@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -33,7 +33,7 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Calendar as CalendarIcon, MapPin, Users, Eye } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, MapPin, Users, Eye, Search } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertEventSchema, type Event, type InsertEvent, type Location } from "@shared/schema";
@@ -47,6 +47,8 @@ const statusLabels: Record<string, { label: string; variant: "default" | "second
 
 export default function Events() {
   const [dialogOpen, setDialogOpen] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [statusFilter, setStatusFilter] = useState<string>("all");
   const { toast } = useToast();
 
   const { data: events, isLoading: eventsLoading } = useQuery<Event[]>({
@@ -105,6 +107,17 @@ export default function Events() {
   const handleSubmit = (data: InsertEvent) => {
     createMutation.mutate(data);
   };
+
+  const filteredEvents = useMemo(() => {
+    if (!events) return [];
+    
+    return events.filter((event) => {
+      const matchesSearch = searchQuery === "" || 
+        event.name.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesStatus = statusFilter === "all" || event.status === statusFilter;
+      return matchesSearch && matchesStatus;
+    });
+  }, [events, searchQuery, statusFilter]);
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto">
@@ -272,15 +285,40 @@ export default function Events() {
         </Dialog>
       </div>
 
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cerca eventi per nome..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+            data-testid="input-search-events"
+          />
+        </div>
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-48" data-testid="select-filter-status">
+            <SelectValue placeholder="Filtra per stato" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutti gli stati</SelectItem>
+            <SelectItem value="draft">Bozza</SelectItem>
+            <SelectItem value="scheduled">Programmato</SelectItem>
+            <SelectItem value="ongoing">In Corso</SelectItem>
+            <SelectItem value="closed">Chiuso</SelectItem>
+          </SelectContent>
+        </Select>
+      </div>
+
       {eventsLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           <Skeleton className="h-64" />
           <Skeleton className="h-64" />
           <Skeleton className="h-64" />
         </div>
-      ) : events && events.length > 0 ? (
+      ) : filteredEvents && filteredEvents.length > 0 ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {events.map((event) => {
+          {filteredEvents.map((event) => {
             const statusInfo = statusLabels[event.status] || statusLabels.draft;
             return (
               <Card key={event.id} className="hover-elevate" data-testid={`event-card-${event.id}`}>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -39,7 +39,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Package, Edit } from "lucide-react";
+import { Plus, Package, Edit, Search } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertProductSchema, type Product, type InsertProduct } from "@shared/schema";
@@ -50,6 +50,8 @@ const units = ['bottle', 'can', 'liter', 'case', 'piece', 'kg'];
 export default function Products() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [categoryFilter, setCategoryFilter] = useState<string>("all");
   const { toast } = useToast();
 
   const { data: products, isLoading } = useQuery<Product[]>({
@@ -161,6 +163,18 @@ export default function Products() {
     setEditingProduct(null);
     form.reset();
   };
+
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+    
+    return products.filter((product) => {
+      const matchesSearch = searchQuery === "" || 
+        product.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        product.code.toLowerCase().includes(searchQuery.toLowerCase());
+      const matchesCategory = categoryFilter === "all" || product.category === categoryFilter;
+      return matchesSearch && matchesCategory;
+    });
+  }, [products, searchQuery, categoryFilter]);
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto">
@@ -327,13 +341,39 @@ export default function Products() {
         </Dialog>
       </div>
 
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Cerca prodotti per nome o codice..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-9"
+            data-testid="input-search-products"
+          />
+        </div>
+        <Select value={categoryFilter} onValueChange={setCategoryFilter}>
+          <SelectTrigger className="w-full sm:w-48" data-testid="select-filter-category">
+            <SelectValue placeholder="Filtra per categoria" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Tutte le categorie</SelectItem>
+            {categories.map((cat) => (
+              <SelectItem key={cat} value={cat}>
+                {cat}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
       {isLoading ? (
         <Card>
           <CardContent className="p-6">
             <Skeleton className="h-96" />
           </CardContent>
         </Card>
-      ) : products && products.length > 0 ? (
+      ) : filteredProducts && filteredProducts.length > 0 ? (
         <Card>
           <CardContent className="p-0">
             <Table>
@@ -350,7 +390,7 @@ export default function Products() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {products.map((product) => (
+                {filteredProducts.map((product) => (
                   <TableRow key={product.id} data-testid={`product-row-${product.id}`}>
                     <TableCell className="font-mono">{product.code}</TableCell>
                     <TableCell className="font-medium">{product.name}</TableCell>

@@ -1,9 +1,10 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Download, FileSpreadsheet, TrendingUp, TrendingDown, DollarSign } from "lucide-react";
+import { FileText, Download, FileSpreadsheet, TrendingUp, TrendingDown, DollarSign, Calendar } from "lucide-react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -44,10 +45,27 @@ type RevenueAnalysis = {
 
 export default function Reports() {
   const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [startDate, setStartDate] = useState<string>("");
+  const [endDate, setEndDate] = useState<string>("");
 
   const { data: events = [], isLoading: eventsLoading } = useQuery<Event[]>({
     queryKey: ['/api/events'],
   });
+
+  const filteredEvents = useMemo(() => {
+    if (!events) return [];
+    if (!startDate && !endDate) return events;
+    
+    return events.filter((event) => {
+      const eventDate = new Date((event as any).startDatetime || (event as any).eventDate);
+      const start = startDate ? new Date(startDate) : null;
+      const end = endDate ? new Date(endDate) : null;
+      
+      if (start && eventDate < start) return false;
+      if (end && eventDate > end) return false;
+      return true;
+    });
+  }, [events, startDate, endDate]);
 
   const { data: reportData, isLoading: reportLoading } = useQuery<ReportData>({
     queryKey: ['/api/reports/end-of-night', selectedEventId],
@@ -74,7 +92,7 @@ export default function Reports() {
     
     pdf.setFontSize(12);
     pdf.text(`Evento: ${event.name}`, 20, 35);
-    pdf.text(`Data: ${new Date(event.eventDate).toLocaleDateString('it-IT')}`, 20, 42);
+    pdf.text(`Data: ${new Date((event as any).startDatetime || (event as any).eventDate).toLocaleDateString('it-IT')}`, 20, 42);
     
     pdf.setFontSize(14);
     pdf.text(`Costo Totale: €${reportData.totalCost.toFixed(2)}`, 20, 55);
@@ -132,7 +150,7 @@ export default function Reports() {
       ["Event4U - Report Fine Serata"],
       [""],
       ["Evento", event.name],
-      ["Data", new Date(event.eventDate).toLocaleDateString('it-IT')],
+      ["Data", new Date((event as any).startDatetime || (event as any).eventDate).toLocaleDateString('it-IT')],
       ["Costo Totale", `€${reportData.totalCost.toFixed(2)}`],
       [""],
     ];
@@ -184,6 +202,55 @@ export default function Reports() {
         </div>
       </div>
 
+      <Card className="mb-6">
+        <CardHeader>
+          <CardTitle>Filtra per Data</CardTitle>
+          <CardDescription>Filtra gli eventi per intervallo di date</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Data Inizio
+              </label>
+              <Input
+                type="date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                data-testid="input-start-date"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium flex items-center gap-2">
+                <Calendar className="h-4 w-4" />
+                Data Fine
+              </label>
+              <Input
+                type="date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                data-testid="input-end-date"
+              />
+            </div>
+          </div>
+          {(startDate || endDate) && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                setStartDate("");
+                setEndDate("");
+              }}
+              className="mt-4"
+              data-testid="button-clear-dates"
+            >
+              Cancella Filtri Date
+            </Button>
+          )}
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Seleziona Evento</CardTitle>
@@ -195,9 +262,9 @@ export default function Reports() {
               <SelectValue placeholder="Seleziona un evento" />
             </SelectTrigger>
             <SelectContent>
-              {events.map((event) => (
+              {filteredEvents.map((event) => (
                 <SelectItem key={event.id} value={event.id.toString()}>
-                  {event.name} - {new Date(event.eventDate).toLocaleDateString('it-IT')}
+                  {event.name} - {new Date((event as any).startDatetime || (event as any).eventDate).toLocaleDateString('it-IT')}
                 </SelectItem>
               ))}
             </SelectContent>
