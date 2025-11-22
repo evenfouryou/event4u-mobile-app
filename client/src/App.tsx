@@ -18,6 +18,7 @@ import Warehouse from "@/pages/warehouse";
 import ConsumptionTracking from "@/pages/consumption-tracking";
 import Register from "@/pages/register";
 import PriceLists from "@/pages/price-lists";
+import ImportPage from "@/pages/import";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -67,6 +68,7 @@ function Router() {
               <Route path="/warehouse" component={Warehouse} />
               <Route path="/consumption" component={ConsumptionTracking} />
               <Route path="/price-lists" component={PriceLists} />
+              <Route path="/import" component={ImportPage} />
               <Route component={NotFound} />
             </Switch>
           </main>

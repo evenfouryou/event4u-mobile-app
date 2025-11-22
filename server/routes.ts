@@ -10,6 +10,7 @@ import {
   insertStationSchema,
   insertProductSchema,
   insertStockMovementSchema,
+  insertPriceListItemSchema,
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -817,6 +818,137 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error generating report:", error);
       res.status(500).json({ message: "Failed to generate report" });
+    }
+  });
+
+  // Bulk import products
+  app.post('/api/import/products', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated with user" });
+      }
+
+      const productsData = req.body.products;
+      if (!Array.isArray(productsData) || productsData.length === 0) {
+        return res.status(400).json({ message: "Products array is required" });
+      }
+
+      // Validate each product with error collection and numeric validation
+      const validatedProducts = [];
+      const errors = [];
+
+      for (const p of productsData) {
+        try {
+          // Normalize and validate numeric fields
+          const normalizedCostPrice = String(p.costPrice).trim().replace(/,/g, '.');
+          const normalizedMinThreshold = p.minThreshold ? String(p.minThreshold).trim().replace(/,/g, '.') : null;
+
+          if (isNaN(parseFloat(normalizedCostPrice))) {
+            throw new Error("costPrice must be a valid number");
+          }
+          if (normalizedMinThreshold && isNaN(parseFloat(normalizedMinThreshold))) {
+            throw new Error("minThreshold must be a valid number");
+          }
+
+          const validated = insertProductSchema.parse({ 
+            ...p, 
+            companyId,
+            costPrice: normalizedCostPrice,
+            minThreshold: normalizedMinThreshold,
+          });
+          validatedProducts.push(validated);
+        } catch (error: any) {
+          errors.push(`Product "${p.name || p.code}": ${error.errors?.[0]?.message || error.message}`);
+        }
+      }
+
+      if (validatedProducts.length === 0) {
+        return res.status(400).json({ 
+          message: "No valid products to import",
+          errors 
+        });
+      }
+
+      const created = await storage.bulkCreateProducts(validatedProducts);
+      res.json({ 
+        message: `Successfully imported ${created.length} products`,
+        count: created.length,
+        products: created,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error: any) {
+      console.error("Error importing products:", error);
+      res.status(500).json({ message: error.message || "Failed to import products" });
+    }
+  });
+
+  // Bulk import price list items
+  app.post('/api/import/price-list-items', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated with user" });
+      }
+
+      const { priceListId, items } = req.body;
+      if (!priceListId || !Array.isArray(items) || items.length === 0) {
+        return res.status(400).json({ message: "priceListId and items array are required" });
+      }
+
+      // Verify price list belongs to company
+      const priceList = await storage.getPriceListByIdAndCompany(priceListId, companyId);
+      if (!priceList) {
+        return res.status(404).json({ message: "Price list not found or access denied" });
+      }
+
+      // Build validated items array
+      const validatedItems = [];
+      const errors = [];
+
+      for (const item of items) {
+        try {
+          // Lookup product by code
+          const product = await storage.getProductByCodeAndCompany(item.productCode, companyId);
+          if (!product) {
+            errors.push(`Product code "${item.productCode}": Product not found`);
+            continue;
+          }
+
+          // Normalize numeric field
+          const normalizedSalePrice = String(item.salePrice).trim().replace(/,/g, '.');
+
+          // Validate with insertPriceListItemSchema (includes z.coerce.number() for salePrice)
+          const validated = insertPriceListItemSchema.parse({
+            priceListId,
+            productId: product.id,
+            salePrice: normalizedSalePrice,
+          });
+
+          validatedItems.push(validated);
+        } catch (error: any) {
+          errors.push(`Product code "${item.productCode}": ${error.errors?.[0]?.message || error.message}`);
+        }
+      }
+
+      if (validatedItems.length === 0) {
+        return res.status(400).json({ 
+          message: "No valid items to import",
+          errors 
+        });
+      }
+
+      const created = await storage.bulkCreatePriceListItems(validatedItems, companyId);
+      
+      res.json({ 
+        message: `Successfully imported ${created.length} price list items`,
+        count: created.length,
+        items: created,
+        errors: errors.length > 0 ? errors : undefined
+      });
+    } catch (error: any) {
+      console.error("Error importing price list items:", error);
+      res.status(500).json({ message: error.message || "Failed to import price list items" });
     }
   });
 

@@ -66,8 +66,10 @@ export interface IStorage {
   // Product operations
   getProductsByCompany(companyId: string): Promise<Product[]>;
   getProduct(id: string): Promise<Product | undefined>;
+  getProductByCodeAndCompany(code: string, companyId: string): Promise<Product | undefined>;
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: string, product: Partial<Product>): Promise<Product | undefined>;
+  bulkCreateProducts(products: InsertProduct[]): Promise<Product[]>;
   
   // Stock operations
   getGeneralStocks(companyId: string): Promise<Stock[]>;
@@ -93,6 +95,7 @@ export interface IStorage {
   createPriceListItem(item: InsertPriceListItem, companyId: string): Promise<PriceListItem>;
   updatePriceListItem(id: string, companyId: string, item: Partial<PriceListItem>): Promise<PriceListItem | undefined>;
   deletePriceListItem(id: string, companyId: string): Promise<boolean>;
+  bulkCreatePriceListItems(items: InsertPriceListItem[], companyId: string): Promise<PriceListItem[]>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -235,6 +238,22 @@ export class DatabaseStorage implements IStorage {
       .where(eq(products.id, id))
       .returning();
     return product;
+  }
+
+  async getProductByCodeAndCompany(code: string, companyId: string): Promise<Product | undefined> {
+    const [product] = await db
+      .select()
+      .from(products)
+      .where(and(
+        eq(products.code, code),
+        eq(products.companyId, companyId)
+      ));
+    return product;
+  }
+
+  async bulkCreateProducts(productsList: InsertProduct[]): Promise<Product[]> {
+    if (productsList.length === 0) return [];
+    return await db.insert(products).values(productsList).returning();
   }
   
   // Stock operations
@@ -463,6 +482,26 @@ export class DatabaseStorage implements IStorage {
       .innerJoin(priceLists, eq(priceListItems.priceListId, priceLists.id))
       .where(and(eq(priceListItems.id, itemId), eq(priceLists.companyId, companyId)));
     return item ? item.price_list_items : undefined;
+  }
+
+  async bulkCreatePriceListItems(itemsList: InsertPriceListItem[], companyId: string): Promise<PriceListItem[]> {
+    if (itemsList.length === 0) return [];
+    
+    return await db.transaction(async (tx) => {
+      const priceListId = itemsList[0].priceListId;
+      const [priceList] = await tx
+        .select()
+        .from(priceLists)
+        .where(and(eq(priceLists.id, priceListId), eq(priceLists.companyId, companyId)))
+        .for('update');
+      
+      if (!priceList) {
+        throw new Error("Price list not found or access denied");
+      }
+
+      const items = await tx.insert(priceListItems).values(itemsList).returning();
+      return items;
+    });
   }
 }
 

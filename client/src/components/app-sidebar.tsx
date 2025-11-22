@@ -10,6 +10,7 @@ import {
   LogOut,
   ShoppingCart,
   DollarSign,
+  Upload,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
@@ -94,6 +95,12 @@ export function AppSidebar() {
         title: "Magazzino",
         icon: Warehouse,
         url: "/warehouse",
+        group: "Inventario",
+      },
+      {
+        title: "Import CSV",
+        icon: Upload,
+        url: "/import",
         group: "Inventario",
       }
     );
