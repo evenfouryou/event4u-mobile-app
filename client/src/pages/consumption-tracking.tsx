@@ -140,162 +140,156 @@ export default function ConsumptionTracking() {
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto">
-      <div className="mb-6">
-        <h1 className="text-2xl font-semibold mb-2">Registra Consumi</h1>
-        <p className="text-muted-foreground mb-4">
-          Seleziona evento e postazione per registrare i consumi
-        </p>
+    <div>
+      <div className="sticky top-0 z-40 bg-background border-b">
+        <div className="p-3 sm:p-4 md:p-6 space-y-3">
+          <h1 className="text-xl sm:text-2xl font-semibold hidden md:block">Registra Consumi</h1>
+          
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs sm:text-sm">Evento</Label>
+              <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                <SelectTrigger data-testid="select-event" className="h-11 sm:h-10">
+                  <SelectValue placeholder="Evento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeEvents.map(event => (
+                    <SelectItem key={event.id} value={event.id}>
+                      {event.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
-          <div className="space-y-2">
-            <Label>Evento</Label>
-            <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-              <SelectTrigger data-testid="select-event">
-                <SelectValue placeholder="Seleziona evento" />
-              </SelectTrigger>
-              <SelectContent>
-                {activeEvents.map(event => (
-                  <SelectItem key={event.id} value={event.id}>
-                    {event.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+            <div className="space-y-1.5">
+              <Label className="text-xs sm:text-sm">Postazione</Label>
+              <Select 
+                value={selectedStationId} 
+                onValueChange={setSelectedStationId}
+                disabled={!stations || stations.length === 0}
+              >
+                <SelectTrigger data-testid="select-station" className="h-11 sm:h-10">
+                  <SelectValue placeholder="Postazione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {stations?.map(station => (
+                    <SelectItem key={station.id} value={station.id}>
+                      {station.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
-          <div className="space-y-2">
-            <Label>Postazione</Label>
-            <Select 
-              value={selectedStationId} 
-              onValueChange={setSelectedStationId}
-              disabled={!stations || stations.length === 0}
-            >
-              <SelectTrigger data-testid="select-station">
-                <SelectValue placeholder="Seleziona postazione" />
-              </SelectTrigger>
-              <SelectContent>
-                {stations?.map(station => (
-                  <SelectItem key={station.id} value={station.id}>
-                    {station.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Cerca prodotto..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 h-11 sm:h-10"
+              data-testid="input-search-product"
+            />
           </div>
         </div>
       </div>
 
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle className="text-lg">Cerca Prodotto</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Cerca per nome o codice..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10"
-              data-testid="input-search-product"
-            />
-          </div>
-        </CardContent>
-      </Card>
+      <div className="p-3 sm:p-4 md:p-6">
 
-      {!selectedStationId ? (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground mb-2">Seleziona una postazione</p>
-            <p className="text-sm text-muted-foreground">
-              Scegli evento e postazione sopra per visualizzare i prodotti e registrare i consumi
-            </p>
-          </CardContent>
-        </Card>
-      ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filteredProducts.map((product) => {
-          const stockValue = getProductStock(product.id);
-          const isLowStock = stockValue <= 5;
-          return (
-            <Card key={product.id} data-testid={`product-card-${product.id}`}>
-              <CardHeader className="pb-3">
-                <div className="flex items-start justify-between">
-                  <div>
-                    <CardTitle className="text-base">{product.name}</CardTitle>
-                    <p className="text-sm text-muted-foreground mt-1">{product.code}</p>
-                  </div>
-                  {product.category && (
-                    <Badge variant="secondary">{product.category}</Badge>
-                  )}
-                </div>
-                <div className="flex items-center gap-2 mt-2">
-                  <Package className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-sm font-medium">
-                    Stock: {stockValue.toFixed(2)} {product.unitOfMeasure}
-                  </span>
-                  {isLowStock && (
-                    <Badge variant="destructive" className="ml-auto" data-testid={`badge-low-${product.id}`}>
-                      Basso
-                    </Badge>
-                  )}
-                </div>
-              </CardHeader>
-              <CardContent>
-              <div className="flex gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleConsume(product.id, 0.5)}
-                  disabled={consumeMutation.isPending}
-                  data-testid={`button-consume-half-${product.id}`}
-                  className="flex-1"
-                >
-                  <Minus className="h-4 w-4 mr-1" />
-                  0.5
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleConsume(product.id, 1)}
-                  disabled={consumeMutation.isPending}
-                  data-testid={`button-consume-one-${product.id}`}
-                  className="flex-1"
-                >
-                  <Minus className="h-4 w-4 mr-1" />
-                  1
-                </Button>
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => handleConsume(product.id, 2)}
-                  disabled={consumeMutation.isPending}
-                  data-testid={`button-consume-two-${product.id}`}
-                  className="flex-1"
-                >
-                  <Minus className="h-4 w-4 mr-1" />
-                  2
-                </Button>
-              </div>
-              <p className="text-xs text-muted-foreground mt-2 text-center">
-                {product.unitOfMeasure}
+        {!selectedStationId ? (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+              <p className="text-muted-foreground mb-2">Seleziona una postazione</p>
+              <p className="text-sm text-muted-foreground">
+                Scegli evento e postazione sopra per visualizzare i prodotti e registrare i consumi
               </p>
             </CardContent>
           </Card>
-          );
-        })}
-        </div>
-      )}
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
+          {filteredProducts.map((product) => {
+            const stockValue = getProductStock(product.id);
+            const isLowStock = stockValue <= 5;
+            return (
+              <Card key={product.id} data-testid={`product-card-${product.id}`} className="overflow-hidden">
+                <CardHeader className="pb-3 space-y-2">
+                  <div className="flex items-center gap-3">
+                    <div className="w-14 h-14 sm:w-16 sm:h-16 bg-muted rounded-md flex items-center justify-center flex-shrink-0">
+                      <Package className="h-7 w-7 sm:h-8 sm:w-8 text-muted-foreground" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <CardTitle className="text-base sm:text-lg truncate">{product.name}</CardTitle>
+                      <p className="text-xs sm:text-sm text-muted-foreground truncate">{product.code}</p>
+                    </div>
+                    {product.category && (
+                      <Badge variant="secondary" className="flex-shrink-0 text-xs">{product.category}</Badge>
+                    )}
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm sm:text-base font-medium">
+                      Stock: {stockValue.toFixed(2)} {product.unitOfMeasure}
+                    </span>
+                    {isLowStock && (
+                      <Badge variant="destructive" className="ml-auto text-xs" data-testid={`badge-low-${product.id}`}>
+                        Basso
+                      </Badge>
+                    )}
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                <div className="grid grid-cols-3 gap-2">
+                  <Button
+                    size="xl"
+                    variant="outline"
+                    onClick={() => handleConsume(product.id, 0.5)}
+                    disabled={consumeMutation.isPending}
+                    data-testid={`button-consume-half-${product.id}`}
+                    className="flex flex-col items-center justify-center gap-1"
+                  >
+                    <Minus className="h-5 w-5 sm:h-6 sm:w-6" />
+                    <span className="font-semibold">0.5</span>
+                  </Button>
+                  <Button
+                    size="xl"
+                    variant="outline"
+                    onClick={() => handleConsume(product.id, 1)}
+                    disabled={consumeMutation.isPending}
+                    data-testid={`button-consume-one-${product.id}`}
+                    className="flex flex-col items-center justify-center gap-1"
+                  >
+                    <Minus className="h-5 w-5 sm:h-6 sm:w-6" />
+                    <span className="font-semibold">1</span>
+                  </Button>
+                  <Button
+                    size="xl"
+                    variant="outline"
+                    onClick={() => handleConsume(product.id, 2)}
+                    disabled={consumeMutation.isPending}
+                    data-testid={`button-consume-two-${product.id}`}
+                    className="flex flex-col items-center justify-center gap-1"
+                  >
+                    <Minus className="h-5 w-5 sm:h-6 sm:w-6" />
+                    <span className="font-semibold">2</span>
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+            );
+          })}
+          </div>
+        )}
 
-      {selectedStationId && filteredProducts.length === 0 && (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <p className="text-muted-foreground">Nessun prodotto trovato</p>
-          </CardContent>
-        </Card>
-      )}
+        {selectedStationId && filteredProducts.length === 0 && (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <p className="text-muted-foreground">Nessun prodotto trovato</p>
+            </CardContent>
+          </Card>
+        )}
+      </div>
     </div>
   );
 }
