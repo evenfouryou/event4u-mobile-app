@@ -1,0 +1,396 @@
+Ok, andiamo dritti al punto 😄
+Ti preparo uno “script”/blueprint tecnico che puoi dare a sviluppatori o ad un’AI per implementare la web + mobile app gestionale (variante amministrativa) di Event4U.
+
+Lo scrivo pensando a backend tipo Laravel + API REST e front-end web/mobile che consumano le API, ma puoi adattarlo.
+
+⸻
+
+1. Ruoli e gerarchia account
+
+1.1 Tipi di account
+	•	Super Admin (Event4U)
+	•	Gestisce tutto il sistema.
+	•	Crea e abilita le società (organizer company).
+	•	Crea l’account amministratore della società.
+	•	Admin Società
+	•	È il “padrone di casa” per una singola società.
+	•	Crea:
+	•	Account Organizzatore (utente gestionale principale).
+	•	Account operativi: Magazziniere, Barista, altri ruoli interni.
+	•	Configura:
+	•	Location della società.
+	•	Listini prezzi generali.
+	•	Permessi per ruoli e postazioni.
+	•	Organizzatore
+	•	Legato ad una sola società.
+	•	Può:
+	•	Creare e gestire Eventi.
+	•	Creare e gestire Location della società.
+	•	Gestire Magazzino generale e Magazzino per evento.
+	•	Creare postazioni (es. Bar 1, Bar 2, Frigo esterno, ecc.)
+	•	Visualizzare report di fine serata.
+	•	Magazziniere
+	•	Accesso alla parte di magazzino:
+	•	Carico/scarico generale.
+	•	Carico/scarico verso eventi/postazioni.
+	•	Non modifica listini prezzi.
+	•	Barista (o Operatore di postazione)
+	•	Vede solo:
+	•	Magazzino relativo alla propria postazione (per un evento).
+	•	Operazioni di scarico (consumo) durante l’evento.
+	•	Può registrare cosa viene consumato.
+
+⸻
+
+2. Flusso funzionale principale
+
+2.1 Setup base da parte di Admin / Organizzatore
+	1.	Login
+	•	L’utente effettua login (web o mobile).
+	•	In base al ruolo vede moduli diversi.
+	2.	Creazione Location (Organizzatore/Admin) – OBBLIGATORIA
+	•	Campi:
+	•	Nome location
+	•	Indirizzo
+	•	Capienza
+	•	Note (es. tipo locale, impianto bar, magazzini disponibili)
+	•	Una location è necessaria per:
+	•	Creare eventi.
+	•	Associare postazioni.
+	•	Legare il magazzino.
+	3.	Configurazione Listino Prezzi Generale
+	•	Organizzatore/Admin carica il listino:
+	•	Articolo (es. “Vodka Lemon”)
+	•	Categoria (drink, bottiglia, cibo, ecc.)
+	•	Prezzo di vendita
+	•	Eventuale variazione per evento (sovrapprezzo/sconto)
+	•	Possibilità di:
+	•	Import CSV / Excel
+	•	Creare/modificare singoli articoli.
+
+⸻
+
+2.2 Gestione Magazzino Generale
+
+Il Magazzino Generale è il magazzino di base della società (non legato ad uno specifico evento).
+
+Funzioni:
+	1.	Gestione articoli
+	•	Codice articolo
+	•	Nome
+	•	Unità di misura (bottiglia, lattina, litro, cassa, pezzo)
+	•	Costo unitario
+	•	Stock attuale
+	•	Soglia minima (per alert)
+	2.	Carico merce (Magazziniere/Admin/Organizzatore)
+	•	Data
+	•	Fornitore (opzionale)
+	•	Articolo
+	•	Quantità caricata
+	•	Costo totale/ unitario
+	•	Note (es. fattura, DDT)
+	3.	Scarico merce generale
+	•	Per trasferimento ad un evento (vedi dopo)
+	•	Per perdita/scarto/rottura
+	4.	Audit log
+	•	Ogni movimento è tracciato:
+	•	Utente
+	•	Ruolo
+	•	Data/ora
+	•	Tipo movimento (carico/scarico/trasferimento).
+
+⸻
+
+2.3 Creazione Evento (Organizzatore)
+
+Sezione Eventi:
+	1.	Creazione evento
+	•	Nome evento
+	•	Data e orari (inizio/fine)
+	•	Location associata (obbligatoria)
+	•	Capienza stimata
+	•	Note (tipo evento, DJ, ecc.)
+	2.	Associazione postazioni all’evento
+	•	Esempi di postazioni:
+	•	“Bar Centrale”
+	•	“Bar Esterna”
+	•	“Privé 1”
+	•	Ogni postazione:
+	•	Ha un responsabile (Barista / Operatore).
+	•	Ha il proprio sotto-magazzino per l’evento.
+
+⸻
+
+2.4 Magazzino per Evento
+
+Dopo aver creato l’evento:
+	1.	Trasferimento stock da Magazzino Generale a Magazzino Evento
+	•	Selezioni:
+	•	Evento
+	•	Postazione (opzionale; se nulla, stock evento generale)
+	•	Articolo
+	•	Quantità da trasferire
+	•	Questo genera:
+	•	Scarico dal Magazzino Generale
+	•	Carico nel Magazzino Evento (o Evento+Postazione)
+	2.	Gestione carico/scarico su più ruoli
+	•	Magazziniere:
+	•	Esegue i trasferimenti generali tra magazzino e evento/postazioni.
+	•	Barista:
+	•	Vede solo il proprio sotto-magazzino di postazione per quell’evento.
+	•	Registra gli scarichi (consumi) durante la serata.
+	3.	Scarico durante l’evento (consumo)
+	•	Il Barista/Operatore, su web o mobile:
+	•	Seleziona evento corrente
+	•	Seleziona la propria postazione
+	•	Registra i consumi:
+	•	Es. -1 bottiglia vodka, -6 lattine RedBull, ecc.
+	•	Possibilità di:
+	•	Scarico veloce per “prodotto venduto” (se si vuole collegare al POS in futuro).
+	•	Scarico manuale per controllo fine serata.
+
+⸻
+
+2.5 Report di fine serata
+
+Alla chiusura dell’evento, Organizzatore (o Admin Società) può generare:
+	1.	Report Consumi per Evento
+	•	Per ogni articolo:
+	•	Iniziale caricato all’evento
+	•	Rimanenza a fine evento
+	•	Consumo totale = Caricato - Rimanenza
+	•	Costo unitario (da magazzino)
+	•	Costo totale consumato = Consumo * Costo unitario
+	•	Suddiviso per:
+	•	Evento complessivo
+	•	Oppure per Postazione:
+	•	Bar Centrale
+	•	Bar Esterno
+	•	Privé, ecc.
+	2.	Report economico
+	•	Se collegato al listino:
+	•	Valore di vendita teorico (se tutti i consumi fossero venduti prezzo pieno).
+	•	Possibilità futura:
+	•	Collegare incassi reali (POS/cassa) per calcolare:
+	•	Margine
+	•	Scostamenti.
+	3.	Esportazione
+	•	PDF
+	•	Excel/CSV
+
+⸻
+
+3. Struttura dati (schema concettuale)
+
+3.1 Entità principali
+	•	users
+	•	id
+	•	name
+	•	email
+	•	password
+	•	role (super_admin, company_admin, organizer, warehouse, bartender, etc.)
+	•	company_id (nullable per super_admin)
+	•	companies
+	•	id
+	•	name
+	•	piva/codice fiscale
+	•	indirizzo
+	•	stato (attiva/non attiva)
+	•	locations
+	•	id
+	•	company_id
+	•	name
+	•	address
+	•	capacity
+	•	notes
+	•	events
+	•	id
+	•	company_id
+	•	location_id
+	•	name
+	•	start_datetime
+	•	end_datetime
+	•	status (draft, scheduled, ongoing, closed)
+	•	stations (Postazioni)
+	•	id
+	•	event_id
+	•	name (Bar Centrale, Bar Esterno, ecc.)
+	•	assigned_user_id (es. barista)
+	•	products (Articoli di magazzino)
+	•	id
+	•	company_id
+	•	code
+	•	name
+	•	category
+	•	unit_of_measure
+	•	cost_price
+	•	active (bool)
+	•	price_lists
+	•	id
+	•	company_id
+	•	name (Listino Generale, Listino Estate, ecc.)
+	•	valid_from, valid_to (opzionale)
+	•	price_list_items
+	•	id
+	•	price_list_id
+	•	product_id
+	•	sale_price
+	•	stocks (quantità attuale per magazzino)
+	•	id
+	•	company_id
+	•	product_id
+	•	location_id (nullable per generale)
+	•	event_id (nullable per magazzino evento)
+	•	station_id (nullable per magazzino postazione)
+	•	quantity
+	•	stock_movements
+	•	id
+	•	company_id
+	•	product_id
+	•	from_location/event/station (campi nullable)
+	•	to_location/event/station (campi nullable)
+	•	quantity (positiva per carico, negativa per scarico, oppure usa from/to)
+	•	type (LOAD, UNLOAD, TRANSFER)
+	•	reason (es. “carico fornitore”, “trasferimento a evento X”, “consumo evento”)
+	•	performed_by (user_id)
+	•	created_at
+
+⸻
+
+4. Esempio di API (pseudo-Laravel)
+
+4.1 Rotte (routes/api.php)
+
+Route::middleware('auth:sanctum')->group(function () {
+
+    // PROFILO & ROLE
+    Route::get('/me', [UserController::class, 'me']);
+
+    // LOCATION
+    Route::get('/locations', [LocationController::class, 'index']);
+    Route::post('/locations', [LocationController::class, 'store']);
+
+    // EVENTI
+    Route::get('/events', [EventController::class, 'index']);
+    Route::post('/events', [EventController::class, 'store']);
+    Route::get('/events/{event}', [EventController::class, 'show']);
+
+    // MAGAZZINO GENERALE
+    Route::get('/products', [ProductController::class, 'index']);
+    Route::post('/products', [ProductController::class, 'store']);
+
+    Route::get('/stock/general', [StockController::class, 'general']);
+    Route::post('/stock/load', [StockController::class, 'loadGeneral']);
+    Route::post('/stock/unload', [StockController::class, 'unloadGeneral']);
+
+    // MAGAZZINO EVENTO
+    Route::post('/events/{event}/transfer-to-event', [StockController::class, 'transferToEvent']);
+    Route::get('/events/{event}/stock', [StockController::class, 'eventStock']);
+
+    // POSTAZIONI
+    Route::post('/events/{event}/stations', [StationController::class, 'store']);
+    Route::get('/events/{event}/stations', [StationController::class, 'index']);
+
+    // CONSUMI POSTAZIONE (barista)
+    Route::post('/events/{event}/stations/{station}/consume', [ConsumptionController::class, 'consume']);
+
+    // REPORT
+    Route::get('/events/{event}/report/end-of-night', [ReportController::class, 'endOfNight']);
+});
+
+
+⸻
+
+4.2 Esempio logica trasferimento magazzino → evento (pseudocodice)
+
+public function transferToEvent(Request $request, Event $event)
+{
+    $this->authorize('manage-stock', $event->company);
+
+    $validated = $request->validate([
+        'product_id' => 'required|exists:products,id',
+        'quantity'   => 'required|numeric|min:0.01',
+        'station_id' => 'nullable|exists:stations,id'
+    ]);
+
+    DB::transaction(function () use ($validated, $event) {
+        // 1. Scarico dal magazzino generale
+        StockService::adjustGeneralStock(
+            $event->company_id,
+            $validated['product_id'],
+            -$validated['quantity']
+        );
+
+        // 2. Carico sul magazzino evento (eventuale postazione)
+        StockService::adjustEventStock(
+            $event->company_id,
+            $event->id,
+            $validated['product_id'],
+            $validated['quantity'],
+            $validated['station_id'] ?? null
+        );
+
+        // 3. Log movimento
+        StockMovement::create([
+            'company_id' => $event->company_id,
+            'product_id' => $validated['product_id'],
+            'type'       => 'TRANSFER',
+            'reason'     => 'Trasferimento magazzino → evento',
+            'from_event_id'   => null,
+            'to_event_id'     => $event->id,
+            'to_station_id'   => $validated['station_id'] ?? null,
+            'quantity'        => $validated['quantity'],
+            'performed_by'    => auth()->id()
+        ]);
+    });
+
+    return response()->json(['status' => 'ok']);
+}
+
+
+⸻
+
+5. Web & Mobile: come dividere le interfacce
+
+5.1 Web (per Admin/Organizzatore/Magazziniere)
+	•	Dashboard società:
+	•	Eventi attivi / futuri
+	•	Stato magazzino (alert sotto scorta)
+	•	Moduli:
+	•	Gestione location
+	•	Gestione eventi
+	•	Magazzino generale (carico, scarico, listino)
+	•	Magazzino evento
+	•	Report fine serata (con esportazione PDF/Excel)
+
+5.2 Mobile (per Barista e Operatori, ma anche Organizer)
+	•	Schermata iniziale:
+	•	Se barista: mostra solo eventi attivi dove è assegnato.
+	•	Se organizzatore: elenco eventi con sintesi.
+	•	Flussi barista:
+	•	Seleziona evento
+	•	Seleziona postazione
+	•	Lista prodotti con quantità iniziale
+	•	Pulsanti veloci:
+	•	“-1”, “-0.5”, “+1” ecc. per aggiornare consumi
+	•	Sincronizzazione in tempo reale (o semi-offline con sync).
+
+⸻
+
+6. Logica magazzino generale vs magazzino evento
+	•	Magazzino Generale
+	•	Serve per il lungo periodo: carichi fornitori, stock di base del locale.
+	•	Magazzino Evento
+	•	È solo per quella data (o intervallo).
+	•	Alla fine dell’evento puoi:
+	•	Registrare rientro in magazzino di ciò che è rimasto.
+	•	Chiudere evento e bloccare ulteriori movimenti.
+	•	Magazzino Postazione
+	•	Sotto-magazzino dell’evento.
+	•	Serve a capire quali postazioni hanno consumato cosa.
+
+⸻
+
+Se vuoi, nel prossimo messaggio posso:
+	•	Dettagliare permessi per ogni ruolo (matrice ruoli/azioni).
+	•	O prepararti direttamente una serie di user stories o specifiche in formato “documento per sviluppatori/AI” da copiare/incollare nel tuo repo.
