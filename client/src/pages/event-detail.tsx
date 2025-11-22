@@ -32,10 +32,20 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { ArrowLeft, Plus, Users, Package } from "lucide-react";
+import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
+import { ArrowLeft, Plus, Users, Package, Warehouse } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertStationSchema, type Event, type Station, type InsertStation, type User } from "@shared/schema";
+import { z } from "zod";
+import { insertStationSchema, type Event, type Station, type InsertStation, type User, type Product } from "@shared/schema";
+
+const transferSchema = z.object({
+  productId: z.string().min(1, "Seleziona un prodotto"),
+  stationId: z.string().optional(),
+  quantity: z.string().min(1, "Inserisci una quantità").refine((val) => parseFloat(val) > 0, "Quantità deve essere maggiore di zero"),
+});
+
+type TransferFormValues = z.infer<typeof transferSchema>;
 
 export default function EventDetail() {
   const { id } = useParams();
@@ -56,12 +66,46 @@ export default function EventDetail() {
     queryKey: ['/api/users'],
   });
 
-  const form = useForm<InsertStation>({
+  const { data: products } = useQuery<Product[]>({
+    queryKey: ['/api/products'],
+  });
+
+  const { data: generalStocks } = useQuery<Array<{
+    id: string;
+    productId: string;
+    quantity: string;
+    productName: string;
+    productCode: string;
+    unitOfMeasure: string;
+  }>>({
+    queryKey: ['/api/stock/general'],
+  });
+
+  const { data: eventStocks, isLoading: eventStocksLoading } = useQuery<Array<{
+    id: string;
+    productId: string;
+    stationId: string | null;
+    quantity: string;
+  }>>({
+    queryKey: ['/api/events', id, 'stocks'],
+    enabled: !!id,
+  });
+
+  const stationForm = useForm<InsertStation>({
     resolver: zodResolver(insertStationSchema),
     defaultValues: {
       name: '',
       assignedUserId: '',
       eventId: id,
+    },
+  });
+
+  const transferForm = useForm<TransferFormValues>({
+    resolver: zodResolver(transferSchema),
+    defaultValues: {
+      productId: '',
+      stationId: '',
+      quantity: '',
     },
   });
 
@@ -72,7 +116,7 @@ export default function EventDetail() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'stations'] });
       setStationDialogOpen(false);
-      form.reset();
+      stationForm.reset();
       toast({
         title: "Successo",
         description: "Postazione creata con successo",
@@ -91,6 +135,44 @@ export default function EventDetail() {
       toast({
         title: "Errore",
         description: "Impossibile creare la postazione",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const transferStockMutation = useMutation({
+    mutationFn: async (data: TransferFormValues) => {
+      await apiRequest('POST', '/api/stock/event-transfer', {
+        eventId: id,
+        stationId: data.stationId || null,
+        productId: data.productId,
+        quantity: data.quantity,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'stocks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
+      setTransferDialogOpen(false);
+      transferForm.reset();
+      toast({
+        title: "Successo",
+        description: "Stock trasferito con successo",
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Non autorizzato",
+          description: "Effettua nuovamente il login...",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = '/api/login', 500);
+        return;
+      }
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile trasferire lo stock",
         variant: "destructive",
       });
     },
@@ -173,6 +255,188 @@ export default function EventDetail() {
 
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
+          <h2 className="text-xl font-semibold">Inventario Evento</h2>
+          <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
+            <DialogTrigger asChild>
+              <Button data-testid="button-transfer-stock">
+                <Warehouse className="h-4 w-4 mr-2" />
+                Trasferisci Stock
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl">
+              <DialogHeader>
+                <DialogTitle>Trasferisci Stock da Magazzino</DialogTitle>
+              </DialogHeader>
+              <Form {...transferForm}>
+                <form onSubmit={transferForm.handleSubmit((data) => transferStockMutation.mutate(data))} className="space-y-4">
+                  {generalStocks && generalStocks.length > 0 ? (
+                    <>
+                      <div className="text-sm text-muted-foreground mb-4">
+                        Seleziona prodotto dal magazzino generale per trasferirlo all'evento
+                      </div>
+                      <FormField
+                        control={transferForm.control}
+                        name="productId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Prodotto</FormLabel>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-transfer-product">
+                                  <SelectValue placeholder="Seleziona prodotto" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {generalStocks.filter(s => parseFloat(s.quantity) > 0).map((stock) => (
+                                  <SelectItem key={stock.productId} value={stock.productId}>
+                                    {stock.productName} - Disponibile: {parseFloat(stock.quantity).toFixed(2)} {stock.unitOfMeasure}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                  <FormField
+                    control={transferForm.control}
+                    name="stationId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Postazione Destinazione (opzionale)</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-transfer-station">
+                              <SelectValue placeholder="Seleziona postazione" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="">Evento (generale)</SelectItem>
+                            {stations?.map((station) => (
+                              <SelectItem key={station.id} value={station.id}>
+                                {station.name}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                      <FormField
+                        control={transferForm.control}
+                        name="quantity"
+                        render={({ field }) => {
+                          const selectedStock = generalStocks.find(s => s.productId === transferForm.watch('productId'));
+                          const maxQuantity = selectedStock ? parseFloat(selectedStock.quantity) : 0;
+                          return (
+                            <FormItem>
+                              <FormLabel>Quantità {selectedStock && `(Max: ${maxQuantity.toFixed(2)})`}</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  type="number"
+                                  step="0.01"
+                                  min="0.01"
+                                  max={maxQuantity}
+                                  placeholder="0.00"
+                                  data-testid="input-transfer-quantity"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          );
+                        }}
+                      />
+
+                      <DialogFooter>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => setTransferDialogOpen(false)}
+                          data-testid="button-cancel-transfer"
+                        >
+                          Annulla
+                        </Button>
+                        <Button type="submit" disabled={transferStockMutation.isPending} data-testid="button-submit-transfer">
+                          Trasferisci
+                        </Button>
+                      </DialogFooter>
+                    </>
+                  ) : (
+                    <div className="text-center py-8">
+                      <p className="text-muted-foreground mb-2">Nessun prodotto disponibile in magazzino</p>
+                      <p className="text-sm text-muted-foreground">Carica prodotti nel magazzino generale prima di trasferirli</p>
+                      <DialogFooter className="mt-4">
+                        <Button variant="outline" onClick={() => setTransferDialogOpen(false)}>
+                          Chiudi
+                        </Button>
+                      </DialogFooter>
+                    </div>
+                  )}
+                </form>
+              </Form>
+            </DialogContent>
+          </Dialog>
+        </div>
+
+        {eventStocksLoading ? (
+          <Skeleton className="h-48" />
+        ) : eventStocks && eventStocks.length > 0 ? (
+          <div className="mt-6">
+            <h3 className="text-lg font-semibold mb-3">Prodotti Presenti</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+              {eventStocks.map((stock) => {
+                const product = products?.find(p => p.id === stock.productId);
+                const station = stations?.find(s => s.id === stock.stationId);
+                const quantity = parseFloat(stock.quantity);
+                const isLowStock = product?.minThreshold && !isNaN(quantity) && quantity < parseFloat(product.minThreshold);
+                
+                return (
+                  <Card key={stock.id} data-testid={`event-stock-${stock.id}`}>
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <CardTitle className="text-base">{product?.name || 'Unknown'}</CardTitle>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {station ? station.name : 'Magazzino Evento'}
+                          </p>
+                        </div>
+                        {isLowStock && (
+                          <Badge variant="destructive" data-testid={`badge-low-stock-event-${stock.id}`}>
+                            <AlertTriangle className="h-3 w-3 mr-1" />
+                            Stock Basso
+                          </Badge>
+                        )}
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="flex items-center gap-2">
+                        <Package className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-semibold tabular-nums">
+                          {isNaN(quantity) ? '0.00' : quantity.toFixed(2)} {product?.unitOfMeasure || ''}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                );
+              })}
+            </div>
+          </div>
+        ) : (
+          <div className="mt-6 text-center p-6 border-2 border-dashed rounded-lg">
+            <Package className="h-8 w-8 text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm text-muted-foreground">
+              Nessun prodotto trasferito all'evento. Usa il pulsante "Trasferisci Stock" per iniziare.
+            </p>
+          </div>
+        )}
+      </div>
+
+      <div className="mb-8">
+        <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Postazioni</h2>
           <Dialog open={stationDialogOpen} onOpenChange={setStationDialogOpen}>
             <DialogTrigger asChild>
@@ -185,10 +449,10 @@ export default function EventDetail() {
               <DialogHeader>
                 <DialogTitle>Nuova Postazione</DialogTitle>
               </DialogHeader>
-              <Form {...form}>
-                <form onSubmit={form.handleSubmit((data) => createStationMutation.mutate(data))} className="space-y-4">
+              <Form {...stationForm}>
+                <form onSubmit={stationForm.handleSubmit((data) => createStationMutation.mutate(data))} className="space-y-4">
                   <FormField
-                    control={form.control}
+                    control={stationForm.control}
                     name="name"
                     render={({ field }) => (
                       <FormItem>
@@ -202,7 +466,7 @@ export default function EventDetail() {
                   />
 
                   <FormField
-                    control={form.control}
+                    control={stationForm.control}
                     name="assignedUserId"
                     render={({ field }) => (
                       <FormItem>

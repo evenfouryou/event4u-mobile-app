@@ -41,7 +41,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Warehouse as WarehouseIcon, TrendingUp, TrendingDown, Package } from "lucide-react";
+import { Plus, Warehouse as WarehouseIcon, TrendingUp, TrendingDown, Package, AlertTriangle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -377,19 +377,32 @@ export default function Warehouse() {
                       <TableHead>Prodotto</TableHead>
                       <TableHead className="text-right">Quantità</TableHead>
                       <TableHead>Unità</TableHead>
+                      <TableHead>Stato</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {stocks.map((stock) => (
-                      <TableRow key={stock.productId} data-testid={`stock-row-${stock.productId}`}>
-                        <TableCell className="font-mono">{stock.productCode}</TableCell>
-                        <TableCell className="font-medium">{stock.productName}</TableCell>
-                        <TableCell className="text-right font-semibold tabular-nums">
-                          {parseFloat(stock.quantity).toFixed(2)}
-                        </TableCell>
-                        <TableCell>{stock.unitOfMeasure}</TableCell>
-                      </TableRow>
-                    ))}
+                    {stocks.map((stock) => {
+                      const product = products?.find(p => p.id === stock.productId);
+                      const isLowStock = product?.minThreshold && parseFloat(stock.quantity) < parseFloat(product.minThreshold);
+                      return (
+                        <TableRow key={stock.productId} data-testid={`stock-row-${stock.productId}`}>
+                          <TableCell className="font-mono">{stock.productCode}</TableCell>
+                          <TableCell className="font-medium">{stock.productName}</TableCell>
+                          <TableCell className="text-right font-semibold tabular-nums">
+                            {parseFloat(stock.quantity).toFixed(2)}
+                          </TableCell>
+                          <TableCell>{stock.unitOfMeasure}</TableCell>
+                          <TableCell>
+                            {isLowStock && (
+                              <Badge variant="destructive" data-testid={`badge-low-stock-${stock.productId}`}>
+                                <AlertTriangle className="h-3 w-3 mr-1" />
+                                Stock Basso
+                              </Badge>
+                            )}
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               ) : (

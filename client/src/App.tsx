@@ -15,6 +15,7 @@ import Products from "@/pages/products";
 import Events from "@/pages/events";
 import EventDetail from "@/pages/event-detail";
 import Warehouse from "@/pages/warehouse";
+import ConsumptionTracking from "@/pages/consumption-tracking";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -61,6 +62,7 @@ function Router() {
               <Route path="/events" component={Events} />
               <Route path="/events/:id" component={EventDetail} />
               <Route path="/warehouse" component={Warehouse} />
+              <Route path="/consumption" component={ConsumptionTracking} />
               <Route component={NotFound} />
             </Switch>
           </main>

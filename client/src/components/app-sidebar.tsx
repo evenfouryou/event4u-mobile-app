@@ -8,6 +8,7 @@ import {
   Users,
   Settings,
   LogOut,
+  ShoppingCart,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
@@ -103,6 +104,23 @@ export function AppSidebar() {
         title: "I Miei Eventi",
         icon: Calendar,
         url: "/",
+        group: "Operazioni",
+      },
+      {
+        title: "Registra Consumi",
+        icon: ShoppingCart,
+        url: "/consumption",
+        group: "Operazioni",
+      }
+    );
+  }
+
+  if (isOrganizer || isWarehouse) {
+    menuItems.push(
+      {
+        title: "Registra Consumi",
+        icon: ShoppingCart,
+        url: "/consumption",
         group: "Operazioni",
       }
     );

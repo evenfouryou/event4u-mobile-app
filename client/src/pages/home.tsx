@@ -71,6 +71,15 @@ export default function Home() {
     enabled: !isSuperAdmin && !isBartender,
   });
 
+  const { data: generalStocks } = useQuery<Array<{
+    productId: string;
+    quantity: string;
+    productName: string;
+  }>>({
+    queryKey: ['/api/stock/general'],
+    enabled: !isSuperAdmin && !isBartender,
+  });
+
   const { data: companies, isLoading: companiesLoading } = useQuery<Company[]>({
     queryKey: ['/api/companies'],
     enabled: isSuperAdmin,
@@ -236,9 +245,12 @@ export default function Home() {
     new Date(e.startDatetime) > new Date() && e.status !== 'closed'
   ).slice(0, 5) || [];
 
-  const lowStockProducts = products?.filter(p => 
-    p.minThreshold && parseFloat(p.costPrice) > 0
-  ).slice(0, 5) || [];
+  const lowStockProducts = products?.filter(p => {
+    if (!p.minThreshold) return false;
+    const stock = generalStocks?.find(s => s.productId === p.id);
+    if (!stock) return false;
+    return parseFloat(stock.quantity) < parseFloat(p.minThreshold);
+  }) || [];
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto">
