@@ -96,6 +96,13 @@ export interface IStorage {
   updatePriceListItem(id: string, companyId: string, item: Partial<PriceListItem>): Promise<PriceListItem | undefined>;
   deletePriceListItem(id: string, companyId: string): Promise<boolean>;
   bulkCreatePriceListItems(items: InsertPriceListItem[], companyId: string): Promise<PriceListItem[]>;
+  
+  // Super admin analytics
+  getSuperAdminAnalytics(): Promise<{
+    companyMetrics: Array<{ companyId: string; companyName: string; eventCount: number; totalRevenue: number }>;
+    topProducts: Array<{ productId: string; productName: string; totalConsumed: number }>;
+    eventStatistics: { total: number; active: number; completed: number };
+  }>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -502,6 +509,62 @@ export class DatabaseStorage implements IStorage {
       const items = await tx.insert(priceListItems).values(itemsList).returning();
       return items;
     });
+  }
+
+  async getSuperAdminAnalytics(): Promise<{
+    companyMetrics: Array<{ companyId: string; companyName: string; eventCount: number; totalRevenue: number }>;
+    topProducts: Array<{ productId: string; productName: string; totalConsumed: number }>;
+    eventStatistics: { total: number; active: number; completed: number };
+  }> {
+    const allCompanies = await db.select().from(companies);
+    const allEvents = await db.select().from(events);
+    const allMovements = await db.select().from(stockMovements).where(eq(stockMovements.type, 'CONSUME'));
+
+    const companyMetrics = allCompanies.map((company) => {
+      const companyEvents = allEvents.filter(e => e.companyId === company.id);
+      const totalRevenue = companyEvents.reduce((sum, e) => {
+        const revenue = parseFloat(e.actualRevenue || '0');
+        return sum + revenue;
+      }, 0);
+      return {
+        companyId: company.id,
+        companyName: company.name,
+        eventCount: companyEvents.length,
+        totalRevenue,
+      };
+    });
+
+    const productConsumptionMap = new Map<string, { productId: string; productName: string; totalConsumed: number }>();
+    const allProducts = await db.select().from(products);
+    
+    for (const movement of allMovements) {
+      const product = allProducts.find(p => p.id === movement.productId);
+      if (product) {
+        const existing = productConsumptionMap.get(movement.productId);
+        const quantity = parseFloat(movement.quantity);
+        if (existing) {
+          existing.totalConsumed += quantity;
+        } else {
+          productConsumptionMap.set(movement.productId, {
+            productId: movement.productId,
+            productName: product.name,
+            totalConsumed: quantity,
+          });
+        }
+      }
+    }
+
+    const topProducts = Array.from(productConsumptionMap.values())
+      .sort((a, b) => b.totalConsumed - a.totalConsumed)
+      .slice(0, 10);
+
+    const eventStatistics = {
+      total: allEvents.length,
+      active: allEvents.filter(e => e.status === 'active').length,
+      completed: allEvents.filter(e => e.status === 'completed').length,
+    };
+
+    return { companyMetrics, topProducts, eventStatistics };
   }
 }
 

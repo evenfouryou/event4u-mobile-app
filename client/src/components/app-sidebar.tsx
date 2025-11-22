@@ -48,6 +48,12 @@ export function AppSidebar() {
   if (isSuperAdmin) {
     menuItems.push(
       {
+        title: "Analytics",
+        icon: BarChart3,
+        url: "/super-admin",
+        group: "Sistema",
+      },
+      {
         title: "Aziende",
         icon: Building2,
         url: "/companies",

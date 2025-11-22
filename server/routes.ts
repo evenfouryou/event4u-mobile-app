@@ -341,6 +341,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== SUPER ADMIN ANALYTICS =====
+  app.get('/api/super-admin/analytics', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Unauthorized: Super Admin access required" });
+      }
+
+      const analytics = await storage.getSuperAdminAnalytics();
+      res.json(analytics);
+    } catch (error) {
+      console.error("Error fetching super admin analytics:", error);
+      res.status(500).json({ message: "Failed to fetch analytics" });
+    }
+  });
+
   // ===== STATIONS =====
   app.get('/api/events/:id/stations', isAuthenticated, async (req: any, res) => {
     try {
