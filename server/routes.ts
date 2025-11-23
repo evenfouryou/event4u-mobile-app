@@ -959,7 +959,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Impersonate user (super_admin only)
+  // Impersonate user (super_admin and gestore)
   app.post('/api/users/:id/impersonate', isAuthenticated, async (req: any, res) => {
     try {
       const sessionUserId = req.user?.claims?.sub || req.user?.id;
@@ -968,9 +968,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const actualUserId = req.session.impersonatorId || sessionUserId;
       const actualUser = await storage.getUser(actualUserId);
       
-      // Only super_admin can impersonate (check the ACTUAL user, not impersonated one)
-      if (!actualUser || actualUser.role !== 'super_admin') {
-        return res.status(403).json({ message: "Forbidden: Super admin access required" });
+      // Only super_admin or gestore can impersonate (check the ACTUAL user, not impersonated one)
+      if (!actualUser || (actualUser.role !== 'super_admin' && actualUser.role !== 'gestore')) {
+        return res.status(403).json({ message: "Forbidden: Admin access required" });
       }
 
       const targetUserId = req.params.id;
@@ -983,6 +983,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Cannot impersonate yourself
       if (targetUserId === actualUserId) {
         return res.status(400).json({ message: "Cannot impersonate yourself" });
+      }
+
+      // Additional restrictions for gestore
+      if (actualUser.role === 'gestore') {
+        // gestore can only impersonate users from their company
+        if (targetUser.companyId !== actualUser.companyId) {
+          return res.status(403).json({ message: "Forbidden: Cannot impersonate users from other companies" });
+        }
+        // gestore cannot impersonate super_admin or other gestore
+        if (targetUser.role === 'super_admin' || targetUser.role === 'gestore') {
+          return res.status(403).json({ message: "Forbidden: Cannot impersonate admin users" });
+        }
       }
 
       // Store the impersonator ID (only once, not on re-impersonation)

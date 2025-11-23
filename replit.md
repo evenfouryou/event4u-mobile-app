@@ -25,15 +25,16 @@ Preferred communication style: Simple, everyday language.
 - **User Account Management**: 
   - Added `isActive` field for user account activation/deactivation
   - Added UI buttons to activate/deactivate user accounts
-  - Added impersonation feature for super_admin users
+  - Added impersonation feature for super_admin and gestore users
+  - Gestore can only impersonate users from their company (excluding super_admin and other gestore)
   - Added security protections: super_admin cannot self-deactivate, admins cannot modify super_admin accounts
 - **Security Enhancements**:
   - Impersonation uses separate `impersonatorId` session field to prevent privilege escalation
   - Role-based protections in user PATCH endpoint
   - Soft delete filters on all station queries to preserve data integrity
 - **New API Endpoints**:
-  - `POST /api/users/:id/impersonate` - Super admin can impersonate any user
-  - `POST /api/users/stop-impersonation` - Return to original super admin session
+  - `POST /api/users/:id/impersonate` - Super admin can impersonate any user; gestore can impersonate users from their company (excluding admins)
+  - `POST /api/users/stop-impersonation` - Return to original admin session
   - `DELETE /api/stations/:id` - Soft delete a station
   - `GET /api/events/:id/stocks` - Returns all stock items transferred to a specific event
   - `GET /api/companies/current` - Returns the company associated with the logged-in user
