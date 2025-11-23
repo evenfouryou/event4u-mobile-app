@@ -9,7 +9,6 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { UserPlus, CheckCircle2 } from "lucide-react";
 import { Link } from "wouter";
 
@@ -19,7 +18,6 @@ const registerSchema = z.object({
   confirmPassword: z.string(),
   firstName: z.string().min(1, "Nome richiesto"),
   lastName: z.string().min(1, "Cognome richiesto"),
-  role: z.enum(['organizer', 'warehouse', 'bartender']).default('organizer'),
 }).refine((data) => data.password === data.confirmPassword, {
   message: "Le password non corrispondono",
   path: ["confirmPassword"],
@@ -39,14 +37,13 @@ export default function Register() {
       confirmPassword: "",
       firstName: "",
       lastName: "",
-      role: "organizer",
     },
   });
 
   const registerMutation = useMutation({
     mutationFn: async (data: RegisterFormValues) => {
       const { confirmPassword, ...registerData } = data;
-      return await apiRequest('POST', '/api/register', registerData);
+      return await apiRequest('POST', '/api/register', { ...registerData, role: 'organizer' });
     },
     onSuccess: () => {
       setRegistrationSuccess(true);
@@ -106,7 +103,7 @@ export default function Register() {
             <div>
               <CardTitle className="text-2xl">Registrazione Event Four You</CardTitle>
               <CardDescription>
-                Crea il tuo account per organizzatori
+                Crea il tuo account organizzatore eventi
               </CardDescription>
             </div>
           </div>
@@ -203,29 +200,6 @@ export default function Register() {
                 />
               </div>
 
-              <FormField
-                control={form.control}
-                name="role"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Ruolo *</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger data-testid="select-role">
-                          <SelectValue placeholder="Seleziona il ruolo" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        <SelectItem value="organizer">Organizzatore</SelectItem>
-                        <SelectItem value="warehouse">Magazziniere</SelectItem>
-                        <SelectItem value="bartender">Barista</SelectItem>
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
               <div className="flex flex-col gap-3 pt-4">
                 <Button 
                   type="submit" 
@@ -238,14 +212,9 @@ export default function Register() {
 
                 <p className="text-sm text-center text-muted-foreground">
                   Hai già un account?{" "}
-                  <button 
-                    type="button"
-                    onClick={() => window.location.href = '/api/login'} 
-                    className="text-primary hover:underline"
-                    data-testid="link-login"
-                  >
+                  <Link href="/login" className="text-primary hover:underline" data-testid="link-login">
                     Accedi
-                  </button>
+                  </Link>
                 </p>
               </div>
             </form>
