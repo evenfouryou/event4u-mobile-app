@@ -18,6 +18,11 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### November 23, 2025
+- **Multi-Bartender Assignment**: Stations now support multiple bartenders assignment instead of single bartender
+  - Changed `assignedUserId` field to `bartenderIds` array in stations schema
+  - Added multi-select checkbox UI for bartender assignment in station creation
+  - Added inline editing UI on station cards to modify assigned bartenders
+  - Bartender validation ensures only users with 'bartender' role from same company can be assigned
 - **Removed Revenue Management**: Removed revenue management section from event detail page
 - **Station Soft Delete**: Implemented soft delete for stations using `deletedAt` field - preserves historical event data
 - **Station Deletion UI**: Added delete button for stations with confirmation dialog
@@ -33,6 +38,7 @@ Preferred communication style: Simple, everyday language.
   - Role-based protections in user PATCH endpoint
   - Soft delete filters on all station queries to preserve data integrity
 - **New API Endpoints**:
+  - `PATCH /api/stations/:id/bartenders` - Update bartenders assigned to a station (validates bartender role and company)
   - `POST /api/users/:id/impersonate` - Super admin can impersonate any user; gestore can impersonate users from their company (excluding admins)
   - `POST /api/users/stop-impersonation` - Return to original admin session
   - `DELETE /api/stations/:id` - Soft delete a station

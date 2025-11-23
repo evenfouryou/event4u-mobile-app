@@ -68,6 +68,8 @@ export default function EventDetail() {
   const [statusChangeDialogOpen, setStatusChangeDialogOpen] = useState(false);
   const [selectedProducts, setSelectedProducts] = useState<Map<string, string>>(new Map());
   const [destinationStationId, setDestinationStationId] = useState<string>('general');
+  const [selectedBartenderIds, setSelectedBartenderIds] = useState<string[]>([]);
+  const [editingStationId, setEditingStationId] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -118,7 +120,7 @@ export default function EventDetail() {
     resolver: zodResolver(insertStationSchema),
     defaultValues: {
       name: '',
-      assignedUserId: '',
+      bartenderIds: [],
       eventId: id,
     },
   });
@@ -132,6 +134,7 @@ export default function EventDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'stations'] });
       setStationDialogOpen(false);
       stationForm.reset();
+      setSelectedBartenderIds([]);
       toast({
         title: "Successo",
         description: "Postazione creata con successo",
@@ -775,7 +778,9 @@ export default function EventDetail() {
                 <DialogTitle>Nuova Postazione</DialogTitle>
               </DialogHeader>
               <Form {...stationForm}>
-                <form onSubmit={stationForm.handleSubmit((data) => createStationMutation.mutate(data))} className="space-y-4">
+                <form onSubmit={stationForm.handleSubmit((data) => {
+                  createStationMutation.mutate({ ...data, bartenderIds: selectedBartenderIds });
+                })} className="space-y-4">
                   <FormField
                     control={stationForm.control}
                     name="name"
@@ -790,31 +795,44 @@ export default function EventDetail() {
                     )}
                   />
 
-                  <FormField
-                    control={stationForm.control}
-                    name="assignedUserId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Barista Assegnato (opzionale)</FormLabel>
-                        <Select onValueChange={(value) => field.onChange(value === 'none' ? undefined : value)} value={field.value || 'none'}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-station-bartender">
-                              <SelectValue placeholder="Seleziona barista" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="none">Nessuno</SelectItem>
-                            {bartenders.map((user) => (
-                              <SelectItem key={user.id} value={user.id}>
-                                {user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
+                  <FormItem>
+                    <FormLabel>Baristi Assegnati (opzionale)</FormLabel>
+                    <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto" data-testid="bartenders-list">
+                      {bartenders && bartenders.length > 0 ? (
+                        bartenders.map((bartender) => (
+                          <div key={bartender.id} className="flex items-center space-x-2">
+                            <Checkbox
+                              id={`bartender-${bartender.id}`}
+                              checked={selectedBartenderIds.includes(bartender.id)}
+                              onCheckedChange={(checked) => {
+                                if (checked) {
+                                  setSelectedBartenderIds([...selectedBartenderIds, bartender.id]);
+                                } else {
+                                  setSelectedBartenderIds(selectedBartenderIds.filter(id => id !== bartender.id));
+                                }
+                              }}
+                              data-testid={`checkbox-bartender-${bartender.id}`}
+                            />
+                            <label
+                              htmlFor={`bartender-${bartender.id}`}
+                              className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                            >
+                              {bartender.firstName && bartender.lastName 
+                                ? `${bartender.firstName} ${bartender.lastName}` 
+                                : bartender.email}
+                            </label>
+                          </div>
+                        ))
+                      ) : (
+                        <p className="text-sm text-muted-foreground">Nessun barista disponibile</p>
+                      )}
+                    </div>
+                    {selectedBartenderIds.length > 0 && (
+                      <p className="text-xs text-muted-foreground mt-2">
+                        {selectedBartenderIds.length} barista/i selezionato/i
+                      </p>
                     )}
-                  />
+                  </FormItem>
 
                   <DialogFooter>
                     <Button
@@ -843,21 +861,118 @@ export default function EventDetail() {
         ) : eventStations && eventStations.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {eventStations.map((station) => {
-              const assignedUser = users?.find(u => u.id === station.assignedUserId);
+              const assignedBartenders = users?.filter(u => station.bartenderIds?.includes(u.id)) || [];
+              const isEditing = editingStationId === station.id;
               return (
                 <Card key={station.id} data-testid={`station-card-${station.id}`}>
                   <CardHeader className="pb-3">
-                    <CardTitle className="text-lg">{station.name}</CardTitle>
+                    <div className="flex items-center justify-between">
+                      <CardTitle className="text-lg">{station.name}</CardTitle>
+                      {!isEditing && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => {
+                            setEditingStationId(station.id);
+                            setSelectedBartenderIds(station.bartenderIds || []);
+                          }}
+                          data-testid={`button-edit-bartenders-${station.id}`}
+                        >
+                          Modifica
+                        </Button>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                      <Users className="h-4 w-4" />
-                      <span>
-                        {assignedUser
-                          ? `${assignedUser.firstName || ''} ${assignedUser.lastName || ''}`.trim() || assignedUser.email
-                          : 'Nessun barista assegnato'}
-                      </span>
-                    </div>
+                    {!isEditing ? (
+                      <div className="space-y-2">
+                        <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                          <Users className="h-4 w-4" />
+                          <span className="font-medium">Baristi:</span>
+                        </div>
+                        {assignedBartenders.length > 0 ? (
+                          <div className="pl-6 space-y-1">
+                            {assignedBartenders.map(bartender => (
+                              <div key={bartender.id} className="text-sm" data-testid={`bartender-${bartender.id}`}>
+                                {bartender.firstName && bartender.lastName 
+                                  ? `${bartender.firstName} ${bartender.lastName}` 
+                                  : bartender.email}
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <p className="text-sm text-muted-foreground pl-6">Nessun barista assegnato</p>
+                        )}
+                      </div>
+                    ) : (
+                      <div className="space-y-3">
+                        <div className="border rounded-md p-2 space-y-2 max-h-40 overflow-y-auto">
+                          {bartenders.map((bartender) => (
+                            <div key={bartender.id} className="flex items-center space-x-2">
+                              <Checkbox
+                                id={`edit-bartender-${station.id}-${bartender.id}`}
+                                checked={selectedBartenderIds.includes(bartender.id)}
+                                onCheckedChange={(checked) => {
+                                  if (checked) {
+                                    setSelectedBartenderIds([...selectedBartenderIds, bartender.id]);
+                                  } else {
+                                    setSelectedBartenderIds(selectedBartenderIds.filter(id => id !== bartender.id));
+                                  }
+                                }}
+                                data-testid={`checkbox-edit-bartender-${bartender.id}`}
+                              />
+                              <label
+                                htmlFor={`edit-bartender-${station.id}-${bartender.id}`}
+                                className="text-sm font-medium leading-none cursor-pointer"
+                              >
+                                {bartender.firstName && bartender.lastName 
+                                  ? `${bartender.firstName} ${bartender.lastName}` 
+                                  : bartender.email}
+                              </label>
+                            </div>
+                          ))}
+                        </div>
+                        <div className="flex gap-2">
+                          <Button
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                await apiRequest('PATCH', `/api/stations/${station.id}/bartenders`, {
+                                  bartenderIds: selectedBartenderIds
+                                });
+                                queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'stations'] });
+                                setEditingStationId(null);
+                                setSelectedBartenderIds([]);
+                                toast({
+                                  title: "Successo",
+                                  description: "Baristi aggiornati con successo",
+                                });
+                              } catch (error) {
+                                toast({
+                                  title: "Errore",
+                                  description: "Impossibile aggiornare i baristi",
+                                  variant: "destructive",
+                                });
+                              }
+                            }}
+                            data-testid={`button-save-bartenders-${station.id}`}
+                          >
+                            Salva
+                          </Button>
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            onClick={() => {
+                              setEditingStationId(null);
+                              setSelectedBartenderIds([]);
+                            }}
+                            data-testid={`button-cancel-bartenders-${station.id}`}
+                          >
+                            Annulla
+                          </Button>
+                        </div>
+                      </div>
+                    )}
                   </CardContent>
                 </Card>
               );

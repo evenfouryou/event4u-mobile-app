@@ -581,6 +581,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Update bartenders assigned to a station
+  app.patch('/api/stations/:id/bartenders', isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+
+      const { bartenderIds } = req.body;
+      if (!Array.isArray(bartenderIds)) {
+        return res.status(400).json({ message: "bartenderIds must be an array" });
+      }
+
+      // Verify all bartender IDs are valid and belong to the same company
+      for (const bartenderId of bartenderIds) {
+        const user = await storage.getUser(bartenderId);
+        if (!user) {
+          return res.status(400).json({ message: `User ${bartenderId} not found` });
+        }
+        if (user.companyId !== companyId) {
+          return res.status(403).json({ message: `User ${bartenderId} is not from your company` });
+        }
+        if (user.role !== 'bartender') {
+          return res.status(400).json({ message: `User ${bartenderId} is not a bartender` });
+        }
+      }
+
+      const station = await storage.updateStation(req.params.id, { bartenderIds });
+      if (!station) {
+        return res.status(404).json({ message: "Station not found" });
+      }
+      res.json(station);
+    } catch (error) {
+      console.error("Error updating station bartenders:", error);
+      res.status(500).json({ message: "Failed to update station bartenders" });
+    }
+  });
+
   // Delete station (preserves event historical data)
   app.delete('/api/stations/:id', isAdminOrSuperAdmin, async (req: any, res) => {
     try {

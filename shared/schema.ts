@@ -126,7 +126,7 @@ export const stations = pgTable("stations", {
   companyId: varchar("company_id").notNull().references(() => companies.id),
   eventId: varchar("event_id").references(() => events.id), // optional - null means general station
   name: varchar("name", { length: 255 }).notNull(),
-  assignedUserId: varchar("assigned_user_id").references(() => users.id),
+  bartenderIds: varchar("bartender_ids").array().default(sql`ARRAY[]::varchar[]`), // Multiple bartenders per station
   deletedAt: timestamp("deleted_at"), // Soft delete - preserves historical data
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
@@ -140,10 +140,6 @@ export const stationsRelations = relations(stations, ({ one, many }) => ({
   event: one(events, {
     fields: [stations.eventId],
     references: [events.id],
-  }),
-  assignedUser: one(users, {
-    fields: [stations.assignedUserId],
-    references: [users.id],
   }),
   stocks: many(stocks),
 }));
@@ -367,6 +363,9 @@ export const insertStationSchema = createInsertSchema(stations).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
+  deletedAt: true,
+}).extend({
+  bartenderIds: z.array(z.string()).optional().default([]),
 });
 
 export const insertProductSchema = createInsertSchema(products).omit({
