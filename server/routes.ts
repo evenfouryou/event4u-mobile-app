@@ -801,6 +801,187 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== PURCHASE ORDERS =====
+  app.get('/api/purchase-orders', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const orders = await storage.getPurchaseOrdersByCompany(companyId);
+      res.json(orders);
+    } catch (error) {
+      console.error("Error fetching purchase orders:", error);
+      res.status(500).json({ message: "Failed to fetch purchase orders" });
+    }
+  });
+
+  app.get('/api/purchase-orders/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const { id } = req.params;
+      const order = await storage.getPurchaseOrder(id, companyId);
+      if (!order) {
+        return res.status(404).json({ message: "Purchase order not found" });
+      }
+      res.json(order);
+    } catch (error) {
+      console.error("Error fetching purchase order:", error);
+      res.status(500).json({ message: "Failed to fetch purchase order" });
+    }
+  });
+
+  app.post('/api/purchase-orders', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const userId = req.user?.claims?.sub || req.user?.id;
+      const { insertPurchaseOrderSchema } = await import('@shared/schema');
+      const validated = insertPurchaseOrderSchema.parse({
+        ...req.body,
+        companyId,
+        createdBy: userId,
+      });
+      const order = await storage.createPurchaseOrder(validated);
+      res.json(order);
+    } catch (error: any) {
+      console.error("Error creating purchase order:", error);
+      res.status(400).json({ message: error.message || "Failed to create purchase order" });
+    }
+  });
+
+  app.patch('/api/purchase-orders/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const { id } = req.params;
+      const { updatePurchaseOrderSchema } = await import('@shared/schema');
+      const validated = updatePurchaseOrderSchema.parse(req.body);
+      const order = await storage.updatePurchaseOrder(id, companyId, validated);
+      if (!order) {
+        return res.status(404).json({ message: "Purchase order not found" });
+      }
+      res.json(order);
+    } catch (error: any) {
+      console.error("Error updating purchase order:", error);
+      res.status(400).json({ message: error.message || "Failed to update purchase order" });
+    }
+  });
+
+  app.delete('/api/purchase-orders/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const { id } = req.params;
+      const deleted = await storage.deletePurchaseOrder(id, companyId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Purchase order not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting purchase order:", error);
+      res.status(500).json({ message: "Failed to delete purchase order" });
+    }
+  });
+
+  // Purchase Order Items endpoints
+  app.get('/api/purchase-orders/:orderId/items', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const { orderId } = req.params;
+      const items = await storage.getPurchaseOrderItems(orderId, companyId);
+      res.json(items);
+    } catch (error) {
+      console.error("Error fetching purchase order items:", error);
+      res.status(500).json({ message: "Failed to fetch purchase order items" });
+    }
+  });
+
+  app.post('/api/purchase-orders/:orderId/items', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const { orderId } = req.params;
+      const { insertPurchaseOrderItemSchema } = await import('@shared/schema');
+      const validated = insertPurchaseOrderItemSchema.parse({
+        ...req.body,
+        purchaseOrderId: orderId,
+      });
+      const item = await storage.createPurchaseOrderItem(validated, companyId);
+      res.json(item);
+    } catch (error: any) {
+      console.error("Error creating purchase order item:", error);
+      res.status(400).json({ message: error.message || "Failed to create purchase order item" });
+    }
+  });
+
+  app.patch('/api/purchase-orders/:orderId/items/:itemId', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const { itemId } = req.params;
+      const { updatePurchaseOrderItemSchema } = await import('@shared/schema');
+      const validated = updatePurchaseOrderItemSchema.parse(req.body);
+      const item = await storage.updatePurchaseOrderItem(itemId, companyId, validated);
+      if (!item) {
+        return res.status(404).json({ message: "Purchase order item not found" });
+      }
+      res.json(item);
+    } catch (error: any) {
+      console.error("Error updating purchase order item:", error);
+      res.status(400).json({ message: error.message || "Failed to update purchase order item" });
+    }
+  });
+
+  app.delete('/api/purchase-orders/:orderId/items/:itemId', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const { itemId } = req.params;
+      const deleted = await storage.deletePurchaseOrderItem(itemId, companyId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Purchase order item not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting purchase order item:", error);
+      res.status(500).json({ message: "Failed to delete purchase order item" });
+    }
+  });
+
+  // Endpoint per generare ordini suggeriti in base a scorte minime e consumi
+  app.post('/api/purchase-orders/suggested', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const suggestedOrders = await storage.generateSuggestedOrders(companyId);
+      res.json(suggestedOrders);
+    } catch (error) {
+      console.error("Error generating suggested orders:", error);
+      res.status(500).json({ message: "Failed to generate suggested orders" });
+    }
+  });
+
   // ===== USERS =====
   app.get('/api/users', isAuthenticated, async (req: any, res) => {
     try {

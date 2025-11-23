@@ -11,6 +11,8 @@ import {
   priceListItems,
   stocks,
   stockMovements,
+  purchaseOrders,
+  purchaseOrderItems,
   type User,
   type UpsertUser,
   type Company,
@@ -32,9 +34,13 @@ import {
   type Stock,
   type StockMovement,
   type InsertStockMovement,
+  type PurchaseOrder,
+  type InsertPurchaseOrder,
+  type PurchaseOrderItem,
+  type InsertPurchaseOrderItem,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, isNull, inArray } from "drizzle-orm";
+import { eq, and, isNull, inArray, sql, desc } from "drizzle-orm";
 
 export interface IStorage {
   // User operations - Required for Replit Auth
@@ -113,6 +119,31 @@ export interface IStorage {
   updatePriceListItem(id: string, companyId: string, item: Partial<PriceListItem>): Promise<PriceListItem | undefined>;
   deletePriceListItem(id: string, companyId: string): Promise<boolean>;
   bulkCreatePriceListItems(items: InsertPriceListItem[], companyId: string): Promise<PriceListItem[]>;
+  
+  // Purchase Order operations
+  getPurchaseOrdersByCompany(companyId: string): Promise<PurchaseOrder[]>;
+  getPurchaseOrder(id: string, companyId: string): Promise<PurchaseOrder | undefined>;
+  createPurchaseOrder(order: InsertPurchaseOrder): Promise<PurchaseOrder>;
+  updatePurchaseOrder(id: string, companyId: string, order: Partial<PurchaseOrder>): Promise<PurchaseOrder | undefined>;
+  deletePurchaseOrder(id: string, companyId: string): Promise<boolean>;
+  
+  // Purchase Order Item operations
+  getPurchaseOrderItems(orderId: string, companyId: string): Promise<PurchaseOrderItem[]>;
+  createPurchaseOrderItem(item: InsertPurchaseOrderItem, companyId: string): Promise<PurchaseOrderItem>;
+  updatePurchaseOrderItem(id: string, companyId: string, item: Partial<PurchaseOrderItem>): Promise<PurchaseOrderItem | undefined>;
+  deletePurchaseOrderItem(id: string, companyId: string): Promise<boolean>;
+  
+  // Suggested orders based on alerts and consumption
+  generateSuggestedOrders(companyId: string): Promise<Array<{
+    productId: string;
+    productName: string;
+    productCode: string;
+    currentStock: number;
+    minThreshold: number;
+    avgConsumption: number;
+    suggestedQuantity: number;
+    reason: string;
+  }>>;
   
   // Super admin analytics
   getSuperAdminAnalytics(): Promise<{
@@ -678,6 +709,186 @@ export class DatabaseStorage implements IStorage {
     };
 
     return { companyMetrics, topProducts, eventStatistics };
+  }
+
+  // Purchase Order operations
+  async getPurchaseOrdersByCompany(companyId: string): Promise<PurchaseOrder[]> {
+    return await db.select().from(purchaseOrders)
+      .where(eq(purchaseOrders.companyId, companyId))
+      .orderBy(desc(purchaseOrders.orderDate));
+  }
+
+  async getPurchaseOrder(id: string, companyId: string): Promise<PurchaseOrder | undefined> {
+    const [order] = await db.select().from(purchaseOrders)
+      .where(and(
+        eq(purchaseOrders.id, id),
+        eq(purchaseOrders.companyId, companyId)
+      ));
+    return order;
+  }
+
+  async createPurchaseOrder(orderData: InsertPurchaseOrder): Promise<PurchaseOrder> {
+    const [order] = await db.insert(purchaseOrders).values(orderData).returning();
+    return order;
+  }
+
+  async updatePurchaseOrder(id: string, companyId: string, orderData: Partial<PurchaseOrder>): Promise<PurchaseOrder | undefined> {
+    const [order] = await db.update(purchaseOrders)
+      .set({ ...orderData, updatedAt: new Date() })
+      .where(and(
+        eq(purchaseOrders.id, id),
+        eq(purchaseOrders.companyId, companyId)
+      ))
+      .returning();
+    return order;
+  }
+
+  async deletePurchaseOrder(id: string, companyId: string): Promise<boolean> {
+    // Delete order items first
+    await db.delete(purchaseOrderItems).where(eq(purchaseOrderItems.purchaseOrderId, id));
+    
+    const result = await db.delete(purchaseOrders)
+      .where(and(
+        eq(purchaseOrders.id, id),
+        eq(purchaseOrders.companyId, companyId)
+      ));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Purchase Order Item operations
+  async getPurchaseOrderItems(orderId: string, companyId: string): Promise<PurchaseOrderItem[]> {
+    // Verify order belongs to company
+    const order = await this.getPurchaseOrder(orderId, companyId);
+    if (!order) return [];
+    
+    return await db.select().from(purchaseOrderItems)
+      .where(eq(purchaseOrderItems.purchaseOrderId, orderId));
+  }
+
+  async createPurchaseOrderItem(itemData: InsertPurchaseOrderItem, companyId: string): Promise<PurchaseOrderItem> {
+    // Verify order belongs to company
+    const order = await this.getPurchaseOrder(itemData.purchaseOrderId, companyId);
+    if (!order) {
+      throw new Error('Purchase order not found or access denied');
+    }
+    
+    const [item] = await db.insert(purchaseOrderItems).values(itemData).returning();
+    return item;
+  }
+
+  async updatePurchaseOrderItem(id: string, companyId: string, itemData: Partial<PurchaseOrderItem>): Promise<PurchaseOrderItem | undefined> {
+    // First get the item to verify it belongs to a company order
+    const [existingItem] = await db.select().from(purchaseOrderItems).where(eq(purchaseOrderItems.id, id));
+    if (!existingItem) return undefined;
+    
+    const order = await this.getPurchaseOrder(existingItem.purchaseOrderId, companyId);
+    if (!order) return undefined;
+    
+    const [item] = await db.update(purchaseOrderItems)
+      .set({ ...itemData, updatedAt: new Date() })
+      .where(eq(purchaseOrderItems.id, id))
+      .returning();
+    return item;
+  }
+
+  async deletePurchaseOrderItem(id: string, companyId: string): Promise<boolean> {
+    // First get the item to verify it belongs to a company order
+    const [existingItem] = await db.select().from(purchaseOrderItems).where(eq(purchaseOrderItems.id, id));
+    if (!existingItem) return false;
+    
+    const order = await this.getPurchaseOrder(existingItem.purchaseOrderId, companyId);
+    if (!order) return false;
+    
+    const result = await db.delete(purchaseOrderItems).where(eq(purchaseOrderItems.id, id));
+    return (result.rowCount ?? 0) > 0;
+  }
+
+  // Generate suggested orders based on alerts (low stock) and consumption patterns
+  async generateSuggestedOrders(companyId: string): Promise<Array<{
+    productId: string;
+    productName: string;
+    productCode: string;
+    currentStock: number;
+    minThreshold: number;
+    avgConsumption: number;
+    suggestedQuantity: number;
+    reason: string;
+  }>> {
+    // Get all products with minimum thresholds
+    const companyProducts = await db.select().from(products)
+      .where(and(
+        eq(products.companyId, companyId),
+        eq(products.active, true)
+      ));
+    
+    // Get general stocks
+    const generalStocks = await this.getGeneralStocks(companyId);
+    
+    // Get consumption movements (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const consumptionMovements = await db.select().from(stockMovements)
+      .where(and(
+        eq(stockMovements.companyId, companyId),
+        eq(stockMovements.type, 'CONSUME')
+      ));
+    
+    const suggestions = [];
+    
+    for (const product of companyProducts) {
+      const stock = generalStocks.find(s => s.productId === product.id);
+      const currentStock = stock ? parseFloat(stock.quantity) : 0;
+      const minThreshold = product.minThreshold ? parseFloat(product.minThreshold) : 0;
+      
+      // Calculate average consumption from last 30 days
+      const productConsumptions = consumptionMovements.filter(m => m.productId === product.id);
+      const totalConsumed = productConsumptions.reduce((sum, m) => sum + parseFloat(m.quantity), 0);
+      const avgConsumption = productConsumptions.length > 0 ? totalConsumed / 30 : 0; // Daily average
+      
+      let shouldOrder = false;
+      let reason = '';
+      let suggestedQuantity = 0;
+      
+      // Case 1: Stock below minimum threshold (ALERT)
+      if (minThreshold > 0 && currentStock < minThreshold) {
+        shouldOrder = true;
+        reason = 'Scorta sotto soglia minima';
+        // Order enough to reach 2x minimum threshold + 1 week consumption
+        suggestedQuantity = (minThreshold * 2 - currentStock) + (avgConsumption * 7);
+      }
+      
+      // Case 2: High consumption rate - predict stock out in next 7 days
+      else if (avgConsumption > 0) {
+        const daysUntilStockOut = currentStock / avgConsumption;
+        if (daysUntilStockOut < 7) {
+          shouldOrder = true;
+          reason = 'Consumo elevato - scorta per meno di 7 giorni';
+          // Order for 30 days consumption
+          suggestedQuantity = avgConsumption * 30;
+        }
+      }
+      
+      if (shouldOrder && suggestedQuantity > 0) {
+        suggestions.push({
+          productId: product.id,
+          productName: product.name,
+          productCode: product.code,
+          currentStock,
+          minThreshold,
+          avgConsumption,
+          suggestedQuantity: Math.ceil(suggestedQuantity), // Round up
+          reason,
+        });
+      }
+    }
+    
+    return suggestions.sort((a, b) => {
+      // Sort by urgency: products with lower stock first
+      const aUrgency = a.currentStock / (a.minThreshold || 1);
+      const bUrgency = b.currentStock / (b.minThreshold || 1);
+      return aUrgency - bUrgency;
+    });
   }
 }
 
