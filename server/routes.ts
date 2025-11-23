@@ -4,7 +4,8 @@ import { createServer, type Server } from "http";
 import { storage } from "./storage";
 // Replit Auth disabled - using classic email/password login
 // import { setupAuth, isAuthenticated } from "./replitAuth";
-import { isAuthenticated } from "./replitAuth";
+import { getSession } from "./replitAuth";
+import passport from "passport";
 import {
   insertCompanySchema,
   insertLocationSchema,
@@ -19,8 +20,15 @@ import { z } from "zod";
 import nodemailer from "nodemailer";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Replit Auth disabled - using classic email/password login only
-  // await setupAuth(app);
+  // Setup passport for classic email/password authentication (no Replit OAuth)
+  app.set("trust proxy", 1);
+  app.use(getSession());
+  app.use(passport.initialize());
+  app.use(passport.session());
+  
+  // Passport serialization for classic login
+  passport.serializeUser((user: Express.User, cb) => cb(null, user));
+  passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
   // Email transporter setup
   const emailTransporter = nodemailer.createTransport({
@@ -155,6 +163,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Login failed" });
     }
   });
+
+  // Custom authentication middleware for classic login
+  const isAuthenticated = (req: any, res: any, next: any) => {
+    if (!req.isAuthenticated() || !req.user?.claims?.sub) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    next();
+  };
 
   // Auth routes
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
