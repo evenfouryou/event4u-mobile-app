@@ -147,7 +147,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Use passport login to properly set up session
-      (req as any).login({ claims: { sub: user.id, email: user.email } }, (err: any) => {
+      (req as any).login({ 
+        claims: { sub: user.id, email: user.email },
+        role: user.role,
+        companyId: user.companyId
+      }, (err: any) => {
         if (err) {
           console.error("Session creation error:", err);
           return res.status(500).json({ message: "Login failed" });
