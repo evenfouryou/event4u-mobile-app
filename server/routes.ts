@@ -178,6 +178,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   };
 
+  // Middleware per verificare se l'utente è admin o super_admin
+  const isAdminOrSuperAdmin = (req: any, res: any, next: any) => {
+    if (!req.isAuthenticated() || !req.user?.claims?.sub) {
+      return res.status(401).json({ message: "Unauthorized" });
+    }
+    const userRole = req.user?.role;
+    if (userRole === 'super_admin' || userRole === 'admin') {
+      return next();
+    }
+    res.status(403).json({ message: "Accesso negato: privilegi amministrativi richiesti" });
+  };
+
   // Auth routes
   // Helper: Remove sensitive fields from user object
   const sanitizeUser = (user: any) => {
@@ -342,7 +354,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/events', isAuthenticated, async (req: any, res) => {
+  app.post('/api/events', isAdminOrSuperAdmin, async (req: any, res) => {
     try {
       const companyId = await getUserCompanyId(req);
       if (!companyId) {
@@ -503,7 +515,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/products', isAuthenticated, async (req: any, res) => {
+  app.post('/api/products', isAdminOrSuperAdmin, async (req: any, res) => {
     try {
       const companyId = await getUserCompanyId(req);
       if (!companyId) {
@@ -1125,7 +1137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/price-lists', isAuthenticated, async (req: any, res) => {
+  app.post('/api/price-lists', isAdminOrSuperAdmin, async (req: any, res) => {
     try {
       const companyId = await getUserCompanyId(req);
       if (!companyId) {
