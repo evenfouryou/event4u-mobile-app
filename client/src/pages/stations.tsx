@@ -16,6 +16,16 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Form,
   FormControl,
   FormField,
@@ -41,7 +51,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Boxes, Edit } from "lucide-react";
+import { Plus, Boxes, Edit, Trash2 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -60,6 +70,7 @@ export default function StationsPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingStation, setEditingStation] = useState<Station | null>(null);
   const [stationType, setStationType] = useState<'general' | 'event'>('general');
+  const [deleteStationId, setDeleteStationId] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -152,6 +163,36 @@ export default function StationsPage() {
       toast({
         title: "Errore",
         description: error.message || "Impossibile aggiornare la postazione",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest('DELETE', `/api/stations/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/stations'] });
+      setDeleteStationId(null);
+      toast({
+        title: "Successo",
+        description: "Postazione eliminata con successo. I dati degli eventi sono stati conservati.",
+      });
+    },
+    onError: (error: any) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Non autorizzato",
+          description: "Effettua nuovamente il login...",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = '/api/login', 500);
+        return;
+      }
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile eliminare la postazione",
         variant: "destructive",
       });
     },
@@ -415,15 +456,26 @@ export default function StationsPage() {
                         </Badge>
                       </TableCell>
                       <TableCell>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleEdit(station)}
-                          disabled={!canCreateStations}
-                          data-testid={`button-edit-station-${station.id}`}
-                        >
-                          <Edit className="h-4 w-4" />
-                        </Button>
+                        <div className="flex gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEdit(station)}
+                            disabled={!canCreateStations}
+                            data-testid={`button-edit-station-${station.id}`}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => setDeleteStationId(station.id)}
+                            disabled={!canCreateStations}
+                            data-testid={`button-delete-station-${station.id}`}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -446,6 +498,29 @@ export default function StationsPage() {
           </CardContent>
         </Card>
       )}
+
+      <AlertDialog open={!!deleteStationId} onOpenChange={(open) => !open && setDeleteStationId(null)}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Conferma Eliminazione</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sei sicuro di voler eliminare questa postazione? I dati storici degli eventi associati saranno conservati.
+              Questa azione non può essere annullata.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-delete-station">
+              Annulla
+            </AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteStationId && deleteMutation.mutate(deleteStationId)}
+              data-testid="button-confirm-delete-station"
+            >
+              Elimina
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
