@@ -69,6 +69,7 @@ export default function EventDetail() {
   const [selectedProducts, setSelectedProducts] = useState<Map<string, string>>(new Map());
   const [destinationStationId, setDestinationStationId] = useState<string>('general');
   const [selectedBartenderIds, setSelectedBartenderIds] = useState<string[]>([]);
+  const [editingBartenderIds, setEditingBartenderIds] = useState<Map<string, string[]>>(new Map());
   const [editingStationId, setEditingStationId] = useState<string | null>(null);
   const { toast } = useToast();
   const { user } = useAuth();
@@ -153,6 +154,39 @@ export default function EventDetail() {
       toast({
         title: "Errore",
         description: "Impossibile creare la postazione",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updateBartendersMutation = useMutation({
+    mutationFn: async ({ stationId, bartenderIds }: { stationId: string; bartenderIds: string[] }) => {
+      await apiRequest('PATCH', `/api/stations/${stationId}/bartenders`, { bartenderIds });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'stations'] });
+      setEditingStationId(null);
+      const newMap = new Map(editingBartenderIds);
+      newMap.delete(variables.stationId);
+      setEditingBartenderIds(newMap);
+      toast({
+        title: "Successo",
+        description: "Baristi aggiornati con successo",
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Non autorizzato",
+          description: "Effettua nuovamente il login...",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = '/api/login', 500);
+        return;
+      }
+      toast({
+        title: "Errore",
+        description: "Impossibile aggiornare i baristi",
         variant: "destructive",
       });
     },
@@ -874,7 +908,9 @@ export default function EventDetail() {
                           variant="ghost"
                           onClick={() => {
                             setEditingStationId(station.id);
-                            setSelectedBartenderIds(station.bartenderIds || []);
+                            const newMap = new Map(editingBartenderIds);
+                            newMap.set(station.id, station.bartenderIds || []);
+                            setEditingBartenderIds(newMap);
                           }}
                           data-testid={`button-edit-bartenders-${station.id}`}
                         >
@@ -907,64 +943,59 @@ export default function EventDetail() {
                     ) : (
                       <div className="space-y-3">
                         <div className="border rounded-md p-2 space-y-2 max-h-40 overflow-y-auto">
-                          {bartenders.map((bartender) => (
-                            <div key={bartender.id} className="flex items-center space-x-2">
-                              <Checkbox
-                                id={`edit-bartender-${station.id}-${bartender.id}`}
-                                checked={selectedBartenderIds.includes(bartender.id)}
-                                onCheckedChange={(checked) => {
-                                  if (checked) {
-                                    setSelectedBartenderIds([...selectedBartenderIds, bartender.id]);
-                                  } else {
-                                    setSelectedBartenderIds(selectedBartenderIds.filter(id => id !== bartender.id));
-                                  }
-                                }}
-                                data-testid={`checkbox-edit-bartender-${bartender.id}`}
-                              />
-                              <label
-                                htmlFor={`edit-bartender-${station.id}-${bartender.id}`}
-                                className="text-sm font-medium leading-none cursor-pointer"
-                              >
-                                {bartender.firstName && bartender.lastName 
-                                  ? `${bartender.firstName} ${bartender.lastName}` 
-                                  : bartender.email}
-                              </label>
-                            </div>
-                          ))}
+                          {bartenders.map((bartender) => {
+                            const currentIds = editingBartenderIds.get(station.id) || [];
+                            return (
+                              <div key={bartender.id} className="flex items-center space-x-2">
+                                <Checkbox
+                                  id={`edit-bartender-${station.id}-${bartender.id}`}
+                                  checked={currentIds.includes(bartender.id)}
+                                  onCheckedChange={(checked) => {
+                                    const newMap = new Map(editingBartenderIds);
+                                    if (checked) {
+                                      newMap.set(station.id, [...currentIds, bartender.id]);
+                                    } else {
+                                      newMap.set(station.id, currentIds.filter(id => id !== bartender.id));
+                                    }
+                                    setEditingBartenderIds(newMap);
+                                  }}
+                                  data-testid={`checkbox-edit-bartender-${bartender.id}`}
+                                />
+                                <label
+                                  htmlFor={`edit-bartender-${station.id}-${bartender.id}`}
+                                  className="text-sm font-medium leading-none cursor-pointer"
+                                >
+                                  {bartender.firstName && bartender.lastName 
+                                    ? `${bartender.firstName} ${bartender.lastName}` 
+                                    : bartender.email}
+                                </label>
+                              </div>
+                            );
+                          })}
                         </div>
                         <div className="flex gap-2">
                           <Button
                             size="sm"
-                            onClick={async () => {
-                              try {
-                                await apiRequest('PATCH', `/api/stations/${station.id}/bartenders`, {
-                                  bartenderIds: selectedBartenderIds
-                                });
-                                queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'stations'] });
-                                setEditingStationId(null);
-                                setSelectedBartenderIds([]);
-                                toast({
-                                  title: "Successo",
-                                  description: "Baristi aggiornati con successo",
-                                });
-                              } catch (error) {
-                                toast({
-                                  title: "Errore",
-                                  description: "Impossibile aggiornare i baristi",
-                                  variant: "destructive",
-                                });
-                              }
+                            onClick={() => {
+                              const currentIds = editingBartenderIds.get(station.id) || [];
+                              updateBartendersMutation.mutate({
+                                stationId: station.id,
+                                bartenderIds: currentIds
+                              });
                             }}
+                            disabled={updateBartendersMutation.isPending}
                             data-testid={`button-save-bartenders-${station.id}`}
                           >
-                            Salva
+                            {updateBartendersMutation.isPending ? "Salvataggio..." : "Salva"}
                           </Button>
                           <Button
                             size="sm"
                             variant="outline"
                             onClick={() => {
                               setEditingStationId(null);
-                              setSelectedBartenderIds([]);
+                              const newMap = new Map(editingBartenderIds);
+                              newMap.delete(station.id);
+                              setEditingBartenderIds(newMap);
                             }}
                             data-testid={`button-cancel-bartenders-${station.id}`}
                           >
