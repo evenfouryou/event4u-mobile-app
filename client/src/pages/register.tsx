@@ -84,10 +84,10 @@ export default function Register() {
             </p>
             <Button 
               className="w-full" 
-              onClick={() => window.location.href = '/api/login'}
+              asChild
               data-testid="button-go-to-login"
             >
-              Vai al Login
+              <Link href="/login">Vai al Login</Link>
             </Button>
           </CardContent>
         </Card>
@@ -104,7 +104,7 @@ export default function Register() {
               <UserPlus className="h-6 w-6 text-primary" />
             </div>
             <div>
-              <CardTitle className="text-2xl">Registrazione Event4U</CardTitle>
+              <CardTitle className="text-2xl">Registrazione Event Four You</CardTitle>
               <CardDescription>
                 Crea il tuo account per organizzatori
               </CardDescription>

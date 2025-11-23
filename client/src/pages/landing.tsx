@@ -10,15 +10,15 @@ export default function Landing() {
         <div className="container mx-auto px-6 py-4 flex items-center justify-between">
           <div className="flex items-center gap-2">
             <Calendar className="h-6 w-6 text-primary" />
-            <h1 className="text-xl font-semibold">Event4U</h1>
+            <h1 className="text-xl font-semibold">Event Four You</h1>
           </div>
           <div className="flex gap-3">
             <Button
               variant="outline"
-              onClick={() => window.location.href = '/api/login'}
+              asChild
               data-testid="button-login"
             >
-              Accedi
+              <Link href="/login">Accedi</Link>
             </Button>
             <Button
               asChild
@@ -52,10 +52,10 @@ export default function Landing() {
               <Button
                 size="lg"
                 variant="outline"
-                onClick={() => window.location.href = '/api/login'}
+                asChild
                 data-testid="button-login-hero"
               >
-                Accedi
+                <Link href="/login">Accedi</Link>
               </Button>
             </div>
           </div>
@@ -131,10 +131,10 @@ export default function Landing() {
                 <Button
                   size="lg"
                   variant="outline"
-                  onClick={() => window.location.href = '/api/login'}
+                  asChild
                   data-testid="button-login-footer"
                 >
-                  Accedi
+                  <Link href="/login">Accedi</Link>
                 </Button>
               </div>
             </div>
@@ -144,7 +144,7 @@ export default function Landing() {
 
       <footer className="border-t py-8">
         <div className="container mx-auto px-6 text-center text-sm text-muted-foreground">
-          © {new Date().getFullYear()} Event4U. Sistema di gestione eventi e inventario.
+          © {new Date().getFullYear()} Event Four You. Sistema di gestione eventi e inventario.
         </div>
       </footer>
     </div>

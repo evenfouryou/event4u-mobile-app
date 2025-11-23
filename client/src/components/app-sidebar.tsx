@@ -198,7 +198,7 @@ export function AppSidebar() {
     <Sidebar>
       <SidebarContent className="p-4">
         <div className="mb-6 px-2">
-          <h2 className="text-xl font-semibold tracking-tight">Event4U</h2>
+          <h2 className="text-xl font-semibold tracking-tight">Event Four You</h2>
           <p className="text-sm text-muted-foreground mt-1">
             Gestione Eventi
           </p>

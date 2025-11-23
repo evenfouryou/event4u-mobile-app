@@ -17,6 +17,7 @@ import EventDetail from "@/pages/event-detail";
 import Warehouse from "@/pages/warehouse";
 import ConsumptionTracking from "@/pages/consumption-tracking";
 import Register from "@/pages/register";
+import Login from "@/pages/login";
 import PriceLists from "@/pages/price-lists";
 import ImportPage from "@/pages/import";
 import Reports from "@/pages/reports";
@@ -46,6 +47,7 @@ function Router() {
     return (
       <Switch>
         <Route path="/" component={Landing} />
+        <Route path="/login" component={Login} />
         <Route path="/register" component={Register} />
         <Route component={NotFound} />
       </Switch>

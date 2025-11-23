@@ -2,7 +2,9 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
-import { setupAuth, isAuthenticated } from "./replitAuth";
+// Replit Auth disabled - using classic email/password login
+// import { setupAuth, isAuthenticated } from "./replitAuth";
+import { isAuthenticated } from "./replitAuth";
 import {
   insertCompanySchema,
   insertLocationSchema,
@@ -17,7 +19,8 @@ import { z } from "zod";
 import nodemailer from "nodemailer";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  await setupAuth(app);
+  // Replit Auth disabled - using classic email/password login only
+  // await setupAuth(app);
 
   // Email transporter setup
   const emailTransporter = nodemailer.createTransport({
@@ -72,14 +75,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
           to: user.email,
           subject: 'Benvenuto su Event4U',
           html: `
-            <h2>Benvenuto su Event4U, ${user.firstName}!</h2>
+            <h2>Benvenuto su Event Four You, ${user.firstName}!</h2>
             <p>Il tuo account è stato creato con successo.</p>
             <p><strong>Email:</strong> ${user.email}</p>
             <p><strong>Ruolo:</strong> ${user.role}</p>
             <p>Puoi accedere alla piattaforma con le credenziali fornite.</p>
             <p>Grazie per esserti registrato!</p>
             <br/>
-            <p>Il Team Event4U</p>
+            <p>Il Team Event Four You</p>
           `,
         });
       } catch (emailError) {
@@ -103,6 +106,53 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: error.errors[0].message });
       }
       res.status(500).json({ message: "Registration failed" });
+    }
+  });
+
+  // Classic email/password login
+  app.post('/api/auth/login', async (req, res) => {
+    try {
+      const { email, password } = req.body;
+      
+      if (!email || !password) {
+        return res.status(400).json({ message: "Email e password richiesti" });
+      }
+
+      const user = await storage.getUserByEmail(email);
+      if (!user || !user.passwordHash) {
+        return res.status(401).json({ message: "Credenziali non valide" });
+      }
+
+      const isValidPassword = await bcrypt.compare(password, user.passwordHash);
+      if (!isValidPassword) {
+        return res.status(401).json({ message: "Credenziali non valide" });
+      }
+
+      if (!user.emailVerified) {
+        return res.status(403).json({ message: "Email non verificata" });
+      }
+
+      // Use passport login to properly set up session
+      (req as any).login({ claims: { sub: user.id, email: user.email } }, (err: any) => {
+        if (err) {
+          console.error("Session creation error:", err);
+          return res.status(500).json({ message: "Login failed" });
+        }
+        
+        res.json({ 
+          message: "Login successful",
+          user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            role: user.role,
+          }
+        });
+      });
+    } catch (error: any) {
+      console.error("Login error:", error);
+      res.status(500).json({ message: "Login failed" });
     }
   });
 

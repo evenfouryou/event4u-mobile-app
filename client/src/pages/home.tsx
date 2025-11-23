@@ -92,7 +92,7 @@ export default function Home() {
           <div>
             <h1 className="text-2xl font-semibold mb-1">Dashboard Super Admin</h1>
             <p className="text-muted-foreground">
-              Panoramica sistema Event4U
+              Panoramica sistema Event Four You
             </p>
           </div>
           <Button asChild data-testid="button-create-company">

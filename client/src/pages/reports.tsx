@@ -88,7 +88,7 @@ export default function Reports() {
     
     // Header
     pdf.setFontSize(20);
-    pdf.text("Event4U - Report Fine Serata", pageWidth / 2, 20, { align: "center" });
+    pdf.text("Event Four You - Report Fine Serata", pageWidth / 2, 20, { align: "center" });
     
     pdf.setFontSize(12);
     pdf.text(`Evento: ${event.name}`, 20, 35);
@@ -147,7 +147,7 @@ export default function Reports() {
 
     // Summary sheet
     const summaryData = [
-      ["Event4U - Report Fine Serata"],
+      ["Event Four You - Report Fine Serata"],
       [""],
       ["Evento", event.name],
       ["Data", new Date((event as any).startDatetime || (event as any).eventDate).toLocaleDateString('it-IT')],
