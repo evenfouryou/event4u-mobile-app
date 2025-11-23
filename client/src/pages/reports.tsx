@@ -33,6 +33,13 @@ type ReportData = {
     }>;
     totalCost: number;
   }>;
+  consumedProducts: Array<{
+    productId: string;
+    productName: string;
+    totalQuantity: number;
+    costPrice: string;
+    totalCost: number;
+  }>;
   totalCost: number;
 };
 
@@ -99,6 +106,33 @@ export default function Reports() {
 
     let yPosition = 70;
 
+    // Riepilogo Totale Consumo Beverage
+    if (reportData.consumedProducts && reportData.consumedProducts.length > 0) {
+      pdf.setFontSize(14);
+      pdf.setFont('helvetica', 'bold');
+      pdf.text("Riepilogo Consumo Beverage", 20, yPosition);
+      yPosition += 10;
+      
+      pdf.setFont('helvetica', 'normal');
+      pdf.setFontSize(10);
+      
+      reportData.consumedProducts.forEach((product) => {
+        if (yPosition > 270) {
+          pdf.addPage();
+          yPosition = 20;
+        }
+        
+        pdf.text(
+          `${product.productName}: ${product.totalQuantity.toFixed(2)} x €${parseFloat(product.costPrice).toFixed(2)} = €${product.totalCost.toFixed(2)}`,
+          20,
+          yPosition
+        );
+        yPosition += 6;
+      });
+      
+      yPosition += 15;
+    }
+
     // Station reports
     reportData.stations.forEach((station) => {
       if (yPosition > 250) {
@@ -107,11 +141,11 @@ export default function Reports() {
       }
 
       pdf.setFontSize(12);
-      pdf.setFont(undefined, 'bold');
+      pdf.setFont('helvetica', 'bold');
       pdf.text(`Postazione: ${station.stationName}`, 20, yPosition);
       yPosition += 7;
       
-      pdf.setFont(undefined, 'normal');
+      pdf.setFont('helvetica', 'normal');
       pdf.text(`Costo: €${station.totalCost.toFixed(2)}`, 20, yPosition);
       yPosition += 10;
 
@@ -177,6 +211,29 @@ export default function Reports() {
 
     const detailedWs = XLSX.utils.aoa_to_sheet(detailedData);
     XLSX.utils.book_append_sheet(wb, detailedWs, "Dettaglio");
+
+    // Consumo Beverage sheet
+    if (reportData.consumedProducts && reportData.consumedProducts.length > 0) {
+      const beverageData: any[] = [
+        ["Riepilogo Consumo Beverage"],
+        [""],
+        ["Prodotto", "Quantità Totale", "Prezzo Unitario", "Costo Totale"],
+      ];
+
+      reportData.consumedProducts.forEach((product) => {
+        beverageData.push([
+          product.productName,
+          product.totalQuantity.toFixed(2),
+          `€${parseFloat(product.costPrice).toFixed(2)}`,
+          `€${product.totalCost.toFixed(2)}`,
+        ]);
+      });
+
+      beverageData.push(["", "", "TOTALE", `€${reportData.totalCost.toFixed(2)}`]);
+
+      const beverageWs = XLSX.utils.aoa_to_sheet(beverageData);
+      XLSX.utils.book_append_sheet(wb, beverageWs, "Consumo Beverage");
+    }
 
     // Download
     XLSX.writeFile(wb, `report-${event.name.replace(/\s+/g, '-')}-${Date.now()}.xlsx`);
@@ -432,6 +489,53 @@ export default function Reports() {
               </div>
             </CardContent>
           </Card>
+
+          {reportData.consumedProducts && reportData.consumedProducts.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle>Riepilogo Consumo Beverage</CardTitle>
+                <CardDescription>Totale prodotti consumati nell'evento</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Prodotto</TableHead>
+                      <TableHead className="text-right">Quantità Totale</TableHead>
+                      <TableHead className="text-right">Prezzo Unitario</TableHead>
+                      <TableHead className="text-right">Costo Totale</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {reportData.consumedProducts.map((product) => (
+                      <TableRow key={product.productId} data-testid={`row-consumed-product-${product.productId}`}>
+                        <TableCell className="font-medium" data-testid={`text-consumed-product-name-${product.productId}`}>
+                          {product.productName}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          {product.totalQuantity.toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          €{parseFloat(product.costPrice).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right font-semibold">
+                          €{product.totalCost.toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    <TableRow className="border-t-2 border-primary">
+                      <TableCell colSpan={3} className="text-right font-bold">
+                        TOTALE BEVERAGE
+                      </TableCell>
+                      <TableCell className="text-right font-bold text-lg" data-testid="text-total-beverage-cost">
+                        €{reportData.totalCost.toFixed(2)}
+                      </TableCell>
+                    </TableRow>
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          )}
 
           <Card>
             <CardHeader>

@@ -45,7 +45,7 @@ import { Plus, Boxes, Edit } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { Station, User } from "@shared/schema";
+import type { Station, User, Event } from "@shared/schema";
 
 const stationFormSchema = z.object({
   name: z.string().min(1, "Nome postazione richiesto"),
@@ -68,6 +68,10 @@ export default function StationsPage() {
 
   const { data: users } = useQuery<User[]>({
     queryKey: ['/api/users'],
+  });
+
+  const { data: events } = useQuery<Event[]>({
+    queryKey: ['/api/events'],
   });
 
   const bartenders = users?.filter(u => u.role === 'bartender') || [];
@@ -169,6 +173,12 @@ export default function StationsPage() {
         assignedUserId: null,
       });
     }
+  };
+
+  const getEventName = (eventId: string | null) => {
+    if (!eventId) return null;
+    const event = events?.find(e => e.id === eventId);
+    return event?.name || 'Evento sconosciuto';
   };
 
   const getBartenderName = (userId: string | null) => {
@@ -298,32 +308,47 @@ export default function StationsPage() {
               <TableHeader>
                 <TableRow>
                   <TableHead>Nome</TableHead>
+                  <TableHead>Tipo</TableHead>
                   <TableHead>Barista Assegnato</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {stations.map((station) => (
-                  <TableRow key={station.id} data-testid={`station-row-${station.id}`}>
-                    <TableCell className="font-medium">{station.name}</TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {getBartenderName(station.assignedUserId)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleEdit(station)}
-                        disabled={!canCreateStations}
-                        data-testid={`button-edit-station-${station.id}`}
-                      >
-                        <Edit className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))}
+                {stations.map((station) => {
+                  const eventName = getEventName(station.eventId);
+                  return (
+                    <TableRow key={station.id} data-testid={`station-row-${station.id}`}>
+                      <TableCell className="font-medium">{station.name}</TableCell>
+                      <TableCell>
+                        {eventName ? (
+                          <Badge variant="secondary" data-testid={`badge-station-type-${station.id}`}>
+                            🎪 {eventName}
+                          </Badge>
+                        ) : (
+                          <Badge variant="outline" data-testid={`badge-station-type-${station.id}`}>
+                            📍 Generale
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant="outline">
+                          {getBartenderName(station.assignedUserId)}
+                        </Badge>
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleEdit(station)}
+                          disabled={!canCreateStations}
+                          data-testid={`button-edit-station-${station.id}`}
+                        >
+                          <Edit className="h-4 w-4" />
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
               </TableBody>
             </Table>
           </CardContent>
@@ -332,7 +357,7 @@ export default function StationsPage() {
         <Card>
           <CardContent className="p-12 text-center">
             <Boxes className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground mb-4">Nessuna postazione generale configurata</p>
+            <p className="text-muted-foreground mb-4">Nessuna postazione configurata</p>
             {canCreateStations && (
               <Button onClick={() => setDialogOpen(true)} data-testid="button-create-first-station">
                 <Plus className="h-4 w-4 mr-2" />

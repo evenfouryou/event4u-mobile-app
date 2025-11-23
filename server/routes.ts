@@ -514,17 +514,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ===== STATIONS =====
-  // Get general stations (not tied to specific event)
+  // Get all stations (general + event-specific)
   app.get('/api/stations', isAuthenticated, async (req: any, res) => {
     try {
       const companyId = await getUserCompanyId(req);
       if (!companyId) {
         return res.status(403).json({ message: "No company associated" });
       }
-      const stations = await storage.getGeneralStationsByCompany(companyId);
+      const stations = await storage.getStationsByCompany(companyId);
       res.json(stations);
     } catch (error) {
-      console.error("Error fetching general stations:", error);
+      console.error("Error fetching stations:", error);
       res.status(500).json({ message: "Failed to fetch stations" });
     }
   });
@@ -1433,10 +1433,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
         };
       }));
 
-      // Calculate total consumption
+      // Calculate total consumption aggregated by product
+      const consumptionByProduct = new Map<string, {
+        productId: string;
+        productName: string;
+        totalQuantity: number;
+        costPrice: string;
+        totalCost: number;
+      }>();
+
+      // Aggregate consumption from all stations
+      stationReports.forEach(station => {
+        station.items.forEach(item => {
+          const existing = consumptionByProduct.get(item.productId);
+          if (existing) {
+            existing.totalQuantity += item.quantity;
+            existing.totalCost += item.totalCost;
+          } else {
+            consumptionByProduct.set(item.productId, {
+              productId: item.productId,
+              productName: item.productName,
+              totalQuantity: item.quantity,
+              costPrice: item.costPrice,
+              totalCost: item.totalCost,
+            });
+          }
+        });
+      });
+
+      const consumedProducts = Array.from(consumptionByProduct.values());
+
       const totalReport = {
         eventId,
         stations: stationReports,
+        consumedProducts, // New: Total consumption per product across all stations
         totalCost: stationReports.reduce((sum, s) => sum + s.totalCost, 0),
       };
 
