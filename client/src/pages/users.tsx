@@ -244,18 +244,21 @@ export default function UsersPage() {
     setDialogOpen(true);
   };
 
-  const handleDialogClose = () => {
-    setDialogOpen(false);
-    setEditingUser(null);
-    form.reset({
-      email: '',
-      password: '',
-      firstName: '',
-      lastName: '',
-      role: 'admin',
-      companyId: null,
-      isEditing: false,
-    });
+  const handleDialogOpenChange = (open: boolean) => {
+    setDialogOpen(open);
+    if (!open) {
+      // Reset quando si chiude
+      setEditingUser(null);
+      form.reset({
+        email: '',
+        password: '',
+        firstName: '',
+        lastName: '',
+        role: 'admin',
+        companyId: null,
+        isEditing: false,
+      });
+    }
   };
 
   const handleDeleteClick = (userId: string) => {
@@ -283,7 +286,7 @@ export default function UsersPage() {
             Crea e gestisci gli utenti del sistema
           </p>
         </div>
-        <Dialog open={dialogOpen} onOpenChange={handleDialogClose}>
+        <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
           <DialogTrigger asChild>
             <Button data-testid="button-create-user">
               <Plus className="h-4 w-4 mr-2" />
@@ -421,7 +424,7 @@ export default function UsersPage() {
                   <Button
                     type="button"
                     variant="outline"
-                    onClick={handleDialogClose}
+                    onClick={() => handleDialogOpenChange(false)}
                     data-testid="button-cancel-user"
                   >
                     Annulla
