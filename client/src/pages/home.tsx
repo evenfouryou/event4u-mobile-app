@@ -186,9 +186,9 @@ export default function Home() {
     return (
       <div className="p-6 md:p-8 max-w-7xl mx-auto">
         <div className="mb-8">
-          <h1 className="text-2xl font-semibold mb-1">Benvenuto, {user?.firstName}</h1>
+          <h1 className="text-2xl font-semibold mb-1">I Miei Eventi</h1>
           <p className="text-muted-foreground">
-            Eventi assegnati per oggi
+            Benvenuto, {user?.firstName} - Eventi assegnati per oggi
           </p>
         </div>
 
