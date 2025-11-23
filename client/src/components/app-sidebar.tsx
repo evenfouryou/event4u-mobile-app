@@ -90,6 +90,12 @@ export function AppSidebar() {
         group: "Generale",
       },
       {
+        title: "Postazioni",
+        icon: MapPin,
+        url: "/stations",
+        group: "Generale",
+      },
+      {
         title: "Report",
         icon: FileText,
         url: "/reports",

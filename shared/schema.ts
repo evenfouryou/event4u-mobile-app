@@ -122,7 +122,8 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
 // Stations (Postazioni) table
 export const stations = pgTable("stations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  eventId: varchar("event_id").notNull().references(() => events.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  eventId: varchar("event_id").references(() => events.id), // optional - null means general station
   name: varchar("name", { length: 255 }).notNull(),
   assignedUserId: varchar("assigned_user_id").references(() => users.id),
   createdAt: timestamp("created_at").defaultNow(),
@@ -130,6 +131,10 @@ export const stations = pgTable("stations", {
 });
 
 export const stationsRelations = relations(stations, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [stations.companyId],
+    references: [companies.id],
+  }),
   event: one(events, {
     fields: [stations.eventId],
     references: [events.id],

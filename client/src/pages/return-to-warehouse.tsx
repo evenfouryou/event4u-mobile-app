@@ -169,9 +169,9 @@ export default function ReturnToWarehouse() {
             <div className="space-y-2">
               <Label htmlFor="station-select">Postazione (opzionale)</Label>
               <Select 
-                value={selectedStationId || ""} 
+                value={selectedStationId || "general"} 
                 onValueChange={(value) => {
-                  setSelectedStationId(value || null);
+                  setSelectedStationId(value === 'general' ? null : value);
                   setReturns({});
                 }}
               >
@@ -179,7 +179,7 @@ export default function ReturnToWarehouse() {
                   <SelectValue placeholder="Inventario evento generale" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">Inventario evento generale</SelectItem>
+                  <SelectItem value="general">Inventario evento generale</SelectItem>
                   {stations.map((station) => (
                     <SelectItem key={station.id} value={station.id.toString()}>
                       {station.name}

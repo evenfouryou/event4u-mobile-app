@@ -3,6 +3,7 @@ import { useParams, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -14,6 +15,16 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import {
   Form,
   FormControl,
@@ -33,34 +44,45 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { ArrowLeft, Plus, Users, Package, Warehouse } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { ArrowLeft, Plus, Users, Package, Warehouse, AlertTriangle, CheckCircle2, Circle } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { insertStationSchema, updateEventSchema, type Event, type Station, type InsertStation, type User, type Product, type PriceList } from "@shared/schema";
 
-const transferSchema = z.object({
-  productId: z.string().min(1, "Seleziona un prodotto"),
-  stationId: z.string().optional(),
-  quantity: z.string().min(1, "Inserisci una quantità").refine((val) => parseFloat(val) > 0, "Quantità deve essere maggiore di zero"),
-});
+type ProductTransfer = {
+  productId: string;
+  quantity: number;
+};
 
-type TransferFormValues = z.infer<typeof transferSchema>;
+type TransferResult = {
+  successful: { productId: string; productName: string }[];
+  failed: { productId: string; productName: string; error: string }[];
+};
 
 export default function EventDetail() {
   const { id } = useParams();
   const [stationDialogOpen, setStationDialogOpen] = useState(false);
   const [transferDialogOpen, setTransferDialogOpen] = useState(false);
+  const [statusChangeDialogOpen, setStatusChangeDialogOpen] = useState(false);
   const [revenueFormData, setRevenueFormData] = useState<{ priceListId?: string; actualRevenue?: string }>({});
+  const [selectedProducts, setSelectedProducts] = useState<Map<string, string>>(new Map());
+  const [destinationStationId, setDestinationStationId] = useState<string>('general');
   const { toast } = useToast();
+  const { user } = useAuth();
 
   const { data: event, isLoading: eventLoading } = useQuery<Event>({
     queryKey: ['/api/events', id],
   });
 
-  const { data: stations, isLoading: stationsLoading } = useQuery<Station[]>({
+  const { data: eventStations, isLoading: stationsLoading } = useQuery<Station[]>({
     queryKey: ['/api/events', id, 'stations'],
     enabled: !!id,
+  });
+
+  const { data: generalStations } = useQuery<Station[]>({
+    queryKey: ['/api/stations'],
   });
 
   const { data: users } = useQuery<User[]>({
@@ -102,15 +124,6 @@ export default function EventDetail() {
       name: '',
       assignedUserId: '',
       eventId: id,
-    },
-  });
-
-  const transferForm = useForm<TransferFormValues>({
-    resolver: zodResolver(transferSchema),
-    defaultValues: {
-      productId: '',
-      stationId: '',
-      quantity: '',
     },
   });
 
@@ -167,24 +180,68 @@ export default function EventDetail() {
   });
 
   const transferStockMutation = useMutation({
-    mutationFn: async (data: TransferFormValues) => {
-      await apiRequest('POST', '/api/stock/event-transfer', {
-        eventId: id,
-        stationId: data.stationId || null,
-        productId: data.productId,
-        quantity: data.quantity,
-      });
+    mutationFn: async (transfers: ProductTransfer[]): Promise<TransferResult> => {
+      const stationId = destinationStationId === 'general' ? null : destinationStationId;
+      
+      const results: TransferResult = {
+        successful: [],
+        failed: [],
+      };
+      
+      for (const transfer of transfers) {
+        try {
+          await apiRequest('POST', '/api/stock/event-transfer', {
+            eventId: id,
+            stationId,
+            productId: transfer.productId,
+            quantity: transfer.quantity,
+          });
+          
+          const product = products?.find(p => p.id === transfer.productId);
+          results.successful.push({
+            productId: transfer.productId,
+            productName: product?.name || transfer.productId,
+          });
+        } catch (error: any) {
+          const product = products?.find(p => p.id === transfer.productId);
+          results.failed.push({
+            productId: transfer.productId,
+            productName: product?.name || transfer.productId,
+            error: error.message || 'Errore sconosciuto',
+          });
+        }
+      }
+      
+      return results;
     },
-    onSuccess: () => {
+    onSuccess: (results) => {
       queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
       queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'stocks'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
       setTransferDialogOpen(false);
-      transferForm.reset();
-      toast({
-        title: "Successo",
-        description: "Stock trasferito con successo",
-      });
+      setSelectedProducts(new Map());
+      setDestinationStationId('general');
+      
+      const totalCount = results.successful.length + results.failed.length;
+      
+      if (results.failed.length === 0) {
+        toast({
+          title: "Successo",
+          description: `${results.successful.length} ${results.successful.length === 1 ? 'prodotto trasferito' : 'prodotti trasferiti'} con successo`,
+        });
+      } else if (results.successful.length === 0) {
+        toast({
+          title: "Errore",
+          description: `Impossibile trasferire i prodotti. Errori: ${results.failed.map(f => f.productName).join(', ')}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Trasferimento parziale",
+          description: `${results.successful.length} di ${totalCount} prodotti trasferiti. Errori: ${results.failed.map(f => f.productName).join(', ')}`,
+          variant: "destructive",
+        });
+      }
     },
     onError: (error: Error) => {
       if (isUnauthorizedError(error)) {
@@ -204,7 +261,107 @@ export default function EventDetail() {
     },
   });
 
+  const changeStatusMutation = useMutation({
+    mutationFn: async (newStatus: string) => {
+      await apiRequest('PATCH', `/api/events/${id}`, { status: newStatus });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events', id] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+      setStatusChangeDialogOpen(false);
+      toast({
+        title: "Successo",
+        description: "Stato evento aggiornato con successo",
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Non autorizzato",
+          description: "Effettua nuovamente il login...",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = '/api/login', 500);
+        return;
+      }
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile cambiare lo stato dell'evento",
+        variant: "destructive",
+      });
+    },
+  });
+
   const bartenders = users?.filter(u => u.role === 'bartender') || [];
+
+  const handleProductToggle = (productId: string, checked: boolean) => {
+    const newSelected = new Map(selectedProducts);
+    if (checked) {
+      newSelected.set(productId, '');
+    } else {
+      newSelected.delete(productId);
+    }
+    setSelectedProducts(newSelected);
+  };
+
+  const handleQuantityChange = (productId: string, quantity: string) => {
+    const newSelected = new Map(selectedProducts);
+    newSelected.set(productId, quantity);
+    setSelectedProducts(newSelected);
+  };
+
+  const validateAndSubmitTransfers = () => {
+    const transfers: ProductTransfer[] = [];
+    const errors: string[] = [];
+
+    selectedProducts.forEach((quantity, productId) => {
+      const stock = generalStocks?.find(s => s.productId === productId);
+      if (!stock) {
+        errors.push(`Prodotto non trovato: ${productId}`);
+        return;
+      }
+
+      const quantityNum = parseFloat(quantity);
+      const availableNum = parseFloat(stock.quantity);
+
+      if (!quantity || isNaN(quantityNum) || quantityNum <= 0) {
+        errors.push(`Quantità non valida per ${stock.productName}`);
+        return;
+      }
+
+      if (quantityNum > availableNum) {
+        errors.push(`Quantità per ${stock.productName} supera il disponibile (${availableNum.toFixed(2)})`);
+        return;
+      }
+
+      transfers.push({ productId, quantity: quantityNum });
+    });
+
+    if (errors.length > 0) {
+      toast({
+        title: "Errori di validazione",
+        description: errors.join(', '),
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (transfers.length === 0) {
+      toast({
+        title: "Nessun prodotto selezionato",
+        description: "Seleziona almeno un prodotto da trasferire",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    transferStockMutation.mutate(transfers);
+  };
+
+  const allStations = [
+    ...(generalStations || []).map(s => ({ ...s, isGeneral: true })),
+    ...(eventStations || []).map(s => ({ ...s, isGeneral: false })),
+  ];
 
   if (eventLoading) {
     return (
@@ -248,7 +405,7 @@ export default function EventDetail() {
           <div>
             <h1 className="text-2xl font-semibold mb-2">{event.name}</h1>
             <div className="flex items-center gap-3">
-              <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+              <Badge variant={statusInfo.variant} data-testid="badge-event-status">{statusInfo.label}</Badge>
               <span className="text-sm text-muted-foreground">
                 {new Date(event.startDatetime).toLocaleDateString('it-IT', {
                   day: 'numeric',
@@ -267,6 +424,138 @@ export default function EventDetail() {
           </div>
         </div>
 
+        {/* Status Stepper and Change Controls */}
+        <Card className="mb-6">
+          <CardContent className="p-6">
+            {/* Status Stepper */}
+            <div className="mb-4">
+              <div className="flex items-center justify-between mb-2">
+                <span className="text-sm font-medium">Stato Evento</span>
+              </div>
+              <div className="flex items-center gap-2">
+                {[
+                  { key: 'draft', label: 'Bozza' },
+                  { key: 'scheduled', label: 'Programmato' },
+                  { key: 'ongoing', label: 'In Corso' },
+                  { key: 'closed', label: 'Chiuso' }
+                ].map((status, index) => {
+                  const isActive = event.status === status.key;
+                  const isPassed = ['draft', 'scheduled', 'ongoing', 'closed'].indexOf(event.status) > index;
+                  const isCompleted = isPassed || isActive;
+
+                  return (
+                    <div key={status.key} className="flex items-center flex-1">
+                      <div className="flex flex-col items-center gap-1 flex-1">
+                        <div 
+                          className={`flex items-center justify-center w-8 h-8 rounded-full border-2 transition-colors ${
+                            isActive 
+                              ? 'border-primary bg-primary text-primary-foreground' 
+                              : isPassed 
+                              ? 'border-primary bg-primary text-primary-foreground' 
+                              : 'border-muted bg-background text-muted-foreground'
+                          }`}
+                          data-testid={`status-step-${status.key}`}
+                        >
+                          {isCompleted ? (
+                            <CheckCircle2 className="h-4 w-4" />
+                          ) : (
+                            <Circle className="h-4 w-4" />
+                          )}
+                        </div>
+                        <span className={`text-xs text-center ${isActive ? 'font-medium' : 'text-muted-foreground'}`}>
+                          {status.label}
+                        </span>
+                      </div>
+                      {index < 3 && (
+                        <div 
+                          className={`h-0.5 flex-1 mx-2 ${
+                            isPassed ? 'bg-primary' : 'bg-muted'
+                          }`}
+                        />
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Status Change Button */}
+            {(() => {
+              const canChangeStatus = user && (user.role === 'super_admin' || user.role === 'gestore');
+              const statusTransitions: Record<string, { next: string; label: string; description: string }> = {
+                'draft': { 
+                  next: 'scheduled', 
+                  label: 'Imposta come Programmato',
+                  description: 'Confermi di voler impostare questo evento come Programmato?'
+                },
+                'scheduled': { 
+                  next: 'ongoing', 
+                  label: 'Inizia Evento',
+                  description: 'Confermi di voler iniziare questo evento?'
+                },
+                'ongoing': { 
+                  next: 'closed', 
+                  label: 'Chiudi Evento',
+                  description: 'Confermi di voler chiudere questo evento? Questa azione segna l\'evento come completato.'
+                },
+              };
+
+              const transition = statusTransitions[event.status];
+
+              if (!transition) {
+                return (
+                  <div className="text-sm text-muted-foreground">
+                    Evento chiuso - nessuna azione disponibile
+                  </div>
+                );
+              }
+
+              if (!canChangeStatus) {
+                return (
+                  <div className="text-sm text-muted-foreground">
+                    Solo amministratori e gestori possono modificare lo stato dell'evento
+                  </div>
+                );
+              }
+
+              return (
+                <>
+                  <Button 
+                    onClick={() => setStatusChangeDialogOpen(true)}
+                    disabled={changeStatusMutation.isPending}
+                    data-testid={`button-change-status-${transition.next}`}
+                  >
+                    {changeStatusMutation.isPending ? 'Aggiornamento...' : transition.label}
+                  </Button>
+
+                  <AlertDialog open={statusChangeDialogOpen} onOpenChange={setStatusChangeDialogOpen}>
+                    <AlertDialogContent data-testid="dialog-confirm-status-change">
+                      <AlertDialogHeader>
+                        <AlertDialogTitle>Conferma Cambio Stato</AlertDialogTitle>
+                        <AlertDialogDescription>
+                          {transition.description}
+                        </AlertDialogDescription>
+                      </AlertDialogHeader>
+                      <AlertDialogFooter>
+                        <AlertDialogCancel data-testid="button-cancel-status-change">
+                          Annulla
+                        </AlertDialogCancel>
+                        <AlertDialogAction
+                          onClick={() => changeStatusMutation.mutate(transition.next)}
+                          disabled={changeStatusMutation.isPending}
+                          data-testid="button-confirm-status-change"
+                        >
+                          Conferma
+                        </AlertDialogAction>
+                      </AlertDialogFooter>
+                    </AlertDialogContent>
+                  </AlertDialog>
+                </>
+              );
+            })()}
+          </CardContent>
+        </Card>
+
         {event.notes && (
           <Card className="mb-6">
             <CardHeader>
@@ -282,128 +571,162 @@ export default function EventDetail() {
       <div className="mb-8">
         <div className="flex items-center justify-between mb-4">
           <h2 className="text-xl font-semibold">Inventario Evento</h2>
-          <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
+          <Dialog open={transferDialogOpen} onOpenChange={(open) => {
+            setTransferDialogOpen(open);
+            if (!open) {
+              setSelectedProducts(new Map());
+              setDestinationStationId('general');
+            }
+          }}>
             <DialogTrigger asChild>
               <Button data-testid="button-transfer-stock">
                 <Warehouse className="h-4 w-4 mr-2" />
                 Trasferisci Stock
               </Button>
             </DialogTrigger>
-            <DialogContent className="max-w-2xl">
+            <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
               <DialogHeader>
-                <DialogTitle>Trasferisci Stock da Magazzino</DialogTitle>
+                <div className="flex items-center justify-between">
+                  <DialogTitle>Trasferisci Stock da Magazzino</DialogTitle>
+                  {selectedProducts.size > 0 && (
+                    <Badge variant="secondary" data-testid="badge-selected-products-count">
+                      {selectedProducts.size} {selectedProducts.size === 1 ? 'prodotto selezionato' : 'prodotti selezionati'}
+                    </Badge>
+                  )}
+                </div>
               </DialogHeader>
-              <Form {...transferForm}>
-                <form onSubmit={transferForm.handleSubmit((data) => transferStockMutation.mutate(data))} className="space-y-4">
-                  {generalStocks && generalStocks.length > 0 ? (
-                    <>
-                      <div className="text-sm text-muted-foreground mb-4">
-                        Seleziona prodotto dal magazzino generale per trasferirlo all'evento
-                      </div>
-                      <FormField
-                        control={transferForm.control}
-                        name="productId"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Prodotto</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger data-testid="select-transfer-product">
-                                  <SelectValue placeholder="Seleziona prodotto" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                {generalStocks.filter(s => parseFloat(s.quantity) > 0).map((stock) => (
-                                  <SelectItem key={stock.productId} value={stock.productId}>
-                                    {stock.productName} - Disponibile: {parseFloat(stock.quantity).toFixed(2)} {stock.unitOfMeasure}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
 
-                  <FormField
-                    control={transferForm.control}
-                    name="stationId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Postazione Destinazione (opzionale)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ''}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-transfer-station">
-                              <SelectValue placeholder="Seleziona postazione" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="">Evento (generale)</SelectItem>
-                            {stations?.map((station) => (
-                              <SelectItem key={station.id} value={station.id}>
+              {generalStocks && generalStocks.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium">Postazione Destinazione</label>
+                    <Select value={destinationStationId} onValueChange={setDestinationStationId}>
+                      <SelectTrigger data-testid="select-transfer-destination">
+                        <SelectValue placeholder="Seleziona postazione" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="general">Evento (generale)</SelectItem>
+                        {generalStations && generalStations.length > 0 && (
+                          <>
+                            <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                              Postazioni Generali
+                            </div>
+                            {generalStations.map((station) => (
+                              <SelectItem key={station.id} value={station.id} data-testid={`select-item-general-station-${station.id}`}>
+                                📍 {station.name}
+                              </SelectItem>
+                            ))}
+                          </>
+                        )}
+                        {eventStations && eventStations.length > 0 && (
+                          <>
+                            <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                              Postazioni Evento
+                            </div>
+                            {eventStations.map((station) => (
+                              <SelectItem key={station.id} value={station.id} data-testid={`select-item-event-station-${station.id}`}>
                                 {station.name}
                               </SelectItem>
                             ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                          </>
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-                      <FormField
-                        control={transferForm.control}
-                        name="quantity"
-                        render={({ field }) => {
-                          const selectedStock = generalStocks.find(s => s.productId === transferForm.watch('productId'));
-                          const maxQuantity = selectedStock ? parseFloat(selectedStock.quantity) : 0;
+                  <div className="border rounded-lg">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead className="w-12"></TableHead>
+                          <TableHead>Prodotto</TableHead>
+                          <TableHead className="text-right">Disponibile</TableHead>
+                          <TableHead className="w-40">Quantità da Trasferire</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {generalStocks.filter(s => parseFloat(s.quantity) > 0).map((stock) => {
+                          const isSelected = selectedProducts.has(stock.productId);
+                          const quantity = selectedProducts.get(stock.productId) || '';
+                          const available = parseFloat(stock.quantity);
+                          const quantityNum = parseFloat(quantity);
+                          const hasError = isSelected && quantity && (!isNaN(quantityNum)) && quantityNum > available;
+
                           return (
-                            <FormItem>
-                              <FormLabel>Quantità {selectedStock && `(Max: ${maxQuantity.toFixed(2)})`}</FormLabel>
-                              <FormControl>
-                                <Input
-                                  {...field}
-                                  type="number"
-                                  step="0.01"
-                                  min="0.01"
-                                  max={maxQuantity}
-                                  placeholder="0.00"
-                                  data-testid="input-transfer-quantity"
+                            <TableRow key={stock.productId} data-testid={`transfer-product-row-${stock.productId}`}>
+                              <TableCell>
+                                <Checkbox
+                                  checked={isSelected}
+                                  onCheckedChange={(checked) => handleProductToggle(stock.productId, checked as boolean)}
+                                  data-testid={`checkbox-product-${stock.productId}`}
                                 />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <div className="font-medium">{stock.productName}</div>
+                                  <div className="text-sm text-muted-foreground">{stock.productCode}</div>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right tabular-nums">
+                                {available.toFixed(2)} {stock.unitOfMeasure}
+                              </TableCell>
+                              <TableCell>
+                                <div className="flex items-center gap-2">
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    min="0.01"
+                                    max={available}
+                                    placeholder="0.00"
+                                    value={quantity}
+                                    onChange={(e) => handleQuantityChange(stock.productId, e.target.value)}
+                                    disabled={!isSelected}
+                                    className={hasError ? "border-destructive" : ""}
+                                    data-testid={`input-quantity-${stock.productId}`}
+                                  />
+                                </div>
+                                {hasError && (
+                                  <p className="text-xs text-destructive mt-1">
+                                    Max: {available.toFixed(2)}
+                                  </p>
+                                )}
+                              </TableCell>
+                            </TableRow>
                           );
-                        }}
-                      />
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
 
-                      <DialogFooter>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          onClick={() => setTransferDialogOpen(false)}
-                          data-testid="button-cancel-transfer"
-                        >
-                          Annulla
-                        </Button>
-                        <Button type="submit" disabled={transferStockMutation.isPending} data-testid="button-submit-transfer">
-                          Trasferisci
-                        </Button>
-                      </DialogFooter>
-                    </>
-                  ) : (
-                    <div className="text-center py-8">
-                      <p className="text-muted-foreground mb-2">Nessun prodotto disponibile in magazzino</p>
-                      <p className="text-sm text-muted-foreground">Carica prodotti nel magazzino generale prima di trasferirli</p>
-                      <DialogFooter className="mt-4">
-                        <Button variant="outline" onClick={() => setTransferDialogOpen(false)}>
-                          Chiudi
-                        </Button>
-                      </DialogFooter>
-                    </div>
-                  )}
-                </form>
-              </Form>
+                  <DialogFooter>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => setTransferDialogOpen(false)}
+                      data-testid="button-cancel-transfer"
+                    >
+                      Annulla
+                    </Button>
+                    <Button
+                      onClick={validateAndSubmitTransfers}
+                      disabled={transferStockMutation.isPending || selectedProducts.size === 0}
+                      data-testid="button-submit-transfer"
+                    >
+                      {transferStockMutation.isPending ? 'Trasferimento in corso...' : 'Trasferisci Prodotti'}
+                    </Button>
+                  </DialogFooter>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <p className="text-muted-foreground mb-2">Nessun prodotto disponibile in magazzino</p>
+                  <p className="text-sm text-muted-foreground">Carica prodotti nel magazzino generale prima di trasferirli</p>
+                  <DialogFooter className="mt-4">
+                    <Button variant="outline" onClick={() => setTransferDialogOpen(false)} data-testid="button-close-transfer">
+                      Chiudi
+                    </Button>
+                  </DialogFooter>
+                </div>
+              )}
             </DialogContent>
           </Dialog>
         </div>
@@ -416,7 +739,7 @@ export default function EventDetail() {
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
               {eventStocks.map((stock) => {
                 const product = products?.find(p => p.id === stock.productId);
-                const station = stations?.find(s => s.id === stock.stationId);
+                const station = eventStations?.find(s => s.id === stock.stationId);
                 const quantity = parseFloat(stock.quantity);
                 const isLowStock = product?.minThreshold && !isNaN(quantity) && quantity < parseFloat(product.minThreshold);
                 
@@ -557,14 +880,14 @@ export default function EventDetail() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Barista Assegnato (opzionale)</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value || ''}>
+                        <Select onValueChange={(value) => field.onChange(value === 'none' ? undefined : value)} value={field.value || 'none'}>
                           <FormControl>
                             <SelectTrigger data-testid="select-station-bartender">
                               <SelectValue placeholder="Seleziona barista" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
-                            <SelectItem value="">Nessuno</SelectItem>
+                            <SelectItem value="none">Nessuno</SelectItem>
                             {bartenders.map((user) => (
                               <SelectItem key={user.id} value={user.id}>
                                 {user.firstName && user.lastName ? `${user.firstName} ${user.lastName}` : user.email}
@@ -601,9 +924,9 @@ export default function EventDetail() {
             <Skeleton className="h-32" />
             <Skeleton className="h-32" />
           </div>
-        ) : stations && stations.length > 0 ? (
+        ) : eventStations && eventStations.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {stations.map((station) => {
+            {eventStations.map((station) => {
               const assignedUser = users?.find(u => u.id === station.assignedUserId);
               return (
                 <Card key={station.id} data-testid={`station-card-${station.id}`}>

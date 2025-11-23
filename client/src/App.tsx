@@ -25,6 +25,7 @@ import ImportPage from "@/pages/import";
 import Reports from "@/pages/reports";
 import ReturnToWarehouse from "@/pages/return-to-warehouse";
 import SuperAdminDashboard from "@/pages/super-admin-dashboard";
+import Stations from "@/pages/stations";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -81,6 +82,7 @@ function Router() {
               <Route path="/reports" component={Reports} />
               <Route path="/return-to-warehouse" component={ReturnToWarehouse} />
               <Route path="/super-admin" component={SuperAdminDashboard} />
+              <Route path="/stations" component={Stations} />
               <Route component={NotFound} />
             </Switch>
           </main>

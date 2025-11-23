@@ -387,6 +387,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Event not found" });
       }
 
+      // Status transition validation
+      if (req.body.status && req.body.status !== event.status) {
+        // Check role permission for status changes
+        const userId = req.user.claims.sub;
+        const user = await storage.getUser(userId);
+        if (!user || (user.role !== 'super_admin' && user.role !== 'gestore')) {
+          return res.status(403).json({ message: "Solo super_admin e gestore possono modificare lo stato dell'evento" });
+        }
+
+        // Define valid status transitions
+        const validTransitions: Record<string, string> = {
+          'draft': 'scheduled',
+          'scheduled': 'ongoing',
+          'ongoing': 'closed',
+        };
+
+        const currentStatus = event.status;
+        const newStatus = req.body.status;
+
+        // Check if transition is valid
+        if (validTransitions[currentStatus] !== newStatus) {
+          if (currentStatus === 'closed') {
+            return res.status(400).json({ message: "L'evento è già chiuso e non può essere modificato" });
+          }
+          return res.status(400).json({ 
+            message: `Transizione di stato non valida: ${currentStatus} → ${newStatus}. Transizione valida: ${currentStatus} → ${validTransitions[currentStatus]}` 
+          });
+        }
+      }
+
       const validated = updateEventSchema.parse(req.body);
       // Convert actualRevenue to string for database storage
       const updateData: any = { ...validated };
@@ -484,6 +514,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // ===== STATIONS =====
+  // Get general stations (not tied to specific event)
+  app.get('/api/stations', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const stations = await storage.getGeneralStationsByCompany(companyId);
+      res.json(stations);
+    } catch (error) {
+      console.error("Error fetching general stations:", error);
+      res.status(500).json({ message: "Failed to fetch stations" });
+    }
+  });
+
+  // Create general station (not tied to specific event)
+  app.post('/api/stations', isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      // Only set eventId to null if not provided
+      const stationData = { ...req.body, companyId };
+      if (!stationData.eventId) {
+        stationData.eventId = null;
+      }
+      const validated = insertStationSchema.parse(stationData);
+      const station = await storage.createStation(validated);
+      res.json(station);
+    } catch (error: any) {
+      console.error("Error creating station:", error);
+      res.status(400).json({ message: error.message || "Failed to create station" });
+    }
+  });
+
+  // Update general station
+  app.patch('/api/stations/:id', isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const station = await storage.updateStation(req.params.id, req.body);
+      if (!station) {
+        return res.status(404).json({ message: "Station not found" });
+      }
+      res.json(station);
+    } catch (error) {
+      console.error("Error updating station:", error);
+      res.status(500).json({ message: "Failed to update station" });
+    }
+  });
+
+  // Get stations for specific event
   app.get('/api/events/:id/stations', isAuthenticated, async (req: any, res) => {
     try {
       const stations = await storage.getStationsByEvent(req.params.id);
@@ -494,9 +575,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Create station for specific event
   app.post('/api/events/:id/stations', isAuthenticated, async (req: any, res) => {
     try {
-      const validated = insertStationSchema.parse({ ...req.body, eventId: req.params.id });
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = insertStationSchema.parse({ ...req.body, eventId: req.params.id, companyId });
       const station = await storage.createStation(validated);
       res.json(station);
     } catch (error: any) {

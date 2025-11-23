@@ -67,7 +67,10 @@ export interface IStorage {
   
   // Station operations
   getStationsByEvent(eventId: string): Promise<Station[]>;
+  getStationsByCompany(companyId: string): Promise<Station[]>;
+  getGeneralStationsByCompany(companyId: string): Promise<Station[]>;
   createStation(station: InsertStation): Promise<Station>;
+  updateStation(id: string, station: Partial<Station>): Promise<Station | undefined>;
   
   // Product operations
   getProductsByCompany(companyId: string): Promise<Product[]>;
@@ -249,8 +252,26 @@ export class DatabaseStorage implements IStorage {
     return await db.select().from(stations).where(eq(stations.eventId, eventId));
   }
 
+  async getStationsByCompany(companyId: string): Promise<Station[]> {
+    return await db.select().from(stations).where(eq(stations.companyId, companyId));
+  }
+
+  async getGeneralStationsByCompany(companyId: string): Promise<Station[]> {
+    return await db.select().from(stations)
+      .where(and(eq(stations.companyId, companyId), isNull(stations.eventId)));
+  }
+
   async createStation(stationData: InsertStation): Promise<Station> {
     const [station] = await db.insert(stations).values(stationData).returning();
+    return station;
+  }
+
+  async updateStation(id: string, stationData: Partial<Station>): Promise<Station | undefined> {
+    const [station] = await db
+      .update(stations)
+      .set({ ...stationData, updatedAt: new Date() })
+      .where(eq(stations.id, id))
+      .returning();
     return station;
   }
   
