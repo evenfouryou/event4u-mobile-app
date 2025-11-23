@@ -531,6 +531,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== SUPPLIERS =====
+  app.get('/api/suppliers', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const suppliers = await storage.getSuppliersByCompany(companyId);
+      res.json(suppliers);
+    } catch (error) {
+      console.error("Error fetching suppliers:", error);
+      res.status(500).json({ message: "Failed to fetch suppliers" });
+    }
+  });
+
+  app.get('/api/suppliers/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const { id } = req.params;
+      const supplier = await storage.getSupplierById(id, companyId);
+      if (!supplier) {
+        return res.status(404).json({ message: "Supplier not found" });
+      }
+      res.json(supplier);
+    } catch (error) {
+      console.error("Error fetching supplier:", error);
+      res.status(500).json({ message: "Failed to fetch supplier" });
+    }
+  });
+
+  app.post('/api/suppliers', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const { insertSupplierSchema } = await import('@shared/schema');
+      const validated = insertSupplierSchema.parse({ ...req.body, companyId });
+      const supplier = await storage.createSupplier(validated);
+      res.json(supplier);
+    } catch (error: any) {
+      console.error("Error creating supplier:", error);
+      res.status(400).json({ message: error.message || "Failed to create supplier" });
+    }
+  });
+
+  app.patch('/api/suppliers/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const { id } = req.params;
+      const { updateSupplierSchema } = await import('@shared/schema');
+      const validated = updateSupplierSchema.parse(req.body);
+      const supplier = await storage.updateSupplier(id, companyId, validated);
+      if (!supplier) {
+        return res.status(404).json({ message: "Supplier not found" });
+      }
+      res.json(supplier);
+    } catch (error: any) {
+      console.error("Error updating supplier:", error);
+      res.status(400).json({ message: error.message || "Failed to update supplier" });
+    }
+  });
+
+  app.delete('/api/suppliers/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const { id } = req.params;
+      const deleted = await storage.deleteSupplier(id, companyId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Supplier not found" });
+      }
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting supplier:", error);
+      res.status(500).json({ message: "Failed to delete supplier" });
+    }
+  });
+
   // ===== USERS =====
   app.get('/api/users', isAuthenticated, async (req: any, res) => {
     try {

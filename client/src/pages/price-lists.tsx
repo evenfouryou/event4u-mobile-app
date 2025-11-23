@@ -16,10 +16,11 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import type { PriceList, PriceListItem, Product } from "@shared/schema";
+import type { PriceList, PriceListItem, Product, Supplier } from "@shared/schema";
 
 const priceListSchema = z.object({
   name: z.string().min(1, "Nome richiesto"),
+  supplierId: z.string().min(1, "Fornitore richiesto"),
   validFrom: z.string().optional(),
   validTo: z.string().optional(),
   active: z.boolean().default(true),
@@ -51,6 +52,10 @@ export default function PriceLists() {
     queryKey: ['/api/products'],
   });
 
+  const { data: suppliers = [] } = useQuery<Supplier[]>({
+    queryKey: ['/api/suppliers'],
+  });
+
   const { data: items = [], isLoading: itemsLoading } = useQuery<PriceListItem[]>({
     queryKey: ['/api/price-lists', selectedPriceList?.id, 'items'],
     enabled: !!selectedPriceList,
@@ -60,6 +65,7 @@ export default function PriceLists() {
     resolver: zodResolver(priceListSchema),
     defaultValues: {
       name: "",
+      supplierId: "",
       validFrom: "",
       validTo: "",
       active: true,
@@ -70,6 +76,7 @@ export default function PriceLists() {
     resolver: zodResolver(priceListSchema),
     defaultValues: {
       name: "",
+      supplierId: "",
       validFrom: "",
       validTo: "",
       active: true,
@@ -88,6 +95,7 @@ export default function PriceLists() {
     if (selectedPriceList && isEditDialogOpen) {
       editForm.reset({
         name: selectedPriceList.name,
+        supplierId: selectedPriceList.supplierId,
         validFrom: selectedPriceList.validFrom ? format(new Date(selectedPriceList.validFrom), 'yyyy-MM-dd') : "",
         validTo: selectedPriceList.validTo ? format(new Date(selectedPriceList.validTo), 'yyyy-MM-dd') : "",
         active: selectedPriceList.active,
@@ -99,6 +107,7 @@ export default function PriceLists() {
     mutationFn: async (data: PriceListFormValues) => {
       return await apiRequest('POST', '/api/price-lists', {
         name: data.name,
+        supplierId: data.supplierId,
         validFrom: data.validFrom || null,
         validTo: data.validTo || null,
         active: data.active,
@@ -259,6 +268,31 @@ export default function PriceLists() {
                       <FormLabel>Nome Listino *</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="Listino Estate 2024" data-testid="input-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={createForm.control}
+                  name="supplierId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Fornitore *</FormLabel>
+                      <FormControl>
+                        <select
+                          {...field}
+                          className="w-full h-9 rounded-md border border-input bg-background px-3 py-1 text-sm"
+                          data-testid="select-supplier"
+                        >
+                          <option value="">Seleziona fornitore</option>
+                          {suppliers.filter(s => s.active).map((supplier) => (
+                            <option key={supplier.id} value={supplier.id}>
+                              {supplier.name}
+                            </option>
+                          ))}
+                        </select>
                       </FormControl>
                       <FormMessage />
                     </FormItem>

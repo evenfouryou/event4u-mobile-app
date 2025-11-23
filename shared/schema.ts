@@ -166,10 +166,34 @@ export const productsRelations = relations(products, ({ one, many }) => ({
   priceListItems: many(priceListItems),
 }));
 
+// Suppliers table
+export const suppliers = pgTable("suppliers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  vatNumber: varchar("vat_number", { length: 50 }),
+  email: varchar("email", { length: 255 }),
+  phone: varchar("phone", { length: 50 }),
+  address: text("address"),
+  notes: text("notes"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const suppliersRelations = relations(suppliers, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [suppliers.companyId],
+    references: [companies.id],
+  }),
+  priceLists: many(priceLists),
+}));
+
 // Price Lists table
 export const priceLists = pgTable("price_lists", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   companyId: varchar("company_id").notNull().references(() => companies.id),
+  supplierId: varchar("supplier_id").notNull().references(() => suppliers.id),
   name: varchar("name", { length: 255 }).notNull(),
   validFrom: timestamp("valid_from"),
   validTo: timestamp("valid_to"),
@@ -182,6 +206,10 @@ export const priceListsRelations = relations(priceLists, ({ one, many }) => ({
   company: one(companies, {
     fields: [priceLists.companyId],
     references: [companies.id],
+  }),
+  supplier: one(suppliers, {
+    fields: [priceLists.supplierId],
+    references: [suppliers.id],
   }),
   items: many(priceListItems),
 }));
@@ -334,13 +362,21 @@ export const insertProductSchema = createInsertSchema(products).omit({
   updatedAt: true,
 });
 
+export const insertSupplierSchema = createInsertSchema(suppliers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateSupplierSchema = insertSupplierSchema.partial().omit({ companyId: true });
+
 export const insertPriceListSchema = createInsertSchema(priceLists).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
 
-export const updatePriceListSchema = insertPriceListSchema.partial().omit({ companyId: true });
+export const updatePriceListSchema = insertPriceListSchema.partial().omit({ companyId: true, supplierId: true });
 
 export const insertPriceListItemSchema = createInsertSchema(priceListItems).omit({
   id: true,
@@ -378,6 +414,10 @@ export type InsertStation = z.infer<typeof insertStationSchema>;
 
 export type Product = typeof products.$inferSelect;
 export type InsertProduct = z.infer<typeof insertProductSchema>;
+
+export type Supplier = typeof suppliers.$inferSelect;
+export type InsertSupplier = z.infer<typeof insertSupplierSchema>;
+export type UpdateSupplier = z.infer<typeof updateSupplierSchema>;
 
 export type PriceList = typeof priceLists.$inferSelect;
 export type InsertPriceList = z.infer<typeof insertPriceListSchema>;

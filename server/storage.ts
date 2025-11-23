@@ -6,6 +6,7 @@ import {
   events,
   stations,
   products,
+  suppliers,
   priceLists,
   priceListItems,
   stocks,
@@ -22,6 +23,8 @@ import {
   type InsertStation,
   type Product,
   type InsertProduct,
+  type Supplier,
+  type InsertSupplier,
   type PriceList,
   type InsertPriceList,
   type PriceListItem,
@@ -73,6 +76,13 @@ export interface IStorage {
   createProduct(product: InsertProduct): Promise<Product>;
   updateProduct(id: string, product: Partial<Product>): Promise<Product | undefined>;
   bulkCreateProducts(products: InsertProduct[]): Promise<Product[]>;
+  
+  // Supplier operations
+  getSuppliersByCompany(companyId: string): Promise<Supplier[]>;
+  getSupplierById(id: string, companyId: string): Promise<Supplier | undefined>;
+  createSupplier(supplier: InsertSupplier): Promise<Supplier>;
+  updateSupplier(id: string, companyId: string, supplier: Partial<Supplier>): Promise<Supplier | undefined>;
+  deleteSupplier(id: string, companyId: string): Promise<boolean>;
   
   // Stock operations
   getGeneralStocks(companyId: string): Promise<Stock[]>;
@@ -282,6 +292,50 @@ export class DatabaseStorage implements IStorage {
   async bulkCreateProducts(productsList: InsertProduct[]): Promise<Product[]> {
     if (productsList.length === 0) return [];
     return await db.insert(products).values(productsList).returning();
+  }
+  
+  // Supplier operations
+  async getSuppliersByCompany(companyId: string): Promise<Supplier[]> {
+    return await db.select().from(suppliers).where(eq(suppliers.companyId, companyId));
+  }
+
+  async getSupplierById(id: string, companyId: string): Promise<Supplier | undefined> {
+    const [supplier] = await db
+      .select()
+      .from(suppliers)
+      .where(and(
+        eq(suppliers.id, id),
+        eq(suppliers.companyId, companyId)
+      ));
+    return supplier;
+  }
+
+  async createSupplier(supplierData: InsertSupplier): Promise<Supplier> {
+    const [supplier] = await db.insert(suppliers).values(supplierData).returning();
+    return supplier;
+  }
+
+  async updateSupplier(id: string, companyId: string, supplierData: Partial<Supplier>): Promise<Supplier | undefined> {
+    const [supplier] = await db
+      .update(suppliers)
+      .set({ ...supplierData, updatedAt: new Date() })
+      .where(and(
+        eq(suppliers.id, id),
+        eq(suppliers.companyId, companyId)
+      ))
+      .returning();
+    return supplier;
+  }
+
+  async deleteSupplier(id: string, companyId: string): Promise<boolean> {
+    const result = await db
+      .delete(suppliers)
+      .where(and(
+        eq(suppliers.id, id),
+        eq(suppliers.companyId, companyId)
+      ))
+      .returning();
+    return result.length > 0;
   }
   
   // Stock operations

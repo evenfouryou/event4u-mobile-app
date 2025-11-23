@@ -13,6 +13,7 @@ import Companies from "@/pages/companies";
 import Users from "@/pages/users";
 import Locations from "@/pages/locations";
 import Products from "@/pages/products";
+import Suppliers from "@/pages/suppliers";
 import Events from "@/pages/events";
 import EventDetail from "@/pages/event-detail";
 import Warehouse from "@/pages/warehouse";
@@ -70,6 +71,7 @@ function Router() {
               <Route path="/users" component={Users} />
               <Route path="/locations" component={Locations} />
               <Route path="/products" component={Products} />
+              <Route path="/suppliers" component={Suppliers} />
               <Route path="/events" component={Events} />
               <Route path="/events/:id" component={EventDetail} />
               <Route path="/warehouse" component={Warehouse} />

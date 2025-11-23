@@ -3,6 +3,7 @@ import {
   MapPin,
   Calendar,
   Package,
+  Truck,
   Warehouse,
   BarChart3,
   Users,
@@ -102,6 +103,12 @@ export function AppSidebar() {
         title: "Prodotti",
         icon: Package,
         url: "/products",
+        group: "Inventario",
+      },
+      {
+        title: "Fornitori",
+        icon: Truck,
+        url: "/suppliers",
         group: "Inventario",
       },
       {

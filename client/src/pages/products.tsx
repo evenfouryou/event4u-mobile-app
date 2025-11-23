@@ -237,7 +237,7 @@ export default function Products() {
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Categoria</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
+                        <Select onValueChange={field.onChange} value={field.value ?? ''}>
                           <FormControl>
                             <SelectTrigger data-testid="select-product-category">
                               <SelectValue placeholder="Seleziona categoria" />
