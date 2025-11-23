@@ -21,8 +21,19 @@ Preferred communication style: Simple, everyday language.
 - **Multi-Bartender Assignment**: Stations now support multiple bartenders assignment instead of single bartender
   - Changed `assignedUserId` field to `bartenderIds` array in stations schema
   - Added multi-select checkbox UI for bartender assignment in station creation
-  - Added inline editing UI on station cards to modify assigned bartenders
+  - Added inline editing UI on station cards to modify assigned bartenders with Set-based simultaneous editing
+  - `editingStationIds` Set allows multiple cards to be in edit mode simultaneously without draft loss
+  - `editingBartenderIds` Map stores per-station draft selections with functional updates to prevent stale closures
   - Bartender validation ensures only users with 'bartender' role from same company can be assigned
+  - Test e2e verified: drafts preserved during query invalidation, concurrent editing safe
+- **Personalized Dashboard Greetings**: All dashboard home pages now show personalized welcome messages
+  - Super Admin: "Benvenuto, {firstName}" with operational subtitle
+  - Gestore/Admin: "Benvenuto, {firstName}" with operational subtitle  
+  - Bartender: Maintains "I Miei Eventi" title with "Benvenuto, {firstName}" in subtitle for task context
+- **Gestore Impersonation Access**: Gestore users can now impersonate warehouse/bartender users
+  - Impersonation button visible in users page for warehouse and bartender roles from same company
+  - Restrictions: Cannot impersonate super_admin, other gestore, or users from different companies
+  - Uses existing security model with `impersonatorId` session field
 - **Removed Revenue Management**: Removed revenue management section from event detail page
 - **Station Soft Delete**: Implemented soft delete for stations using `deletedAt` field - preserves historical event data
 - **Station Deletion UI**: Added delete button for stations with confirmation dialog
