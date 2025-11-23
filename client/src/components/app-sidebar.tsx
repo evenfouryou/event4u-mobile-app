@@ -244,7 +244,15 @@ export function AppSidebar() {
         <Button
           variant="outline"
           className="w-full justify-start"
-          onClick={() => window.location.href = '/api/logout'}
+          onClick={async () => {
+            try {
+              await fetch('/api/logout');
+              window.location.href = '/login';
+            } catch (error) {
+              console.error("Logout error:", error);
+              window.location.href = '/login';
+            }
+          }}
           data-testid="button-logout"
         >
           <LogOut className="h-4 w-4 mr-2" />
