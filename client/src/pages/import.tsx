@@ -18,6 +18,8 @@ interface PreviewRow {
   [key: string]: any;
   _valid: boolean;
   _errors?: string[];
+  _warnings?: string[];
+  _rowIndex: number;
 }
 
 export default function ImportPage() {
@@ -84,6 +86,47 @@ export default function ImportPage() {
     setShowPreview(false);
   };
 
+  const validateDecimalField = (
+    value: string | undefined | null,
+    fieldName: string
+  ): { isValid: boolean; errors: string[]; warnings: string[]; normalized: string | null } => {
+    const errors: string[] = [];
+    const warnings: string[] = [];
+
+    if (!value || value.trim() === '') {
+      errors.push(`${fieldName} mancante o vuoto`);
+      return { isValid: false, errors, warnings, normalized: null };
+    }
+
+    const normalized = value.trim().replace(',', '.');
+    
+    if (isNaN(parseFloat(normalized))) {
+      errors.push(`${fieldName} non è un numero valido`);
+      return { isValid: false, errors, warnings, normalized: null };
+    }
+
+    const num = parseFloat(normalized);
+    
+    if (num < 0) {
+      errors.push(`${fieldName} deve essere positivo`);
+      return { isValid: false, errors, warnings, normalized: null };
+    }
+
+    const decimalRegex = /^\d+(\.\d{1,2})?$/;
+    if (!decimalRegex.test(normalized)) {
+      const parts = normalized.split('.');
+      if (parts.length > 1 && parts[1].length > 2) {
+        warnings.push(`${fieldName} ha più di 2 decimali (${normalized}) - sarà arrotondato a ${num.toFixed(2)}`);
+      } else {
+        errors.push(`${fieldName} ha un formato non valido (${normalized})`);
+        return { isValid: false, errors, warnings, normalized: null };
+      }
+    }
+
+    const canonicalValue = num.toFixed(2);
+    return { isValid: true, errors, warnings, normalized: canonicalValue };
+  };
+
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = e.target.files?.[0];
     if (!selectedFile) return;
@@ -113,29 +156,60 @@ export default function ImportPage() {
 
   const validateRows = (rows: any[]): PreviewRow[] => {
     if (importType === "products") {
-      return rows.map(row => {
+      return rows.map((row, index) => {
         const errors: string[] = [];
+        const warnings: string[] = [];
+
         if (!row.code) errors.push("Codice mancante");
         if (!row.name) errors.push("Nome mancante");
         if (!row.unitOfMeasure) errors.push("Unità di misura mancante");
-        if (!row.costPrice || isNaN(parseFloat(row.costPrice))) errors.push("Prezzo costo non valido");
+
+        const costPriceValidation = validateDecimalField(row.costPrice, "Prezzo costo");
+        errors.push(...costPriceValidation.errors);
+        warnings.push(...costPriceValidation.warnings);
+
+        if (row.minThreshold) {
+          const minThresholdValidation = validateDecimalField(row.minThreshold, "Soglia minima");
+          errors.push(...minThresholdValidation.errors);
+          warnings.push(...minThresholdValidation.warnings);
+          if (minThresholdValidation.normalized) {
+            row.minThreshold = minThresholdValidation.normalized;
+          }
+        }
+
+        if (costPriceValidation.normalized) {
+          row.costPrice = costPriceValidation.normalized;
+        }
 
         return {
           ...row,
           _valid: errors.length === 0,
-          _errors: errors.length > 0 ? errors : undefined,
+          _errors: errors.length > 0 ? errors.map(e => `Riga ${index + 2}: ${e}`) : undefined,
+          _warnings: warnings.length > 0 ? warnings.map(w => `Riga ${index + 2}: ${w}`) : undefined,
+          _rowIndex: index + 2,
         };
       });
     } else {
-      return rows.map(row => {
+      return rows.map((row, index) => {
         const errors: string[] = [];
+        const warnings: string[] = [];
+
         if (!row.productCode) errors.push("Codice prodotto mancante");
-        if (!row.salePrice || isNaN(parseFloat(row.salePrice))) errors.push("Prezzo vendita non valido");
+
+        const salePriceValidation = validateDecimalField(row.salePrice, "Prezzo vendita");
+        errors.push(...salePriceValidation.errors);
+        warnings.push(...salePriceValidation.warnings);
+
+        if (salePriceValidation.normalized) {
+          row.salePrice = salePriceValidation.normalized;
+        }
 
         return {
           ...row,
           _valid: errors.length === 0,
-          _errors: errors.length > 0 ? errors : undefined,
+          _errors: errors.length > 0 ? errors.map(e => `Riga ${index + 2}: ${e}`) : undefined,
+          _warnings: warnings.length > 0 ? warnings.map(w => `Riga ${index + 2}: ${w}`) : undefined,
+          _rowIndex: index + 2,
         };
       });
     }
@@ -153,14 +227,23 @@ export default function ImportPage() {
       return;
     }
 
+    const hasWarnings = validRows.some(row => row._warnings && row._warnings.length > 0);
+    if (hasWarnings) {
+      const warningCount = validRows.filter(row => row._warnings && row._warnings.length > 0).length;
+      toast({
+        title: "Attenzione",
+        description: `${warningCount} ${warningCount === 1 ? 'riga ha' : 'righe hanno'} avvisi (valori arrotondati). Controlla l'anteprima.`,
+      });
+    }
+
     if (importType === "products") {
-      const products = validRows.map(({ _valid, _errors, ...row }) => ({
+      const products = validRows.map(({ _valid, _errors, _warnings, _rowIndex, ...row }) => ({
         code: row.code,
         name: row.name,
         category: row.category || null,
         unitOfMeasure: row.unitOfMeasure,
-        costPrice: row.costPrice.toString(),
-        minThreshold: row.minThreshold ? row.minThreshold.toString() : null,
+        costPrice: row.costPrice,
+        minThreshold: row.minThreshold || null,
         active: row.active === "false" ? false : true,
       }));
       importProductsMutation.mutate(products);
@@ -174,9 +257,9 @@ export default function ImportPage() {
         return;
       }
 
-      const items = validRows.map(({ _valid, _errors, ...row }) => ({
+      const items = validRows.map(({ _valid, _errors, _warnings, _rowIndex, ...row }) => ({
         productCode: row.productCode,
-        salePrice: row.salePrice.toString(),
+        salePrice: row.salePrice,
       }));
       importPriceListItemsMutation.mutate({ priceListId: selectedPriceList, items });
     }
@@ -184,6 +267,7 @@ export default function ImportPage() {
 
   const validCount = previewData.filter(row => row._valid).length;
   const invalidCount = previewData.length - validCount;
+  const warningCount = previewData.filter(row => row._warnings && row._warnings.length > 0).length;
 
   return (
     <div className="p-4 sm:p-6 md:p-8">
@@ -274,6 +358,12 @@ export default function ImportPage() {
                     <CheckCircle2 className="h-4 w-4" />
                     {validCount} valide
                   </span>
+                  {warningCount > 0 && (
+                    <span className="flex items-center gap-1 text-yellow-600" data-testid="text-warning-count">
+                      <AlertCircle className="h-4 w-4" />
+                      {warningCount} avvisi
+                    </span>
+                  )}
                   {invalidCount > 0 && (
                     <span className="flex items-center gap-1 text-destructive" data-testid="text-invalid-count">
                       <AlertCircle className="h-4 w-4" />
@@ -288,6 +378,7 @@ export default function ImportPage() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead className="w-16">Riga</TableHead>
                       <TableHead className="w-12">Stato</TableHead>
                       {importType === "products" ? (
                         <>
@@ -309,35 +400,72 @@ export default function ImportPage() {
                   </TableHeader>
                   <TableBody>
                     {previewData.map((row, idx) => (
-                      <TableRow key={idx} className={!row._valid ? "bg-destructive/10" : ""} data-testid={`row-preview-${idx}`}>
-                        <TableCell data-testid={`status-row-${idx}`}>
-                          {row._valid ? (
-                            <CheckCircle2 className="h-4 w-4 text-green-600" data-testid={`icon-valid-${idx}`} />
+                      <>
+                        <TableRow 
+                          key={idx} 
+                          className={!row._valid ? "bg-destructive/10" : (row._warnings && row._warnings.length > 0 ? "bg-yellow-50 dark:bg-yellow-950/10" : "")} 
+                          data-testid={`row-preview-${idx}`}
+                        >
+                          <TableCell className="font-medium text-muted-foreground" data-testid={`rownum-${idx}`}>
+                            {row._rowIndex}
+                          </TableCell>
+                          <TableCell data-testid={`status-row-${idx}`}>
+                            {row._valid ? (
+                              row._warnings && row._warnings.length > 0 ? (
+                                <AlertCircle 
+                                  className="h-4 w-4 text-yellow-600" 
+                                  title={row._warnings.join(", ")}
+                                  data-testid={`icon-warning-${idx}`}
+                                />
+                              ) : (
+                                <CheckCircle2 className="h-4 w-4 text-green-600" data-testid={`icon-valid-${idx}`} />
+                              )
+                            ) : (
+                              <AlertCircle 
+                                className="h-4 w-4 text-destructive" 
+                                title={row._errors?.join(", ")}
+                                data-testid={`icon-invalid-${idx}`}
+                              />
+                            )}
+                          </TableCell>
+                          {importType === "products" ? (
+                            <>
+                              <TableCell className="font-mono text-xs">{row.code}</TableCell>
+                              <TableCell>{row.name}</TableCell>
+                              <TableCell>{row.category}</TableCell>
+                              <TableCell>{row.unitOfMeasure}</TableCell>
+                              <TableCell>€{row.costPrice}</TableCell>
+                              <TableCell>{row.minThreshold || "-"}</TableCell>
+                              <TableCell>{row.active === "false" ? "No" : "Sì"}</TableCell>
+                            </>
                           ) : (
-                            <AlertCircle 
-                              className="h-4 w-4 text-destructive" 
-                              title={row._errors?.join(", ")}
-                              data-testid={`icon-invalid-${idx}`}
-                            />
+                            <>
+                              <TableCell className="font-mono text-xs">{row.productCode}</TableCell>
+                              <TableCell>€{row.salePrice}</TableCell>
+                            </>
                           )}
-                        </TableCell>
-                        {importType === "products" ? (
-                          <>
-                            <TableCell className="font-mono text-xs">{row.code}</TableCell>
-                            <TableCell>{row.name}</TableCell>
-                            <TableCell>{row.category}</TableCell>
-                            <TableCell>{row.unitOfMeasure}</TableCell>
-                            <TableCell>€{row.costPrice}</TableCell>
-                            <TableCell>{row.minThreshold || "-"}</TableCell>
-                            <TableCell>{row.active === "false" ? "No" : "Sì"}</TableCell>
-                          </>
-                        ) : (
-                          <>
-                            <TableCell className="font-mono text-xs">{row.productCode}</TableCell>
-                            <TableCell>€{row.salePrice}</TableCell>
-                          </>
+                        </TableRow>
+                        {(row._errors || row._warnings) && (
+                          <TableRow key={`${idx}-details`} className={!row._valid ? "bg-destructive/5" : "bg-yellow-50/50 dark:bg-yellow-950/5"}>
+                            <TableCell colSpan={importType === "products" ? 9 : 4} className="py-2">
+                              <div className="text-xs space-y-1">
+                                {row._errors && row._errors.map((err, errIdx) => (
+                                  <div key={errIdx} className="text-destructive flex items-start gap-1" data-testid={`error-${idx}-${errIdx}`}>
+                                    <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                                    <span>{err}</span>
+                                  </div>
+                                ))}
+                                {row._warnings && row._warnings.map((warn, warnIdx) => (
+                                  <div key={warnIdx} className="text-yellow-700 dark:text-yellow-500 flex items-start gap-1" data-testid={`warning-${idx}-${warnIdx}`}>
+                                    <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0" />
+                                    <span>{warn}</span>
+                                  </div>
+                                ))}
+                              </div>
+                            </TableCell>
+                          </TableRow>
                         )}
-                      </TableRow>
+                      </>
                     ))}
                   </TableBody>
                 </Table>
