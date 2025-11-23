@@ -343,8 +343,12 @@ export const insertEventSchema = createInsertSchema(events).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  startDatetime: z.string().transform(val => new Date(val)),
-  endDatetime: z.string().transform(val => new Date(val)),
+  startDatetime: z.union([z.string(), z.date()]).transform(val => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+  endDatetime: z.union([z.string(), z.date()]).transform(val => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
   actualRevenue: z.union([z.string(), z.coerce.number(), z.null()]).transform(val => 
     val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
   ).optional(),
@@ -377,8 +381,8 @@ export const insertPriceListSchema = createInsertSchema(priceLists).omit({
   createdAt: true,
   updatedAt: true,
 }).extend({
-  validFrom: z.string().transform(val => new Date(val)),
-  validTo: z.string().transform(val => new Date(val)).optional(),
+  validFrom: z.union([z.string(), z.null()]).transform(val => val ? new Date(val) : new Date()),
+  validTo: z.union([z.string(), z.null(), z.undefined()]).transform(val => val ? new Date(val) : undefined).optional(),
 });
 
 export const updatePriceListSchema = insertPriceListSchema.partial().omit({ companyId: true, supplierId: true });
