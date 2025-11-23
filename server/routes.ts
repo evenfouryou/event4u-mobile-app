@@ -575,6 +575,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Get stocks for specific event
+  app.get('/api/events/:id/stocks', isAuthenticated, async (req: any, res) => {
+    try {
+      const stocks = await storage.getEventStocks(req.params.id);
+      res.json(stocks);
+    } catch (error) {
+      console.error("Error fetching event stocks:", error);
+      res.status(500).json({ message: "Failed to fetch event stocks" });
+    }
+  });
+
   // Create station for specific event
   app.post('/api/events/:id/stations', isAuthenticated, async (req: any, res) => {
     try {
