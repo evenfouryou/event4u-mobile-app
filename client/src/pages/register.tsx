@@ -76,9 +76,14 @@ export default function Register() {
           </CardHeader>
           <CardContent className="space-y-4">
             <p className="text-sm text-muted-foreground text-center">
-              Ti abbiamo inviato un'email di benvenuto all'indirizzo fornito.
-              Ora puoi accedere alla piattaforma.
+              Ti abbiamo inviato un'email con un link di conferma. 
+              Clicca sul link nell'email per verificare il tuo account e completare la registrazione.
             </p>
+            <div className="bg-muted/50 p-4 rounded-lg">
+              <p className="text-xs text-muted-foreground text-center">
+                Non hai ricevuto l'email? Controlla nella cartella spam o nella posta indesiderata.
+              </p>
+            </div>
             <Button 
               className="w-full" 
               asChild

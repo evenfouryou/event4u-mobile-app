@@ -29,6 +29,7 @@ import SuperAdminDashboard from "@/pages/super-admin-dashboard";
 import Stations from "@/pages/stations";
 import Settings from "@/pages/settings";
 import AIAnalysis from "@/pages/ai-analysis";
+import VerifyEmail from "@/pages/verify-email";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -55,6 +56,7 @@ function Router() {
         <Route path="/" component={Landing} />
         <Route path="/login" component={Login} />
         <Route path="/register" component={Register} />
+        <Route path="/verify-email" component={VerifyEmail} />
         <Route component={NotFound} />
       </Switch>
     );
