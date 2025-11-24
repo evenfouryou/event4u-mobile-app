@@ -617,43 +617,115 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (!companyId) {
         return res.status(403).json({ message: "No company associated" });
       }
-      const validated = insertEventSchema.parse({ ...req.body, companyId });
+      
+      // Extract selectedRecurringDates if provided
+      const { selectedRecurringDates, ...eventData } = req.body;
+      const validated = insertEventSchema.parse({ ...eventData, companyId });
       
       // Check if this is a recurring event
       if (validated.isRecurring && validated.recurrencePattern && validated.recurrencePattern !== 'none') {
         // Import recurring events helper
-        const { generateRecurringEvents } = await import('./recurring-events');
+        const { randomUUID } = await import('crypto');
         
-        // Validate recurrence parameters
-        if (!validated.recurrenceInterval || validated.recurrenceInterval < 1) {
-          return res.status(400).json({ message: "Intervallo ricorrenza non valido" });
-        }
-        
-        if (!validated.recurrenceEndDate && !validated.recurrenceCount) {
-          return res.status(400).json({ message: "Specificare data fine o numero occorrenze" });
-        }
-
-        // Generate recurring event occurrences
-        const occurrences = generateRecurringEvents({
-          baseEvent: validated,
-          pattern: validated.recurrencePattern as 'daily' | 'weekly' | 'monthly',
-          interval: validated.recurrenceInterval,
-          count: validated.recurrenceCount || undefined,
-          endDate: validated.recurrenceEndDate ? new Date(validated.recurrenceEndDate) : undefined,
-        });
-
-        // Create all occurrences
-        const createdEvents = await storage.createRecurringEvents(occurrences as any);
-        
-        // Set parent-child relationship: first event is parent (null), others reference it
-        if (createdEvents.length > 1) {
-          const parentId = createdEvents[0].id;
-          for (let i = 1; i < createdEvents.length; i++) {
-            await storage.updateEvent(createdEvents[i].id, { parentEventId: parentId });
+        // If user has manually selected specific dates, use those instead of generating
+        if (selectedRecurringDates && Array.isArray(selectedRecurringDates) && selectedRecurringDates.length > 0) {
+          // MANUAL DATE SELECTION PATH
+          // When using manual date selection, skip interval/count/endDate validation
+          // since user has explicitly chosen which dates to create
+          
+          const seriesId = randomUUID();
+          const eventDuration = new Date(validated.endDatetime).getTime() - new Date(validated.startDatetime).getTime();
+          
+          // Normalize and validate dates: ensure they're ISO strings, parse safely
+          const validDates = selectedRecurringDates
+            .filter((dateInput: any) => {
+              // Accept only string values (ISO format)
+              if (typeof dateInput !== 'string') return false;
+              const parsed = new Date(dateInput);
+              return !isNaN(parsed.getTime());
+            })
+            .map((dateStr: string) => new Date(dateStr))
+            .sort((a: Date, b: Date) => a.getTime() - b.getTime());
+          
+          if (validDates.length === 0) {
+            return res.status(400).json({ message: "Nessuna data valida selezionata" });
           }
+          
+          const occurrences = validDates.map((startDate: Date) => {
+            const endDate = new Date(startDate.getTime() + eventDuration);
+            
+            // Preserve ALL fields from validated event, just override dates and add series info
+            return {
+              ...validated, // Copy all fields from validated event
+              seriesId,
+              isRecurring: true,
+              parentEventId: null,
+              startDatetime: startDate,
+              endDatetime: endDate,
+              // Normalize all optional/nullable fields to explicit null instead of undefined
+              capacity: validated.capacity ?? null,
+              priceListId: validated.priceListId ?? null,
+              actualRevenue: validated.actualRevenue ?? null,
+              notes: validated.notes ?? null,
+              formatId: validated.formatId ?? null,
+              // For manual selection, set meaningful recurrence metadata to prevent issues with future cloning/editing:
+              // - interval: 1 (safe default since dates were manually selected)
+              // - count: number of manually selected dates
+              // - endDate: last selected date
+              recurrenceInterval: 1,
+              recurrenceCount: validDates.length,
+              recurrenceEndDate: validDates[validDates.length - 1],
+            };
+          });
+          
+          // Create all selected occurrences
+          const createdEvents = await storage.createRecurringEvents(occurrences as any);
+          
+          // Set parent-child relationship: first event is parent (null), others reference it
+          if (createdEvents.length > 1) {
+            const parentId = createdEvents[0].id;
+            for (let i = 1; i < createdEvents.length; i++) {
+              await storage.updateEvent(createdEvents[i].id, { parentEventId: parentId });
+            }
+          }
+          
+          res.json({ events: createdEvents, count: createdEvents.length });
+        } else {
+          // AUTOMATIC GENERATION PATH
+          // Use automatic generation if no specific dates provided
+          const { generateRecurringEvents } = await import('./recurring-events');
+          
+          // Validate recurrence parameters (REQUIRED for automatic generation)
+          if (!validated.recurrenceInterval || validated.recurrenceInterval < 1) {
+            return res.status(400).json({ message: "Intervallo ricorrenza non valido" });
+          }
+          
+          if (!validated.recurrenceEndDate && !validated.recurrenceCount) {
+            return res.status(400).json({ message: "Specificare data fine o numero occorrenze" });
+          }
+
+          // Generate recurring event occurrences
+          const occurrences = generateRecurringEvents({
+            baseEvent: validated,
+            pattern: validated.recurrencePattern as 'daily' | 'weekly' | 'monthly',
+            interval: validated.recurrenceInterval,
+            count: validated.recurrenceCount || undefined,
+            endDate: validated.recurrenceEndDate ? new Date(validated.recurrenceEndDate) : undefined,
+          });
+
+          // Create all occurrences
+          const createdEvents = await storage.createRecurringEvents(occurrences as any);
+          
+          // Set parent-child relationship: first event is parent (null), others reference it
+          if (createdEvents.length > 1) {
+            const parentId = createdEvents[0].id;
+            for (let i = 1; i < createdEvents.length; i++) {
+              await storage.updateEvent(createdEvents[i].id, { parentEventId: parentId });
+            }
+          }
+          
+          res.json({ events: createdEvents, count: createdEvents.length });
         }
-        
-        res.json({ events: createdEvents, count: createdEvents.length });
       } else {
         // Create single event
         const event = await storage.createEvent(validated);

@@ -125,7 +125,7 @@ export const events = pgTable("events", {
   seriesId: varchar("series_id"), // UUID shared by all events in a recurring series
   isRecurring: boolean("is_recurring").notNull().default(false),
   recurrencePattern: varchar("recurrence_pattern", { length: 20 }).default('none'), // none, daily, weekly, monthly
-  recurrenceInterval: integer("recurrence_interval").default(1), // every N days/weeks/months
+  recurrenceInterval: integer("recurrence_interval"), // every N days/weeks/months (required for automatic, optional for manual)
   recurrenceCount: integer("recurrence_count"), // total occurrences (null = infinite with end date)
   recurrenceEndDate: timestamp("recurrence_end_date"), // when recurrence ends
   parentEventId: varchar("parent_event_id").references((): any => events.id), // null for parent, points to parent for exceptions
@@ -465,18 +465,12 @@ export const insertEventSchema = baseEventSchema.refine((data) => {
     if (!['daily', 'weekly', 'monthly'].includes(data.recurrencePattern)) {
       return false;
     }
-    // Must have interval >= 1
-    if (!data.recurrenceInterval || data.recurrenceInterval < 1) {
-      return false;
-    }
-    // Must have either end date or count
-    if (!data.recurrenceEndDate && !data.recurrenceCount) {
-      return false;
-    }
+    // NOTE: interval/count/endDate validation is handled in backend
+    // to allow different requirements for manual vs automatic date selection
   }
   return true;
 }, {
-  message: "Eventi ricorrenti richiedono pattern valido, intervallo >= 1, e data fine o numero occorrenze",
+  message: "Eventi ricorrenti richiedono pattern valido",
 });
 
 export const updateEventSchema = baseEventSchema.partial().omit({ companyId: true });

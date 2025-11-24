@@ -11,6 +11,8 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### November 24, 2025
+- **Event Formats/Categories System**: Added event_formats table and CRUD API with admin-only permissions. Created management UI with color picker and badge preview. Events can now be classified with custom formats (e.g., "Wedding", "Concert") displayed as colored badges throughout the UI.
+- **Manual Recurring Event Date Selection**: Enhanced recurring events UI with real-time date preview and checkbox selection. Users can now review generated dates and manually select which occurrences to create. Backend validates selected dates and preserves all event fields correctly.
 - **Recurring Events Bug Fixes**: Fixed critical bugs where future-dated recurring events were excluded and `parentEventId` hierarchy wasn't established after bulk insert
 - **Warehouse Multi-Product Operations**: Added bulk-load and bulk-unload endpoints with table interface for managing multiple products simultaneously with quantity validation
 - **Search & Filtering**: Implemented product search by name/code in stock list, and movement filters by type/supplier/product with defensive enrichment

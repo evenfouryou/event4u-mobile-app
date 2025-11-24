@@ -188,7 +188,27 @@ export default function Events() {
   });
 
   const handleSubmit = (data: InsertEvent) => {
-    createMutation.mutate(data);
+    // Validate recurring events have selected dates
+    if (data.isRecurring && data.recurrencePattern && data.recurrencePattern !== 'none') {
+      if (selectedDates.size === 0) {
+        toast({
+          title: "Errore",
+          description: "Seleziona almeno una data per creare eventi ricorrenti",
+          variant: "destructive",
+        });
+        return;
+      }
+      
+      // Send selected dates to backend (as ISO strings for proper timezone handling)
+      const selectedDatesArray = Array.from(selectedDates);
+      const payload = {
+        ...data,
+        selectedRecurringDates: selectedDatesArray, // Keep as ISO strings
+      };
+      createMutation.mutate(payload as any);
+    } else {
+      createMutation.mutate(data);
+    }
   };
 
   const formatsMap = useMemo(() => {
@@ -209,41 +229,31 @@ export default function Events() {
 
   // Update preview dates when recurring params change
   useEffect(() => {
-    const isRecurring = form.watch('isRecurring');
-    const pattern = form.watch('recurrencePattern');
-    const interval = form.watch('recurrenceInterval');
-    const count = form.watch('recurrenceCount');
-    const endDate = form.watch('recurrenceEndDate');
-    const startDatetime = form.watch('startDatetime');
-    const endDatetime = form.watch('endDatetime');
-    
-    if (isRecurring && pattern && pattern !== 'none' && startDatetime && endDatetime) {
-      const dates = generateRecurringDatesPreview(
-        new Date(startDatetime),
-        new Date(endDatetime),
-        pattern as 'daily' | 'weekly' | 'monthly',
-        interval || 1,
-        count,
-        endDate ? new Date(endDate) : undefined
-      );
-      setPreviewDates(dates);
+    const subscription = form.watch((values) => {
+      const { isRecurring, recurrencePattern, recurrenceInterval, recurrenceCount, recurrenceEndDate, startDatetime, endDatetime } = values;
       
-      // Initialize all dates as selected
-      const allDatesSet = new Set(dates.map(d => d.toISOString()));
-      setSelectedDates(allDatesSet);
-    } else {
-      setPreviewDates([]);
-      setSelectedDates(new Set());
-    }
-  }, [
-    form.watch('isRecurring'),
-    form.watch('recurrencePattern'),
-    form.watch('recurrenceInterval'),
-    form.watch('recurrenceCount'),
-    form.watch('recurrenceEndDate'),
-    form.watch('startDatetime'),
-    form.watch('endDatetime'),
-  ]);
+      if (isRecurring && recurrencePattern && recurrencePattern !== 'none' && startDatetime && endDatetime) {
+        const dates = generateRecurringDatesPreview(
+          new Date(startDatetime),
+          new Date(endDatetime),
+          recurrencePattern as 'daily' | 'weekly' | 'monthly',
+          recurrenceInterval || 1,
+          recurrenceCount,
+          recurrenceEndDate ? new Date(recurrenceEndDate) : undefined
+        );
+        setPreviewDates(dates);
+        
+        // ALWAYS reset and initialize all dates as selected when params change
+        const allDatesSet = new Set(dates.map(d => d.toISOString()));
+        setSelectedDates(allDatesSet);
+      } else {
+        setPreviewDates([]);
+        setSelectedDates(new Set());
+      }
+    });
+    
+    return () => subscription.unsubscribe();
+  }, [form]);
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto">
