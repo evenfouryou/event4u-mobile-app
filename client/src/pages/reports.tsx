@@ -13,11 +13,11 @@ import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 
 type Event = {
-  id: number;
+  id: string;
   name: string;
   eventDate: string;
   status: string;
-  locationId: number;
+  locationId: string;
 };
 
 type ReportData = {
@@ -88,7 +88,7 @@ export default function Reports() {
   const handleExportPDF = () => {
     if (!reportData) return;
 
-    const event = events.find(e => e.id === parseInt(selectedEventId));
+    const event = events.find(e => e.id === selectedEventId);
     if (!event) return;
 
     const pdf = new jsPDF();
@@ -174,7 +174,7 @@ export default function Reports() {
   const handleExportExcel = () => {
     if (!reportData) return;
 
-    const event = events.find(e => e.id === parseInt(selectedEventId));
+    const event = events.find(e => e.id === selectedEventId);
     if (!event) return;
 
     // Create workbook
@@ -326,7 +326,7 @@ export default function Reports() {
             </SelectTrigger>
             <SelectContent>
               {filteredEvents.map((event) => (
-                <SelectItem key={event.id} value={event.id.toString()}>
+                <SelectItem key={event.id} value={event.id}>
                   {event.name} - {new Date((event as any).startDatetime || (event as any).eventDate).toLocaleDateString('it-IT')}
                 </SelectItem>
               ))}
