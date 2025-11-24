@@ -1,11 +1,11 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { FileText, Download, FileSpreadsheet, TrendingUp, TrendingDown, DollarSign, Calendar, ArrowLeft } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
@@ -52,13 +52,23 @@ type RevenueAnalysis = {
 };
 
 export default function Reports() {
-  const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const searchString = useSearch();
+  const urlParams = new URLSearchParams(searchString);
+  const urlEventId = urlParams.get('eventId');
+
+  const [selectedEventId, setSelectedEventId] = useState<string>(urlEventId || "");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
 
   const { data: events = [], isLoading: eventsLoading } = useQuery<Event[]>({
     queryKey: ['/api/events'],
   });
+
+  useEffect(() => {
+    if (urlEventId && !selectedEventId) {
+      setSelectedEventId(urlEventId);
+    }
+  }, [urlEventId, selectedEventId]);
 
   const filteredEvents = useMemo(() => {
     if (!events) return [];

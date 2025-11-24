@@ -439,7 +439,7 @@ export default function EventDetail() {
           </div>
           <div className="flex gap-2">
             <Button asChild variant="outline" data-testid="button-view-report">
-              <Link href={`/events/${id}/report`}>
+              <Link href={`/reports?eventId=${id}`}>
                 Report
               </Link>
             </Button>
