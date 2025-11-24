@@ -2268,7 +2268,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const { eventId } = req.params;
       const movements = await storage.getMovementsByEvent(eventId);
       const products = await storage.getProductsByCompany(companyId);
-      const stations = await storage.getStationsByEvent(eventId);
 
       // Get all CONSUME movements for this event
       const consumeMovements = movements.filter(m => m.type === 'CONSUME');
@@ -2308,10 +2307,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
+      // Get unique station IDs from consume movements
+      const stationIds = [...new Set(consumeMovements.map(m => m.fromStationId).filter(Boolean))] as string[];
+      
+      // Fetch station details for all referenced stations
+      const allStations = await storage.getStationsByCompany(companyId);
+      const stationMap = new Map(allStations.map(s => [s.id, s]));
+
       // Calculate consumption per station (for detailed breakdown)
-      const stationReports = await Promise.all(stations.map(async (station) => {
+      const stationReports = stationIds.map(stationId => {
+        const station = stationMap.get(stationId);
+        const stationName = station?.name || `Postazione ${stationId.slice(0, 8)}`;
+        
         const stationConsumeMovements = consumeMovements.filter(m => 
-          m.fromStationId === station.id
+          m.fromStationId === stationId
         );
 
         const items: any[] = [];
@@ -2335,12 +2344,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
 
         return {
-          stationId: station.id,
-          stationName: station.name,
+          stationId,
+          stationName,
           items,
           totalCost: stationTotalCost,
         };
-      }));
+      });
 
       const consumedProducts = Array.from(consumptionByProduct.values());
 

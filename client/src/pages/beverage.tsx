@@ -19,6 +19,7 @@ import {
   Clock,
   Wine,
   Users,
+  Sparkles,
 } from "lucide-react";
 import type { Event, Product, Station } from "@shared/schema";
 
@@ -420,6 +421,14 @@ export default function Beverage() {
             <CardContent className="p-4 flex items-center gap-3">
               <BarChart3 className="h-5 w-5 text-primary" />
               <span className="font-medium">Report</span>
+            </CardContent>
+          </Card>
+        </Link>
+        <Link href="/ai-analysis">
+          <Card className="hover-elevate cursor-pointer">
+            <CardContent className="p-4 flex items-center gap-3">
+              <Sparkles className="h-5 w-5 text-primary" />
+              <span className="font-medium">Analisi AI</span>
             </CardContent>
           </Card>
         </Link>
