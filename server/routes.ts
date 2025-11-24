@@ -1604,6 +1604,128 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Bulk load multiple products
+  app.post('/api/stock/bulk-load', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      const userId = req.user.claims.sub;
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+
+      const bulkSchema = z.object({
+        items: z.array(z.object({
+          productId: z.string().uuid(),
+          quantity: z.string().min(1),
+          supplierId: z.string().uuid().optional(),
+        })),
+        reason: z.string().optional(),
+      });
+
+      const validated = bulkSchema.parse(req.body);
+      const currentStocks = await storage.getGeneralStocks(companyId);
+      
+      // Process all items
+      for (const item of validated.items) {
+        // Convert quantity to number and validate
+        const quantityNum = parseFloat(item.quantity);
+        if (isNaN(quantityNum) || quantityNum <= 0) {
+          return res.status(400).json({ message: `Quantità non valida per prodotto ${item.productId}` });
+        }
+
+        const existingStock = currentStocks.find(s => s.productId === item.productId);
+        const currentQty = existingStock ? parseFloat(existingStock.quantity) : 0;
+        const newQty = currentQty + quantityNum;
+
+        await storage.upsertStock({
+          companyId,
+          productId: item.productId,
+          quantity: newQty.toString(),
+        });
+
+        // Get supplier name if provided (optional-safe)
+        let supplierName: string | undefined;
+        if (item.supplierId) {
+          const supplier = await storage.getSupplierById(item.supplierId, companyId);
+          if (!supplier) {
+            return res.status(400).json({ message: `Fornitore non trovato: ${item.supplierId}` });
+          }
+          supplierName = supplier.name;
+        }
+
+        await storage.createStockMovement({
+          companyId,
+          productId: item.productId,
+          quantity: quantityNum.toString(),
+          type: 'LOAD',
+          reason: validated.reason,
+          supplier: supplierName,
+          performedBy: userId,
+        });
+      }
+
+      res.json({ success: true, count: validated.items.length });
+    } catch (error) {
+      console.error("Error bulk loading stock:", error);
+      res.status(500).json({ message: "Failed to bulk load stock" });
+    }
+  });
+
+  // Bulk unload multiple products
+  app.post('/api/stock/bulk-unload', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      const userId = req.user.claims.sub;
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+
+      const bulkSchema = z.object({
+        items: z.array(z.object({
+          productId: z.string().uuid(),
+          quantity: z.string().min(1),
+        })),
+        reason: z.string().optional(),
+      });
+
+      const validated = bulkSchema.parse(req.body);
+      const currentStocks = await storage.getGeneralStocks(companyId);
+      
+      // Process all items
+      for (const item of validated.items) {
+        // Convert quantity to number and validate
+        const quantityNum = parseFloat(item.quantity);
+        if (isNaN(quantityNum) || quantityNum <= 0) {
+          return res.status(400).json({ message: `Quantità non valida per prodotto ${item.productId}` });
+        }
+
+        const existingStock = currentStocks.find(s => s.productId === item.productId);
+        const currentQty = existingStock ? parseFloat(existingStock.quantity) : 0;
+        const newQty = Math.max(0, currentQty - quantityNum);
+
+        await storage.upsertStock({
+          companyId,
+          productId: item.productId,
+          quantity: newQty.toString(),
+        });
+
+        await storage.createStockMovement({
+          companyId,
+          productId: item.productId,
+          quantity: quantityNum.toString(),
+          type: 'UNLOAD',
+          reason: validated.reason,
+          performedBy: userId,
+        });
+      }
+
+      res.json({ success: true, count: validated.items.length });
+    } catch (error) {
+      console.error("Error bulk unloading stock:", error);
+      res.status(500).json({ message: "Failed to bulk unload stock" });
+    }
+  });
+
   app.get('/api/stock/movements', isAuthenticated, async (req: any, res) => {
     try {
       const companyId = await getUserCompanyId(req);
@@ -1611,7 +1733,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "No company associated" });
       }
       const movements = await storage.getMovementsByCompany(companyId);
-      res.json(movements);
+      const products = await storage.getProductsByCompany(companyId) || [];
+      
+      // Enrich movements with product details (defensive against undefined products array)
+      const enrichedMovements = movements.map(movement => {
+        const product = products.find(p => p.id === movement.productId);
+        return {
+          ...movement,
+          productName: product?.name || 'Sconosciuto',
+          productCode: product?.code || '-',
+        };
+      });
+      
+      res.json(enrichedMovements);
     } catch (error) {
       console.error("Error fetching movements:", error);
       res.status(500).json({ message: "Failed to fetch movements" });
