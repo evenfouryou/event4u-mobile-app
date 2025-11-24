@@ -377,8 +377,11 @@ export default function EventDetail() {
     transferStockMutation.mutate(transfers);
   };
 
+  // Filter only fixed (general) stations that are not deleted
+  const fixedStations = (generalStations || []).filter(s => !s.eventId && !s.deletedAt);
+  
   const allStations = [
-    ...(generalStations || []).map(s => ({ ...s, isGeneral: true })),
+    ...fixedStations.map(s => ({ ...s, isGeneral: true })),
     ...(eventStations || []).map(s => ({ ...s, isGeneral: false })),
   ];
 
@@ -898,17 +901,22 @@ export default function EventDetail() {
             <Skeleton className="h-32" />
             <Skeleton className="h-32" />
           </div>
-        ) : eventStations && eventStations.length > 0 ? (
+        ) : allStations && allStations.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {eventStations.map((station) => {
+            {allStations.map((station) => {
               const assignedBartenders = users?.filter(u => station.bartenderIds?.includes(u.id)) || [];
               const isEditing = editingStationIds.has(station.id);
               return (
                 <Card key={station.id} data-testid={`station-card-${station.id}`}>
                   <CardHeader className="pb-3">
                     <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg">{station.name}</CardTitle>
-                      {!isEditing && (
+                      <div className="flex items-center gap-2">
+                        <CardTitle className="text-lg">{station.name}</CardTitle>
+                        {station.isGeneral && (
+                          <Badge variant="secondary" className="text-xs">Fissa</Badge>
+                        )}
+                      </div>
+                      {!isEditing && !station.isGeneral && (
                         <Button
                           size="sm"
                           variant="ghost"
@@ -1032,10 +1040,15 @@ export default function EventDetail() {
           <Card>
             <CardContent className="p-12 text-center">
               <Package className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground mb-4">Nessuna postazione creata</p>
+              <p className="text-muted-foreground mb-4">
+                {fixedStations.length > 0 
+                  ? `Hai ${fixedStations.length} postazioni fisse disponibili. Puoi anche creare postazioni specifiche per questo evento.`
+                  : "Nessuna postazione disponibile"
+                }
+              </p>
               <Button onClick={() => setStationDialogOpen(true)} data-testid="button-create-first-station">
                 <Plus className="h-4 w-4 mr-2" />
-                Crea Prima Postazione
+                Crea Postazione Evento
               </Button>
             </CardContent>
           </Card>
