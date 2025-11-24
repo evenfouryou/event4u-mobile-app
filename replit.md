@@ -8,6 +8,15 @@ Event4U is a comprehensive event management and inventory tracking system design
 
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### November 24, 2025
+- **Recurring Events Bug Fixes**: Fixed critical bugs where future-dated recurring events were excluded and `parentEventId` hierarchy wasn't established after bulk insert
+- **Warehouse Multi-Product Operations**: Added bulk-load and bulk-unload endpoints with table interface for managing multiple products simultaneously with quantity validation
+- **Search & Filtering**: Implemented product search by name/code in stock list, and movement filters by type/supplier/product with defensive enrichment
+- **Email Verification URLs**: Replaced deprecated `REPL_SLUG`/`REPL_OWNER` with `REPLIT_DEV_DOMAIN` and `PUBLIC_URL` fallback for production deployments
+- **Warehouse Role Permissions**: Enforced warehouse role restrictions - protected supplier creation/edit/delete and event creation endpoints with `isAdminOrSuperAdmin` middleware, disabled UI buttons for warehouse users
+
 ## System Architecture
 
 ### Frontend Architecture
@@ -20,7 +29,7 @@ The backend is developed with Node.js and Express.js, using TypeScript with ESM 
 
 ### Authentication & Authorization
 
-Authentication supports both Replit OAuth and classic email/password registration with BCrypt hashing and email verification. Session management is handled by `express-session` with a PostgreSQL store. Authorization is based on a Role-Based Access Control (RBAC) model with five roles: `super_admin`, `company_admin`, `organizer`, `warehouse`, and `bartender`. Security considerations include HTTP-only secure cookies, encrypted session data, role checks in API middleware, and company-scoped data access for multi-tenant isolation. Impersonation features for `super_admin` and `company_admin` roles are also implemented.
+Authentication supports both Replit OAuth and classic email/password registration with BCrypt hashing and email verification. Session management is handled by `express-session` with a PostgreSQL store. Authorization is based on a Role-Based Access Control (RBAC) model with five roles: `super_admin`, `gestore` (company admin), `organizer`, `warehouse`, and `bartender`. Security considerations include HTTP-only secure cookies, encrypted session data, role checks in API middleware, and company-scoped data access for multi-tenant isolation. Impersonation features for `super_admin` and `gestore` roles are also implemented. Warehouse users have read-only access to suppliers and events but cannot create, modify, or delete them.
 
 ### Data Model & Business Logic
 
