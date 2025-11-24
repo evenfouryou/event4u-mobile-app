@@ -8,7 +8,7 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
-import { Plus, Calendar as CalendarIcon, Users, Eye, Search, Warehouse, Repeat, FileEdit, Clock, CalendarCheck, FilePenLine } from "lucide-react";
+import { Plus, Calendar as CalendarIcon, Users, Eye, Search, Warehouse, Repeat, FileEdit, Clock, CalendarCheck, FilePenLine, CheckCircle2 } from "lucide-react";
 import type { Event, Station, EventFormat } from "@shared/schema";
 
 const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -21,7 +21,7 @@ const statusLabels: Record<string, { label: string; variant: "default" | "second
 export default function Events() {
   const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<'ongoing' | 'scheduled' | 'draft'>('ongoing');
+  const [activeTab, setActiveTab] = useState<'ongoing' | 'scheduled' | 'draft' | 'closed'>('ongoing');
   const { user } = useAuth();
   
   const canCreateEvents = user?.role === 'super_admin' || user?.role === 'gestore';
@@ -74,11 +74,20 @@ export default function Events() {
     );
   }, [events, searchQuery]);
 
+  const closedEvents = useMemo(() => {
+    if (!events) return [];
+    return events.filter(e => 
+      e.status === 'closed' && 
+      (searchQuery === "" || e.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }, [events, searchQuery]);
+
   // Get count for each tab
   const tabCounts = useMemo(() => ({
     ongoing: events?.filter(e => e.status === 'ongoing').length || 0,
     scheduled: events?.filter(e => e.status === 'scheduled').length || 0,
     draft: events?.filter(e => e.status === 'draft').length || 0,
+    closed: events?.filter(e => e.status === 'closed').length || 0,
   }), [events]);
 
   const renderEventCard = (event: Event, isDraft: boolean = false) => {
@@ -264,32 +273,41 @@ export default function Events() {
       </div>
 
       {/* Tabs Navigation */}
-      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'ongoing' | 'scheduled' | 'draft')}>
-        <TabsList className="mb-6 grid w-full max-w-md grid-cols-3">
-          <TabsTrigger value="ongoing" className="flex items-center gap-2">
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'ongoing' | 'scheduled' | 'draft' | 'closed')}>
+        <TabsList className="mb-6 grid w-full max-w-lg grid-cols-4">
+          <TabsTrigger value="ongoing" className="flex items-center gap-1">
             <Clock className="h-4 w-4" />
-            <span>In Corso</span>
+            <span className="hidden sm:inline">In Corso</span>
             {tabCounts.ongoing > 0 && (
               <Badge variant="default" className="ml-1 h-5 px-1.5">
                 {tabCounts.ongoing}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="scheduled" className="flex items-center gap-2">
+          <TabsTrigger value="scheduled" className="flex items-center gap-1">
             <CalendarCheck className="h-4 w-4" />
-            <span>Programmati</span>
+            <span className="hidden sm:inline">Programmati</span>
             {tabCounts.scheduled > 0 && (
               <Badge variant="secondary" className="ml-1 h-5 px-1.5">
                 {tabCounts.scheduled}
               </Badge>
             )}
           </TabsTrigger>
-          <TabsTrigger value="draft" className="flex items-center gap-2">
+          <TabsTrigger value="draft" className="flex items-center gap-1">
             <FilePenLine className="h-4 w-4" />
-            <span>Bozze</span>
+            <span className="hidden sm:inline">Bozze</span>
             {tabCounts.draft > 0 && (
               <Badge variant="outline" className="ml-1 h-5 px-1.5">
                 {tabCounts.draft}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="closed" className="flex items-center gap-1">
+            <CheckCircle2 className="h-4 w-4" />
+            <span className="hidden sm:inline">Chiusi</span>
+            {tabCounts.closed > 0 && (
+              <Badge variant="destructive" className="ml-1 h-5 px-1.5">
+                {tabCounts.closed}
               </Badge>
             )}
           </TabsTrigger>
@@ -314,6 +332,10 @@ export default function Events() {
               </CardContent>
             </Card>
           )}
+        </TabsContent>
+
+        <TabsContent value="closed" className="mt-0">
+          {renderEventList(closedEvents, searchQuery ? "Nessun evento chiuso trovato" : "Nessun evento chiuso")}
         </TabsContent>
       </Tabs>
     </div>
