@@ -1817,8 +1817,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         items: z.array(z.object({
           productId: z.string().uuid(),
           quantity: z.string().min(1),
+          reason: z.string().optional(),
         })),
-        reason: z.string().optional(),
       });
 
       const validated = bulkSchema.parse(req.body);
@@ -1847,7 +1847,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           productId: item.productId,
           quantity: quantityNum.toString(),
           type: 'UNLOAD',
-          reason: validated.reason,
+          reason: item.reason,
           performedBy: userId,
         });
       }

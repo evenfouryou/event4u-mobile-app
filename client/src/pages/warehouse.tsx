@@ -64,11 +64,20 @@ interface MultiLoadItem {
   supplierId?: string;
 }
 
+interface MultiUnloadItem {
+  id: string;
+  productId: string;
+  quantity: string;
+  reason?: string;
+}
+
 export default function Warehouse() {
   const [loadDialogOpen, setLoadDialogOpen] = useState(false);
   const [unloadDialogOpen, setUnloadDialogOpen] = useState(false);
   const [multiLoadDialogOpen, setMultiLoadDialogOpen] = useState(false);
+  const [multiUnloadDialogOpen, setMultiUnloadDialogOpen] = useState(false);
   const [multiLoadItems, setMultiLoadItems] = useState<MultiLoadItem[]>([]);
+  const [multiUnloadItems, setMultiUnloadItems] = useState<MultiUnloadItem[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
   const [movementTypeFilter, setMovementTypeFilter] = useState<string>("all");
   const [movementSearchQuery, setMovementSearchQuery] = useState("");
@@ -263,6 +272,76 @@ export default function Warehouse() {
     }
     
     bulkLoadMutation.mutate({ items: validItems });
+  };
+
+  const bulkUnloadMutation = useMutation({
+    mutationFn: async (data: { items: Array<{ productId: string; quantity: string; reason?: string }> }) => {
+      await apiRequest('POST', '/api/stock/bulk-unload', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
+      setMultiUnloadDialogOpen(false);
+      setMultiUnloadItems([]);
+      toast({
+        title: "Successo",
+        description: "Scarico multiplo effettuato con successo",
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Non autorizzato",
+          description: "Effettua nuovamente il login...",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = '/api/login', 500);
+        return;
+      }
+      toast({
+        title: "Errore",
+        description: "Impossibile effettuare lo scarico multiplo",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAddMultiUnloadItem = () => {
+    setMultiUnloadItems(prev => [...prev, {
+      id: crypto.randomUUID(),
+      productId: '',
+      quantity: '',
+      reason: '',
+    }]);
+  };
+
+  const handleRemoveMultiUnloadItem = (id: string) => {
+    setMultiUnloadItems(prev => prev.filter(item => item.id !== id));
+  };
+
+  const handleUpdateMultiUnloadItem = (id: string, field: keyof MultiUnloadItem, value: string) => {
+    setMultiUnloadItems(prev => prev.map(item =>
+      item.id === id ? { ...item, [field]: value } : item
+    ));
+  };
+
+  const handleSubmitBulkUnload = () => {
+    const validItems = multiUnloadItems.filter(item => {
+      if (!item.productId || !item.quantity) return false;
+      const qty = parseFloat(item.quantity);
+      return !isNaN(qty) && qty > 0;
+    });
+    
+    if (validItems.length === 0) {
+      toast({
+        title: "Errore",
+        description: "Aggiungi almeno un prodotto con quantità valida",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    bulkUnloadMutation.mutate({ items: validItems });
   };
 
   return (
@@ -587,6 +666,126 @@ export default function Warehouse() {
                   data-testid="button-submit-multi-load"
                 >
                   {bulkLoadMutation.isPending ? 'Caricamento...' : `Carica ${multiLoadItems.length > 0 ? `(${multiLoadItems.length})` : ''}`}
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+
+          <Dialog open={multiUnloadDialogOpen} onOpenChange={setMultiUnloadDialogOpen}>
+            <DialogTrigger asChild>
+              <Button variant="outline" data-testid="button-multi-unload">
+                <ListPlus className="h-4 w-4 mr-2" />
+                Scarico Multiplo
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-4xl">
+              <DialogHeader>
+                <DialogTitle>Scarico Multiprodotto</DialogTitle>
+              </DialogHeader>
+              
+              <div className="space-y-4">
+                <div className="border rounded-md">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Prodotto</TableHead>
+                        <TableHead>Quantità</TableHead>
+                        <TableHead>Motivo</TableHead>
+                        <TableHead className="w-[50px]"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {multiUnloadItems.length === 0 ? (
+                        <TableRow>
+                          <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                            Nessun prodotto aggiunto. Clicca "+ Aggiungi Prodotto" per iniziare.
+                          </TableCell>
+                        </TableRow>
+                      ) : (
+                        multiUnloadItems.map((item) => (
+                          <TableRow key={item.id}>
+                            <TableCell>
+                              <Select
+                                value={item.productId}
+                                onValueChange={(value) => handleUpdateMultiUnloadItem(item.id, 'productId', value)}
+                              >
+                                <SelectTrigger data-testid={`select-unload-product-${item.id}`}>
+                                  <SelectValue placeholder="Seleziona prodotto" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {products?.filter(p => p.id).map((product) => (
+                                    <SelectItem key={product.id} value={product.id}>
+                                      {product.name} ({product.code})
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                type="number"
+                                step="0.01"
+                                placeholder="0"
+                                value={item.quantity}
+                                onChange={(e) => handleUpdateMultiUnloadItem(item.id, 'quantity', e.target.value)}
+                                data-testid={`input-unload-quantity-${item.id}`}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Input
+                                placeholder="Motivo (opzionale)"
+                                value={item.reason || ''}
+                                onChange={(e) => handleUpdateMultiUnloadItem(item.id, 'reason', e.target.value)}
+                                data-testid={`input-unload-reason-${item.id}`}
+                              />
+                            </TableCell>
+                            <TableCell>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleRemoveMultiUnloadItem(item.id)}
+                                data-testid={`button-remove-unload-${item.id}`}
+                              >
+                                <X className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))
+                      )}
+                    </TableBody>
+                  </Table>
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAddMultiUnloadItem}
+                  data-testid="button-add-multi-unload-product"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  Aggiungi Prodotto
+                </Button>
+              </div>
+
+              <DialogFooter>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => {
+                    setMultiUnloadDialogOpen(false);
+                    setMultiUnloadItems([]);
+                  }}
+                  data-testid="button-cancel-multi-unload"
+                >
+                  Annulla
+                </Button>
+                <Button
+                  onClick={handleSubmitBulkUnload}
+                  disabled={bulkUnloadMutation.isPending || multiUnloadItems.length === 0}
+                  data-testid="button-submit-multi-unload"
+                >
+                  {bulkUnloadMutation.isPending ? 'Scaricando...' : `Scarica ${multiUnloadItems.length > 0 ? `(${multiUnloadItems.length})` : ''}`}
                 </Button>
               </DialogFooter>
             </DialogContent>
