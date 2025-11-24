@@ -408,7 +408,7 @@ export const insertLocationSchema = createInsertSchema(locations).omit({
   updatedAt: true,
 });
 
-export const insertEventSchema = createInsertSchema(events).omit({
+const baseEventSchema = createInsertSchema(events).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
@@ -422,9 +422,33 @@ export const insertEventSchema = createInsertSchema(events).omit({
   actualRevenue: z.union([z.string(), z.coerce.number(), z.null()]).transform(val => 
     val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
   ).optional(),
+  recurrenceEndDate: z.union([z.string(), z.date(), z.null(), z.undefined()]).transform(val => 
+    val && typeof val === 'string' ? new Date(val) : val || undefined
+  ).optional(),
 });
 
-export const updateEventSchema = insertEventSchema.partial().omit({ companyId: true });
+export const insertEventSchema = baseEventSchema.refine((data) => {
+  // If recurring, validate recurrence parameters
+  if (data.isRecurring && data.recurrencePattern && data.recurrencePattern !== 'none') {
+    // Must have valid pattern
+    if (!['daily', 'weekly', 'monthly'].includes(data.recurrencePattern)) {
+      return false;
+    }
+    // Must have interval >= 1
+    if (!data.recurrenceInterval || data.recurrenceInterval < 1) {
+      return false;
+    }
+    // Must have either end date or count
+    if (!data.recurrenceEndDate && !data.recurrenceCount) {
+      return false;
+    }
+  }
+  return true;
+}, {
+  message: "Eventi ricorrenti richiedono pattern valido, intervallo >= 1, e data fine o numero occorrenze",
+});
+
+export const updateEventSchema = baseEventSchema.partial().omit({ companyId: true });
 
 export const insertStationSchema = createInsertSchema(stations).omit({
   id: true,

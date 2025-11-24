@@ -559,8 +559,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "No company associated" });
       }
       const validated = insertEventSchema.parse({ ...req.body, companyId });
-      const event = await storage.createEvent(validated);
-      res.json(event);
+      
+      // Check if this is a recurring event
+      if (validated.isRecurring && validated.recurrencePattern && validated.recurrencePattern !== 'none') {
+        // Import recurring events helper
+        const { generateRecurringEvents } = await import('./recurring-events');
+        
+        // Validate recurrence parameters
+        if (!validated.recurrenceInterval || validated.recurrenceInterval < 1) {
+          return res.status(400).json({ message: "Intervallo ricorrenza non valido" });
+        }
+        
+        if (!validated.recurrenceEndDate && !validated.recurrenceCount) {
+          return res.status(400).json({ message: "Specificare data fine o numero occorrenze" });
+        }
+
+        // Generate recurring event occurrences
+        const occurrences = generateRecurringEvents({
+          baseEvent: validated,
+          pattern: validated.recurrencePattern as 'daily' | 'weekly' | 'monthly',
+          interval: validated.recurrenceInterval,
+          count: validated.recurrenceCount || undefined,
+          endDate: validated.recurrenceEndDate ? new Date(validated.recurrenceEndDate) : undefined,
+        });
+
+        // Create all occurrences
+        const createdEvents = await storage.createRecurringEvents(occurrences as any);
+        
+        // Set parent-child relationship: first event is parent (null), others reference it
+        if (createdEvents.length > 1) {
+          const parentId = createdEvents[0].id;
+          for (let i = 1; i < createdEvents.length; i++) {
+            await storage.updateEvent(createdEvents[i].id, { parentEventId: parentId });
+          }
+        }
+        
+        res.json({ events: createdEvents, count: createdEvents.length });
+      } else {
+        // Create single event
+        const event = await storage.createEvent(validated);
+        res.json(event);
+      }
     } catch (error: any) {
       console.error("Error creating event:", error);
       res.status(400).json({ message: error.message || "Failed to create event" });

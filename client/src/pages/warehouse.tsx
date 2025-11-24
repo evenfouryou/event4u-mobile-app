@@ -41,11 +41,11 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Warehouse as WarehouseIcon, TrendingUp, TrendingDown, Package, AlertTriangle } from "lucide-react";
+import { Plus, Warehouse as WarehouseIcon, TrendingUp, TrendingDown, Package, AlertTriangle, X, ListPlus } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { Product, StockMovement } from "@shared/schema";
+import type { Product, StockMovement, Supplier } from "@shared/schema";
 
 const loadStockSchema = z.object({
   productId: z.string().min(1, "Seleziona un prodotto"),
@@ -56,13 +56,27 @@ const loadStockSchema = z.object({
 
 type LoadStockData = z.infer<typeof loadStockSchema>;
 
+interface MultiLoadItem {
+  id: string;
+  productId: string;
+  quantity: string;
+  supplierId?: string;
+}
+
 export default function Warehouse() {
   const [loadDialogOpen, setLoadDialogOpen] = useState(false);
   const [unloadDialogOpen, setUnloadDialogOpen] = useState(false);
+  const [multiLoadDialogOpen, setMultiLoadDialogOpen] = useState(false);
+  const [multiLoadItems, setMultiLoadItems] = useState<MultiLoadItem[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const { toast } = useToast();
 
   const { data: products } = useQuery<Product[]>({
     queryKey: ['/api/products'],
+  });
+
+  const { data: suppliers } = useQuery<Supplier[]>({
+    queryKey: ['/api/suppliers'],
   });
 
   const { data: stocks, isLoading: stocksLoading } = useQuery<Array<{

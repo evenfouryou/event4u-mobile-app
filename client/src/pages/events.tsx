@@ -34,7 +34,10 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, Calendar as CalendarIcon, MapPin, Users, Eye, Search, Warehouse } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Label } from "@/components/ui/label";
+import { Plus, Calendar as CalendarIcon, MapPin, Users, Eye, Search, Warehouse, Repeat } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertEventSchema, type Event, type InsertEvent, type Location, type Station } from "@shared/schema";
@@ -78,20 +81,43 @@ export default function Events() {
       status: 'draft',
       notes: '',
       companyId: '',
+      isRecurring: false,
+      recurrencePattern: 'none',
+      recurrenceInterval: 1,
+      recurrenceCount: undefined,
+      recurrenceEndDate: undefined,
     },
   });
 
   const createMutation = useMutation({
     mutationFn: async (data: InsertEvent) => {
-      await apiRequest('POST', '/api/events', data);
+      return await apiRequest('POST', '/api/events', data);
     },
-    onSuccess: () => {
+    onSuccess: (response: any) => {
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
       setDialogOpen(false);
-      form.reset();
+      form.reset({
+        name: '',
+        locationId: '',
+        startDatetime: new Date(),
+        endDatetime: new Date(),
+        capacity: undefined,
+        status: 'draft',
+        notes: '',
+        companyId: '',
+        isRecurring: false,
+        recurrencePattern: 'none',
+        recurrenceInterval: 1,
+        recurrenceCount: undefined,
+        recurrenceEndDate: undefined,
+      });
+      
+      const isRecurring = response?.events && Array.isArray(response.events);
       toast({
         title: "Successo",
-        description: "Evento creato con successo",
+        description: isRecurring 
+          ? `Serie di ${response.count} eventi creata con successo`
+          : "Evento creato con successo",
       });
     },
     onError: (error: Error) => {
@@ -284,6 +310,121 @@ export default function Events() {
                   )}
                 />
 
+                {/* Recurring Events Section */}
+                <div className="border-t pt-4">
+                  <FormField
+                    control={form.control}
+                    name="isRecurring"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center gap-2 space-y-0">
+                        <FormControl>
+                          <Checkbox
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            data-testid="checkbox-recurring"
+                          />
+                        </FormControl>
+                        <FormLabel className="cursor-pointer font-normal flex items-center gap-2">
+                          <Repeat className="h-4 w-4" />
+                          Evento Ricorrente
+                        </FormLabel>
+                      </FormItem>
+                    )}
+                  />
+
+                  {form.watch('isRecurring') && (
+                    <div className="mt-4 space-y-4 p-4 bg-muted/50 rounded-lg">
+                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="recurrencePattern"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Frequenza</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value || 'none'}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-recurrence-pattern">
+                                    <SelectValue placeholder="Seleziona frequenza" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="daily">Giornaliero</SelectItem>
+                                  <SelectItem value="weekly">Settimanale</SelectItem>
+                                  <SelectItem value="monthly">Mensile</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          control={form.control}
+                          name="recurrenceInterval"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Ogni</FormLabel>
+                              <FormControl>
+                                <Input
+                                  {...field}
+                                  type="number"
+                                  min={1}
+                                  value={field.value || 1}
+                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                                  data-testid="input-recurrence-interval"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <FormField
+                        control={form.control}
+                        name="recurrenceEndDate"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Termina il (opzionale)</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="date"
+                                value={field.value instanceof Date ? field.value.toISOString().slice(0, 10) : field.value || ''}
+                                onChange={(e) => field.onChange(e.target.value ? new Date(e.target.value) : undefined)}
+                                data-testid="input-recurrence-end-date"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        control={form.control}
+                        name="recurrenceCount"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Oppure numero occorrenze (opzionale)</FormLabel>
+                            <FormControl>
+                              <Input
+                                {...field}
+                                type="number"
+                                min={1}
+                                value={field.value || ''}
+                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                                data-testid="input-recurrence-count"
+                                placeholder="Es. 10 occorrenze"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  )}
+                </div>
+
                 <DialogFooter>
                   <Button
                     type="button"
@@ -348,7 +489,15 @@ export default function Events() {
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <CardTitle className="text-lg flex-1">{event.name}</CardTitle>
-                    <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                    <div className="flex gap-2">
+                      {event.seriesId && (
+                        <Badge variant="outline" className="flex items-center gap-1">
+                          <Repeat className="h-3 w-3" />
+                          Ricorrente
+                        </Badge>
+                      )}
+                      <Badge variant={statusInfo.variant}>{statusInfo.label}</Badge>
+                    </div>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-3">
