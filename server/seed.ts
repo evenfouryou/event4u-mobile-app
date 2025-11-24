@@ -27,7 +27,7 @@ import { eq } from 'drizzle-orm';
  * 
  * COME USARE:
  * ============
- * npm run seed
+ * npx tsx server/seed.ts
  * 
  * NOTA: Questo script è solo per sviluppo/testing.
  *       NON usare in produzione!

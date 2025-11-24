@@ -12,12 +12,6 @@ Esegui lo script di seed:
 npx tsx server/seed.ts
 ```
 
-Oppure:
-
-```bash
-npm run seed
-```
-
 ## Credenziali Account di Test
 
 ### 🔑 Super Admin
