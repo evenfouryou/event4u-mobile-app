@@ -40,7 +40,7 @@ import { Label } from "@/components/ui/label";
 import { Plus, Calendar as CalendarIcon, MapPin, Users, Eye, Search, Warehouse, Repeat } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertEventSchema, type Event, type InsertEvent, type Location, type Station } from "@shared/schema";
+import { insertEventSchema, type Event, type InsertEvent, type Location, type Station, type EventFormat } from "@shared/schema";
 
 const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
   draft: { label: 'Bozza', variant: 'outline' },
@@ -66,6 +66,10 @@ export default function Events() {
     queryKey: ['/api/locations'],
   });
 
+  const { data: formats, isLoading: formatsLoading } = useQuery<EventFormat[]>({
+    queryKey: ['/api/event-formats'],
+  });
+
   const { data: stations } = useQuery<Station[]>({
     queryKey: ['/api/stations'],
   });
@@ -75,6 +79,7 @@ export default function Events() {
     defaultValues: {
       name: '',
       locationId: '',
+      formatId: undefined,
       startDatetime: new Date(),
       endDatetime: new Date(),
       capacity: undefined,
@@ -99,6 +104,7 @@ export default function Events() {
       form.reset({
         name: '',
         locationId: '',
+        formatId: undefined,
         startDatetime: new Date(),
         endDatetime: new Date(),
         capacity: undefined,
@@ -227,6 +233,39 @@ export default function Events() {
                           ) : (
                             <SelectItem value="none" disabled>Nessuna location disponibile</SelectItem>
                           )}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="formatId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Format Evento (opzionale)</FormLabel>
+                      <Select 
+                        onValueChange={(value) => field.onChange(value === "none" ? undefined : value)} 
+                        value={field.value ?? "none"}
+                      >
+                        <FormControl>
+                          <SelectTrigger data-testid="select-event-format">
+                            <SelectValue placeholder="Seleziona format" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="none">Nessun format</SelectItem>
+                          {formatsLoading ? (
+                            <SelectItem value="loading" disabled>Caricamento...</SelectItem>
+                          ) : formats && formats.length > 0 ? (
+                            formats.map((format) => (
+                              <SelectItem key={format.id} value={format.id}>
+                                {format.name}
+                              </SelectItem>
+                            ))
+                          ) : null}
                         </SelectContent>
                       </Select>
                       <FormMessage />
