@@ -361,7 +361,7 @@ export default function Warehouse() {
         <div className="flex flex-wrap gap-2">
           <Dialog open={multiUnloadDialogOpen} onOpenChange={setMultiUnloadDialogOpen}>
             <DialogTrigger asChild>
-              <Button variant="outline" data-testid="button-multi-unload">
+              <Button variant="destructive" data-testid="button-multi-unload">
                 <ListPlus className="h-4 w-4 mr-2" />
                 Scarico Multiplo
               </Button>
