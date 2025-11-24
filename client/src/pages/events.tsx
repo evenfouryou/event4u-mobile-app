@@ -5,17 +5,10 @@ import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Separator } from "@/components/ui/separator";
-import { Plus, Calendar as CalendarIcon, Users, Eye, Search, Warehouse, Repeat, FileEdit, AlertCircle } from "lucide-react";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Plus, Calendar as CalendarIcon, Users, Eye, Search, Warehouse, Repeat, FileEdit, Clock, CalendarCheck, FilePenLine } from "lucide-react";
 import type { Event, Station, EventFormat } from "@shared/schema";
 
 const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
@@ -28,7 +21,7 @@ const statusLabels: Record<string, { label: string; variant: "default" | "second
 export default function Events() {
   const [, navigate] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [activeTab, setActiveTab] = useState<'ongoing' | 'scheduled' | 'draft'>('ongoing');
   const { user } = useAuth();
   
   const canCreateEvents = user?.role === 'super_admin' || user?.role === 'gestore';
@@ -56,23 +49,37 @@ export default function Events() {
     return new Map(formats.map(f => [f.id, f]));
   }, [formats]);
 
-  // Separate draft events from published events
-  const draftEvents = useMemo(() => {
-    return events?.filter(e => e.status === 'draft') || [];
-  }, [events]);
-
-  const publishedEvents = useMemo(() => {
+  // Filter events by tab
+  const ongoingEvents = useMemo(() => {
     if (!events) return [];
-    
-    return events.filter((event) => {
-      if (event.status === 'draft') return false;
-      
-      const matchesSearch = searchQuery === "" || 
-        event.name.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchesStatus = statusFilter === "all" || event.status === statusFilter;
-      return matchesSearch && matchesStatus;
-    });
-  }, [events, searchQuery, statusFilter]);
+    return events.filter(e => 
+      e.status === 'ongoing' && 
+      (searchQuery === "" || e.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }, [events, searchQuery]);
+
+  const scheduledEvents = useMemo(() => {
+    if (!events) return [];
+    return events.filter(e => 
+      e.status === 'scheduled' && 
+      (searchQuery === "" || e.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }, [events, searchQuery]);
+
+  const draftEvents = useMemo(() => {
+    if (!events) return [];
+    return events.filter(e => 
+      e.status === 'draft' && 
+      (searchQuery === "" || e.name.toLowerCase().includes(searchQuery.toLowerCase()))
+    );
+  }, [events, searchQuery]);
+
+  // Get count for each tab
+  const tabCounts = useMemo(() => ({
+    ongoing: events?.filter(e => e.status === 'ongoing').length || 0,
+    scheduled: events?.filter(e => e.status === 'scheduled').length || 0,
+    draft: events?.filter(e => e.status === 'draft').length || 0,
+  }), [events]);
 
   const renderEventCard = (event: Event, isDraft: boolean = false) => {
     const statusInfo = statusLabels[event.status] || statusLabels.draft;
@@ -183,14 +190,52 @@ export default function Events() {
     );
   };
 
+  const renderEventList = (eventsList: Event[], emptyMessage: string, isDraft: boolean = false) => {
+    if (eventsLoading) {
+      return (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Skeleton className="h-64" />
+          <Skeleton className="h-64" />
+          <Skeleton className="h-64" />
+        </div>
+      );
+    }
+
+    if (eventsList.length === 0) {
+      return (
+        <Card>
+          <CardContent className="p-12 text-center">
+            <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+            <p className="text-muted-foreground mb-4">{emptyMessage}</p>
+            {canCreateEvents && searchQuery === '' && (
+              <Button 
+                onClick={() => navigate('/events/wizard')} 
+                data-testid="button-create-event-empty"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Crea Evento
+              </Button>
+            )}
+          </CardContent>
+        </Card>
+      );
+    }
+
+    return (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {eventsList.map(event => renderEventCard(event, isDraft))}
+      </div>
+    );
+  };
+
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto">
       {/* Header */}
-      <div className="flex items-center justify-between mb-8">
+      <div className="flex items-center justify-between mb-6">
         <div>
           <h1 className="text-2xl font-semibold mb-1">Gestione Eventi</h1>
           <p className="text-muted-foreground">
-            {canCreateEvents ? 'Crea e organizza i tuoi eventi' : 'Visualizza gli eventi'}
+            {canCreateEvents ? 'Organizza e monitora i tuoi eventi' : 'Visualizza gli eventi'}
           </p>
         </div>
         <Button 
@@ -204,83 +249,73 @@ export default function Events() {
         </Button>
       </div>
 
-      {/* Draft Events Section */}
-      {canCreateEvents && draftEvents.length > 0 && (
-        <>
-          <div className="mb-6">
-            <div className="flex items-center gap-2 mb-4">
-              <AlertCircle className="h-5 w-5 text-orange-500" />
-              <h2 className="text-lg font-semibold">Bozze in Sospeso</h2>
-              <Badge variant="secondary">{draftEvents.length}</Badge>
-            </div>
-            <p className="text-sm text-muted-foreground mb-4">
-              Continua a lavorare sugli eventi salvati come bozza
-            </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {draftEvents.map((event) => renderEventCard(event, true))}
-            </div>
-          </div>
-          <Separator className="my-8" />
-        </>
-      )}
-
-      {/* Search and Filters */}
-      <div className="flex flex-col sm:flex-row gap-4 mb-6">
-        <div className="relative flex-1">
+      {/* Search Bar */}
+      <div className="mb-6">
+        <div className="relative">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
           <Input
             placeholder="Cerca eventi per nome..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-9"
+            className="pl-9 max-w-md"
             data-testid="input-search-events"
           />
         </div>
-        <Select value={statusFilter} onValueChange={setStatusFilter}>
-          <SelectTrigger className="w-full sm:w-48" data-testid="select-filter-status">
-            <SelectValue placeholder="Filtra per stato" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Tutti gli stati</SelectItem>
-            <SelectItem value="scheduled">Programmato</SelectItem>
-            <SelectItem value="ongoing">In Corso</SelectItem>
-            <SelectItem value="closed">Chiuso</SelectItem>
-          </SelectContent>
-        </Select>
       </div>
 
-      {/* Published Events */}
-      {eventsLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          <Skeleton className="h-64" />
-          <Skeleton className="h-64" />
-          <Skeleton className="h-64" />
-        </div>
-      ) : publishedEvents && publishedEvents.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {publishedEvents.map((event) => renderEventCard(event, false))}
-        </div>
-      ) : (
-        <Card>
-          <CardContent className="p-12 text-center">
-            <CalendarIcon className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground mb-4">
-              {searchQuery || statusFilter !== 'all' 
-                ? 'Nessun evento trovato con i filtri selezionati' 
-                : 'Nessun evento creato'}
-            </p>
-            {canCreateEvents && !searchQuery && statusFilter === 'all' && (
-              <Button 
-                onClick={() => navigate('/events/wizard')} 
-                data-testid="button-create-first-event"
-              >
-                <Plus className="h-4 w-4 mr-2" />
-                Crea Primo Evento
-              </Button>
+      {/* Tabs Navigation */}
+      <Tabs value={activeTab} onValueChange={(value) => setActiveTab(value as 'ongoing' | 'scheduled' | 'draft')}>
+        <TabsList className="mb-6 grid w-full max-w-md grid-cols-3">
+          <TabsTrigger value="ongoing" className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            <span>In Corso</span>
+            {tabCounts.ongoing > 0 && (
+              <Badge variant="default" className="ml-1 h-5 px-1.5">
+                {tabCounts.ongoing}
+              </Badge>
             )}
-          </CardContent>
-        </Card>
-      )}
+          </TabsTrigger>
+          <TabsTrigger value="scheduled" className="flex items-center gap-2">
+            <CalendarCheck className="h-4 w-4" />
+            <span>Programmati</span>
+            {tabCounts.scheduled > 0 && (
+              <Badge variant="secondary" className="ml-1 h-5 px-1.5">
+                {tabCounts.scheduled}
+              </Badge>
+            )}
+          </TabsTrigger>
+          <TabsTrigger value="draft" className="flex items-center gap-2">
+            <FilePenLine className="h-4 w-4" />
+            <span>Bozze</span>
+            {tabCounts.draft > 0 && (
+              <Badge variant="outline" className="ml-1 h-5 px-1.5">
+                {tabCounts.draft}
+              </Badge>
+            )}
+          </TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="ongoing" className="mt-0">
+          {renderEventList(ongoingEvents, searchQuery ? "Nessun evento in corso trovato" : "Nessun evento in corso")}
+        </TabsContent>
+
+        <TabsContent value="scheduled" className="mt-0">
+          {renderEventList(scheduledEvents, searchQuery ? "Nessun evento programmato trovato" : "Nessun evento programmato")}
+        </TabsContent>
+
+        <TabsContent value="draft" className="mt-0">
+          {canCreateEvents ? (
+            renderEventList(draftEvents, searchQuery ? "Nessuna bozza trovata" : "Nessuna bozza in sospeso", true)
+          ) : (
+            <Card>
+              <CardContent className="p-12 text-center">
+                <FilePenLine className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                <p className="text-muted-foreground">Solo gli amministratori possono vedere le bozze</p>
+              </CardContent>
+            </Card>
+          )}
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }
