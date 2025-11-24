@@ -27,13 +27,13 @@ export default function AIAnalysis() {
   const analysisMutation = useMutation({
     mutationFn: async (userQuery: string) => {
       const response = await apiRequest('POST', '/api/ai/analyze', { query: userQuery });
-      return response;
+      return { response, userQuery };
     },
     onSuccess: (data: any) => {
       setConversationHistory(prev => [
         ...prev,
-        { role: 'user', content: query },
-        { role: 'assistant', content: data.answer }
+        { role: 'user', content: data.userQuery },
+        { role: 'assistant', content: data.response.answer }
       ]);
       setQuery('');
     },

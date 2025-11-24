@@ -165,6 +165,12 @@ export function AppSidebar() {
         icon: PackageOpen,
         url: "/return-to-warehouse",
         group: "Inventario",
+      },
+      {
+        title: "Analisi AI",
+        icon: Sparkles,
+        url: "/ai-analysis",
+        group: "Analytics",
       }
     );
   }
@@ -176,12 +182,6 @@ export function AppSidebar() {
         icon: DollarSign,
         url: "/price-lists",
         group: "Inventario",
-      },
-      {
-        title: "Analisi AI",
-        icon: Sparkles,
-        url: "/ai-analysis",
-        group: "Analytics",
       }
     );
   }
