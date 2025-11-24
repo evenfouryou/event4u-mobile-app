@@ -60,7 +60,7 @@ import type { Station, User, Event } from "@shared/schema";
 
 const stationFormSchema = z.object({
   name: z.string().min(1, "Nome postazione richiesto"),
-  assignedUserId: z.string().optional().nullable(),
+  bartenderId: z.string().optional().nullable(),
   stationType: z.enum(['general', 'event']).default('general'),
   eventId: z.string().optional().nullable(),
 });
@@ -95,7 +95,7 @@ export default function StationsPage() {
     resolver: zodResolver(stationFormSchema),
     defaultValues: {
       name: '',
-      assignedUserId: null,
+      bartenderId: null,
       stationType: 'general',
       eventId: null,
     },
@@ -103,9 +103,12 @@ export default function StationsPage() {
 
   const createMutation = useMutation({
     mutationFn: async (data: StationFormData) => {
+      const bartenderIds = data.bartenderId && data.bartenderId !== 'null' 
+        ? [data.bartenderId] 
+        : [];
       const payload = {
         name: data.name,
-        assignedUserId: data.assignedUserId,
+        bartenderIds,
         eventId: data.stationType === 'event' ? data.eventId : null,
       };
       await apiRequest('POST', '/api/stations', payload);
@@ -139,7 +142,15 @@ export default function StationsPage() {
 
   const updateMutation = useMutation({
     mutationFn: async ({ id, data }: { id: string; data: Partial<StationFormData> }) => {
-      await apiRequest('PATCH', `/api/stations/${id}`, data);
+      const bartenderIds = data.bartenderId && data.bartenderId !== 'null' 
+        ? [data.bartenderId] 
+        : [];
+      const payload = {
+        name: data.name,
+        bartenderIds,
+        eventId: data.stationType === 'event' ? data.eventId : null,
+      };
+      await apiRequest('PATCH', `/api/stations/${id}`, payload);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/stations'] });
@@ -211,9 +222,12 @@ export default function StationsPage() {
     setEditingStation(station);
     const isEventStation = !!station.eventId;
     setStationType(isEventStation ? 'event' : 'general');
+    const bartenderId = station.bartenderIds && station.bartenderIds.length > 0 
+      ? station.bartenderIds[0] 
+      : null;
     form.reset({
       name: station.name,
-      assignedUserId: station.assignedUserId,
+      bartenderId,
       stationType: isEventStation ? 'event' : 'general',
       eventId: station.eventId,
     });
@@ -227,7 +241,7 @@ export default function StationsPage() {
       setStationType('general');
       form.reset({
         name: '',
-        assignedUserId: null,
+        bartenderId: null,
         stationType: 'general',
         eventId: null,
       });
@@ -240,11 +254,14 @@ export default function StationsPage() {
     return event?.name || 'Evento sconosciuto';
   };
 
-  const getBartenderName = (userId: string | null) => {
-    if (!userId) return 'Nessuno';
-    const bartender = users?.find(u => u.id === userId);
-    if (!bartender) return 'Sconosciuto';
-    return `${bartender.firstName} ${bartender.lastName}`;
+  const getBartenderNames = (bartenderIds: string[] | null) => {
+    if (!bartenderIds || bartenderIds.length === 0) return 'Nessuno';
+    const names = bartenderIds.map(id => {
+      const bartender = users?.find(u => u.id === id);
+      if (!bartender) return 'Sconosciuto';
+      return `${bartender.firstName} ${bartender.lastName}`;
+    });
+    return names.join(', ');
   };
 
   return (
@@ -372,7 +389,7 @@ export default function StationsPage() {
 
                 <FormField
                   control={form.control}
-                  name="assignedUserId"
+                  name="bartenderId"
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>Barista Assegnato (opzionale)</FormLabel>
@@ -458,7 +475,7 @@ export default function StationsPage() {
                       </TableCell>
                       <TableCell>
                         <Badge variant="outline">
-                          {getBartenderName(station.assignedUserId)}
+                          {getBartenderNames(station.bartenderIds)}
                         </Badge>
                       </TableCell>
                       <TableCell>
