@@ -11,39 +11,16 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Plus, AlertTriangle, Package, ArrowLeft, Upload, Download, Warehouse, History, Check, RotateCcw, ListPlus, X } from "lucide-react";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
+import { Search, Plus, AlertTriangle, Package, ArrowLeft, Upload, Download, Warehouse, History, Check, RotateCcw, Send } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Event, Station, Product, Stock, StockMovement } from "@shared/schema";
-
-interface MultiConsumeItem {
-  id: string;
-  productId: string;
-  remaining: string;
-}
 
 export default function ConsumptionTracking() {
   const [, setLocation] = useLocation();
   const [searchQuery, setSearchQuery] = useState("");
   const [loadQuantities, setLoadQuantities] = useState<Record<string, string>>({});
   const [remainingQuantities, setRemainingQuantities] = useState<Record<string, string>>({});
-  const [multiConsumeDialogOpen, setMultiConsumeDialogOpen] = useState(false);
-  const [multiConsumeItems, setMultiConsumeItems] = useState<MultiConsumeItem[]>([]);
+  const [isSubmittingAll, setIsSubmittingAll] = useState(false);
   const { toast } = useToast();
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -313,25 +290,7 @@ export default function ConsumptionTracking() {
     });
   };
 
-  const handleAddMultiConsumeItem = () => {
-    setMultiConsumeItems(prev => [...prev, {
-      id: crypto.randomUUID(),
-      productId: '',
-      remaining: '',
-    }]);
-  };
-
-  const handleRemoveMultiConsumeItem = (id: string) => {
-    setMultiConsumeItems(prev => prev.filter(item => item.id !== id));
-  };
-
-  const handleUpdateMultiConsumeItem = (id: string, field: keyof MultiConsumeItem, value: string) => {
-    setMultiConsumeItems(prev => prev.map(item =>
-      item.id === id ? { ...item, [field]: value } : item
-    ));
-  };
-
-  const handleSubmitMultiConsume = async () => {
+  const handleSubmitAllConsume = async () => {
     if (!selectedEventId || !selectedStationId) {
       toast({
         title: "Errore",
@@ -341,34 +300,33 @@ export default function ConsumptionTracking() {
       return;
     }
 
-    const validItems = multiConsumeItems.filter(item => {
-      if (!item.productId) return false;
-      const remaining = parseFloat(item.remaining);
-      return !isNaN(remaining) && remaining >= 0;
-    });
+    const itemsToSubmit = productsWithStock
+      .filter(product => {
+        const remaining = remainingQuantities[product.id];
+        return remaining !== undefined && remaining !== "";
+      })
+      .map(product => ({
+        productId: product.id,
+        remaining: parseFloat(remainingQuantities[product.id]),
+        stockValue: getProductStock(product.id),
+      }))
+      .filter(item => !isNaN(item.remaining) && item.remaining >= 0 && item.remaining <= item.stockValue);
     
-    if (validItems.length === 0) {
+    if (itemsToSubmit.length === 0) {
       toast({
-        title: "Errore",
-        description: "Aggiungi almeno un prodotto con quantità valida",
+        title: "Nessun prodotto da inviare",
+        description: "Compila la quantità rimasta per almeno un prodotto",
         variant: "destructive",
       });
       return;
     }
 
+    setIsSubmittingAll(true);
     let successCount = 0;
     let errorCount = 0;
 
-    for (const item of validItems) {
-      const stockValue = getProductStock(item.productId);
-      const remaining = parseFloat(item.remaining);
-      
-      if (remaining > stockValue) {
-        errorCount++;
-        continue;
-      }
-      
-      const consumed = stockValue - remaining;
+    for (const item of itemsToSubmit) {
+      const consumed = item.stockValue - item.remaining;
       
       try {
         if (consumed > 0) {
@@ -380,12 +338,12 @@ export default function ConsumptionTracking() {
           });
         }
         
-        if (remaining > 0) {
+        if (item.remaining > 0) {
           await apiRequest('POST', '/api/stock/return-to-warehouse', {
             eventId: selectedEventId,
             stationId: selectedStationId,
             productId: item.productId,
-            quantity: remaining,
+            quantity: item.remaining,
           });
         }
         successCount++;
@@ -398,12 +356,12 @@ export default function ConsumptionTracking() {
     queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
     queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
     
-    setMultiConsumeDialogOpen(false);
-    setMultiConsumeItems([]);
+    setRemainingQuantities({});
+    setIsSubmittingAll(false);
     
     if (successCount > 0) {
       toast({
-        title: "Consumo registrato",
+        title: "Chiusura completata",
         description: `${successCount} prodotti aggiornati${errorCount > 0 ? `, ${errorCount} errori` : ''}`,
       });
     } else {
@@ -413,6 +371,13 @@ export default function ConsumptionTracking() {
         variant: "destructive",
       });
     }
+  };
+
+  const getFilledCount = () => {
+    return productsWithStock.filter(product => {
+      const remaining = remainingQuantities[product.id];
+      return remaining !== undefined && remaining !== "";
+    }).length;
   };
 
   const filteredProducts = products?.filter(p => 
@@ -470,140 +435,6 @@ export default function ConsumptionTracking() {
                 <p className="text-sm text-muted-foreground">{selectedStation.name}</p>
               )}
             </div>
-            
-            <Dialog open={multiConsumeDialogOpen} onOpenChange={setMultiConsumeDialogOpen}>
-              <DialogTrigger asChild>
-                <Button variant="default" data-testid="button-multi-consume">
-                  <ListPlus className="h-4 w-4 mr-2" />
-                  Chiusura Multipla
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>Chiusura Multiprodotto</DialogTitle>
-                </DialogHeader>
-                
-                <div className="space-y-4">
-                  <p className="text-sm text-muted-foreground">
-                    Inserisci la quantità rimasta per ogni prodotto. Il consumo verrà calcolato automaticamente.
-                  </p>
-                  
-                  <div className="border rounded-md">
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Prodotto</TableHead>
-                          <TableHead>Giacenza</TableHead>
-                          <TableHead>Rimasto</TableHead>
-                          <TableHead className="w-[50px]"></TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {multiConsumeItems.length === 0 ? (
-                          <TableRow>
-                            <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
-                              Nessun prodotto aggiunto. Clicca "+ Aggiungi Prodotto" per iniziare.
-                            </TableCell>
-                          </TableRow>
-                        ) : (
-                          multiConsumeItems.map((item) => {
-                            const stockValue = item.productId ? getProductStock(item.productId) : 0;
-                            const remaining = parseFloat(item.remaining) || 0;
-                            const consumed = stockValue - remaining;
-                            return (
-                              <TableRow key={item.id}>
-                                <TableCell>
-                                  <Select
-                                    value={item.productId}
-                                    onValueChange={(value) => handleUpdateMultiConsumeItem(item.id, 'productId', value)}
-                                  >
-                                    <SelectTrigger data-testid={`select-consume-product-${item.id}`}>
-                                      <SelectValue placeholder="Seleziona prodotto" />
-                                    </SelectTrigger>
-                                    <SelectContent>
-                                      {productsWithStock.map((product) => (
-                                        <SelectItem key={product.id} value={product.id}>
-                                          {product.name} ({product.code})
-                                        </SelectItem>
-                                      ))}
-                                    </SelectContent>
-                                  </Select>
-                                </TableCell>
-                                <TableCell className="text-center font-medium">
-                                  {stockValue.toFixed(2)}
-                                </TableCell>
-                                <TableCell>
-                                  <div className="flex items-center gap-2">
-                                    <Input
-                                      type="number"
-                                      step="0.01"
-                                      min="0"
-                                      max={stockValue}
-                                      placeholder="0"
-                                      value={item.remaining}
-                                      onChange={(e) => handleUpdateMultiConsumeItem(item.id, 'remaining', e.target.value)}
-                                      data-testid={`input-consume-remaining-${item.id}`}
-                                      className="w-24"
-                                    />
-                                    {item.productId && consumed > 0 && (
-                                      <Badge variant="secondary">
-                                        -{consumed.toFixed(2)}
-                                      </Badge>
-                                    )}
-                                  </div>
-                                </TableCell>
-                                <TableCell>
-                                  <Button
-                                    type="button"
-                                    variant="ghost"
-                                    size="icon"
-                                    onClick={() => handleRemoveMultiConsumeItem(item.id)}
-                                    data-testid={`button-remove-consume-${item.id}`}
-                                  >
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                </TableCell>
-                              </TableRow>
-                            );
-                          })
-                        )}
-                      </TableBody>
-                    </Table>
-                  </div>
-
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={handleAddMultiConsumeItem}
-                    data-testid="button-add-multi-consume-product"
-                  >
-                    <Plus className="h-4 w-4 mr-2" />
-                    Aggiungi Prodotto
-                  </Button>
-                </div>
-
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setMultiConsumeDialogOpen(false);
-                      setMultiConsumeItems([]);
-                    }}
-                    data-testid="button-cancel-multi-consume"
-                  >
-                    Annulla
-                  </Button>
-                  <Button
-                    onClick={handleSubmitMultiConsume}
-                    disabled={multiConsumeItems.length === 0}
-                    data-testid="button-submit-multi-consume"
-                  >
-                    Conferma Chiusura ({multiConsumeItems.length})
-                  </Button>
-                </DialogFooter>
-              </DialogContent>
-            </Dialog>
           </div>
           
           {!urlEventId && !urlStationId && (
@@ -833,32 +664,38 @@ export default function ConsumptionTracking() {
                                 </div>
                               )}
                               
-                              <div className="flex flex-col gap-1 shrink-0">
-                                <Button
-                                  size="sm"
-                                  onClick={() => handleCloseProduct(product.id)}
-                                  disabled={consumeMutation.isPending || returnMutation.isPending || remainingQuantities[product.id] === "" || remainingQuantities[product.id] === undefined}
-                                  className="bg-blue-600 hover:bg-blue-700 h-9"
-                                  data-testid={`button-close-${product.id}`}
-                                >
-                                  <Check className="h-4 w-4 mr-1" />
-                                  Chiudi
-                                </Button>
-                                <Button
-                                  size="sm"
-                                  variant="outline"
-                                  onClick={() => handleConsumeAll(product.id)}
-                                  disabled={consumeMutation.isPending}
-                                  className="h-9 text-xs"
-                                  data-testid={`button-finish-${product.id}`}
-                                >
-                                  Finito tutto
-                                </Button>
-                              </div>
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleConsumeAll(product.id)}
+                                disabled={consumeMutation.isPending}
+                                className="h-10 text-xs shrink-0"
+                                data-testid={`button-finish-${product.id}`}
+                              >
+                                Finito tutto
+                              </Button>
                             </div>
                           </div>
                         );
                       })}
+                    </div>
+                    
+                    {/* Pulsante Invia Tutto */}
+                    <div className="p-4 border-t bg-muted/30">
+                      <Button
+                        onClick={handleSubmitAllConsume}
+                        disabled={isSubmittingAll || getFilledCount() === 0}
+                        className="w-full h-12 text-lg bg-green-600 hover:bg-green-700"
+                        data-testid="button-submit-all-consume"
+                      >
+                        <Send className="h-5 w-5 mr-2" />
+                        {isSubmittingAll ? "Invio in corso..." : `Invia Tutto (${getFilledCount()} prodotti)`}
+                      </Button>
+                      {getFilledCount() > 0 && (
+                        <p className="text-xs text-center text-muted-foreground mt-2">
+                          Compila la quantità rimasta per ogni prodotto, poi clicca per inviare tutto insieme
+                        </p>
+                      )}
                     </div>
                   )}
                 </CardContent>
