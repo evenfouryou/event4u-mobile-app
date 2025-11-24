@@ -36,6 +36,7 @@ export const users = pgTable("users", {
   role: varchar("role").notNull().default('gestore'), // super_admin, gestore, warehouse, bartender
   companyId: varchar("company_id").references(() => companies.id),
   emailVerified: boolean("email_verified").default(false), // Email verification status for classic registration
+  verificationToken: varchar("verification_token"), // Token for email verification link
   isActive: boolean("is_active").notNull().default(true), // User account active status
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
