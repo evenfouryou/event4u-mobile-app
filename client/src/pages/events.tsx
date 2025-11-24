@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -49,10 +49,53 @@ const statusLabels: Record<string, { label: string; variant: "default" | "second
   closed: { label: 'Chiuso', variant: 'destructive' },
 };
 
+// Helper function to generate recurring dates preview
+function generateRecurringDatesPreview(
+  startDate: Date,
+  endDate: Date,
+  pattern: 'daily' | 'weekly' | 'monthly',
+  interval: number,
+  count?: number,
+  recurrenceEndDate?: Date
+): Date[] {
+  const dates: Date[] = [];
+  const eventDuration = endDate.getTime() - startDate.getTime();
+  const maxGenerateDate = new Date(startDate);
+  maxGenerateDate.setDate(maxGenerateDate.getDate() + 90); // 90 days window
+  
+  let currentDate = new Date(startDate);
+  let occurrenceIndex = 0;
+  
+  while (occurrenceIndex < 50) { // Max 50 occurrences in preview
+    if (count !== undefined && occurrenceIndex >= count) break;
+    if (recurrenceEndDate && currentDate > recurrenceEndDate) break;
+    if (occurrenceIndex > 0 && currentDate > maxGenerateDate) break;
+    
+    dates.push(new Date(currentDate));
+    occurrenceIndex++;
+    
+    switch (pattern) {
+      case 'daily':
+        currentDate.setDate(currentDate.getDate() + interval);
+        break;
+      case 'weekly':
+        currentDate.setDate(currentDate.getDate() + (7 * interval));
+        break;
+      case 'monthly':
+        currentDate.setMonth(currentDate.getMonth() + interval);
+        break;
+    }
+  }
+  
+  return dates;
+}
+
 export default function Events() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [previewDates, setPreviewDates] = useState<Date[]>([]);
+  const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
   const { toast } = useToast();
   const { user } = useAuth();
   
@@ -163,6 +206,44 @@ export default function Events() {
       return matchesSearch && matchesStatus;
     });
   }, [events, searchQuery, statusFilter]);
+
+  // Update preview dates when recurring params change
+  useEffect(() => {
+    const isRecurring = form.watch('isRecurring');
+    const pattern = form.watch('recurrencePattern');
+    const interval = form.watch('recurrenceInterval');
+    const count = form.watch('recurrenceCount');
+    const endDate = form.watch('recurrenceEndDate');
+    const startDatetime = form.watch('startDatetime');
+    const endDatetime = form.watch('endDatetime');
+    
+    if (isRecurring && pattern && pattern !== 'none' && startDatetime && endDatetime) {
+      const dates = generateRecurringDatesPreview(
+        new Date(startDatetime),
+        new Date(endDatetime),
+        pattern as 'daily' | 'weekly' | 'monthly',
+        interval || 1,
+        count,
+        endDate ? new Date(endDate) : undefined
+      );
+      setPreviewDates(dates);
+      
+      // Initialize all dates as selected
+      const allDatesSet = new Set(dates.map(d => d.toISOString()));
+      setSelectedDates(allDatesSet);
+    } else {
+      setPreviewDates([]);
+      setSelectedDates(new Set());
+    }
+  }, [
+    form.watch('isRecurring'),
+    form.watch('recurrencePattern'),
+    form.watch('recurrenceInterval'),
+    form.watch('recurrenceCount'),
+    form.watch('recurrenceEndDate'),
+    form.watch('startDatetime'),
+    form.watch('endDatetime'),
+  ]);
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto">
@@ -465,6 +546,80 @@ export default function Events() {
                           </FormItem>
                         )}
                       />
+
+                      {/* Preview Dates Section */}
+                      {previewDates.length > 0 && (
+                        <div className="border-t pt-4 mt-4">
+                          <div className="flex items-center justify-between mb-3">
+                            <Label className="text-sm font-medium">
+                              Anteprima Date Generate ({selectedDates.size}/{previewDates.length} selezionate)
+                            </Label>
+                            <div className="flex gap-2">
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  const allDates = new Set(previewDates.map(d => d.toISOString()));
+                                  setSelectedDates(allDates);
+                                }}
+                                data-testid="button-select-all-dates"
+                              >
+                                Seleziona tutte
+                              </Button>
+                              <Button
+                                type="button"
+                                variant="outline"
+                                size="sm"
+                                onClick={() => setSelectedDates(new Set())}
+                                data-testid="button-deselect-all-dates"
+                              >
+                                Deseleziona tutte
+                              </Button>
+                            </div>
+                          </div>
+                          <div className="max-h-60 overflow-y-auto border rounded-md p-3 space-y-2 bg-background">
+                            {previewDates.map((date, index) => {
+                              const dateKey = date.toISOString();
+                              const isSelected = selectedDates.has(dateKey);
+                              return (
+                                <div 
+                                  key={dateKey} 
+                                  className="flex items-center gap-3 p-2 rounded hover-elevate"
+                                  data-testid={`date-preview-${index}`}
+                                >
+                                  <Checkbox
+                                    checked={isSelected}
+                                    onCheckedChange={(checked) => {
+                                      const newSet = new Set(selectedDates);
+                                      if (checked) {
+                                        newSet.add(dateKey);
+                                      } else {
+                                        newSet.delete(dateKey);
+                                      }
+                                      setSelectedDates(newSet);
+                                    }}
+                                    data-testid={`checkbox-date-${index}`}
+                                  />
+                                  <Label className="flex-1 cursor-pointer text-sm">
+                                    {date.toLocaleDateString('it-IT', {
+                                      weekday: 'short',
+                                      day: 'numeric',
+                                      month: 'long',
+                                      year: 'numeric',
+                                      hour: '2-digit',
+                                      minute: '2-digit'
+                                    })}
+                                  </Label>
+                                  <Badge variant="outline" className="text-xs">
+                                    #{index + 1}
+                                  </Badge>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+                      )}
                     </div>
                   )}
                 </div>
