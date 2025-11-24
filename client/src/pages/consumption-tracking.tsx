@@ -612,91 +612,92 @@ export default function ConsumptionTracking() {
                       </p>
                     </div>
                   ) : (
-                    <div className="divide-y">
-                      {productsWithStock.map((product) => {
-                        const stockValue = getProductStock(product.id);
-                        const remaining = parseFloat(remainingQuantities[product.id] || "");
-                        const consumed = !isNaN(remaining) ? stockValue - remaining : 0;
-                        const isLowStock = stockValue <= 5;
-                        
-                        return (
-                          <div 
-                            key={product.id} 
-                            className="p-4 hover:bg-muted/50"
-                            data-testid={`consume-row-${product.id}`}
-                          >
-                            <div className="flex items-center gap-3 mb-3">
-                              <div className="flex-1 min-w-0">
-                                <div className="font-medium truncate">{product.name}</div>
-                                <div className="text-xs text-muted-foreground">{product.code}</div>
-                              </div>
-                              
-                              <div className="text-center shrink-0">
-                                <div className="text-xs text-muted-foreground">Caricato</div>
-                                <div className={`text-xl font-bold ${isLowStock ? 'text-orange-500' : ''}`}>
-                                  {stockValue.toFixed(1)}
+                    <>
+                      <div className="divide-y">
+                        {productsWithStock.map((product) => {
+                          const stockValue = getProductStock(product.id);
+                          const remaining = parseFloat(remainingQuantities[product.id] || "");
+                          const consumed = !isNaN(remaining) ? stockValue - remaining : 0;
+                          const isLowStock = stockValue <= 5;
+                          
+                          return (
+                            <div 
+                              key={product.id} 
+                              className="p-4 hover:bg-muted/50"
+                              data-testid={`consume-row-${product.id}`}
+                            >
+                              <div className="flex items-center gap-3 mb-3">
+                                <div className="flex-1 min-w-0">
+                                  <div className="font-medium truncate">{product.name}</div>
+                                  <div className="text-xs text-muted-foreground">{product.code}</div>
                                 </div>
-                              </div>
-                            </div>
-                            
-                            <div className="flex items-center gap-2">
-                              <div className="flex-1">
-                                <Label className="text-xs text-muted-foreground mb-1 block">Rimasto</Label>
-                                <Input
-                                  type="number"
-                                  min="0"
-                                  max={stockValue}
-                                  step="1"
-                                  placeholder="0"
-                                  value={remainingQuantities[product.id] || ""}
-                                  onChange={(e) => setRemainingQuantities(prev => ({ ...prev, [product.id]: e.target.value }))}
-                                  className="h-10 text-center text-lg"
-                                  data-testid={`input-remaining-${product.id}`}
-                                />
-                              </div>
-                              
-                              {!isNaN(remaining) && remaining >= 0 && (
-                                <div className="text-center shrink-0 min-w-16">
-                                  <div className="text-xs text-muted-foreground">Consumato</div>
-                                  <div className="text-lg font-bold text-orange-500">
-                                    {consumed.toFixed(1)}
+                                
+                                <div className="text-center shrink-0">
+                                  <div className="text-xs text-muted-foreground">Caricato</div>
+                                  <div className={`text-xl font-bold ${isLowStock ? 'text-orange-500' : ''}`}>
+                                    {stockValue.toFixed(1)}
                                   </div>
                                 </div>
-                              )}
+                              </div>
                               
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                onClick={() => handleConsumeAll(product.id)}
-                                disabled={consumeMutation.isPending}
-                                className="h-10 text-xs shrink-0"
-                                data-testid={`button-finish-${product.id}`}
-                              >
-                                Finito tutto
-                              </Button>
+                              <div className="flex items-center gap-2">
+                                <div className="flex-1">
+                                  <Label className="text-xs text-muted-foreground mb-1 block">Rimasto</Label>
+                                  <Input
+                                    type="number"
+                                    min="0"
+                                    max={stockValue}
+                                    step="1"
+                                    placeholder="0"
+                                    value={remainingQuantities[product.id] || ""}
+                                    onChange={(e) => setRemainingQuantities(prev => ({ ...prev, [product.id]: e.target.value }))}
+                                    className="h-10 text-center text-lg"
+                                    data-testid={`input-remaining-${product.id}`}
+                                  />
+                                </div>
+                                
+                                {!isNaN(remaining) && remaining >= 0 && (
+                                  <div className="text-center shrink-0 min-w-16">
+                                    <div className="text-xs text-muted-foreground">Consumato</div>
+                                    <div className="text-lg font-bold text-orange-500">
+                                      {consumed.toFixed(1)}
+                                    </div>
+                                  </div>
+                                )}
+                                
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => handleConsumeAll(product.id)}
+                                  disabled={consumeMutation.isPending}
+                                  className="h-10 text-xs shrink-0"
+                                  data-testid={`button-finish-${product.id}`}
+                                >
+                                  Finito tutto
+                                </Button>
+                              </div>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                    
-                    {/* Pulsante Invia Tutto */}
-                    <div className="p-4 border-t bg-muted/30">
-                      <Button
-                        onClick={handleSubmitAllConsume}
-                        disabled={isSubmittingAll || getFilledCount() === 0}
-                        className="w-full h-12 text-lg bg-green-600 hover:bg-green-700"
-                        data-testid="button-submit-all-consume"
-                      >
-                        <Send className="h-5 w-5 mr-2" />
-                        {isSubmittingAll ? "Invio in corso..." : `Invia Tutto (${getFilledCount()} prodotti)`}
-                      </Button>
-                      {getFilledCount() > 0 && (
-                        <p className="text-xs text-center text-muted-foreground mt-2">
-                          Compila la quantità rimasta per ogni prodotto, poi clicca per inviare tutto insieme
-                        </p>
-                      )}
-                    </div>
+                          );
+                        })}
+                      </div>
+                      
+                      <div className="p-4 border-t bg-muted/30">
+                        <Button
+                          onClick={handleSubmitAllConsume}
+                          disabled={isSubmittingAll || getFilledCount() === 0}
+                          className="w-full h-12 text-lg bg-green-600 hover:bg-green-700"
+                          data-testid="button-submit-all-consume"
+                        >
+                          <Send className="h-5 w-5 mr-2" />
+                          {isSubmittingAll ? "Invio in corso..." : `Invia Tutto (${getFilledCount()} prodotti)`}
+                        </Button>
+                        {getFilledCount() > 0 && (
+                          <p className="text-xs text-center text-muted-foreground mt-2">
+                            Compila la quantità rimasta per ogni prodotto, poi clicca per inviare tutto insieme
+                          </p>
+                        )}
+                      </div>
+                    </>
                   )}
                 </CardContent>
               </Card>
