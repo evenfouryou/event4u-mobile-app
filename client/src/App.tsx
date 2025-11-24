@@ -91,6 +91,7 @@ function Router() {
               <Route path="/event-formats" component={EventFormats} />
               <Route path="/warehouse" component={Warehouse} />
               <Route path="/consumption" component={ConsumptionTracking} />
+              <Route path="/consumption-tracking" component={ConsumptionTracking} />
               <Route path="/price-lists" component={PriceLists} />
               <Route path="/import" component={ImportPage} />
               <Route path="/reports" component={Reports} />

@@ -11,7 +11,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Minus, Plus, AlertTriangle, Package, ArrowLeft, Upload, Download } from "lucide-react";
+import { Search, Minus, Plus, AlertTriangle, Package, ArrowLeft, Upload, Download, Warehouse } from "lucide-react";
 import { useLocation } from "wouter";
 import type { Event, Station, Product, Stock } from "@shared/schema";
 
@@ -112,8 +112,8 @@ export default function ConsumptionTracking() {
       queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
       toast({
-        title: "Successo",
-        description: "Consumo registrato",
+        title: "Consumo registrato",
+        description: "Stock aggiornato",
       });
     },
     onError: (error: Error) => {
@@ -144,8 +144,8 @@ export default function ConsumptionTracking() {
       queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
       setLoadQuantities({});
       toast({
-        title: "Successo",
-        description: "Prodotto caricato sulla postazione",
+        title: "Prodotto caricato",
+        description: "Trasferimento completato",
       });
     },
     onError: (error: Error) => {
@@ -242,7 +242,7 @@ export default function ConsumptionTracking() {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div>
+            <div className="flex-1">
               <h1 className="text-xl sm:text-2xl font-semibold">{selectedEvent?.name}</h1>
               {selectedStation && (
                 <p className="text-sm text-muted-foreground">{selectedStation.name}</p>
@@ -310,13 +310,13 @@ export default function ConsumptionTracking() {
               <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
               <p className="text-muted-foreground mb-2">Seleziona una postazione</p>
               <p className="text-sm text-muted-foreground">
-                Scegli evento e postazione sopra per visualizzare i prodotti e registrare i consumi
+                Scegli evento e postazione sopra per visualizzare i prodotti
               </p>
             </CardContent>
           </Card>
         ) : (
           <Tabs defaultValue="scarico" className="w-full">
-            <TabsList className="grid w-full grid-cols-2 mb-6">
+            <TabsList className="grid w-full grid-cols-2 mb-4">
               <TabsTrigger value="carico" className="flex items-center gap-2" data-testid="tab-carico">
                 <Upload className="h-4 w-4" />
                 Carico
@@ -328,175 +328,163 @@ export default function ConsumptionTracking() {
             </TabsList>
 
             <TabsContent value="carico">
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Upload className="h-5 w-5 text-green-500" />
-                  Carica Prodotti
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Trasferisci prodotti dal magazzino generale alla postazione
-                </p>
-              </div>
-
-              {productsInGeneral.length === 0 ? (
-                <Card>
-                  <CardContent className="p-12 text-center">
-                    <Package className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-muted-foreground">Nessun prodotto disponibile nel magazzino</p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-                  {productsInGeneral.map((product) => {
-                    const generalStock = getGeneralStock(product.id);
-                    const stationStock = getProductStock(product.id);
-                    return (
-                      <Card key={product.id} data-testid={`load-product-card-${product.id}`} className="overflow-hidden">
-                        <CardHeader className="pb-3 space-y-2">
-                          <div className="flex items-center gap-3">
-                            <div className="w-12 h-12 bg-green-500/10 rounded-md flex items-center justify-center flex-shrink-0">
-                              <Package className="h-6 w-6 text-green-500" />
-                            </div>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Warehouse className="h-5 w-5 text-green-600" />
+                    Carica dal Magazzino
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Trasferisci prodotti dal magazzino alla postazione
+                  </p>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {productsInGeneral.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <Package className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-muted-foreground">Nessun prodotto disponibile</p>
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {productsInGeneral.map((product) => {
+                        const generalStock = getGeneralStock(product.id);
+                        const stationStock = getProductStock(product.id);
+                        return (
+                          <div 
+                            key={product.id} 
+                            className="flex items-center gap-3 p-4 hover:bg-muted/50"
+                            data-testid={`load-row-${product.id}`}
+                          >
                             <div className="flex-1 min-w-0">
-                              <CardTitle className="text-base truncate">{product.name}</CardTitle>
-                              <p className="text-xs text-muted-foreground truncate">{product.code}</p>
+                              <div className="font-medium truncate">{product.name}</div>
+                              <div className="text-xs text-muted-foreground">{product.code}</div>
+                            </div>
+                            
+                            <div className="text-right text-sm shrink-0">
+                              <div className="text-muted-foreground">Magazzino</div>
+                              <div className="font-semibold text-green-600">{generalStock.toFixed(1)}</div>
+                            </div>
+                            
+                            <div className="text-right text-sm shrink-0">
+                              <div className="text-muted-foreground">Postazione</div>
+                              <div className="font-semibold">{stationStock.toFixed(1)}</div>
+                            </div>
+                            
+                            <div className="flex items-center gap-2 shrink-0">
+                              <Input
+                                type="number"
+                                min="0"
+                                step="1"
+                                placeholder="Qtà"
+                                value={loadQuantities[product.id] || ""}
+                                onChange={(e) => setLoadQuantities(prev => ({ ...prev, [product.id]: e.target.value }))}
+                                className="w-20 h-9 text-center"
+                                data-testid={`input-load-${product.id}`}
+                              />
+                              <Button
+                                size="sm"
+                                onClick={() => handleLoad(product.id)}
+                                disabled={loadMutation.isPending}
+                                className="bg-green-600 hover:bg-green-700 h-9"
+                                data-testid={`button-load-${product.id}`}
+                              >
+                                <Plus className="h-4 w-4" />
+                              </Button>
                             </div>
                           </div>
-                          <div className="flex flex-col gap-1 text-sm">
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Magazzino:</span>
-                              <span className="font-medium">{generalStock.toFixed(2)} {product.unitOfMeasure}</span>
-                            </div>
-                            <div className="flex justify-between">
-                              <span className="text-muted-foreground">Postazione:</span>
-                              <span className="font-medium">{stationStock.toFixed(2)} {product.unitOfMeasure}</span>
-                            </div>
-                          </div>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                          <div className="flex gap-2">
-                            <Input
-                              type="number"
-                              min="0"
-                              step="0.5"
-                              placeholder="Qtà"
-                              value={loadQuantities[product.id] || ""}
-                              onChange={(e) => setLoadQuantities(prev => ({ ...prev, [product.id]: e.target.value }))}
-                              className="flex-1"
-                              data-testid={`input-load-qty-${product.id}`}
-                            />
-                            <Button
-                              onClick={() => handleLoad(product.id)}
-                              disabled={loadMutation.isPending}
-                              className="bg-green-600 hover:bg-green-700"
-                              data-testid={`button-load-${product.id}`}
-                            >
-                              <Plus className="h-4 w-4 mr-1" />
-                              Carica
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
 
             <TabsContent value="scarico">
-              <div className="mb-4">
-                <h2 className="text-lg font-semibold flex items-center gap-2">
-                  <Download className="h-5 w-5 text-orange-500" />
-                  Scarica Consumi
-                </h2>
-                <p className="text-sm text-muted-foreground">
-                  Registra i consumi dei prodotti caricati sulla postazione
-                </p>
-              </div>
-
-              {productsWithStock.length === 0 ? (
-                <Card>
-                  <CardContent className="p-12 text-center">
-                    <Package className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-muted-foreground mb-2">Nessun prodotto caricato</p>
-                    <p className="text-sm text-muted-foreground">
-                      Vai nella sezione Carico per trasferire prodotti dal magazzino
-                    </p>
-                  </CardContent>
-                </Card>
-              ) : (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 sm:gap-4">
-                  {productsWithStock.map((product) => {
-                    const stockValue = getProductStock(product.id);
-                    const isLowStock = stockValue <= 5;
-                    return (
-                      <Card key={product.id} data-testid={`product-card-${product.id}`} className="overflow-hidden">
-                        <CardHeader className="pb-3 space-y-2">
-                          <div className="flex items-center gap-3">
-                            <div className="w-14 h-14 sm:w-16 sm:h-16 bg-orange-500/10 rounded-md flex items-center justify-center flex-shrink-0">
-                              <Package className="h-7 w-7 sm:h-8 sm:w-8 text-orange-500" />
-                            </div>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Package className="h-5 w-5 text-orange-500" />
+                    Registra Consumi
+                  </CardTitle>
+                  <p className="text-sm text-muted-foreground">
+                    Tocca i pulsanti per scaricare le quantità vendute
+                  </p>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {productsWithStock.length === 0 ? (
+                    <div className="p-8 text-center">
+                      <Package className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                      <p className="text-muted-foreground mb-1">Nessun prodotto caricato</p>
+                      <p className="text-xs text-muted-foreground">
+                        Vai nella sezione Carico per trasferire prodotti
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="divide-y">
+                      {productsWithStock.map((product) => {
+                        const stockValue = getProductStock(product.id);
+                        const isLowStock = stockValue <= 5;
+                        return (
+                          <div 
+                            key={product.id} 
+                            className="flex items-center gap-3 p-4 hover:bg-muted/50"
+                            data-testid={`consume-row-${product.id}`}
+                          >
                             <div className="flex-1 min-w-0">
-                              <CardTitle className="text-base sm:text-lg truncate">{product.name}</CardTitle>
-                              <p className="text-xs sm:text-sm text-muted-foreground truncate">{product.code}</p>
+                              <div className="font-medium truncate">{product.name}</div>
+                              <div className="text-xs text-muted-foreground">{product.code}</div>
                             </div>
-                            {product.category && (
-                              <Badge variant="secondary" className="flex-shrink-0 text-xs">{product.category}</Badge>
-                            )}
+                            
+                            <div className="text-center shrink-0 min-w-16">
+                              <div className="text-xs text-muted-foreground">Giacenza</div>
+                              <div className={`text-lg font-bold ${isLowStock ? 'text-red-500' : ''}`}>
+                                {stockValue.toFixed(1)}
+                              </div>
+                              {isLowStock && (
+                                <Badge variant="destructive" className="text-xs px-1">Basso</Badge>
+                              )}
+                            </div>
+                            
+                            <div className="flex items-center gap-1 shrink-0">
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleConsume(product.id, 1)}
+                                disabled={consumeMutation.isPending || stockValue < 1}
+                                className="h-10 w-12 text-base font-bold"
+                                data-testid={`button-minus-1-${product.id}`}
+                              >
+                                -1
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleConsume(product.id, 2)}
+                                disabled={consumeMutation.isPending || stockValue < 2}
+                                className="h-10 w-12 text-base font-bold"
+                                data-testid={`button-minus-2-${product.id}`}
+                              >
+                                -2
+                              </Button>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => handleConsume(product.id, 5)}
+                                disabled={consumeMutation.isPending || stockValue < 5}
+                                className="h-10 w-12 text-base font-bold"
+                                data-testid={`button-minus-5-${product.id}`}
+                              >
+                                -5
+                              </Button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm sm:text-base font-medium">
-                              Giacenza: {stockValue.toFixed(2)} {product.unitOfMeasure}
-                            </span>
-                            {isLowStock && (
-                              <Badge variant="destructive" className="ml-auto text-xs" data-testid={`badge-low-${product.id}`}>
-                                Basso
-                              </Badge>
-                            )}
-                          </div>
-                        </CardHeader>
-                        <CardContent className="pt-0">
-                          <div className="grid grid-cols-3 gap-2">
-                            <Button
-                              size="lg"
-                              variant="outline"
-                              onClick={() => handleConsume(product.id, 0.5)}
-                              disabled={consumeMutation.isPending || stockValue < 0.5}
-                              data-testid={`button-consume-half-${product.id}`}
-                              className="flex flex-col items-center justify-center gap-1 h-16"
-                            >
-                              <Minus className="h-5 w-5" />
-                              <span className="font-semibold">0.5</span>
-                            </Button>
-                            <Button
-                              size="lg"
-                              variant="outline"
-                              onClick={() => handleConsume(product.id, 1)}
-                              disabled={consumeMutation.isPending || stockValue < 1}
-                              data-testid={`button-consume-one-${product.id}`}
-                              className="flex flex-col items-center justify-center gap-1 h-16"
-                            >
-                              <Minus className="h-5 w-5" />
-                              <span className="font-semibold">1</span>
-                            </Button>
-                            <Button
-                              size="lg"
-                              variant="outline"
-                              onClick={() => handleConsume(product.id, 2)}
-                              disabled={consumeMutation.isPending || stockValue < 2}
-                              data-testid={`button-consume-two-${product.id}`}
-                              className="flex flex-col items-center justify-center gap-1 h-16"
-                            >
-                              <Minus className="h-5 w-5" />
-                              <span className="font-semibold">2</span>
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
-                    );
-                  })}
-                </div>
-              )}
+                        );
+                      })}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             </TabsContent>
           </Tabs>
         )}
