@@ -28,6 +28,7 @@ import ReturnToWarehouse from "@/pages/return-to-warehouse";
 import SuperAdminDashboard from "@/pages/super-admin-dashboard";
 import Stations from "@/pages/stations";
 import Settings from "@/pages/settings";
+import AIAnalysis from "@/pages/ai-analysis";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -87,6 +88,7 @@ function Router() {
               <Route path="/super-admin" component={SuperAdminDashboard} />
               <Route path="/stations" component={Stations} />
               <Route path="/settings" component={Settings} />
+              <Route path="/ai-analysis" component={AIAnalysis} />
               <Route component={NotFound} />
             </Switch>
           </main>

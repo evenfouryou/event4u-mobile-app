@@ -1997,6 +1997,42 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== AI ANALYSIS =====
+  app.post('/api/ai/analyze', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+
+      const { query, context } = req.body;
+      if (!query) {
+        return res.status(400).json({ message: "Query is required" });
+      }
+
+      const analysis = await storage.analyzeWithAI(companyId, query, context);
+      res.json(analysis);
+    } catch (error: any) {
+      console.error("Error in AI analysis:", error);
+      res.status(500).json({ message: error.message || "Failed to analyze data" });
+    }
+  });
+
+  app.get('/api/ai/insights', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+
+      const insights = await storage.generateInsights(companyId);
+      res.json(insights);
+    } catch (error: any) {
+      console.error("Error generating insights:", error);
+      res.status(500).json({ message: error.message || "Failed to generate insights" });
+    }
+  });
+
   const httpServer = createServer(app);
   return httpServer;
 }

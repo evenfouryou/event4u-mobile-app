@@ -133,6 +133,18 @@ export interface IStorage {
   updatePurchaseOrderItem(id: string, companyId: string, item: Partial<PurchaseOrderItem>): Promise<PurchaseOrderItem | undefined>;
   deletePurchaseOrderItem(id: string, companyId: string): Promise<boolean>;
   
+  // AI Analysis operations
+  analyzeWithAI(companyId: string, query: string, context?: string): Promise<{
+    answer: string;
+    data?: any;
+  }>;
+  generateInsights(companyId: string): Promise<Array<{
+    title: string;
+    description: string;
+    type: 'info' | 'warning' | 'success';
+    data?: any;
+  }>>;
+  
   // Suggested orders based on alerts and consumption
   generateSuggestedOrders(companyId: string): Promise<Array<{
     productId: string;
@@ -889,6 +901,183 @@ export class DatabaseStorage implements IStorage {
       const bUrgency = b.currentStock / (b.minThreshold || 1);
       return aUrgency - bUrgency;
     });
+  }
+
+  async analyzeWithAI(companyId: string, query: string, context?: string): Promise<{ answer: string; data?: any }> {
+    const OpenAI = (await import('openai')).default;
+    const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+    // Gather company data for context
+    const [products, events, stocks, movements] = await Promise.all([
+      this.getProductsByCompany(companyId),
+      this.getEventsByCompany(companyId),
+      this.getGeneralStocks(companyId),
+      this.getMovementsByCompany(companyId),
+    ]);
+
+    // Build context with relevant data
+    const dataContext = {
+      products: products.map(p => ({ 
+        code: p.code, 
+        name: p.name, 
+        category: p.category, 
+        unit: p.unitOfMeasure,
+        minThreshold: p.minThreshold 
+      })),
+      events: events.map(e => ({ 
+        name: e.name, 
+        date: e.startDatetime, 
+        status: e.status,
+        locationId: e.locationId 
+      })),
+      inventory: stocks.map(s => {
+        const product = products.find(p => p.id === s.productId);
+        return {
+          product: product?.name,
+          code: product?.code,
+          quantity: s.quantity,
+          minThreshold: product?.minThreshold,
+        };
+      }),
+      recentMovements: movements.slice(0, 100).map(m => {
+        const product = products.find(p => p.id === m.productId);
+        return {
+          product: product?.name,
+          type: m.type,
+          quantity: m.quantity,
+          reason: m.reason,
+          timestamp: m.createdAt,
+        };
+      }),
+    };
+
+    const systemPrompt = `Sei un assistente AI esperto nell'analisi di dati per la gestione eventi e inventario.
+Analizza i dati forniti e rispondi in italiano con informazioni chiare e actionable.
+Concentrati su: consumi, pattern, ottimizzazioni, tendenze e suggerimenti pratici.
+
+Dati disponibili:
+- Prodotti: ${products.length} articoli
+- Eventi: ${events.length} eventi
+- Scorte attuali: ${stocks.length} prodotti in magazzino
+- Movimenti recenti: ${movements.length} movimenti registrati
+
+${context ? `Contesto aggiuntivo: ${context}` : ''}`;
+
+    const completion = await openai.chat.completions.create({
+      model: "gpt-4o-mini",
+      messages: [
+        { role: "system", content: systemPrompt },
+        { role: "user", content: `Domanda: ${query}\n\nDati:\n${JSON.stringify(dataContext, null, 2)}` }
+      ],
+      temperature: 0.7,
+      max_tokens: 1500,
+    });
+
+    return {
+      answer: completion.choices[0]?.message?.content || "Non sono riuscito a generare una risposta.",
+      data: dataContext,
+    };
+  }
+
+  async generateInsights(companyId: string): Promise<Array<{ title: string; description: string; type: 'info' | 'warning' | 'success'; data?: any }>> {
+    const insights: Array<{ title: string; description: string; type: 'info' | 'warning' | 'success'; data?: any }> = [];
+
+    const [products, stocks, movements, events] = await Promise.all([
+      this.getProductsByCompany(companyId),
+      this.getGeneralStocks(companyId),
+      this.getMovementsByCompany(companyId),
+      this.getEventsByCompany(companyId),
+    ]);
+
+    // Insight 1: Low stock alerts
+    const lowStockItems = stocks.filter(s => {
+      const product = products.find(p => p.id === s.productId);
+      return product && product.minThreshold && parseFloat(product.minThreshold) > 0 && parseFloat(s.quantity) < parseFloat(product.minThreshold);
+    });
+
+    if (lowStockItems.length > 0) {
+      insights.push({
+        title: `⚠️ ${lowStockItems.length} prodotti sotto scorta minima`,
+        description: `Controlla il magazzino: alcuni prodotti sono sotto la soglia di sicurezza.`,
+        type: 'warning',
+        data: { count: lowStockItems.length },
+      });
+    }
+
+    // Insight 2: Top consumed products (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    
+    const consumptionMovements = movements.filter(m => 
+      m.type === 'out' && 
+      m.reason === 'consumption' &&
+      m.createdAt && new Date(m.createdAt) >= thirtyDaysAgo
+    );
+
+    const consumptionByProduct = new Map<string, number>();
+    consumptionMovements.forEach(m => {
+      const current = consumptionByProduct.get(m.productId) || 0;
+      consumptionByProduct.set(m.productId, current + parseFloat(m.quantity));
+    });
+
+    const topProducts = Array.from(consumptionByProduct.entries())
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 3)
+      .map(([productId, qty]) => {
+        const product = products.find(p => p.id === productId);
+        return { name: product?.name || 'Unknown', quantity: qty };
+      });
+
+    if (topProducts.length > 0) {
+      insights.push({
+        title: `📊 Top 3 prodotti più consumati`,
+        description: `${topProducts.map((p, i) => `${i + 1}. ${p.name}: ${p.quantity.toFixed(0)} unità`).join(' | ')}`,
+        type: 'info',
+        data: { products: topProducts },
+      });
+    }
+
+    // Insight 3: Upcoming events
+    const upcomingEvents = events.filter(e => {
+      if (!e.startDatetime) return false;
+      const eventDate = new Date(e.startDatetime);
+      const now = new Date();
+      const inSevenDays = new Date();
+      inSevenDays.setDate(inSevenDays.getDate() + 7);
+      return eventDate >= now && eventDate <= inSevenDays;
+    });
+
+    if (upcomingEvents.length > 0) {
+      insights.push({
+        title: `📅 ${upcomingEvents.length} eventi nei prossimi 7 giorni`,
+        description: `Verifica le scorte e le stazioni per gli eventi in arrivo.`,
+        type: 'info',
+        data: { events: upcomingEvents.map(e => ({ name: e.name, date: e.startDatetime })) },
+      });
+    }
+
+    // Insight 4: Inventory health
+    const totalProducts = products.length;
+    const productsInStock = stocks.filter(s => parseFloat(s.quantity) > 0).length;
+    const stockPercentage = totalProducts > 0 ? (productsInStock / totalProducts * 100) : 0;
+
+    if (stockPercentage > 80) {
+      insights.push({
+        title: `✅ Magazzino in salute`,
+        description: `${stockPercentage.toFixed(0)}% dei prodotti disponibili in magazzino.`,
+        type: 'success',
+        data: { percentage: stockPercentage },
+      });
+    } else if (stockPercentage < 50) {
+      insights.push({
+        title: `⚠️ Magazzino da rifornire`,
+        description: `Solo ${stockPercentage.toFixed(0)}% dei prodotti disponibili.`,
+        type: 'warning',
+        data: { percentage: stockPercentage },
+      });
+    }
+
+    return insights;
   }
 }
 

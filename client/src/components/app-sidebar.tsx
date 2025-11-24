@@ -15,6 +15,7 @@ import {
   FileText,
   PackageOpen,
   Home,
+  Sparkles,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import {
@@ -175,6 +176,12 @@ export function AppSidebar() {
         icon: DollarSign,
         url: "/price-lists",
         group: "Inventario",
+      },
+      {
+        title: "Analisi AI",
+        icon: Sparkles,
+        url: "/ai-analysis",
+        group: "Analytics",
       }
     );
   }
