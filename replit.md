@@ -11,6 +11,10 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### November 24, 2025
+- **Module-Based Home Page Structure**: Restructured navigation with a new home page featuring four main sections (Beverage, Contabilità, Personale, Dati). Each section is displayed as a large card with icon, description and navigation. Only Beverage is currently active, other sections show "Prossimamente" (Coming Soon).
+- **Dedicated Beverage Dashboard**: Created /beverage route containing the full operational dashboard with stats (ongoing events, scheduled events, products, low stock), quick access links, events list, and low stock alerts. This replaces the old home page content for gestore/organizer users.
+- **EventFourYou Logo Integration**: Applied the new logo image throughout the application: sidebar header, login page header, register page, and landing page.
+- **Role-Specific Views Preserved**: Bartenders and warehouse users still see their specialized views in the Beverage dashboard; SuperAdmin sees company management dashboard on home.
 - **Step-by-Step Event Creation Wizard**: Replaced dialog-based event creation with comprehensive multi-step wizard (/events/wizard) featuring:
   - **4-Step Process**: (1) Basic info (name, location, format), (2) Dates/times/capacity, (3) Recurrence configuration with manual date selection, (4) Summary and notes
   - **Draft Auto-Save**: Automatic draft saving every 30 seconds + on step navigation, enabling users to pause and resume event creation
