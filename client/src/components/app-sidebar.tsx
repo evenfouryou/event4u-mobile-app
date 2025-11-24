@@ -74,46 +74,22 @@ export function AppSidebar() {
   if (isAdmin) {
     menuItems.push(
       {
-        title: "Dashboard",
-        icon: BarChart3,
+        title: "Home",
+        icon: Home,
         url: "/",
-        group: "Generale",
+        group: "Menu",
       },
       {
-        title: "Eventi",
-        icon: Calendar,
-        url: "/events",
-        group: "Generale",
-      },
-      {
-        title: "Format Eventi",
-        icon: Tag,
-        url: "/event-formats",
-        group: "Generale",
-      },
-      {
-        title: "Location",
-        icon: MapPin,
-        url: "/locations",
-        group: "Generale",
-      },
-      {
-        title: "Postazioni",
-        icon: MapPin,
-        url: "/stations",
-        group: "Generale",
-      },
-      {
-        title: "Report",
-        icon: FileText,
-        url: "/reports",
-        group: "Generale",
+        title: "Beverage",
+        icon: Package,
+        url: "/beverage",
+        group: "Menu",
       },
       {
         title: "Utenti",
         icon: Users,
         url: "/users",
-        group: "Generale",
+        group: "Menu",
       }
     );
   }
@@ -135,7 +111,7 @@ export function AppSidebar() {
     );
   }
 
-  if (isAdmin || isWarehouse) {
+  if (isWarehouse) {
     menuItems.push(
       {
         title: "Prodotti",
@@ -150,44 +126,9 @@ export function AppSidebar() {
         group: "Inventario",
       },
       {
-        title: "Ordini",
-        icon: ShoppingCart,
-        url: "/purchase-orders",
-        group: "Inventario",
-      },
-      {
         title: "Magazzino",
         icon: Warehouse,
         url: "/warehouse",
-        group: "Inventario",
-      },
-      {
-        title: "Import CSV",
-        icon: Upload,
-        url: "/import",
-        group: "Inventario",
-      },
-      {
-        title: "Rientro Magazzino",
-        icon: PackageOpen,
-        url: "/return-to-warehouse",
-        group: "Inventario",
-      },
-      {
-        title: "Analisi AI",
-        icon: Sparkles,
-        url: "/ai-analysis",
-        group: "Analytics",
-      }
-    );
-  }
-
-  if (isAdmin) {
-    menuItems.push(
-      {
-        title: "Listini Prezzi",
-        icon: DollarSign,
-        url: "/price-lists",
         group: "Inventario",
       }
     );
