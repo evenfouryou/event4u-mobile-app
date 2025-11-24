@@ -531,7 +531,7 @@ export default function Warehouse() {
                                   <SelectValue placeholder="Nessuno" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                  <SelectItem value="">Nessuno</SelectItem>
+                                  <SelectItem value="none">Nessuno</SelectItem>
                                   {suppliers?.map((supplier) => (
                                     <SelectItem key={supplier.id} value={supplier.id}>
                                       {supplier.name}
