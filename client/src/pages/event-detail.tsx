@@ -916,7 +916,7 @@ export default function EventDetail() {
                           <Badge variant="secondary" className="text-xs">Fissa</Badge>
                         )}
                       </div>
-                      {!isEditing && !station.isGeneral && (
+                      {!isEditing && (
                         <Button
                           size="sm"
                           variant="ghost"
