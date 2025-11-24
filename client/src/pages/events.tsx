@@ -148,6 +148,11 @@ export default function Events() {
     createMutation.mutate(data);
   };
 
+  const formatsMap = useMemo(() => {
+    if (!formats) return new Map<string, EventFormat>();
+    return new Map(formats.map(f => [f.id, f]));
+  }, [formats]);
+
   const filteredEvents = useMemo(() => {
     if (!events) return [];
     
@@ -523,12 +528,23 @@ export default function Events() {
           {filteredEvents.map((event) => {
             const statusInfo = statusLabels[event.status] || statusLabels.draft;
             const eventStations = stations?.filter(s => s.eventId === event.id) || [];
+            const eventFormat = event.formatId ? formatsMap.get(event.formatId) : undefined;
             return (
               <Card key={event.id} className="hover-elevate" data-testid={`event-card-${event.id}`}>
                 <CardHeader className="pb-3">
                   <div className="flex items-start justify-between gap-2 mb-2">
                     <CardTitle className="text-lg flex-1">{event.name}</CardTitle>
-                    <div className="flex gap-2">
+                    <div className="flex gap-2 flex-wrap">
+                      {eventFormat && (
+                        <Badge 
+                          style={{ 
+                            backgroundColor: eventFormat.color ?? '#3b82f6',
+                            color: '#ffffff'
+                          }}
+                        >
+                          {eventFormat.name}
+                        </Badge>
+                      )}
                       {event.seriesId && (
                         <Badge variant="outline" className="flex items-center gap-1">
                           <Repeat className="h-3 w-3" />
