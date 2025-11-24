@@ -43,7 +43,7 @@ import {
   type InsertPurchaseOrderItem,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, isNull, inArray, sql, desc } from "drizzle-orm";
+import { eq, and, or, isNull, inArray, sql, desc } from "drizzle-orm";
 
 export interface IStorage {
   // User operations - Required for Replit Auth
@@ -560,7 +560,10 @@ export class DatabaseStorage implements IStorage {
     return await db
       .select()
       .from(stockMovements)
-      .where(eq(stockMovements.toEventId, eventId))
+      .where(or(
+        eq(stockMovements.toEventId, eventId),
+        eq(stockMovements.fromEventId, eventId)
+      ))
       .orderBy(stockMovements.createdAt);
   }
   

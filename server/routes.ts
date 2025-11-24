@@ -2270,41 +2270,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const products = await storage.getProductsByCompany(companyId);
       const stations = await storage.getStationsByEvent(eventId);
 
-      // Calculate consumption per station
-      const stationReports = await Promise.all(stations.map(async (station) => {
-        const stationMovements = movements.filter(m => 
-          m.toStationId === station.id || m.fromStationId === station.id
-        );
+      // Get all CONSUME movements for this event
+      const consumeMovements = movements.filter(m => m.type === 'CONSUME');
 
-        const consumed = stationMovements
-          .filter(m => m.type === 'CONSUME' && m.fromStationId === station.id)
-          .reduce((acc, m) => {
-            const product = products.find(p => p.id === m.productId);
-            if (!product) return acc;
-            
-            const qty = parseFloat(m.quantity);
-            const cost = parseFloat(product.costPrice) * qty;
-            
-            return {
-              items: [...acc.items, {
-                productId: m.productId,
-                productName: product.name,
-                quantity: qty,
-                costPrice: product.costPrice,
-                totalCost: cost,
-              }],
-              totalCost: acc.totalCost + cost,
-            };
-          }, { items: [] as any[], totalCost: 0 });
-
-        return {
-          stationId: station.id,
-          stationName: station.name,
-          ...consumed,
-        };
-      }));
-
-      // Calculate total consumption aggregated by product
+      // Calculate total consumption aggregated by product (from ALL consume movements)
       const consumptionByProduct = new Map<string, {
         productId: string;
         productName: string;
@@ -2313,32 +2282,73 @@ export async function registerRoutes(app: Express): Promise<Server> {
         totalCost: number;
       }>();
 
-      // Aggregate consumption from all stations
-      stationReports.forEach(station => {
-        station.items.forEach(item => {
-          const existing = consumptionByProduct.get(item.productId);
-          if (existing) {
-            existing.totalQuantity += item.quantity;
-            existing.totalCost += item.totalCost;
-          } else {
-            consumptionByProduct.set(item.productId, {
-              productId: item.productId,
-              productName: item.productName,
-              totalQuantity: item.quantity,
-              costPrice: item.costPrice,
-              totalCost: item.totalCost,
-            });
-          }
-        });
+      let totalCost = 0;
+
+      // Aggregate all consumptions regardless of station
+      consumeMovements.forEach(m => {
+        const product = products.find(p => p.id === m.productId);
+        if (!product) return;
+
+        const qty = parseFloat(m.quantity);
+        const cost = parseFloat(product.costPrice) * qty;
+        totalCost += cost;
+
+        const existing = consumptionByProduct.get(m.productId);
+        if (existing) {
+          existing.totalQuantity += qty;
+          existing.totalCost += cost;
+        } else {
+          consumptionByProduct.set(m.productId, {
+            productId: m.productId,
+            productName: product.name,
+            totalQuantity: qty,
+            costPrice: product.costPrice,
+            totalCost: cost,
+          });
+        }
       });
+
+      // Calculate consumption per station (for detailed breakdown)
+      const stationReports = await Promise.all(stations.map(async (station) => {
+        const stationConsumeMovements = consumeMovements.filter(m => 
+          m.fromStationId === station.id
+        );
+
+        const items: any[] = [];
+        let stationTotalCost = 0;
+
+        stationConsumeMovements.forEach(m => {
+          const product = products.find(p => p.id === m.productId);
+          if (!product) return;
+          
+          const qty = parseFloat(m.quantity);
+          const cost = parseFloat(product.costPrice) * qty;
+          stationTotalCost += cost;
+
+          items.push({
+            productId: m.productId,
+            productName: product.name,
+            quantity: qty,
+            costPrice: product.costPrice,
+            totalCost: cost,
+          });
+        });
+
+        return {
+          stationId: station.id,
+          stationName: station.name,
+          items,
+          totalCost: stationTotalCost,
+        };
+      }));
 
       const consumedProducts = Array.from(consumptionByProduct.values());
 
       const totalReport = {
         eventId,
         stations: stationReports,
-        consumedProducts, // New: Total consumption per product across all stations
-        totalCost: stationReports.reduce((sum, s) => sum + s.totalCost, 0),
+        consumedProducts,
+        totalCost,
       };
 
       res.json(totalReport);
