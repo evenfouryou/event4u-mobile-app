@@ -46,7 +46,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertProductSchema, type Product, type InsertProduct } from "@shared/schema";
 
-const categories = ['drink', 'bottle', 'food', 'supplies', 'other'];
+const defaultCategories = ['drink', 'bottle', 'food', 'supplies', 'other'];
 const units = ['bottle', 'can', 'liter', 'case', 'piece', 'kg'];
 
 export default function Products() {
@@ -62,6 +62,15 @@ export default function Products() {
   const { data: products, isLoading } = useQuery<Product[]>({
     queryKey: ['/api/products'],
   });
+
+  const categories = useMemo(() => {
+    if (!products) return defaultCategories;
+    const productCategories = products
+      .map(p => p.category)
+      .filter((cat): cat is string => !!cat && cat.trim() !== '');
+    const uniqueCategories = [...new Set(productCategories)];
+    return uniqueCategories.length > 0 ? uniqueCategories.sort() : defaultCategories;
+  }, [products]);
 
   const form = useForm<InsertProduct>({
     resolver: zodResolver(insertProductSchema),
