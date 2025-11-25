@@ -86,6 +86,12 @@ export function AppSidebar() {
         group: "Menu",
       },
       {
+        title: "Location",
+        icon: MapPin,
+        url: "/locations",
+        group: "Menu",
+      },
+      {
         title: "Utenti",
         icon: Users,
         url: "/users",
