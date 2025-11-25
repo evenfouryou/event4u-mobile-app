@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useRoute, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -76,6 +76,10 @@ export default function EventWizard() {
   const [selectedDates, setSelectedDates] = useState<Set<string>>(new Set());
   const [previewVersion, setPreviewVersion] = useState<string>('');
   const [userEditedSelection, setUserEditedSelection] = useState(false);
+  
+  // Ref to track current draftId for preventing duplicate creations
+  const draftIdRef = useRef<string | null>(params?.id || null);
+  const isSavingRef = useRef(false);
 
   const { data: locations } = useQuery<LocationType[]>({
     queryKey: ['/api/locations'],
@@ -125,7 +129,7 @@ export default function EventWizard() {
       
       // Restore selected recurring dates if they exist
       if (existingEvent.selectedRecurringDates && Array.isArray(existingEvent.selectedRecurringDates)) {
-        const restoredDates = new Set(existingEvent.selectedRecurringDates);
+        const restoredDates = new Set<string>(existingEvent.selectedRecurringDates as string[]);
         setSelectedDates(restoredDates);
         // Set preview version hash to prevent watcher from overwriting
         setPreviewVersion(JSON.stringify(Array.from(restoredDates).sort()));
@@ -157,7 +161,7 @@ export default function EventWizard() {
           new Date(endDatetime),
           recurrencePattern as 'daily' | 'weekly' | 'monthly',
           recurrenceInterval || 1,
-          recurrenceCount,
+          recurrenceCount ?? undefined,
           recurrenceEndDate ? new Date(recurrenceEndDate) : undefined
         );
         
@@ -208,19 +212,27 @@ export default function EventWizard() {
 
   const saveDraftMutation = useMutation({
     mutationFn: async (data: Partial<InsertEvent>) => {
-      if (draftId) {
-        return apiRequest('PATCH', `/api/events/${draftId}`, { ...data, status: 'draft' });
+      // Use ref to get the most current draftId
+      const currentDraftId = draftIdRef.current;
+      if (currentDraftId) {
+        return apiRequest('PATCH', `/api/events/${currentDraftId}`, { ...data, status: 'draft' });
       } else {
         return apiRequest('POST', '/api/events', { ...data, status: 'draft' });
       }
     },
     onSuccess: (savedEvent: any) => {
-      if (!draftId && savedEvent?.id) {
+      // Only set new draftId if we didn't have one before
+      if (!draftIdRef.current && savedEvent?.id) {
+        draftIdRef.current = savedEvent.id;
         setDraftId(savedEvent.id);
-        navigate(`/events/wizard/${savedEvent.id}`);
+        navigate(`/events/wizard/${savedEvent.id}`, { replace: true });
       }
       setLastSaved(new Date());
+      isSavingRef.current = false;
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
+    },
+    onError: () => {
+      isSavingRef.current = false;
     },
   });
 
@@ -249,7 +261,14 @@ export default function EventWizard() {
     },
   });
 
-  const saveDraft = () => {
+  const saveDraft = useCallback(() => {
+    // Prevent concurrent saves to avoid creating multiple drafts
+    if (isSavingRef.current || saveDraftMutation.isPending) {
+      return;
+    }
+    
+    isSavingRef.current = true;
+    
     const values = form.getValues();
     const payload: any = { ...values };
     
@@ -270,7 +289,7 @@ export default function EventWizard() {
     }
     
     saveDraftMutation.mutate(payload);
-  };
+  }, [form, selectedDates, saveDraftMutation]);
 
   const nextStep = () => {
     if (currentStep < STEPS.length) {
