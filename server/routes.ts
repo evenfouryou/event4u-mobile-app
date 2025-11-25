@@ -100,10 +100,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Send welcome email with verification link
-      // Use correct Replit URL: REPLIT_DEV_DOMAIN for development, custom domain/deployed URL for production
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : (process.env.PUBLIC_URL || 'http://localhost:5000');
+      // Priority: PUBLIC_URL (production) > REPLIT_DEV_DOMAIN (development) > localhost
+      const baseUrl = process.env.PUBLIC_URL 
+        ? process.env.PUBLIC_URL.replace(/\/$/, '') // Remove trailing slash if present
+        : process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : 'http://localhost:5000';
       const verificationLink = `${baseUrl}/verify-email?token=${verificationToken}`;
       const fromEmail = process.env.SMTP_FROM || 'Event4U <noreply@event4u.com>';
       
@@ -248,10 +250,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       await storage.updateUser(user.id, { verificationToken });
 
       // Send verification email
-      // Use correct Replit URL: REPLIT_DEV_DOMAIN for development, custom domain/deployed URL for production
-      const baseUrl = process.env.REPLIT_DEV_DOMAIN 
-        ? `https://${process.env.REPLIT_DEV_DOMAIN}`
-        : (process.env.PUBLIC_URL || 'http://localhost:5000');
+      // Priority: PUBLIC_URL (production) > REPLIT_DEV_DOMAIN (development) > localhost
+      const baseUrl = process.env.PUBLIC_URL 
+        ? process.env.PUBLIC_URL.replace(/\/$/, '') // Remove trailing slash if present
+        : process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : 'http://localhost:5000';
       const verificationLink = `${baseUrl}/verify-email?token=${verificationToken}`;
       const fromEmail = process.env.SMTP_FROM || 'Event4U <noreply@event4u.com>';
 
