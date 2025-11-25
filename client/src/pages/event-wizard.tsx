@@ -139,16 +139,8 @@ export default function EventWizard() {
     }
   }, [existingEvent]);
 
-  // Auto-save draft every 30 seconds
-  useEffect(() => {
-    const interval = setInterval(() => {
-      if (form.formState.isDirty) {
-        saveDraft();
-      }
-    }, 30000);
-
-    return () => clearInterval(interval);
-  }, [form.formState.isDirty]);
+  // Auto-save disabled - events are only saved when user clicks "Pubblica Evento"
+  // This prevents unwanted draft creation during wizard completion
 
   // Update preview dates when recurring params change
   useEffect(() => {
@@ -238,15 +230,12 @@ export default function EventWizard() {
 
   const publishMutation = useMutation({
     mutationFn: async (data: InsertEvent) => {
-      // Use ref to get the most current draftId (same as saveDraftMutation)
-      const currentDraftId = draftIdRef.current;
-      if (currentDraftId) {
-        // Update the existing draft to scheduled status
-        return apiRequest('PATCH', `/api/events/${currentDraftId}`, { ...data, status: 'scheduled' });
-      } else {
-        // Create new event directly as scheduled
-        return apiRequest('POST', '/api/events', { ...data, status: 'scheduled' });
+      // If editing an existing event, update it
+      if (draftIdRef.current) {
+        return apiRequest('PATCH', `/api/events/${draftIdRef.current}`, { ...data, status: 'scheduled' });
       }
+      // Otherwise create new event directly as scheduled (no draft)
+      return apiRequest('POST', '/api/events', { ...data, status: 'scheduled' });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
@@ -298,7 +287,7 @@ export default function EventWizard() {
   const nextStep = () => {
     if (currentStep < STEPS.length) {
       setCurrentStep(currentStep + 1);
-      saveDraft();
+      // No longer saving draft on step change - only save when user clicks "Pubblica Evento"
     }
   };
 
@@ -350,20 +339,8 @@ export default function EventWizard() {
           <h1 className="text-2xl font-semibold">
             {draftId ? 'Modifica Evento' : 'Nuovo Evento'}
           </h1>
-          <p className="text-sm text-muted-foreground mt-1">
-            {lastSaved && `Ultima modifica salvata: ${lastSaved.toLocaleTimeString()}`}
-          </p>
         </div>
         <div className="flex gap-2">
-          <Button
-            variant="outline"
-            onClick={saveDraft}
-            disabled={saveDraftMutation.isPending}
-            data-testid="button-save-draft"
-          >
-            <Save className="h-4 w-4 mr-2" />
-            Salva Bozza
-          </Button>
           <Button
             variant="ghost"
             onClick={() => navigate('/events')}
