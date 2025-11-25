@@ -342,6 +342,15 @@ export default function EventWizard() {
         </div>
         <div className="flex gap-2">
           <Button
+            variant="outline"
+            onClick={saveDraft}
+            disabled={saveDraftMutation.isPending}
+            data-testid="button-save-draft"
+          >
+            <Save className="h-4 w-4 mr-2" />
+            Salva Bozza
+          </Button>
+          <Button
             variant="ghost"
             onClick={() => navigate('/events')}
             data-testid="button-cancel-wizard"
