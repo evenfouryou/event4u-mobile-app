@@ -14,7 +14,6 @@ import {
   Calendar,
   Plus,
   Building2,
-  Wallet,
   FileText,
 } from "lucide-react";
 import type { Company } from "@shared/schema";
@@ -240,15 +239,8 @@ export default function Home() {
           color="bg-blue-500"
         />
         <SectionCard
-          title="Cassa"
-          description="Settori, postazioni, registrazione incassi e quadratura fondi. Gestione completa della cassa eventi."
-          icon={Wallet}
-          href="/cash-register"
-          color="bg-orange-500"
-        />
-        <SectionCard
           title="File della Serata"
-          description="Documento riepilogativo integrato. Visualizza contabilità, personale e cassa per ogni evento."
+          description="Documento completo dell'evento. Compila cassa, incassi, personale e costi per ogni serata."
           icon={FileText}
           href="/night-file"
           color="bg-rose-500"
