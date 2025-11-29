@@ -94,6 +94,18 @@ export default function ConsumptionTracking() {
 
   const getProductStock = (productId: string): number => {
     if (!selectedStationId) return 0;
+    
+    // Handle "general" event inventory (stocks without station)
+    if (selectedStationId === 'general') {
+      const stock = eventStocks?.find(s => 
+        s.productId === productId && !s.stationId
+      );
+      if (!stock) return 0;
+      const quantity = parseFloat(stock.quantity);
+      return isNaN(quantity) ? 0 : quantity;
+    }
+    
+    // Handle specific station
     const stock = eventStocks?.find(s => 
       s.productId === productId && s.stationId === selectedStationId
     );
@@ -152,7 +164,7 @@ export default function ConsumptionTracking() {
   });
 
   const returnMutation = useMutation({
-    mutationFn: async (data: { eventId: string; stationId: string; productId: string; quantity: number }) => {
+    mutationFn: async (data: { eventId: string; stationId: string | null; productId: string; quantity: number }) => {
       await apiRequest('POST', '/api/stock/return-to-warehouse', data);
     },
     onSuccess: (_, variables) => {
@@ -175,7 +187,7 @@ export default function ConsumptionTracking() {
   });
 
   const loadMutation = useMutation({
-    mutationFn: async (data: { eventId: string; stationId: string; productId: string; quantity: number }) => {
+    mutationFn: async (data: { eventId: string; stationId: string | null; productId: string; quantity: number }) => {
       await apiRequest('POST', '/api/stock/event-transfer', data);
     },
     onSuccess: (_, variables) => {
@@ -223,10 +235,12 @@ export default function ConsumptionTracking() {
     
     const consumed = stockValue - remaining;
     
+    const stationIdForApi = selectedStationId === 'general' ? null : selectedStationId;
+    
     if (consumed > 0) {
       consumeMutation.mutate({
         eventId: selectedEventId,
-        stationId: selectedStationId,
+        stationId: stationIdForApi,
         productId,
         quantity: consumed,
       });
@@ -235,7 +249,7 @@ export default function ConsumptionTracking() {
     if (remaining > 0) {
       returnMutation.mutate({
         eventId: selectedEventId,
-        stationId: selectedStationId,
+        stationId: stationIdForApi,
         productId,
         quantity: remaining,
       });
@@ -262,9 +276,10 @@ export default function ConsumptionTracking() {
       return;
     }
     
+    const stationIdForApi = selectedStationId === 'general' ? null : selectedStationId;
     consumeMutation.mutate({
       eventId: selectedEventId,
-      stationId: selectedStationId || null,
+      stationId: stationIdForApi,
       productId,
       quantity: stockValue,
     });
@@ -282,9 +297,10 @@ export default function ConsumptionTracking() {
       return;
     }
     
+    const stationIdForApi = selectedStationId === 'general' ? null : selectedStationId;
     loadMutation.mutate({
       eventId: selectedEventId,
-      stationId: selectedStationId,
+      stationId: stationIdForApi,
       productId,
       quantity: qty,
     });
@@ -324,6 +340,7 @@ export default function ConsumptionTracking() {
     setIsSubmittingAll(true);
     let successCount = 0;
     let errorCount = 0;
+    const stationIdForApi = selectedStationId === 'general' ? null : selectedStationId;
 
     for (const item of itemsToSubmit) {
       const consumed = item.stockValue - item.remaining;
@@ -332,7 +349,7 @@ export default function ConsumptionTracking() {
         if (consumed > 0) {
           await apiRequest('POST', '/api/stock/consume', {
             eventId: selectedEventId,
-            stationId: selectedStationId,
+            stationId: stationIdForApi,
             productId: item.productId,
             quantity: consumed,
           });
@@ -341,7 +358,7 @@ export default function ConsumptionTracking() {
         if (item.remaining > 0) {
           await apiRequest('POST', '/api/stock/return-to-warehouse', {
             eventId: selectedEventId,
-            stationId: selectedStationId,
+            stationId: stationIdForApi,
             productId: item.productId,
             quantity: item.remaining,
           });
@@ -431,9 +448,11 @@ export default function ConsumptionTracking() {
             </Button>
             <div className="flex-1">
               <h1 className="text-xl sm:text-2xl font-semibold">{selectedEvent?.name}</h1>
-              {selectedStation && (
+              {selectedStationId === 'general' ? (
+                <p className="text-sm text-muted-foreground">Inventario Generale Evento</p>
+              ) : selectedStation ? (
                 <p className="text-sm text-muted-foreground">{selectedStation.name}</p>
-              )}
+              ) : null}
             </div>
           </div>
           
@@ -460,17 +479,26 @@ export default function ConsumptionTracking() {
                 <Select 
                   value={selectedStationId} 
                   onValueChange={setSelectedStationId}
-                  disabled={!stations || stations.length === 0}
                 >
                   <SelectTrigger data-testid="select-station" className="h-11 sm:h-10">
                     <SelectValue placeholder="Postazione" />
                   </SelectTrigger>
                   <SelectContent>
-                    {stations?.map(station => (
-                      <SelectItem key={station.id} value={station.id}>
-                        {station.name}
-                      </SelectItem>
-                    ))}
+                    <SelectItem value="general">
+                      Inventario Generale Evento
+                    </SelectItem>
+                    {stations && stations.length > 0 && (
+                      <>
+                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                          Postazioni
+                        </div>
+                        {stations.map(station => (
+                          <SelectItem key={station.id} value={station.id}>
+                            {station.name}
+                          </SelectItem>
+                        ))}
+                      </>
+                    )}
                   </SelectContent>
                 </Select>
               </div>
