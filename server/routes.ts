@@ -2763,7 +2763,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get event stock to update
-      const eventStocks = await storage.getStocksByEvent(eventId);
+      const eventStocks = await storage.getEventStocks(eventId);
       
       // If stationId is specified, update that station's stock, otherwise update event general stock
       const targetStationId = stationId !== undefined ? stationId : 
