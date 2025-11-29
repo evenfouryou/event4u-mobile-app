@@ -2787,11 +2787,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Update event stock
-      await storage.upsertEventStock({
+      await storage.upsertStock({
         eventId,
         stationId: targetStationId,
         productId,
         quantity: newStock.toString(),
+        companyId,
       });
 
       // Create correction movement
