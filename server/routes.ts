@@ -779,27 +779,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.get('/api/user-features/:userId', isAuthenticated, async (req: any, res) => {
-    try {
-      const features = await storage.getUserFeatures(req.params.userId);
-      if (!features) {
-        // Return default features if none exist
-        return res.json({
-          userId: req.params.userId,
-          beverageEnabled: true,
-          contabilitaEnabled: false,
-          personaleEnabled: false,
-          cassaEnabled: false,
-          nightFileEnabled: false,
-        });
-      }
-      res.json(features);
-    } catch (error) {
-      console.error("Error fetching user features:", error);
-      res.status(500).json({ message: "Failed to fetch user features" });
-    }
-  });
-
+  // IMPORTANT: This route must be BEFORE /:userId to avoid matching 'current' as userId
   app.get('/api/user-features/current/my', isAuthenticated, async (req: any, res) => {
     try {
       const userId = req.user?.id;
@@ -821,6 +801,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(features);
     } catch (error) {
       console.error("Error fetching current user features:", error);
+      res.status(500).json({ message: "Failed to fetch user features" });
+    }
+  });
+
+  app.get('/api/user-features/:userId', isAuthenticated, async (req: any, res) => {
+    try {
+      const features = await storage.getUserFeatures(req.params.userId);
+      if (!features) {
+        // Return default features if none exist
+        return res.json({
+          userId: req.params.userId,
+          beverageEnabled: true,
+          contabilitaEnabled: false,
+          personaleEnabled: false,
+          cassaEnabled: false,
+          nightFileEnabled: false,
+        });
+      }
+      res.json(features);
+    } catch (error) {
+      console.error("Error fetching user features:", error);
       res.status(500).json({ message: "Failed to fetch user features" });
     }
   });
