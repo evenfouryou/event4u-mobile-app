@@ -1166,9 +1166,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Get stocks for event (alternative endpoint used by return-to-warehouse)
+  // Returns only stocks without station assignment (general event inventory)
   app.get('/api/stocks/event/:eventId', isAuthenticated, async (req: any, res) => {
     try {
-      const stocks = await storage.getEventStocks(req.params.eventId);
+      const allStocks = await storage.getEventStocks(req.params.eventId);
+      // Filter to only include stocks without station (general event inventory)
+      const stocks = allStocks.filter(stock => !stock.stationId);
+      
       const products = await storage.getProductsByCompany(
         (await getUserCompanyId(req)) || ''
       );
