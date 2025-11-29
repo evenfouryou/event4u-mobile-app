@@ -2672,6 +2672,116 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Correct consumption in report - only for gestore/admin
+  app.post('/api/reports/correct-consumption', isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      const userId = req.user.claims.sub;
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+
+      const correctSchema = z.object({
+        eventId: z.string().uuid(),
+        productId: z.string().uuid(),
+        stationId: z.string().uuid().nullable().optional(),
+        newQuantity: z.union([z.string(), z.number()])
+          .transform(val => parseFloat(val.toString()))
+          .refine(val => !isNaN(val), { message: "La quantità deve essere un numero valido" }),
+        reason: z.string().optional(),
+      });
+
+      const { eventId, productId, stationId, newQuantity, reason } = correctSchema.parse(req.body);
+
+      if (newQuantity < 0) {
+        return res.status(400).json({ message: "La quantità non può essere negativa" });
+      }
+
+      // Verify event belongs to user's company
+      const event = await storage.getEvent(eventId);
+      if (!event || event.companyId !== companyId) {
+        return res.status(403).json({ message: "Non autorizzato ad accedere a questo evento" });
+      }
+
+      // Verify product belongs to user's company
+      const product = await storage.getProduct(productId);
+      if (!product || product.companyId !== companyId) {
+        return res.status(403).json({ message: "Non autorizzato ad accedere a questo prodotto" });
+      }
+
+      // Get current consumption for this product/event/station (already company-scoped via event)
+      const movements = await storage.getMovementsByEvent(eventId);
+      const consumeMovements = movements.filter(m => 
+        m.type === 'CONSUME' && 
+        m.productId === productId &&
+        (stationId === undefined ? true : (stationId === null ? m.fromStationId === null : m.fromStationId === stationId))
+      );
+
+      // Calculate current total consumed
+      const currentConsumed = consumeMovements.reduce((sum, m) => sum + parseFloat(m.quantity), 0);
+      const difference = newQuantity - currentConsumed;
+
+      if (difference === 0) {
+        return res.json({ success: true, message: "Nessuna modifica necessaria", difference: 0 });
+      }
+
+      // Get event stock to update
+      const eventStocks = await storage.getStocksByEvent(eventId);
+      
+      // If stationId is specified, update that station's stock, otherwise update event general stock
+      const targetStationId = stationId !== undefined ? stationId : 
+        (consumeMovements.length > 0 ? consumeMovements[0].fromStationId : null);
+      
+      const existingStock = eventStocks.find(s => 
+        s.productId === productId && 
+        (targetStationId === null ? s.stationId === null : s.stationId === targetStationId)
+      );
+
+      const currentStock = existingStock ? parseFloat(existingStock.quantity) : 0;
+      
+      // If we consumed MORE (difference > 0), we need to reduce stock more
+      // If we consumed LESS (difference < 0), we need to add stock back
+      const newStock = currentStock - difference;
+
+      if (newStock < 0) {
+        return res.status(400).json({ 
+          message: `Quantità insufficiente. Stock attuale: ${currentStock.toFixed(2)}, correzione richiede: ${(-difference).toFixed(2)} in più` 
+        });
+      }
+
+      // Update event stock
+      await storage.upsertEventStock({
+        eventId,
+        stationId: targetStationId,
+        productId,
+        quantity: newStock.toString(),
+      });
+
+      // Create correction movement
+      await storage.createStockMovement({
+        companyId,
+        productId,
+        quantity: Math.abs(difference).toString(),
+        type: difference > 0 ? 'CONSUME' : 'RETURN',
+        reason: reason || `Correzione report: da ${currentConsumed.toFixed(2)} a ${newQuantity.toFixed(2)}`,
+        performedBy: userId,
+        fromEventId: eventId,
+        fromStationId: targetStationId,
+      });
+
+      res.json({ 
+        success: true, 
+        oldQuantity: currentConsumed,
+        newQuantity,
+        difference,
+        stockUpdated: newStock,
+      });
+    } catch (error: any) {
+      console.error("Error correcting consumption:", error);
+      res.status(500).json({ message: error.message || "Failed to correct consumption" });
+    }
+  });
+
   // Bulk import products
   app.post('/api/import/products', isAuthenticated, async (req: any, res) => {
     try {

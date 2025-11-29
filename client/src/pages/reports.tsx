@@ -1,14 +1,20 @@
 import { useState, useMemo, useEffect } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Download, FileSpreadsheet, TrendingUp, TrendingDown, DollarSign, Calendar, ArrowLeft } from "lucide-react";
+import { FileText, Download, FileSpreadsheet, TrendingUp, TrendingDown, DollarSign, Calendar, ArrowLeft, Pencil } from "lucide-react";
 import { Link, useSearch } from "wouter";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { isUnauthorizedError } from "@/lib/authUtils";
+import { useAuth } from "@/hooks/useAuth";
 import jsPDF from "jspdf";
 import * as XLSX from "xlsx";
 
@@ -55,10 +61,26 @@ export default function Reports() {
   const searchString = useSearch();
   const urlParams = new URLSearchParams(searchString);
   const urlEventId = urlParams.get('eventId');
+  const { toast } = useToast();
+  const { user } = useAuth();
 
   const [selectedEventId, setSelectedEventId] = useState<string>(urlEventId || "");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+
+  // State for correction dialog
+  const [correctionDialogOpen, setCorrectionDialogOpen] = useState(false);
+  const [correctingProduct, setCorrectingProduct] = useState<{
+    productId: string;
+    productName: string;
+    currentQuantity: number;
+    stationId?: string | null;
+  } | null>(null);
+  const [newQuantity, setNewQuantity] = useState("");
+  const [correctionReason, setCorrectionReason] = useState("");
+
+  // Check if user can correct (must be authenticated and gestore or super_admin)
+  const canCorrect = !!user && (user.role === 'gestore' || user.role === 'super_admin');
 
   const { data: events = [], isLoading: eventsLoading } = useQuery<Event[]>({
     queryKey: ['/api/events'],
@@ -94,6 +116,77 @@ export default function Reports() {
     queryKey: ['/api/events', selectedEventId, 'revenue-analysis'],
     enabled: !!selectedEventId,
   });
+
+  // Mutation for correcting consumption
+  const correctConsumptionMutation = useMutation({
+    mutationFn: async (data: { 
+      eventId: string; 
+      productId: string; 
+      newQuantity: number; 
+      stationId?: string | null;
+      reason?: string;
+    }) => {
+      await apiRequest('POST', '/api/reports/correct-consumption', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/reports/end-of-night', selectedEventId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events', selectedEventId, 'revenue-analysis'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stock'] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/stock') });
+      setCorrectionDialogOpen(false);
+      setCorrectingProduct(null);
+      setNewQuantity("");
+      setCorrectionReason("");
+      toast({
+        title: "Correzione effettuata",
+        description: "Il consumo è stato corretto e la giacenza aggiornata",
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Non autorizzato",
+          description: "Non hai i permessi per correggere i consumi",
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Errore",
+          description: error.message || "Impossibile correggere il consumo",
+          variant: "destructive",
+        });
+      }
+    },
+  });
+
+  const openCorrectionDialog = (productId: string, productName: string, currentQuantity: number, stationId?: string | null) => {
+    setCorrectingProduct({ productId, productName, currentQuantity, stationId });
+    setNewQuantity(currentQuantity.toString());
+    setCorrectionReason("");
+    setCorrectionDialogOpen(true);
+  };
+
+  const handleCorrectConsumption = () => {
+    if (!correctingProduct || !selectedEventId) return;
+    
+    const qty = parseFloat(newQuantity);
+    if (isNaN(qty) || qty < 0) {
+      toast({
+        title: "Errore",
+        description: "Inserisci una quantità valida",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    correctConsumptionMutation.mutate({
+      eventId: selectedEventId,
+      productId: correctingProduct.productId,
+      newQuantity: qty,
+      stationId: correctingProduct.stationId,
+      reason: correctionReason || undefined,
+    });
+  };
 
   const handleExportPDF = () => {
     if (!reportData) return;
@@ -520,6 +613,7 @@ export default function Reports() {
                       <TableHead className="text-right">Quantità Totale</TableHead>
                       <TableHead className="text-right">Prezzo Unitario</TableHead>
                       <TableHead className="text-right">Costo Totale</TableHead>
+                      {canCorrect && <TableHead className="w-16">Azioni</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -537,10 +631,27 @@ export default function Reports() {
                         <TableCell className="text-right font-semibold">
                           €{product.totalCost.toFixed(2)}
                         </TableCell>
+                        {canCorrect && (
+                          <TableCell>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              disabled={correctConsumptionMutation.isPending}
+                              onClick={() => openCorrectionDialog(
+                                product.productId, 
+                                product.productName, 
+                                product.totalQuantity
+                              )}
+                              data-testid={`button-correct-${product.productId}`}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </Button>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                     <TableRow className="border-t-2 border-primary">
-                      <TableCell colSpan={3} className="text-right font-bold">
+                      <TableCell colSpan={canCorrect ? 4 : 3} className="text-right font-bold">
                         TOTALE BEVERAGE
                       </TableCell>
                       <TableCell className="text-right font-bold text-lg" data-testid="text-total-beverage-cost">
@@ -578,6 +689,7 @@ export default function Reports() {
                             <TableHead className="text-right">Quantità</TableHead>
                             <TableHead className="text-right">Prezzo Unitario</TableHead>
                             <TableHead className="text-right">Totale</TableHead>
+                            {canCorrect && <TableHead className="w-16">Azioni</TableHead>}
                           </TableRow>
                         </TableHeader>
                         <TableBody>
@@ -595,6 +707,24 @@ export default function Reports() {
                               <TableCell className="text-right font-medium">
                                 €{item.totalCost.toFixed(2)}
                               </TableCell>
+                              {canCorrect && (
+                                <TableCell>
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    disabled={correctConsumptionMutation.isPending}
+                                    onClick={() => openCorrectionDialog(
+                                      item.productId.toString(), 
+                                      item.productName, 
+                                      item.quantity,
+                                      station.stationId.toString()
+                                    )}
+                                    data-testid={`button-correct-station-${station.stationId}-${item.productId}`}
+                                  >
+                                    <Pencil className="h-4 w-4" />
+                                  </Button>
+                                </TableCell>
+                              )}
                             </TableRow>
                           ))}
                         </TableBody>
@@ -618,6 +748,65 @@ export default function Reports() {
           </CardContent>
         </Card>
       )}
+
+      {/* Dialog per correzione consumo */}
+      <Dialog open={correctionDialogOpen} onOpenChange={setCorrectionDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Correggi Consumo</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Prodotto</p>
+              <p className="font-medium">{correctingProduct?.productName}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Quantità attuale consumata</p>
+              <p className="font-medium">{correctingProduct?.currentQuantity.toFixed(2)}</p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nuova Quantità Consumata</label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={newQuantity}
+                onChange={(e) => setNewQuantity(e.target.value)}
+                placeholder="Inserisci nuova quantità"
+                data-testid="input-correct-quantity"
+              />
+              <p className="text-xs text-muted-foreground">
+                La giacenza verrà aggiornata automaticamente in base alla differenza
+              </p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Motivo (opzionale)</label>
+              <Textarea
+                value={correctionReason}
+                onChange={(e) => setCorrectionReason(e.target.value)}
+                placeholder="Es: Errore di conteggio, correzione inventario..."
+                data-testid="input-correct-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setCorrectionDialogOpen(false)}
+              data-testid="button-cancel-correct"
+            >
+              Annulla
+            </Button>
+            <Button
+              onClick={handleCorrectConsumption}
+              disabled={correctConsumptionMutation.isPending}
+              data-testid="button-confirm-correct"
+            >
+              {correctConsumptionMutation.isPending ? 'Salvataggio...' : 'Salva'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
