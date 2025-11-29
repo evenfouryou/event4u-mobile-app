@@ -509,7 +509,7 @@ function PositionsSection({ isAdmin }: { isAdmin: boolean }) {
                         <SelectValue placeholder="Seleziona operatore" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Non assegnato</SelectItem>
+                        <SelectItem value="_none">Non assegnato</SelectItem>
                         {staffList.filter(s => s.active).map((s) => (
                           <SelectItem key={s.id} value={s.id}>{s.firstName} {s.lastName}</SelectItem>
                         ))}
@@ -810,7 +810,7 @@ function EntriesSection({ isAdmin }: { isAdmin: boolean }) {
                         <SelectValue placeholder="Seleziona prodotto (opzionale)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Nessuno</SelectItem>
+                        <SelectItem value="_none">Nessuno</SelectItem>
                         {products.map((p) => (
                           <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                         ))}
@@ -1175,7 +1175,7 @@ function FundsSection({ isAdmin }: { isAdmin: boolean }) {
                         <SelectValue placeholder="Seleziona operatore" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Non specificato</SelectItem>
+                        <SelectItem value="_none">Non specificato</SelectItem>
                         {staffList.filter(s => s.active).map((s) => (
                           <SelectItem key={s.id} value={s.id}>{s.firstName} {s.lastName}</SelectItem>
                         ))}

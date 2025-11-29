@@ -982,7 +982,7 @@ function PaymentsSection({ isAdmin }: { isAdmin: boolean }) {
                         <SelectValue placeholder="Seleziona evento (opzionale)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Non associato</SelectItem>
+                        <SelectItem value="_none">Non associato</SelectItem>
                         {events.map((e) => (
                           <SelectItem key={e.id} value={e.id}>{e.name}</SelectItem>
                         ))}
@@ -1025,7 +1025,7 @@ function PaymentsSection({ isAdmin }: { isAdmin: boolean }) {
                           <SelectValue placeholder="Metodo" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Non specificato</SelectItem>
+                          <SelectItem value="_none">Non specificato</SelectItem>
                           <SelectItem value="cash">Contanti</SelectItem>
                           <SelectItem value="bank_transfer">Bonifico</SelectItem>
                           <SelectItem value="other">Altro</SelectItem>

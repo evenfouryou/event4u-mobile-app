@@ -288,7 +288,7 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
                           <SelectValue placeholder="Generale" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Generale</SelectItem>
+                          <SelectItem value="_none">Generale</SelectItem>
                           {locations.map((loc) => (
                             <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
                           ))}
@@ -637,7 +637,7 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
                         <SelectValue placeholder="Seleziona evento (opzionale)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Non associato</SelectItem>
+                        <SelectItem value="_none">Non associato</SelectItem>
                         {events.map((evt) => (
                           <SelectItem key={evt.id} value={evt.id}>{evt.name}</SelectItem>
                         ))}
@@ -992,7 +992,7 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
                           <SelectValue placeholder="Generale" />
                         </SelectTrigger>
                         <SelectContent>
-                          <SelectItem value="">Generale</SelectItem>
+                          <SelectItem value="_none">Generale</SelectItem>
                           {locations.map((loc) => (
                             <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
                           ))}
@@ -1358,7 +1358,7 @@ function DocumentsSection({ isAdmin }: { isAdmin: boolean }) {
                         <SelectValue placeholder="Seleziona evento (opzionale)" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">Non associato</SelectItem>
+                        <SelectItem value="_none">Non associato</SelectItem>
                         {events.map((evt) => (
                           <SelectItem key={evt.id} value={evt.id}>{evt.name}</SelectItem>
                         ))}
