@@ -14,6 +14,18 @@ import {
   stockMovements,
   purchaseOrders,
   purchaseOrderItems,
+  // New module tables
+  fixedCosts,
+  extraCosts,
+  maintenances,
+  accountingDocuments,
+  staff,
+  staffAssignments,
+  staffPayments,
+  cashSectors,
+  cashPositions,
+  cashEntries,
+  cashFunds,
   type User,
   type UpsertUser,
   type Company,
@@ -41,6 +53,32 @@ import {
   type InsertPurchaseOrder,
   type PurchaseOrderItem,
   type InsertPurchaseOrderItem,
+  // New module types
+  type FixedCost,
+  type InsertFixedCost,
+  type ExtraCost,
+  type InsertExtraCost,
+  type Maintenance,
+  type InsertMaintenance,
+  type AccountingDocument,
+  type InsertAccountingDocument,
+  type Staff,
+  type InsertStaff,
+  type StaffAssignment,
+  type InsertStaffAssignment,
+  type StaffPayment,
+  type InsertStaffPayment,
+  type CashSector,
+  type InsertCashSector,
+  type CashPosition,
+  type InsertCashPosition,
+  type CashEntry,
+  type InsertCashEntry,
+  type CashFund,
+  type InsertCashFund,
+  nightFiles,
+  type NightFile,
+  type InsertNightFile,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, isNull, inArray, sql, desc } from "drizzle-orm";
@@ -179,6 +217,115 @@ export interface IStorage {
     topProducts: Array<{ productId: string; productName: string; totalConsumed: number }>;
     eventStatistics: { total: number; active: number; completed: number };
   }>;
+
+  // ==================== MODULO CONTABILITÀ ====================
+  
+  // Fixed Costs operations
+  getFixedCostsByCompany(companyId: string): Promise<FixedCost[]>;
+  getFixedCostsByLocation(locationId: string, companyId: string): Promise<FixedCost[]>;
+  getFixedCost(id: string, companyId: string): Promise<FixedCost | undefined>;
+  createFixedCost(cost: InsertFixedCost): Promise<FixedCost>;
+  updateFixedCost(id: string, companyId: string, cost: Partial<FixedCost>): Promise<FixedCost | undefined>;
+  deleteFixedCost(id: string, companyId: string): Promise<boolean>;
+
+  // Extra Costs operations
+  getExtraCostsByCompany(companyId: string): Promise<ExtraCost[]>;
+  getExtraCostsByEvent(eventId: string, companyId: string): Promise<ExtraCost[]>;
+  getExtraCost(id: string, companyId: string): Promise<ExtraCost | undefined>;
+  createExtraCost(cost: InsertExtraCost): Promise<ExtraCost>;
+  updateExtraCost(id: string, companyId: string, cost: Partial<ExtraCost>): Promise<ExtraCost | undefined>;
+  deleteExtraCost(id: string, companyId: string): Promise<boolean>;
+
+  // Maintenances operations
+  getMaintenancesByCompany(companyId: string): Promise<Maintenance[]>;
+  getMaintenancesByLocation(locationId: string, companyId: string): Promise<Maintenance[]>;
+  getMaintenance(id: string, companyId: string): Promise<Maintenance | undefined>;
+  createMaintenance(maintenance: InsertMaintenance): Promise<Maintenance>;
+  updateMaintenance(id: string, companyId: string, maintenance: Partial<Maintenance>): Promise<Maintenance | undefined>;
+  deleteMaintenance(id: string, companyId: string): Promise<boolean>;
+
+  // Accounting Documents operations
+  getAccountingDocumentsByCompany(companyId: string): Promise<AccountingDocument[]>;
+  getAccountingDocumentsByEvent(eventId: string, companyId: string): Promise<AccountingDocument[]>;
+  getAccountingDocument(id: string, companyId: string): Promise<AccountingDocument | undefined>;
+  createAccountingDocument(doc: InsertAccountingDocument): Promise<AccountingDocument>;
+  updateAccountingDocument(id: string, companyId: string, doc: Partial<AccountingDocument>): Promise<AccountingDocument | undefined>;
+  deleteAccountingDocument(id: string, companyId: string): Promise<boolean>;
+
+  // ==================== MODULO PERSONALE ====================
+  
+  // Staff operations
+  getStaffByCompany(companyId: string): Promise<Staff[]>;
+  getStaff(id: string, companyId: string): Promise<Staff | undefined>;
+  createStaff(staff: InsertStaff): Promise<Staff>;
+  updateStaff(id: string, companyId: string, staff: Partial<Staff>): Promise<Staff | undefined>;
+  deleteStaff(id: string, companyId: string): Promise<boolean>;
+
+  // Staff Assignments operations
+  getStaffAssignmentsByCompany(companyId: string): Promise<StaffAssignment[]>;
+  getStaffAssignmentsByEvent(eventId: string, companyId: string): Promise<StaffAssignment[]>;
+  getStaffAssignmentsByStaff(staffId: string, companyId: string): Promise<StaffAssignment[]>;
+  getStaffAssignment(id: string, companyId: string): Promise<StaffAssignment | undefined>;
+  createStaffAssignment(assignment: InsertStaffAssignment): Promise<StaffAssignment>;
+  updateStaffAssignment(id: string, companyId: string, assignment: Partial<StaffAssignment>): Promise<StaffAssignment | undefined>;
+  deleteStaffAssignment(id: string, companyId: string): Promise<boolean>;
+
+  // Staff Payments operations
+  getStaffPaymentsByCompany(companyId: string): Promise<StaffPayment[]>;
+  getStaffPaymentsByStaff(staffId: string, companyId: string): Promise<StaffPayment[]>;
+  getStaffPayment(id: string, companyId: string): Promise<StaffPayment | undefined>;
+  createStaffPayment(payment: InsertStaffPayment): Promise<StaffPayment>;
+  updateStaffPayment(id: string, companyId: string, payment: Partial<StaffPayment>): Promise<StaffPayment | undefined>;
+  deleteStaffPayment(id: string, companyId: string): Promise<boolean>;
+
+  // ==================== MODULO CASSA ====================
+  
+  // Cash Sectors operations
+  getCashSectorsByCompany(companyId: string): Promise<CashSector[]>;
+  getCashSector(id: string, companyId: string): Promise<CashSector | undefined>;
+  createCashSector(sector: InsertCashSector): Promise<CashSector>;
+  updateCashSector(id: string, companyId: string, sector: Partial<CashSector>): Promise<CashSector | undefined>;
+  deleteCashSector(id: string, companyId: string): Promise<boolean>;
+
+  // Cash Positions operations
+  getCashPositionsByEvent(eventId: string, companyId: string): Promise<CashPosition[]>;
+  getCashPositionsBySector(sectorId: string, companyId: string): Promise<CashPosition[]>;
+  getCashPosition(id: string, companyId: string): Promise<CashPosition | undefined>;
+  createCashPosition(position: InsertCashPosition): Promise<CashPosition>;
+  updateCashPosition(id: string, companyId: string, position: Partial<CashPosition>): Promise<CashPosition | undefined>;
+  deleteCashPosition(id: string, companyId: string): Promise<boolean>;
+
+  // Cash Entries operations
+  getCashEntriesByPosition(positionId: string, companyId: string): Promise<CashEntry[]>;
+  getCashEntriesByEvent(eventId: string, companyId: string): Promise<CashEntry[]>;
+  getCashEntry(id: string, companyId: string): Promise<CashEntry | undefined>;
+  createCashEntry(entry: InsertCashEntry): Promise<CashEntry>;
+  updateCashEntry(id: string, companyId: string, entry: Partial<CashEntry>): Promise<CashEntry | undefined>;
+  deleteCashEntry(id: string, companyId: string): Promise<boolean>;
+
+  // Cash Funds operations
+  getCashFundsByPosition(positionId: string, companyId: string): Promise<CashFund[]>;
+  getCashFundsByEvent(eventId: string, companyId: string): Promise<CashFund[]>;
+  getCashFundsByCompany(companyId: string): Promise<CashFund[]>;
+  getCashFund(id: string, companyId: string): Promise<CashFund | undefined>;
+  createCashFund(fund: InsertCashFund): Promise<CashFund>;
+  updateCashFund(id: string, companyId: string, fund: Partial<CashFund>): Promise<CashFund | undefined>;
+  deleteCashFund(id: string, companyId: string): Promise<boolean>;
+  
+  // Cash Positions by company
+  getCashPositionsByCompany(companyId: string): Promise<CashPosition[]>;
+  
+  // Cash Entries by company
+  getCashEntriesByCompany(companyId: string): Promise<CashEntry[]>;
+  
+  // Night Files
+  getNightFilesByCompany(companyId: string): Promise<NightFile[]>;
+  getNightFileByEvent(eventId: string, companyId: string): Promise<NightFile | undefined>;
+  getNightFile(id: string, companyId: string): Promise<NightFile | undefined>;
+  createNightFile(nightFile: InsertNightFile): Promise<NightFile>;
+  updateNightFile(id: string, companyId: string, nightFile: Partial<NightFile>): Promise<NightFile | undefined>;
+  approveNightFile(id: string, companyId: string, userId: string): Promise<NightFile | undefined>;
+  deleteNightFile(id: string, companyId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1156,6 +1303,497 @@ ${context ? `Contesto aggiuntivo: ${context}` : ''}`;
     }
 
     return insights;
+  }
+
+  // ==================== MODULO CONTABILITÀ - Implementazioni ====================
+
+  // Fixed Costs operations
+  async getFixedCostsByCompany(companyId: string): Promise<FixedCost[]> {
+    return await db.select().from(fixedCosts).where(eq(fixedCosts.companyId, companyId));
+  }
+
+  async getFixedCostsByLocation(locationId: string, companyId: string): Promise<FixedCost[]> {
+    return await db.select().from(fixedCosts).where(
+      and(eq(fixedCosts.locationId, locationId), eq(fixedCosts.companyId, companyId))
+    );
+  }
+
+  async getFixedCost(id: string, companyId: string): Promise<FixedCost | undefined> {
+    const [cost] = await db.select().from(fixedCosts).where(
+      and(eq(fixedCosts.id, id), eq(fixedCosts.companyId, companyId))
+    );
+    return cost;
+  }
+
+  async createFixedCost(cost: InsertFixedCost): Promise<FixedCost> {
+    const [newCost] = await db.insert(fixedCosts).values(cost).returning();
+    return newCost;
+  }
+
+  async updateFixedCost(id: string, companyId: string, cost: Partial<FixedCost>): Promise<FixedCost | undefined> {
+    const [updated] = await db.update(fixedCosts)
+      .set({ ...cost, updatedAt: new Date() })
+      .where(and(eq(fixedCosts.id, id), eq(fixedCosts.companyId, companyId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteFixedCost(id: string, companyId: string): Promise<boolean> {
+    const result = await db.delete(fixedCosts).where(
+      and(eq(fixedCosts.id, id), eq(fixedCosts.companyId, companyId))
+    );
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Extra Costs operations
+  async getExtraCostsByCompany(companyId: string): Promise<ExtraCost[]> {
+    return await db.select().from(extraCosts).where(eq(extraCosts.companyId, companyId));
+  }
+
+  async getExtraCostsByEvent(eventId: string, companyId: string): Promise<ExtraCost[]> {
+    return await db.select().from(extraCosts).where(
+      and(eq(extraCosts.eventId, eventId), eq(extraCosts.companyId, companyId))
+    );
+  }
+
+  async getExtraCost(id: string, companyId: string): Promise<ExtraCost | undefined> {
+    const [cost] = await db.select().from(extraCosts).where(
+      and(eq(extraCosts.id, id), eq(extraCosts.companyId, companyId))
+    );
+    return cost;
+  }
+
+  async createExtraCost(cost: InsertExtraCost): Promise<ExtraCost> {
+    const [newCost] = await db.insert(extraCosts).values(cost).returning();
+    return newCost;
+  }
+
+  async updateExtraCost(id: string, companyId: string, cost: Partial<ExtraCost>): Promise<ExtraCost | undefined> {
+    const [updated] = await db.update(extraCosts)
+      .set({ ...cost, updatedAt: new Date() })
+      .where(and(eq(extraCosts.id, id), eq(extraCosts.companyId, companyId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteExtraCost(id: string, companyId: string): Promise<boolean> {
+    const result = await db.delete(extraCosts).where(
+      and(eq(extraCosts.id, id), eq(extraCosts.companyId, companyId))
+    );
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Maintenances operations
+  async getMaintenancesByCompany(companyId: string): Promise<Maintenance[]> {
+    return await db.select().from(maintenances).where(eq(maintenances.companyId, companyId));
+  }
+
+  async getMaintenancesByLocation(locationId: string, companyId: string): Promise<Maintenance[]> {
+    return await db.select().from(maintenances).where(
+      and(eq(maintenances.locationId, locationId), eq(maintenances.companyId, companyId))
+    );
+  }
+
+  async getMaintenance(id: string, companyId: string): Promise<Maintenance | undefined> {
+    const [maintenance] = await db.select().from(maintenances).where(
+      and(eq(maintenances.id, id), eq(maintenances.companyId, companyId))
+    );
+    return maintenance;
+  }
+
+  async createMaintenance(maintenance: InsertMaintenance): Promise<Maintenance> {
+    const [newMaintenance] = await db.insert(maintenances).values(maintenance).returning();
+    return newMaintenance;
+  }
+
+  async updateMaintenance(id: string, companyId: string, maintenance: Partial<Maintenance>): Promise<Maintenance | undefined> {
+    const [updated] = await db.update(maintenances)
+      .set({ ...maintenance, updatedAt: new Date() })
+      .where(and(eq(maintenances.id, id), eq(maintenances.companyId, companyId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteMaintenance(id: string, companyId: string): Promise<boolean> {
+    const result = await db.delete(maintenances).where(
+      and(eq(maintenances.id, id), eq(maintenances.companyId, companyId))
+    );
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Accounting Documents operations
+  async getAccountingDocumentsByCompany(companyId: string): Promise<AccountingDocument[]> {
+    return await db.select().from(accountingDocuments).where(eq(accountingDocuments.companyId, companyId));
+  }
+
+  async getAccountingDocumentsByEvent(eventId: string, companyId: string): Promise<AccountingDocument[]> {
+    return await db.select().from(accountingDocuments).where(
+      and(eq(accountingDocuments.eventId, eventId), eq(accountingDocuments.companyId, companyId))
+    );
+  }
+
+  async getAccountingDocument(id: string, companyId: string): Promise<AccountingDocument | undefined> {
+    const [doc] = await db.select().from(accountingDocuments).where(
+      and(eq(accountingDocuments.id, id), eq(accountingDocuments.companyId, companyId))
+    );
+    return doc;
+  }
+
+  async createAccountingDocument(doc: InsertAccountingDocument): Promise<AccountingDocument> {
+    const [newDoc] = await db.insert(accountingDocuments).values(doc).returning();
+    return newDoc;
+  }
+
+  async updateAccountingDocument(id: string, companyId: string, doc: Partial<AccountingDocument>): Promise<AccountingDocument | undefined> {
+    const [updated] = await db.update(accountingDocuments)
+      .set({ ...doc, updatedAt: new Date() })
+      .where(and(eq(accountingDocuments.id, id), eq(accountingDocuments.companyId, companyId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteAccountingDocument(id: string, companyId: string): Promise<boolean> {
+    const result = await db.delete(accountingDocuments).where(
+      and(eq(accountingDocuments.id, id), eq(accountingDocuments.companyId, companyId))
+    );
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // ==================== MODULO PERSONALE - Implementazioni ====================
+
+  // Staff operations
+  async getStaffByCompany(companyId: string): Promise<Staff[]> {
+    return await db.select().from(staff).where(eq(staff.companyId, companyId));
+  }
+
+  async getStaff(id: string, companyId: string): Promise<Staff | undefined> {
+    const [member] = await db.select().from(staff).where(
+      and(eq(staff.id, id), eq(staff.companyId, companyId))
+    );
+    return member;
+  }
+
+  async createStaff(staffData: InsertStaff): Promise<Staff> {
+    const [newStaff] = await db.insert(staff).values(staffData).returning();
+    return newStaff;
+  }
+
+  async updateStaff(id: string, companyId: string, staffData: Partial<Staff>): Promise<Staff | undefined> {
+    const [updated] = await db.update(staff)
+      .set({ ...staffData, updatedAt: new Date() })
+      .where(and(eq(staff.id, id), eq(staff.companyId, companyId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteStaff(id: string, companyId: string): Promise<boolean> {
+    const result = await db.delete(staff).where(
+      and(eq(staff.id, id), eq(staff.companyId, companyId))
+    );
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Staff Assignments operations
+  async getStaffAssignmentsByCompany(companyId: string): Promise<StaffAssignment[]> {
+    return await db.select().from(staffAssignments).where(eq(staffAssignments.companyId, companyId));
+  }
+
+  async getStaffAssignmentsByEvent(eventId: string, companyId: string): Promise<StaffAssignment[]> {
+    return await db.select().from(staffAssignments).where(
+      and(eq(staffAssignments.eventId, eventId), eq(staffAssignments.companyId, companyId))
+    );
+  }
+
+  async getStaffAssignmentsByStaff(staffId: string, companyId: string): Promise<StaffAssignment[]> {
+    return await db.select().from(staffAssignments).where(
+      and(eq(staffAssignments.staffId, staffId), eq(staffAssignments.companyId, companyId))
+    );
+  }
+
+  async getStaffAssignment(id: string, companyId: string): Promise<StaffAssignment | undefined> {
+    const [assignment] = await db.select().from(staffAssignments).where(
+      and(eq(staffAssignments.id, id), eq(staffAssignments.companyId, companyId))
+    );
+    return assignment;
+  }
+
+  async createStaffAssignment(assignment: InsertStaffAssignment): Promise<StaffAssignment> {
+    const [newAssignment] = await db.insert(staffAssignments).values(assignment).returning();
+    return newAssignment;
+  }
+
+  async updateStaffAssignment(id: string, companyId: string, assignment: Partial<StaffAssignment>): Promise<StaffAssignment | undefined> {
+    const [updated] = await db.update(staffAssignments)
+      .set({ ...assignment, updatedAt: new Date() })
+      .where(and(eq(staffAssignments.id, id), eq(staffAssignments.companyId, companyId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteStaffAssignment(id: string, companyId: string): Promise<boolean> {
+    const result = await db.delete(staffAssignments).where(
+      and(eq(staffAssignments.id, id), eq(staffAssignments.companyId, companyId))
+    );
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Staff Payments operations
+  async getStaffPaymentsByCompany(companyId: string): Promise<StaffPayment[]> {
+    return await db.select().from(staffPayments).where(eq(staffPayments.companyId, companyId));
+  }
+
+  async getStaffPaymentsByStaff(staffId: string, companyId: string): Promise<StaffPayment[]> {
+    return await db.select().from(staffPayments).where(
+      and(eq(staffPayments.staffId, staffId), eq(staffPayments.companyId, companyId))
+    );
+  }
+
+  async getStaffPayment(id: string, companyId: string): Promise<StaffPayment | undefined> {
+    const [payment] = await db.select().from(staffPayments).where(
+      and(eq(staffPayments.id, id), eq(staffPayments.companyId, companyId))
+    );
+    return payment;
+  }
+
+  async createStaffPayment(payment: InsertStaffPayment): Promise<StaffPayment> {
+    const [newPayment] = await db.insert(staffPayments).values(payment).returning();
+    return newPayment;
+  }
+
+  async updateStaffPayment(id: string, companyId: string, payment: Partial<StaffPayment>): Promise<StaffPayment | undefined> {
+    const [updated] = await db.update(staffPayments)
+      .set({ ...payment, updatedAt: new Date() })
+      .where(and(eq(staffPayments.id, id), eq(staffPayments.companyId, companyId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteStaffPayment(id: string, companyId: string): Promise<boolean> {
+    const result = await db.delete(staffPayments).where(
+      and(eq(staffPayments.id, id), eq(staffPayments.companyId, companyId))
+    );
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // ==================== MODULO CASSA - Implementazioni ====================
+
+  // Cash Sectors operations
+  async getCashSectorsByCompany(companyId: string): Promise<CashSector[]> {
+    return await db.select().from(cashSectors).where(eq(cashSectors.companyId, companyId));
+  }
+
+  async getCashSector(id: string, companyId: string): Promise<CashSector | undefined> {
+    const [sector] = await db.select().from(cashSectors).where(
+      and(eq(cashSectors.id, id), eq(cashSectors.companyId, companyId))
+    );
+    return sector;
+  }
+
+  async createCashSector(sector: InsertCashSector): Promise<CashSector> {
+    const [newSector] = await db.insert(cashSectors).values(sector).returning();
+    return newSector;
+  }
+
+  async updateCashSector(id: string, companyId: string, sector: Partial<CashSector>): Promise<CashSector | undefined> {
+    const [updated] = await db.update(cashSectors)
+      .set({ ...sector, updatedAt: new Date() })
+      .where(and(eq(cashSectors.id, id), eq(cashSectors.companyId, companyId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteCashSector(id: string, companyId: string): Promise<boolean> {
+    const result = await db.delete(cashSectors).where(
+      and(eq(cashSectors.id, id), eq(cashSectors.companyId, companyId))
+    );
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Cash Positions operations
+  async getCashPositionsByEvent(eventId: string, companyId: string): Promise<CashPosition[]> {
+    return await db.select().from(cashPositions).where(
+      and(eq(cashPositions.eventId, eventId), eq(cashPositions.companyId, companyId))
+    );
+  }
+
+  async getCashPositionsBySector(sectorId: string, companyId: string): Promise<CashPosition[]> {
+    return await db.select().from(cashPositions).where(
+      and(eq(cashPositions.sectorId, sectorId), eq(cashPositions.companyId, companyId))
+    );
+  }
+
+  async getCashPosition(id: string, companyId: string): Promise<CashPosition | undefined> {
+    const [position] = await db.select().from(cashPositions).where(
+      and(eq(cashPositions.id, id), eq(cashPositions.companyId, companyId))
+    );
+    return position;
+  }
+
+  async createCashPosition(position: InsertCashPosition): Promise<CashPosition> {
+    const [newPosition] = await db.insert(cashPositions).values(position).returning();
+    return newPosition;
+  }
+
+  async updateCashPosition(id: string, companyId: string, position: Partial<CashPosition>): Promise<CashPosition | undefined> {
+    const [updated] = await db.update(cashPositions)
+      .set({ ...position, updatedAt: new Date() })
+      .where(and(eq(cashPositions.id, id), eq(cashPositions.companyId, companyId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteCashPosition(id: string, companyId: string): Promise<boolean> {
+    const result = await db.delete(cashPositions).where(
+      and(eq(cashPositions.id, id), eq(cashPositions.companyId, companyId))
+    );
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Cash Entries operations
+  async getCashEntriesByPosition(positionId: string, companyId: string): Promise<CashEntry[]> {
+    return await db.select().from(cashEntries).where(
+      and(eq(cashEntries.positionId, positionId), eq(cashEntries.companyId, companyId))
+    );
+  }
+
+  async getCashEntriesByEvent(eventId: string, companyId: string): Promise<CashEntry[]> {
+    return await db.select().from(cashEntries).where(
+      and(eq(cashEntries.eventId, eventId), eq(cashEntries.companyId, companyId))
+    );
+  }
+
+  async getCashEntry(id: string, companyId: string): Promise<CashEntry | undefined> {
+    const [entry] = await db.select().from(cashEntries).where(
+      and(eq(cashEntries.id, id), eq(cashEntries.companyId, companyId))
+    );
+    return entry;
+  }
+
+  async createCashEntry(entry: InsertCashEntry): Promise<CashEntry> {
+    const [newEntry] = await db.insert(cashEntries).values(entry).returning();
+    return newEntry;
+  }
+
+  async updateCashEntry(id: string, companyId: string, entry: Partial<CashEntry>): Promise<CashEntry | undefined> {
+    const [updated] = await db.update(cashEntries)
+      .set({ ...entry, updatedAt: new Date() })
+      .where(and(eq(cashEntries.id, id), eq(cashEntries.companyId, companyId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteCashEntry(id: string, companyId: string): Promise<boolean> {
+    const result = await db.delete(cashEntries).where(
+      and(eq(cashEntries.id, id), eq(cashEntries.companyId, companyId))
+    );
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Cash Funds operations
+  async getCashFundsByPosition(positionId: string, companyId: string): Promise<CashFund[]> {
+    return await db.select().from(cashFunds).where(
+      and(eq(cashFunds.positionId, positionId), eq(cashFunds.companyId, companyId))
+    );
+  }
+
+  async getCashFundsByEvent(eventId: string, companyId: string): Promise<CashFund[]> {
+    return await db.select().from(cashFunds).where(
+      and(eq(cashFunds.eventId, eventId), eq(cashFunds.companyId, companyId))
+    );
+  }
+
+  async getCashFund(id: string, companyId: string): Promise<CashFund | undefined> {
+    const [fund] = await db.select().from(cashFunds).where(
+      and(eq(cashFunds.id, id), eq(cashFunds.companyId, companyId))
+    );
+    return fund;
+  }
+
+  async createCashFund(fund: InsertCashFund): Promise<CashFund> {
+    const [newFund] = await db.insert(cashFunds).values(fund).returning();
+    return newFund;
+  }
+
+  async updateCashFund(id: string, companyId: string, fund: Partial<CashFund>): Promise<CashFund | undefined> {
+    const [updated] = await db.update(cashFunds)
+      .set({ ...fund, updatedAt: new Date() })
+      .where(and(eq(cashFunds.id, id), eq(cashFunds.companyId, companyId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteCashFund(id: string, companyId: string): Promise<boolean> {
+    const result = await db.delete(cashFunds).where(
+      and(eq(cashFunds.id, id), eq(cashFunds.companyId, companyId))
+    );
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Get all cash positions by company
+  async getCashPositionsByCompany(companyId: string): Promise<CashPosition[]> {
+    return await db.select().from(cashPositions).where(eq(cashPositions.companyId, companyId));
+  }
+
+  // Get all cash entries by company
+  async getCashEntriesByCompany(companyId: string): Promise<CashEntry[]> {
+    return await db.select().from(cashEntries).where(eq(cashEntries.companyId, companyId)).orderBy(desc(cashEntries.entryTime));
+  }
+
+  // Get all cash funds by company
+  async getCashFundsByCompany(companyId: string): Promise<CashFund[]> {
+    return await db.select().from(cashFunds).where(eq(cashFunds.companyId, companyId)).orderBy(desc(cashFunds.recordedAt));
+  }
+
+  // Night Files operations
+  async getNightFilesByCompany(companyId: string): Promise<NightFile[]> {
+    return await db.select().from(nightFiles).where(eq(nightFiles.companyId, companyId)).orderBy(desc(nightFiles.generatedAt));
+  }
+
+  async getNightFileByEvent(eventId: string, companyId: string): Promise<NightFile | undefined> {
+    const [nightFile] = await db.select().from(nightFiles).where(
+      and(eq(nightFiles.eventId, eventId), eq(nightFiles.companyId, companyId))
+    );
+    return nightFile;
+  }
+
+  async getNightFile(id: string, companyId: string): Promise<NightFile | undefined> {
+    const [nightFile] = await db.select().from(nightFiles).where(
+      and(eq(nightFiles.id, id), eq(nightFiles.companyId, companyId))
+    );
+    return nightFile;
+  }
+
+  async createNightFile(nightFile: InsertNightFile): Promise<NightFile> {
+    const [created] = await db.insert(nightFiles).values(nightFile).returning();
+    return created;
+  }
+
+  async updateNightFile(id: string, companyId: string, nightFile: Partial<NightFile>): Promise<NightFile | undefined> {
+    const [updated] = await db.update(nightFiles)
+      .set({ ...nightFile, updatedAt: new Date() })
+      .where(and(eq(nightFiles.id, id), eq(nightFiles.companyId, companyId)))
+      .returning();
+    return updated;
+  }
+
+  async approveNightFile(id: string, companyId: string, userId: string): Promise<NightFile | undefined> {
+    const [updated] = await db.update(nightFiles)
+      .set({ 
+        status: 'approved',
+        approvedBy: userId,
+        approvedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(and(eq(nightFiles.id, id), eq(nightFiles.companyId, companyId)))
+      .returning();
+    return updated;
+  }
+
+  async deleteNightFile(id: string, companyId: string): Promise<boolean> {
+    const result = await db.delete(nightFiles).where(
+      and(eq(nightFiles.id, id), eq(nightFiles.companyId, companyId))
+    );
+    return result.rowCount ? result.rowCount > 0 : false;
   }
 }
 

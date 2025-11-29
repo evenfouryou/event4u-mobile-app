@@ -18,6 +18,30 @@ import {
   insertEventFormatSchema,
   stockMovements,
   priceListItems,
+  // New module schemas
+  insertFixedCostSchema,
+  updateFixedCostSchema,
+  insertExtraCostSchema,
+  updateExtraCostSchema,
+  insertMaintenanceSchema,
+  updateMaintenanceSchema,
+  insertAccountingDocumentSchema,
+  updateAccountingDocumentSchema,
+  insertStaffSchema,
+  updateStaffSchema,
+  insertStaffAssignmentSchema,
+  updateStaffAssignmentSchema,
+  insertStaffPaymentSchema,
+  updateStaffPaymentSchema,
+  insertCashSectorSchema,
+  updateCashSectorSchema,
+  insertCashPositionSchema,
+  updateCashPositionSchema,
+  insertCashEntrySchema,
+  updateCashEntrySchema,
+  insertCashFundSchema,
+  updateCashFundSchema,
+  updateNightFileSchema,
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -2953,6 +2977,1038 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error("Error generating insights:", error);
       res.status(500).json({ message: error.message || "Failed to generate insights" });
+    }
+  });
+
+  // ==================== MODULO CONTABILITÀ - API Routes ====================
+
+  // Fixed Costs
+  app.get('/api/fixed-costs', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const costs = await storage.getFixedCostsByCompany(companyId);
+      res.json(costs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/fixed-costs/location/:locationId', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const costs = await storage.getFixedCostsByLocation(req.params.locationId, companyId);
+      res.json(costs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/fixed-costs', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = insertFixedCostSchema.parse({ ...req.body, companyId });
+      const cost = await storage.createFixedCost(validated);
+      res.status(201).json(cost);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch('/api/fixed-costs/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = updateFixedCostSchema.parse(req.body);
+      const cost = await storage.updateFixedCost(req.params.id, companyId, validated);
+      if (!cost) {
+        return res.status(404).json({ message: "Fixed cost not found" });
+      }
+      res.json(cost);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/fixed-costs/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const deleted = await storage.deleteFixedCost(req.params.id, companyId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Fixed cost not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Extra Costs
+  app.get('/api/extra-costs', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const costs = await storage.getExtraCostsByCompany(companyId);
+      res.json(costs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/extra-costs/event/:eventId', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const costs = await storage.getExtraCostsByEvent(req.params.eventId, companyId);
+      res.json(costs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/extra-costs', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = insertExtraCostSchema.parse({ ...req.body, companyId });
+      const cost = await storage.createExtraCost(validated);
+      res.status(201).json(cost);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch('/api/extra-costs/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = updateExtraCostSchema.parse(req.body);
+      const cost = await storage.updateExtraCost(req.params.id, companyId, validated);
+      if (!cost) {
+        return res.status(404).json({ message: "Extra cost not found" });
+      }
+      res.json(cost);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/extra-costs/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const deleted = await storage.deleteExtraCost(req.params.id, companyId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Extra cost not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Maintenances
+  app.get('/api/maintenances', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const maintenances = await storage.getMaintenancesByCompany(companyId);
+      res.json(maintenances);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/maintenances/location/:locationId', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const maintenances = await storage.getMaintenancesByLocation(req.params.locationId, companyId);
+      res.json(maintenances);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/maintenances', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = insertMaintenanceSchema.parse({ ...req.body, companyId });
+      const maintenance = await storage.createMaintenance(validated);
+      res.status(201).json(maintenance);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch('/api/maintenances/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = updateMaintenanceSchema.parse(req.body);
+      const maintenance = await storage.updateMaintenance(req.params.id, companyId, validated);
+      if (!maintenance) {
+        return res.status(404).json({ message: "Maintenance not found" });
+      }
+      res.json(maintenance);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/maintenances/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const deleted = await storage.deleteMaintenance(req.params.id, companyId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Maintenance not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Accounting Documents
+  app.get('/api/accounting-documents', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const docs = await storage.getAccountingDocumentsByCompany(companyId);
+      res.json(docs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/accounting-documents/event/:eventId', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const docs = await storage.getAccountingDocumentsByEvent(req.params.eventId, companyId);
+      res.json(docs);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/accounting-documents', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = insertAccountingDocumentSchema.parse({ ...req.body, companyId });
+      const doc = await storage.createAccountingDocument(validated);
+      res.status(201).json(doc);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch('/api/accounting-documents/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = updateAccountingDocumentSchema.parse(req.body);
+      const doc = await storage.updateAccountingDocument(req.params.id, companyId, validated);
+      if (!doc) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+      res.json(doc);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/accounting-documents/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const deleted = await storage.deleteAccountingDocument(req.params.id, companyId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Document not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==================== MODULO PERSONALE - API Routes ====================
+
+  // Staff
+  app.get('/api/staff', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const staffList = await storage.getStaffByCompany(companyId);
+      res.json(staffList);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/staff/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const member = await storage.getStaff(req.params.id, companyId);
+      if (!member) {
+        return res.status(404).json({ message: "Staff member not found" });
+      }
+      res.json(member);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/staff', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = insertStaffSchema.parse({ ...req.body, companyId });
+      const member = await storage.createStaff(validated);
+      res.status(201).json(member);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch('/api/staff/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = updateStaffSchema.parse(req.body);
+      const member = await storage.updateStaff(req.params.id, companyId, validated);
+      if (!member) {
+        return res.status(404).json({ message: "Staff member not found" });
+      }
+      res.json(member);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/staff/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const deleted = await storage.deleteStaff(req.params.id, companyId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Staff member not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Staff Assignments
+  app.get('/api/staff-assignments', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const assignments = await storage.getStaffAssignmentsByCompany(companyId);
+      res.json(assignments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/staff-assignments/event/:eventId', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const assignments = await storage.getStaffAssignmentsByEvent(req.params.eventId, companyId);
+      res.json(assignments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/staff-assignments/staff/:staffId', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const assignments = await storage.getStaffAssignmentsByStaff(req.params.staffId, companyId);
+      res.json(assignments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/staff-assignments', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = insertStaffAssignmentSchema.parse({ ...req.body, companyId });
+      const assignment = await storage.createStaffAssignment(validated);
+      res.status(201).json(assignment);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch('/api/staff-assignments/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = updateStaffAssignmentSchema.parse(req.body);
+      const assignment = await storage.updateStaffAssignment(req.params.id, companyId, validated);
+      if (!assignment) {
+        return res.status(404).json({ message: "Assignment not found" });
+      }
+      res.json(assignment);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/staff-assignments/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const deleted = await storage.deleteStaffAssignment(req.params.id, companyId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Assignment not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Staff Payments
+  app.get('/api/staff-payments', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const payments = await storage.getStaffPaymentsByCompany(companyId);
+      res.json(payments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/staff-payments/staff/:staffId', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const payments = await storage.getStaffPaymentsByStaff(req.params.staffId, companyId);
+      res.json(payments);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/staff-payments', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = insertStaffPaymentSchema.parse({ ...req.body, companyId });
+      const payment = await storage.createStaffPayment(validated);
+      res.status(201).json(payment);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch('/api/staff-payments/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = updateStaffPaymentSchema.parse(req.body);
+      const payment = await storage.updateStaffPayment(req.params.id, companyId, validated);
+      if (!payment) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+      res.json(payment);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/staff-payments/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const deleted = await storage.deleteStaffPayment(req.params.id, companyId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Payment not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==================== MODULO CASSA - API Routes ====================
+
+  // Cash Sectors
+  app.get('/api/cash-sectors', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const sectors = await storage.getCashSectorsByCompany(companyId);
+      res.json(sectors);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/cash-sectors', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = insertCashSectorSchema.parse({ ...req.body, companyId });
+      const sector = await storage.createCashSector(validated);
+      res.status(201).json(sector);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch('/api/cash-sectors/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = updateCashSectorSchema.parse(req.body);
+      const sector = await storage.updateCashSector(req.params.id, companyId, validated);
+      if (!sector) {
+        return res.status(404).json({ message: "Sector not found" });
+      }
+      res.json(sector);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/cash-sectors/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const deleted = await storage.deleteCashSector(req.params.id, companyId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Sector not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Cash Positions
+  app.get('/api/cash-positions/event/:eventId', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const positions = await storage.getCashPositionsByEvent(req.params.eventId, companyId);
+      res.json(positions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/cash-positions', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = insertCashPositionSchema.parse({ ...req.body, companyId });
+      const position = await storage.createCashPosition(validated);
+      res.status(201).json(position);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch('/api/cash-positions/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = updateCashPositionSchema.parse(req.body);
+      const position = await storage.updateCashPosition(req.params.id, companyId, validated);
+      if (!position) {
+        return res.status(404).json({ message: "Position not found" });
+      }
+      res.json(position);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/cash-positions/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const deleted = await storage.deleteCashPosition(req.params.id, companyId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Position not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Cash Entries
+  app.get('/api/cash-entries/event/:eventId', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const entries = await storage.getCashEntriesByEvent(req.params.eventId, companyId);
+      res.json(entries);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/cash-entries/position/:positionId', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const entries = await storage.getCashEntriesByPosition(req.params.positionId, companyId);
+      res.json(entries);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/cash-entries', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = insertCashEntrySchema.parse({ ...req.body, companyId });
+      const entry = await storage.createCashEntry(validated);
+      res.status(201).json(entry);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch('/api/cash-entries/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = updateCashEntrySchema.parse(req.body);
+      const entry = await storage.updateCashEntry(req.params.id, companyId, validated);
+      if (!entry) {
+        return res.status(404).json({ message: "Entry not found" });
+      }
+      res.json(entry);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/cash-entries/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const deleted = await storage.deleteCashEntry(req.params.id, companyId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Entry not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Cash Funds
+  app.get('/api/cash-funds/event/:eventId', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const funds = await storage.getCashFundsByEvent(req.params.eventId, companyId);
+      res.json(funds);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.get('/api/cash-funds/position/:positionId', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const funds = await storage.getCashFundsByPosition(req.params.positionId, companyId);
+      res.json(funds);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  app.post('/api/cash-funds', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = insertCashFundSchema.parse({ ...req.body, companyId });
+      const fund = await storage.createCashFund(validated);
+      res.status(201).json(fund);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.patch('/api/cash-funds/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = updateCashFundSchema.parse(req.body);
+      const fund = await storage.updateCashFund(req.params.id, companyId, validated);
+      if (!fund) {
+        return res.status(404).json({ message: "Fund not found" });
+      }
+      res.json(fund);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  app.delete('/api/cash-funds/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const deleted = await storage.deleteCashFund(req.params.id, companyId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Fund not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get all cash positions (for general listing)
+  app.get('/api/cash-positions', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const positions = await storage.getCashPositionsByCompany(companyId);
+      res.json(positions);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get all cash entries (for general listing)
+  app.get('/api/cash-entries', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const entries = await storage.getCashEntriesByCompany(companyId);
+      res.json(entries);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get all cash funds (for general listing)
+  app.get('/api/cash-funds', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const funds = await storage.getCashFundsByCompany(companyId);
+      res.json(funds);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ==================== NIGHT FILES ROUTES ====================
+
+  // Get all night files
+  app.get('/api/night-files', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const nightFiles = await storage.getNightFilesByCompany(companyId);
+      res.json(nightFiles);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get night file by event
+  app.get('/api/night-files/event/:eventId', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const nightFile = await storage.getNightFileByEvent(req.params.eventId, companyId);
+      res.json(nightFile);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Get single night file
+  app.get('/api/night-files/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const nightFile = await storage.getNightFile(req.params.id, companyId);
+      if (!nightFile) {
+        return res.status(404).json({ message: "Night file not found" });
+      }
+      res.json(nightFile);
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // Generate/Create night file for an event
+  app.post('/api/night-files/generate/:eventId', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      
+      const eventId = req.params.eventId;
+      
+      // Gather data from all modules for this event
+      const [
+        extraCosts,
+        maintenances,
+        staffAssignments,
+        cashEntries,
+        cashFunds,
+      ] = await Promise.all([
+        storage.getExtraCostsByEvent(eventId, companyId),
+        storage.getMaintenancesByEvent(eventId, companyId),
+        storage.getStaffAssignmentsByEvent(eventId, companyId),
+        storage.getCashEntriesByEvent(eventId, companyId),
+        storage.getCashFundsByEvent(eventId, companyId),
+      ]);
+
+      // Calculate totals
+      const totalExtraCosts = extraCosts.reduce((sum, c) => sum + parseFloat(c.amount || '0'), 0);
+      const totalMaintenances = maintenances.reduce((sum, m) => sum + parseFloat(m.amount || '0'), 0);
+      
+      const totalStaffCount = staffAssignments.length;
+      const totalStaffCosts = staffAssignments.reduce((sum, a) => 
+        sum + parseFloat(a.compensationAmount || '0') + parseFloat(a.bonus || '0'), 0);
+
+      const totalCashRevenue = cashEntries.filter(e => e.paymentMethod === 'cash')
+        .reduce((sum, e) => sum + parseFloat(e.totalAmount || '0'), 0);
+      const totalCardRevenue = cashEntries.filter(e => e.paymentMethod === 'card')
+        .reduce((sum, e) => sum + parseFloat(e.totalAmount || '0'), 0);
+      const totalOnlineRevenue = cashEntries.filter(e => e.paymentMethod === 'online')
+        .reduce((sum, e) => sum + parseFloat(e.totalAmount || '0'), 0);
+      const totalCreditsRevenue = cashEntries.filter(e => e.paymentMethod === 'credits')
+        .reduce((sum, e) => sum + parseFloat(e.totalAmount || '0'), 0);
+      const totalRevenue = totalCashRevenue + totalCardRevenue + totalOnlineRevenue + totalCreditsRevenue;
+
+      const openingFunds = cashFunds.filter(f => f.type === 'opening');
+      const closingFunds = cashFunds.filter(f => f.type === 'closing');
+      const openingFund = openingFunds.reduce((sum, f) => sum + parseFloat(f.amount || '0'), 0);
+      const closingFund = closingFunds.reduce((sum, f) => sum + parseFloat(f.amount || '0'), 0);
+
+      const totalExpenses = totalExtraCosts + totalMaintenances + totalStaffCosts;
+      const netResult = totalRevenue - totalExpenses;
+      const fundDifference = closingFund - openingFund - totalCashRevenue;
+
+      const nightFileData = {
+        companyId,
+        eventId,
+        status: 'draft',
+        totalExtraCosts: totalExtraCosts.toString(),
+        totalMaintenances: totalMaintenances.toString(),
+        totalStaffCount,
+        totalStaffCosts: totalStaffCosts.toString(),
+        totalCashRevenue: totalCashRevenue.toString(),
+        totalCardRevenue: totalCardRevenue.toString(),
+        totalOnlineRevenue: totalOnlineRevenue.toString(),
+        totalCreditsRevenue: totalCreditsRevenue.toString(),
+        totalRevenue: totalRevenue.toString(),
+        totalExpenses: totalExpenses.toString(),
+        netResult: netResult.toString(),
+        openingFund: openingFund.toString(),
+        closingFund: closingFund.toString(),
+        fundDifference: fundDifference.toString(),
+        notes: req.body.notes || null,
+      };
+
+      const nightFile = await storage.createNightFile(nightFileData);
+      res.status(201).json(nightFile);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Update night file
+  app.patch('/api/night-files/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const validated = updateNightFileSchema.parse(req.body);
+      const nightFile = await storage.updateNightFile(req.params.id, companyId, validated);
+      if (!nightFile) {
+        return res.status(404).json({ message: "Night file not found" });
+      }
+      res.json(nightFile);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Approve night file
+  app.post('/api/night-files/:id/approve', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const userId = req.user?.id;
+      const nightFile = await storage.approveNightFile(req.params.id, companyId, userId);
+      if (!nightFile) {
+        return res.status(404).json({ message: "Night file not found" });
+      }
+      res.json(nightFile);
+    } catch (error: any) {
+      res.status(400).json({ message: error.message });
+    }
+  });
+
+  // Delete night file
+  app.delete('/api/night-files/:id', isAuthenticated, isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const deleted = await storage.deleteNightFile(req.params.id, companyId);
+      if (!deleted) {
+        return res.status(404).json({ message: "Night file not found" });
+      }
+      res.json({ success: true });
+    } catch (error: any) {
+      res.status(500).json({ message: error.message });
     }
   });
 

@@ -778,6 +778,57 @@ export const cashFundsRelations = relations(cashFunds, ({ one }) => ({
   }),
 }));
 
+// ==================== MODULO FILE DELLA SERATA ====================
+
+// Night Files (Documento riepilogativo serata)
+export const nightFiles = pgTable("night_files", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  eventId: varchar("event_id").notNull().references(() => events.id),
+  status: varchar("status", { length: 50 }).notNull().default('draft'), // draft, pending_review, approved, closed
+  // Riepilogo Contabilità
+  totalFixedCosts: decimal("total_fixed_costs", { precision: 10, scale: 2 }),
+  totalExtraCosts: decimal("total_extra_costs", { precision: 10, scale: 2 }),
+  totalMaintenances: decimal("total_maintenances", { precision: 10, scale: 2 }),
+  // Riepilogo Personale
+  totalStaffCount: integer("total_staff_count"),
+  totalStaffCosts: decimal("total_staff_costs", { precision: 10, scale: 2 }),
+  // Riepilogo Cassa
+  totalCashRevenue: decimal("total_cash_revenue", { precision: 10, scale: 2 }),
+  totalCardRevenue: decimal("total_card_revenue", { precision: 10, scale: 2 }),
+  totalOnlineRevenue: decimal("total_online_revenue", { precision: 10, scale: 2 }),
+  totalCreditsRevenue: decimal("total_credits_revenue", { precision: 10, scale: 2 }),
+  totalRevenue: decimal("total_revenue", { precision: 10, scale: 2 }),
+  totalExpenses: decimal("total_expenses", { precision: 10, scale: 2 }),
+  netResult: decimal("net_result", { precision: 10, scale: 2 }),
+  // Fund Reconciliation
+  openingFund: decimal("opening_fund", { precision: 10, scale: 2 }),
+  closingFund: decimal("closing_fund", { precision: 10, scale: 2 }),
+  fundDifference: decimal("fund_difference", { precision: 10, scale: 2 }),
+  // Note e Approvazione
+  notes: text("notes"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  generatedAt: timestamp("generated_at").defaultNow(),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const nightFilesRelations = relations(nightFiles, ({ one }) => ({
+  company: one(companies, {
+    fields: [nightFiles.companyId],
+    references: [companies.id],
+  }),
+  event: one(events, {
+    fields: [nightFiles.eventId],
+    references: [events.id],
+  }),
+  approver: one(users, {
+    fields: [nightFiles.approvedBy],
+    references: [users.id],
+  }),
+}));
+
 // Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -1207,3 +1258,64 @@ export type UpdateCashEntry = z.infer<typeof updateCashEntrySchema>;
 export type CashFund = typeof cashFunds.$inferSelect;
 export type InsertCashFund = z.infer<typeof insertCashFundSchema>;
 export type UpdateCashFund = z.infer<typeof updateCashFundSchema>;
+
+// ==================== MODULO FILE DELLA SERATA - Schemas & Types ====================
+
+export const insertNightFileSchema = createInsertSchema(nightFiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  generatedAt: true,
+}).extend({
+  totalFixedCosts: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
+  totalExtraCosts: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
+  totalMaintenances: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
+  totalStaffCosts: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
+  totalCashRevenue: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
+  totalCardRevenue: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
+  totalOnlineRevenue: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
+  totalCreditsRevenue: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
+  totalRevenue: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
+  totalExpenses: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
+  netResult: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
+  openingFund: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
+  closingFund: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
+  fundDifference: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
+  approvedAt: z.union([z.string(), z.date(), z.null(), z.undefined()]).transform(val => 
+    val ? (typeof val === 'string' ? new Date(val) : val) : null
+  ).optional(),
+});
+
+export const updateNightFileSchema = insertNightFileSchema.partial();
+
+export type NightFile = typeof nightFiles.$inferSelect;
+export type InsertNightFile = z.infer<typeof insertNightFileSchema>;
+export type UpdateNightFile = z.infer<typeof updateNightFileSchema>;

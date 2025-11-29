@@ -38,6 +38,10 @@ import AIAnalysis from "@/pages/ai-analysis";
 import VerifyEmail from "@/pages/verify-email";
 import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
+import Accounting from "@/pages/accounting";
+import Personnel from "@/pages/personnel";
+import CashRegister from "@/pages/cash-register";
+import NightFilePage from "@/pages/night-file";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -107,6 +111,10 @@ function Router() {
               <Route path="/stations" component={Stations} />
               <Route path="/settings" component={Settings} />
               <Route path="/ai-analysis" component={AIAnalysis} />
+              <Route path="/accounting" component={Accounting} />
+              <Route path="/personnel" component={Personnel} />
+              <Route path="/cash-register" component={CashRegister} />
+              <Route path="/night-file" component={NightFilePage} />
               <Route component={NotFound} />
             </Switch>
           </main>

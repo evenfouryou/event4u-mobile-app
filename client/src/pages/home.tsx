@@ -14,6 +14,8 @@ import {
   Calendar,
   Plus,
   Building2,
+  Wallet,
+  FileText,
 } from "lucide-react";
 import type { Company } from "@shared/schema";
 
@@ -218,26 +220,38 @@ export default function Home() {
         />
         <SectionCard
           title="Contabilità"
-          description="Fatturazione, report finanziari e analisi dei costi. Tieni traccia delle entrate e delle uscite."
+          description="Costi fissi, costi extra, manutenzioni e documenti contabili. Gestione completa della contabilità aziendale."
           icon={Calculator}
           href="/accounting"
           color="bg-emerald-500"
-          available={false}
         />
         <SectionCard
           title="Personale"
-          description="Gestione dipendenti, turni e presenze. Organizza il tuo team per ogni evento."
+          description="Anagrafica staff, assegnazioni agli eventi e gestione pagamenti. Organizza il tuo team efficacemente."
           icon={Users}
-          href="/staff"
+          href="/personnel"
           color="bg-blue-500"
-          available={false}
+        />
+        <SectionCard
+          title="Cassa"
+          description="Settori, postazioni, registrazione incassi e quadratura fondi. Gestione completa della cassa eventi."
+          icon={Wallet}
+          href="/cash-register"
+          color="bg-orange-500"
+        />
+        <SectionCard
+          title="File della Serata"
+          description="Documento riepilogativo integrato. Visualizza contabilità, personale e cassa per ogni evento."
+          icon={FileText}
+          href="/night-file"
+          color="bg-rose-500"
         />
         <SectionCard
           title="Dati"
           description="Analytics avanzati, report e statistiche. Ottieni insights per migliorare il tuo business."
           icon={Database}
           href="/data"
-          color="bg-orange-500"
+          color="bg-slate-500"
           available={false}
         />
       </div>
