@@ -128,14 +128,14 @@ export default function Reports() {
     }) => {
       await apiRequest('POST', '/api/reports/correct-consumption', data);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/reports/end-of-night', selectedEventId] });
-      queryClient.invalidateQueries({ queryKey: ['/api/events', selectedEventId, 'revenue-analysis'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/stock'] });
-      queryClient.invalidateQueries({ predicate: (query) => {
-        const key = query.queryKey[0];
-        return typeof key === 'string' ? key.includes('/api/stock') : false;
-      }});
+    onSuccess: (_, variables) => {
+      // Use variables.eventId instead of selectedEventId to avoid stale closure
+      setTimeout(() => {
+        queryClient.refetchQueries({ queryKey: ['/api/reports/end-of-night', variables.eventId] });
+        queryClient.refetchQueries({ queryKey: ['/api/events', variables.eventId, 'revenue-analysis'] });
+        queryClient.refetchQueries({ queryKey: ['/api/stock'] });
+      }, 100);
+      
       setCorrectionDialogOpen(false);
       setCorrectingProduct(null);
       setNewQuantity("");
