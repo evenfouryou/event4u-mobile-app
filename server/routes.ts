@@ -2838,51 +2838,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const targetStationId = stationId !== undefined ? stationId : 
         (consumeMovements.length > 0 ? consumeMovements[0].fromStationId : null);
       
-      const existingStock = eventStocks.find(s => 
+      const existingEventStock = eventStocks.find(s => 
         s.productId === productId && 
         (targetStationId === null ? s.stationId === null : s.stationId === targetStationId)
       );
 
-      const currentStock = safeParseQuantity(existingStock?.quantity ?? 0);
-      
-      // If we consumed MORE (difference > 0), we need to reduce stock more
-      // If we consumed LESS (difference < 0), we need to add stock back
-      const newStock = currentStock - difference;
+      const currentEventStock = safeParseQuantity(existingEventStock?.quantity ?? 0);
 
-      if (newStock < 0) {
-        return res.status(400).json({ 
-          message: `Quantità insufficiente. Stock attuale: ${currentStock.toFixed(2)}, correzione richiede: ${(-difference).toFixed(2)} in più` 
+      if (difference > 0) {
+        // AUMENTA il consumo: ridurre lo stock dell'evento
+        const newEventStock = currentEventStock - difference;
+        
+        if (newEventStock < 0) {
+          return res.status(400).json({ 
+            message: `Quantità insufficiente. Stock evento: ${currentEventStock.toFixed(2)}, correzione richiede: ${difference.toFixed(2)} in più` 
+          });
+        }
+
+        // Update event stock
+        await storage.upsertStock({
+          eventId,
+          stationId: targetStationId,
+          productId,
+          quantity: newEventStock.toString(),
+          companyId,
+        });
+
+        // Create CONSUME movement
+        await storage.createStockMovement({
+          companyId,
+          productId,
+          quantity: Math.abs(difference).toString(),
+          type: 'CONSUME',
+          reason: reason || `Correzione report: da ${currentConsumed.toFixed(2)} a ${newQuantity.toFixed(2)}`,
+          performedBy: userId,
+          fromEventId: eventId,
+          fromStationId: targetStationId,
+        });
+
+        res.json({ 
+          success: true, 
+          oldQuantity: currentConsumed,
+          newQuantity,
+          difference,
+          stockUpdated: newEventStock,
+        });
+      } else {
+        // DIMINUISCE il consumo: restituire al MAGAZZINO GENERALE
+        const returnQty = Math.abs(difference);
+        
+        // Get general warehouse stock
+        const generalStocks = await storage.getGeneralStocks(companyId);
+        const existingGeneralStock = generalStocks.find(s => s.productId === productId);
+        const currentGeneralStock = safeParseQuantity(existingGeneralStock?.quantity ?? 0);
+        const newGeneralStock = currentGeneralStock + returnQty;
+
+        // Update general warehouse stock (eventId = null, stationId = null)
+        await storage.upsertStock({
+          eventId: null,
+          stationId: null,
+          productId,
+          quantity: newGeneralStock.toString(),
+          companyId,
+        });
+
+        // Create RETURN movement (to warehouse)
+        await storage.createStockMovement({
+          companyId,
+          productId,
+          quantity: returnQty.toString(),
+          type: 'RETURN',
+          reason: reason || `Correzione report: da ${currentConsumed.toFixed(2)} a ${newQuantity.toFixed(2)} - restituito a magazzino`,
+          performedBy: userId,
+          fromEventId: eventId,
+          fromStationId: targetStationId,
+          toEventId: null, // To general warehouse
+        });
+
+        res.json({ 
+          success: true, 
+          oldQuantity: currentConsumed,
+          newQuantity,
+          difference,
+          warehouseUpdated: newGeneralStock,
         });
       }
-
-      // Update event stock
-      await storage.upsertStock({
-        eventId,
-        stationId: targetStationId,
-        productId,
-        quantity: newStock.toString(),
-        companyId,
-      });
-
-      // Create correction movement
-      await storage.createStockMovement({
-        companyId,
-        productId,
-        quantity: Math.abs(difference).toString(),
-        type: difference > 0 ? 'CONSUME' : 'RETURN',
-        reason: reason || `Correzione report: da ${currentConsumed.toFixed(2)} a ${newQuantity.toFixed(2)}`,
-        performedBy: userId,
-        fromEventId: eventId,
-        fromStationId: targetStationId,
-      });
-
-      res.json({ 
-        success: true, 
-        oldQuantity: currentConsumed,
-        newQuantity,
-        difference,
-        stockUpdated: newStock,
-      });
     } catch (error: any) {
       console.error("Error correcting consumption:", error);
       res.status(500).json({ message: error.message || "Failed to correct consumption" });
