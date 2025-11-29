@@ -212,8 +212,15 @@ export default function Home() {
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <SectionCard
+          title="Eventi"
+          description="Crea e gestisci i tuoi eventi. Pianifica date, location e organizza ogni dettaglio della serata."
+          icon={Calendar}
+          href="/events"
+          color="bg-indigo-500"
+        />
+        <SectionCard
           title="Beverage"
-          description="Gestione eventi, magazzino, postazioni e consumi. Monitora le scorte e organizza i tuoi eventi."
+          description="Magazzino, postazioni e consumi. Monitora le scorte e gestisci l'inventario delle bevande."
           icon={Wine}
           href="/beverage"
           color="bg-purple-500"

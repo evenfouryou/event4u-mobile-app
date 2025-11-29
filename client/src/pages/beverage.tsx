@@ -310,39 +310,20 @@ export default function Beverage() {
             Beverage
           </h1>
           <p className="text-muted-foreground">
-            Gestione eventi, magazzino e consumi
+            Gestione magazzino, prodotti e consumi
           </p>
         </div>
-        <Button asChild data-testid="button-create-event">
-          <Link href="/events/wizard">
-            <Plus className="h-4 w-4 mr-2" />
-            Nuovo Evento
-          </Link>
-        </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {eventsLoading || productsLoading ? (
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
+        {productsLoading ? (
           <>
-            <Skeleton className="h-32" />
             <Skeleton className="h-32" />
             <Skeleton className="h-32" />
             <Skeleton className="h-32" />
           </>
         ) : (
           <>
-            <StatsCard
-              title="Eventi in Corso"
-              value={ongoingEvents.length}
-              icon={Calendar}
-              testId="stat-ongoing-events"
-            />
-            <StatsCard
-              title="Eventi Programmati"
-              value={scheduledEvents.length}
-              icon={Calendar}
-              testId="stat-scheduled-events"
-            />
             <StatsCard
               title="Prodotti"
               value={products?.length || 0}
@@ -355,19 +336,17 @@ export default function Beverage() {
               icon={AlertTriangle}
               testId="stat-low-stock"
             />
+            <StatsCard
+              title="In Magazzino"
+              value={generalStocks?.reduce((sum, s) => sum + Number(s.quantity), 0) || 0}
+              icon={Warehouse}
+              testId="stat-total-stock"
+            />
           </>
         )}
       </div>
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
-        <Link href="/events">
-          <Card className="hover-elevate cursor-pointer">
-            <CardContent className="p-4 flex items-center gap-3">
-              <Calendar className="h-5 w-5 text-primary" />
-              <span className="font-medium">Eventi</span>
-            </CardContent>
-          </Card>
-        </Link>
         <Link href="/warehouse">
           <Card className="hover-elevate cursor-pointer">
             <CardContent className="p-4 flex items-center gap-3">
@@ -434,68 +413,7 @@ export default function Beverage() {
         </Link>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between gap-2">
-            <CardTitle>Prossimi Eventi</CardTitle>
-            <Button variant="outline" size="sm" asChild>
-              <Link href="/events">Vedi tutti</Link>
-            </Button>
-          </CardHeader>
-          <CardContent>
-            {eventsLoading ? (
-              <div className="space-y-3">
-                <Skeleton className="h-16" />
-                <Skeleton className="h-16" />
-                <Skeleton className="h-16" />
-              </div>
-            ) : [...ongoingEvents, ...scheduledEvents].length > 0 ? (
-              <div className="space-y-3">
-                {[...ongoingEvents, ...scheduledEvents].slice(0, 5).map((event) => (
-                  <Link key={event.id} href={`/events/${event.id}`}>
-                    <div
-                      className="flex items-center justify-between p-3 rounded-lg hover-elevate cursor-pointer"
-                      data-testid={`event-item-${event.id}`}
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className={`rounded-lg p-2 ${event.status === 'ongoing' ? 'bg-green-100 dark:bg-green-900/30' : 'bg-blue-100 dark:bg-blue-900/30'}`}>
-                          <Calendar className={`h-4 w-4 ${event.status === 'ongoing' ? 'text-green-600' : 'text-blue-600'}`} />
-                        </div>
-                        <div>
-                          <p className="font-medium">{event.name}</p>
-                          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                            <Clock className="h-3 w-3" />
-                            {new Date(event.startDatetime).toLocaleDateString('it-IT', {
-                              day: 'numeric',
-                              month: 'short',
-                              hour: '2-digit',
-                              minute: '2-digit',
-                            })}
-                          </div>
-                        </div>
-                      </div>
-                      <Badge variant={event.status === 'ongoing' ? 'default' : 'secondary'}>
-                        {event.status === 'ongoing' ? 'In corso' : 'Programmato'}
-                      </Badge>
-                    </div>
-                  </Link>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8">
-                <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                <p className="text-muted-foreground mb-4">Nessun evento programmato</p>
-                <Button asChild data-testid="button-create-first-event">
-                  <Link href="/events/wizard">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Crea Evento
-                  </Link>
-                </Button>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
+      <div className="grid grid-cols-1 gap-6">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-2">
             <CardTitle>Scorte Basse</CardTitle>
