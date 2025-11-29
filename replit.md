@@ -11,6 +11,11 @@ Preferred communication style: Simple, everyday language.
 ## Recent Changes
 
 ### November 29, 2025
+- **Company Features Management**: Super admins can now enable/disable modules per company
+  - **company_features table**: Boolean flags for each module (Beverage, Contabilità, Personale, Cassa, Night File)
+  - **API Endpoints**: GET/PUT for per-company feature configuration with super_admin authorization
+  - **Admin UI**: Feature toggle dialog in companies.tsx for managing module access
+  - **Template literal query keys**: Fixed React Query to use proper endpoint format for per-company fetching
 - **Four New Management Modules Implemented**: Complete backend and frontend for Contabilità, Personale, Cassa, and File della Serata
   - **Contabilità (Accounting)**: Fixed costs, extra costs, maintenances, and documents management with full CRUD operations
   - **Personale (Personnel)**: Staff registry with event assignments and payment tracking
