@@ -41,12 +41,12 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Warehouse as WarehouseIcon, TrendingUp, TrendingDown, Package, AlertTriangle, X, ListPlus, ArrowLeft } from "lucide-react";
+import { Plus, Warehouse as WarehouseIcon, TrendingUp, TrendingDown, Package, AlertTriangle, X, ListPlus, ArrowLeft, Pencil } from "lucide-react";
 import { Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { Product, StockMovement, Supplier, Event } from "@shared/schema";
+import type { Product, StockMovement, Supplier, Event, User } from "@shared/schema";
 
 const loadStockSchema = z.object({
   productId: z.string().min(1, "Seleziona un prodotto"),
@@ -84,7 +84,17 @@ export default function Warehouse() {
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [transferQuantities, setTransferQuantities] = useState<Record<string, string>>({});
   const [consumeQuantities, setConsumeQuantities] = useState<Record<string, string>>({});
+  const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
+  const [adjustingProduct, setAdjustingProduct] = useState<{ id: string; name: string; quantity: string } | null>(null);
+  const [adjustQuantity, setAdjustQuantity] = useState("");
+  const [adjustReason, setAdjustReason] = useState("");
   const { toast } = useToast();
+
+  const { data: user } = useQuery<User>({
+    queryKey: ['/api/auth/user'],
+  });
+
+  const canAdjustStock = user?.role === 'super_admin' || user?.role === 'gestore';
 
   const { data: products } = useQuery<Product[]>({
     queryKey: ['/api/products'],
@@ -442,6 +452,66 @@ export default function Warehouse() {
       });
     },
   });
+
+  const adjustStockMutation = useMutation({
+    mutationFn: async (data: { productId: string; newQuantity: number; reason?: string }) => {
+      await apiRequest('POST', '/api/stock/adjust', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/reports') });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/events') && query.queryKey[2] === 'revenue-analysis' });
+      setAdjustDialogOpen(false);
+      setAdjustingProduct(null);
+      setAdjustQuantity("");
+      setAdjustReason("");
+      toast({
+        title: "Correzione effettuata",
+        description: "Quantità aggiornata correttamente",
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Non autorizzato",
+          description: "Solo gestore e admin possono correggere le quantità",
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile effettuare la correzione",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleAdjustStock = () => {
+    if (!adjustingProduct) return;
+    const qty = parseFloat(adjustQuantity);
+    if (isNaN(qty) || qty < 0) {
+      toast({
+        title: "Errore",
+        description: "Inserisci una quantità valida (maggiore o uguale a 0)",
+        variant: "destructive",
+      });
+      return;
+    }
+    adjustStockMutation.mutate({
+      productId: adjustingProduct.id,
+      newQuantity: qty,
+      reason: adjustReason || undefined,
+    });
+  };
+
+  const openAdjustDialog = (productId: string, productName: string, currentQuantity: string) => {
+    setAdjustingProduct({ id: productId, name: productName, quantity: currentQuantity });
+    setAdjustQuantity(currentQuantity);
+    setAdjustReason("");
+    setAdjustDialogOpen(true);
+  };
 
   const handleTransferToEvent = (productId: string) => {
     if (!selectedEventId) return;
@@ -978,6 +1048,7 @@ export default function Warehouse() {
                       <TableHead className="text-right">Quantità</TableHead>
                       <TableHead>Unità</TableHead>
                       <TableHead>Stato</TableHead>
+                      {canAdjustStock && <TableHead className="w-16">Azioni</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -1007,6 +1078,18 @@ export default function Warehouse() {
                                 </Badge>
                               )}
                             </TableCell>
+                            {canAdjustStock && (
+                              <TableCell>
+                                <Button
+                                  variant="ghost"
+                                  size="icon"
+                                  onClick={() => openAdjustDialog(stock.productId, stock.productName, stock.quantity)}
+                                  data-testid={`button-adjust-${stock.productId}`}
+                                >
+                                  <Pencil className="h-4 w-4" />
+                                </Button>
+                              </TableCell>
+                            )}
                           </TableRow>
                         );
                       })}
@@ -1285,6 +1368,62 @@ export default function Warehouse() {
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Dialog per correzione quantità */}
+      <Dialog open={adjustDialogOpen} onOpenChange={setAdjustDialogOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>Correggi Quantità</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Prodotto</p>
+              <p className="font-medium">{adjustingProduct?.name}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">Quantità attuale</p>
+              <p className="font-medium">{adjustingProduct ? parseFloat(adjustingProduct.quantity).toFixed(2) : '-'}</p>
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Nuova Quantità</label>
+              <Input
+                type="number"
+                min="0"
+                step="0.01"
+                value={adjustQuantity}
+                onChange={(e) => setAdjustQuantity(e.target.value)}
+                placeholder="Inserisci nuova quantità"
+                data-testid="input-adjust-quantity"
+              />
+            </div>
+            <div className="space-y-2">
+              <label className="text-sm font-medium">Motivo (opzionale)</label>
+              <Textarea
+                value={adjustReason}
+                onChange={(e) => setAdjustReason(e.target.value)}
+                placeholder="Es: Correzione inventario, errore conteggio..."
+                data-testid="input-adjust-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setAdjustDialogOpen(false)}
+              data-testid="button-cancel-adjust"
+            >
+              Annulla
+            </Button>
+            <Button
+              onClick={handleAdjustStock}
+              disabled={adjustStockMutation.isPending}
+              data-testid="button-confirm-adjust"
+            >
+              {adjustStockMutation.isPending ? 'Salvataggio...' : 'Salva'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

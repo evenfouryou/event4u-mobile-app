@@ -525,7 +525,7 @@ export const insertStockMovementSchema = createInsertSchema(stockMovements).omit
   id: true,
   createdAt: true,
 }).extend({
-  type: z.enum(['LOAD', 'UNLOAD', 'TRANSFER', 'CONSUME', 'RETURN']),
+  type: z.enum(['LOAD', 'UNLOAD', 'TRANSFER', 'CONSUME', 'RETURN', 'ADJUSTMENT']),
 });
 
 export const insertPurchaseOrderSchema = createInsertSchema(purchaseOrders).omit({

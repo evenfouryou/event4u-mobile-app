@@ -1961,6 +1961,87 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Stock adjustment - only for gestore/admin
+  app.post('/api/stock/adjust', isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      const userId = req.user.claims.sub;
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+
+      const adjustSchema = z.object({
+        productId: z.string().uuid(),
+        newQuantity: z.union([z.string(), z.number()])
+          .transform(val => parseFloat(val.toString()))
+          .refine(val => !isNaN(val), { message: "La quantità deve essere un numero valido" }),
+        reason: z.string().optional(),
+        eventId: z.string().uuid().optional(),
+        stationId: z.string().uuid().nullable().optional(),
+      });
+
+      const { productId, newQuantity, reason, eventId, stationId } = adjustSchema.parse(req.body);
+
+      if (newQuantity < 0) {
+        return res.status(400).json({ message: "La quantità non può essere negativa" });
+      }
+
+      let oldQuantity = 0;
+
+      if (eventId) {
+        // Adjust event stock
+        const eventStocks = await storage.getStocksByEvent(eventId);
+        const existingStock = eventStocks.find(s => 
+          s.productId === productId && 
+          (stationId === null ? s.stationId === null : s.stationId === stationId)
+        );
+        oldQuantity = existingStock ? parseFloat(existingStock.quantity) : 0;
+
+        await storage.upsertEventStock({
+          eventId,
+          stationId: stationId || null,
+          productId,
+          quantity: newQuantity.toString(),
+        });
+      } else {
+        // Adjust general warehouse stock
+        const currentStocks = await storage.getGeneralStocks(companyId);
+        const existingStock = currentStocks.find(s => s.productId === productId);
+        oldQuantity = existingStock ? parseFloat(existingStock.quantity) : 0;
+
+        await storage.upsertStock({
+          companyId,
+          productId,
+          quantity: newQuantity.toString(),
+        });
+      }
+
+      const difference = newQuantity - oldQuantity;
+
+      // Create movement record for adjustment
+      await storage.createStockMovement({
+        companyId,
+        productId,
+        quantity: Math.abs(difference).toString(),
+        type: 'ADJUSTMENT',
+        reason: reason || `Correzione: da ${oldQuantity.toFixed(2)} a ${newQuantity.toFixed(2)}`,
+        performedBy: userId,
+        toEventId: eventId || null,
+        toStationId: stationId || null,
+      });
+
+      res.json({ 
+        success: true, 
+        oldQuantity,
+        newQuantity,
+        difference,
+      });
+    } catch (error: any) {
+      console.error("Error adjusting stock:", error);
+      res.status(500).json({ message: error.message || "Failed to adjust stock" });
+    }
+  });
+
   // Bulk load multiple products
   app.post('/api/stock/bulk-load', isAuthenticated, async (req: any, res) => {
     try {
