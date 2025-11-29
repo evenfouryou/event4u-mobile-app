@@ -46,7 +46,7 @@ import { Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import type { Product, StockMovement, Supplier } from "@shared/schema";
+import type { Product, StockMovement, Supplier, Event } from "@shared/schema";
 
 const loadStockSchema = z.object({
   productId: z.string().min(1, "Seleziona un prodotto"),
@@ -81,6 +81,9 @@ export default function Warehouse() {
   const [searchQuery, setSearchQuery] = useState("");
   const [movementTypeFilter, setMovementTypeFilter] = useState<string>("all");
   const [movementSearchQuery, setMovementSearchQuery] = useState("");
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
+  const [transferQuantities, setTransferQuantities] = useState<Record<string, string>>({});
+  const [consumeQuantities, setConsumeQuantities] = useState<Record<string, string>>({});
   const { toast } = useToast();
 
   const { data: products } = useQuery<Product[]>({
@@ -103,6 +106,22 @@ export default function Warehouse() {
 
   const { data: movements, isLoading: movementsLoading } = useQuery<StockMovement[]>({
     queryKey: ['/api/stock/movements'],
+  });
+
+  const { data: events } = useQuery<Event[]>({
+    queryKey: ['/api/events'],
+  });
+
+  const activeEvents = events?.filter(e => e.status === 'scheduled' || e.status === 'ongoing') || [];
+
+  const { data: eventStocks } = useQuery<Array<{
+    id: string;
+    productId: string;
+    stationId: string | null;
+    quantity: string;
+  }>>({
+    queryKey: ['/api/events', selectedEventId, 'stocks'],
+    enabled: !!selectedEventId,
   });
 
   const loadForm = useForm<LoadStockData>({
@@ -343,6 +362,132 @@ export default function Warehouse() {
     
     bulkUnloadMutation.mutate({ items: validItems });
   };
+
+  const transferToEventMutation = useMutation({
+    mutationFn: async (data: { eventId: string; productId: string; quantity: number }) => {
+      await apiRequest('POST', '/api/stock/event-transfer', {
+        eventId: data.eventId,
+        stationId: null,
+        productId: data.productId,
+        quantity: data.quantity,
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events', selectedEventId, 'stocks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
+      setTransferQuantities(prev => ({ ...prev, [variables.productId]: "" }));
+      toast({
+        title: "Trasferimento completato",
+        description: "Prodotto trasferito all'evento",
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Non autorizzato",
+          description: "Effettua nuovamente il login...",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = '/api/login', 500);
+        return;
+      }
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile trasferire il prodotto",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const consumeFromEventMutation = useMutation({
+    mutationFn: async (data: { eventId: string; productId: string; quantity: number }) => {
+      await apiRequest('POST', '/api/stock/consume', {
+        eventId: data.eventId,
+        stationId: null,
+        productId: data.productId,
+        quantity: data.quantity,
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events', selectedEventId, 'stocks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
+      setConsumeQuantities(prev => ({ ...prev, [variables.productId]: "" }));
+      toast({
+        title: "Scarico registrato",
+        description: "Consumo registrato correttamente",
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Non autorizzato",
+          description: "Effettua nuovamente il login...",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = '/api/login', 500);
+        return;
+      }
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile registrare lo scarico",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleTransferToEvent = (productId: string) => {
+    if (!selectedEventId) return;
+    const qty = parseFloat(transferQuantities[productId] || "0");
+    if (qty <= 0) {
+      toast({
+        title: "Errore",
+        description: "Inserisci una quantità valida",
+        variant: "destructive",
+      });
+      return;
+    }
+    transferToEventMutation.mutate({
+      eventId: selectedEventId,
+      productId,
+      quantity: qty,
+    });
+  };
+
+  const handleConsumeFromEvent = (productId: string) => {
+    if (!selectedEventId) return;
+    const qty = parseFloat(consumeQuantities[productId] || "0");
+    if (qty <= 0) {
+      toast({
+        title: "Errore",
+        description: "Inserisci una quantità valida",
+        variant: "destructive",
+      });
+      return;
+    }
+    consumeFromEventMutation.mutate({
+      eventId: selectedEventId,
+      productId,
+      quantity: qty,
+    });
+  };
+
+  const getEventStock = (productId: string): number => {
+    const stock = eventStocks?.find(s => s.productId === productId && !s.stationId);
+    if (!stock) return 0;
+    const quantity = parseFloat(stock.quantity);
+    return isNaN(quantity) ? 0 : quantity;
+  };
+
+  const getGeneralStock = (productId: string): number => {
+    const stock = stocks?.find(s => s.productId === productId);
+    if (!stock) return 0;
+    const quantity = parseFloat(stock.quantity);
+    return isNaN(quantity) ? 0 : quantity;
+  };
+
+  const productsWithGeneralStock = products?.filter(p => p.active && getGeneralStock(p.id) > 0) || [];
+  const productsWithEventStock = products?.filter(p => p.active && getEventStock(p.id) > 0) || [];
 
   return (
     <div className="p-6 md:p-8 max-w-7xl mx-auto">
@@ -796,6 +941,7 @@ export default function Warehouse() {
       <Tabs defaultValue="stocks" className="space-y-6">
         <TabsList>
           <TabsTrigger value="stocks" data-testid="tab-stocks">Giacenze</TabsTrigger>
+          <TabsTrigger value="event-transfer" data-testid="tab-event-transfer">Trasferimento Evento</TabsTrigger>
           <TabsTrigger value="movements" data-testid="tab-movements">Movimenti</TabsTrigger>
         </TabsList>
 
@@ -867,6 +1013,167 @@ export default function Warehouse() {
               )}
             </CardContent>
           </Card>
+        </TabsContent>
+
+        <TabsContent value="event-transfer" className="space-y-4">
+          <div className="space-y-4">
+            <div className="flex items-center gap-4">
+              <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                <SelectTrigger className="w-[300px]" data-testid="select-event">
+                  <SelectValue placeholder="Seleziona evento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {activeEvents.map(event => (
+                    <SelectItem key={event.id} value={event.id}>
+                      {event.name} ({event.status === 'ongoing' ? 'In corso' : 'Programmato'})
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+
+            {!selectedEventId ? (
+              <Card>
+                <CardContent className="p-12 text-center">
+                  <Package className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                  <p className="text-muted-foreground">Seleziona un evento per gestire i trasferimenti</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="grid md:grid-cols-2 gap-6">
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <TrendingUp className="h-5 w-5 text-green-600" />
+                      Trasferisci a Evento
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Sposta prodotti dal magazzino generale all'evento
+                    </p>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {productsWithGeneralStock.length === 0 ? (
+                      <div className="p-8 text-center">
+                        <Package className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-muted-foreground">Nessun prodotto disponibile in magazzino</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y max-h-[400px] overflow-y-auto">
+                        {productsWithGeneralStock.map((product) => {
+                          const generalStock = getGeneralStock(product.id);
+                          return (
+                            <div 
+                              key={product.id} 
+                              className="flex items-center gap-3 p-4 hover:bg-muted/50"
+                              data-testid={`transfer-row-${product.id}`}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium truncate">{product.name}</div>
+                                <div className="text-xs text-muted-foreground">{product.code}</div>
+                              </div>
+                              
+                              <div className="text-right text-sm shrink-0">
+                                <div className="text-muted-foreground">Disponibile</div>
+                                <div className="font-semibold text-green-600">{generalStock.toFixed(1)}</div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2 shrink-0">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="1"
+                                  placeholder="Qtà"
+                                  value={transferQuantities[product.id] || ""}
+                                  onChange={(e) => setTransferQuantities(prev => ({ ...prev, [product.id]: e.target.value }))}
+                                  className="w-20 h-9 text-center"
+                                  data-testid={`input-transfer-${product.id}`}
+                                />
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleTransferToEvent(product.id)}
+                                  disabled={transferToEventMutation.isPending}
+                                  className="bg-green-600 hover:bg-green-700 h-9"
+                                  data-testid={`button-transfer-${product.id}`}
+                                >
+                                  <Plus className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <TrendingDown className="h-5 w-5 text-orange-500" />
+                      Scarica da Evento
+                    </CardTitle>
+                    <p className="text-sm text-muted-foreground">
+                      Registra il consumo dei prodotti nell'evento
+                    </p>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {productsWithEventStock.length === 0 ? (
+                      <div className="p-8 text-center">
+                        <Package className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
+                        <p className="text-muted-foreground">Nessun prodotto trasferito all'evento</p>
+                      </div>
+                    ) : (
+                      <div className="divide-y max-h-[400px] overflow-y-auto">
+                        {productsWithEventStock.map((product) => {
+                          const eventStock = getEventStock(product.id);
+                          return (
+                            <div 
+                              key={product.id} 
+                              className="flex items-center gap-3 p-4 hover:bg-muted/50"
+                              data-testid={`consume-row-${product.id}`}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium truncate">{product.name}</div>
+                                <div className="text-xs text-muted-foreground">{product.code}</div>
+                              </div>
+                              
+                              <div className="text-right text-sm shrink-0">
+                                <div className="text-muted-foreground">Nell'evento</div>
+                                <div className="font-semibold text-orange-500">{eventStock.toFixed(1)}</div>
+                              </div>
+                              
+                              <div className="flex items-center gap-2 shrink-0">
+                                <Input
+                                  type="number"
+                                  min="0"
+                                  step="1"
+                                  placeholder="Qtà"
+                                  value={consumeQuantities[product.id] || ""}
+                                  onChange={(e) => setConsumeQuantities(prev => ({ ...prev, [product.id]: e.target.value }))}
+                                  className="w-20 h-9 text-center"
+                                  data-testid={`input-consume-${product.id}`}
+                                />
+                                <Button
+                                  size="sm"
+                                  variant="destructive"
+                                  onClick={() => handleConsumeFromEvent(product.id)}
+                                  disabled={consumeFromEventMutation.isPending}
+                                  className="h-9"
+                                  data-testid={`button-consume-${product.id}`}
+                                >
+                                  <TrendingDown className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="movements" className="space-y-4">
