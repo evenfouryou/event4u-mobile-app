@@ -2,6 +2,7 @@
 import {
   users,
   companies,
+  companyFeatures,
   locations,
   eventFormats,
   events,
@@ -30,6 +31,7 @@ import {
   type UpsertUser,
   type Company,
   type InsertCompany,
+  type CompanyFeatures,
   type Location,
   type InsertLocation,
   type EventFormat,
@@ -102,6 +104,11 @@ export interface IStorage {
   createCompany(company: InsertCompany): Promise<Company>;
   updateCompany(id: string, company: Partial<Company>): Promise<Company | undefined>;
   deleteCompany(id: string): Promise<boolean>;
+  
+  // Company Features operations
+  getAllCompanyFeatures(): Promise<CompanyFeatures[]>;
+  getCompanyFeatures(companyId: string): Promise<CompanyFeatures | undefined>;
+  upsertCompanyFeatures(companyId: string, features: Partial<CompanyFeatures>): Promise<CompanyFeatures>;
   
   // Location operations
   getLocationsByCompany(companyId: string): Promise<Location[]>;
@@ -424,6 +431,34 @@ export class DatabaseStorage implements IStorage {
   async deleteCompany(id: string): Promise<boolean> {
     const result = await db.delete(companies).where(eq(companies.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Company Features operations
+  async getAllCompanyFeatures(): Promise<CompanyFeatures[]> {
+    return await db.select().from(companyFeatures);
+  }
+
+  async getCompanyFeatures(companyId: string): Promise<CompanyFeatures | undefined> {
+    const [features] = await db.select().from(companyFeatures).where(eq(companyFeatures.companyId, companyId));
+    return features;
+  }
+
+  async upsertCompanyFeatures(companyId: string, featuresData: Partial<CompanyFeatures>): Promise<CompanyFeatures> {
+    const existing = await this.getCompanyFeatures(companyId);
+    if (existing) {
+      const [updated] = await db
+        .update(companyFeatures)
+        .set({ ...featuresData, updatedAt: new Date() })
+        .where(eq(companyFeatures.companyId, companyId))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db
+        .insert(companyFeatures)
+        .values({ companyId, ...featuresData })
+        .returning();
+      return created;
+    }
   }
   
   // Location operations

@@ -670,6 +670,79 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== COMPANY FEATURES (Admin toggles for modules) =====
+  app.get('/api/company-features', isAuthenticated, async (req: any, res) => {
+    try {
+      if (!(await isSuperAdmin(req))) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      const features = await storage.getAllCompanyFeatures();
+      res.json(features);
+    } catch (error) {
+      console.error("Error fetching company features:", error);
+      res.status(500).json({ message: "Failed to fetch company features" });
+    }
+  });
+
+  app.get('/api/company-features/:companyId', isAuthenticated, async (req: any, res) => {
+    try {
+      const features = await storage.getCompanyFeatures(req.params.companyId);
+      if (!features) {
+        // Return default features if none exist
+        return res.json({
+          companyId: req.params.companyId,
+          beverageEnabled: true,
+          contabilitaEnabled: false,
+          personaleEnabled: false,
+          cassaEnabled: false,
+          nightFileEnabled: false,
+        });
+      }
+      res.json(features);
+    } catch (error) {
+      console.error("Error fetching company features:", error);
+      res.status(500).json({ message: "Failed to fetch company features" });
+    }
+  });
+
+  app.get('/api/company-features/current/my', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      const features = await storage.getCompanyFeatures(companyId);
+      if (!features) {
+        // Return default features if none exist (beverage always enabled by default)
+        return res.json({
+          companyId: companyId,
+          beverageEnabled: true,
+          contabilitaEnabled: false,
+          personaleEnabled: false,
+          cassaEnabled: false,
+          nightFileEnabled: false,
+        });
+      }
+      res.json(features);
+    } catch (error) {
+      console.error("Error fetching current company features:", error);
+      res.status(500).json({ message: "Failed to fetch company features" });
+    }
+  });
+
+  app.put('/api/company-features/:companyId', isAuthenticated, async (req: any, res) => {
+    try {
+      if (!(await isSuperAdmin(req))) {
+        return res.status(403).json({ message: "Forbidden" });
+      }
+      const features = await storage.upsertCompanyFeatures(req.params.companyId, req.body);
+      res.json(features);
+    } catch (error) {
+      console.error("Error updating company features:", error);
+      res.status(500).json({ message: "Failed to update company features" });
+    }
+  });
+
   // ===== LOCATIONS =====
   app.get('/api/locations', isAuthenticated, async (req: any, res) => {
     try {

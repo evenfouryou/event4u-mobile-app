@@ -62,12 +62,33 @@ export const companies = pgTable("companies", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const companiesRelations = relations(companies, ({ many }) => ({
+export const companiesRelations = relations(companies, ({ many, one }) => ({
   users: many(users),
   locations: many(locations),
   eventFormats: many(eventFormats),
   events: many(events),
   products: many(products),
+  features: one(companyFeatures),
+}));
+
+// Company Features table - Controls which modules are enabled for each company
+export const companyFeatures = pgTable("company_features", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id).unique(),
+  beverageEnabled: boolean("beverage_enabled").notNull().default(true),
+  contabilitaEnabled: boolean("contabilita_enabled").notNull().default(false),
+  personaleEnabled: boolean("personale_enabled").notNull().default(false),
+  cassaEnabled: boolean("cassa_enabled").notNull().default(false),
+  nightFileEnabled: boolean("night_file_enabled").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const companyFeaturesRelations = relations(companyFeatures, ({ one }) => ({
+  company: one(companies, {
+    fields: [companyFeatures.companyId],
+    references: [companies.id],
+  }),
 }));
 
 // Locations table
@@ -849,6 +870,19 @@ export const insertCompanySchema = createInsertSchema(companies).omit({
   updatedAt: true,
 });
 
+export const insertCompanyFeaturesSchema = createInsertSchema(companyFeatures).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateCompanyFeaturesSchema = createInsertSchema(companyFeatures).omit({
+  id: true,
+  companyId: true,
+  createdAt: true,
+  updatedAt: true,
+}).partial();
+
 export const insertLocationSchema = createInsertSchema(locations).omit({
   id: true,
   createdAt: true,
@@ -988,6 +1022,10 @@ export type InsertUser = z.infer<typeof insertUserSchema>;
 
 export type Company = typeof companies.$inferSelect;
 export type InsertCompany = z.infer<typeof insertCompanySchema>;
+
+export type CompanyFeatures = typeof companyFeatures.$inferSelect;
+export type InsertCompanyFeatures = z.infer<typeof insertCompanyFeaturesSchema>;
+export type UpdateCompanyFeatures = z.infer<typeof updateCompanyFeaturesSchema>;
 
 export type Location = typeof locations.$inferSelect;
 export type InsertLocation = z.infer<typeof insertLocationSchema>;
