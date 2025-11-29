@@ -237,6 +237,8 @@ export default function EventDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
       queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'stocks'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/reports') });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/events') && query.queryKey[2] === 'revenue-analysis' });
       setTransferDialogOpen(false);
       setSelectedProducts(new Map());
       setDestinationStationId('general');

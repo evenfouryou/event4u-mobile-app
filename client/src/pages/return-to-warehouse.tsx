@@ -77,6 +77,9 @@ export default function ReturnToWarehouse() {
       queryClient.invalidateQueries({ queryKey: ['/api/stocks/event', selectedEventId] });
       queryClient.invalidateQueries({ queryKey: ['/api/stocks/station', selectedStationId] });
       queryClient.invalidateQueries({ queryKey: ['/api/stocks'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/reports') });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/events') && query.queryKey[2] === 'revenue-analysis' });
       setReturns({});
     },
     onError: (error: any) => {

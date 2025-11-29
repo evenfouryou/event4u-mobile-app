@@ -139,6 +139,8 @@ export default function ConsumptionTracking() {
       queryClient.invalidateQueries({ queryKey: ['/api/events', selectedEventId, 'stocks'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/reports') });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/events') && query.queryKey[2] === 'revenue-analysis' });
       setRemainingQuantities(prev => ({ ...prev, [variables.productId]: "" }));
       toast({
         title: "Consumo registrato",
@@ -171,6 +173,8 @@ export default function ConsumptionTracking() {
       queryClient.invalidateQueries({ queryKey: ['/api/events', selectedEventId, 'stocks'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/reports') });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/events') && query.queryKey[2] === 'revenue-analysis' });
       setRemainingQuantities(prev => ({ ...prev, [variables.productId]: "" }));
       toast({
         title: "Reso al magazzino",
@@ -194,6 +198,8 @@ export default function ConsumptionTracking() {
       queryClient.invalidateQueries({ queryKey: ['/api/events', selectedEventId, 'stocks'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/reports') });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/events') && query.queryKey[2] === 'revenue-analysis' });
       setLoadQuantities(prev => ({ ...prev, [variables.productId]: "" }));
       toast({
         title: "Prodotto caricato",
@@ -372,6 +378,8 @@ export default function ConsumptionTracking() {
     queryClient.invalidateQueries({ queryKey: ['/api/events', selectedEventId, 'stocks'] });
     queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
     queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
+    queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/reports') });
+    queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/events') && query.queryKey[2] === 'revenue-analysis' });
     
     setRemainingQuantities({});
     setIsSubmittingAll(false);

@@ -150,6 +150,7 @@ export default function Warehouse() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/reports') });
       setLoadDialogOpen(false);
       loadForm.reset();
       toast({
@@ -182,6 +183,7 @@ export default function Warehouse() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/reports') });
       setUnloadDialogOpen(false);
       unloadForm.reset();
       toast({
@@ -214,6 +216,7 @@ export default function Warehouse() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/reports') });
       setMultiLoadDialogOpen(false);
       setMultiLoadItems([]);
       toast({
@@ -376,6 +379,8 @@ export default function Warehouse() {
       queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
       queryClient.invalidateQueries({ queryKey: ['/api/events', selectedEventId, 'stocks'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/reports') });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/events') && query.queryKey[2] === 'revenue-analysis' });
       setTransferQuantities(prev => ({ ...prev, [variables.productId]: "" }));
       toast({
         title: "Trasferimento completato",
@@ -412,6 +417,8 @@ export default function Warehouse() {
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/events', selectedEventId, 'stocks'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/reports') });
+      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/events') && query.queryKey[2] === 'revenue-analysis' });
       setConsumeQuantities(prev => ({ ...prev, [variables.productId]: "" }));
       toast({
         title: "Scarico registrato",
