@@ -2603,10 +2603,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const movements = await storage.getMovementsByEvent(eventId);
       const products = await storage.getProductsByCompany(companyId);
 
-      // Get all CONSUME movements for this event
-      const consumeMovements = movements.filter(m => m.type === 'CONSUME');
+      // Get all relevant movements (CONSUME adds, RETURN subtracts)
+      const relevantMovements = movements.filter(m => m.type === 'CONSUME' || m.type === 'RETURN');
 
-      // Calculate total consumption aggregated by product (from ALL consume movements)
+      // Calculate total consumption aggregated by product (considering both CONSUME and RETURN)
       const consumptionByProduct = new Map<string, {
         productId: string;
         productName: string;
@@ -2617,12 +2617,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       let totalCost = 0;
 
-      // Aggregate all consumptions regardless of station
-      consumeMovements.forEach(m => {
+      // Aggregate all consumptions regardless of station (CONSUME adds, RETURN subtracts)
+      relevantMovements.forEach(m => {
         const product = products.find(p => p.id === m.productId);
         if (!product) return;
 
-        const qty = parseFloat(m.quantity);
+        const qty = m.type === 'RETURN' ? -parseFloat(m.quantity) : parseFloat(m.quantity);
         const cost = parseFloat(product.costPrice) * qty;
         totalCost += cost;
 
@@ -2641,30 +2641,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       });
 
-      // Get unique station IDs from consume movements
-      const stationIds = [...new Set(consumeMovements.map(m => m.fromStationId).filter(Boolean))] as string[];
+      // Get unique station IDs from relevant movements (excluding null stations)
+      const stationIds = [...new Set(relevantMovements.map(m => m.fromStationId).filter(Boolean))] as string[];
       
       // Fetch station details for all referenced stations
       const allStations = await storage.getStationsByCompany(companyId);
       const stationMap = new Map(allStations.map(s => [s.id, s]));
 
-      // Calculate consumption per station (for detailed breakdown)
+      // Calculate consumption per station (for detailed breakdown, considering CONSUME and RETURN)
       const stationReports = stationIds.map(stationId => {
         const station = stationMap.get(stationId);
         const stationName = station?.name || `Postazione ${stationId.slice(0, 8)}`;
         
-        const stationConsumeMovements = consumeMovements.filter(m => 
+        const stationMovements = relevantMovements.filter(m => 
           m.fromStationId === stationId
         );
 
         const items: any[] = [];
         let stationTotalCost = 0;
 
-        stationConsumeMovements.forEach(m => {
+        stationMovements.forEach(m => {
           const product = products.find(p => p.id === m.productId);
           if (!product) return;
           
-          const qty = parseFloat(m.quantity);
+          const qty = m.type === 'RETURN' ? -parseFloat(m.quantity) : parseFloat(m.quantity);
           const cost = parseFloat(product.costPrice) * qty;
           stationTotalCost += cost;
 
