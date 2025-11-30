@@ -10,6 +10,21 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### November 30, 2025
+- **Comprehensive UI/UX Redesign - Dark Nightclub Theme**: Complete visual overhaul with club/nightlife aesthetic
+  - **Color System**: Dark background (#0a0e17), card backgrounds (#151922), golden primary accent (#FFD700), teal status indicators (#00CED1)
+  - **Glass-Morphism Effects**: New `glass-card` class with backdrop-blur and semi-transparent backgrounds, includes solid fallback for unsupported browsers
+  - **Golden Gradient Buttons**: `gradient-golden` class for CTAs with enforced black text in all states (hover/focus/active)
+  - **Framer Motion Animations**: Added subtle animations (opacity/y transitions) across all pages for modern feel
+  - **Gradient Icon Containers**: Stats cards use rounded-2xl icon containers with color gradients
+- **Updated Pages (15+ files)**: Landing, Login, Register, Home, Beverage, Events, Event Detail, Warehouse, Products, Stations, Suppliers, Companies, Users, Settings, Accounting, Personnel, Night File
+- **Mobile Bottom Navigation Improvements**: 
+  - Golden center FAB with role-specific functional links
+  - Warehouse FAB now opens bulk load dialog via `?action=load` URL parameter
+  - Updated icons and labels for all roles
+- **StatsCard & QuickActionCard Components**: Reusable components for consistent dashboard styling across modules
+- **Accessibility Improvements**: WCAG-compliant contrast on golden buttons, glass-card fallback for browsers without backdrop-filter support
+
 ### November 29, 2025
 - **User-Level Feature Management**: Migrated from company-level to user-level module access control
   - **user_features table**: Boolean flags for each module per user (Beverage, Contabilità, Personale, Cassa, Night File)
