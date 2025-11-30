@@ -782,7 +782,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // IMPORTANT: This route must be BEFORE /:userId to avoid matching 'current' as userId
   app.get('/api/user-features/current/my', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user?.id;
+      const userId = req.user?.claims?.sub || req.user?.id;
       if (!userId) {
         return res.status(403).json({ message: "User not found" });
       }
