@@ -1486,8 +1486,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.post('/api/products', isAdminOrSuperAdmin, async (req: any, res) => {
+  app.post('/api/products', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      const userRole = req.user?.role;
+      
+      // Check if user has permission to create products
+      if (userRole !== 'super_admin' && userRole !== 'gestore') {
+        // Warehouse users need canCreateProducts permission
+        if (userRole === 'warehouse') {
+          const features = await storage.getUserFeatures(userId);
+          if (!features?.canCreateProducts) {
+            return res.status(403).json({ message: "Permesso di creazione prodotti non abilitato" });
+          }
+        } else {
+          return res.status(403).json({ message: "Accesso negato: privilegi amministrativi richiesti" });
+        }
+      }
+      
       const companyId = await getUserCompanyId(req);
       if (!companyId) {
         return res.status(403).json({ message: "No company associated" });

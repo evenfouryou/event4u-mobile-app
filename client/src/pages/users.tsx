@@ -124,6 +124,10 @@ const featuresList: FeatureConfig[] = [
   { key: 'nightFileEnabled', label: 'File della Serata', description: 'Documento integrato per evento', icon: <FileText className="h-4 w-4" /> },
 ];
 
+const warehouseFeaturesList: FeatureConfig[] = [
+  { key: 'canCreateProducts', label: 'Crea Prodotti', description: 'Permesso di creare nuovi prodotti', icon: <Plus className="h-4 w-4" /> },
+];
+
 export default function UsersPage() {
   const [dialogOpen, setDialogOpen] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -156,6 +160,7 @@ export default function UsersPage() {
         personaleEnabled: userFeatures.personaleEnabled,
         cassaEnabled: userFeatures.cassaEnabled,
         nightFileEnabled: userFeatures.nightFileEnabled,
+        canCreateProducts: userFeatures.canCreateProducts,
       });
     }
   }, [userFeatures]);
@@ -428,6 +433,7 @@ export default function UsersPage() {
       personaleEnabled: false,
       cassaEnabled: false,
       nightFileEnabled: false,
+      canCreateProducts: false,
     });
     setFeaturesDialogOpen(true);
   };
@@ -752,6 +758,7 @@ export default function UsersPage() {
                 )}
 
                 <div className="flex gap-1 pt-2 border-t border-white/5 flex-wrap">
+                  {/* Super Admin can manage features for gestori */}
                   {isSuperAdmin && user.role === 'gestore' && (
                     <Button
                       size="icon"
@@ -759,6 +766,19 @@ export default function UsersPage() {
                       onClick={() => handleOpenFeaturesDialog(user)}
                       data-testid={`button-features-user-${user.id}`}
                       title="Gestisci Moduli"
+                      className="rounded-xl min-w-[44px] min-h-[44px]"
+                    >
+                      <Settings2 className="h-4 w-4" />
+                    </Button>
+                  )}
+                  {/* Organizer (gestore) can manage permissions for warehouse users */}
+                  {isAdmin && user.role === 'warehouse' && (
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      onClick={() => handleOpenFeaturesDialog(user)}
+                      data-testid={`button-permissions-user-${user.id}`}
+                      title="Gestisci Permessi"
                       className="rounded-xl min-w-[44px] min-h-[44px]"
                     >
                       <Settings2 className="h-4 w-4" />
@@ -857,14 +877,39 @@ export default function UsersPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings2 className="h-5 w-5" />
-              Gestione Moduli
+              {selectedUserForFeatures?.role === 'warehouse' ? 'Gestione Permessi' : 'Gestione Moduli'}
             </DialogTitle>
             <DialogDescription>
-              {selectedUserForFeatures?.firstName} {selectedUserForFeatures?.lastName} - Attiva o disattiva i moduli disponibili
+              {selectedUserForFeatures?.firstName} {selectedUserForFeatures?.lastName} - {selectedUserForFeatures?.role === 'warehouse' ? 'Abilita o disabilita i permessi' : 'Attiva o disattiva i moduli disponibili'}
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-4">
-            {featuresList.map((feature) => (
+            {/* Show warehouse permissions for warehouse users */}
+            {selectedUserForFeatures?.role === 'warehouse' && warehouseFeaturesList.map((feature) => (
+              <div
+                key={feature.key}
+                className="glass-card p-4 flex items-center justify-between cursor-pointer hover:border-primary/30 transition-all"
+                onClick={() => handleToggleFeature(feature.key)}
+                data-testid={`toggle-feature-${feature.key}`}
+              >
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
+                    {feature.icon}
+                  </div>
+                  <div>
+                    <Label className="text-base font-medium cursor-pointer">{feature.label}</Label>
+                    <p className="text-sm text-muted-foreground">{feature.description}</p>
+                  </div>
+                </div>
+                <Switch
+                  checked={!!localFeatures[feature.key]}
+                  onCheckedChange={() => handleToggleFeature(feature.key)}
+                  data-testid={`switch-feature-${feature.key}`}
+                />
+              </div>
+            ))}
+            {/* Show module features for gestori */}
+            {selectedUserForFeatures?.role === 'gestore' && featuresList.map((feature) => (
               <div
                 key={feature.key}
                 className="glass-card p-4 flex items-center justify-between cursor-pointer hover:border-primary/30 transition-all"
@@ -903,7 +948,7 @@ export default function UsersPage() {
               className="gradient-golden text-black font-semibold"
               data-testid="button-save-features"
             >
-              {updateFeaturesMutation.isPending ? 'Salvataggio...' : 'Salva Moduli'}
+              {updateFeaturesMutation.isPending ? 'Salvataggio...' : 'Salva'}
             </Button>
           </DialogFooter>
         </DialogContent>
