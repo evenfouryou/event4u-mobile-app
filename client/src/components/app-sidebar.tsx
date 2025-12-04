@@ -103,6 +103,12 @@ export function AppSidebar() {
         icon: Users,
         url: "/siae/customers",
         group: "Biglietteria SIAE",
+      },
+      {
+        title: "Eventi Biglietteria",
+        icon: Ticket,
+        url: "/siae/ticketed-events",
+        group: "Biglietteria SIAE",
       }
     );
   }
