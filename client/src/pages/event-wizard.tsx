@@ -4,7 +4,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertEventSchema, type Location as LocationType, type EventFormat, type InsertEvent } from "@shared/schema";
+import { insertEventSchema, type Location as LocationType, type EventFormat, type InsertEvent, type SiaeEventGenre, type SiaeSectorCode } from "@shared/schema";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -14,16 +14,47 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDescription } from "@/components/ui/form";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, MapPin, Clock, Repeat, FileText, Save, CheckCircle2, ArrowLeft, ArrowRight } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Calendar, MapPin, Clock, Repeat, FileText, Save, CheckCircle2, ArrowLeft, ArrowRight, Ticket, Users, Euro, Plus, Trash2 } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
 
-const STEPS = [
+// Tipo per i settori configurati nel wizard
+interface SectorConfig {
+  id: string;
+  sectorCode: string;
+  name: string;
+  capacity: number;
+  isNumbered: boolean;
+  priceIntero: string;
+  priceRidotto: string;
+  priceOmaggio: string;
+  prevendita: string;
+}
+
+// Step base sempre visibili
+const BASE_STEPS = [
   { id: 1, title: "Informazioni Base", icon: FileText },
   { id: 2, title: "Date e Orari", icon: Calendar },
   { id: 3, title: "Ricorrenza", icon: Repeat },
-  { id: 4, title: "Riepilogo", icon: CheckCircle2 }
 ];
+
+// Step SIAE (mostrati solo se biglietteria abilitata)
+const SIAE_STEPS = [
+  { id: 4, title: "Biglietteria SIAE", icon: Ticket },
+  { id: 5, title: "Settori e Prezzi", icon: Euro },
+];
+
+// Step finale
+const FINAL_STEP = { id: 6, title: "Riepilogo", icon: CheckCircle2 };
+
+// Funzione per generare steps dinamici
+function getSteps(siaeEnabled: boolean) {
+  if (siaeEnabled) {
+    return [...BASE_STEPS, ...SIAE_STEPS, { ...FINAL_STEP, id: 6 }];
+  }
+  return [...BASE_STEPS, { ...FINAL_STEP, id: 4 }];
+}
 
 // Helper function to generate recurring dates preview
 function generateRecurringDatesPreview(
@@ -77,6 +108,17 @@ export default function EventWizard() {
   const [previewVersion, setPreviewVersion] = useState<string>('');
   const [userEditedSelection, setUserEditedSelection] = useState(false);
   
+  // SIAE state
+  const [siaeEnabled, setSiaeEnabled] = useState(false);
+  const [siaeGenreCode, setSiaeGenreCode] = useState<string>('');
+  const [siaeTaxType, setSiaeTaxType] = useState<string>('S');
+  const [siaeRequiresNominative, setSiaeRequiresNominative] = useState(true);
+  const [siaeMaxTicketsPerUser, setSiaeMaxTicketsPerUser] = useState(10);
+  const [siaeSectors, setSiaeSectors] = useState<SectorConfig[]>([]);
+  
+  // Dynamic steps based on SIAE enabled
+  const STEPS = getSteps(siaeEnabled);
+  
   // Ref to track current draftId for preventing duplicate creations
   const draftIdRef = useRef<string | null>(params?.id || null);
   const isSavingRef = useRef(false);
@@ -87,6 +129,16 @@ export default function EventWizard() {
 
   const { data: formats } = useQuery<EventFormat[]>({
     queryKey: ['/api/event-formats'],
+  });
+
+  // Carica generi SIAE (TAB.1)
+  const { data: siaeGenres } = useQuery<SiaeEventGenre[]>({
+    queryKey: ['/api/siae/event-genres'],
+  });
+
+  // Carica codici settore SIAE (TAB.2)
+  const { data: siaeSectorCodes } = useQuery<SiaeSectorCode[]>({
+    queryKey: ['/api/siae/sector-codes'],
   });
 
   // Load existing draft if editing
@@ -206,11 +258,13 @@ export default function EventWizard() {
     mutationFn: async (data: Partial<InsertEvent>) => {
       // Use ref to get the most current draftId
       const currentDraftId = draftIdRef.current;
+      let response;
       if (currentDraftId) {
-        return apiRequest('PATCH', `/api/events/${currentDraftId}`, { ...data, status: 'draft' });
+        response = await apiRequest('PATCH', `/api/events/${currentDraftId}`, { ...data, status: 'draft' });
       } else {
-        return apiRequest('POST', '/api/events', { ...data, status: 'draft' });
+        response = await apiRequest('POST', '/api/events', { ...data, status: 'draft' });
       }
+      return response.json();
     },
     onSuccess: (savedEvent: any) => {
       // Only set new draftId if we didn't have one before
@@ -229,20 +283,74 @@ export default function EventWizard() {
   });
 
   const publishMutation = useMutation({
-    mutationFn: async (data: InsertEvent) => {
+    mutationFn: async (data: any) => {
       // If editing an existing event, update it
+      let response;
       if (draftIdRef.current) {
-        return apiRequest('PATCH', `/api/events/${draftIdRef.current}`, { ...data, status: 'scheduled' });
+        response = await apiRequest('PATCH', `/api/events/${draftIdRef.current}`, { ...data, status: 'scheduled' });
+      } else {
+        // Otherwise create new event directly as scheduled (no draft)
+        response = await apiRequest('POST', '/api/events', { ...data, status: 'scheduled' });
       }
-      // Otherwise create new event directly as scheduled (no draft)
-      return apiRequest('POST', '/api/events', { ...data, status: 'scheduled' });
+      return response.json();
     },
-    onSuccess: () => {
+    onSuccess: async (savedEvent: any) => {
+      // If SIAE is enabled, create the SIAE ticketed event and sectors
+      if (siaeEnabled && savedEvent?.id) {
+        try {
+          // Create SIAE ticketed event
+          const siaeEventData = {
+            eventId: savedEvent.id,
+            genreCode: siaeGenreCode,
+            taxType: siaeTaxType,
+            totalCapacity: siaeSectors.reduce((sum, s) => sum + s.capacity, 0),
+            requiresNominative: siaeRequiresNominative,
+            maxTicketsPerUser: siaeMaxTicketsPerUser,
+            ticketingStatus: 'draft',
+          };
+          
+          const siaeEventResponse = await apiRequest('POST', '/api/siae/ticketed-events', siaeEventData);
+          const siaeEvent = await siaeEventResponse.json();
+          
+          // Create sectors for the SIAE event
+          if (siaeEvent?.id && siaeSectors.length > 0) {
+            for (const sector of siaeSectors) {
+              await apiRequest('POST', '/api/siae/event-sectors', {
+                ticketedEventId: siaeEvent.id,
+                sectorCode: sector.sectorCode,
+                name: sector.name,
+                capacity: sector.capacity,
+                availableSeats: sector.capacity,
+                isNumbered: sector.isNumbered,
+                priceIntero: sector.priceIntero,
+                priceRidotto: sector.priceRidotto || '0',
+                priceOmaggio: sector.priceOmaggio || '0',
+                prevendita: sector.prevendita || '0',
+              });
+            }
+          }
+          
+          toast({
+            title: "Successo",
+            description: "Evento con biglietteria SIAE creato con successo",
+          });
+        } catch (error) {
+          console.error('Error creating SIAE ticketed event:', error);
+          toast({
+            title: "Attenzione",
+            description: "Evento creato ma errore nella configurazione SIAE. Configura la biglietteria manualmente.",
+            variant: "destructive",
+          });
+        }
+      } else {
+        toast({
+          title: "Successo",
+          description: "Evento creato con successo",
+        });
+      }
+      
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
-      toast({
-        title: "Successo",
-        description: "Evento creato con successo",
-      });
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/ticketed-events'] });
       navigate('/events');
     },
     onError: () => {
@@ -473,6 +581,34 @@ export default function EventWizard() {
                     </FormItem>
                   )}
                 />
+
+                {/* SIAE Ticketing Toggle */}
+                <div className="border-t pt-4 mt-4">
+                  <div className="flex items-center justify-between rounded-lg border p-4 bg-primary/5">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-lg bg-primary/10">
+                        <Ticket className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <Label className="font-medium">Abilita Biglietteria SIAE</Label>
+                        <p className="text-xs text-muted-foreground">
+                          Configura settori, prezzi e biglietti con conformità fiscale SIAE
+                        </p>
+                      </div>
+                    </div>
+                    <Switch
+                      checked={siaeEnabled}
+                      onCheckedChange={setSiaeEnabled}
+                      data-testid="switch-siae-enabled"
+                    />
+                  </div>
+                  {siaeEnabled && (
+                    <p className="text-xs text-muted-foreground mt-2 flex items-center gap-1">
+                      <CheckCircle2 className="h-3 w-3 text-green-600" />
+                      Verranno aggiunti 2 step per configurare genere evento e settori
+                    </p>
+                  )}
+                </div>
               </CardContent>
             </Card>
           )}
@@ -730,8 +866,304 @@ export default function EventWizard() {
             </Card>
           )}
 
-          {/* Step 4: Summary */}
-          {currentStep === 4 && (
+          {/* Step 4: SIAE Ticketing (only if SIAE enabled or this step) */}
+          {currentStep === 4 && siaeEnabled && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Ticket className="h-5 w-5" />
+                  Biglietteria SIAE
+                </CardTitle>
+                <CardDescription>Configura i parametri fiscali per la biglietteria</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="space-y-2">
+                    <Label>Genere Evento (TAB.1 SIAE)</Label>
+                    <Select value={siaeGenreCode} onValueChange={setSiaeGenreCode}>
+                      <SelectTrigger data-testid="select-siae-genre">
+                        <SelectValue placeholder="Seleziona genere evento" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {siaeGenres?.map((genre) => (
+                          <SelectItem key={genre.id} value={genre.code}>
+                            <span className="font-mono mr-2">{genre.code}</span>
+                            {genre.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <p className="text-xs text-muted-foreground">
+                      Categoria fiscale dell'evento secondo la normativa SIAE
+                    </p>
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Tipo Imposta</Label>
+                    <Select value={siaeTaxType} onValueChange={setSiaeTaxType}>
+                      <SelectTrigger data-testid="select-siae-tax-type">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="S">Spettacolo</SelectItem>
+                        <SelectItem value="I">Intrattenimento</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div className="flex items-center justify-between rounded-lg border p-3">
+                    <div>
+                      <Label className="font-medium">Biglietti Nominativi</Label>
+                      <p className="text-xs text-muted-foreground">
+                        Obbligatorio per eventi &gt;5000 partecipanti
+                      </p>
+                    </div>
+                    <Switch
+                      checked={siaeRequiresNominative}
+                      onCheckedChange={setSiaeRequiresNominative}
+                      data-testid="switch-nominative"
+                    />
+                  </div>
+
+                  <div className="space-y-2">
+                    <Label>Max Biglietti per Utente</Label>
+                    <Input
+                      type="number"
+                      min={1}
+                      max={50}
+                      value={siaeMaxTicketsPerUser}
+                      onChange={(e) => setSiaeMaxTicketsPerUser(parseInt(e.target.value) || 10)}
+                      data-testid="input-max-tickets"
+                    />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Step 5: Sectors and Prices (only if SIAE enabled) */}
+          {currentStep === 5 && siaeEnabled && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Euro className="h-5 w-5" />
+                  Settori e Prezzi
+                </CardTitle>
+                <CardDescription>Configura i settori dell'evento con i relativi prezzi</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {siaeSectors.length === 0 ? (
+                  <div className="text-center py-8 border-2 border-dashed rounded-lg">
+                    <Users className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground mb-4">Nessun settore configurato</p>
+                    <Button
+                      type="button"
+                      onClick={() => {
+                        const newSector: SectorConfig = {
+                          id: Date.now().toString(),
+                          sectorCode: '',
+                          name: '',
+                          capacity: 100,
+                          isNumbered: false,
+                          priceIntero: '20.00',
+                          priceRidotto: '15.00',
+                          priceOmaggio: '0.00',
+                          prevendita: '2.00',
+                        };
+                        setSiaeSectors([...siaeSectors, newSector]);
+                      }}
+                      data-testid="button-add-first-sector"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Aggiungi Primo Settore
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="space-y-4">
+                    {siaeSectors.map((sector, index) => (
+                      <Card key={sector.id} className="p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <h4 className="font-medium">Settore {index + 1}</h4>
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setSiaeSectors(siaeSectors.filter(s => s.id !== sector.id));
+                            }}
+                            data-testid={`button-remove-sector-${index}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </Button>
+                        </div>
+                        
+                        <div className="grid grid-cols-2 gap-4">
+                          <div className="space-y-2">
+                            <Label>Codice Settore (TAB.2)</Label>
+                            <Select 
+                              value={sector.sectorCode} 
+                              onValueChange={(value) => {
+                                const updated = siaeSectors.map(s => 
+                                  s.id === sector.id ? { ...s, sectorCode: value } : s
+                                );
+                                setSiaeSectors(updated);
+                              }}
+                            >
+                              <SelectTrigger data-testid={`select-sector-code-${index}`}>
+                                <SelectValue placeholder="Seleziona" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {siaeSectorCodes?.map((code) => (
+                                  <SelectItem key={code.id} value={code.code}>
+                                    <span className="font-mono mr-2">{code.code}</span>
+                                    {code.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Nome Settore</Label>
+                            <Input
+                              value={sector.name}
+                              onChange={(e) => {
+                                const updated = siaeSectors.map(s => 
+                                  s.id === sector.id ? { ...s, name: e.target.value } : s
+                                );
+                                setSiaeSectors(updated);
+                              }}
+                              placeholder="es. Platea, VIP, Balconata"
+                              data-testid={`input-sector-name-${index}`}
+                            />
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Capienza</Label>
+                            <Input
+                              type="number"
+                              value={sector.capacity}
+                              onChange={(e) => {
+                                const updated = siaeSectors.map(s => 
+                                  s.id === sector.id ? { ...s, capacity: parseInt(e.target.value) || 0 } : s
+                                );
+                                setSiaeSectors(updated);
+                              }}
+                              data-testid={`input-sector-capacity-${index}`}
+                            />
+                          </div>
+
+                          <div className="flex items-center gap-2 pt-6">
+                            <Checkbox
+                              checked={sector.isNumbered}
+                              onCheckedChange={(checked) => {
+                                const updated = siaeSectors.map(s => 
+                                  s.id === sector.id ? { ...s, isNumbered: !!checked } : s
+                                );
+                                setSiaeSectors(updated);
+                              }}
+                              data-testid={`checkbox-numbered-${index}`}
+                            />
+                            <Label>Posti numerati</Label>
+                          </div>
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-3 mt-4">
+                          <div className="space-y-2">
+                            <Label className="text-xs">Intero €</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={sector.priceIntero}
+                              onChange={(e) => {
+                                const updated = siaeSectors.map(s => 
+                                  s.id === sector.id ? { ...s, priceIntero: e.target.value } : s
+                                );
+                                setSiaeSectors(updated);
+                              }}
+                              data-testid={`input-price-intero-${index}`}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Ridotto €</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={sector.priceRidotto}
+                              onChange={(e) => {
+                                const updated = siaeSectors.map(s => 
+                                  s.id === sector.id ? { ...s, priceRidotto: e.target.value } : s
+                                );
+                                setSiaeSectors(updated);
+                              }}
+                              data-testid={`input-price-ridotto-${index}`}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Omaggio €</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={sector.priceOmaggio}
+                              onChange={(e) => {
+                                const updated = siaeSectors.map(s => 
+                                  s.id === sector.id ? { ...s, priceOmaggio: e.target.value } : s
+                                );
+                                setSiaeSectors(updated);
+                              }}
+                              data-testid={`input-price-omaggio-${index}`}
+                            />
+                          </div>
+                          <div className="space-y-2">
+                            <Label className="text-xs">Prevendita €</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={sector.prevendita}
+                              onChange={(e) => {
+                                const updated = siaeSectors.map(s => 
+                                  s.id === sector.id ? { ...s, prevendita: e.target.value } : s
+                                );
+                                setSiaeSectors(updated);
+                              }}
+                              data-testid={`input-prevendita-${index}`}
+                            />
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+
+                    <Button
+                      type="button"
+                      variant="outline"
+                      onClick={() => {
+                        const newSector: SectorConfig = {
+                          id: Date.now().toString(),
+                          sectorCode: '',
+                          name: '',
+                          capacity: 100,
+                          isNumbered: false,
+                          priceIntero: '20.00',
+                          priceRidotto: '15.00',
+                          priceOmaggio: '0.00',
+                          prevendita: '2.00',
+                        };
+                        setSiaeSectors([...siaeSectors, newSector]);
+                      }}
+                      className="w-full"
+                      data-testid="button-add-sector"
+                    >
+                      <Plus className="h-4 w-4 mr-2" />
+                      Aggiungi Settore
+                    </Button>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
+          {/* Final Step: Summary (step 4 without SIAE, step 6 with SIAE) */}
+          {currentStep === STEPS[STEPS.length - 1].id && (
             <Card>
               <CardHeader>
                 <CardTitle>Riepilogo e Note</CardTitle>
@@ -762,6 +1194,38 @@ export default function EventWizard() {
                     </div>
                   )}
                 </div>
+
+                {/* SIAE Summary */}
+                {siaeEnabled && (
+                  <div className="space-y-2 p-4 bg-primary/5 border border-primary/20 rounded-lg">
+                    <h4 className="font-medium flex items-center gap-2">
+                      <Ticket className="h-4 w-4" />
+                      Biglietteria SIAE
+                    </h4>
+                    <div className="text-sm space-y-1">
+                      <div>
+                        <span className="text-muted-foreground">Genere: </span>
+                        <span>{siaeGenres?.find(g => g.code === siaeGenreCode)?.name || '-'}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Tipo Imposta: </span>
+                        <span>{siaeTaxType === 'S' ? 'Spettacolo' : 'Intrattenimento'}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Nominativi: </span>
+                        <span>{siaeRequiresNominative ? 'Sì' : 'No'}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Settori: </span>
+                        <span>{siaeSectors.length}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Capienza Totale: </span>
+                        <span>{siaeSectors.reduce((sum, s) => sum + s.capacity, 0)} posti</span>
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 <FormField
                   control={form.control}

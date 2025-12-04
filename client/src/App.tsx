@@ -126,6 +126,7 @@ function Router() {
               <Route path="/products" component={Products} />
               <Route path="/suppliers" component={Suppliers} />
               <Route path="/purchase-orders" component={PurchaseOrders} />
+              <Route path="/events/new" component={EventWizard} />
               <Route path="/events/wizard/:id?" component={EventWizard} />
               <Route path="/events/:id" component={EventDetail} />
               <Route path="/events" component={Events} />
