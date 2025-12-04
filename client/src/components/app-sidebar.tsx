@@ -91,6 +91,12 @@ export function AppSidebar() {
         icon: CreditCard,
         url: "/siae/activation-cards",
         group: "Biglietteria SIAE",
+      },
+      {
+        title: "Configurazione",
+        icon: Settings,
+        url: "/siae/system-config",
+        group: "Biglietteria SIAE",
       }
     );
   }
