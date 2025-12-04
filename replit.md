@@ -43,12 +43,36 @@ A comprehensive SIAE-compliant event ticketing and fiscal management system for 
 - Transaction processing and name change requests
 - Secondary ticketing marketplace
 - Box office session management
-- Audit logs and SIAE transmission tracking
+- Audit logs with company scoping and Zod validation
+- Numbered seats management with sector-based organization
+- SIAE XML transmission tracking
+
+**Frontend Pages (`/siae/*`):**
+- `/siae/system-config` - System configuration for SIAE integration
+- `/siae/ticketed-events` - Ticketed events management
+- `/siae/sectors` - Event sectors configuration
+- `/siae/fiscal-seals` - Fiscal seal management
+- `/siae/tickets` - Ticket emission and management
+- `/siae/transactions` - Transaction processing
+- `/siae/customers` - Customer registry with OTP
+- `/siae/name-changes` - Nominative ticket changes
+- `/siae/resales` - Secondary ticketing marketplace
+- `/siae/box-office` - Box office session management
+- `/siae/subscriptions` - Subscription management
+- `/siae/transmissions` - XML transmission to SIAE
+- `/siae/audit-logs` - Audit log viewing with filtering
+- `/siae/numbered-seats` - Numbered seat management by sector
 
 **Key Files:**
-- `server/siae-storage.ts`: Storage layer with CRUD operations for all SIAE tables
-- `server/siae-routes.ts`: REST API routes with role-based access control
-- `shared/schema.ts`: Database schema definitions with Zod validation
+- `server/siae-storage.ts`: Storage layer with CRUD operations for all SIAE tables (20+ tables)
+- `server/siae-routes.ts`: REST API routes with role-based access control and Zod validation
+- `shared/schema.ts`: Database schema definitions with Zod validation and TypeScript types
+
+**Security Features:**
+- Zod validation on all POST/PATCH endpoints
+- Company-scoped data access for multi-tenant isolation
+- Role-based authorization (requireGestore, requireOrganizer)
+- Proper 404/403 responses for access control
 
 ### Progressive Web App (PWA)
 Event4U is a fully installable PWA with:
