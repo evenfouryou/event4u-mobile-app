@@ -6,6 +6,7 @@ import { storage } from "./storage";
 // import { setupAuth, isAuthenticated } from "./replitAuth";
 import { getSession } from "./replitAuth";
 import passport from "passport";
+import siaeRoutes from "./siae-routes";
 import {
   insertCompanySchema,
   insertLocationSchema,
@@ -59,6 +60,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Passport serialization for classic login
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
+
+  // Register SIAE module routes
+  app.use(siaeRoutes);
 
   // Email transporter setup
   const emailTransporter = nodemailer.createTransport({

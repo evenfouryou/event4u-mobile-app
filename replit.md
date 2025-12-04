@@ -23,6 +23,33 @@ The system's data model links Companies to Users, Locations, Events, Products, a
 ### Import/Export Features
 The system supports CSV import for bulk product and price list item uploads. Reporting capabilities include PDF generation for event reports and Excel export for data analysis, covering revenue and consumption reports.
 
+### SIAE Ticketing Module (Event Four You Manage)
+A comprehensive SIAE-compliant event ticketing and fiscal management system for Italian clubs and event organizers, designed to comply with Italian fiscal regulations (Decreto 23/07/2001, Provvedimento 356768/2025).
+
+**Database Architecture (18+ SIAE tables in production):**
+- **TAB.1-5 Reference Tables**: Event genres, sector codes, ticket types, service codes, cancellation reasons
+- **Fiscal Compliance**: Activation cards (Carta di Attivazione), emission channels, fiscal seals
+- **Customer Management**: SIAE customers with OTP/SPID authentication, unique customer codes
+- **Ticketing**: Ticketed events, event sectors, numbered/unnumbered seats, tickets with fiscal seals
+- **Transactions**: Purchase transactions, name changes, secondary ticketing (resales)
+- **Operations**: Box office sessions, subscriptions, audit logs, XML transmissions to SIAE
+
+**API Endpoints (`/api/siae/*`):**
+- Reference tables (TAB.1-5) with CRUD operations
+- Activation cards and emission channels management
+- Customer registration with OTP verification
+- Ticketed events and sector configuration
+- Ticket emission with fiscal seal generation
+- Transaction processing and name change requests
+- Secondary ticketing marketplace
+- Box office session management
+- Audit logs and SIAE transmission tracking
+
+**Key Files:**
+- `server/siae-storage.ts`: Storage layer with CRUD operations for all SIAE tables
+- `server/siae-routes.ts`: REST API routes with role-based access control
+- `shared/schema.ts`: Database schema definitions with Zod validation
+
 ### Progressive Web App (PWA)
 Event4U is a fully installable PWA with:
 - **manifest.json**: App metadata, icons, and shortcuts for installation
