@@ -27,6 +27,11 @@ import {
   Send,
   ClipboardList,
   Grid3X3,
+  ListChecks,
+  QrCode,
+  Armchair,
+  UserPlus,
+  ScanLine,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -53,8 +58,16 @@ export function AppSidebar() {
 
   const isSuperAdmin = user?.role === 'super_admin';
   const isAdmin = user?.role === 'gestore';
+  const isGestoreCovisione = user?.role === 'gestore_covisione';
+  const isCapoStaff = user?.role === 'capo_staff';
+  const isPr = user?.role === 'pr';
   const isWarehouse = user?.role === 'warehouse';
   const isBartender = user?.role === 'bartender';
+  
+  // Combined role checks for menu access
+  const canManageLists = isSuperAdmin || isAdmin || isGestoreCovisione || isCapoStaff || isPr;
+  const canManageStaff = isSuperAdmin || isAdmin || isGestoreCovisione || isCapoStaff;
+  const canManageTables = isSuperAdmin || isAdmin || isGestoreCovisione;
 
   // Fetch user features for menu filtering
   const { data: userFeatures } = useQuery<UserFeatures>({
@@ -327,6 +340,142 @@ export function AppSidebar() {
           url: "/siae/numbered-seats",
           group: "Biglietteria SIAE",
         }
+    );
+
+    // PR Module for Gestore
+    menuItems.push(
+      {
+        title: "Liste Ospiti",
+        icon: ListChecks,
+        url: "/pr/guest-lists",
+        group: "Gestione PR",
+      },
+      {
+        title: "Tavoli Evento",
+        icon: Armchair,
+        url: "/pr/tables",
+        group: "Gestione PR",
+      },
+      {
+        title: "Scanner QR",
+        icon: ScanLine,
+        url: "/pr/scanner",
+        group: "Gestione PR",
+      },
+      {
+        title: "Staff Eventi",
+        icon: UserPlus,
+        url: "/pr/staff",
+        group: "Gestione PR",
+      }
+    );
+  }
+
+  // Gestore Covisione menu
+  if (isGestoreCovisione) {
+    menuItems.push(
+      {
+        title: "Home",
+        icon: Home,
+        url: "/",
+        group: "Bacheca",
+      },
+      {
+        title: "Eventi",
+        icon: Calendar,
+        url: "/events",
+        group: "Gestione",
+      },
+      {
+        title: "Liste Ospiti",
+        icon: ListChecks,
+        url: "/pr/guest-lists",
+        group: "Gestione PR",
+      },
+      {
+        title: "Tavoli Evento",
+        icon: Armchair,
+        url: "/pr/tables",
+        group: "Gestione PR",
+      },
+      {
+        title: "Scanner QR",
+        icon: ScanLine,
+        url: "/pr/scanner",
+        group: "Gestione PR",
+      },
+      {
+        title: "Staff Eventi",
+        icon: UserPlus,
+        url: "/pr/staff",
+        group: "Gestione PR",
+      }
+    );
+  }
+
+  // Capo Staff menu
+  if (isCapoStaff) {
+    menuItems.push(
+      {
+        title: "Home",
+        icon: Home,
+        url: "/",
+        group: "Bacheca",
+      },
+      {
+        title: "I Miei Eventi",
+        icon: Calendar,
+        url: "/pr/my-events",
+        group: "Gestione",
+      },
+      {
+        title: "Liste Ospiti",
+        icon: ListChecks,
+        url: "/pr/guest-lists",
+        group: "Gestione PR",
+      },
+      {
+        title: "Scanner QR",
+        icon: ScanLine,
+        url: "/pr/scanner",
+        group: "Gestione PR",
+      },
+      {
+        title: "Staff Eventi",
+        icon: UserPlus,
+        url: "/pr/staff",
+        group: "Gestione PR",
+      }
+    );
+  }
+
+  // PR menu
+  if (isPr) {
+    menuItems.push(
+      {
+        title: "Home",
+        icon: Home,
+        url: "/",
+        group: "Bacheca",
+      },
+      {
+        title: "I Miei Eventi",
+        icon: Calendar,
+        url: "/pr/my-events",
+        group: "Gestione",
+      },
+      {
+        title: "Le Mie Liste",
+        icon: ListChecks,
+        url: "/pr/guest-lists",
+        group: "Gestione PR",
+      },
+      {
+        title: "Le Mie Prenotazioni",
+        icon: Armchair,
+        url: "/pr/my-bookings",
+        group: "Gestione PR",
+      }
     );
   }
 

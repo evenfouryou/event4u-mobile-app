@@ -64,6 +64,7 @@ import PublicCheckoutSuccess from "@/pages/public-checkout-success";
 import PublicLogin from "@/pages/public-login";
 import PublicVenues from "@/pages/public-venues";
 import PublicVenueDetail from "@/pages/public-venue-detail";
+import PrGuestLists from "@/pages/pr-guest-lists";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -159,6 +160,7 @@ function Router() {
               <Route path="/siae/transmissions" component={SiaeTransmissions} />
               <Route path="/siae/audit-logs" component={SiaeAuditLogs} />
               <Route path="/siae/numbered-seats" component={SiaeNumberedSeats} />
+              <Route path="/pr/guest-lists" component={PrGuestLists} />
               <Route component={NotFound} />
             </Switch>
           </main>
