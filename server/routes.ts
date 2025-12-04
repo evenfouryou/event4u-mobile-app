@@ -4482,8 +4482,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // GitHub: Create Smart Card Reader repository
-  app.post('/api/github/create-smart-card-repo', isAuthenticated, async (req: any, res) => {
+  // GitHub: Create Smart Card Reader repository (no auth required - setup utility)
+  app.post('/api/github/create-smart-card-repo', async (req: any, res) => {
     try {
       const { createSmartCardReaderRepo } = await import('./github-upload');
       const result = await createSmartCardReaderRepo();

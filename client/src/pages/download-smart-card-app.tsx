@@ -1,13 +1,66 @@
 import { useState } from "react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Github, Loader2, CheckCircle, ExternalLink, AlertCircle } from "lucide-react";
+import { Github, Loader2, CheckCircle, ExternalLink, AlertCircle, AlertTriangle, Copy } from "lucide-react";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+
+const WORKFLOW_CONTENT = `name: Build and Release Smart Card Reader
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install production dependencies
+        run: npm ci --production
+        
+      - name: Create release package
+        run: |
+          mkdir release
+          copy server.js release\\\\
+          copy package.json release\\\\
+          copy install-and-run.bat release\\\\
+          copy README.md release\\\\
+          xcopy node_modules release\\\\node_modules\\\\ /E /I /Y
+          
+      - name: Create ZIP
+        run: Compress-Archive -Path release\\\\* -DestinationPath Event4U-SmartCard-Reader.zip
+        shell: powershell
+        
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Event4U-SmartCard-Reader
+          path: Event4U-SmartCard-Reader.zip
+          
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: Event4U-SmartCard-Reader.zip
+          name: Event4U Smart Card Reader \${{ github.ref_name }}
+        env:
+          GITHUB_TOKEN: \${{ secrets.GITHUB_TOKEN }}`;
 
 export default function DownloadSmartCardApp() {
   const [isCreating, setIsCreating] = useState(false);
   const [repoUrl, setRepoUrl] = useState<string | null>(null);
+  const [workflowSkipped, setWorkflowSkipped] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const { toast } = useToast();
 
@@ -22,9 +75,12 @@ export default function DownloadSmartCardApp() {
       
       if (result.success && result.repoUrl) {
         setRepoUrl(result.repoUrl);
+        setWorkflowSkipped(result.workflowSkipped || false);
         toast({
           title: "Repository creato!",
-          description: "Il repository è pronto su GitHub"
+          description: result.workflowSkipped 
+            ? "Devi aggiungere il workflow manualmente" 
+            : "Il repository è pronto su GitHub"
         });
       } else {
         throw new Error(result.error || 'Errore sconosciuto');
@@ -39,6 +95,14 @@ export default function DownloadSmartCardApp() {
     } finally {
       setIsCreating(false);
     }
+  };
+
+  const copyWorkflow = () => {
+    navigator.clipboard.writeText(WORKFLOW_CONTENT);
+    toast({
+      title: "Copiato!",
+      description: "Incolla il contenuto nel file build.yml"
+    });
   };
 
   return (
@@ -110,15 +174,36 @@ export default function DownloadSmartCardApp() {
                     Apri Repository
                   </Button>
                 </a>
+
+                {workflowSkipped && (
+                  <div className="bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-4 space-y-3">
+                    <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400">
+                      <AlertTriangle className="h-5 w-5" />
+                      <span className="font-medium">Aggiungi il Workflow Manualmente</span>
+                    </div>
+                    <ol className="list-decimal list-inside text-sm space-y-1 text-muted-foreground">
+                      <li>Vai nel repository su GitHub</li>
+                      <li>Clicca "Add file" → "Create new file"</li>
+                      <li>Nome file: <code className="bg-muted px-1 rounded">.github/workflows/build.yml</code></li>
+                      <li>Incolla il contenuto qui sotto</li>
+                      <li>Clicca "Commit new file"</li>
+                    </ol>
+                    <Button onClick={copyWorkflow} variant="secondary" size="sm" className="w-full">
+                      <Copy className="mr-2 h-4 w-4" />
+                      Copia Contenuto Workflow
+                    </Button>
+                  </div>
+                )}
                 
                 <div className="bg-muted p-4 rounded-lg text-sm space-y-2">
                   <p className="font-medium">Prossimi passi:</p>
                   <ol className="list-decimal list-inside space-y-1 text-muted-foreground">
+                    {workflowSkipped && <li>Aggiungi il workflow come indicato sopra</li>}
                     <li>Vai alla tab <strong>Actions</strong> nel repository</li>
                     <li>Clicca su <strong>"Build and Release Smart Card Reader"</strong></li>
                     <li>Clicca <strong>"Run workflow"</strong> → <strong>"Run workflow"</strong></li>
                     <li>Attendi 2-3 minuti per la compilazione</li>
-                    <li>Scarica il file ZIP dalla sezione <strong>Releases</strong></li>
+                    <li>Scarica il file ZIP dalla sezione <strong>Artifacts</strong></li>
                   </ol>
                 </div>
               </div>
@@ -150,17 +235,11 @@ export default function DownloadSmartCardApp() {
               <div className="flex h-8 w-8 items-center justify-center rounded-full bg-primary text-primary-foreground font-bold shrink-0">3</div>
               <div>
                 <p className="font-medium">Scarica e distribuisci</p>
-                <p className="text-sm text-muted-foreground">Il file ZIP sarà nella sezione Releases</p>
+                <p className="text-sm text-muted-foreground">Il file ZIP sarà negli Artifacts</p>
               </div>
             </div>
           </CardContent>
         </Card>
-
-        <div className="bg-blue-500/10 border border-blue-500/30 rounded-lg p-4">
-          <p className="text-sm text-center">
-            <strong>Nota:</strong> Gli utenti finali dovranno solo scaricare il ZIP, estrarlo e fare doppio click su <code className="bg-muted px-1 rounded">install-and-run.bat</code>
-          </p>
-        </div>
       </div>
     </div>
   );

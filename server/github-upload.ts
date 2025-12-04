@@ -442,44 +442,117 @@ export async function createSmartCardReaderRepo(): Promise<{ success: boolean; r
         private: false,
         auto_init: true
       });
-      // Wait a moment for repo to be ready
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Wait longer for repo to be fully ready
+      console.log('Waiting for repository to be ready...');
+      await new Promise(resolve => setTimeout(resolve, 5000));
+      
+      // Verify repo is ready by checking if we can access it
+      for (let i = 0; i < 5; i++) {
+        try {
+          await octokit.repos.get({ owner: user.login, repo: repoName });
+          console.log('Repository is ready!');
+          break;
+        } catch (e) {
+          console.log(`Waiting... attempt ${i + 1}/5`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
     }
     
-    // Upload each file
-    for (const [filename, content] of Object.entries(FILES_TO_UPLOAD)) {
+    // Upload root files only (GitHub API restrictions on .github folder)
+    const rootFiles = Object.entries(FILES_TO_UPLOAD).filter(([f]) => !f.includes('/'));
+    let workflowSkipped = false;
+    
+    for (const [filename, content] of rootFiles) {
       console.log(`Uploading ${filename}...`);
       
-      // Check if file exists
-      let sha: string | undefined;
-      try {
-        const { data: existingFile } = await octokit.repos.getContent({
-          owner: user.login,
-          repo: repoName,
-          path: filename
-        });
-        if ('sha' in existingFile) {
-          sha = existingFile.sha;
+      let success = false;
+      let lastError: any = null;
+      
+      for (let attempt = 0; attempt < 3 && !success; attempt++) {
+        try {
+          // Check if file exists
+          let sha: string | undefined;
+          try {
+            const { data: existingFile } = await octokit.repos.getContent({
+              owner: user.login,
+              repo: repoName,
+              path: filename
+            });
+            if ('sha' in existingFile) {
+              sha = existingFile.sha;
+            }
+          } catch (e: any) {
+            // 404 is expected for new files
+          }
+          
+          // Create or update file
+          await octokit.repos.createOrUpdateFileContents({
+            owner: user.login,
+            repo: repoName,
+            path: filename,
+            message: sha ? `Update ${filename}` : `Add ${filename}`,
+            content: Buffer.from(content).toString('base64'),
+            ...(sha ? { sha } : {})
+          });
+          
+          success = true;
+          console.log(`  ✓ ${filename} uploaded`);
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (e: any) {
+          lastError = e;
+          console.log(`  Attempt ${attempt + 1}/3 failed for ${filename}: ${e.message}`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
         }
-      } catch (e: any) {
-        if (e.status !== 404) throw e;
       }
       
-      // Create or update file
-      await octokit.repos.createOrUpdateFileContents({
-        owner: user.login,
-        repo: repoName,
-        path: filename,
-        message: sha ? `Update ${filename}` : `Add ${filename}`,
-        content: Buffer.from(content).toString('base64'),
-        sha
-      });
+      if (!success && lastError) {
+        console.error(`Failed to upload ${filename}`);
+        throw lastError;
+      }
+    }
+    
+    // Try to upload workflow file (may fail due to permissions)
+    const workflowFile = Object.entries(FILES_TO_UPLOAD).find(([f]) => f.includes('.github'));
+    if (workflowFile) {
+      const [filename, content] = workflowFile;
+      console.log(`Uploading ${filename}...`);
+      try {
+        let sha: string | undefined;
+        try {
+          const { data: existingFile } = await octokit.repos.getContent({
+            owner: user.login,
+            repo: repoName,
+            path: filename
+          });
+          if ('sha' in existingFile) {
+            sha = existingFile.sha;
+          }
+        } catch (e: any) {}
+        
+        await octokit.repos.createOrUpdateFileContents({
+          owner: user.login,
+          repo: repoName,
+          path: filename,
+          message: sha ? `Update ${filename}` : `Add ${filename}`,
+          content: Buffer.from(content).toString('base64'),
+          ...(sha ? { sha } : {})
+        });
+        console.log(`  ✓ ${filename} uploaded`);
+      } catch (e: any) {
+        console.log(`  ⚠ Workflow file skipped (add manually via GitHub UI)`);
+        workflowSkipped = true;
+      }
     }
     
     const repoUrl = `https://github.com/${user.login}/${repoName}`;
     console.log(`Repository ready: ${repoUrl}`);
     
-    return { success: true, repoUrl };
+    return { 
+      success: true, 
+      repoUrl,
+      workflowSkipped 
+    };
     
   } catch (error: any) {
     console.error('GitHub error:', error.message);
