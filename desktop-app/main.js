@@ -353,7 +353,6 @@ function createWindow() {
     height: 620,
     resizable: false,
     maximizable: false,
-    icon: path.join(__dirname, 'assets', 'icon.png'),
     webPreferences: {
       nodeIntegration: false,
       contextIsolation: true,
@@ -375,21 +374,19 @@ function createWindow() {
 
 // Crea icona nella system tray
 function createTray() {
-  let iconPath = path.join(__dirname, 'assets', 'icon.png');
-  
-  // Fallback se l'icona non esiste
-  let icon;
-  try {
-    icon = nativeImage.createFromPath(iconPath);
-    if (icon.isEmpty()) {
-      // Crea un'icona di default
-      icon = nativeImage.createEmpty();
-    }
-  } catch (e) {
-    icon = nativeImage.createEmpty();
+  // Crea un'icona semplice programmaticamente (16x16 blu)
+  const size = 16;
+  const canvas = Buffer.alloc(size * size * 4);
+  for (let i = 0; i < size * size; i++) {
+    canvas[i * 4] = 66;      // R
+    canvas[i * 4 + 1] = 133; // G
+    canvas[i * 4 + 2] = 244; // B
+    canvas[i * 4 + 3] = 255; // A
   }
   
-  tray = new Tray(icon.resize({ width: 16, height: 16 }));
+  const icon = nativeImage.createFromBuffer(canvas, { width: size, height: size });
+  
+  tray = new Tray(icon);
   
   const contextMenu = Menu.buildFromTemplate([
     { 
