@@ -1,17 +1,64 @@
 {
   "name": "event4u-smart-card-reader",
   "version": "1.0.0",
-  "description": "Event4U - Server Smart Card SIAE per MiniLector EVO V3",
-  "main": "server.js",
+  "description": "Event4U - Lettore Smart Card SIAE per MiniLector EVO V3",
+  "main": "main.js",
   "author": "Event4U",
   "license": "MIT",
   "scripts": {
-    "start": "node server.js"
+    "start": "electron .",
+    "build": "electron-builder --win",
+    "build:portable": "electron-builder --win portable"
   },
   "dependencies": {
     "ws": "^8.14.2"
   },
-  "optionalDependencies": {
-    "pcsclite": "^1.0.1"
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.event4u.smartcard",
+    "productName": "Event4U Smart Card Reader",
+    "copyright": "Copyright © 2024 Event4U",
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": ["x64"]
+        }
+      ],
+      "icon": "assets/icon.ico"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "installerIcon": "assets/icon.ico",
+      "uninstallerIcon": "assets/icon.ico",
+      "installerHeaderIcon": "assets/icon.ico",
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Event4U Smart Card",
+      "language": "1040"
+    },
+    "directories": {
+      "output": "dist",
+      "buildResources": "assets"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "index.html",
+      "styles.css",
+      "renderer.js",
+      "smart-card-detector.js",
+      "assets/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": "assets",
+        "to": "assets"
+      }
+    ]
   }
 }

@@ -15,19 +15,28 @@ body {
 
 .container {
   padding: 20px;
-  max-width: 450px;
+  max-width: 480px;
   margin: 0 auto;
 }
 
 .header {
   text-align: center;
-  margin-bottom: 24px;
+  margin-bottom: 20px;
 }
 
-.logo {
+.logo-placeholder {
   width: 64px;
   height: 64px;
-  margin-bottom: 12px;
+  margin: 0 auto 12px;
+  background: linear-gradient(135deg, #e94560, #ff6b6b);
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 24px;
+  font-weight: 700;
+  color: white;
+  box-shadow: 0 4px 15px rgba(233, 69, 96, 0.4);
 }
 
 h1 {
@@ -43,6 +52,34 @@ h1 {
 .subtitle {
   font-size: 14px;
   color: #8892b0;
+}
+
+.demo-banner {
+  background: linear-gradient(90deg, #ffa502, #ff7f50);
+  border-radius: 8px;
+  padding: 10px 16px;
+  margin-bottom: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  animation: pulse-banner 2s infinite;
+}
+
+.demo-icon {
+  font-size: 18px;
+}
+
+.demo-text {
+  font-size: 13px;
+  font-weight: 600;
+  color: #1a1a2e;
+  letter-spacing: 1px;
+}
+
+@keyframes pulse-banner {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.85; }
 }
 
 .status-card {
@@ -155,6 +192,58 @@ h1 {
   color: #00d26a;
 }
 
+.button-row {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 16px;
+}
+
+.btn {
+  flex: 1;
+  padding: 12px 16px;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, #e94560, #ff6b6b);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(233, 69, 96, 0.4);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: #ccd6f6;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+.btn-warning {
+  background: linear-gradient(135deg, #ffa502, #ff7f50);
+  color: #1a1a2e;
+}
+
+.btn-warning:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 165, 2, 0.4);
+}
+
 .connection-info {
   background: rgba(255, 255, 255, 0.03);
   border-radius: 12px;
@@ -184,9 +273,25 @@ h1 {
   line-height: 1.8;
 }
 
+.instructions .note {
+  margin-top: 12px;
+  font-size: 11px;
+  color: #ffa502;
+  font-style: italic;
+}
+
 .footer {
   text-align: center;
   padding: 12px;
+}
+
+.footer p {
   font-size: 11px;
   color: #5a6a8a;
+  margin-bottom: 4px;
+}
+
+.footer .version {
+  font-size: 10px;
+  color: #3a4a6a;
 }

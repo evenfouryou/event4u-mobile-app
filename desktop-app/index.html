@@ -9,9 +9,14 @@
 <body>
   <div class="container">
     <div class="header">
-      <img src="icon.png" alt="Event4U" class="logo" onerror="this.style.display='none'">
+      <div class="logo-placeholder">E4U</div>
       <h1>Event4U</h1>
       <p class="subtitle">Lettore Smart Card SIAE</p>
+    </div>
+    
+    <div class="demo-banner" id="demo-banner" style="display: none;">
+      <span class="demo-icon">🧪</span>
+      <span class="demo-text">MODALITA DEMO ATTIVA</span>
     </div>
     
     <div class="status-card">
@@ -49,6 +54,15 @@
       </div>
     </div>
     
+    <div class="button-row">
+      <button id="btn-refresh" class="btn btn-secondary">
+        Aggiorna Stato
+      </button>
+      <button id="btn-demo" class="btn btn-primary">
+        Attiva Demo
+      </button>
+    </div>
+    
     <div class="connection-info">
       <div class="info-row">
         <span class="label">Server WebSocket</span>
@@ -59,7 +73,7 @@
       </div>
       
       <div class="info-row">
-        <span class="label">Client Connessi</span>
+        <span class="label">Client Web Connessi</span>
         <span id="clients-count" class="value">0</span>
       </div>
     </div>
@@ -72,10 +86,12 @@
         <li>Apri l'applicazione Event4U nel browser</li>
         <li>Il sistema si collegherà automaticamente</li>
       </ol>
+      <p class="note">Per test senza hardware, usa "Attiva Demo"</p>
     </div>
     
     <div class="footer">
       <p>Mantieni questa applicazione aperta per emettere biglietti fiscali</p>
+      <p class="version">Versione 1.0.0</p>
     </div>
   </div>
   
