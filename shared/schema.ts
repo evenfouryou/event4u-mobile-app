@@ -26,16 +26,20 @@ export const sessions = pgTable(
 );
 
 // Users table - Required for Replit Auth + Extended for Event4U roles
+// Roles: super_admin, gestore, gestore_covisione, capo_staff, pr, warehouse, bartender, cliente
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   email: varchar("email").unique(),
+  phone: varchar("phone", { length: 20 }), // For PR OTP login
   passwordHash: varchar("password_hash"), // For classic email/password registration (optional - null for Replit Auth users)
   firstName: varchar("first_name"),
   lastName: varchar("last_name"),
   profileImageUrl: varchar("profile_image_url"),
-  role: varchar("role").notNull().default('gestore'), // super_admin, gestore, warehouse, bartender
+  role: varchar("role").notNull().default('gestore'), // super_admin, gestore, gestore_covisione, capo_staff, pr, warehouse, bartender, cliente
   companyId: varchar("company_id").references(() => companies.id),
+  parentUserId: varchar("parent_user_id"), // For PR: their Capo Staff; For Capo Staff: their Gestore
   emailVerified: boolean("email_verified").default(false), // Email verification status for classic registration
+  phoneVerified: boolean("phone_verified").default(false), // Phone verification for PR OTP login
   verificationToken: varchar("verification_token"), // Token for email verification link
   resetPasswordToken: varchar("reset_password_token"), // Token for password reset
   resetPasswordExpires: timestamp("reset_password_expires"), // Token expiration time
