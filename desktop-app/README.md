@@ -2,6 +2,18 @@
 
 Applicazione desktop per Windows che permette all'app web Event4U di comunicare con il lettore Smart Card MiniLector EVO V3 per l'emissione di biglietti fiscali SIAE.
 
+## Setup GitHub Actions (Importante!)
+
+Per abilitare il build automatico dell'installer, devi aggiungere manualmente il workflow:
+
+1. Vai al repository su GitHub
+2. Clicca "Add file" > "Create new file"
+3. Inserisci il percorso: `.github/workflows/build.yml`
+4. Incolla il contenuto del workflow (vedi sotto)
+5. Clicca "Commit new file"
+
+Il workflow si trova nella cartella `desktop-app/.github/workflows/build.yml` di questa repo.
+
 ## Download e Installazione
 
 1. Vai alla pagina [Releases](../../releases)
