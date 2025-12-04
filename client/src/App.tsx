@@ -45,6 +45,7 @@ import NightFilePage from "@/pages/night-file";
 import SiaeTables from "@/pages/siae-tables";
 import SiaeActivationCards from "@/pages/siae-activation-cards";
 import SiaeSystemConfig from "@/pages/siae-system-config";
+import SiaeCustomers from "@/pages/siae-customers";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -120,6 +121,7 @@ function Router() {
               <Route path="/siae/tables" component={SiaeTables} />
               <Route path="/siae/activation-cards" component={SiaeActivationCards} />
               <Route path="/siae/system-config" component={SiaeSystemConfig} />
+              <Route path="/siae/customers" component={SiaeCustomers} />
               <Route component={NotFound} />
             </Switch>
           </main>

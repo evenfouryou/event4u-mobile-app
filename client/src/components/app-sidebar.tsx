@@ -97,6 +97,12 @@ export function AppSidebar() {
         icon: Settings,
         url: "/siae/system-config",
         group: "Biglietteria SIAE",
+      },
+      {
+        title: "Clienti",
+        icon: Users,
+        url: "/siae/customers",
+        group: "Biglietteria SIAE",
       }
     );
   }
