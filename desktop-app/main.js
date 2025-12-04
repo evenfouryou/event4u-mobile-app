@@ -50,26 +50,62 @@ function isAllowedOrigin(origin) {
   return false;
 }
 
-// Rileva lettore smart card tramite PowerShell
+// Rileva lettore smart card tramite PowerShell (metodi multipli)
 function detectSmartCardReader() {
   return new Promise((resolve) => {
+    // Metodo 1: Get-PnpDevice
+    // Metodo 2: Get-CimInstance (fallback)
+    // Metodo 3: pnputil (fallback)
     const psScript = `
+      $found = $false
+      $readerName = ""
+      
+      # Metodo 1: Get-PnpDevice
       try {
-        $readers = Get-PnpDevice -Class SmartCardReader -ErrorAction SilentlyContinue | 
+        $reader = Get-PnpDevice -Class SmartCardReader -ErrorAction SilentlyContinue | 
           Where-Object { $_.Status -eq 'OK' } | 
-          Select-Object -First 1 -Property FriendlyName
-        if ($readers) {
-          Write-Output "FOUND:$($readers.FriendlyName)"
-        } else {
-          Write-Output "NOTFOUND"
+          Select-Object -First 1
+        if ($reader) {
+          $found = $true
+          $readerName = $reader.FriendlyName
         }
-      } catch {
+      } catch {}
+      
+      # Metodo 2: Get-CimInstance (WMI)
+      if (-not $found) {
+        try {
+          $reader = Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue | 
+            Where-Object { $_.PNPClass -eq 'SmartCardReader' -and $_.Status -eq 'OK' } | 
+            Select-Object -First 1
+          if ($reader) {
+            $found = $true
+            $readerName = $reader.Name
+          }
+        } catch {}
+      }
+      
+      # Metodo 3: Cerca BIT4ID o MiniLector in tutti i dispositivi USB
+      if (-not $found) {
+        try {
+          $reader = Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue | 
+            Where-Object { $_.Name -like '*MiniLector*' -or $_.Name -like '*BIT4ID*' -or $_.Name -like '*Smart Card*' } | 
+            Select-Object -First 1
+          if ($reader) {
+            $found = $true
+            $readerName = $reader.Name
+          }
+        } catch {}
+      }
+      
+      if ($found) {
+        Write-Output "FOUND:$readerName"
+      } else {
         Write-Output "NOTFOUND"
       }
     `;
     
-    exec(`powershell -NoProfile -NonInteractive -Command "${psScript.replace(/\n/g, ' ')}"`, 
-      { timeout: 8000 }, 
+    exec(`powershell -NoProfile -NonInteractive -Command "${psScript.replace(/\n/g, ' ').replace(/"/g, '\\"')}"`, 
+      { timeout: 15000 }, 
       (error, stdout, stderr) => {
         if (error) {
           resolve({ found: false, name: null, error: error.message });
