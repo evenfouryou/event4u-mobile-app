@@ -1,0 +1,64 @@
+name: Build and Release Smart Card Reader
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          
+      - name: Install production dependencies
+        run: npm ci --production
+        
+      - name: Create release package
+        run: |
+          mkdir release
+          copy server.js release\
+          copy package.json release\
+          copy install-and-run.bat release\
+          copy README.txt release\
+          copy node_modules release\node_modules\ /E /Y 2>nul || echo "No node_modules to copy"
+          
+      - name: Create ZIP
+        run: Compress-Archive -Path release\* -DestinationPath Event4U-SmartCard-Reader.zip
+        shell: powershell
+        
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Event4U-SmartCard-Reader
+          path: Event4U-SmartCard-Reader.zip
+          
+      - name: Create GitHub Release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: softprops/action-gh-release@v1
+        with:
+          files: Event4U-SmartCard-Reader.zip
+          name: Event4U Smart Card Reader ${{ github.ref_name }}
+          body: |
+            ## Event4U Smart Card Reader
+            
+            ### Installazione
+            1. Scarica `Event4U-SmartCard-Reader.zip`
+            2. Estrai in una cartella
+            3. Fai doppio click su `install-and-run.bat`
+            4. Lascia la finestra aperta mentre usi Event4U
+            
+            ### Requisiti
+            - Windows 10/11
+            - Node.js (installato automaticamente se mancante)
+            - Lettore MiniLector EVO V3 (opzionale per test)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -1,0 +1,17 @@
+{
+  "name": "event4u-smart-card-reader",
+  "version": "1.0.0",
+  "description": "Event4U - Server Smart Card SIAE per MiniLector EVO V3",
+  "main": "server.js",
+  "author": "Event4U",
+  "license": "MIT",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "ws": "^8.14.2"
+  },
+  "optionalDependencies": {
+    "pcsclite": "^1.0.1"
+  }
+}
