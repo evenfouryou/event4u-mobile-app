@@ -871,6 +871,703 @@ export const nightFilesRelations = relations(nightFiles, ({ one }) => ({
   }),
 }));
 
+// ==================== MODULO BIGLIETTERIA SIAE ====================
+
+// TAB.1 - Generi Evento (Event Types) - Decreto 23/07/2001
+export const siaeEventGenres = pgTable("siae_event_genres", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code", { length: 2 }).notNull().unique(), // 01-97
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  taxType: varchar("tax_type", { length: 1 }).notNull().default('S'), // S=spettacolo, I=intrattenimento
+  vatRate: decimal("vat_rate", { precision: 5, scale: 2 }), // Aliquota IVA
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// TAB.2 - Ordini di Posto (Sector Codes) - Decreto 23/07/2001
+export const siaeSectorCodes = pgTable("siae_sector_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code", { length: 2 }).notNull().unique(), // AA, AB, PT, etc.
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  sortOrder: integer("sort_order").default(0),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// TAB.3 - Tipi Titolo (Ticket Types) - Decreto 23/07/2001
+export const siaeTicketTypes = pgTable("siae_ticket_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code", { length: 3 }).notNull().unique(), // I, R1-R6, RX, O1-O6, OX, S, etc.
+  name: varchar("name", { length: 255 }).notNull(),
+  category: varchar("category", { length: 50 }).notNull(), // intero, ridotto, omaggio, servizio, prestazione, cessione
+  description: text("description"),
+  sortOrder: integer("sort_order").default(0),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// TAB.4 - Prestazioni Complementari (Complementary Services)
+export const siaeServiceCodes = pgTable("siae_service_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code", { length: 3 }).notNull().unique(), // GR, PR, CO, etc.
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// TAB.5 - Causali Annullamento (Cancellation Reasons) - Allegato B
+export const siaeCancellationReasons = pgTable("siae_cancellation_reasons", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  code: varchar("code", { length: 3 }).notNull().unique(), // 001-010
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  requiresReference: boolean("requires_reference").notNull().default(false), // Se richiede riferimento a titolo originale
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Carte di Attivazione SIAE (Activation Cards) - Decreto Art. 3-5
+export const siaeActivationCards = pgTable("siae_activation_cards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  cardCode: varchar("card_code", { length: 8 }).notNull().unique(), // Codice univoco carta 8 caratteri
+  systemCode: varchar("system_code", { length: 8 }).notNull(), // Codice sistema emissione associato
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  status: varchar("status", { length: 20 }).notNull().default('active'), // active, expired, revoked, maintenance
+  activationDate: timestamp("activation_date").notNull(),
+  expirationDate: timestamp("expiration_date"),
+  certificateExpiration: timestamp("certificate_expiration"), // X.509 certificate expiry
+  progressiveCounter: integer("progressive_counter").notNull().default(0), // Numeratore progressivo sigilli
+  lastSealDate: timestamp("last_seal_date"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const siaeActivationCardsRelations = relations(siaeActivationCards, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [siaeActivationCards.companyId],
+    references: [companies.id],
+  }),
+  fiscalSeals: many(siaeFiscalSeals),
+}));
+
+// Codici Canale Emissione (Emission Channel Codes - C1) - Allegato B 1.a
+export const siaeEmissionChannels = pgTable("siae_emission_channels", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  channelCode: varchar("channel_code", { length: 8 }).notNull().unique(), // 8 caratteri: 2 tipo + 6 univoco
+  channelType: varchar("channel_type", { length: 2 }).notNull(), // 01=PV, 02=SW, 03=CL, 04=CW, 05=AP
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  locationId: varchar("location_id").references(() => locations.id), // Per PV - associazione punto vendita
+  websiteUrl: varchar("website_url", { length: 500 }), // Per SW - URL sito web
+  status: varchar("status", { length: 20 }).notNull().default('active'), // active, inactive, suspended
+  activatedAt: timestamp("activated_at").defaultNow(),
+  deactivatedAt: timestamp("deactivated_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const siaeEmissionChannelsRelations = relations(siaeEmissionChannels, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [siaeEmissionChannels.companyId],
+    references: [companies.id],
+  }),
+  location: one(locations, {
+    fields: [siaeEmissionChannels.locationId],
+    references: [locations.id],
+  }),
+  tickets: many(siaeTickets),
+}));
+
+// Configurazione Sistema SIAE (per Gestore)
+export const siaeSystemConfig = pgTable("siae_system_config", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id).unique(),
+  systemCode: varchar("system_code", { length: 8 }), // Codice sistema emissione SIAE
+  taxId: varchar("tax_id", { length: 16 }), // Codice Fiscale Titolare (CFTitolare)
+  vatNumber: varchar("vat_number", { length: 11 }), // Partita IVA
+  pecEmail: varchar("pec_email", { length: 255 }), // PEC per comunicazioni SIAE
+  siaeEmail: varchar("siae_email", { length: 255 }), // Email assegnata da SIAE
+  // Configurazione CAPTCHA
+  captchaEnabled: boolean("captcha_enabled").notNull().default(true),
+  captchaMinChars: integer("captcha_min_chars").notNull().default(5),
+  captchaImageWidth: integer("captcha_image_width").notNull().default(400),
+  captchaImageHeight: integer("captcha_image_height").notNull().default(200),
+  captchaFonts: text("captcha_fonts").array().default(sql`ARRAY['Arial', 'Verdana']::text[]`),
+  captchaDistortion: varchar("captcha_distortion", { length: 20 }).default('medium'), // low, medium, high
+  captchaAudioEnabled: boolean("captcha_audio_enabled").notNull().default(true),
+  // Configurazione OTP
+  otpEnabled: boolean("otp_enabled").notNull().default(true),
+  otpDigits: integer("otp_digits").notNull().default(6),
+  otpTimeoutSeconds: integer("otp_timeout_seconds").notNull().default(300), // 5 minuti
+  otpMaxAttempts: integer("otp_max_attempts").notNull().default(3),
+  otpCooldownSeconds: integer("otp_cooldown_seconds").notNull().default(60),
+  otpProvider: varchar("otp_provider", { length: 50 }).default('twilio'), // twilio, nexmo, custom
+  otpVoiceEnabled: boolean("otp_voice_enabled").notNull().default(true),
+  // Configurazione SPID
+  spidEnabled: boolean("spid_enabled").notNull().default(false),
+  spidLevel: integer("spid_level").notNull().default(2), // 1, 2, 3
+  spidProviders: text("spid_providers").array().default(sql`ARRAY['poste', 'aruba']::text[]`),
+  // Limiti e Policy
+  maxTicketsPerEvent: integer("max_tickets_per_event").notNull().default(10), // Limite acquisto per utente
+  capacityThreshold: integer("capacity_threshold").notNull().default(5000), // Soglia per cambio nominativo
+  nominativeTicketsEnabled: boolean("nominative_tickets_enabled").notNull().default(true),
+  changeNameEnabled: boolean("change_name_enabled").notNull().default(true),
+  resaleEnabled: boolean("resale_enabled").notNull().default(true),
+  // Template biglietti
+  ticketTemplatePdf: text("ticket_template_pdf"),
+  ticketTemplatePrint: text("ticket_template_print"),
+  // Trasmissioni
+  autoTransmitDaily: boolean("auto_transmit_daily").notNull().default(false),
+  transmissionPecAddress: varchar("transmission_pec_address", { length: 255 }).default('misuratorifiscali@pec.agenziaentrate.it'),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const siaeSystemConfigRelations = relations(siaeSystemConfig, ({ one }) => ({
+  company: one(companies, {
+    fields: [siaeSystemConfig.companyId],
+    references: [companies.id],
+  }),
+}));
+
+// Clienti Biglietteria (Ticket Customers) - Allegato A 3.3
+export const siaeCustomers = pgTable("siae_customers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  uniqueCode: varchar("unique_code", { length: 50 }).notNull().unique(), // Codice univoco per log (NO dati anagrafici)
+  email: varchar("email", { length: 255 }).notNull().unique(),
+  phone: varchar("phone", { length: 20 }).notNull().unique(), // Con prefisso internazionale
+  passwordHash: varchar("password_hash", { length: 255 }),
+  firstName: varchar("first_name", { length: 100 }).notNull(),
+  lastName: varchar("last_name", { length: 100 }).notNull(),
+  birthDate: timestamp("birth_date"),
+  birthPlace: varchar("birth_place", { length: 255 }), // ISO 3166 conforme
+  // Stato verifica
+  phoneVerified: boolean("phone_verified").notNull().default(false),
+  emailVerified: boolean("email_verified").notNull().default(false),
+  registrationCompleted: boolean("registration_completed").notNull().default(false),
+  // SPID
+  spidCode: varchar("spid_code", { length: 100 }), // Se registrato via SPID
+  spidProvider: varchar("spid_provider", { length: 50 }),
+  // Metadati registrazione
+  registrationIp: varchar("registration_ip", { length: 45 }), // IPv4 o IPv6
+  registrationDate: timestamp("registration_date").defaultNow(),
+  authenticationType: varchar("authentication_type", { length: 10 }).notNull().default('OTP'), // SPID, OTP, BO
+  // Stato account
+  isActive: boolean("is_active").notNull().default(true),
+  blockedUntil: timestamp("blocked_until"),
+  blockReason: text("block_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const siaeCustomersRelations = relations(siaeCustomers, ({ many }) => ({
+  transactions: many(siaeTransactions),
+  tickets: many(siaeTickets),
+  otpAttempts: many(siaeOtpAttempts),
+}));
+
+// Tentativi OTP (OTP Attempts Log)
+export const siaeOtpAttempts = pgTable("siae_otp_attempts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  customerId: varchar("customer_id").references(() => siaeCustomers.id),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  otpCode: varchar("otp_code", { length: 10 }).notNull(), // Codice OTP generato
+  purpose: varchar("purpose", { length: 50 }).notNull(), // registration, login, phone_change
+  status: varchar("status", { length: 20 }).notNull().default('pending'), // pending, verified, expired, failed
+  attemptsCount: integer("attempts_count").notNull().default(0),
+  expiresAt: timestamp("expires_at").notNull(),
+  verifiedAt: timestamp("verified_at"),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const siaeOtpAttemptsRelations = relations(siaeOtpAttempts, ({ one }) => ({
+  customer: one(siaeCustomers, {
+    fields: [siaeOtpAttempts.customerId],
+    references: [siaeCustomers.id],
+  }),
+}));
+
+// Eventi Biglietteria (Ticketed Events)
+export const siaeTicketedEvents = pgTable("siae_ticketed_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id").notNull().references(() => events.id).unique(),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  // Dati SIAE
+  siaeEventCode: varchar("siae_event_code", { length: 50 }), // Codice evento SIAE
+  siaeLocationCode: varchar("siae_location_code", { length: 50 }), // Codice locale SIAE
+  genreCode: varchar("genre_code", { length: 2 }).notNull(), // TAB.1
+  taxType: varchar("tax_type", { length: 1 }).notNull().default('S'), // S=spettacolo, I=intrattenimento
+  ivaPreassolta: varchar("iva_preassolta", { length: 1 }).notNull().default('N'), // N, B, F
+  // Capienza e nominatività
+  totalCapacity: integer("total_capacity").notNull(),
+  requiresNominative: boolean("requires_nominative").notNull().default(true),
+  allowsChangeName: boolean("allows_change_name").notNull().default(false), // Solo se >5000
+  allowsResale: boolean("allows_resale").notNull().default(false), // Solo se >5000
+  // Date vendita
+  saleStartDate: timestamp("sale_start_date"),
+  saleEndDate: timestamp("sale_end_date"),
+  maxTicketsPerUser: integer("max_tickets_per_user").notNull().default(10),
+  // Stato
+  ticketingStatus: varchar("ticketing_status", { length: 20 }).notNull().default('draft'), // draft, active, suspended, closed
+  // Contatori
+  ticketsSold: integer("tickets_sold").notNull().default(0),
+  ticketsCancelled: integer("tickets_cancelled").notNull().default(0),
+  totalRevenue: decimal("total_revenue", { precision: 12, scale: 2 }).default('0'),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const siaeTicketedEventsRelations = relations(siaeTicketedEvents, ({ one, many }) => ({
+  event: one(events, {
+    fields: [siaeTicketedEvents.eventId],
+    references: [events.id],
+  }),
+  company: one(companies, {
+    fields: [siaeTicketedEvents.companyId],
+    references: [companies.id],
+  }),
+  sectors: many(siaeEventSectors),
+  tickets: many(siaeTickets),
+  transactions: many(siaeTransactions),
+}));
+
+// Settori Evento (Event Sectors) - con prezzi
+export const siaeEventSectors = pgTable("siae_event_sectors", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketedEventId: varchar("ticketed_event_id").notNull().references(() => siaeTicketedEvents.id),
+  sectorCode: varchar("sector_code", { length: 2 }).notNull(), // TAB.2
+  name: varchar("name", { length: 255 }).notNull(),
+  capacity: integer("capacity").notNull(),
+  availableSeats: integer("available_seats").notNull(),
+  isNumbered: boolean("is_numbered").notNull().default(false), // Posti numerati
+  // Prezzi per tipo titolo
+  priceIntero: decimal("price_intero", { precision: 10, scale: 2 }).notNull(), // Prezzo intero
+  priceRidotto: decimal("price_ridotto", { precision: 10, scale: 2 }),
+  priceOmaggio: decimal("price_omaggio", { precision: 10, scale: 2 }).default('0'),
+  prevendita: decimal("prevendita", { precision: 10, scale: 2 }).default('0'), // Diritto prevendita
+  ivaRate: decimal("iva_rate", { precision: 5, scale: 2 }).default('22'), // Aliquota IVA
+  sortOrder: integer("sort_order").default(0),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const siaeEventSectorsRelations = relations(siaeEventSectors, ({ one, many }) => ({
+  ticketedEvent: one(siaeTicketedEvents, {
+    fields: [siaeEventSectors.ticketedEventId],
+    references: [siaeTicketedEvents.id],
+  }),
+  tickets: many(siaeTickets),
+  seats: many(siaeSeats),
+}));
+
+// Posti Numerati (Numbered Seats)
+export const siaeSeats = pgTable("siae_seats", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  sectorId: varchar("sector_id").notNull().references(() => siaeEventSectors.id),
+  row: varchar("row", { length: 10 }),
+  seatNumber: varchar("seat_number", { length: 10 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default('available'), // available, reserved, sold, blocked
+  ticketId: varchar("ticket_id"), // No FK reference to avoid circular dependency - relationship is via siaeTickets.seatId
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const siaeSeatsRelations = relations(siaeSeats, ({ one }) => ({
+  sector: one(siaeEventSectors, {
+    fields: [siaeSeats.sectorId],
+    references: [siaeEventSectors.id],
+  }),
+}));
+
+// Sigilli Fiscali (Fiscal Seals) - Decreto Art. 4
+export const siaeFiscalSeals = pgTable("siae_fiscal_seals", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  cardId: varchar("card_id").notNull().references(() => siaeActivationCards.id),
+  sealCode: varchar("seal_code", { length: 16 }).notNull().unique(), // 16 caratteri alfanumerici
+  progressiveNumber: integer("progressive_number").notNull(), // Progressivo per carta
+  emissionDate: varchar("emission_date", { length: 4 }).notNull(), // MMGG
+  emissionTime: varchar("emission_time", { length: 4 }).notNull(), // HHMM
+  amount: varchar("amount", { length: 8 }).notNull(), // 8 caratteri importo
+  ticketId: varchar("ticket_id"), // No FK reference to avoid circular dependency - relationship is via siaeTickets.fiscalSealId
+  status: varchar("status", { length: 20 }).notNull().default('active'), // active, cancelled
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const siaeFiscalSealsRelations = relations(siaeFiscalSeals, ({ one }) => ({
+  card: one(siaeActivationCards, {
+    fields: [siaeFiscalSeals.cardId],
+    references: [siaeActivationCards.id],
+  }),
+}));
+
+// Biglietti (Tickets) - Allegato B
+export const siaeTickets = pgTable("siae_tickets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketedEventId: varchar("ticketed_event_id").notNull().references(() => siaeTicketedEvents.id),
+  sectorId: varchar("sector_id").notNull().references(() => siaeEventSectors.id),
+  transactionId: varchar("transaction_id"), // No FK to avoid circular dependency - siaeTransactions defined after this
+  customerId: varchar("customer_id").references(() => siaeCustomers.id),
+  // Sigillo Fiscale
+  fiscalSealId: varchar("fiscal_seal_id"), // No FK to avoid circular dependency - managed via application logic
+  fiscalSealCode: varchar("fiscal_seal_code", { length: 16 }), // Copia per query rapide
+  progressiveNumber: integer("progressive_number").notNull(), // Numero progressivo sistema
+  // Carta e Canale
+  cardCode: varchar("card_code", { length: 8 }), // Codice carta attivazione
+  emissionChannelCode: varchar("emission_channel_code", { length: 8 }), // Codice C1
+  // Date emissione
+  emissionDate: timestamp("emission_date").notNull().defaultNow(),
+  emissionDateStr: varchar("emission_date_str", { length: 8 }), // AAAAMMGG
+  emissionTimeStr: varchar("emission_time_str", { length: 4 }), // HHMM
+  // Tipo titolo
+  ticketTypeCode: varchar("ticket_type_code", { length: 3 }).notNull(), // TAB.3
+  sectorCode: varchar("sector_code", { length: 2 }).notNull(), // TAB.2
+  // Posto (se numerato)
+  seatId: varchar("seat_id").references(() => siaeSeats.id),
+  row: varchar("row", { length: 10 }),
+  seatNumber: varchar("seat_number", { length: 10 }),
+  // Prezzi
+  grossAmount: decimal("gross_amount", { precision: 10, scale: 2 }).notNull(), // Corrispettivo lordo con IVA
+  netAmount: decimal("net_amount", { precision: 10, scale: 2 }), // Importo netto
+  vatAmount: decimal("vat_amount", { precision: 10, scale: 2 }), // IVA
+  prevendita: decimal("prevendita", { precision: 10, scale: 2 }).default('0'),
+  prevenditaVat: decimal("prevendita_vat", { precision: 10, scale: 2 }),
+  // Nominatività
+  participantFirstName: varchar("participant_first_name", { length: 100 }),
+  participantLastName: varchar("participant_last_name", { length: 100 }),
+  // Stato
+  status: varchar("status", { length: 20 }).notNull().default('valid'), // valid, used, cancelled
+  usedAt: timestamp("used_at"), // Quando è stato usato per entrare
+  usedByScannerId: varchar("used_by_scanner_id"), // ID scanner che ha validato
+  // Annullamento
+  cancellationReasonCode: varchar("cancellation_reason_code", { length: 3 }), // TAB.5
+  cancellationDate: timestamp("cancellation_date"),
+  cancelledByUserId: varchar("cancelled_by_user_id").references(() => users.id),
+  // Riferimento annullamento (per cambio nominativo/rimessa)
+  originalTicketId: varchar("original_ticket_id"), // Se derivato da cambio/rimessa
+  replacedByTicketId: varchar("replaced_by_ticket_id"), // Se sostituito
+  // QR Code
+  qrCode: text("qr_code"),
+  pdfUrl: varchar("pdf_url", { length: 500 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const siaeTicketsRelations = relations(siaeTickets, ({ one }) => ({
+  ticketedEvent: one(siaeTicketedEvents, {
+    fields: [siaeTickets.ticketedEventId],
+    references: [siaeTicketedEvents.id],
+  }),
+  sector: one(siaeEventSectors, {
+    fields: [siaeTickets.sectorId],
+    references: [siaeEventSectors.id],
+  }),
+  customer: one(siaeCustomers, {
+    fields: [siaeTickets.customerId],
+    references: [siaeCustomers.id],
+  }),
+  cancelledByUser: one(users, {
+    fields: [siaeTickets.cancelledByUserId],
+    references: [users.id],
+  }),
+}));
+
+// Transazioni (Transactions) - Allegato B
+export const siaeTransactions = pgTable("siae_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  transactionCode: varchar("transaction_code", { length: 50 }).notNull().unique(), // Codice univoco transazione
+  ticketedEventId: varchar("ticketed_event_id").notNull().references(() => siaeTicketedEvents.id),
+  customerId: varchar("customer_id").notNull().references(() => siaeCustomers.id),
+  emissionChannelCode: varchar("emission_channel_code", { length: 8 }).notNull(), // Codice C1
+  // Dati acquirente per log
+  customerUniqueCode: varchar("customer_unique_code", { length: 50 }).notNull(), // Codice univoco (NO dati personali)
+  customerPhone: varchar("customer_phone", { length: 20 }), // Con prefisso 0039
+  customerEmail: varchar("customer_email", { length: 255 }),
+  // Metadati transazione
+  transactionIp: varchar("transaction_ip", { length: 45 }),
+  checkoutStartedAt: timestamp("checkout_started_at"),
+  paymentCompletedAt: timestamp("payment_completed_at"),
+  // Pagamento
+  paymentMethod: varchar("payment_method", { length: 50 }), // card, bank_transfer, cash, paypal
+  paymentReference: varchar("payment_reference", { length: 100 }), // CRO o riferimento
+  // Importi
+  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }).notNull(),
+  totalVat: decimal("total_vat", { precision: 10, scale: 2 }),
+  totalPrevendita: decimal("total_prevendita", { precision: 10, scale: 2 }),
+  ticketsCount: integer("tickets_count").notNull().default(0),
+  // Consegna
+  deliveryMethod: varchar("delivery_method", { length: 50 }), // email, download, courier, box_office
+  deliveryAddress: text("delivery_address"),
+  deliveredAt: timestamp("delivered_at"),
+  // Stato
+  status: varchar("status", { length: 20 }).notNull().default('pending'), // pending, completed, failed, refunded
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const siaeTransactionsRelations = relations(siaeTransactions, ({ one, many }) => ({
+  ticketedEvent: one(siaeTicketedEvents, {
+    fields: [siaeTransactions.ticketedEventId],
+    references: [siaeTicketedEvents.id],
+  }),
+  customer: one(siaeCustomers, {
+    fields: [siaeTransactions.customerId],
+    references: [siaeCustomers.id],
+  }),
+  tickets: many(siaeTickets),
+}));
+
+// Cambio Nominativo (Name Change) - Provvedimento 356768/2025 6.1-6.3
+export const siaeNameChanges = pgTable("siae_name_changes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  originalTicketId: varchar("original_ticket_id").notNull().references(() => siaeTickets.id),
+  newTicketId: varchar("new_ticket_id").references(() => siaeTickets.id),
+  requestedById: varchar("requested_by_id").notNull(), // Customer o User ID
+  requestedByType: varchar("requested_by_type", { length: 20 }).notNull(), // customer, operator
+  // Nuovo nominativo
+  newFirstName: varchar("new_first_name", { length: 100 }).notNull(),
+  newLastName: varchar("new_last_name", { length: 100 }).notNull(),
+  // Costi
+  fee: decimal("fee", { precision: 10, scale: 2 }).default('0'),
+  // Stato
+  status: varchar("status", { length: 20 }).notNull().default('pending'), // pending, completed, rejected
+  processedAt: timestamp("processed_at"),
+  processedByUserId: varchar("processed_by_user_id").references(() => users.id),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const siaeNameChangesRelations = relations(siaeNameChanges, ({ one }) => ({
+  originalTicket: one(siaeTickets, {
+    fields: [siaeNameChanges.originalTicketId],
+    references: [siaeTickets.id],
+  }),
+  processedByUser: one(users, {
+    fields: [siaeNameChanges.processedByUserId],
+    references: [users.id],
+  }),
+}));
+
+// Rimessa in Vendita (Resale) - Provvedimento 356768/2025 6.4
+export const siaeResales = pgTable("siae_resales", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  originalTicketId: varchar("original_ticket_id").notNull().references(() => siaeTickets.id),
+  newTicketId: varchar("new_ticket_id").references(() => siaeTickets.id),
+  sellerId: varchar("seller_id").notNull().references(() => siaeCustomers.id),
+  buyerId: varchar("buyer_id").references(() => siaeCustomers.id),
+  // Prezzi
+  originalPrice: decimal("original_price", { precision: 10, scale: 2 }).notNull(),
+  resalePrice: decimal("resale_price", { precision: 10, scale: 2 }).notNull(),
+  platformFee: decimal("platform_fee", { precision: 10, scale: 2 }).default('0'),
+  // Stato
+  status: varchar("status", { length: 20 }).notNull().default('listed'), // listed, sold, cancelled, expired
+  listedAt: timestamp("listed_at").defaultNow(),
+  soldAt: timestamp("sold_at"),
+  cancelledAt: timestamp("cancelled_at"),
+  expiresAt: timestamp("expires_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const siaeResalesRelations = relations(siaeResales, ({ one }) => ({
+  originalTicket: one(siaeTickets, {
+    fields: [siaeResales.originalTicketId],
+    references: [siaeTickets.id],
+  }),
+  seller: one(siaeCustomers, {
+    fields: [siaeResales.sellerId],
+    references: [siaeCustomers.id],
+  }),
+  buyer: one(siaeCustomers, {
+    fields: [siaeResales.buyerId],
+    references: [siaeCustomers.id],
+  }),
+}));
+
+// Log SIAE (Transaction Logs for XML) - Allegato B
+export const siaeLogs = pgTable("siae_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  ticketId: varchar("ticket_id").references(() => siaeTickets.id),
+  transactionId: varchar("transaction_id").references(() => siaeTransactions.id),
+  logType: varchar("log_type", { length: 20 }).notNull(), // emission, cancellation, change, resale
+  // Dati fiscali obbligatori
+  cfOrganizzatore: varchar("cf_organizzatore", { length: 16 }).notNull(),
+  cfTitolare: varchar("cf_titolare", { length: 16 }).notNull(),
+  sigilloFiscale: varchar("sigillo_fiscale", { length: 16 }),
+  codiceRichiedenteEmissione: varchar("codice_richiedente_emissione", { length: 8 }),
+  // Dati evento
+  codiceLocale: varchar("codice_locale", { length: 50 }),
+  tipoGenere: varchar("tipo_genere", { length: 2 }),
+  dataEvento: varchar("data_evento", { length: 8 }), // AAAAMMGG
+  oraEvento: varchar("ora_evento", { length: 4 }), // HHMM
+  // Dati biglietto
+  numeroProgressivo: integer("numero_progressivo"),
+  tipoTitolo: varchar("tipo_titolo", { length: 3 }),
+  codiceOrdine: varchar("codice_ordine", { length: 2 }),
+  corrispettivoLordo: decimal("corrispettivo_lordo", { precision: 10, scale: 2 }),
+  ivaCorrispettivo: decimal("iva_corrispettivo", { precision: 10, scale: 2 }),
+  // Nominatività
+  partecipanteNome: varchar("partecipante_nome", { length: 100 }),
+  partecipanteCognome: varchar("partecipante_cognome", { length: 100 }),
+  // Acquirente (solo codici, NO dati personali)
+  codiceUnivocoAcquirente: varchar("codice_univoco_acquirente", { length: 50 }),
+  autenticazione: varchar("autenticazione", { length: 10 }), // SPID, OTP, BO
+  // Annullamento
+  causaleAnnullamento: varchar("causale_annullamento", { length: 3 }),
+  originaleRiferimentoAnnullamento: integer("originale_riferimento_annullamento"),
+  cartaRiferimentoAnnullamento: varchar("carta_riferimento_annullamento", { length: 8 }),
+  // XML generato
+  xmlContent: text("xml_content"),
+  transmissionId: varchar("transmission_id").references(() => siaeTransmissions.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const siaeLogsRelations = relations(siaeLogs, ({ one }) => ({
+  company: one(companies, {
+    fields: [siaeLogs.companyId],
+    references: [companies.id],
+  }),
+  ticket: one(siaeTickets, {
+    fields: [siaeLogs.ticketId],
+    references: [siaeTickets.id],
+  }),
+  transaction: one(siaeTransactions, {
+    fields: [siaeLogs.transactionId],
+    references: [siaeTransactions.id],
+  }),
+  transmission: one(siaeTransmissions, {
+    fields: [siaeLogs.transmissionId],
+    references: [siaeTransmissions.id],
+  }),
+}));
+
+// Trasmissioni SIAE (SIAE Transmissions) - Decreto Art. 10-14
+export const siaeTransmissions = pgTable("siae_transmissions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  transmissionType: varchar("transmission_type", { length: 20 }).notNull(), // daily, monthly, corrective
+  periodDate: timestamp("period_date").notNull(), // Data periodo (giorno o mese)
+  // File
+  fileName: varchar("file_name", { length: 255 }), // Formato: AAAA>MM>GG>SSSSSSSS>MP>TT>V
+  fileExtension: varchar("file_extension", { length: 4 }).notNull().default('.XST'), // .XST o .XSI
+  fileContent: text("file_content"), // Contenuto XML
+  fileHash: varchar("file_hash", { length: 64 }), // SHA-256 hash
+  digitalSignature: text("digital_signature"), // Firma digitale
+  // Invio
+  status: varchar("status", { length: 20 }).notNull().default('pending'), // pending, sent, received, error
+  sentAt: timestamp("sent_at"),
+  sentToPec: varchar("sent_to_pec", { length: 255 }),
+  pecMessageId: varchar("pec_message_id", { length: 255 }),
+  // Risposta
+  receivedAt: timestamp("received_at"),
+  receiptContent: text("receipt_content"),
+  errorMessage: text("error_message"),
+  retryCount: integer("retry_count").notNull().default(0),
+  // Statistiche
+  ticketsCount: integer("tickets_count").notNull().default(0),
+  totalAmount: decimal("total_amount", { precision: 12, scale: 2 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const siaeTransmissionsRelations = relations(siaeTransmissions, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [siaeTransmissions.companyId],
+    references: [companies.id],
+  }),
+  logs: many(siaeLogs),
+}));
+
+// Box Office Sessions (Sessioni Cassa) - Per operatori PV
+export const siaeBoxOfficeSessions = pgTable("siae_box_office_sessions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  emissionChannelId: varchar("emission_channel_id").notNull().references(() => siaeEmissionChannels.id),
+  locationId: varchar("location_id").references(() => locations.id),
+  // Turno
+  openedAt: timestamp("opened_at").notNull().defaultNow(),
+  closedAt: timestamp("closed_at"),
+  // Incassi
+  cashTotal: decimal("cash_total", { precision: 10, scale: 2 }).default('0'),
+  cardTotal: decimal("card_total", { precision: 10, scale: 2 }).default('0'),
+  ticketsSold: integer("tickets_sold").notNull().default(0),
+  ticketsCancelled: integer("tickets_cancelled").notNull().default(0),
+  // Quadratura
+  expectedCash: decimal("expected_cash", { precision: 10, scale: 2 }),
+  actualCash: decimal("actual_cash", { precision: 10, scale: 2 }),
+  difference: decimal("difference", { precision: 10, scale: 2 }),
+  status: varchar("status", { length: 20 }).notNull().default('open'), // open, closed, reconciled
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const siaeBoxOfficeSessionsRelations = relations(siaeBoxOfficeSessions, ({ one }) => ({
+  user: one(users, {
+    fields: [siaeBoxOfficeSessions.userId],
+    references: [users.id],
+  }),
+  emissionChannel: one(siaeEmissionChannels, {
+    fields: [siaeBoxOfficeSessions.emissionChannelId],
+    references: [siaeEmissionChannels.id],
+  }),
+  location: one(locations, {
+    fields: [siaeBoxOfficeSessions.locationId],
+    references: [locations.id],
+  }),
+}));
+
+// Abbonamenti (Subscriptions) - Allegato B
+export const siaeSubscriptions = pgTable("siae_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  customerId: varchar("customer_id").notNull().references(() => siaeCustomers.id),
+  subscriptionCode: varchar("subscription_code", { length: 50 }).notNull().unique(),
+  progressiveNumber: integer("progressive_number").notNull(),
+  // Tipo abbonamento
+  turnType: varchar("turn_type", { length: 1 }).notNull().default('F'), // F=fisso, L=libero
+  eventsCount: integer("events_count").notNull(), // Quantità eventi abilitati
+  eventsUsed: integer("events_used").notNull().default(0),
+  // Validità
+  validFrom: timestamp("valid_from").notNull(),
+  validTo: timestamp("valid_to").notNull(),
+  // Prezzo
+  totalAmount: decimal("total_amount", { precision: 10, scale: 2 }).notNull(),
+  rateoPerEvent: decimal("rateo_per_event", { precision: 10, scale: 2 }),
+  rateoVat: decimal("rateo_vat", { precision: 10, scale: 2 }),
+  // Nominatività
+  holderFirstName: varchar("holder_first_name", { length: 100 }).notNull(),
+  holderLastName: varchar("holder_last_name", { length: 100 }).notNull(),
+  // Stato
+  status: varchar("status", { length: 20 }).notNull().default('active'), // active, expired, cancelled
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const siaeSubscriptionsRelations = relations(siaeSubscriptions, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [siaeSubscriptions.companyId],
+    references: [companies.id],
+  }),
+  customer: one(siaeCustomers, {
+    fields: [siaeSubscriptions.customerId],
+    references: [siaeCustomers.id],
+  }),
+}));
+
 // Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -1395,3 +2092,331 @@ export const updateNightFileSchema = insertNightFileSchema.partial();
 export type NightFile = typeof nightFiles.$inferSelect;
 export type InsertNightFile = z.infer<typeof insertNightFileSchema>;
 export type UpdateNightFile = z.infer<typeof updateNightFileSchema>;
+
+// ==================== MODULO BIGLIETTERIA SIAE - Schemas ====================
+
+// TAB.1 - Generi Evento
+export const insertSiaeEventGenreSchema = createInsertSchema(siaeEventGenres).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateSiaeEventGenreSchema = insertSiaeEventGenreSchema.partial();
+
+// TAB.2 - Ordini di Posto
+export const insertSiaeSectorCodeSchema = createInsertSchema(siaeSectorCodes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateSiaeSectorCodeSchema = insertSiaeSectorCodeSchema.partial();
+
+// TAB.3 - Tipi Titolo
+export const insertSiaeTicketTypeSchema = createInsertSchema(siaeTicketTypes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateSiaeTicketTypeSchema = insertSiaeTicketTypeSchema.partial();
+
+// TAB.4 - Prestazioni Complementari
+export const insertSiaeServiceCodeSchema = createInsertSchema(siaeServiceCodes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateSiaeServiceCodeSchema = insertSiaeServiceCodeSchema.partial();
+
+// TAB.5 - Causali Annullamento
+export const insertSiaeCancellationReasonSchema = createInsertSchema(siaeCancellationReasons).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateSiaeCancellationReasonSchema = insertSiaeCancellationReasonSchema.partial();
+
+// Carte di Attivazione
+export const insertSiaeActivationCardSchema = createInsertSchema(siaeActivationCards).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  activationDate: z.union([z.string(), z.date()]).transform(val => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+  expirationDate: z.union([z.string(), z.date(), z.null(), z.undefined()]).transform(val => 
+    val ? (typeof val === 'string' ? new Date(val) : val) : null
+  ).optional(),
+  certificateExpiration: z.union([z.string(), z.date(), z.null(), z.undefined()]).transform(val => 
+    val ? (typeof val === 'string' ? new Date(val) : val) : null
+  ).optional(),
+});
+export const updateSiaeActivationCardSchema = insertSiaeActivationCardSchema.partial().omit({ companyId: true });
+
+// Codici Canale Emissione
+export const insertSiaeEmissionChannelSchema = createInsertSchema(siaeEmissionChannels).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateSiaeEmissionChannelSchema = insertSiaeEmissionChannelSchema.partial().omit({ companyId: true });
+
+// Configurazione Sistema
+export const insertSiaeSystemConfigSchema = createInsertSchema(siaeSystemConfig).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateSiaeSystemConfigSchema = insertSiaeSystemConfigSchema.partial().omit({ companyId: true });
+
+// Clienti
+export const insertSiaeCustomerSchema = createInsertSchema(siaeCustomers).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  birthDate: z.union([z.string(), z.date(), z.null(), z.undefined()]).transform(val => 
+    val ? (typeof val === 'string' ? new Date(val) : val) : null
+  ).optional(),
+});
+export const updateSiaeCustomerSchema = insertSiaeCustomerSchema.partial();
+
+// OTP Attempts
+export const insertSiaeOtpAttemptSchema = createInsertSchema(siaeOtpAttempts).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  expiresAt: z.union([z.string(), z.date()]).transform(val => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+});
+
+// Eventi Biglietteria
+export const insertSiaeTicketedEventSchema = createInsertSchema(siaeTicketedEvents).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  saleStartDate: z.union([z.string(), z.date(), z.null(), z.undefined()]).transform(val => 
+    val ? (typeof val === 'string' ? new Date(val) : val) : null
+  ).optional(),
+  saleEndDate: z.union([z.string(), z.date(), z.null(), z.undefined()]).transform(val => 
+    val ? (typeof val === 'string' ? new Date(val) : val) : null
+  ).optional(),
+});
+export const updateSiaeTicketedEventSchema = insertSiaeTicketedEventSchema.partial().omit({ eventId: true, companyId: true });
+
+// Settori Evento
+export const insertSiaeEventSectorSchema = createInsertSchema(siaeEventSectors).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  priceIntero: z.union([z.string(), z.coerce.number()]).transform(val => typeof val === 'number' ? val.toString() : val),
+  priceRidotto: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
+});
+export const updateSiaeEventSectorSchema = insertSiaeEventSectorSchema.partial().omit({ ticketedEventId: true });
+
+// Posti Numerati
+export const insertSiaeSeatSchema = createInsertSchema(siaeSeats).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateSiaeSeatSchema = insertSiaeSeatSchema.partial().omit({ sectorId: true });
+
+// Sigilli Fiscali
+export const insertSiaeFiscalSealSchema = createInsertSchema(siaeFiscalSeals).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Biglietti
+export const insertSiaeTicketSchema = createInsertSchema(siaeTickets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  emissionDate: z.union([z.string(), z.date()]).transform(val => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+  grossAmount: z.union([z.string(), z.coerce.number()]).transform(val => typeof val === 'number' ? val.toString() : val),
+  netAmount: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
+  vatAmount: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
+});
+export const updateSiaeTicketSchema = insertSiaeTicketSchema.partial().omit({ ticketedEventId: true, sectorId: true });
+
+// Transazioni
+export const insertSiaeTransactionSchema = createInsertSchema(siaeTransactions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  totalAmount: z.union([z.string(), z.coerce.number()]).transform(val => typeof val === 'number' ? val.toString() : val),
+});
+export const updateSiaeTransactionSchema = insertSiaeTransactionSchema.partial().omit({ ticketedEventId: true, customerId: true });
+
+// Cambio Nominativo
+export const insertSiaeNameChangeSchema = createInsertSchema(siaeNameChanges).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateSiaeNameChangeSchema = insertSiaeNameChangeSchema.partial().omit({ originalTicketId: true });
+
+// Rimessa in Vendita
+export const insertSiaeResaleSchema = createInsertSchema(siaeResales).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  originalPrice: z.union([z.string(), z.coerce.number()]).transform(val => typeof val === 'number' ? val.toString() : val),
+  resalePrice: z.union([z.string(), z.coerce.number()]).transform(val => typeof val === 'number' ? val.toString() : val),
+});
+export const updateSiaeResaleSchema = insertSiaeResaleSchema.partial().omit({ originalTicketId: true, sellerId: true });
+
+// Log SIAE
+export const insertSiaeLogSchema = createInsertSchema(siaeLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Trasmissioni SIAE
+export const insertSiaeTransmissionSchema = createInsertSchema(siaeTransmissions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  periodDate: z.union([z.string(), z.date()]).transform(val => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+});
+export const updateSiaeTransmissionSchema = insertSiaeTransmissionSchema.partial().omit({ companyId: true });
+
+// Box Office Sessions
+export const insertSiaeBoxOfficeSessionSchema = createInsertSchema(siaeBoxOfficeSessions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateSiaeBoxOfficeSessionSchema = insertSiaeBoxOfficeSessionSchema.partial().omit({ userId: true, emissionChannelId: true });
+
+// Abbonamenti
+export const insertSiaeSubscriptionSchema = createInsertSchema(siaeSubscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  validFrom: z.union([z.string(), z.date()]).transform(val => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+  validTo: z.union([z.string(), z.date()]).transform(val => 
+    typeof val === 'string' ? new Date(val) : val
+  ),
+  totalAmount: z.union([z.string(), z.coerce.number()]).transform(val => typeof val === 'number' ? val.toString() : val),
+});
+export const updateSiaeSubscriptionSchema = insertSiaeSubscriptionSchema.partial().omit({ companyId: true, customerId: true });
+
+// ==================== MODULO BIGLIETTERIA SIAE - Types ====================
+
+// TAB.1-5
+export type SiaeEventGenre = typeof siaeEventGenres.$inferSelect;
+export type InsertSiaeEventGenre = z.infer<typeof insertSiaeEventGenreSchema>;
+export type UpdateSiaeEventGenre = z.infer<typeof updateSiaeEventGenreSchema>;
+
+export type SiaeSectorCode = typeof siaeSectorCodes.$inferSelect;
+export type InsertSiaeSectorCode = z.infer<typeof insertSiaeSectorCodeSchema>;
+export type UpdateSiaeSectorCode = z.infer<typeof updateSiaeSectorCodeSchema>;
+
+export type SiaeTicketType = typeof siaeTicketTypes.$inferSelect;
+export type InsertSiaeTicketType = z.infer<typeof insertSiaeTicketTypeSchema>;
+export type UpdateSiaeTicketType = z.infer<typeof updateSiaeTicketTypeSchema>;
+
+export type SiaeServiceCode = typeof siaeServiceCodes.$inferSelect;
+export type InsertSiaeServiceCode = z.infer<typeof insertSiaeServiceCodeSchema>;
+export type UpdateSiaeServiceCode = z.infer<typeof updateSiaeServiceCodeSchema>;
+
+export type SiaeCancellationReason = typeof siaeCancellationReasons.$inferSelect;
+export type InsertSiaeCancellationReason = z.infer<typeof insertSiaeCancellationReasonSchema>;
+export type UpdateSiaeCancellationReason = z.infer<typeof updateSiaeCancellationReasonSchema>;
+
+// Carte e Canali
+export type SiaeActivationCard = typeof siaeActivationCards.$inferSelect;
+export type InsertSiaeActivationCard = z.infer<typeof insertSiaeActivationCardSchema>;
+export type UpdateSiaeActivationCard = z.infer<typeof updateSiaeActivationCardSchema>;
+
+export type SiaeEmissionChannel = typeof siaeEmissionChannels.$inferSelect;
+export type InsertSiaeEmissionChannel = z.infer<typeof insertSiaeEmissionChannelSchema>;
+export type UpdateSiaeEmissionChannel = z.infer<typeof updateSiaeEmissionChannelSchema>;
+
+// Configurazione
+export type SiaeSystemConfig = typeof siaeSystemConfig.$inferSelect;
+export type InsertSiaeSystemConfig = z.infer<typeof insertSiaeSystemConfigSchema>;
+export type UpdateSiaeSystemConfig = z.infer<typeof updateSiaeSystemConfigSchema>;
+
+// Clienti
+export type SiaeCustomer = typeof siaeCustomers.$inferSelect;
+export type InsertSiaeCustomer = z.infer<typeof insertSiaeCustomerSchema>;
+export type UpdateSiaeCustomer = z.infer<typeof updateSiaeCustomerSchema>;
+
+export type SiaeOtpAttempt = typeof siaeOtpAttempts.$inferSelect;
+export type InsertSiaeOtpAttempt = z.infer<typeof insertSiaeOtpAttemptSchema>;
+
+// Eventi e Settori
+export type SiaeTicketedEvent = typeof siaeTicketedEvents.$inferSelect;
+export type InsertSiaeTicketedEvent = z.infer<typeof insertSiaeTicketedEventSchema>;
+export type UpdateSiaeTicketedEvent = z.infer<typeof updateSiaeTicketedEventSchema>;
+
+export type SiaeEventSector = typeof siaeEventSectors.$inferSelect;
+export type InsertSiaeEventSector = z.infer<typeof insertSiaeEventSectorSchema>;
+export type UpdateSiaeEventSector = z.infer<typeof updateSiaeEventSectorSchema>;
+
+export type SiaeSeat = typeof siaeSeats.$inferSelect;
+export type InsertSiaeSeat = z.infer<typeof insertSiaeSeatSchema>;
+export type UpdateSiaeSeat = z.infer<typeof updateSiaeSeatSchema>;
+
+// Sigilli e Biglietti
+export type SiaeFiscalSeal = typeof siaeFiscalSeals.$inferSelect;
+export type InsertSiaeFiscalSeal = z.infer<typeof insertSiaeFiscalSealSchema>;
+
+export type SiaeTicket = typeof siaeTickets.$inferSelect;
+export type InsertSiaeTicket = z.infer<typeof insertSiaeTicketSchema>;
+export type UpdateSiaeTicket = z.infer<typeof updateSiaeTicketSchema>;
+
+// Transazioni
+export type SiaeTransaction = typeof siaeTransactions.$inferSelect;
+export type InsertSiaeTransaction = z.infer<typeof insertSiaeTransactionSchema>;
+export type UpdateSiaeTransaction = z.infer<typeof updateSiaeTransactionSchema>;
+
+// Cambio Nominativo e Rimessa
+export type SiaeNameChange = typeof siaeNameChanges.$inferSelect;
+export type InsertSiaeNameChange = z.infer<typeof insertSiaeNameChangeSchema>;
+export type UpdateSiaeNameChange = z.infer<typeof updateSiaeNameChangeSchema>;
+
+export type SiaeResale = typeof siaeResales.$inferSelect;
+export type InsertSiaeResale = z.infer<typeof insertSiaeResaleSchema>;
+export type UpdateSiaeResale = z.infer<typeof updateSiaeResaleSchema>;
+
+// Log e Trasmissioni
+export type SiaeLog = typeof siaeLogs.$inferSelect;
+export type InsertSiaeLog = z.infer<typeof insertSiaeLogSchema>;
+
+export type SiaeTransmission = typeof siaeTransmissions.$inferSelect;
+export type InsertSiaeTransmission = z.infer<typeof insertSiaeTransmissionSchema>;
+export type UpdateSiaeTransmission = z.infer<typeof updateSiaeTransmissionSchema>;
+
+// Box Office
+export type SiaeBoxOfficeSession = typeof siaeBoxOfficeSessions.$inferSelect;
+export type InsertSiaeBoxOfficeSession = z.infer<typeof insertSiaeBoxOfficeSessionSchema>;
+export type UpdateSiaeBoxOfficeSession = z.infer<typeof updateSiaeBoxOfficeSessionSchema>;
+
+// Abbonamenti
+export type SiaeSubscription = typeof siaeSubscriptions.$inferSelect;
+export type InsertSiaeSubscription = z.infer<typeof insertSiaeSubscriptionSchema>;
+export type UpdateSiaeSubscription = z.infer<typeof updateSiaeSubscriptionSchema>;
