@@ -50,9 +50,9 @@ import {
 } from "lucide-react";
 import { 
   insertSiaeSystemConfigSchema, 
-  type Company, 
   type SiaeSystemConfig
 } from "@shared/schema";
+import { Building2 } from "lucide-react";
 
 const formSchema = insertSiaeSystemConfigSchema.extend({
   captchaMinChars: z.coerce.number().min(4).max(8),
@@ -70,7 +70,8 @@ const formSchema = insertSiaeSystemConfigSchema.extend({
 type FormData = z.infer<typeof formSchema>;
 
 const defaultFormValues: Partial<FormData> = {
-  companyId: "",
+  businessName: null,
+  businessAddress: null,
   systemCode: null,
   taxId: null,
   vatNumber: null,
@@ -106,17 +107,11 @@ const defaultFormValues: Partial<FormData> = {
 
 export default function SiaeSystemConfigPage() {
   const { toast } = useToast();
-  const [selectedCompany, setSelectedCompany] = useState<string>("");
 
-  const { data: companies = [], isLoading: companiesLoading } = useQuery<Company[]>({
-    queryKey: ["/api/companies"],
-  });
-
-  const configQueryKey = ["/api/siae/companies", selectedCompany, "config"] as const;
+  const configQueryKey = ["/api/siae/config"] as const;
 
   const { data: config, isLoading: configLoading, refetch: refetchConfig } = useQuery<SiaeSystemConfig | null>({
     queryKey: configQueryKey,
-    enabled: !!selectedCompany,
   });
 
   const form = useForm<FormData>({
@@ -127,7 +122,8 @@ export default function SiaeSystemConfigPage() {
   useEffect(() => {
     if (config) {
       form.reset({
-        companyId: config.companyId,
+        businessName: config.businessName,
+        businessAddress: config.businessAddress,
         systemCode: config.systemCode,
         taxId: config.taxId,
         vatNumber: config.vatNumber,
@@ -160,24 +156,20 @@ export default function SiaeSystemConfigPage() {
         autoTransmitDaily: config.autoTransmitDaily ?? false,
         transmissionPecAddress: config.transmissionPecAddress ?? "misuratorifiscali@pec.agenziaentrate.it",
       });
-    } else if (selectedCompany) {
-      form.reset({ ...defaultFormValues, companyId: selectedCompany });
+    } else {
+      form.reset(defaultFormValues);
     }
-  }, [config, selectedCompany, form]);
+  }, [config, form]);
 
   const saveMutation = useMutation({
     mutationFn: async (data: FormData) => {
-      const payload = {
-        ...data,
-        companyId: selectedCompany,
-      };
-      const response = await apiRequest("PUT", `/api/siae/companies/${selectedCompany}/config`, payload);
+      const response = await apiRequest("PUT", "/api/siae/config", data);
       return response.json();
     },
     onSuccess: () => {
       toast({
         title: "Configurazione salvata",
-        description: "Le impostazioni sono state aggiornate con successo",
+        description: "Le impostazioni del sistema SIAE sono state aggiornate",
       });
       queryClient.invalidateQueries({ queryKey: configQueryKey });
     },
@@ -190,19 +182,7 @@ export default function SiaeSystemConfigPage() {
     },
   });
 
-  const handleCompanyChange = (companyId: string) => {
-    setSelectedCompany(companyId);
-  };
-
   const onSubmit = (data: FormData) => {
-    if (!selectedCompany) {
-      toast({
-        title: "Errore",
-        description: "Seleziona un'azienda prima di salvare",
-        variant: "destructive",
-      });
-      return;
-    }
     saveMutation.mutate(data);
   };
 
@@ -217,56 +197,19 @@ export default function SiaeSystemConfigPage() {
         </p>
       </div>
 
-      <Card className="glass-card" data-testid="card-company-selector">
-        <CardHeader>
-          <CardTitle className="text-lg flex items-center gap-2">
-            <Settings className="w-5 h-5" />
-            Seleziona Azienda
-          </CardTitle>
-          <CardDescription>
-            Scegli l'azienda per configurare il sistema biglietteria
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex gap-4 items-end">
-            <div className="flex-1">
-              <Select value={selectedCompany} onValueChange={handleCompanyChange}>
-                <SelectTrigger data-testid="select-company">
-                  <SelectValue placeholder="Seleziona un'azienda" />
-                </SelectTrigger>
-                <SelectContent data-testid="select-company-content">
-                  {companies.map((company) => (
-                    <SelectItem 
-                      key={company.id} 
-                      value={company.id}
-                      data-testid={`select-company-option-${company.id}`}
-                    >
-                      {company.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-            {selectedCompany && (
-              <Button
-                variant="outline"
-                onClick={() => refetchConfig()}
-                disabled={configLoading}
-                data-testid="button-refresh-config"
-              >
-                <RefreshCw className={`w-4 h-4 mr-2 ${configLoading ? "animate-spin" : ""}`} />
-                Ricarica
-              </Button>
-            )}
-          </div>
-        </CardContent>
-      </Card>
-
-      {selectedCompany ? (
+      {configLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      ) : (
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} data-testid="form-system-config">
-            <Tabs defaultValue="captcha" className="w-full" data-testid="tabs-config">
-              <TabsList className="grid w-full grid-cols-4 mb-6" data-testid="tabs-list">
+            <Tabs defaultValue="azienda" className="w-full" data-testid="tabs-config">
+              <TabsList className="grid w-full grid-cols-5 mb-6" data-testid="tabs-list">
+                <TabsTrigger value="azienda" className="flex items-center gap-2" data-testid="tab-azienda">
+                  <Settings className="w-4 h-4" />
+                  <span className="hidden md:inline">Azienda</span>
+                </TabsTrigger>
                 <TabsTrigger value="captcha" className="flex items-center gap-2" data-testid="tab-captcha">
                   <Image className="w-4 h-4" />
                   <span className="hidden md:inline">CAPTCHA</span>
@@ -284,6 +227,182 @@ export default function SiaeSystemConfigPage() {
                   <span className="hidden md:inline">Sistema</span>
                 </TabsTrigger>
               </TabsList>
+
+              {/* Tab Azienda - Dati Fiscali Globali */}
+              <TabsContent value="azienda" data-testid="tabcontent-azienda">
+                <Card className="glass-card">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Settings className="w-5 h-5 text-primary" />
+                      Dati Azienda Titolare
+                    </CardTitle>
+                    <CardDescription>
+                      Informazioni del titolare del sistema di biglietteria SIAE
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="businessName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Ragione Sociale</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="Es: Event4U S.r.l."
+                                {...field}
+                                value={field.value || ""}
+                                data-testid="input-business-name"
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Nome legale dell'azienda titolare
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="systemCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Codice Sistema SIAE</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="Es: SYS00001"
+                                maxLength={8}
+                                {...field}
+                                value={field.value || ""}
+                                data-testid="input-system-code"
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Codice univoco assegnato da SIAE (8 caratteri)
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    
+                    <FormField
+                      control={form.control}
+                      name="businessAddress"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Indirizzo Sede Legale</FormLabel>
+                          <FormControl>
+                            <Input 
+                              placeholder="Es: Via Roma 123, 20100 Milano (MI)"
+                              {...field}
+                              value={field.value || ""}
+                              data-testid="input-business-address"
+                            />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    <Separator />
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="taxId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Codice Fiscale</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="Es: 12345678901"
+                                maxLength={16}
+                                {...field}
+                                value={field.value || ""}
+                                data-testid="input-tax-id"
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Codice Fiscale del titolare (CFTitolare)
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="vatNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Partita IVA</FormLabel>
+                            <FormControl>
+                              <Input 
+                                placeholder="Es: IT12345678901"
+                                maxLength={13}
+                                {...field}
+                                value={field.value || ""}
+                                data-testid="input-vat-number"
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+
+                    <Separator />
+
+                    <div className="grid gap-4 md:grid-cols-2">
+                      <FormField
+                        control={form.control}
+                        name="pecEmail"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email PEC</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="email"
+                                placeholder="azienda@pec.it"
+                                {...field}
+                                value={field.value || ""}
+                                data-testid="input-pec-email"
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              PEC per comunicazioni ufficiali SIAE
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="siaeEmail"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Email SIAE</FormLabel>
+                            <FormControl>
+                              <Input 
+                                type="email"
+                                placeholder="utente@siae.it"
+                                {...field}
+                                value={field.value || ""}
+                                data-testid="input-siae-email"
+                              />
+                            </FormControl>
+                            <FormDescription>
+                              Email registrata presso SIAE
+                            </FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
               <TabsContent value="captcha" data-testid="tabcontent-captcha">
                 <Card className="glass-card">
@@ -345,7 +464,7 @@ export default function SiaeSystemConfigPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Livello Distorsione</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value ?? undefined}>
                               <FormControl>
                                 <SelectTrigger data-testid="select-captcha-distortion">
                                   <SelectValue />
@@ -565,7 +684,7 @@ export default function SiaeSystemConfigPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel>Provider SMS</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
+                            <Select onValueChange={field.onChange} value={field.value ?? undefined}>
                               <FormControl>
                                 <SelectTrigger data-testid="select-otp-provider">
                                   <SelectValue />
@@ -929,7 +1048,7 @@ export default function SiaeSystemConfigPage() {
             <div className="flex justify-end mt-6">
               <Button
                 type="submit"
-                disabled={saveMutation.isPending || !selectedCompany}
+                disabled={saveMutation.isPending}
                 className="min-w-[200px]"
                 data-testid="button-save-config"
               >
@@ -948,15 +1067,6 @@ export default function SiaeSystemConfigPage() {
             </div>
           </form>
         </Form>
-      ) : (
-        <Card className="glass-card" data-testid="card-no-company">
-          <CardContent className="flex flex-col items-center justify-center py-12">
-            <Settings className="w-12 h-12 text-muted-foreground mb-4" />
-            <p className="text-muted-foreground text-center">
-              Seleziona un'azienda per visualizzare e modificare la configurazione
-            </p>
-          </CardContent>
-        </Card>
       )}
     </div>
   );

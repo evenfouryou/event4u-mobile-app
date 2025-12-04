@@ -998,10 +998,13 @@ export const siaeEmissionChannelsRelations = relations(siaeEmissionChannels, ({ 
   tickets: many(siaeTickets),
 }));
 
-// Configurazione Sistema SIAE (per Gestore)
+// Configurazione Sistema SIAE (Globale - una sola istanza)
 export const siaeSystemConfig = pgTable("siae_system_config", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  companyId: varchar("company_id").notNull().references(() => companies.id).unique(),
+  companyId: varchar("company_id").references(() => companies.id), // Opzionale - per compatibilità
+  // Dati Azienda Titolare Sistema Biglietteria
+  businessName: varchar("business_name", { length: 255 }), // Ragione Sociale
+  businessAddress: text("business_address"), // Indirizzo sede legale
   systemCode: varchar("system_code", { length: 8 }), // Codice sistema emissione SIAE
   taxId: varchar("tax_id", { length: 16 }), // Codice Fiscale Titolare (CFTitolare)
   vatNumber: varchar("vat_number", { length: 11 }), // Partita IVA

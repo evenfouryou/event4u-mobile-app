@@ -365,11 +365,32 @@ router.patch("/api/siae/emission-channels/:id", requireAuth, requireGestore, asy
   }
 });
 
-// ==================== System Configuration (Gestore) ====================
+// ==================== System Configuration (Globale - Gestore) ====================
 
+// Nuove route globali per configurazione unica
+router.get("/api/siae/config", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const config = await siaeStorage.getGlobalSiaeSystemConfig();
+    res.json(config || null);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.put("/api/siae/config", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const data = insertSiaeSystemConfigSchema.parse(req.body);
+    const config = await siaeStorage.upsertGlobalSiaeSystemConfig(data);
+    res.json(config);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// Route legacy per compatibilità (reindirizza alla config globale)
 router.get("/api/siae/companies/:companyId/config", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
-    const config = await siaeStorage.getSiaeSystemConfig(req.params.companyId);
+    const config = await siaeStorage.getGlobalSiaeSystemConfig();
     res.json(config || null);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -378,8 +399,8 @@ router.get("/api/siae/companies/:companyId/config", requireAuth, requireGestore,
 
 router.put("/api/siae/companies/:companyId/config", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
-    const data = insertSiaeSystemConfigSchema.parse({ ...req.body, companyId: req.params.companyId });
-    const config = await siaeStorage.upsertSiaeSystemConfig(data);
+    const data = insertSiaeSystemConfigSchema.parse(req.body);
+    const config = await siaeStorage.upsertGlobalSiaeSystemConfig(data);
     res.json(config);
   } catch (error: any) {
     res.status(400).json({ message: error.message });

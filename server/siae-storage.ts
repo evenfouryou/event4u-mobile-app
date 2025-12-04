@@ -125,6 +125,8 @@ export interface ISiaeStorage {
   
   getSiaeSystemConfig(companyId: string): Promise<SiaeSystemConfig | undefined>;
   upsertSiaeSystemConfig(config: InsertSiaeSystemConfig): Promise<SiaeSystemConfig>;
+  getGlobalSiaeSystemConfig(): Promise<SiaeSystemConfig | undefined>;
+  upsertGlobalSiaeSystemConfig(config: InsertSiaeSystemConfig): Promise<SiaeSystemConfig>;
   
   // ==================== Customers ====================
   
@@ -460,11 +462,30 @@ export class SiaeStorage implements ISiaeStorage {
   }
   
   async upsertSiaeSystemConfig(config: InsertSiaeSystemConfig): Promise<SiaeSystemConfig> {
-    const existing = await this.getSiaeSystemConfig(config.companyId);
+    const existing = await this.getSiaeSystemConfig(config.companyId!);
     if (existing) {
       const [updated] = await db.update(siaeSystemConfig)
         .set({ ...config, updatedAt: new Date() })
-        .where(eq(siaeSystemConfig.companyId, config.companyId))
+        .where(eq(siaeSystemConfig.companyId, config.companyId!))
+        .returning();
+      return updated;
+    }
+    const [created] = await db.insert(siaeSystemConfig).values(config).returning();
+    return created;
+  }
+
+  // Configurazione globale (prima riga della tabella, senza filtro companyId)
+  async getGlobalSiaeSystemConfig(): Promise<SiaeSystemConfig | undefined> {
+    const [config] = await db.select().from(siaeSystemConfig).limit(1);
+    return config;
+  }
+  
+  async upsertGlobalSiaeSystemConfig(config: InsertSiaeSystemConfig): Promise<SiaeSystemConfig> {
+    const existing = await this.getGlobalSiaeSystemConfig();
+    if (existing) {
+      const [updated] = await db.update(siaeSystemConfig)
+        .set({ ...config, updatedAt: new Date() })
+        .where(eq(siaeSystemConfig.id, existing.id))
         .returning();
       return updated;
     }
