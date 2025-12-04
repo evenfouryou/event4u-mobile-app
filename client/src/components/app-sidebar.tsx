@@ -109,6 +109,18 @@ export function AppSidebar() {
         icon: Ticket,
         url: "/siae/ticketed-events",
         group: "Biglietteria SIAE",
+      },
+      {
+        title: "Biglietti",
+        icon: Ticket,
+        url: "/siae/tickets",
+        group: "Biglietteria SIAE",
+      },
+      {
+        title: "Transazioni",
+        icon: Receipt,
+        url: "/siae/transactions",
+        group: "Biglietteria SIAE",
       }
     );
   }

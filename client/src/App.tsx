@@ -47,6 +47,8 @@ import SiaeActivationCards from "@/pages/siae-activation-cards";
 import SiaeSystemConfig from "@/pages/siae-system-config";
 import SiaeCustomers from "@/pages/siae-customers";
 import SiaeTicketedEvents from "@/pages/siae-ticketed-events";
+import SiaeTickets from "@/pages/siae-tickets";
+import SiaeTransactions from "@/pages/siae-transactions";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -124,6 +126,8 @@ function Router() {
               <Route path="/siae/system-config" component={SiaeSystemConfig} />
               <Route path="/siae/customers" component={SiaeCustomers} />
               <Route path="/siae/ticketed-events" component={SiaeTicketedEvents} />
+              <Route path="/siae/tickets" component={SiaeTickets} />
+              <Route path="/siae/transactions" component={SiaeTransactions} />
               <Route component={NotFound} />
             </Switch>
           </main>
