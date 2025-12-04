@@ -619,6 +619,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return user?.role === 'super_admin';
   };
 
+  const isGestore = async (req: any): Promise<boolean> => {
+    const userId = req.user.claims.sub;
+    const user = await storage.getUser(userId);
+    return user?.role === 'gestore';
+  };
+
   // ===== COMPANIES =====
   app.get('/api/companies', isAuthenticated, async (req: any, res) => {
     try {
