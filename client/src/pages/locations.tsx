@@ -24,7 +24,10 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Plus, MapPin, Edit, Users } from "lucide-react";
+import { Switch } from "@/components/ui/switch";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Plus, MapPin, Edit, Users, Clock, Globe, Image as ImageIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertLocationSchema, type Location, type InsertLocation } from "@shared/schema";
@@ -43,8 +46,13 @@ export default function Locations() {
     defaultValues: {
       name: '',
       address: '',
+      city: '',
       capacity: undefined,
       notes: '',
+      heroImageUrl: '',
+      shortDescription: '',
+      openingHours: '',
+      isPublic: false,
       companyId: '',
     },
   });
@@ -125,8 +133,13 @@ export default function Locations() {
     form.reset({
       name: location.name,
       address: location.address || '',
+      city: location.city || '',
       capacity: location.capacity || undefined,
       notes: location.notes || '',
+      heroImageUrl: location.heroImageUrl || '',
+      shortDescription: location.shortDescription || '',
+      openingHours: location.openingHours || '',
+      isPublic: location.isPublic || false,
       companyId: location.companyId,
     });
     setDialogOpen(true);
@@ -183,7 +196,21 @@ export default function Locations() {
                     <FormItem>
                       <FormLabel>Indirizzo</FormLabel>
                       <FormControl>
-                        <Textarea {...field} data-testid="input-location-address" />
+                        <Textarea {...field} value={field.value || ''} data-testid="input-location-address" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Città</FormLabel>
+                      <FormControl>
+                        <Input {...field} value={field.value || ''} placeholder="es. Milano, Roma" data-testid="input-location-city" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -219,6 +246,7 @@ export default function Locations() {
                       <FormControl>
                         <Textarea
                           {...field}
+                          value={field.value || ''}
                           placeholder="Tipo locale, impianti disponibili, ecc."
                           data-testid="input-location-notes"
                         />
@@ -227,6 +255,90 @@ export default function Locations() {
                     </FormItem>
                   )}
                 />
+
+                <div className="border-t pt-4 mt-4">
+                  <p className="text-sm font-medium mb-4 text-muted-foreground flex items-center gap-2">
+                    <Globe className="w-4 h-4" />
+                    Impostazioni Vetrina Pubblica
+                  </p>
+
+                  <FormField
+                    control={form.control}
+                    name="isPublic"
+                    render={({ field }) => (
+                      <FormItem className="flex items-center justify-between rounded-lg border p-3 mb-4">
+                        <div>
+                          <FormLabel className="font-medium">Mostra nella Vetrina</FormLabel>
+                          <p className="text-xs text-muted-foreground">Rendi visibile il locale nella pagina pubblica</p>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value}
+                            onCheckedChange={field.onChange}
+                            data-testid="switch-is-public"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="heroImageUrl"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>URL Immagine di Copertina</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            value={field.value || ''} 
+                            placeholder="https://esempio.com/immagine.jpg" 
+                            data-testid="input-hero-image" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="shortDescription"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Descrizione Breve</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            {...field} 
+                            value={field.value || ''} 
+                            placeholder="Una breve descrizione del locale per la vetrina pubblica"
+                            data-testid="input-short-description" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="openingHours"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Orari di Apertura</FormLabel>
+                        <FormControl>
+                          <Input 
+                            {...field} 
+                            value={field.value || ''} 
+                            placeholder="es. Ven-Sab 23:00-05:00"
+                            data-testid="input-opening-hours" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
 
                 <DialogFooter>
                   <Button
@@ -261,22 +373,35 @@ export default function Locations() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {locations.map((location) => (
             <Card key={location.id} data-testid={`location-card-${location.id}`}>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-lg flex items-center gap-2">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  {location.name}
-                </CardTitle>
-                <Button
-                  variant="ghost"
-                  size="icon"
-                  onClick={() => handleEdit(location)}
-                  data-testid={`button-edit-location-${location.id}`}
-                >
-                  <Edit className="h-4 w-4" />
-                </Button>
+              <CardHeader className="flex flex-row items-center justify-between space-y-0 gap-2 pb-2">
+                <div className="flex items-center gap-2 min-w-0">
+                  <MapPin className="h-5 w-5 text-primary flex-shrink-0" />
+                  <CardTitle className="text-lg truncate">{location.name}</CardTitle>
+                </div>
+                <div className="flex items-center gap-2 flex-shrink-0">
+                  {location.isPublic && (
+                    <Badge variant="outline" className="bg-teal-500/10 text-teal-600 border-teal-500/30">
+                      <Globe className="w-3 h-3 mr-1" />
+                      Pubblico
+                    </Badge>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => handleEdit(location)}
+                    data-testid={`button-edit-location-${location.id}`}
+                  >
+                    <Edit className="h-4 w-4" />
+                  </Button>
+                </div>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
+                  {location.city && (
+                    <Badge variant="secondary" className="mb-2">
+                      {location.city}
+                    </Badge>
+                  )}
                   {location.address && (
                     <div>
                       <p className="text-sm text-muted-foreground mb-1">Indirizzo</p>
@@ -289,6 +414,17 @@ export default function Locations() {
                       <span className="text-sm">
                         Capienza: <span className="font-medium">{location.capacity}</span> persone
                       </span>
+                    </div>
+                  )}
+                  {location.openingHours && (
+                    <div className="flex items-center gap-2">
+                      <Clock className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-sm">{location.openingHours}</span>
+                    </div>
+                  )}
+                  {location.shortDescription && (
+                    <div>
+                      <p className="text-sm text-muted-foreground line-clamp-2">{location.shortDescription}</p>
                     </div>
                   )}
                   {location.notes && (

@@ -93,6 +93,17 @@ export default function Landing() {
               size="sm"
               asChild
               className="border-primary/50 text-primary hover:bg-primary/10"
+              data-testid="button-venues"
+            >
+              <Link href="/locali">
+                Locali
+              </Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              asChild
+              className="border-primary/50 text-primary hover:bg-primary/10"
               data-testid="button-buy-tickets"
             >
               <Link href="/acquista">
