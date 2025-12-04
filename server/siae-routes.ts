@@ -773,6 +773,15 @@ router.patch("/api/siae/transactions/:id", requireAuth, async (req: Request, res
 
 // ==================== Name Changes (Customer / Organizer) ====================
 
+router.get("/api/siae/companies/:companyId/name-changes", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const changes = await siaeStorage.getSiaeNameChangesByCompany(req.params.companyId);
+    res.json(changes);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.get("/api/siae/tickets/:ticketId/name-changes", requireAuth, async (req: Request, res: Response) => {
   try {
     const changes = await siaeStorage.getSiaeNameChanges(req.params.ticketId);
@@ -806,6 +815,15 @@ router.patch("/api/siae/name-changes/:id", requireAuth, requireOrganizer, async 
 });
 
 // ==================== Resales (Customer) ====================
+
+router.get("/api/siae/companies/:companyId/resales", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const resales = await siaeStorage.getSiaeResalesByCompany(req.params.companyId);
+    res.json(resales);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
 
 router.get("/api/siae/resales/available", async (req: Request, res: Response) => {
   try {
@@ -899,6 +917,15 @@ router.patch("/api/siae/transmissions/:id", requireAuth, requireGestore, async (
 router.get("/api/siae/emission-channels/:channelId/sessions", requireAuth, async (req: Request, res: Response) => {
   try {
     const sessions = await siaeStorage.getSiaeBoxOfficeSessions(req.params.channelId);
+    res.json(sessions);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.get("/api/siae/box-office/sessions", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const sessions = await siaeStorage.getAllSiaeBoxOfficeSessions();
     res.json(sessions);
   } catch (error: any) {
     res.status(500).json({ message: error.message });

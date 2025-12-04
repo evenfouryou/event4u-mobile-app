@@ -21,6 +21,10 @@ import {
   CreditCard,
   Table2,
   Ticket,
+  UserCog,
+  RefreshCcw,
+  Store,
+  Send,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -120,6 +124,36 @@ export function AppSidebar() {
         title: "Transazioni",
         icon: Receipt,
         url: "/siae/transactions",
+        group: "Biglietteria SIAE",
+      },
+      {
+        title: "Cambio Nominativo",
+        icon: UserCog,
+        url: "/siae/name-changes",
+        group: "Biglietteria SIAE",
+      },
+      {
+        title: "Rivendite",
+        icon: RefreshCcw,
+        url: "/siae/resales",
+        group: "Biglietteria SIAE",
+      },
+      {
+        title: "Box Office",
+        icon: Store,
+        url: "/siae/box-office",
+        group: "Biglietteria SIAE",
+      },
+      {
+        title: "Abbonamenti",
+        icon: CreditCard,
+        url: "/siae/subscriptions",
+        group: "Biglietteria SIAE",
+      },
+      {
+        title: "Trasmissioni XML",
+        icon: Send,
+        url: "/siae/transmissions",
         group: "Biglietteria SIAE",
       }
     );

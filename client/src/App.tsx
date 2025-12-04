@@ -49,6 +49,11 @@ import SiaeCustomers from "@/pages/siae-customers";
 import SiaeTicketedEvents from "@/pages/siae-ticketed-events";
 import SiaeTickets from "@/pages/siae-tickets";
 import SiaeTransactions from "@/pages/siae-transactions";
+import SiaeNameChanges from "@/pages/siae-name-changes";
+import SiaeResales from "@/pages/siae-resales";
+import SiaeBoxOffice from "@/pages/siae-box-office";
+import SiaeSubscriptions from "@/pages/siae-subscriptions";
+import SiaeTransmissions from "@/pages/siae-transmissions";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -128,6 +133,11 @@ function Router() {
               <Route path="/siae/ticketed-events" component={SiaeTicketedEvents} />
               <Route path="/siae/tickets" component={SiaeTickets} />
               <Route path="/siae/transactions" component={SiaeTransactions} />
+              <Route path="/siae/name-changes" component={SiaeNameChanges} />
+              <Route path="/siae/resales" component={SiaeResales} />
+              <Route path="/siae/box-office" component={SiaeBoxOffice} />
+              <Route path="/siae/subscriptions" component={SiaeSubscriptions} />
+              <Route path="/siae/transmissions" component={SiaeTransmissions} />
               <Route component={NotFound} />
             </Switch>
           </main>

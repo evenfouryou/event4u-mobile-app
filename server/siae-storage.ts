@@ -194,6 +194,7 @@ export interface ISiaeStorage {
   // ==================== Name Changes ====================
   
   getSiaeNameChanges(ticketId: string): Promise<SiaeNameChange[]>;
+  getSiaeNameChangesByCompany(companyId: string): Promise<SiaeNameChange[]>;
   createSiaeNameChange(change: InsertSiaeNameChange): Promise<SiaeNameChange>;
   updateSiaeNameChange(id: string, change: Partial<SiaeNameChange>): Promise<SiaeNameChange | undefined>;
   
@@ -201,6 +202,7 @@ export interface ISiaeStorage {
   
   getSiaeResalesBySeller(sellerId: string): Promise<SiaeResale[]>;
   getSiaeResalesByTicket(ticketId: string): Promise<SiaeResale[]>;
+  getSiaeResalesByCompany(companyId: string): Promise<SiaeResale[]>;
   getAvailableSiaeResales(): Promise<SiaeResale[]>;
   getAvailableSiaeResalesByEvent(eventId: string): Promise<SiaeResale[]>;
   getSiaeResale(id: string): Promise<SiaeResale | undefined>;
@@ -223,6 +225,7 @@ export interface ISiaeStorage {
   // ==================== Box Office Sessions ====================
   
   getSiaeBoxOfficeSessions(channelId: string): Promise<SiaeBoxOfficeSession[]>;
+  getAllSiaeBoxOfficeSessions(): Promise<SiaeBoxOfficeSession[]>;
   getActiveSiaeBoxOfficeSession(userId: string): Promise<SiaeBoxOfficeSession | undefined>;
   getSiaeBoxOfficeSession(id: string): Promise<SiaeBoxOfficeSession | undefined>;
   createSiaeBoxOfficeSession(session: InsertSiaeBoxOfficeSession): Promise<SiaeBoxOfficeSession>;
@@ -811,6 +814,17 @@ export class SiaeStorage implements ISiaeStorage {
       .orderBy(desc(siaeNameChanges.createdAt));
   }
   
+  async getSiaeNameChangesByCompany(companyId: string): Promise<SiaeNameChange[]> {
+    return await db.select({ nameChange: siaeNameChanges })
+      .from(siaeNameChanges)
+      .innerJoin(siaeTickets, eq(siaeNameChanges.originalTicketId, siaeTickets.id))
+      .innerJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
+      .innerJoin(siaeTicketedEvents, eq(siaeEventSectors.ticketedEventId, siaeTicketedEvents.id))
+      .where(eq(siaeTicketedEvents.companyId, companyId))
+      .orderBy(desc(siaeNameChanges.createdAt))
+      .then(rows => rows.map(r => r.nameChange));
+  }
+  
   async createSiaeNameChange(change: InsertSiaeNameChange): Promise<SiaeNameChange> {
     const [created] = await db.insert(siaeNameChanges).values(change).returning();
     return created;
@@ -836,6 +850,17 @@ export class SiaeStorage implements ISiaeStorage {
     return await db.select().from(siaeResales)
       .where(eq(siaeResales.originalTicketId, ticketId))
       .orderBy(desc(siaeResales.createdAt));
+  }
+  
+  async getSiaeResalesByCompany(companyId: string): Promise<SiaeResale[]> {
+    return await db.select({ resale: siaeResales })
+      .from(siaeResales)
+      .innerJoin(siaeTickets, eq(siaeResales.originalTicketId, siaeTickets.id))
+      .innerJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
+      .innerJoin(siaeTicketedEvents, eq(siaeEventSectors.ticketedEventId, siaeTicketedEvents.id))
+      .where(eq(siaeTicketedEvents.companyId, companyId))
+      .orderBy(desc(siaeResales.createdAt))
+      .then(rows => rows.map(r => r.resale));
   }
   
   async getAvailableSiaeResales(): Promise<SiaeResale[]> {
@@ -925,6 +950,11 @@ export class SiaeStorage implements ISiaeStorage {
   async getSiaeBoxOfficeSessions(channelId: string): Promise<SiaeBoxOfficeSession[]> {
     return await db.select().from(siaeBoxOfficeSessions)
       .where(eq(siaeBoxOfficeSessions.emissionChannelId, channelId))
+      .orderBy(desc(siaeBoxOfficeSessions.openedAt));
+  }
+  
+  async getAllSiaeBoxOfficeSessions(): Promise<SiaeBoxOfficeSession[]> {
+    return await db.select().from(siaeBoxOfficeSessions)
       .orderBy(desc(siaeBoxOfficeSessions.openedAt));
   }
   
