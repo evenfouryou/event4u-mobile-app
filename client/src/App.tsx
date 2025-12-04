@@ -65,6 +65,8 @@ import PublicLogin from "@/pages/public-login";
 import PublicVenues from "@/pages/public-venues";
 import PublicVenueDetail from "@/pages/public-venue-detail";
 import PrGuestLists from "@/pages/pr-guest-lists";
+import PrTables from "@/pages/pr-tables";
+import PrScanner from "@/pages/pr-scanner";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -161,6 +163,8 @@ function Router() {
               <Route path="/siae/audit-logs" component={SiaeAuditLogs} />
               <Route path="/siae/numbered-seats" component={SiaeNumberedSeats} />
               <Route path="/pr/guest-lists" component={PrGuestLists} />
+              <Route path="/pr/tables" component={PrTables} />
+              <Route path="/pr/scanner" component={PrScanner} />
               <Route component={NotFound} />
             </Switch>
           </main>
