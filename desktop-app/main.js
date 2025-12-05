@@ -2,6 +2,7 @@ const { app, BrowserWindow, ipcMain } = require('electron');
 const path = require('path');
 const { spawn } = require('child_process');
 const fs = require('fs');
+const WebSocket = require('ws');
 
 // Setup logging
 const log = require('electron-log');
@@ -39,6 +40,20 @@ log.info('='.repeat(60));
 let mainWindow = null;
 let bridgeProcess = null;
 let bridgePath = null;
+let wsServer = null;
+let wsClients = new Set();
+
+// Current status for WebSocket clients
+let currentStatus = {
+  bridgeConnected: false,
+  readerConnected: false,
+  cardInserted: false,
+  readerName: null,
+  cardSerial: null,
+  cardAtr: null,
+  demoMode: false,
+  canEmitTickets: false
+};
 
 // Log buffer for live updates
 let logBuffer = [];
@@ -311,11 +326,223 @@ function sendBridgeCommand(command) {
   });
 }
 
+// ============================================
+// WebSocket Server for Replit communication
+// ============================================
+const WS_PORT = 18765;
+
+function startWebSocketServer() {
+  if (wsServer) {
+    log.info('WebSocket server already running');
+    return;
+  }
+
+  try {
+    wsServer = new WebSocket.Server({ port: WS_PORT });
+    log.info(`WebSocket server started on port ${WS_PORT}`);
+
+    wsServer.on('connection', (ws) => {
+      log.info('WebSocket client connected');
+      wsClients.add(ws);
+
+      // Send current status immediately
+      ws.send(JSON.stringify({ type: 'status', data: currentStatus }));
+
+      ws.on('message', async (message) => {
+        try {
+          const msg = JSON.parse(message.toString());
+          log.info('WS message received:', msg.type);
+          await handleWebSocketMessage(ws, msg);
+        } catch (e) {
+          log.error('WS message error:', e.message);
+        }
+      });
+
+      ws.on('close', () => {
+        log.info('WebSocket client disconnected');
+        wsClients.delete(ws);
+      });
+
+      ws.on('error', (err) => {
+        log.error('WebSocket error:', err.message);
+        wsClients.delete(ws);
+      });
+    });
+
+    wsServer.on('error', (err) => {
+      log.error('WebSocket server error:', err.message);
+    });
+
+  } catch (err) {
+    log.error('Failed to start WebSocket server:', err.message);
+  }
+}
+
+async function handleWebSocketMessage(ws, msg) {
+  const sendResponse = (type, data) => {
+    if (ws.readyState === WebSocket.OPEN) {
+      ws.send(JSON.stringify({ type, ...data }));
+    }
+  };
+
+  switch (msg.type) {
+    case 'ping':
+      sendResponse('pong', {});
+      break;
+
+    case 'get_status':
+      sendResponse('status', { data: currentStatus });
+      break;
+
+    case 'connect':
+      try {
+        await startBridge();
+        const result = await sendBridgeCommand('CHECK_READER');
+        updateStatus({
+          bridgeConnected: true,
+          readerConnected: result.readerConnected || false,
+          cardInserted: result.cardPresent || false,
+          readerName: result.readerName || 'BIT4ID miniLector EVO',
+          cardSerial: result.cardSerial || null
+        });
+        sendResponse('status', { data: currentStatus });
+      } catch (err) {
+        sendResponse('error', { error: err.message });
+      }
+      break;
+
+    case 'checkReader':
+      try {
+        const result = await sendBridgeCommand('CHECK_READER');
+        updateStatus({
+          readerConnected: result.readerConnected || false,
+          cardInserted: result.cardPresent || false,
+          readerName: result.readerName || null
+        });
+        sendResponse('status', { data: currentStatus });
+      } catch (err) {
+        sendResponse('error', { error: err.message });
+      }
+      break;
+
+    case 'readCard':
+      try {
+        const result = await sendBridgeCommand('READ_CARD');
+        if (result.success) {
+          updateStatus({
+            cardSerial: result.serialNumber,
+            cardInserted: true
+          });
+        }
+        sendResponse('cardData', { success: true, data: result });
+      } catch (err) {
+        sendResponse('error', { error: err.message });
+      }
+      break;
+
+    case 'requestSeal':
+      try {
+        const sealData = msg.data || {};
+        const price = sealData.price || 0;
+        const result = await sendBridgeCommand(`COMPUTE_SIGILLO:${JSON.stringify({ price })}`);
+        if (result.success && result.sigillo) {
+          sendResponse('sealResponse', {
+            success: true,
+            seal: {
+              sealCode: result.sigillo.mac,
+              sealNumber: `${result.sigillo.serialNumber}-${result.sigillo.counter}`,
+              serialNumber: result.sigillo.serialNumber,
+              counter: result.sigillo.counter,
+              mac: result.sigillo.mac,
+              dateTime: result.sigillo.dateTime
+            }
+          });
+        } else {
+          sendResponse('sealResponse', { success: false, error: result.error || 'Sigillo fallito' });
+        }
+      } catch (err) {
+        sendResponse('sealResponse', { success: false, error: err.message });
+      }
+      break;
+
+    case 'enableDemo':
+      updateStatus({ demoMode: true, cardInserted: true, readerConnected: true });
+      sendResponse('status', { data: currentStatus });
+      break;
+
+    case 'disableDemo':
+      updateStatus({ demoMode: false });
+      sendResponse('status', { data: currentStatus });
+      break;
+
+    default:
+      log.warn('Unknown WS message type:', msg.type);
+  }
+}
+
+function updateStatus(newData) {
+  currentStatus = { ...currentStatus, ...newData };
+  currentStatus.canEmitTickets = currentStatus.bridgeConnected && 
+                                  currentStatus.readerConnected && 
+                                  currentStatus.cardInserted;
+  
+  // Broadcast to all clients
+  broadcastStatus();
+  
+  // Update renderer
+  if (mainWindow && mainWindow.webContents) {
+    mainWindow.webContents.send('status:update', currentStatus);
+  }
+}
+
+function broadcastStatus() {
+  const message = JSON.stringify({ type: 'status', data: currentStatus });
+  wsClients.forEach(client => {
+    if (client.readyState === WebSocket.OPEN) {
+      try {
+        client.send(message);
+      } catch (e) {
+        log.error('Error broadcasting:', e.message);
+      }
+    }
+  });
+}
+
+// Periodic status check
+let statusInterval = null;
+function startStatusPolling() {
+  if (statusInterval) return;
+  
+  statusInterval = setInterval(async () => {
+    if (!bridgeProcess) return;
+    
+    try {
+      const result = await sendBridgeCommand('CHECK_READER');
+      updateStatus({
+        readerConnected: result.readerConnected || false,
+        cardInserted: result.cardPresent || false
+      });
+    } catch (e) {
+      // Ignore errors during polling
+    }
+  }, 3000);
+}
+
+function stopStatusPolling() {
+  if (statusInterval) {
+    clearInterval(statusInterval);
+    statusInterval = null;
+  }
+}
+
 // IPC Handlers
 ipcMain.handle('bridge:start', async () => {
   log.info('IPC: bridge:start');
   try {
-    return await startBridge();
+    const result = await startBridge();
+    updateStatus({ bridgeConnected: true });
+    startStatusPolling();
+    return result;
   } catch (err) {
     return { success: false, error: err.message };
   }
@@ -389,6 +616,7 @@ ipcMain.handle('app:getFullLogs', async () => {
 app.whenReady().then(() => {
   log.info('App ready');
   createWindow();
+  startWebSocketServer();
 
   app.on('activate', () => {
     if (BrowserWindow.getAllWindows().length === 0) {
@@ -399,7 +627,12 @@ app.whenReady().then(() => {
 
 app.on('window-all-closed', () => {
   log.info('All windows closed');
+  stopStatusPolling();
   stopBridge();
+  if (wsServer) {
+    wsServer.close();
+    wsServer = null;
+  }
   if (process.platform !== 'darwin') {
     app.quit();
   }
