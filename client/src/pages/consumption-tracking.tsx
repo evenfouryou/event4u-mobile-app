@@ -580,46 +580,51 @@ export default function ConsumptionTracking() {
                         return (
                           <div 
                             key={product.id} 
-                            className={`flex items-center gap-3 p-4 ${hasStock ? 'hover:bg-muted/50' : 'opacity-60'}`}
+                            className={`p-3 sm:p-4 ${hasStock ? 'hover:bg-muted/50' : 'opacity-60'}`}
                             data-testid={`load-row-${product.id}`}
                           >
-                            <div className="flex-1 min-w-0">
-                              <div className="font-medium truncate">{product.name}</div>
-                              <div className="text-xs text-muted-foreground">{product.code}</div>
-                            </div>
-                            
-                            <div className="text-right text-sm shrink-0">
-                              <div className="text-muted-foreground">Magazzino</div>
-                              <div className={`font-semibold ${hasStock ? 'text-green-600' : 'text-muted-foreground'}`}>
-                                {generalStock.toFixed(1)}
+                            <div className="flex items-start justify-between gap-2 mb-2 sm:mb-0 sm:items-center">
+                              <div className="flex-1 min-w-0">
+                                <div className="font-medium text-sm sm:text-base truncate">{product.name}</div>
+                                <div className="text-xs text-muted-foreground">{product.code}</div>
+                              </div>
+                              
+                              <div className="flex gap-3 sm:gap-4 text-right shrink-0">
+                                <div className="text-center">
+                                  <div className="text-[10px] sm:text-xs text-muted-foreground">Magaz.</div>
+                                  <div className={`text-sm sm:text-base font-bold ${hasStock ? 'text-green-600' : 'text-muted-foreground'}`}>
+                                    {generalStock.toFixed(1)}
+                                  </div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-[10px] sm:text-xs text-muted-foreground">Post.</div>
+                                  <div className="text-sm sm:text-base font-bold">{stationStock.toFixed(1)}</div>
+                                </div>
                               </div>
                             </div>
                             
-                            <div className="text-right text-sm shrink-0">
-                              <div className="text-muted-foreground">Postazione</div>
-                              <div className="font-semibold">{stationStock.toFixed(1)}</div>
-                            </div>
-                            
-                            <div className="flex items-center gap-2 shrink-0">
+                            <div className="flex items-center gap-2 mt-2">
                               <Input
                                 type="number"
                                 min="0"
                                 step="1"
-                                placeholder="Qtà"
+                                inputMode="numeric"
+                                placeholder="Quantità da caricare"
                                 value={loadQuantities[product.id] || ""}
                                 onChange={(e) => setLoadQuantities(prev => ({ ...prev, [product.id]: e.target.value }))}
-                                className="w-20 h-9 text-center"
+                                className="flex-1 h-11 text-center text-base"
                                 disabled={!hasStock}
                                 data-testid={`input-load-${product.id}`}
                               />
                               <Button
-                                size="sm"
                                 onClick={() => handleLoad(product.id)}
                                 disabled={loadMutation.isPending || !hasStock}
-                                className="bg-green-600 hover:bg-green-700 h-9"
+                                className="bg-green-600 hover:bg-green-700 h-11 px-4"
+                                aria-label={`Carica ${product.name}`}
                                 data-testid={`button-load-${product.id}`}
                               >
-                                <Plus className="h-4 w-4" />
+                                <Plus className="h-5 w-5 sm:mr-1" />
+                                <span className="hidden sm:inline">Carica</span>
                               </Button>
                             </div>
                           </div>
@@ -638,8 +643,8 @@ export default function ConsumptionTracking() {
                     <Package className="h-5 w-5 text-orange-500" />
                     Chiudi Prodotti
                   </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Inserisci la quantità <strong>rimasta</strong>: il consumato viene calcolato e il resto torna al magazzino
+                  <p className="text-xs sm:text-sm text-muted-foreground">
+                    Inserisci la quantità <strong>rimasta</strong>: il consumato viene calcolato automaticamente
                   </p>
                 </CardHeader>
                 <CardContent className="p-0">
@@ -663,57 +668,58 @@ export default function ConsumptionTracking() {
                           return (
                             <div 
                               key={product.id} 
-                              className="p-4 hover:bg-muted/50"
+                              className="p-3 sm:p-4 hover:bg-muted/50"
                               data-testid={`consume-row-${product.id}`}
                             >
-                              <div className="flex items-center gap-3 mb-3">
+                              <div className="flex items-start justify-between gap-2 mb-3">
                                 <div className="flex-1 min-w-0">
-                                  <div className="font-medium truncate">{product.name}</div>
+                                  <div className="font-medium text-sm sm:text-base truncate">{product.name}</div>
                                   <div className="text-xs text-muted-foreground">{product.code}</div>
                                 </div>
                                 
-                                <div className="text-center shrink-0">
-                                  <div className="text-xs text-muted-foreground">Caricato</div>
-                                  <div className={`text-xl font-bold ${isLowStock ? 'text-orange-500' : ''}`}>
+                                <div className="text-center shrink-0 bg-muted/50 rounded-lg px-3 py-1">
+                                  <div className="text-[10px] sm:text-xs text-muted-foreground">Caricato</div>
+                                  <div className={`text-lg sm:text-xl font-bold ${isLowStock ? 'text-orange-500' : ''}`}>
                                     {stockValue.toFixed(1)}
                                   </div>
                                 </div>
                               </div>
                               
-                              <div className="flex items-center gap-2">
-                                <div className="flex-1">
-                                  <Label className="text-xs text-muted-foreground mb-1 block">Rimasto</Label>
+                              <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-end">
+                                <div>
+                                  <Label className="text-xs text-muted-foreground mb-1 block">Quantità Rimasta</Label>
                                   <Input
                                     type="number"
                                     min="0"
                                     max={stockValue}
                                     step="1"
+                                    inputMode="numeric"
                                     placeholder="0"
                                     value={remainingQuantities[product.id] || ""}
                                     onChange={(e) => setRemainingQuantities(prev => ({ ...prev, [product.id]: e.target.value }))}
-                                    className="h-10 text-center text-lg"
+                                    className="h-12 text-center text-lg"
                                     data-testid={`input-remaining-${product.id}`}
                                   />
                                 </div>
                                 
                                 {!isNaN(remaining) && remaining >= 0 && (
-                                  <div className="text-center shrink-0 min-w-16">
-                                    <div className="text-xs text-muted-foreground">Consumato</div>
-                                    <div className="text-lg font-bold text-orange-500">
+                                  <div className="text-center bg-orange-500/10 rounded-lg px-3 py-2 h-12 flex flex-col justify-center">
+                                    <div className="text-[10px] text-muted-foreground leading-none">Consumato</div>
+                                    <div className="text-base font-bold text-orange-500 leading-none">
                                       {consumed.toFixed(1)}
                                     </div>
                                   </div>
                                 )}
                                 
                                 <Button
-                                  size="sm"
                                   variant="outline"
                                   onClick={() => handleConsumeAll(product.id)}
                                   disabled={consumeMutation.isPending}
-                                  className="h-10 text-xs shrink-0"
+                                  className="h-12 px-3 text-xs whitespace-nowrap"
                                   data-testid={`button-finish-${product.id}`}
                                 >
-                                  Finito tutto
+                                  <Check className="h-4 w-4 sm:mr-1" />
+                                  <span className="hidden sm:inline">Finito</span>
                                 </Button>
                               </div>
                             </div>
@@ -721,19 +727,19 @@ export default function ConsumptionTracking() {
                         })}
                       </div>
                       
-                      <div className="p-4 border-t bg-muted/30">
+                      <div className="p-3 sm:p-4 border-t bg-muted/30">
                         <Button
                           onClick={handleSubmitAllConsume}
                           disabled={isSubmittingAll || getFilledCount() === 0}
-                          className="w-full h-12 text-lg bg-green-600 hover:bg-green-700"
+                          className="w-full h-14 text-base sm:text-lg bg-green-600 hover:bg-green-700"
                           data-testid="button-submit-all-consume"
                         >
                           <Send className="h-5 w-5 mr-2" />
-                          {isSubmittingAll ? "Invio in corso..." : `Invia Tutto (${getFilledCount()} prodotti)`}
+                          {isSubmittingAll ? "Invio..." : `Invia Tutto (${getFilledCount()})`}
                         </Button>
                         {getFilledCount() > 0 && (
                           <p className="text-xs text-center text-muted-foreground mt-2">
-                            Compila la quantità rimasta per ogni prodotto, poi clicca per inviare tutto insieme
+                            Compila tutte le quantità rimaste, poi invia
                           </p>
                         )}
                       </div>
