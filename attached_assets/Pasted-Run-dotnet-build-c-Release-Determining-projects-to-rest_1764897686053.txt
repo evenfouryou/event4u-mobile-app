@@ -1,0 +1,17 @@
+Run dotnet build -c Release
+  
+  Determining projects to restore...
+  Restored D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\SiaeBridge\SiaeBridge.csproj (in 1.24 sec).
+Error: D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\SiaeBridge\Program.cs(353,32): error CS0656: Missing compiler required member 'Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfo.Create' [D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\SiaeBridge\SiaeBridge.csproj]
+Error: D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\SiaeBridge\Program.cs(403,9): error CS0656: Missing compiler required member 'Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfo.Create' [D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\SiaeBridge\SiaeBridge.csproj]
+Error: D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\SiaeBridge\Program.cs(434,9): error CS0656: Missing compiler required member 'Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfo.Create' [D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\SiaeBridge\SiaeBridge.csproj]
+Error: D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\SiaeBridge\Program.cs(492,9): error CS0656: Missing compiler required member 'Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfo.Create' [D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\SiaeBridge\SiaeBridge.csproj]
+Build FAILED.
+Error: D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\SiaeBridge\Program.cs(353,32): error CS0656: Missing compiler required member 'Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfo.Create' [D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\SiaeBridge\SiaeBridge.csproj]
+Error: D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\SiaeBridge\Program.cs(403,9): error CS0656: Missing compiler required member 'Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfo.Create' [D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\SiaeBridge\SiaeBridge.csproj]
+Error: D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\SiaeBridge\Program.cs(434,9): error CS0656: Missing compiler required member 'Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfo.Create' [D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\SiaeBridge\SiaeBridge.csproj]
+Error: D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\SiaeBridge\Program.cs(492,9): error CS0656: Missing compiler required member 'Microsoft.CSharp.RuntimeBinder.CSharpArgumentInfo.Create' [D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\SiaeBridge\SiaeBridge.csproj]
+    0 Warning(s)
+    4 Error(s)
+Time Elapsed 00:00:08.54
+Error: Process completed with exit code 1.
