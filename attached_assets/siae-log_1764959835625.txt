@@ -1,0 +1,299 @@
+[2025-12-05 19:35:45.672] [info]    [FILE] System.Private.CoreLib.dll (12536072 bytes)
+[2025-12-05 19:35:45.673] [info]    [FILE] System.Private.DataContractSerialization.dll (1927432 bytes)
+[2025-12-05 19:35:45.673] [info]    [FILE] System.Private.Uri.dll (248080 bytes)
+[2025-12-05 19:35:45.674] [info]    [FILE] System.Private.Xml.dll (7424264 bytes)
+[2025-12-05 19:35:45.674] [info]    [FILE] System.Private.Xml.Linq.dll (366856 bytes)
+[2025-12-05 19:35:45.675] [info]    [FILE] System.Reflection.DispatchProxy.dll (71944 bytes)
+[2025-12-05 19:35:45.676] [info]    [FILE] System.Reflection.dll (16648 bytes)
+[2025-12-05 19:35:45.676] [info]    [FILE] System.Reflection.Emit.dll (125232 bytes)
+[2025-12-05 19:35:45.677] [info]    [FILE] System.Reflection.Emit.ILGeneration.dll (16136 bytes)
+[2025-12-05 19:35:45.678] [info]    [FILE] System.Reflection.Emit.Lightweight.dll (16136 bytes)
+[2025-12-05 19:35:45.678] [info]    [FILE] System.Reflection.Extensions.dll (15624 bytes)
+[2025-12-05 19:35:45.679] [info]    [FILE] System.Reflection.Metadata.dll (1063184 bytes)
+[2025-12-05 19:35:45.680] [info]    [FILE] System.Reflection.Primitives.dll (16136 bytes)
+[2025-12-05 19:35:45.680] [info]    [FILE] System.Reflection.TypeExtensions.dll (43272 bytes)
+[2025-12-05 19:35:45.681] [info]    [FILE] System.Resources.Reader.dll (15672 bytes)
+[2025-12-05 19:35:45.681] [info]    [FILE] System.Resources.ResourceManager.dll (16136 bytes)
+[2025-12-05 19:35:45.682] [info]    [FILE] System.Resources.Writer.dll (51464 bytes)
+[2025-12-05 19:35:45.682] [info]    [FILE] System.Runtime.CompilerServices.Unsafe.dll (15664 bytes)
+[2025-12-05 19:35:45.683] [info]    [FILE] System.Runtime.CompilerServices.VisualC.dll (30992 bytes)
+[2025-12-05 19:35:45.684] [info]    [FILE] System.Runtime.dll (43792 bytes)
+[2025-12-05 19:35:45.684] [info]    [FILE] System.Runtime.Extensions.dll (18184 bytes)
+[2025-12-05 19:35:45.685] [info]    [FILE] System.Runtime.Handles.dll (15624 bytes)
+[2025-12-05 19:35:45.685] [info]    [FILE] System.Runtime.InteropServices.dll (88328 bytes)
+[2025-12-05 19:35:45.686] [info]    [FILE] System.Runtime.InteropServices.JavaScript.dll (51464 bytes)
+[2025-12-05 19:35:45.687] [info]    [FILE] System.Runtime.InteropServices.RuntimeInformation.dll (15624 bytes)
+[2025-12-05 19:35:45.687] [info]    [FILE] System.Runtime.Intrinsics.dll (17200 bytes)
+[2025-12-05 19:35:45.688] [info]    [FILE] System.Runtime.Loader.dll (16136 bytes)
+[2025-12-05 19:35:45.688] [info]    [FILE] System.Runtime.Numerics.dll (313648 bytes)
+[2025-12-05 19:35:45.689] [info]    [FILE] System.Runtime.Serialization.dll (17160 bytes)
+[2025-12-05 19:35:45.689] [info]    [FILE] System.Runtime.Serialization.Formatters.dll (293136 bytes)
+[2025-12-05 19:35:45.690] [info]    [FILE] System.Runtime.Serialization.Json.dll (16144 bytes)
+[2025-12-05 19:35:45.690] [info]    [FILE] System.Runtime.Serialization.Primitives.dll (39224 bytes)
+[2025-12-05 19:35:45.691] [info]    [FILE] System.Runtime.Serialization.Xml.dll (17200 bytes)
+[2025-12-05 19:35:45.692] [info]    [FILE] System.Security.AccessControl.dll (211208 bytes)
+[2025-12-05 19:35:45.692] [info]    [FILE] System.Security.Claims.dll (92472 bytes)
+[2025-12-05 19:35:45.692] [info]    [FILE] System.Security.Cryptography.Algorithms.dll (17712 bytes)
+[2025-12-05 19:35:45.693] [info]    [FILE] System.Security.Cryptography.Cng.dll (16648 bytes)
+[2025-12-05 19:35:45.694] [info]    [FILE] System.Security.Cryptography.Csp.dll (16144 bytes)
+[2025-12-05 19:35:45.694] [info]    [FILE] System.Security.Cryptography.dll (1792264 bytes)
+[2025-12-05 19:35:45.695] [info]    [FILE] System.Security.Cryptography.Encoding.dll (16136 bytes)
+[2025-12-05 19:35:45.695] [info]    [FILE] System.Security.Cryptography.OpenSsl.dll (15664 bytes)
+[2025-12-05 19:35:45.695] [info]    [FILE] System.Security.Cryptography.Primitives.dll (16136 bytes)
+[2025-12-05 19:35:45.696] [info]    [FILE] System.Security.Cryptography.X509Certificates.dll (17208 bytes)
+[2025-12-05 19:35:45.697] [info]    [FILE] System.Security.dll (18696 bytes)
+[2025-12-05 19:35:45.697] [info]    [FILE] System.Security.Principal.dll (15632 bytes)
+[2025-12-05 19:35:45.698] [info]    [FILE] System.Security.Principal.Windows.dll (166152 bytes)
+[2025-12-05 19:35:45.698] [info]    [FILE] System.Security.SecureString.dll (15624 bytes)
+[2025-12-05 19:35:45.699] [info]    [FILE] System.ServiceModel.Web.dll (17160 bytes)
+[2025-12-05 19:35:45.699] [info]    [FILE] System.ServiceProcess.dll (16136 bytes)
+[2025-12-05 19:35:45.700] [info]    [FILE] System.Text.Encoding.CodePages.dll (858416 bytes)
+[2025-12-05 19:35:45.700] [info]    [FILE] System.Text.Encoding.dll (16184 bytes)
+[2025-12-05 19:35:45.701] [info]    [FILE] System.Text.Encoding.Extensions.dll (16136 bytes)
+[2025-12-05 19:35:45.701] [info]    [FILE] System.Text.Encodings.Web.dll (125192 bytes)
+[2025-12-05 19:35:45.702] [info]    [FILE] System.Text.Json.dll (1386808 bytes)
+[2025-12-05 19:35:45.702] [info]    [FILE] System.Text.RegularExpressions.dll (960776 bytes)
+[2025-12-05 19:35:45.703] [info]    [FILE] System.Threading.Channels.dll (121096 bytes)
+[2025-12-05 19:35:45.703] [info]    [FILE] System.Threading.dll (80184 bytes)
+[2025-12-05 19:35:45.704] [info]    [FILE] System.Threading.Overlapped.dll (16136 bytes)
+[2025-12-05 19:35:45.704] [info]    [FILE] System.Threading.Tasks.Dataflow.dll (440584 bytes)
+[2025-12-05 19:35:45.705] [info]    [FILE] System.Threading.Tasks.dll (17168 bytes)
+[2025-12-05 19:35:45.705] [info]    [FILE] System.Threading.Tasks.Extensions.dll (16136 bytes)
+[2025-12-05 19:35:45.706] [info]    [FILE] System.Threading.Tasks.Parallel.dll (121096 bytes)
+[2025-12-05 19:35:45.706] [info]    [FILE] System.Threading.Thread.dll (16184 bytes)
+[2025-12-05 19:35:45.707] [info]    [FILE] System.Threading.ThreadPool.dll (16184 bytes)
+[2025-12-05 19:35:45.707] [info]    [FILE] System.Threading.Timer.dll (15664 bytes)
+[2025-12-05 19:35:45.708] [info]    [FILE] System.Transactions.dll (16648 bytes)
+[2025-12-05 19:35:45.708] [info]    [FILE] System.Transactions.Local.dll (596272 bytes)
+[2025-12-05 19:35:45.709] [info]    [FILE] System.ValueTuple.dll (15632 bytes)
+[2025-12-05 19:35:45.709] [info]    [FILE] System.Web.dll (15664 bytes)
+[2025-12-05 19:35:45.710] [info]    [FILE] System.Web.HttpUtility.dll (59704 bytes)
+[2025-12-05 19:35:45.711] [info]    [FILE] System.Windows.dll (16176 bytes)
+[2025-12-05 19:35:45.711] [info]    [FILE] System.Xml.dll (23856 bytes)
+[2025-12-05 19:35:45.712] [info]    [FILE] System.Xml.Linq.dll (16136 bytes)
+[2025-12-05 19:35:45.712] [info]    [FILE] System.Xml.ReaderWriter.dll (22328 bytes)
+[2025-12-05 19:35:45.713] [info]    [FILE] System.Xml.Serialization.dll (16696 bytes)
+[2025-12-05 19:35:45.713] [info]    [FILE] System.Xml.XDocument.dll (16136 bytes)
+[2025-12-05 19:35:45.713] [info]    [FILE] System.Xml.XmlDocument.dll (16184 bytes)
+[2025-12-05 19:35:45.714] [info]    [FILE] System.Xml.XmlSerializer.dll (18184 bytes)
+[2025-12-05 19:35:45.714] [info]    [FILE] System.Xml.XPath.dll (16176 bytes)
+[2025-12-05 19:35:45.715] [info]    [FILE] System.Xml.XPath.XDocument.dll (30992 bytes)
+[2025-12-05 19:35:45.715] [info]    [FILE] WindowsBase.dll (16648 bytes)
+[2025-12-05 19:35:45.715] [info]  --- End Directory Structure ---
+[2025-12-05 19:35:45.716] [info]  Searching for SiaeBridge.exe...
+[2025-12-05 19:35:45.716] [info]  Resource path: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources
+[2025-12-05 19:35:45.717] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge.exe
+[2025-12-05 19:35:45.717] [info]    ✓ FOUND: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge.exe
+[2025-12-05 19:35:45.718] [info]  ✓ libSIAE.dll found at C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\libSIAE.dll
+[2025-12-05 19:35:46.108] [info]  Window shown
+[2025-12-05 19:35:57.461] [info]  IPC: bridge:start
+[2025-12-05 19:35:57.462] [info]  Starting bridge: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge.exe
+[2025-12-05 19:35:58.000] [info]  [Bridge] READY
+[2025-12-05 19:35:58.001] [info]  Bridge READY
+[2025-12-05 19:35:58.016] [info]  IPC: checkReader
+[2025-12-05 19:35:58.016] [info]  >> Command: CHECK_READER
+[2025-12-05 19:35:58.482] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:35:58.483] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:01.017] [info]  IPC: checkReader
+[2025-12-05 19:36:01.019] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:01.055] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:01.055] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:04.019] [info]  IPC: checkReader
+[2025-12-05 19:36:04.021] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:04.052] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:04.053] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:07.020] [info]  IPC: checkReader
+[2025-12-05 19:36:07.021] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:07.054] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:07.054] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:10.029] [info]  IPC: checkReader
+[2025-12-05 19:36:10.031] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:10.065] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:10.065] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:13.022] [info]  IPC: checkReader
+[2025-12-05 19:36:13.024] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:13.075] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:13.076] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:16.019] [info]  IPC: checkReader
+[2025-12-05 19:36:16.022] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:16.074] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:16.074] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:19.028] [info]  IPC: checkReader
+[2025-12-05 19:36:19.030] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:19.072] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:19.073] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:20.591] [info]  IPC: checkReader
+[2025-12-05 19:36:20.593] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:20.669] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:20.670] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:22.017] [info]  IPC: checkReader
+[2025-12-05 19:36:22.019] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:22.060] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:22.060] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:25.137] [info]  IPC: checkReader
+[2025-12-05 19:36:25.139] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:25.189] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:25.190] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:28.132] [info]  IPC: checkReader
+[2025-12-05 19:36:28.133] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:28.176] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:28.177] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:31.039] [info]  IPC: checkReader
+[2025-12-05 19:36:31.040] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:31.069] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:31.070] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:34.020] [info]  IPC: checkReader
+[2025-12-05 19:36:34.023] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:34.074] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:34.074] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:37.031] [info]  IPC: checkReader
+[2025-12-05 19:36:37.031] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:37.063] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:37.063] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:40.138] [info]  IPC: checkReader
+[2025-12-05 19:36:40.142] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:40.196] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:40.197] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:43.143] [info]  IPC: checkReader
+[2025-12-05 19:36:43.146] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:43.208] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:43.209] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:46.027] [info]  IPC: checkReader
+[2025-12-05 19:36:46.029] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:46.071] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:46.071] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:49.033] [info]  IPC: checkReader
+[2025-12-05 19:36:49.035] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:49.094] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:49.094] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:52.023] [info]  IPC: checkReader
+[2025-12-05 19:36:52.025] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:52.091] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:52.092] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:55.024] [info]  IPC: checkReader
+[2025-12-05 19:36:55.024] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:55.086] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:55.087] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:36:58.022] [info]  IPC: checkReader
+[2025-12-05 19:36:58.024] [info]  >> Command: CHECK_READER
+[2025-12-05 19:36:58.072] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:36:58.072] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-05 19:37:01.024] [info]  IPC: checkReader
+[2025-12-05 19:37:01.026] [info]  >> Command: CHECK_READER
+[2025-12-05 19:37:01.070] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-05 19:37:01.070] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}

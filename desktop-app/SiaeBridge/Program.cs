@@ -9,56 +9,140 @@ namespace SiaeBridge
     class Program
     {
         // ============================================================
-        // IMPORT libSIAE.dll
+        // IMPORT libSIAE.dll - 32-bit ONLY!
         // ============================================================
         private const string DLL = "libSIAE.dll";
 
-        [DllImport(DLL)] static extern int isCardIn(int slot);
-        [DllImport(DLL)] static extern int Initialize(int slot);
-        [DllImport(DLL)] static extern int FinalizeML(int slot);
-        [DllImport(DLL)] static extern int BeginTransactionML(int slot);
-        [DllImport(DLL)] static extern int EndTransactionML(int slot);
-        [DllImport(DLL)] static extern int GetSNML(byte[] sn, int slot);
-        [DllImport(DLL)] static extern int ReadCounterML(ref uint val, int slot);
-        [DllImport(DLL)] static extern int ReadBalanceML(ref uint val, int slot);
-        [DllImport(DLL)] static extern byte GetKeyIDML(int slot);
-        [DllImport(DLL)] static extern int ComputeSigilloML(byte[] dt, uint price, byte[] sn, byte[] mac, ref uint cnt, int slot);
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        static extern int isCardIn(int slot);
+
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        static extern int Initialize(int slot);
+
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        static extern int FinalizeML(int slot);
+
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        static extern int BeginTransactionML(int slot);
+
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        static extern int EndTransactionML(int slot);
+
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        static extern int GetSNML(byte[] sn, int slot);
+
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        static extern int ReadCounterML(ref uint val, int slot);
+
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        static extern int ReadBalanceML(ref uint val, int slot);
+
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        static extern byte GetKeyIDML(int slot);
+
+        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        static extern int ComputeSigilloML(byte[] dt, uint price, byte[] sn, byte[] mac, ref uint cnt, int slot);
+
+        // Windows API per verificare se il lettore è realmente presente
+        [DllImport("winscard.dll", CharSet = CharSet.Unicode)]
+        static extern int SCardListReadersW(IntPtr hContext, string mszGroups, byte[] mszReaders, ref int pcchReaders);
+
+        [DllImport("winscard.dll")]
+        static extern int SCardEstablishContext(int dwScope, IntPtr pvReserved1, IntPtr pvReserved2, ref IntPtr phContext);
+
+        [DllImport("winscard.dll")]
+        static extern int SCardReleaseContext(IntPtr hContext);
 
         // ============================================================
         // STATE
         // ============================================================
         static int _slot = -1;
         static StreamWriter _log;
+        static bool _dllLoaded = false;
+        static string _dllError = null;
 
         // ============================================================
         // MAIN
         // ============================================================
         static void Main()
         {
-            try { _log = new StreamWriter(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bridge.log"), true) { AutoFlush = true }; } catch { }
-            
-            Log("=== SiaeBridge Started ===");
+            string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "bridge.log");
+            try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
+
+            Log("═══════════════════════════════════════════════════════");
+            Log("SiaeBridge v3.0 - DEBUG VERSION");
+            Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
-            Log($"DLL exists: {File.Exists(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "libSIAE.dll"))}");
-            
+            Log($"64-bit Process: {Environment.Is64BitProcess}");
+            Log($"64-bit OS: {Environment.Is64BitOperatingSystem}");
+            Log($"CLR: {Environment.Version}");
+
+            // Verifica DLL
+            string dllPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "libSIAE.dll");
+            if (File.Exists(dllPath))
+            {
+                var info = new FileInfo(dllPath);
+                Log($"✓ libSIAE.dll: {info.Length} bytes");
+                
+                // Prova a caricare la DLL
+                try
+                {
+                    IntPtr handle = LoadLibrary(dllPath);
+                    if (handle != IntPtr.Zero)
+                    {
+                        Log("✓ DLL loaded successfully");
+                        _dllLoaded = true;
+                        FreeLibrary(handle);
+                    }
+                    else
+                    {
+                        int err = Marshal.GetLastWin32Error();
+                        _dllError = $"LoadLibrary failed: error {err}";
+                        Log($"✗ {_dllError}");
+                        
+                        if (Environment.Is64BitProcess)
+                        {
+                            Log("✗ ERRORE: Processo a 64-bit! libSIAE.dll richiede 32-bit!");
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    _dllError = ex.Message;
+                    Log($"✗ DLL load error: {ex.Message}");
+                }
+            }
+            else
+            {
+                _dllError = "libSIAE.dll not found";
+                Log($"✗ {_dllError}");
+            }
+
             Console.WriteLine("READY");
-            
+            Log("Bridge READY");
+
             string line;
             while ((line = Console.ReadLine()) != null)
             {
                 line = line.Trim();
                 if (string.IsNullOrEmpty(line)) continue;
-                
-                Log($"CMD: {line}");
+
+                Log($">> {line}");
                 string response = Handle(line);
                 Console.WriteLine(response);
-                Log($"RSP: {response}");
+                Log($"<< {(response.Length > 300 ? response.Substring(0, 300) + "..." : response)}");
             }
         }
 
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        static extern IntPtr LoadLibrary(string lpFileName);
+
+        [DllImport("kernel32.dll")]
+        static extern bool FreeLibrary(IntPtr hModule);
+
         static void Log(string msg)
         {
-            try { _log?.WriteLine($"[{DateTime.Now:HH:mm:ss}] {msg}"); } catch { }
+            try { _log?.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] {msg}"); } catch { }
         }
 
         // ============================================================
@@ -73,31 +157,91 @@ namespace SiaeBridge
                 if (cmd == "CHECK_READER") return CheckReader();
                 if (cmd == "READ_CARD") return ReadCard();
                 if (cmd.StartsWith("COMPUTE_SIGILLO:")) return ComputeSigillo(cmd.Substring(16));
+                if (cmd == "DEBUG") return GetDebugInfo();
                 return ERR($"Comando sconosciuto: {cmd}");
             }
-            catch (DllNotFoundException) { return ERR("libSIAE.dll non trovata!"); }
-            catch (Exception ex) { return ERR(ex.Message); }
+            catch (DllNotFoundException ex)
+            {
+                Log($"DllNotFoundException: {ex.Message}");
+                return ERR("libSIAE.dll non trovata o incompatibile (32/64 bit?)");
+            }
+            catch (BadImageFormatException ex)
+            {
+                Log($"BadImageFormatException: {ex.Message}");
+                return ERR("libSIAE.dll incompatibile - processo 64-bit, DLL 32-bit!");
+            }
+            catch (Exception ex)
+            {
+                Log($"Exception: {ex.GetType().Name}: {ex.Message}");
+                return ERR(ex.Message);
+            }
         }
 
         static string OK(object data) => JsonConvert.SerializeObject(new { success = true, data });
         static string ERR(string msg) => JsonConvert.SerializeObject(new { success = false, error = msg });
 
+        static string GetDebugInfo()
+        {
+            return JsonConvert.SerializeObject(new
+            {
+                success = true,
+                is64BitProcess = Environment.Is64BitProcess,
+                dllLoaded = _dllLoaded,
+                dllError = _dllError,
+                clrVersion = Environment.Version.ToString()
+            });
+        }
+
         // ============================================================
-        // CHECK READER
+        // CHECK READER - CON VERIFICA REALE
         // ============================================================
         static string CheckReader()
         {
+            // Prima verifica se ci sono lettori smart card usando Windows API
+            bool hasReaders = CheckWindowsSmartCardReaders();
+            Log($"Windows SmartCard readers present: {hasReaders}");
+
+            if (!hasReaders)
+            {
+                return JsonConvert.SerializeObject(new
+                {
+                    success = true,
+                    readerConnected = false,
+                    cardPresent = false,
+                    message = "Nessun lettore smart card rilevato"
+                });
+            }
+
+            // Verifica architettura
+            if (Environment.Is64BitProcess)
+            {
+                return JsonConvert.SerializeObject(new
+                {
+                    success = false,
+                    readerConnected = hasReaders,
+                    cardPresent = false,
+                    error = "Errore: processo a 64-bit, libSIAE.dll richiede 32-bit!"
+                });
+            }
+
+            // Prova a usare libSIAE
             try
             {
                 for (int s = 0; s < 16; s++)
                 {
                     try
                     {
-                        if (isCardIn(s) == 1)
+                        Log($"  isCardIn({s})...");
+                        int result = isCardIn(s);
+                        Log($"  isCardIn({s}) = {result}");
+
+                        if (result == 1)
                         {
                             _slot = s;
+                            Log($"  Card found in slot {s}, initializing...");
                             int init = Initialize(s);
-                            Log($"Found card slot {s}, init={init}");
+                            Log($"  Initialize({s}) = {init}");
+
                             return JsonConvert.SerializeObject(new
                             {
                                 success = true,
@@ -108,9 +252,14 @@ namespace SiaeBridge
                             });
                         }
                     }
-                    catch { break; }
+                    catch (Exception ex)
+                    {
+                        Log($"  Slot {s} error: {ex.Message}");
+                        break;
+                    }
                 }
 
+                // Lettore presente ma nessuna carta
                 return JsonConvert.SerializeObject(new
                 {
                     success = true,
@@ -119,25 +268,61 @@ namespace SiaeBridge
                     message = "Inserire carta SIAE"
                 });
             }
+            catch (BadImageFormatException)
+            {
+                return JsonConvert.SerializeObject(new
+                {
+                    success = false,
+                    readerConnected = hasReaders,
+                    cardPresent = false,
+                    error = "DLL 32-bit incompatibile con processo 64-bit!"
+                });
+            }
             catch (DllNotFoundException)
             {
                 return JsonConvert.SerializeObject(new
                 {
                     success = false,
-                    readerConnected = false,
+                    readerConnected = hasReaders,
                     cardPresent = false,
                     error = "libSIAE.dll non trovata"
                 });
             }
+        }
+
+        static bool CheckWindowsSmartCardReaders()
+        {
+            try
+            {
+                IntPtr context = IntPtr.Zero;
+                int result = SCardEstablishContext(2, IntPtr.Zero, IntPtr.Zero, ref context); // SCARD_SCOPE_SYSTEM = 2
+                
+                if (result != 0)
+                {
+                    Log($"  SCardEstablishContext failed: {result}");
+                    return false;
+                }
+
+                int size = 0;
+                result = SCardListReadersW(context, null, null, ref size);
+                
+                bool hasReaders = (result == 0 && size > 0);
+                
+                if (hasReaders)
+                {
+                    byte[] readers = new byte[size * 2];
+                    result = SCardListReadersW(context, null, readers, ref size);
+                    string readerList = Encoding.Unicode.GetString(readers);
+                    Log($"  Readers: {readerList.Replace('\0', '|')}");
+                }
+
+                SCardReleaseContext(context);
+                return hasReaders;
+            }
             catch (Exception ex)
             {
-                return JsonConvert.SerializeObject(new
-                {
-                    success = false,
-                    readerConnected = false,
-                    cardPresent = false,
-                    error = ex.Message
-                });
+                Log($"  CheckWindowsSmartCardReaders error: {ex.Message}");
+                return false;
             }
         }
 
