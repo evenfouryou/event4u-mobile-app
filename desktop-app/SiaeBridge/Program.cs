@@ -9,41 +9,56 @@ namespace SiaeBridge
     class Program
     {
         // ============================================================
-        // IMPORT libSIAE.dll - 32-bit ONLY!
+        // SCARD_STATE flags from Windows Smart Card API
+        // ============================================================
+        const int SCARD_STATE_UNAWARE = 0x0000;
+        const int SCARD_STATE_IGNORE = 0x0001;
+        const int SCARD_STATE_CHANGED = 0x0002;
+        const int SCARD_STATE_UNKNOWN = 0x0004;
+        const int SCARD_STATE_UNAVAILABLE = 0x0008;
+        const int SCARD_STATE_EMPTY = 0x0010;      // 16 - no card
+        const int SCARD_STATE_PRESENT = 0x0020;    // 32 - card present!
+        const int SCARD_STATE_ATRMATCH = 0x0040;
+        const int SCARD_STATE_EXCLUSIVE = 0x0080;
+        const int SCARD_STATE_INUSE = 0x0100;
+        const int SCARD_STATE_MUTE = 0x0200;
+
+        // ============================================================
+        // IMPORT libSIAE.dll - StdCall calling convention (confirmed)
         // ============================================================
         private const string DLL = "libSIAE.dll";
 
-        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(DLL, CallingConvention = CallingConvention.StdCall)]
         static extern int isCardIn(int slot);
 
-        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(DLL, CallingConvention = CallingConvention.StdCall)]
         static extern int Initialize(int slot);
 
-        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(DLL, CallingConvention = CallingConvention.StdCall)]
         static extern int FinalizeML(int slot);
 
-        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(DLL, CallingConvention = CallingConvention.StdCall)]
         static extern int BeginTransactionML(int slot);
 
-        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(DLL, CallingConvention = CallingConvention.StdCall)]
         static extern int EndTransactionML(int slot);
 
-        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(DLL, CallingConvention = CallingConvention.StdCall)]
         static extern int GetSNML(byte[] sn, int slot);
 
-        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(DLL, CallingConvention = CallingConvention.StdCall)]
         static extern int ReadCounterML(ref uint val, int slot);
 
-        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(DLL, CallingConvention = CallingConvention.StdCall)]
         static extern int ReadBalanceML(ref uint val, int slot);
 
-        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(DLL, CallingConvention = CallingConvention.StdCall)]
         static extern byte GetKeyIDML(int slot);
 
-        [DllImport(DLL, CallingConvention = CallingConvention.Cdecl)]
+        [DllImport(DLL, CallingConvention = CallingConvention.StdCall)]
         static extern int ComputeSigilloML(byte[] dt, uint price, byte[] sn, byte[] mac, ref uint cnt, int slot);
 
-        // Windows API per verificare se il lettore è realmente presente
+        // Windows API
         [DllImport("winscard.dll", CharSet = CharSet.Unicode)]
         static extern int SCardListReadersW(IntPtr hContext, string mszGroups, byte[] mszReaders, ref int pcchReaders);
 
@@ -58,8 +73,6 @@ namespace SiaeBridge
         // ============================================================
         static int _slot = -1;
         static StreamWriter _log;
-        static bool _dllLoaded = false;
-        static string _dllError = null;
 
         // ============================================================
         // MAIN
@@ -70,52 +83,19 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.0 - DEBUG VERSION");
+            Log("SiaeBridge v3.2 - SCARD_STATE bitmask fix");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
-            Log($"64-bit Process: {Environment.Is64BitProcess}");
-            Log($"64-bit OS: {Environment.Is64BitOperatingSystem}");
-            Log($"CLR: {Environment.Version}");
+            Log($"32-bit Process: {!Environment.Is64BitProcess}");
 
-            // Verifica DLL
             string dllPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "libSIAE.dll");
             if (File.Exists(dllPath))
             {
-                var info = new FileInfo(dllPath);
-                Log($"✓ libSIAE.dll: {info.Length} bytes");
-                
-                // Prova a caricare la DLL
-                try
-                {
-                    IntPtr handle = LoadLibrary(dllPath);
-                    if (handle != IntPtr.Zero)
-                    {
-                        Log("✓ DLL loaded successfully");
-                        _dllLoaded = true;
-                        FreeLibrary(handle);
-                    }
-                    else
-                    {
-                        int err = Marshal.GetLastWin32Error();
-                        _dllError = $"LoadLibrary failed: error {err}";
-                        Log($"✗ {_dllError}");
-                        
-                        if (Environment.Is64BitProcess)
-                        {
-                            Log("✗ ERRORE: Processo a 64-bit! libSIAE.dll richiede 32-bit!");
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    _dllError = ex.Message;
-                    Log($"✗ DLL load error: {ex.Message}");
-                }
+                Log($"✓ libSIAE.dll: {new FileInfo(dllPath).Length} bytes");
             }
             else
             {
-                _dllError = "libSIAE.dll not found";
-                Log($"✗ {_dllError}");
+                Log("✗ libSIAE.dll NOT FOUND!");
             }
 
             Console.WriteLine("READY");
@@ -134,15 +114,38 @@ namespace SiaeBridge
             }
         }
 
-        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
-        static extern IntPtr LoadLibrary(string lpFileName);
-
-        [DllImport("kernel32.dll")]
-        static extern bool FreeLibrary(IntPtr hModule);
-
         static void Log(string msg)
         {
             try { _log?.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] {msg}"); } catch { }
+        }
+
+        // ============================================================
+        // Check if card is present using SCARD_STATE bitmask
+        // ============================================================
+        static bool IsCardPresent(int state)
+        {
+            // isCardIn returns SCARD_STATE bitmask:
+            // - 0 means no readers or error
+            // - 16 (0x10) = SCARD_STATE_EMPTY = no card
+            // - 32 (0x20) = SCARD_STATE_PRESENT = card present!
+            // - Can be combined: 34 = PRESENT | CHANGED
+            return (state & SCARD_STATE_PRESENT) != 0;
+        }
+
+        static string DecodeCardState(int state)
+        {
+            if (state == 0) return "NO_READER";
+            var flags = new System.Collections.Generic.List<string>();
+            if ((state & SCARD_STATE_CHANGED) != 0) flags.Add("CHANGED");
+            if ((state & SCARD_STATE_UNKNOWN) != 0) flags.Add("UNKNOWN");
+            if ((state & SCARD_STATE_UNAVAILABLE) != 0) flags.Add("UNAVAILABLE");
+            if ((state & SCARD_STATE_EMPTY) != 0) flags.Add("EMPTY");
+            if ((state & SCARD_STATE_PRESENT) != 0) flags.Add("PRESENT");
+            if ((state & SCARD_STATE_ATRMATCH) != 0) flags.Add("ATRMATCH");
+            if ((state & SCARD_STATE_EXCLUSIVE) != 0) flags.Add("EXCLUSIVE");
+            if ((state & SCARD_STATE_INUSE) != 0) flags.Add("INUSE");
+            if ((state & SCARD_STATE_MUTE) != 0) flags.Add("MUTE");
+            return flags.Count > 0 ? string.Join("|", flags) : $"0x{state:X2}";
         }
 
         // ============================================================
@@ -157,18 +160,12 @@ namespace SiaeBridge
                 if (cmd == "CHECK_READER") return CheckReader();
                 if (cmd == "READ_CARD") return ReadCard();
                 if (cmd.StartsWith("COMPUTE_SIGILLO:")) return ComputeSigillo(cmd.Substring(16));
-                if (cmd == "DEBUG") return GetDebugInfo();
                 return ERR($"Comando sconosciuto: {cmd}");
             }
             catch (DllNotFoundException ex)
             {
                 Log($"DllNotFoundException: {ex.Message}");
-                return ERR("libSIAE.dll non trovata o incompatibile (32/64 bit?)");
-            }
-            catch (BadImageFormatException ex)
-            {
-                Log($"BadImageFormatException: {ex.Message}");
-                return ERR("libSIAE.dll incompatibile - processo 64-bit, DLL 32-bit!");
+                return ERR("libSIAE.dll non trovata");
             }
             catch (Exception ex)
             {
@@ -180,26 +177,13 @@ namespace SiaeBridge
         static string OK(object data) => JsonConvert.SerializeObject(new { success = true, data });
         static string ERR(string msg) => JsonConvert.SerializeObject(new { success = false, error = msg });
 
-        static string GetDebugInfo()
-        {
-            return JsonConvert.SerializeObject(new
-            {
-                success = true,
-                is64BitProcess = Environment.Is64BitProcess,
-                dllLoaded = _dllLoaded,
-                dllError = _dllError,
-                clrVersion = Environment.Version.ToString()
-            });
-        }
-
         // ============================================================
-        // CHECK READER - CON VERIFICA REALE
+        // CHECK READER
         // ============================================================
         static string CheckReader()
         {
-            // Prima verifica se ci sono lettori smart card usando Windows API
             bool hasReaders = CheckWindowsSmartCardReaders();
-            Log($"Windows SmartCard readers present: {hasReaders}");
+            Log($"Windows readers: {hasReaders}");
 
             if (!hasReaders)
             {
@@ -208,48 +192,64 @@ namespace SiaeBridge
                     success = true,
                     readerConnected = false,
                     cardPresent = false,
-                    message = "Nessun lettore smart card rilevato"
+                    message = "Nessun lettore rilevato"
                 });
             }
 
-            // Verifica architettura
-            if (Environment.Is64BitProcess)
-            {
-                return JsonConvert.SerializeObject(new
-                {
-                    success = false,
-                    readerConnected = hasReaders,
-                    cardPresent = false,
-                    error = "Errore: processo a 64-bit, libSIAE.dll richiede 32-bit!"
-                });
-            }
-
-            // Prova a usare libSIAE
             try
             {
                 for (int s = 0; s < 16; s++)
                 {
                     try
                     {
-                        Log($"  isCardIn({s})...");
-                        int result = isCardIn(s);
-                        Log($"  isCardIn({s}) = {result}");
+                        int state = isCardIn(s);
+                        string decoded = DecodeCardState(state);
+                        Log($"  isCardIn({s}) = {state} (0x{state:X2}) = {decoded}");
 
-                        if (result == 1)
+                        if (state == 0)
                         {
-                            _slot = s;
-                            Log($"  Card found in slot {s}, initializing...");
-                            int init = Initialize(s);
-                            Log($"  Initialize({s}) = {init}");
+                            // No more readers
+                            break;
+                        }
 
-                            return JsonConvert.SerializeObject(new
+                        if (IsCardPresent(state))
+                        {
+                            Log($"  ✓ CARTA PRESENTE in slot {s}!");
+
+                            // Try to initialize
+                            Log($"  Trying Initialize({s})...");
+                            int init = Initialize(s);
+                            Log($"  Initialize({s}) = {init} (0x{init:X4})");
+
+                            _slot = s;
+
+                            if (init == 0 || init == 3) // 0=OK, 3=already initialized
                             {
-                                success = true,
-                                readerConnected = true,
-                                cardPresent = true,
-                                slot = s,
-                                message = "Carta SIAE rilevata"
-                            });
+                                return JsonConvert.SerializeObject(new
+                                {
+                                    success = true,
+                                    readerConnected = true,
+                                    cardPresent = true,
+                                    slot = s,
+                                    cardState = decoded,
+                                    initResult = init,
+                                    message = "Carta SIAE rilevata e pronta!"
+                                });
+                            }
+                            else
+                            {
+                                return JsonConvert.SerializeObject(new
+                                {
+                                    success = true,
+                                    readerConnected = true,
+                                    cardPresent = true,
+                                    slot = s,
+                                    cardState = decoded,
+                                    initResult = init,
+                                    warning = $"Initialize returned 0x{init:X4}",
+                                    message = "Carta rilevata (init warning)"
+                                });
+                            }
                         }
                     }
                     catch (Exception ex)
@@ -259,7 +259,6 @@ namespace SiaeBridge
                     }
                 }
 
-                // Lettore presente ma nessuna carta
                 return JsonConvert.SerializeObject(new
                 {
                     success = true,
@@ -268,24 +267,15 @@ namespace SiaeBridge
                     message = "Inserire carta SIAE"
                 });
             }
-            catch (BadImageFormatException)
+            catch (Exception ex)
             {
+                Log($"CheckReader error: {ex.Message}");
                 return JsonConvert.SerializeObject(new
                 {
                     success = false,
                     readerConnected = hasReaders,
                     cardPresent = false,
-                    error = "DLL 32-bit incompatibile con processo 64-bit!"
-                });
-            }
-            catch (DllNotFoundException)
-            {
-                return JsonConvert.SerializeObject(new
-                {
-                    success = false,
-                    readerConnected = hasReaders,
-                    cardPresent = false,
-                    error = "libSIAE.dll non trovata"
+                    error = ex.Message
                 });
             }
         }
@@ -295,23 +285,17 @@ namespace SiaeBridge
             try
             {
                 IntPtr context = IntPtr.Zero;
-                int result = SCardEstablishContext(2, IntPtr.Zero, IntPtr.Zero, ref context); // SCARD_SCOPE_SYSTEM = 2
-                
-                if (result != 0)
-                {
-                    Log($"  SCardEstablishContext failed: {result}");
-                    return false;
-                }
+                int result = SCardEstablishContext(2, IntPtr.Zero, IntPtr.Zero, ref context);
+                if (result != 0) return false;
 
                 int size = 0;
                 result = SCardListReadersW(context, null, null, ref size);
-                
                 bool hasReaders = (result == 0 && size > 0);
-                
+
                 if (hasReaders)
                 {
                     byte[] readers = new byte[size * 2];
-                    result = SCardListReadersW(context, null, readers, ref size);
+                    SCardListReadersW(context, null, readers, ref size);
                     string readerList = Encoding.Unicode.GetString(readers);
                     Log($"  Readers: {readerList.Replace('\0', '|')}");
                 }
@@ -319,11 +303,7 @@ namespace SiaeBridge
                 SCardReleaseContext(context);
                 return hasReaders;
             }
-            catch (Exception ex)
-            {
-                Log($"  CheckWindowsSmartCardReaders error: {ex.Message}");
-                return false;
-            }
+            catch { return false; }
         }
 
         // ============================================================
@@ -331,25 +311,43 @@ namespace SiaeBridge
         // ============================================================
         static string ReadCard()
         {
-            if (_slot < 0) return ERR("Nessuna carta rilevata");
+            if (_slot < 0) return ERR("Nessuna carta rilevata - prima fai CHECK_READER");
 
             bool tx = false;
             try
             {
-                if (isCardIn(_slot) != 1) { _slot = -1; return ERR("Carta rimossa"); }
+                Log($"ReadCard: slot={_slot}");
 
-                Initialize(_slot);
-                BeginTransactionML(_slot);
-                tx = true;
+                int state = isCardIn(_slot);
+                Log($"  isCardIn({_slot}) = {state} ({DecodeCardState(state)})");
+                if (!IsCardPresent(state))
+                {
+                    _slot = -1;
+                    return ERR("Carta rimossa");
+                }
+
+                int init = Initialize(_slot);
+                Log($"  Initialize = {init}");
+
+                int txResult = BeginTransactionML(_slot);
+                Log($"  BeginTransactionML = {txResult}");
+                tx = (txResult == 0);
 
                 byte[] sn = new byte[8];
-                int r = GetSNML(sn, _slot);
-                if (r != 0) return ERR($"Lettura SN fallita: {r}");
+                int snResult = GetSNML(sn, _slot);
+                Log($"  GetSNML = {snResult}, SN = {BitConverter.ToString(sn)}");
+
+                if (snResult != 0)
+                {
+                    return ERR($"Lettura SN fallita: errore 0x{snResult:X4}");
+                }
 
                 uint cnt = 0, bal = 0;
-                ReadCounterML(ref cnt, _slot);
-                ReadBalanceML(ref bal, _slot);
+                int cntResult = ReadCounterML(ref cnt, _slot);
+                int balResult = ReadBalanceML(ref bal, _slot);
                 byte key = GetKeyIDML(_slot);
+
+                Log($"  Counter = {cnt}, Balance = {bal}, KeyID = {key}");
 
                 return JsonConvert.SerializeObject(new
                 {
@@ -361,8 +359,23 @@ namespace SiaeBridge
                     slot = _slot
                 });
             }
-            catch (Exception ex) { return ERR(ex.Message); }
-            finally { if (tx) try { EndTransactionML(_slot); } catch { } }
+            catch (Exception ex)
+            {
+                Log($"ReadCard error: {ex.Message}");
+                return ERR(ex.Message);
+            }
+            finally
+            {
+                if (tx)
+                {
+                    try
+                    {
+                        EndTransactionML(_slot);
+                        Log("  EndTransactionML done");
+                    }
+                    catch { }
+                }
+            }
         }
 
         // ============================================================
@@ -378,7 +391,8 @@ namespace SiaeBridge
                 dynamic req = JsonConvert.DeserializeObject(json);
                 decimal price = req.price;
 
-                if (isCardIn(_slot) != 1) { _slot = -1; return ERR("Carta rimossa"); }
+                int state = isCardIn(_slot);
+                if (!IsCardPresent(state)) { _slot = -1; return ERR("Carta rimossa"); }
 
                 Initialize(_slot);
                 BeginTransactionML(_slot);
@@ -397,8 +411,11 @@ namespace SiaeBridge
                 byte[] sn = new byte[8], mac = new byte[8];
                 uint cnt = 0;
 
+                Log($"ComputeSigilloML: price={cents} cents");
                 int r = ComputeSigilloML(bcd, cents, sn, mac, ref cnt, _slot);
-                if (r != 0) return ERR($"Sigillo fallito: {r}");
+                Log($"  Result = {r} (0x{r:X4})");
+
+                if (r != 0) return ERR($"Sigillo fallito: errore 0x{r:X4}");
 
                 return JsonConvert.SerializeObject(new
                 {
@@ -413,8 +430,15 @@ namespace SiaeBridge
                     }
                 });
             }
-            catch (Exception ex) { return ERR(ex.Message); }
-            finally { if (tx) try { EndTransactionML(_slot); } catch { } }
+            catch (Exception ex)
+            {
+                Log($"ComputeSigillo error: {ex.Message}");
+                return ERR(ex.Message);
+            }
+            finally
+            {
+                if (tx) try { EndTransactionML(_slot); } catch { }
+            }
         }
     }
 }
