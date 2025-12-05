@@ -34,7 +34,7 @@ import {
   ShieldX
 } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 
 interface SmartCardStatusProps {
   compact?: boolean;
@@ -52,30 +52,28 @@ export function SmartCardStatus({
 
   const handleRefresh = async () => {
     setIsRefreshing(true);
-    // Force a status check
     smartCardService.startPolling();
     setTimeout(() => setIsRefreshing(false), 1000);
   };
 
   const handleDemoMode = () => {
-    if (status.readerName?.includes('DEMO')) {
+    if (status.demoMode) {
       smartCardService.disableDemoMode();
     } else {
       smartCardService.enableDemoMode();
     }
   };
 
-  // Determina lo stato visuale
   const getStatusInfo = () => {
-    if (!status.middlewareAvailable) {
+    if (!status.connected) {
       return {
         icon: WifiOff,
         color: 'text-destructive',
         bgColor: 'bg-destructive/10',
         borderColor: 'border-destructive/30',
         pulseColor: 'bg-destructive',
-        label: 'Middleware Offline',
-        description: 'Trust1Connector non disponibile',
+        label: 'App Non Connessa',
+        description: 'Avviare Event4U Smart Card Reader',
         severity: 'error' as const
       };
     }
@@ -120,9 +118,8 @@ export function SmartCardStatus({
 
   const statusInfo = getStatusInfo();
   const StatusIcon = statusInfo.icon;
-  const canEmit = status.cardInserted && status.readerDetected;
+  const canEmit = status.cardInserted && status.readerDetected && status.connected;
 
-  // Versione compatta per header
   if (compact) {
     return (
       <Tooltip>
@@ -139,7 +136,6 @@ export function SmartCardStatus({
           >
             <StatusIcon className={cn("w-4 h-4", statusInfo.color)} />
             
-            {/* Pulse animation per stato attivo */}
             {canEmit && (
               <span className="absolute top-0 right-0 flex h-2.5 w-2.5">
                 <span className={cn(
@@ -179,7 +175,6 @@ export function SmartCardStatus({
     );
   }
 
-  // Versione estesa con dropdown
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
@@ -224,18 +219,31 @@ export function SmartCardStatus({
         </DropdownMenuLabel>
         <DropdownMenuSeparator />
         
-        {/* Stato connessione */}
         <div className="px-2 py-2 space-y-2">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-muted-foreground">Middleware:</span>
+            <span className="text-muted-foreground">App Event4U:</span>
             <Badge 
-              variant={status.middlewareAvailable ? "default" : "destructive"}
+              variant={status.connected ? "default" : "destructive"}
               className="text-xs"
             >
-              {status.middlewareAvailable ? (
-                <><Wifi className="w-3 h-3 mr-1" /> Online</>
+              {status.connected ? (
+                <><Wifi className="w-3 h-3 mr-1" /> Connessa</>
               ) : (
-                <><WifiOff className="w-3 h-3 mr-1" /> Offline</>
+                <><WifiOff className="w-3 h-3 mr-1" /> Non Connessa</>
+              )}
+            </Badge>
+          </div>
+
+          <div className="flex items-center justify-between text-sm">
+            <span className="text-muted-foreground">Bridge SIAE:</span>
+            <Badge 
+              variant={status.bridgeConnected ? "default" : "secondary"}
+              className="text-xs"
+            >
+              {status.bridgeConnected ? (
+                <><CheckCircle2 className="w-3 h-3 mr-1" /> Attivo</>
+              ) : (
+                <><XCircle className="w-3 h-3 mr-1" /> Non Attivo</>
               )}
             </Badge>
           </div>
@@ -270,9 +278,17 @@ export function SmartCardStatus({
               )}
             </Badge>
           </div>
+
+          {status.demoMode && (
+            <div className="flex items-center justify-between text-sm">
+              <span className="text-muted-foreground">Modalita:</span>
+              <Badge variant="outline" className="text-xs text-orange-500 border-orange-500">
+                DEMO
+              </Badge>
+            </div>
+          )}
         </div>
         
-        {/* Info lettore */}
         {status.readerName && (
           <>
             <DropdownMenuSeparator />
@@ -281,10 +297,10 @@ export function SmartCardStatus({
                 <span className="font-medium">Dispositivo:</span>
                 <p className="mt-0.5">{status.readerName}</p>
               </div>
-              {status.cardType && (
+              {status.cardSerial && (
                 <div className="text-xs text-muted-foreground">
-                  <span className="font-medium">Tipo Carta:</span>
-                  <p className="mt-0.5">{status.cardType}</p>
+                  <span className="font-medium">Seriale Carta:</span>
+                  <p className="mt-0.5 font-mono">{status.cardSerial}</p>
                 </div>
               )}
               {status.cardAtr && (
@@ -297,7 +313,6 @@ export function SmartCardStatus({
           </>
         )}
         
-        {/* Errore */}
         {status.error && (
           <>
             <DropdownMenuSeparator />
@@ -312,7 +327,6 @@ export function SmartCardStatus({
         
         <DropdownMenuSeparator />
         
-        {/* Azioni */}
         <DropdownMenuItem onClick={handleRefresh} disabled={isRefreshing}>
           <RefreshCw className={cn("w-4 h-4 mr-2", isRefreshing && "animate-spin")} />
           Aggiorna Stato
@@ -320,10 +334,9 @@ export function SmartCardStatus({
         
         <DropdownMenuItem onClick={handleDemoMode}>
           <Info className="w-4 h-4 mr-2" />
-          {status.readerName?.includes('DEMO') ? 'Disabilita Demo' : 'Modalità Demo'}
+          {status.demoMode ? 'Disabilita Demo' : 'Modalita Demo'}
         </DropdownMenuItem>
         
-        {/* Stato emissione */}
         <DropdownMenuSeparator />
         <div className="px-2 py-2">
           <div className={cn(
@@ -346,7 +359,6 @@ export function SmartCardStatus({
           </div>
         </div>
         
-        {/* Ultimo controllo */}
         <div className="px-2 py-1 text-[10px] text-muted-foreground">
           Ultimo controllo: {status.lastCheck.toLocaleTimeString('it-IT')}
         </div>
@@ -355,10 +367,6 @@ export function SmartCardStatus({
   );
 }
 
-/**
- * Hook per verificare se è possibile emettere biglietti
- * Da usare nelle pagine di emissione
- */
 export function useCanEmitTickets(): {
   canEmit: boolean;
   reason: string | null;
@@ -368,8 +376,8 @@ export function useCanEmitTickets(): {
   
   let reason: string | null = null;
   
-  if (!status.middlewareAvailable) {
-    reason = "Middleware Trust1Connector non disponibile";
+  if (!status.connected) {
+    reason = "App Event4U Smart Card Reader non connessa";
   } else if (!status.readerDetected) {
     reason = "Lettore MiniLector EVO non connesso";
   } else if (!status.cardInserted) {
@@ -377,7 +385,7 @@ export function useCanEmitTickets(): {
   }
   
   return {
-    canEmit: status.cardInserted && status.readerDetected && status.middlewareAvailable,
+    canEmit: status.cardInserted && status.readerDetected && status.connected,
     reason,
     status
   };
