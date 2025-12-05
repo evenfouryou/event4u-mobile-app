@@ -6,7 +6,8 @@ namespace SiaeBridge
 {
     /// <summary>
     /// P/Invoke wrapper for libSIAE.dll - SIAE smart card library
-    /// Based on official SIAE documentation and header files
+    /// IMPORTANT: Always use ML (Multi-Lector) variants with slot parameter!
+    /// Sequence: Initialize(slot) → BeginTransactionML(slot) → operation → EndTransactionML(slot)
     /// </summary>
     public static class LibSiae
     {
@@ -32,129 +33,177 @@ namespace SiaeBridge
         public const int C_GENERIC_ERROR = 0xFFFF;
         #endregion
 
-        #region Initialization & Status Functions
+        #region Initialization & Status - USE THESE!
+        
         /// <summary>
-        /// Check if card is present in slot
+        /// Check if card is present in specified slot (0-15)
+        /// Returns 1 if card present, 0 if not
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
         public static extern int isCardIn(int nSlot);
 
         /// <summary>
-        /// Check if library is initialized
+        /// Check if library is initialized for any slot
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
         public static extern int IsInitialized();
 
         /// <summary>
         /// Initialize connection to card in specified slot
+        /// MUST be called before any card operation!
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
         public static extern int Initialize(int nSlot);
 
         /// <summary>
-        /// Finalize (close) connection to card
-        /// </summary>
-        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
-        public static extern int Finalize();
-
-        /// <summary>
-        /// Finalize connection for specific slot (multi-reader)
+        /// Finalize (close) connection for specific slot
+        /// Call when card is removed or on cleanup
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
         public static extern int FinalizeML(int nSlot);
+
+        /// <summary>
+        /// Finalize all connections (global)
+        /// </summary>
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
+        public static extern int Finalize();
+        
         #endregion
 
-        #region Transaction Functions
+        #region Transaction Control - CRITICAL FOR PREVENTING READER DISCONNECT!
+        
         /// <summary>
-        /// Begin exclusive transaction with card
-        /// </summary>
-        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
-        public static extern int BeginTransaction();
-
-        /// <summary>
-        /// End transaction with card
-        /// </summary>
-        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
-        public static extern int EndTransaction();
-
-        /// <summary>
-        /// Begin transaction for specific slot
+        /// Begin exclusive transaction with card in specified slot
+        /// MUST wrap all card operations to prevent reader reset!
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
         public static extern int BeginTransactionML(int nSlot);
 
         /// <summary>
-        /// End transaction for specific slot
+        /// End transaction for specified slot
+        /// MUST be called in finally block after BeginTransactionML!
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
         public static extern int EndTransactionML(int nSlot);
-        #endregion
 
-        #region Card Information Functions
         /// <summary>
-        /// Get card serial number (8 bytes)
+        /// Begin transaction (global - avoid using this)
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
-        public static extern int GetSN(byte[] serial);
+        public static extern int BeginTransaction();
 
         /// <summary>
-        /// Get serial number for specific slot
+        /// End transaction (global - avoid using this)
+        /// </summary>
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
+        public static extern int EndTransaction();
+        
+        #endregion
+
+        #region Card Information - ML versions
+        
+        /// <summary>
+        /// Get card serial number (8 bytes) for specific slot
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
         public static extern int GetSNML(byte[] serial, int nSlot);
 
         /// <summary>
-        /// Get current counter value
+        /// Get serial number (global - avoid)
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
-        public static extern int ReadCounter(ref uint value);
+        public static extern int GetSN(byte[] serial);
 
         /// <summary>
-        /// Get counter for specific slot
+        /// Read counter for specific slot
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
         public static extern int ReadCounterML(ref uint value, int nSlot);
 
         /// <summary>
-        /// Get balance value
+        /// Read counter (global)
+        /// </summary>
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
+        public static extern int ReadCounter(ref uint value);
+
+        /// <summary>
+        /// Read balance for specific slot
+        /// </summary>
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
+        public static extern int ReadBalanceML(ref uint value, int nSlot);
+
+        /// <summary>
+        /// Read balance (global)
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
         public static extern int ReadBalance(ref uint value);
-        #endregion
 
-        #region Certificate Functions
         /// <summary>
-        /// Get card certificate
+        /// Get Key ID for specific slot
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
-        public static extern int GetCertificate(byte[] cert, ref int dim);
+        public static extern byte GetKeyIDML(int nSlot);
 
         /// <summary>
-        /// Get CA certificate
-        /// </summary>
-        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
-        public static extern int GetCACertificate(byte[] cert, ref int dim);
-
-        /// <summary>
-        /// Get SIAE certificate
-        /// </summary>
-        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
-        public static extern int GetSIAECertificate(byte[] cert, ref int dim);
-
-        /// <summary>
-        /// Get key ID
+        /// Get Key ID (global)
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
         public static extern byte GetKeyID();
+        
         #endregion
 
-        #region PIN Functions
+        #region Sigillo (Fiscal Seal) - ML versions
+        
         /// <summary>
-        /// Verify PIN
+        /// Compute fiscal seal for specific slot
         /// </summary>
-        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
-        public static extern int VerifyPIN(int nPIN, string pin);
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
+        public static extern int ComputeSigilloML(byte[] dataOra, uint prezzo, byte[] serialNumber, byte[] mac, ref uint counter, int nSlot);
 
+        /// <summary>
+        /// Compute fiscal seal (global)
+        /// </summary>
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
+        public static extern int ComputeSigillo(byte[] dataOra, uint prezzo, byte[] serialNumber, byte[] mac, ref uint counter);
+
+        /// <summary>
+        /// Compute sigillo extended for specific slot
+        /// </summary>
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
+        public static extern int ComputeSigilloExML(byte[] dataOra, uint prezzo, byte[] mac, ref uint counter, int nSlot);
+
+        /// <summary>
+        /// Fast sigillo for specific slot
+        /// </summary>
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
+        public static extern int ComputeSigilloFastML(byte[] dataOra, uint prezzo, byte[] serialNumber, byte[] mac, ref uint counter, int nSlot);
+        
+        #endregion
+
+        #region Certificate Functions - ML versions
+        
+        /// <summary>
+        /// Get card certificate for specific slot
+        /// </summary>
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
+        public static extern int GetCertificateML(byte[] cert, ref int dim, int nSlot);
+
+        /// <summary>
+        /// Get CA certificate for specific slot
+        /// </summary>
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
+        public static extern int GetCACertificateML(byte[] cert, ref int dim, int nSlot);
+
+        /// <summary>
+        /// Get SIAE certificate for specific slot
+        /// </summary>
+        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
+        public static extern int GetSIAECertificateML(byte[] cert, ref int dim, int nSlot);
+        
+        #endregion
+
+        #region PIN Functions - ML versions
+        
         /// <summary>
         /// Verify PIN for specific slot
         /// </summary>
@@ -162,135 +211,99 @@ namespace SiaeBridge
         public static extern int VerifyPINML(int nPIN, string pin, int nSlot);
 
         /// <summary>
-        /// Change PIN
+        /// Change PIN for specific slot
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
-        public static extern int ChangePIN(int nPIN, string oldPin, string newPin);
+        public static extern int ChangePINML(int nPIN, string oldPin, string newPin, int nSlot);
 
         /// <summary>
-        /// Unblock PIN with PUK
+        /// Unblock PIN for specific slot
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
-        public static extern int UnblockPIN(int nPIN, string puk, string newPin);
+        public static extern int UnblockPINML(int nPIN, string puk, string newPin, int nSlot);
+        
         #endregion
 
-        #region Sigillo (Fiscal Seal) Functions
+        #region Cryptographic Functions - ML versions
+        
         /// <summary>
-        /// Compute fiscal seal (sigillo) - main function for ticket validation
-        /// </summary>
-        /// <param name="dataOra">Date/time bytes (format: YYMMDDHHmm - 5 bytes BCD)</param>
-        /// <param name="prezzo">Price in cents</param>
-        /// <param name="serialNumber">Output: card serial number (8 bytes)</param>
-        /// <param name="mac">Output: MAC signature (8 bytes)</param>
-        /// <param name="counter">Output: transaction counter</param>
-        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
-        public static extern int ComputeSigillo(byte[] dataOra, uint prezzo, byte[] serialNumber, byte[] mac, ref uint counter);
-
-        /// <summary>
-        /// Compute sigillo for specific slot
+        /// Sign data for specific slot
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
-        public static extern int ComputeSigilloML(byte[] dataOra, uint prezzo, byte[] serialNumber, byte[] mac, ref uint counter, int nSlot);
+        public static extern int SignML(int keyIndex, byte[] toSign, byte[] signed, int nSlot);
 
         /// <summary>
-        /// Compute sigillo extended (without SN output)
-        /// </summary>
-        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
-        public static extern int ComputeSigilloEx(byte[] dataOra, uint prezzo, byte[] mac, ref uint counter);
-
-        /// <summary>
-        /// Fast sigillo computation
-        /// </summary>
-        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
-        public static extern int ComputeSigilloFast(byte[] dataOra, uint prezzo, byte[] serialNumber, byte[] mac, ref uint counter);
-        #endregion
-
-        #region Cryptographic Functions
-        /// <summary>
-        /// Sign data with card key
-        /// </summary>
-        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
-        public static extern int Sign(int keyIndex, byte[] toSign, byte[] signed);
-
-        /// <summary>
-        /// Hash data (SHA1 or MD5)
+        /// Hash data (SHA1=1, MD5=2)
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
         public static extern int Hash(int mechanism, byte[] toHash, int len, byte[] hashed);
-
-        /// <summary>
-        /// Pad data for cryptographic operations
-        /// </summary>
-        [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
-        public static extern int Padding(byte[] toPad, int len, byte[] padded);
+        
         #endregion
 
-        #region File Operations
+        #region File Operations - ML versions
+        
         /// <summary>
-        /// Select file on card
+        /// Select file for specific slot
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
-        public static extern int Select(ushort fid);
+        public static extern int SelectML(ushort fid, int nSlot);
 
         /// <summary>
-        /// Read binary data from card
+        /// Read binary for specific slot
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
-        public static extern int ReadBinary(ushort offset, byte[] buffer, ref int len);
+        public static extern int ReadBinaryML(ushort offset, byte[] buffer, ref int len, int nSlot);
 
         /// <summary>
-        /// Read record from card
+        /// Read record for specific slot
         /// </summary>
         [DllImport(DLL_NAME, CallingConvention = CallingConvention.StdCall)]
-        public static extern int ReadRecord(int nRec, byte[] buffer, ref int len);
+        public static extern int ReadRecordML(int nRec, byte[] buffer, ref int len, int nSlot);
+        
         #endregion
 
         #region Helper Methods
-        /// <summary>
-        /// Convert error code to human-readable message
-        /// </summary>
+        
         public static string GetErrorMessage(int errorCode)
         {
             switch (errorCode)
             {
                 case C_OK: return "OK";
-                case C_CONTEXT_ERROR: return "Errore contesto smart card";
-                case C_NOT_INITIALIZED: return "Libreria non inizializzata";
-                case C_ALREADY_INITIALIZED: return "Libreria già inizializzata";
-                case C_NO_CARD: return "Nessuna carta presente";
-                case C_UNKNOWN_CARD: return "Carta non riconosciuta";
+                case C_CONTEXT_ERROR: return "Errore contesto PC/SC";
+                case C_NOT_INITIALIZED: return "Non inizializzato - chiamare Initialize()";
+                case C_ALREADY_INITIALIZED: return "Già inizializzato";
+                case C_NO_CARD: return "Carta non presente";
+                case C_UNKNOWN_CARD: return "Carta non riconosciuta (non SIAE)";
                 case C_WRONG_LENGTH: return "Lunghezza dati errata";
                 case C_WRONG_TYPE: return "Tipo file errato";
-                case C_NOT_AUTHORIZED: return "Non autorizzato (PIN errato?)";
+                case C_NOT_AUTHORIZED: return "Non autorizzato - PIN errato?";
                 case C_PIN_BLOCKED: return "PIN bloccato";
                 case C_WRONG_DATA: return "Dati errati";
-                case C_FILE_NOT_FOUND: return "File non trovato";
+                case C_FILE_NOT_FOUND: return "File non trovato sulla carta";
                 case C_RECORD_NOT_FOUND: return "Record non trovato";
-                case C_WRONG_LEN: return "Lunghezza errata";
+                case C_WRONG_LEN: return "Lunghezza parametro errata";
                 case C_UNKNOWN_OBJECT: return "Oggetto sconosciuto";
-                case C_ALREADY_EXISTS: return "Già esistente";
+                case C_ALREADY_EXISTS: return "Elemento già esistente";
                 case C_GENERIC_ERROR: return "Errore generico";
-                default: return $"Errore sconosciuto (0x{errorCode:X4})";
+                default: return $"Errore 0x{errorCode:X4}";
             }
         }
 
         /// <summary>
-        /// Convert DateTime to SIAE BCD format (YYMMDDHHmm)
+        /// Convert DateTime to SIAE BCD format (YYMMDDHHmm - 5 bytes)
         /// </summary>
         public static byte[] DateTimeToBCD(DateTime dt)
         {
             byte[] bcd = new byte[5];
-            bcd[0] = (byte)(((dt.Year % 100) / 10 << 4) | (dt.Year % 10));
-            bcd[1] = (byte)((dt.Month / 10 << 4) | (dt.Month % 10));
-            bcd[2] = (byte)((dt.Day / 10 << 4) | (dt.Day % 10));
-            bcd[3] = (byte)((dt.Hour / 10 << 4) | (dt.Hour % 10));
-            bcd[4] = (byte)((dt.Minute / 10 << 4) | (dt.Minute % 10));
+            int year = dt.Year % 100;
+            bcd[0] = (byte)(((year / 10) << 4) | (year % 10));
+            bcd[1] = (byte)(((dt.Month / 10) << 4) | (dt.Month % 10));
+            bcd[2] = (byte)(((dt.Day / 10) << 4) | (dt.Day % 10));
+            bcd[3] = (byte)(((dt.Hour / 10) << 4) | (dt.Hour % 10));
+            bcd[4] = (byte)(((dt.Minute / 10) << 4) | (dt.Minute % 10));
             return bcd;
         }
 
-        /// <summary>
-        /// Convert bytes to hex string
-        /// </summary>
         public static string BytesToHex(byte[] bytes)
         {
             if (bytes == null) return "";
@@ -299,6 +312,7 @@ namespace SiaeBridge
                 sb.AppendFormat("{0:X2}", b);
             return sb.ToString();
         }
+        
         #endregion
     }
 }
