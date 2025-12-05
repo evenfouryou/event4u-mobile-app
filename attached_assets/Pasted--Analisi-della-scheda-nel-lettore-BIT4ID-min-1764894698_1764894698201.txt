@@ -1,0 +1,95 @@
+======================================================
+Analisi della scheda nel lettore: BIT4ID miniLector EVO 0
+SCardGetCardTypeProviderName: Impossibile trovare il file specificato. 0x2 (WIN32: 2 ERROR_FILE_NOT_FOUND)
+Impossibile recuperare il nome del provider per SCardGetCardTypeProviderName: Impossibile trovare il file specificato. 0x2 (WIN32: 2 ERROR_FILE_NOT_FOUND)
+Impossibile recuperare il nome del provider per
+--------------===========================--------------
+CertUtil: comando -SCInfo NON RIUSCITO: 0x2 (WIN32: 2 ERROR_FILE_NOT_FOUND)
+CertUtil: Impossibile trovare il file specificato.
+PS C:\WINDOWS\system32> Add-Type -TypeDefinition @"
+>> using System;
+>> using System.Runtime.InteropServices;
+>> using System.Text;
+>> using System.Collections.Generic;
+>>
+>> public class WinSCard {
+>>     [DllImport("winscard.dll", CharSet = CharSet.Ansi)]
+>>     public static extern int SCardEstablishContext(uint dwScope, IntPtr pvReserved1, IntPtr pvReserved2, out IntPtr phContext);
+>>
+>>     [DllImport("winscard.dll", CharSet = CharSet.Ansi)]
+>>     public static extern int SCardListReadersA(IntPtr hContext, string mszGroups, byte[] mszReaders, ref uint pcchReaders);
+>>
+>>     [DllImport("winscard.dll")]
+>>     public static extern int SCardReleaseContext(IntPtr hContext);
+>>
+>>     public static List<string> GetReaders() {
+>>         List<string> readers = new List<string>();
+>>         IntPtr hContext = IntPtr.Zero;
+>>
+>>         int result = SCardEstablishContext(0, IntPtr.Zero, IntPtr.Zero, out hContext);
+>>         if (result != 0) return readers;
+>>
+>>         uint size = 0;
+>>         result = SCardListReadersA(hContext, null, null, ref size);
+>>         if (result == 0 && size > 0) {
+>>             byte[] buffer = new byte[size];
+>>             result = SCardListReadersA(hContext, null, buffer, ref size);
+>>             if (result == 0) {
+>>                 string allReaders = Encoding.ASCII.GetString(buffer);
+>>                 string[] parts = allReaders.Split(new char[] { (char)0 }, StringSplitOptions.RemoveEmptyEntries);
+>>                 foreach (string r in parts) {
+>>                     if (!string.IsNullOrWhiteSpace(r)) readers.Add(r.Trim());
+>>                 }
+>>             }
+>>         }
+>>         SCardReleaseContext(hContext);
+>>         return readers;
+>>     }
+>> }
+>> "@
+PS C:\WINDOWS\system32>
+PS C:\WINDOWS\system32> [WinSCard]::GetReaders()
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
