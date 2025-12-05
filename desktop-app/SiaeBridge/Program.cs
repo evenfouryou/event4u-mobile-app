@@ -2,8 +2,10 @@ using System;
 using System.Collections.Generic;
 using System.IO;
 using System.Net;
-using System.Net.WebSockets;
+using System.Net.Sockets;
+using System.Security.Cryptography;
 using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Windows.Forms;
@@ -14,8 +16,8 @@ namespace EventFourYouSiaeLettore
     static class Program
     {
         private const int WS_PORT = 18766;
-        private static HttpListener _httpListener;
-        private static readonly List<WebSocket> _clients = new List<WebSocket>();
+        private static TcpListener _tcpListener;
+        private static readonly List<TcpClient> _clients = new List<TcpClient>();
         private static NotifyIcon _trayIcon;
         private static bool _isInitialized = false;
         private static string _readerName = null;
@@ -23,6 +25,7 @@ namespace EventFourYouSiaeLettore
         private static string _cardSerial = null;
         private static string _lastError = null;
         private static bool _demoMode = false;
+        private static bool _serverRunning = false;
 
         [STAThread]
         static void Main(string[] args)
@@ -30,16 +33,9 @@ namespace EventFourYouSiaeLettore
             Application.EnableVisualStyles();
             Application.SetCompatibleTextRenderingDefault(false);
 
-            // Crea icona nella system tray
             CreateTrayIcon();
-
-            // Avvia server WebSocket
-            Task.Run(() => StartWebSocketServer());
-
-            // Inizializza libreria SIAE
+            Task.Run(() => StartTcpServer());
             Task.Run(() => InitializeSiae());
-
-            // Polling stato carta
             Task.Run(() => PollCardStatus());
 
             Application.Run();
@@ -49,7 +45,7 @@ namespace EventFourYouSiaeLettore
         {
             _trayIcon = new NotifyIcon();
             _trayIcon.Icon = System.Drawing.SystemIcons.Application;
-            _trayIcon.Text = "Event Four You SIAE Lettore";
+            _trayIcon.Text = "Event Four You SIAE Bridge";
             _trayIcon.Visible = true;
 
             var menu = new ContextMenuStrip();
@@ -74,9 +70,14 @@ namespace EventFourYouSiaeLettore
                 status = "Stato: DEMO MODE";
                 _trayIcon.Icon = System.Drawing.SystemIcons.Warning;
             }
+            else if (!_serverRunning)
+            {
+                status = "Stato: Server non avviato";
+                _trayIcon.Icon = System.Drawing.SystemIcons.Error;
+            }
             else if (!_isInitialized)
             {
-                status = "Stato: Inizializzazione...";
+                status = "Stato: libSIAE non inizializzata";
                 _trayIcon.Icon = System.Drawing.SystemIcons.Information;
             }
             else if (!_cardPresent)
@@ -91,22 +92,23 @@ namespace EventFourYouSiaeLettore
             }
 
             _trayIcon.ContextMenuStrip.Items[0].Text = status;
-            _trayIcon.Text = "Event Four You SIAE\n" + status;
+            _trayIcon.Text = "SIAE Bridge\n" + status;
         }
 
         static void ShowStatus()
         {
-            var msg = $"Event Four You SIAE Lettore\n\n" +
+            var msg = $"Event Four You SIAE Bridge\n\n" +
+                      $"Server: {(_serverRunning ? "Attivo" : "Non attivo")} (porta {WS_PORT})\n" +
                       $"Libreria: {(LibSiae.IsLibraryAvailable() ? "OK" : "Non trovata")}\n" +
-                      $"Inizializzato: {(_isInitialized ? "Sì" : "No")}\n" +
+                      $"Inizializzato: {(_isInitialized ? "Si" : "No")}\n" +
                       $"Lettore: {_readerName ?? "N/A"}\n" +
                       $"Smart Card: {(_cardPresent ? "Inserita" : "Non inserita")}\n" +
                       $"Seriale: {_cardSerial ?? "N/A"}\n" +
                       $"Demo Mode: {(_demoMode ? "Attivo" : "Disattivo")}\n" +
-                      $"Server: ws://127.0.0.1:{WS_PORT}\n" +
+                      $"Client connessi: {_clients.Count}\n" +
                       $"Ultimo errore: {_lastError ?? "Nessuno"}";
             
-            MessageBox.Show(msg, "Event Four You SIAE Lettore", MessageBoxButtons.OK, MessageBoxIcon.Information);
+            MessageBox.Show(msg, "SIAE Bridge Status", MessageBoxButtons.OK, MessageBoxIcon.Information);
         }
 
         static void EnableDemoMode()
@@ -115,9 +117,10 @@ namespace EventFourYouSiaeLettore
             _cardPresent = true;
             _cardSerial = "DEMO-12345678";
             _readerName = "MiniLector EVO V3 (DEMO)";
+            _isInitialized = true;
             UpdateTrayStatus();
             BroadcastStatus();
-            _trayIcon.ShowBalloonTip(3000, "Demo Mode", "Modalità demo attivata", ToolTipIcon.Warning);
+            _trayIcon.ShowBalloonTip(3000, "Demo Mode", "Modalita demo attivata", ToolTipIcon.Warning);
         }
 
         static void DisableDemoMode()
@@ -127,7 +130,7 @@ namespace EventFourYouSiaeLettore
             _cardSerial = null;
             UpdateTrayStatus();
             BroadcastStatus();
-            _trayIcon.ShowBalloonTip(3000, "Demo Mode", "Modalità demo disattivata", ToolTipIcon.Info);
+            _trayIcon.ShowBalloonTip(3000, "Demo Mode", "Modalita demo disattivata", ToolTipIcon.Info);
         }
 
         static void ExitApplication()
@@ -142,7 +145,7 @@ namespace EventFourYouSiaeLettore
             catch { }
 
             _trayIcon.Visible = false;
-            _httpListener?.Stop();
+            _tcpListener?.Stop();
             Application.Exit();
         }
 
@@ -163,7 +166,7 @@ namespace EventFourYouSiaeLettore
                     _isInitialized = true;
                     _readerName = "MiniLector EVO V3";
                     _lastError = null;
-                    _trayIcon.ShowBalloonTip(3000, "SIAE Lettore", "Lettore inizializzato correttamente", ToolTipIcon.Info);
+                    _trayIcon.ShowBalloonTip(3000, "SIAE Bridge", "Lettore inizializzato", ToolTipIcon.Info);
                 }
                 else
                 {
@@ -198,7 +201,6 @@ namespace EventFourYouSiaeLettore
 
                         if (_cardPresent && !wasPresent)
                         {
-                            // Carta appena inserita, leggi seriale
                             ReadCardSerial();
                             _trayIcon.ShowBalloonTip(2000, "Smart Card", "Carta SIAE inserita", ToolTipIcon.Info);
                         }
@@ -236,93 +238,203 @@ namespace EventFourYouSiaeLettore
             catch { }
         }
 
-        static async Task StartWebSocketServer()
+        static async Task StartTcpServer()
         {
-            _httpListener = new HttpListener();
-            _httpListener.Prefixes.Add($"http://127.0.0.1:{WS_PORT}/");
-            
             try
             {
-                _httpListener.Start();
-                Console.WriteLine($"Server WebSocket avviato su ws://127.0.0.1:{WS_PORT}");
+                _tcpListener = new TcpListener(IPAddress.Loopback, WS_PORT);
+                _tcpListener.Start();
+                _serverRunning = true;
+                Console.WriteLine($"SIAE Bridge WebSocket server su ws://127.0.0.1:{WS_PORT}");
+                UpdateTrayStatus();
 
-                while (_httpListener.IsListening)
+                while (true)
                 {
-                    var context = await _httpListener.GetContextAsync();
-                    
-                    if (context.Request.IsWebSocketRequest)
-                    {
-                        ProcessWebSocketRequest(context);
-                    }
-                    else if (context.Request.Url.AbsolutePath == "/health")
-                    {
-                        // Health check HTTP
-                        var response = GetStatusJson();
-                        var buffer = Encoding.UTF8.GetBytes(response);
-                        context.Response.ContentType = "application/json";
-                        context.Response.Headers.Add("Access-Control-Allow-Origin", "*");
-                        await context.Response.OutputStream.WriteAsync(buffer, 0, buffer.Length);
-                        context.Response.Close();
-                    }
-                    else
-                    {
-                        context.Response.StatusCode = 404;
-                        context.Response.Close();
-                    }
+                    var client = await _tcpListener.AcceptTcpClientAsync();
+                    _ = Task.Run(() => HandleClient(client));
                 }
             }
             catch (Exception ex)
             {
                 _lastError = $"Server error: {ex.Message}";
+                _serverRunning = false;
+                UpdateTrayStatus();
             }
         }
 
-        static async void ProcessWebSocketRequest(HttpListenerContext context)
+        static async Task HandleClient(TcpClient client)
         {
-            WebSocket ws = null;
+            NetworkStream stream = null;
             try
             {
-                var wsContext = await context.AcceptWebSocketAsync(null);
-                ws = wsContext.WebSocket;
+                stream = client.GetStream();
                 
-                lock (_clients)
+                // WebSocket handshake
+                byte[] buffer = new byte[4096];
+                int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                string request = Encoding.UTF8.GetString(buffer, 0, bytesRead);
+
+                if (!request.Contains("Upgrade: websocket"))
                 {
-                    _clients.Add(ws);
+                    // HTTP health check
+                    if (request.Contains("GET /health") || request.Contains("GET / "))
+                    {
+                        string json = GetStatusJsonRaw();
+                        string response = "HTTP/1.1 200 OK\r\n" +
+                                         "Content-Type: application/json\r\n" +
+                                         "Access-Control-Allow-Origin: *\r\n" +
+                                         $"Content-Length: {Encoding.UTF8.GetByteCount(json)}\r\n" +
+                                         "\r\n" + json;
+                        byte[] responseBytes = Encoding.UTF8.GetBytes(response);
+                        await stream.WriteAsync(responseBytes, 0, responseBytes.Length);
+                    }
+                    client.Close();
+                    return;
                 }
 
-                // Invia stato iniziale
-                await SendMessage(ws, GetStatusJson());
+                // Perform WebSocket handshake
+                string swk = Regex.Match(request, "Sec-WebSocket-Key: (.*)").Groups[1].Value.Trim();
+                string swka = swk + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+                byte[] swkaSha1 = SHA1.Create().ComputeHash(Encoding.UTF8.GetBytes(swka));
+                string swkaSha1Base64 = Convert.ToBase64String(swkaSha1);
 
-                var buffer = new byte[4096];
-                while (ws.State == WebSocketState.Open)
+                string handshake = "HTTP/1.1 101 Switching Protocols\r\n" +
+                                  "Connection: Upgrade\r\n" +
+                                  "Upgrade: websocket\r\n" +
+                                  $"Sec-WebSocket-Accept: {swkaSha1Base64}\r\n\r\n";
+
+                byte[] handshakeBytes = Encoding.UTF8.GetBytes(handshake);
+                await stream.WriteAsync(handshakeBytes, 0, handshakeBytes.Length);
+
+                lock (_clients) { _clients.Add(client); }
+
+                // Send initial status
+                await SendWebSocketMessage(stream, GetStatusJsonRaw());
+
+                // Read messages
+                while (client.Connected)
                 {
-                    var result = await ws.ReceiveAsync(new ArraySegment<byte>(buffer), CancellationToken.None);
-                    
-                    if (result.MessageType == WebSocketMessageType.Close)
+                    if (!stream.DataAvailable)
                     {
-                        break;
+                        await Task.Delay(50);
+                        continue;
                     }
 
-                    if (result.MessageType == WebSocketMessageType.Text)
-                    {
-                        var message = Encoding.UTF8.GetString(buffer, 0, result.Count);
-                        var response = ProcessCommand(message);
-                        await SendMessage(ws, response);
-                    }
+                    string message = await ReadWebSocketMessage(stream);
+                    if (message == null) break;
+
+                    string response = ProcessCommand(message);
+                    await SendWebSocketMessage(stream, response);
                 }
             }
             catch { }
             finally
             {
-                if (ws != null)
-                {
-                    lock (_clients)
-                    {
-                        _clients.Remove(ws);
-                    }
-                    try { ws.Dispose(); } catch { }
-                }
+                lock (_clients) { _clients.Remove(client); }
+                try { client?.Close(); } catch { }
             }
+        }
+
+        static async Task<string> ReadWebSocketMessage(NetworkStream stream)
+        {
+            try
+            {
+                byte[] header = new byte[2];
+                int read = await stream.ReadAsync(header, 0, 2);
+                if (read < 2) return null;
+
+                bool fin = (header[0] & 0x80) != 0;
+                int opcode = header[0] & 0x0F;
+                
+                if (opcode == 8) return null; // Close frame
+
+                bool masked = (header[1] & 0x80) != 0;
+                int len = header[1] & 0x7F;
+
+                if (len == 126)
+                {
+                    byte[] lenBytes = new byte[2];
+                    await stream.ReadAsync(lenBytes, 0, 2);
+                    len = (lenBytes[0] << 8) | lenBytes[1];
+                }
+                else if (len == 127)
+                {
+                    byte[] lenBytes = new byte[8];
+                    await stream.ReadAsync(lenBytes, 0, 8);
+                    len = (int)BitConverter.ToInt64(lenBytes, 0);
+                }
+
+                byte[] mask = new byte[4];
+                if (masked)
+                {
+                    await stream.ReadAsync(mask, 0, 4);
+                }
+
+                byte[] payload = new byte[len];
+                int totalRead = 0;
+                while (totalRead < len)
+                {
+                    int r = await stream.ReadAsync(payload, totalRead, len - totalRead);
+                    if (r == 0) return null;
+                    totalRead += r;
+                }
+
+                if (masked)
+                {
+                    for (int i = 0; i < payload.Length; i++)
+                    {
+                        payload[i] ^= mask[i % 4];
+                    }
+                }
+
+                return Encoding.UTF8.GetString(payload);
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        static async Task SendWebSocketMessage(NetworkStream stream, string message)
+        {
+            try
+            {
+                byte[] payload = Encoding.UTF8.GetBytes(message);
+                byte[] frame;
+
+                if (payload.Length < 126)
+                {
+                    frame = new byte[2 + payload.Length];
+                    frame[0] = 0x81; // FIN + Text
+                    frame[1] = (byte)payload.Length;
+                    Array.Copy(payload, 0, frame, 2, payload.Length);
+                }
+                else if (payload.Length < 65536)
+                {
+                    frame = new byte[4 + payload.Length];
+                    frame[0] = 0x81;
+                    frame[1] = 126;
+                    frame[2] = (byte)(payload.Length >> 8);
+                    frame[3] = (byte)(payload.Length & 0xFF);
+                    Array.Copy(payload, 0, frame, 4, payload.Length);
+                }
+                else
+                {
+                    frame = new byte[10 + payload.Length];
+                    frame[0] = 0x81;
+                    frame[1] = 127;
+                    long len = payload.Length;
+                    for (int i = 0; i < 8; i++)
+                    {
+                        frame[9 - i] = (byte)(len & 0xFF);
+                        len >>= 8;
+                    }
+                    Array.Copy(payload, 0, frame, 10, payload.Length);
+                }
+
+                await stream.WriteAsync(frame, 0, frame.Length);
+            }
+            catch { }
         }
 
         static string ProcessCommand(string messageJson)
@@ -336,18 +448,18 @@ namespace EventFourYouSiaeLettore
                     case "getstatus":
                     case "get_status":
                     case "status":
-                        return GetStatusJson();
+                        return GetStatusJsonRaw();
 
                     case "ping":
                         return JsonConvert.SerializeObject(new { type = "pong", timestamp = DateTime.UtcNow });
 
                     case "enabledemo":
                         EnableDemoMode();
-                        return GetStatusJson();
+                        return GetStatusJsonRaw();
 
                     case "disabledemo":
                         DisableDemoMode();
-                        return GetStatusJson();
+                        return GetStatusJsonRaw();
 
                     case "verifypin":
                         return VerifyPin(msg.data);
@@ -375,7 +487,7 @@ namespace EventFourYouSiaeLettore
             }
         }
 
-        static string GetStatusJson()
+        static string GetStatusJsonRaw()
         {
             return JsonConvert.SerializeObject(new
             {
@@ -390,6 +502,7 @@ namespace EventFourYouSiaeLettore
                     cardInserted = _cardPresent,
                     cardSerial = _cardSerial,
                     canEmitTickets = _cardPresent || _demoMode,
+                    bridgeConnected = true,
                     demoMode = _demoMode,
                     simulationMode = _demoMode,
                     lastError = _lastError,
@@ -579,38 +692,25 @@ namespace EventFourYouSiaeLettore
 
         static async void BroadcastStatus()
         {
-            var statusJson = GetStatusJson();
-            List<WebSocket> clientsCopy;
+            var statusJson = GetStatusJsonRaw();
+            List<TcpClient> clientsCopy;
             
             lock (_clients)
             {
-                clientsCopy = new List<WebSocket>(_clients);
+                clientsCopy = new List<TcpClient>(_clients);
             }
 
             foreach (var client in clientsCopy)
             {
                 try
                 {
-                    if (client.State == WebSocketState.Open)
+                    if (client.Connected)
                     {
-                        await SendMessage(client, statusJson);
+                        await SendWebSocketMessage(client.GetStream(), statusJson);
                     }
                 }
                 catch { }
             }
-        }
-
-        static async Task SendMessage(WebSocket ws, string message)
-        {
-            try
-            {
-                if (ws.State == WebSocketState.Open)
-                {
-                    var buffer = Encoding.UTF8.GetBytes(message);
-                    await ws.SendAsync(new ArraySegment<byte>(buffer), WebSocketMessageType.Text, true, CancellationToken.None);
-                }
-            }
-            catch { }
         }
 
         class CommandMessage

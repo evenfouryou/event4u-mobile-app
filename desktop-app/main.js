@@ -103,21 +103,60 @@ function detectSmartCardReader() {
 // Rileva smart card inserita tramite certutil
 function detectSmartCard() {
   return new Promise((resolve) => {
-    exec('certutil -scinfo', { timeout: 10000 }, (error, stdout, stderr) => {
-      const output = (stdout || '').toLowerCase();
+    exec('certutil -scinfo', { timeout: 8000, encoding: 'utf8' }, (error, stdout, stderr) => {
+      const output = stdout || '';
+      const outputLower = output.toLowerCase();
       const errorOutput = (stderr || '').toLowerCase();
       
-      // Se c'è un lettore e una carta, certutil mostra info
-      if (output.includes('card:') || output.includes('provider:')) {
-        // Cerca ATR
-        const atrMatch = stdout.match(/Card ATR:\s*([0-9A-Fa-f\s]+)/i);
-        const atr = atrMatch ? atrMatch[1].replace(/\s/g, '') : 'CARD_DETECTED';
-        resolve({ inserted: true, atr: atr });
-      } else if (output.includes('no card') || errorOutput.includes('no card') || error) {
-        resolve({ inserted: false, atr: null });
-      } else {
-        resolve({ inserted: false, atr: null });
+      // Debug log
+      console.log('certutil output:', output.substring(0, 500));
+      
+      // Cerca ATR (indica che una carta è inserita)
+      const atrMatch = output.match(/(?:Card ATR|ATR):\s*([0-9A-Fa-f\s]+)/i);
+      if (atrMatch) {
+        const atr = atrMatch[1].replace(/\s/g, '').trim();
+        if (atr.length >= 8) {
+          console.log('Carta rilevata, ATR:', atr);
+          resolve({ inserted: true, atr: atr });
+          return;
+        }
       }
+      
+      // Cerca "Provider:" o "CSP" che indica una carta con certificato
+      if (outputLower.includes('provider:') || outputLower.includes('csp name:') || outputLower.includes('microsoft base smart card')) {
+        console.log('Carta con CSP rilevata');
+        resolve({ inserted: true, atr: 'CSP_CARD_DETECTED' });
+        return;
+      }
+      
+      // Cerca pattern "Card:" seguito da testo (non "No card")
+      const cardMatch = output.match(/Card:\s*([^\r\n]+)/i);
+      if (cardMatch && !cardMatch[1].toLowerCase().includes('no card') && !cardMatch[1].toLowerCase().includes('nessuna')) {
+        console.log('Carta rilevata:', cardMatch[1]);
+        resolve({ inserted: true, atr: 'CARD_DETECTED' });
+        return;
+      }
+      
+      // Cerca indicatori negativi
+      if (outputLower.includes('no card') || 
+          outputLower.includes('nessuna carta') || 
+          outputLower.includes('no smart card') ||
+          errorOutput.includes('no card') ||
+          errorOutput.includes('0x8010002e')) { // SCARD_E_NO_SMARTCARD
+        console.log('Nessuna carta inserita');
+        resolve({ inserted: false, atr: null });
+        return;
+      }
+      
+      // Se c'è un errore di timeout o connessione, considera carta non inserita
+      if (error) {
+        console.log('Errore certutil:', error.message);
+        resolve({ inserted: false, atr: null });
+        return;
+      }
+      
+      // Default: se troviamo "Lettore" ma non carta, non è inserita
+      resolve({ inserted: false, atr: null });
     });
   });
 }

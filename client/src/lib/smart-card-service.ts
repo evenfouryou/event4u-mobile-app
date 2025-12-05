@@ -1,24 +1,10 @@
 /**
  * Smart Card Service per MiniLector EVO V3 (Bit4id)
- * Gestisce la comunicazione con il lettore di smart card per sigilli fiscali SIAE
- * 
- * Metodi di connessione (in ordine di priorità):
- * 1. WebSocket locale (Event4U Desktop App) - ws://localhost:18765
- * 2. Trust1Connector middleware - https://localhost:10443/v3
+ * Gestisce la comunicazione con l'app desktop Event4U via WebSocket
+ * ws://localhost:18765
  */
 
 import { useState, useEffect } from 'react';
-
-export interface SmartCardReader {
-  id: string;
-  name: string;
-  pinpad: boolean;
-  card: {
-    atr: string;
-    description: string[];
-    module?: string;
-  } | null;
-}
 
 export interface SmartCardStatus {
   connected: boolean;
@@ -30,11 +16,9 @@ export interface SmartCardStatus {
   cardType: string | null;
   lastCheck: Date;
   error: string | null;
-  middlewareAvailable: boolean;
   bridgeConnected: boolean;
   canEmitRealSeals: boolean;
   demoMode: boolean;
-  connectionMethod: 'websocket' | 'trust1connector' | 'none';
 }
 
 export interface FiscalSeal {
@@ -48,14 +32,11 @@ type StatusChangeCallback = (status: SmartCardStatus) => void;
 class SmartCardService {
   private static instance: SmartCardService;
   private status: SmartCardStatus;
-  private pollingInterval: NodeJS.Timeout | null = null;
   private listeners: Set<StatusChangeCallback> = new Set();
   private ws: WebSocket | null = null;
   private wsReconnectTimer: NodeJS.Timeout | null = null;
   
   private readonly WS_URL = 'ws://localhost:18765';
-  private readonly T1C_BASE_URL = 'https://localhost:10443/v3';
-  private readonly POLLING_INTERVAL = 3000;
   private readonly WS_RECONNECT_DELAY = 5000;
 
   private constructor() {
@@ -68,12 +49,10 @@ class SmartCardService {
       cardSerial: null,
       cardType: null,
       lastCheck: new Date(),
-      error: null,
-      middlewareAvailable: false,
+      error: 'App Event4U Smart Card Reader non in esecuzione',
       bridgeConnected: false,
       canEmitRealSeals: false,
-      demoMode: false,
-      connectionMethod: 'none'
+      demoMode: false
     };
   }
 
@@ -84,18 +63,11 @@ class SmartCardService {
     return SmartCardService.instance;
   }
 
-  /**
-   * Inizia la connessione con il lettore
-   */
   public startPolling(): void {
-    if (this.pollingInterval || this.ws) return;
-    
+    if (this.ws) return;
     this.tryWebSocketConnection();
   }
 
-  /**
-   * Tenta connessione WebSocket (app desktop Event4U)
-   */
   private tryWebSocketConnection(): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) return;
     
@@ -103,14 +75,10 @@ class SmartCardService {
       this.ws = new WebSocket(this.WS_URL);
       
       this.ws.onopen = () => {
-        console.log('Smart Card: Connesso via WebSocket');
+        console.log('Smart Card: Connesso all\'app Event4U');
         if (this.wsReconnectTimer) {
           clearTimeout(this.wsReconnectTimer);
           this.wsReconnectTimer = null;
-        }
-        if (this.pollingInterval) {
-          clearInterval(this.pollingInterval);
-          this.pollingInterval = null;
         }
         this.ws?.send(JSON.stringify({ type: 'get_status' }));
       };
@@ -131,54 +99,57 @@ class SmartCardService {
       };
       
       this.ws.onerror = () => {
-        console.log('Smart Card: WebSocket non disponibile');
+        console.log('Smart Card: App Event4U non disponibile');
         this.ws = null;
+        this.updateStatus({
+          ...this.status,
+          connected: false,
+          readerDetected: false,
+          cardInserted: false,
+          error: 'App Event4U Smart Card Reader non in esecuzione. Avviare l\'applicazione desktop.',
+          lastCheck: new Date()
+        });
         this.scheduleWebSocketReconnect();
-        if (!this.pollingInterval) {
-          this.startTrust1ConnectorPolling();
-        }
       };
       
       this.ws.onclose = () => {
         this.ws = null;
+        this.updateStatus({
+          ...this.status,
+          connected: false,
+          error: 'Connessione persa con Event4U Smart Card Reader',
+          lastCheck: new Date()
+        });
         this.scheduleWebSocketReconnect();
       };
       
     } catch {
       this.scheduleWebSocketReconnect();
-      if (!this.pollingInterval) {
-        this.startTrust1ConnectorPolling();
-      }
     }
   }
 
-  /**
-   * Gestisce lo stato ricevuto via WebSocket
-   */
   private handleWebSocketStatus(data: any): void {
     this.updateStatus({
-      connected: data.connected ?? false,
-      readerDetected: data.readerDetected ?? false,
+      connected: true,
+      readerDetected: data.readerDetected ?? data.readerConnected ?? false,
       cardInserted: data.cardInserted ?? false,
       readerName: data.readerName || null,
       cardAtr: data.cardAtr || data.cardATR || null,
       cardSerial: data.cardSerial || null,
-      cardType: data.cardType || null,
+      cardType: data.cardInserted ? 'Smart Card SIAE' : null,
       lastCheck: new Date(),
-      error: data.canEmitTickets ? null : this.getErrorMessage(data),
-      middlewareAvailable: true,
-      bridgeConnected: data.bridgeConnected ?? false,
-      canEmitRealSeals: data.canEmitRealSeals ?? false,
-      demoMode: data.demoMode ?? data.simulationMode ?? false,
-      connectionMethod: 'websocket'
+      error: this.getErrorMessage(data),
+      bridgeConnected: data.bridgeConnected ?? data.initialized ?? false,
+      canEmitRealSeals: data.canEmitTickets ?? false,
+      demoMode: data.demoMode ?? data.simulationMode ?? false
     });
   }
 
-  /**
-   * Genera messaggio di errore appropriato
-   */
   private getErrorMessage(data: any): string | null {
-    if (!data.readerDetected) {
+    if (data.demoMode || data.simulationMode) {
+      return null;
+    }
+    if (!data.readerDetected && !data.readerConnected) {
       return 'Lettore Smart Card non rilevato. Collegare il MiniLector EVO.';
     }
     if (!data.cardInserted) {
@@ -187,41 +158,18 @@ class SmartCardService {
     return null;
   }
 
-  /**
-   * Pianifica riconnessione WebSocket
-   */
   private scheduleWebSocketReconnect(): void {
     if (this.wsReconnectTimer) return;
     
     this.wsReconnectTimer = setTimeout(() => {
       this.wsReconnectTimer = null;
-      if (!this.ws && !this.pollingInterval) {
+      if (!this.ws) {
         this.tryWebSocketConnection();
       }
     }, this.WS_RECONNECT_DELAY);
   }
 
-  /**
-   * Avvia polling Trust1Connector (fallback)
-   */
-  private startTrust1ConnectorPolling(): void {
-    if (this.pollingInterval) return;
-    
-    this.checkTrust1ConnectorStatus();
-    
-    this.pollingInterval = setInterval(() => {
-      this.checkTrust1ConnectorStatus();
-    }, this.POLLING_INTERVAL);
-  }
-
-  /**
-   * Ferma il polling
-   */
   public stopPolling(): void {
-    if (this.pollingInterval) {
-      clearInterval(this.pollingInterval);
-      this.pollingInterval = null;
-    }
     if (this.wsReconnectTimer) {
       clearTimeout(this.wsReconnectTimer);
       this.wsReconnectTimer = null;
@@ -232,9 +180,6 @@ class SmartCardService {
     }
   }
 
-  /**
-   * Registra un listener per i cambiamenti di stato
-   */
   public subscribe(callback: StatusChangeCallback): () => void {
     this.listeners.add(callback);
     callback(this.status);
@@ -244,216 +189,50 @@ class SmartCardService {
     };
   }
 
-  /**
-   * Ottiene lo stato corrente
-   */
   public getStatus(): SmartCardStatus {
     return { ...this.status };
   }
 
-  /**
-   * Verifica se è possibile emettere biglietti
-   */
   public canEmitTickets(): boolean {
     return this.status.connected && 
            this.status.readerDetected && 
            this.status.cardInserted;
   }
 
-  /**
-   * Controlla lo stato via Trust1Connector
-   */
-  private async checkTrust1ConnectorStatus(): Promise<void> {
-    try {
-      const middlewareCheck = await this.checkMiddleware();
-      
-      if (!middlewareCheck) {
-        this.updateStatus({
-          connected: false,
-          readerDetected: false,
-          cardInserted: false,
-          readerName: null,
-          cardAtr: null,
-          cardType: null,
-          lastCheck: new Date(),
-          error: 'Nessuna connessione al lettore. Avviare l\'app Event4U Smart Card Reader.',
-          middlewareAvailable: false,
-          connectionMethod: 'none'
-        });
-        
-        this.tryWebSocketConnection();
-        return;
-      }
-
-      const readers = await this.getReaders();
-      
-      const miniLector = readers.find(r => 
-        r.name.toLowerCase().includes('minilector') || 
-        r.name.toLowerCase().includes('bit4id') ||
-        r.name.toLowerCase().includes('evo')
-      );
-
-      if (!miniLector) {
-        this.updateStatus({
-          connected: true,
-          readerDetected: false,
-          cardInserted: false,
-          readerName: null,
-          cardAtr: null,
-          cardType: null,
-          lastCheck: new Date(),
-          error: 'Lettore MiniLector EVO non rilevato. Collegare il dispositivo USB.',
-          middlewareAvailable: true,
-          connectionMethod: 'trust1connector'
-        });
-        return;
-      }
-
-      const hasCard = miniLector.card !== null;
-      
-      this.updateStatus({
-        connected: true,
-        readerDetected: true,
-        cardInserted: hasCard,
-        readerName: miniLector.name,
-        cardAtr: hasCard ? miniLector.card!.atr : null,
-        cardType: hasCard ? miniLector.card!.description.join(', ') : null,
-        lastCheck: new Date(),
-        error: hasCard ? null : 'Smart Card SIAE non inserita.',
-        middlewareAvailable: true,
-        connectionMethod: 'trust1connector'
-      });
-
-    } catch (error) {
-      this.updateStatus({
-        connected: false,
-        readerDetected: false,
-        cardInserted: false,
-        readerName: null,
-        cardAtr: null,
-        cardType: null,
-        lastCheck: new Date(),
-        error: error instanceof Error ? error.message : 'Errore di comunicazione',
-        middlewareAvailable: false,
-        connectionMethod: 'none'
-      });
-    }
-  }
-
-  /**
-   * Verifica se Trust1Connector è in esecuzione
-   */
-  private async checkMiddleware(): Promise<boolean> {
-    try {
-      const response = await fetch(`${this.T1C_BASE_URL}/info`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
-      return response.ok;
-    } catch {
-      return false;
-    }
-  }
-
-  /**
-   * Ottiene la lista dei lettori da Trust1Connector
-   */
-  private async getReaders(): Promise<SmartCardReader[]> {
-    try {
-      const response = await fetch(`${this.T1C_BASE_URL}/readers`, {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' }
-      });
-
-      if (!response.ok) {
-        throw new Error('Errore nella lettura dei dispositivi');
-      }
-
-      const data = await response.json();
-      
-      if (data.success && Array.isArray(data.data)) {
-        return data.data;
-      }
-      
-      return [];
-    } catch {
-      return [];
-    }
-  }
-
-  /**
-   * Legge un sigillo fiscale dalla smart card
-   */
-  public async readFiscalSeal(): Promise<FiscalSeal | null> {
-    if (!this.canEmitTickets()) {
-      throw new Error('Impossibile leggere sigillo: carta non inserita');
-    }
-
-    try {
-      const response = await fetch(`${this.T1C_BASE_URL}/containers/siae`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          readerId: this.status.readerName,
-          action: 'read-seal'
-        })
-      });
-
-      if (!response.ok) {
-        throw new Error('Errore lettura sigillo');
-      }
-
-      const data = await response.json();
-      return {
-        sealNumber: data.sealNumber || `SEAL-${Date.now()}`,
-        timestamp: new Date(),
-        valid: true
-      };
-    } catch {
-      console.warn('Modalità demo: generazione sigillo simulato');
-      return {
-        sealNumber: `DEMO-${Date.now().toString(36).toUpperCase()}`,
-        timestamp: new Date(),
-        valid: false
-      };
-    }
-  }
-
-  /**
-   * Genera un nuovo sigillo fiscale per un biglietto
-   */
   public async generateSealForTicket(ticketId: number): Promise<string> {
-    if (!this.canEmitTickets()) {
-      throw new Error('ERRORE FISCALE: Smart Card non inserita. Impossibile emettere biglietto senza sigillo fiscale valido.');
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      throw new Error('App Event4U Smart Card Reader non connessa');
     }
 
-    const seal = await this.readFiscalSeal();
-    
-    if (!seal) {
-      throw new Error('ERRORE FISCALE: Impossibile leggere sigillo dalla Smart Card');
-    }
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        reject(new Error('Timeout generazione sigillo'));
+      }, 10000);
 
-    const year = new Date().getFullYear();
-    const progressive = ticketId.toString().padStart(8, '0');
-    const checksum = this.calculateChecksum(`${year}${progressive}`);
-    
-    return `${year}-${progressive}-${checksum}`;
+      const handler = (event: MessageEvent) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'sealResponse') {
+            clearTimeout(timeout);
+            this.ws?.removeEventListener('message', handler);
+            
+            if (msg.success && msg.seal) {
+              resolve(msg.seal.sealCode || msg.seal.sealNumber);
+            } else {
+              reject(new Error(msg.error || 'Errore generazione sigillo'));
+            }
+          }
+        } catch {}
+      };
+
+      this.ws!.addEventListener('message', handler);
+      this.ws!.send(JSON.stringify({
+        type: 'requestSeal',
+        data: { ticketId, timestamp: new Date().toISOString() }
+      }));
+    });
   }
 
-  /**
-   * Calcola checksum per sigillo fiscale
-   */
-  private calculateChecksum(input: string): string {
-    let sum = 0;
-    for (let i = 0; i < input.length; i++) {
-      sum += parseInt(input[i], 10) * (i + 1);
-    }
-    return (sum % 97).toString().padStart(2, '0');
-  }
-
-  /**
-   * Aggiorna lo stato e notifica i listener
-   */
   private updateStatus(newStatus: SmartCardStatus): void {
     const hasChanged = JSON.stringify(this.status) !== JSON.stringify(newStatus);
     
@@ -469,30 +248,31 @@ class SmartCardService {
     }
   }
 
-  /**
-   * Modalità demo per testing senza hardware
-   */
   public enableDemoMode(): void {
-    console.warn('Smart Card Service: Modalità DEMO attivata');
-    this.updateStatus({
-      connected: true,
-      readerDetected: true,
-      cardInserted: true,
-      readerName: 'Bit4id MiniLector EVO V3 (DEMO)',
-      cardAtr: '3B9813400AA503010101AD1311',
-      cardType: 'SIAE Fiscal Card (Demo)',
-      lastCheck: new Date(),
-      error: null,
-      middlewareAvailable: true,
-      connectionMethod: 'websocket'
-    });
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: 'enableDemo' }));
+    } else {
+      this.updateStatus({
+        connected: true,
+        readerDetected: true,
+        cardInserted: true,
+        readerName: 'Bit4id MiniLector EVO V3 (DEMO)',
+        cardAtr: '3B9813400AA503010101AD1311',
+        cardSerial: 'DEMO-12345678',
+        cardType: 'SIAE Fiscal Card (Demo)',
+        lastCheck: new Date(),
+        error: null,
+        bridgeConnected: true,
+        canEmitRealSeals: false,
+        demoMode: true
+      });
+    }
   }
 
-  /**
-   * Disabilita modalità demo
-   */
   public disableDemoMode(): void {
-    this.checkTrust1ConnectorStatus();
+    if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+      this.ws.send(JSON.stringify({ type: 'disableDemo' }));
+    }
   }
 }
 
