@@ -50,82 +50,45 @@ function isAllowedOrigin(origin) {
   return false;
 }
 
-// Rileva lettore smart card tramite WinSCard API (come fa EventForYou)
+// Rileva lettore smart card tramite certutil (metodo più affidabile)
 function detectSmartCardReader() {
   return new Promise((resolve) => {
-    // Usa SCardListReaders API nativa di Windows con encoding ASCII
-    const psScript = `
-Add-Type -TypeDefinition @"
-using System;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Collections.Generic;
-
-public class WinSCard {
-    [DllImport("winscard.dll", CharSet = CharSet.Ansi)]
-    public static extern int SCardEstablishContext(uint dwScope, IntPtr pvReserved1, IntPtr pvReserved2, out IntPtr phContext);
-    
-    [DllImport("winscard.dll", CharSet = CharSet.Ansi)]
-    public static extern int SCardListReadersA(IntPtr hContext, string mszGroups, byte[] mszReaders, ref uint pcchReaders);
-    
-    [DllImport("winscard.dll")]
-    public static extern int SCardReleaseContext(IntPtr hContext);
-    
-    public static List<string> GetReaders() {
-        List<string> readers = new List<string>();
-        IntPtr hContext = IntPtr.Zero;
-        
-        int result = SCardEstablishContext(0, IntPtr.Zero, IntPtr.Zero, out hContext);
-        if (result != 0) return readers;
-        
-        uint size = 0;
-        result = SCardListReadersA(hContext, null, null, ref size);
-        if (result == 0 && size > 0) {
-            byte[] buffer = new byte[size];
-            result = SCardListReadersA(hContext, null, buffer, ref size);
-            if (result == 0) {
-                string allReaders = Encoding.ASCII.GetString(buffer);
-                string[] parts = allReaders.Split(new char[] { (char)0 }, StringSplitOptions.RemoveEmptyEntries);
-                foreach (string r in parts) {
-                    if (!string.IsNullOrWhiteSpace(r)) readers.Add(r.Trim());
-                }
-            }
-        }
-        SCardReleaseContext(hContext);
-        return readers;
-    }
-}
-"@
-
-try {
-    $$readers = [WinSCard]::GetReaders()
-    if ($$readers.Count -gt 0) {
-        Write-Output "FOUND:$$($$readers[0])"
-    } else {
-        Write-Output "NOTFOUND"
-    }
-} catch {
-    Write-Output "ERROR:$$_"
-}
-    `;
-    
-    exec(`powershell -NoProfile -ExecutionPolicy Bypass -Command "${psScript.replace(/"/g, '\\"')}"`, 
-      { timeout: 20000 }, 
-      (error, stdout, stderr) => {
-        if (error) {
-          resolve({ found: false, name: null, error: error.message });
+    // Usa certutil -scinfo che funziona sempre su Windows
+    exec('certutil -scinfo', { timeout: 15000, encoding: 'utf8' }, (error, stdout, stderr) => {
+      if (error) {
+        resolve({ found: false, name: null, error: error.message });
+        return;
+      }
+      
+      const output = stdout || '';
+      
+      // Cerca "Lettore:" o "Reader:" nel output
+      const readerMatch = output.match(/(?:Lettore|Reader):\s*(.+?)(?:\r?\n|$)/i);
+      if (readerMatch) {
+        const readerName = readerMatch[1].trim();
+        // Verifica che non sia un messaggio di errore
+        if (readerName && !readerName.includes('Nessun') && !readerName.includes('No ')) {
+          resolve({ found: true, name: readerName, error: null });
           return;
         }
-        
-        const output = stdout.trim();
-        if (output.startsWith('FOUND:')) {
-          const name = output.replace('FOUND:', '').trim();
-          resolve({ found: true, name: name || 'MiniLector EVO V3', error: null });
-        } else {
-          resolve({ found: false, name: null, error: null });
-        }
       }
-    );
+      
+      // Cerca pattern alternativi (BIT4ID, MiniLector, Smart Card Reader)
+      const bit4idMatch = output.match(/(BIT4ID[^\r\n]+|miniLector[^\r\n]+|Smart Card Reader[^\r\n]+)/i);
+      if (bit4idMatch) {
+        resolve({ found: true, name: bit4idMatch[1].trim(), error: null });
+        return;
+      }
+      
+      // Cerca "Lettori:" seguito da numero > 0
+      const countMatch = output.match(/(?:Lettori|Readers):\s*(\d+)/i);
+      if (countMatch && parseInt(countMatch[1]) > 0) {
+        resolve({ found: true, name: 'Smart Card Reader', error: null });
+        return;
+      }
+      
+      resolve({ found: false, name: null, error: null });
+    });
   });
 }
 
