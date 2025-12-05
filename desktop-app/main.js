@@ -50,62 +50,77 @@ function isAllowedOrigin(origin) {
   return false;
 }
 
-// Rileva lettore smart card tramite PowerShell (metodi multipli)
+// Rileva lettore smart card tramite WinSCard API (come fa EventForYou)
 function detectSmartCardReader() {
   return new Promise((resolve) => {
-    // Metodo 1: Get-PnpDevice
-    // Metodo 2: Get-CimInstance (fallback)
-    // Metodo 3: pnputil (fallback)
+    // Usa SCardListReaders API nativa di Windows (stesso metodo di EventForYou.exe)
     const psScript = `
-      $found = $false
-      $readerName = ""
-      
-      # Metodo 1: Get-PnpDevice
-      try {
-        $reader = Get-PnpDevice -Class SmartCardReader -ErrorAction SilentlyContinue | 
-          Where-Object { $_.Status -eq 'OK' } | 
-          Select-Object -First 1
-        if ($reader) {
-          $found = $true
-          $readerName = $reader.FriendlyName
+Add-Type -TypeDefinition @"
+using System;
+using System.Runtime.InteropServices;
+using System.Text;
+using System.Collections.Generic;
+
+public class WinSCard {
+    [DllImport("winscard.dll", CharSet = CharSet.Unicode)]
+    public static extern int SCardEstablishContext(uint dwScope, IntPtr pvReserved1, IntPtr pvReserved2, out IntPtr phContext);
+    
+    [DllImport("winscard.dll", CharSet = CharSet.Unicode)]
+    public static extern int SCardListReaders(IntPtr hContext, string mszGroups, byte[] mszReaders, ref int pcchReaders);
+    
+    [DllImport("winscard.dll")]
+    public static extern int SCardReleaseContext(IntPtr hContext);
+    
+    public static List<string> GetReaders() {
+        List<string> readers = new List<string>();
+        IntPtr hContext = IntPtr.Zero;
+        int result = SCardEstablishContext(2, IntPtr.Zero, IntPtr.Zero, out hContext);
+        if (result != 0) return readers;
+        
+        int size = 0;
+        result = SCardListReaders(hContext, null, null, ref size);
+        if (result == 0 && size > 0) {
+            byte[] buffer = new byte[size * 2];
+            result = SCardListReaders(hContext, null, buffer, ref size);
+            if (result == 0) {
+                string allReaders = Encoding.Unicode.GetString(buffer);
+                foreach (string r in allReaders.Split(new char[] { '\\0' }, StringSplitOptions.RemoveEmptyEntries)) {
+                    if (!string.IsNullOrWhiteSpace(r)) readers.Add(r.Trim());
+                }
+            }
         }
-      } catch {}
-      
-      # Metodo 2: Get-CimInstance (WMI)
-      if (-not $found) {
-        try {
-          $reader = Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue | 
-            Where-Object { $_.PNPClass -eq 'SmartCardReader' -and $_.Status -eq 'OK' } | 
-            Select-Object -First 1
-          if ($reader) {
-            $found = $true
-            $readerName = $reader.Name
-          }
-        } catch {}
-      }
-      
-      # Metodo 3: Cerca BIT4ID o MiniLector in tutti i dispositivi USB
-      if (-not $found) {
-        try {
-          $reader = Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue | 
-            Where-Object { $_.Name -like '*MiniLector*' -or $_.Name -like '*BIT4ID*' -or $_.Name -like '*Smart Card*' } | 
-            Select-Object -First 1
-          if ($reader) {
-            $found = $true
-            $readerName = $reader.Name
-          }
-        } catch {}
-      }
-      
-      if ($found) {
-        Write-Output "FOUND:$readerName"
-      } else {
+        SCardReleaseContext(hContext);
+        return readers;
+    }
+}
+"@
+
+try {
+    $readers = [WinSCard]::GetReaders()
+    if ($readers.Count -gt 0) {
+        Write-Output "FOUND:$($readers[0])"
+    } else {
+        # Fallback a WMI
+        $reader = Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue | Where-Object { $_.Name -like '*MiniLector*' -or $_.Name -like '*BIT4ID*' -or $_.Name -like '*Smart Card Reader*' } | Select-Object -First 1
+        if ($reader) {
+            Write-Output "FOUND:$($reader.Name)"
+        } else {
+            Write-Output "NOTFOUND"
+        }
+    }
+} catch {
+    # Fallback a WMI
+    $reader = Get-CimInstance Win32_PnPEntity -ErrorAction SilentlyContinue | Where-Object { $_.Name -like '*MiniLector*' -or $_.Name -like '*BIT4ID*' -or $_.Name -like '*Smart Card Reader*' } | Select-Object -First 1
+    if ($reader) {
+        Write-Output "FOUND:$($reader.Name)"
+    } else {
         Write-Output "NOTFOUND"
-      }
+    }
+}
     `;
     
-    exec(`powershell -NoProfile -NonInteractive -Command "${psScript.replace(/\n/g, ' ').replace(/"/g, '\\"')}"`, 
-      { timeout: 15000 }, 
+    exec(`powershell -NoProfile -ExecutionPolicy Bypass -Command "${psScript.replace(/"/g, '\\"')}"`, 
+      { timeout: 20000 }, 
       (error, stdout, stderr) => {
         if (error) {
           resolve({ found: false, name: null, error: error.message });
