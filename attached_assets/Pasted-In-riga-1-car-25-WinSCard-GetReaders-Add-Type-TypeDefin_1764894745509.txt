@@ -1,0 +1,271 @@
+In riga:1 car:25
++ [WinSCard]::GetReaders()Add-Type -TypeDefinition @"
++                         ~~~~~~~~
+Token 'Add-Type' imprevisto nell'espressione o nell'istruzione.
+    + CategoryInfo          : ParserError: (:) [], ParentContainsErrorRecordException
+    + FullyQualifiedErrorId : UnexpectedToken
+
+PS C:\WINDOWS\system32>
+PS C:\WINDOWS\system32> $context = [IntPtr]::Zero
+PS C:\WINDOWS\system32> $result1 = [WinSCard2]::SCardEstablishContext(0, [IntPtr]::Zero, [IntPtr]::Zero, [ref]$context)
+Impossibile trovare il tipo [WinSCard2].
+In riga:1 car:12
++ $result1 = [WinSCard2]::SCardEstablishContext(0, [IntPtr]::Zero, [Int ...
++            ~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (WinSCard2:TypeName) [], RuntimeException
+    + FullyQualifiedErrorId : TypeNotFound
+
+PS C:\WINDOWS\system32> Write-Host "SCardEstablishContext result: $result1 (0=success)"
+SCardEstablishContext result:  (0=success)
+PS C:\WINDOWS\system32> Write-Host "Context: $context"
+Context: 0
+PS C:\WINDOWS\system32>
+PS C:\WINDOWS\system32> $size = [uint32]0
+PS C:\WINDOWS\system32> $result2 = [WinSCard2]::SCardListReadersA($context, $null, $null, [ref]$size)
+Impossibile trovare il tipo [WinSCard2].
+In riga:1 car:12
++ $result2 = [WinSCard2]::SCardListReadersA($context, $null, $null, [re ...
++            ~~~~~~~~~~~
+    + CategoryInfo          : InvalidOperation: (WinSCard2:TypeName) [], RuntimeException
+    + FullyQualifiedErrorId : TypeNotFound
+
+PS C:\WINDOWS\system32> Write-Host "SCardListReadersA (get size) result: $result2 (0=success)"
+SCardListReadersA (get size) result:  (0=success)
+PS C:\WINDOWS\system32> Write-Host "Size: $size"
+Size: 0
+PS C:\WINDOWS\system32>
+PS C:\WINDOWS\system32> if ($size -gt 0) {
+>>     $buffer = New-Object byte[] $size
+>>     $result3 = [WinSCard2]::SCardListReadersA($context, $null, $buffer, [ref]$size)
+>>     Write-Host "SCardListReadersA (get data) result: $result3"
+>>     $readers = [System.Text.Encoding]::ASCII.GetString($buffer)
+>>     Write-Host "Readers: $readers"
+>> }
+PS C:\WINDOWS\system32>
+PS C:\WINDOWS\system32> [WinSCard2]::SCardReleaseContext($context)
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
