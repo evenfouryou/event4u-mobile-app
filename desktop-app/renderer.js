@@ -103,7 +103,7 @@ document.addEventListener('DOMContentLoaded', () => {
     addLog('info', 'Connessione gestita automaticamente');
     try {
       await window.siaeAPI.setRelayConfig({
-        serverUrl: inputServerUrl?.value || 'wss://1e140314-d94a-4320-bb5f-edbf06f7b556-00-3atrzxa6r3x8c.kirk.replit.dev',
+        serverUrl: inputServerUrl?.value || 'wss://manage.eventfouryou.com',
         token: inputBridgeToken?.value || '',
         companyId: inputCompanyId?.value || '',
         enabled: true
