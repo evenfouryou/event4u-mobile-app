@@ -80,6 +80,47 @@ A comprehensive SIAE-compliant event ticketing and fiscal management system for 
 - When siaeEnabled=true, the "Biglietteria SIAE" section appears in the sidebar for that gestore
 - Feature toggle stored in user_features table (siaeEnabled field)
 
+### Event Command Center (Event Hub)
+A unified real-time dashboard for managing events during operation, replacing scattered navigation with a single comprehensive view.
+
+**Route**: `/events/:id/hub`
+
+**Tab Navigation:**
+- **Panoramica (Overview)**: Main dashboard with KPIs, activity log, entrance charts, venue map
+- **Biglietteria (Ticketing)**: SIAE ticket management integration
+- **Liste (Guest Lists)**: Guest list management with check-in tracking
+- **Tavoli (Tables)**: Table booking and seating management
+- **Staff**: Staff assignments and coordination
+- **Inventario (Inventory)**: Stock management and transfers
+- **Incassi (Finance)**: Revenue tracking and financial summaries
+
+**Key Components:**
+- `KPICard`: Real-time metrics with trend indicators (entries, capacity, tables, revenue)
+- `EntranceChart`: Recharts area chart showing entry flow by time slot
+- `VenueMap`: Interactive table grid organized by type (standard/VIP/privé) with status colors
+- `ActivityLogEntry`: Real-time activity feed for check-ins, sales, bookings
+- `AlertBanner`: Warning/error/success notifications for operational alerts
+- `QuickActionButton`: Rapid action triggers (QR scan, add guest, book table)
+- `TopConsumptionsWidget`: Pie chart of top-selling products
+
+**Real-time Features:**
+- WebSocket connection on port 18765 for live updates
+- Live indicator showing connection status
+- Automatic activity log updates
+- Alert system for low stock, capacity warnings
+
+**Quick Actions Sheet:**
+- QR code scanning
+- Guest addition
+- Table booking
+- Stock transfer
+- Report generation
+- Emergency actions (pause ticketing, close doors, call security)
+
+**Navigation:**
+- Events list (`/events`) now routes to Event Hub (`/events/:id/hub`) for non-draft events
+- Draft events route to wizard (`/events/wizard/:id`)
+
 ### Progressive Web App (PWA)
 Event4U is a fully installable PWA with:
 - **manifest.json**: App metadata, icons, and shortcuts for installation
