@@ -24,7 +24,12 @@ jobs:
       - name: Build SiaeBridge
         run: |
           cd SiaeBridge
-          dotnet publish -c Release -r win-x86 --self-contained true -o bin/Release/net8.0-windows/win-x86
+          dotnet publish -c Release -r win-x86 --self-contained true -o ../resources
+          
+      - name: Copy libSIAE.dll
+        run: |
+          copy SiaeBridge\prebuilt\libSIAE.dll resources\
+          dir resources
           
       - name: Setup Node.js
         uses: actions/setup-node@v4

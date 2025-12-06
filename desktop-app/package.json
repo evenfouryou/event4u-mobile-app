@@ -50,7 +50,7 @@
     ],
     "extraResources": [
       {
-        "from": "SiaeBridge/bin/Release/net8.0-windows/win-x86",
+        "from": "resources",
         "to": "SiaeBridge",
         "filter": ["**/*"]
       }

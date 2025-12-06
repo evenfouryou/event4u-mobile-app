@@ -57,7 +57,18 @@ function readDesktopFile(filename: string): string {
   }
 }
 
-// Get files to upload from local desktop-app directory
+// Read binary file from desktop-app directory and return base64
+function readDesktopFileBinary(filename: string): string {
+  try {
+    const filePath = path.join(process.cwd(), 'desktop-app', filename);
+    return fs.readFileSync(filePath).toString('base64');
+  } catch (e) {
+    console.error(`Failed to read binary ${filename}:`, e);
+    return '';
+  }
+}
+
+// Get text files to upload from local desktop-app directory
 function getFilesToUpload(): Record<string, string> {
   return {
     'main.js': readDesktopFile('main.js'),
@@ -71,6 +82,13 @@ function getFilesToUpload(): Record<string, string> {
     'SiaeBridge/SiaeBridge.csproj': readDesktopFile('SiaeBridge/SiaeBridge.csproj'),
     'SiaeBridge/Program.cs': readDesktopFile('SiaeBridge/Program.cs'),
     'SiaeBridge/LibSiae.cs': readDesktopFile('SiaeBridge/LibSiae.cs')
+  };
+}
+
+// Get binary files to upload (already base64 encoded)
+function getBinaryFilesToUpload(): Record<string, string> {
+  return {
+    'SiaeBridge/prebuilt/libSIAE.dll': readDesktopFileBinary('SiaeBridge/prebuilt/libSIAE.dll')
   };
 }
 
@@ -109,10 +127,11 @@ export async function updateSmartCardReaderRepo(): Promise<{ success: boolean; r
     }
     
     const FILES_TO_UPLOAD = getFilesToUpload();
+    const BINARY_FILES_TO_UPLOAD = getBinaryFilesToUpload();
     let filesUploaded = 0;
     let workflowSkipped = false;
     
-    // Upload files
+    // Upload text files
     for (const [filename, content] of Object.entries(FILES_TO_UPLOAD)) {
       if (!content) {
         console.log(`Skipping ${filename} (empty or not found)`);
@@ -163,6 +182,55 @@ export async function updateSmartCardReaderRepo(): Promise<{ success: boolean; r
             break;
           }
           console.log(`  Attempt ${attempt + 1}/3 failed for ${filename}: ${e.message}`);
+          await new Promise(resolve => setTimeout(resolve, 2000));
+        }
+      }
+    }
+    
+    // Upload binary files (already base64 encoded)
+    for (const [filename, base64Content] of Object.entries(BINARY_FILES_TO_UPLOAD)) {
+      if (!base64Content) {
+        console.log(`Skipping binary ${filename} (empty or not found)`);
+        continue;
+      }
+      
+      console.log(`Uploading binary ${filename}...`);
+      
+      let success = false;
+      
+      for (let attempt = 0; attempt < 3 && !success; attempt++) {
+        try {
+          // Check if file exists
+          let sha: string | undefined;
+          try {
+            const { data: existingFile } = await octokit.repos.getContent({
+              owner: user.login,
+              repo: repoName,
+              path: filename
+            });
+            if ('sha' in existingFile) {
+              sha = existingFile.sha;
+            }
+          } catch (e: any) {
+            // 404 is expected for new files
+          }
+          
+          // Create or update file (content is already base64)
+          await octokit.repos.createOrUpdateFileContents({
+            owner: user.login,
+            repo: repoName,
+            path: filename,
+            message: sha ? `Update ${filename}` : `Add ${filename}`,
+            content: base64Content,
+            ...(sha ? { sha } : {})
+          });
+          
+          success = true;
+          filesUploaded++;
+          console.log(`  ✓ ${filename} uploaded`);
+          await new Promise(resolve => setTimeout(resolve, 500));
+        } catch (e: any) {
+          console.log(`  Attempt ${attempt + 1}/3 failed for binary ${filename}: ${e.message}`);
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }
