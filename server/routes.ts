@@ -4508,7 +4508,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   // ===== BRIDGE RELAY API =====
   
-  // Generate a bridge token for the current user's company
+  // Get or generate a bridge token for the current user's company
+  // Token is fixed and persists - only regenerated if explicitly requested
   app.get('/api/bridge/token', isAuthenticated, async (req: any, res) => {
     try {
       const companyId = await getUserCompanyId(req);
@@ -4522,10 +4523,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Only administrators can generate bridge tokens" });
       }
       
+      // Check if company already has a token
+      const company = await db
+        .select()
+        .from(companies)
+        .where(eq(companies.id, companyId))
+        .limit(1);
+      
+      let token = company[0]?.bridgeToken;
+      
+      // Only generate a new token if one doesn't exist
+      if (!token) {
+        token = crypto.randomBytes(32).toString('hex');
+        
+        // Save the new token
+        await db
+          .update(companies)
+          .set({ bridgeToken: token, updatedAt: new Date() })
+          .where(eq(companies.id, companyId));
+      }
+      
+      res.json({ 
+        token, 
+        companyId,
+        serverUrl: 'wss://manage.eventfouryou.com',
+        message: "Token fisso per la tua azienda. Usa queste credenziali nell'app desktop." 
+      });
+    } catch (error: any) {
+      console.error('[Bridge] Error getting token:', error);
+      res.status(500).json({ message: "Failed to get bridge token" });
+    }
+  });
+  
+  // Regenerate bridge token (explicitly requested)
+  app.post('/api/bridge/token/regenerate', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated with your account" });
+      }
+      
+      const userRole = req.user?.role;
+      if (userRole !== 'super_admin' && userRole !== 'gestore') {
+        return res.status(403).json({ message: "Only administrators can regenerate bridge tokens" });
+      }
+      
       // Generate a new token
       const token = crypto.randomBytes(32).toString('hex');
       
-      // Update the company with the new bridge token
       await db
         .update(companies)
         .set({ bridgeToken: token, updatedAt: new Date() })
@@ -4534,11 +4579,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json({ 
         token, 
         companyId,
-        message: "Bridge token generated successfully. Use this token to connect the desktop bridge application." 
+        serverUrl: 'wss://manage.eventfouryou.com',
+        message: "Nuovo token generato. Aggiorna le credenziali nell'app desktop." 
       });
     } catch (error: any) {
-      console.error('[Bridge] Error generating token:', error);
-      res.status(500).json({ message: "Failed to generate bridge token" });
+      console.error('[Bridge] Error regenerating token:', error);
+      res.status(500).json({ message: "Failed to regenerate bridge token" });
     }
   });
   

@@ -472,3 +472,28 @@ body {
   opacity: 0.5;
   cursor: not-allowed;
 }
+
+.config-help {
+  font-size: 13px;
+  color: var(--text-secondary);
+  padding: 12px;
+  background: rgba(99, 102, 241, 0.1);
+  border-radius: 8px;
+  margin-bottom: 12px;
+}
+
+.config-help strong {
+  color: var(--accent-primary);
+}
+
+.relay-config.hidden {
+  display: none;
+}
+
+.relay-connected .relay-config {
+  display: none;
+}
+
+.relay-connected .status-value {
+  color: var(--success);
+}

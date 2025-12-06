@@ -27,27 +27,41 @@
 
     <!-- Main Content -->
     <main class="main-content">
-      <!-- Remote Relay Panel - Simplified (auto-connects) -->
+      <!-- Remote Relay Panel - Configuration for Gestore -->
       <section class="panel relay-panel">
-        <h2>Connessione Remota</h2>
+        <h2>Connessione Server Event4U</h2>
         <div class="status-grid">
           <div class="status-item" id="status-relay">
             <div class="status-indicator"></div>
             <div class="status-info">
-              <span class="status-label">Server Event4U</span>
-              <span class="status-value">Connessione in corso...</span>
+              <span class="status-label">Server</span>
+              <span class="status-value">In attesa configurazione...</span>
             </div>
           </div>
         </div>
-        <!-- Hidden config fields for compatibility -->
-        <div class="relay-config" id="relay-config" style="display: none;">
+        
+        <!-- Configuration Panel - Visible for first-time setup -->
+        <div class="relay-config" id="relay-config">
+          <p class="config-help">Ottieni le credenziali da <strong>Impostazioni → Bridge Token</strong> nel pannello web.</p>
+          <div class="form-group">
+            <label for="input-company-id">Company ID</label>
+            <input type="text" id="input-company-id" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx">
+          </div>
+          <div class="form-group">
+            <label for="input-bridge-token">Token</label>
+            <input type="password" id="input-bridge-token" placeholder="Token di autenticazione">
+          </div>
           <input type="hidden" id="input-server-url" value="wss://manage.eventfouryou.com">
-          <input type="hidden" id="input-bridge-token" value="">
-          <input type="hidden" id="input-company-id" value="">
         </div>
-        <div class="status-actions" style="display: none;">
-          <button id="btn-relay-connect" class="btn btn-success" style="display: none;"></button>
-          <button id="btn-relay-disconnect" class="btn btn-secondary" style="display: none;"></button>
+        <div class="status-actions">
+          <button id="btn-relay-connect" class="btn btn-success">
+            <span class="btn-icon">🔗</span>
+            Salva e Connetti
+          </button>
+          <button id="btn-relay-disconnect" class="btn btn-secondary" style="display: none;">
+            <span class="btn-icon">❌</span>
+            Disconnetti
+          </button>
         </div>
       </section>
 
