@@ -79,7 +79,7 @@ export async function updateSmartCardReaderRepo(): Promise<{ success: boolean; r
     const { data: user } = await octokit.users.getAuthenticated();
     console.log(`GitHub user: ${user.login}`);
     
-    const repoName = 'event4u-smart-card-reader';
+    const repoName = 'event-four-you-siae-lettore';
     
     // Check if repo exists
     let repoExists = false;
