@@ -47,7 +47,7 @@ let wsClients = new Set();
 let relayWs = null;
 let relayReconnectTimer = null;
 let relayConfig = {
-  serverUrl: 'wss://manage.eventfouryou.com',
+  serverUrl: 'wss://1e140314-d94a-4320-bb5f-edbf06f7b556-00-3atrzxa6r3x8c.kirk.replit.dev',
   token: '2a128d156ed5ee528925edb9c2279d3085cc5e1d02bd0895438e9277c1c422e1',
   companyId: '67952894-0d84-4e62-81bf-bfec9a282c1e',
   enabled: true
@@ -772,9 +772,9 @@ async function handleRelayCommand(msg) {
 
 // Load relay config from file
 function loadRelayConfig() {
-  // Default config is hardcoded - only override with saved values if they are valid
+  // Default config for Event4U development server
   const defaultConfig = {
-    serverUrl: 'wss://manage.eventfouryou.com',
+    serverUrl: 'wss://1e140314-d94a-4320-bb5f-edbf06f7b556-00-3atrzxa6r3x8c.kirk.replit.dev',
     token: '2a128d156ed5ee528925edb9c2279d3085cc5e1d02bd0895438e9277c1c422e1',
     companyId: '67952894-0d84-4e62-81bf-bfec9a282c1e',
     enabled: true
