@@ -266,81 +266,83 @@ export function AppSidebar() {
       }
     );
 
-    // SIAE Ticketing Module for Gestore
-    menuItems.push(
-        {
-          title: "Configurazione",
-          icon: Settings,
-          url: "/siae/system-config",
-          group: "Biglietteria SIAE",
-        },
-        {
-          title: "Clienti",
-          icon: Users,
-          url: "/siae/customers",
-          group: "Biglietteria SIAE",
-        },
-        {
-          title: "Eventi Biglietteria",
-          icon: Ticket,
-          url: "/siae/ticketed-events",
-          group: "Biglietteria SIAE",
-        },
-        {
-          title: "Biglietti",
-          icon: Ticket,
-          url: "/siae/tickets",
-          group: "Biglietteria SIAE",
-        },
-        {
-          title: "Transazioni",
-          icon: Receipt,
-          url: "/siae/transactions",
-          group: "Biglietteria SIAE",
-        },
-        {
-          title: "Cambio Nominativo",
-          icon: UserCog,
-          url: "/siae/name-changes",
-          group: "Biglietteria SIAE",
-        },
-        {
-          title: "Rivendita",
-          icon: RefreshCcw,
-          url: "/siae/resales",
-          group: "Biglietteria SIAE",
-        },
-        {
-          title: "Box Office",
-          icon: Store,
-          url: "/siae/box-office",
-          group: "Biglietteria SIAE",
-        },
-        {
-          title: "Abbonamenti",
-          icon: CreditCard,
-          url: "/siae/subscriptions",
-          group: "Biglietteria SIAE",
-        },
-        {
-          title: "Trasmissioni XML",
-          icon: Send,
-          url: "/siae/transmissions",
-          group: "Biglietteria SIAE",
-        },
-        {
-          title: "Log Audit",
-          icon: ClipboardList,
-          url: "/siae/audit-logs",
-          group: "Biglietteria SIAE",
-        },
-        {
-          title: "Posti Numerati",
-          icon: Grid3X3,
-          url: "/siae/numbered-seats",
-          group: "Biglietteria SIAE",
-        }
-    );
+    // SIAE Ticketing Module for Gestore (only if enabled)
+    if (userFeatures?.siaeEnabled === true) {
+      menuItems.push(
+          {
+            title: "Configurazione",
+            icon: Settings,
+            url: "/siae/system-config",
+            group: "Biglietteria SIAE",
+          },
+          {
+            title: "Clienti",
+            icon: Users,
+            url: "/siae/customers",
+            group: "Biglietteria SIAE",
+          },
+          {
+            title: "Eventi Biglietteria",
+            icon: Ticket,
+            url: "/siae/ticketed-events",
+            group: "Biglietteria SIAE",
+          },
+          {
+            title: "Biglietti",
+            icon: Ticket,
+            url: "/siae/tickets",
+            group: "Biglietteria SIAE",
+          },
+          {
+            title: "Transazioni",
+            icon: Receipt,
+            url: "/siae/transactions",
+            group: "Biglietteria SIAE",
+          },
+          {
+            title: "Cambio Nominativo",
+            icon: UserCog,
+            url: "/siae/name-changes",
+            group: "Biglietteria SIAE",
+          },
+          {
+            title: "Rivendita",
+            icon: RefreshCcw,
+            url: "/siae/resales",
+            group: "Biglietteria SIAE",
+          },
+          {
+            title: "Box Office",
+            icon: Store,
+            url: "/siae/box-office",
+            group: "Biglietteria SIAE",
+          },
+          {
+            title: "Abbonamenti",
+            icon: CreditCard,
+            url: "/siae/subscriptions",
+            group: "Biglietteria SIAE",
+          },
+          {
+            title: "Trasmissioni XML",
+            icon: Send,
+            url: "/siae/transmissions",
+            group: "Biglietteria SIAE",
+          },
+          {
+            title: "Log Audit",
+            icon: ClipboardList,
+            url: "/siae/audit-logs",
+            group: "Biglietteria SIAE",
+          },
+          {
+            title: "Posti Numerati",
+            icon: Grid3X3,
+            url: "/siae/numbered-seats",
+            group: "Biglietteria SIAE",
+          }
+      );
+    }
 
     // PR Module for Gestore
     menuItems.push(
