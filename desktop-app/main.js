@@ -60,6 +60,11 @@ const RELAY_RECONNECT_DELAY = 5000;
 const RELAY_HEARTBEAT_INTERVAL = 30000;
 let relayHeartbeatTimer = null;
 
+// Periodic status check timer
+const STATUS_CHECK_INTERVAL = 3000; // Check every 3 seconds
+let statusCheckTimer = null;
+let lastStatusJson = '';
+
 // Current status for WebSocket clients
 let currentStatus = {
   bridgeConnected: false,
