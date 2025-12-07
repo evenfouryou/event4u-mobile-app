@@ -78,6 +78,8 @@ function getFilesToUpload(): Record<string, string> {
     'renderer.js': readDesktopFile('renderer.js'),
     'package.json': readDesktopFile('package.json'),
     'README.md': readDesktopFile('README.md'),
+    'BUILD_INSTRUCTIONS.md': readDesktopFile('BUILD_INSTRUCTIONS.md'),
+    'build-local.ps1': readDesktopFile('build-local.ps1'),
     '.github/workflows/build.yml': readDesktopFile('.github/workflows/build.yml'),
     'SiaeBridge/SiaeBridge.csproj': readDesktopFile('SiaeBridge/SiaeBridge.csproj'),
     'SiaeBridge/Program.cs': readDesktopFile('SiaeBridge/Program.cs'),
@@ -88,7 +90,8 @@ function getFilesToUpload(): Record<string, string> {
 // Get binary files to upload (already base64 encoded)
 function getBinaryFilesToUpload(): Record<string, string> {
   return {
-    'SiaeBridge/prebuilt/libSIAE.dll': readDesktopFileBinary('SiaeBridge/prebuilt/libSIAE.dll')
+    'SiaeBridge/prebuilt/libSIAE.dll': readDesktopFileBinary('SiaeBridge/prebuilt/libSIAE.dll'),
+    'SiaeBridge/prebuilt/Newtonsoft.Json.dll': readDesktopFileBinary('SiaeBridge/prebuilt/Newtonsoft.Json.dll')
   };
 }
 
