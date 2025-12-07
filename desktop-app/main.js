@@ -61,7 +61,7 @@ const RELAY_HEARTBEAT_INTERVAL = 30000;
 let relayHeartbeatTimer = null;
 
 // Periodic status check timer
-const STATUS_CHECK_INTERVAL = 3000; // Check every 3 seconds
+const STATUS_CHECK_INTERVAL = 500; // Check every 0.5 seconds
 let statusCheckTimer = null;
 let lastStatusJson = '';
 
@@ -241,6 +241,8 @@ function startBridge() {
         if (!resolved && text.includes('READY')) {
           resolved = true;
           log.info('Bridge READY');
+          // Start automatic status polling when bridge is ready
+          startStatusPolling();
           resolve({ success: true, message: 'Bridge avviato' });
         }
       });
@@ -261,6 +263,7 @@ function startBridge() {
       bridgeProcess.on('exit', (code) => {
         log.info(`Bridge exited with code ${code}`);
         bridgeProcess = null;
+        stopStatusPolling();
         if (!resolved) {
           resolved = true;
           reject(new Error(`Bridge exit code ${code}`));
@@ -271,6 +274,8 @@ function startBridge() {
         if (!resolved) {
           resolved = true;
           if (bridgeProcess) {
+            // Start automatic status polling when bridge starts
+            startStatusPolling();
             resolve({ success: true, message: 'Bridge avviato (timeout)' });
           } else {
             reject(new Error('Timeout avvio bridge'));
@@ -287,6 +292,9 @@ function startBridge() {
 
 function stopBridge() {
   return new Promise((resolve) => {
+    // Stop status polling first
+    stopStatusPolling();
+    
     if (bridgeProcess) {
       log.info('Stopping bridge...');
       bridgeProcess.stdin.write('EXIT\n');
@@ -657,6 +665,49 @@ function startRelayHeartbeat() {
       }
     }
   }, RELAY_HEARTBEAT_INTERVAL);
+}
+
+// ============================================
+// Automatic Status Polling - checks reader/card every 0.5s
+// ============================================
+
+function startStatusPolling() {
+  stopStatusPolling();
+  log.info('Starting automatic status polling every 500ms');
+  
+  statusCheckTimer = setInterval(async () => {
+    if (!bridgeProcess) return;
+    
+    try {
+      const result = await sendBridgeCommand('CHECK_READER');
+      
+      const newStatus = {
+        bridgeConnected: true,
+        readerConnected: result.readerConnected || false,
+        cardInserted: result.cardPresent || false,
+        readerName: result.readerName || null,
+        cardSerial: result.cardSerial || null,
+        cardAtr: result.cardAtr || null
+      };
+      
+      // Only broadcast if status actually changed
+      const newStatusJson = JSON.stringify(newStatus);
+      if (newStatusJson !== lastStatusJson) {
+        log.info('Status changed, broadcasting update');
+        lastStatusJson = newStatusJson;
+        updateStatus(newStatus);
+      }
+    } catch (err) {
+      // Bridge command failed - don't spam logs
+    }
+  }, STATUS_CHECK_INTERVAL);
+}
+
+function stopStatusPolling() {
+  if (statusCheckTimer) {
+    clearInterval(statusCheckTimer);
+    statusCheckTimer = null;
+  }
 }
 
 function stopRelayHeartbeat() {
