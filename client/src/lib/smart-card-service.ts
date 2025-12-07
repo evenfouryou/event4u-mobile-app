@@ -110,7 +110,8 @@ class SmartCardService {
           if (msg && typeof msg.type === 'string') {
             if (msg.type === 'status' && msg.data) {
               this.handleWebSocketStatus(msg.data);
-            } else if (msg.type === 'bridge_status') {
+            } else if (msg.type === 'bridge_status' || msg.type === 'connection_status') {
+              // Handle both bridge_status (updates) and connection_status (initial state)
               this.handleBridgeStatus(msg);
             } else if (msg.type === 'pong') {
               // Heartbeat response
@@ -163,10 +164,16 @@ class SmartCardService {
   }
 
   private handleBridgeStatus(msg: any): void {
-    if (msg.connected) {
+    // Handle both 'connected' (from bridge_status) and 'bridgeConnected' (from connection_status)
+    const isConnected = msg.connected ?? msg.bridgeConnected ?? false;
+    
+    console.log('Smart Card: Bridge status update:', { type: msg.type, isConnected });
+    
+    if (isConnected) {
       this.updateStatus({
         ...this.status,
         connected: true,
+        bridgeConnected: true,
         error: null,
         lastCheck: new Date()
       });
@@ -174,6 +181,7 @@ class SmartCardService {
       this.updateStatus({
         ...this.status,
         connected: false,
+        bridgeConnected: false,
         readerDetected: false,
         cardInserted: false,
         error: 'App desktop Event4U non connessa. Avviare l\'applicazione sul PC.',
