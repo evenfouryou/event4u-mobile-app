@@ -93,10 +93,14 @@ export function setupBridgeRelay(server: Server): void {
           userId,
           companyId,
         };
-        console.log(`[Bridge] Client connected: userId=${connectionInfo.userId}, companyId=${connectionInfo.companyId}`);
+        console.log(`[Bridge] Client connected: userId=${connectionInfo.userId}, companyId=${connectionInfo.companyId}, role=${user.role}`);
         
-        if (connectionInfo.companyId && connectionInfo.userId) {
-          addClient(connectionInfo.companyId, connectionInfo.userId, ws);
+        // Super admin doesn't have companyId, but should still receive bridge status
+        // Use a special "super_admin" company key for routing
+        const effectiveCompanyId = connectionInfo.companyId || (user.role === 'super_admin' ? 'super_admin' : null);
+        
+        if (effectiveCompanyId && connectionInfo.userId) {
+          addClient(effectiveCompanyId, connectionInfo.userId, ws);
           
           // Check if global bridge is connected (single Event Four You app)
           const bridgeConnected = globalBridge !== null && globalBridge.ws.readyState === WebSocket.OPEN;
@@ -105,6 +109,16 @@ export function setupBridgeRelay(server: Server): void {
             type: 'connection_status',
             bridgeConnected,
             connected: bridgeConnected, // Also send as 'connected' for compatibility
+            message: bridgeConnected ? 'Bridge desktop app is connected' : 'Bridge desktop app is not connected',
+          }));
+        } else {
+          console.log(`[Bridge] WARNING: Cannot add client - missing effectiveCompanyId or userId`);
+          // Still send connection status even if we can't track the client
+          const bridgeConnected = globalBridge !== null && globalBridge.ws.readyState === WebSocket.OPEN;
+          ws.send(JSON.stringify({
+            type: 'connection_status',
+            bridgeConnected,
+            connected: bridgeConnected,
             message: bridgeConnected ? 'Bridge desktop app is connected' : 'Bridge desktop app is not connected',
           }));
         }
