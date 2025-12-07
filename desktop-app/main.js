@@ -893,32 +893,7 @@ function saveRelayConfig() {
   }
 }
 
-// Periodic status check
-let statusInterval = null;
-function startStatusPolling() {
-  if (statusInterval) return;
-  
-  statusInterval = setInterval(async () => {
-    if (!bridgeProcess) return;
-    
-    try {
-      const result = await sendBridgeCommand('CHECK_READER');
-      updateStatus({
-        readerConnected: result.readerConnected || false,
-        cardInserted: result.cardPresent || false
-      });
-    } catch (e) {
-      // Ignore errors during polling
-    }
-  }, 3000);
-}
-
-function stopStatusPolling() {
-  if (statusInterval) {
-    clearInterval(statusInterval);
-    statusInterval = null;
-  }
-}
+// Note: startStatusPolling is defined earlier with full PIN verification logic
 
 // IPC Handlers
 ipcMain.handle('bridge:start', async () => {
