@@ -1,0 +1,22 @@
+index-Cl6Ak3_6.js:769 [DEBUG SC] ====== SMART CARD CONNECTION START ======
+index-Cl6Ak3_6.js:769 [DEBUG SC] URL: wss://manage.eventfouryou.com/ws/bridge
+index-Cl6Ak3_6.js:769 [DEBUG SC] Cookies present: YES
+index-Cl6Ak3_6.js:769 [DEBUG SC] Cookie value: _ga=GA1.1.962813290.1739208627; _fbp=fb.1.17397993...
+index-Cl6Ak3_6.js:769 [DEBUG SC] WebSocket created, state: 0
+index-Cl6Ak3_6.js:1187 SW registered: https://manage.eventfouryou.com/
+index-Cl6Ak3_6.js:769 [DEBUG SC] WebSocket OPEN! State: 1
+index-Cl6Ak3_6.js:769 [DEBUG SC] Sending get_status request...
+index-Cl6Ak3_6.js:769 [DEBUG SC] MESSAGE RECEIVED: {"type":"connection_status","bridgeConnected":false,"connected":false,"message":"Bridge desktop app is not connected"}
+index-Cl6Ak3_6.js:769 [DEBUG SC] Parsed message type: connection_status
+index-Cl6Ak3_6.js:769 [DEBUG SC] Handling bridge/connection status: connection_status Object
+index-Cl6Ak3_6.js:769 [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+index-Cl6Ak3_6.js:769 [DEBUG SC] Message type: connection_status
+index-Cl6Ak3_6.js:769 [DEBUG SC] msg.connected: false
+index-Cl6Ak3_6.js:769 [DEBUG SC] msg.bridgeConnected: false
+index-Cl6Ak3_6.js:769 [DEBUG SC] isConnected (final): false
+index-Cl6Ak3_6.js:769 [DEBUG SC] Full message: {"type":"connection_status","bridgeConnected":false,"connected":false,"message":"Bridge desktop app is not connected"}
+index-Cl6Ak3_6.js:769 [DEBUG SC] Bridge NOT connected - updating status to DISCONNECTED
+index-Cl6Ak3_6.js:769 [DEBUG SC] Status after update: {"connected":false,"readerDetected":false,"cardInserted":false,"readerName":null,"cardAtr":null,"cardSerial":null,"cardType":null,"lastCheck":"2025-12-07T11:57:01.641Z","error":"App desktop Event4U non connessa. Avviare l'applicazione sul PC.","bridgeConnected":false,"canEmitRealSeals":false,"demoMode":false,"relayConnected":true}
+index-Cl6Ak3_6.js:769 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-Cl6Ak3_6.js:769 [DEBUG SC] Parsed message type: ping
+index-Cl6Ak3_6.js:769 [DEBUG SC] Ping received, sending pong
