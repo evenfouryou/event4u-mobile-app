@@ -67,7 +67,13 @@ export function setupBridgeRelay(server: Server): void {
     const cookies = request.headers.cookie ? parseCookie(request.headers.cookie) : {};
     const sessionId = cookies['connect.sid'];
     
+    console.log(`[Bridge] Raw cookie header: ${request.headers.cookie ? request.headers.cookie.substring(0, 100) + '...' : 'NONE'}`);
     console.log(`[Bridge] Cookie received: ${sessionId ? 'yes (connect.sid present)' : 'no cookie'}`);
+    
+    if (!sessionId) {
+      console.log(`[Bridge] WARNING: No session cookie! WebSocket connection without authentication.`);
+      console.log(`[Bridge] This could mean: 1) User not logged in, 2) Cookie not being sent, 3) CORS/SameSite issue`);
+    }
 
     if (sessionId) {
       const session = await getSessionData(sessionId);
@@ -209,9 +215,16 @@ export function setupBridgeRelay(server: Server): void {
 
 async function getSessionData(sessionId: string): Promise<any | null> {
   try {
+    // Log the raw session ID from cookie
+    console.log(`[Bridge] Raw session ID from cookie: ${sessionId?.substring(0, 30)}...`);
+    
     // URL-decode the session ID first (browser sends it URL-encoded)
     const decodedSessionId = decodeURIComponent(sessionId);
+    console.log(`[Bridge] URL-decoded session ID: ${decodedSessionId?.substring(0, 30)}...`);
+    
+    // Remove 's:' prefix and signature
     const cleanSessionId = decodedSessionId.replace(/^s:/, '').split('.')[0];
+    console.log(`[Bridge] Clean session ID for DB lookup: ${cleanSessionId}`);
     
     const result = await db
       .select()
@@ -219,8 +232,12 @@ async function getSessionData(sessionId: string): Promise<any | null> {
       .where(eq(sessions.sid, cleanSessionId))
       .limit(1);
 
+    console.log(`[Bridge] DB lookup returned ${result.length} rows`);
+    
     if (result.length > 0 && result[0].sess) {
-      return result[0].sess as any;
+      const sess = result[0].sess as any;
+      console.log(`[Bridge] Session data: role=${sess?.passport?.user?.role}, companyId=${sess?.passport?.user?.companyId}, hasClaimsSub=${!!sess?.passport?.user?.claims?.sub}`);
+      return sess;
     }
     return null;
   } catch (error) {
