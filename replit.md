@@ -140,10 +140,12 @@ A WebSocket relay system enabling remote smart card reader access from the deskt
 - `client_request`: Web client request to read card
 - `bridge_response`: Desktop bridge response with card data
 - `bridge_status`: Connection status updates (connected/disconnected)
+- `REQUEST_FISCAL_SEAL`: Server-side seal request for self-service purchases
+- `SEAL_RESPONSE`: Desktop bridge response with seal data (sealCode, counter, MAC)
 - `ping/pong`: Heartbeat for connection keepalive (30s interval)
 
 **Key Files:**
-- `server/bridge-relay.ts`: WebSocket relay implementation with company-scoped routing
+- `server/bridge-relay.ts`: WebSocket relay implementation with company-scoped routing and seal request broker
 - `desktop-app/main.js`: Electron main process with dual WebSocket (local + relay)
 - `desktop-app/renderer.js`: Desktop UI with relay configuration panel
 - `client/src/lib/smart-card-service.ts`: Frontend WebSocket client with heartbeat management
@@ -153,6 +155,40 @@ A WebSocket relay system enabling remote smart card reader access from the deskt
 - Session-based authentication for web clients
 - Company-scoped message routing (bridges only receive messages from their company)
 - HTTPS/WSS required for production connections
+
+### SIAE Fiscal Seal System (MANDATORY)
+**CRITICAL REQUIREMENT**: Every ticket emission MUST have a fiscal seal from the physical SIAE smart card. No seal = No ticket. This is a legal requirement per Italian fiscal regulations (Decreto 23/07/2001).
+
+**Seal Generation Flow:**
+1. **Manual Emission** (siae-tickets.tsx): Operator clicks "Emetti Biglietto" → seal requested from card → ticket created
+2. **Self-Service Purchase** (public-routes.ts): Customer pays → payment confirmed → seal requested via server broker → ticket created
+
+**Architecture:**
+- **Seal Request Broker** (`server/bridge-relay.ts`): Server-side async seal requester with 15s timeout
+- **Functions**: `requestFiscalSeal(priceInCents)`, `isCardReadyForSeals()`, `isBridgeConnected()`
+- **Desktop Handler** (`desktop-app/main.js`): Handles `REQUEST_FISCAL_SEAL` messages, calls C# bridge for COMPUTE_SIGILLO
+
+**Seal Data Structure:**
+```typescript
+interface FiscalSealData {
+  sealCode: string;      // MAC signature from card
+  sealNumber: string;    // serialNumber-counter format
+  serialNumber: string;  // Card serial number (sistema code)
+  counter: number;       // Progressive counter from card
+  mac: string;           // Cryptographic MAC
+  dateTime: string;      // Emission timestamp
+}
+```
+
+**Error Handling:**
+- Bridge offline: HTTP 503 with `SEAL_BRIDGE_OFFLINE` code
+- Card not ready: HTTP 503 with `SEAL_CARD_NOT_READY` code
+- Timeout (15s): `SEAL_TIMEOUT` error, checkout marked as `waiting_for_seal`
+- All failures prevent ticket creation - payment remains confirmed but tickets not issued
+
+**API Endpoints:**
+- `GET /api/public/checkout/seal-status`: Check if seal system is available before checkout
+- `POST /api/public/checkout/confirm`: Requests seals during checkout confirmation
 
 ### Progressive Web App (PWA)
 Event4U is a fully installable PWA with:
