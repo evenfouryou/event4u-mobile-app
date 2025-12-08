@@ -1,5 +1,21 @@
 # 🔧 ISTRUZIONI DI BUILD - Event Four You SIAE Lettore
 
+## ✅ BUG FIX APPLICATO (Dicembre 2024)
+
+**Problema:** PIN mostrato come errato anche quando corretto
+**Causa:** Il parametro `nPIN` di `VerifyPINML` era sbagliato
+- Prima: `VerifyPINML(pin.Length, pin, slot)` - passava 4-8 (lunghezza)
+- Dopo: `VerifyPINML(1, pin, slot)` - passa 1 (identificatore PIN utente)
+
+**Riferimento:** Documentazione ufficiale SIAE `test.c` riga 233:
+```c
+res=pVerifyPINML(1, (char*) pin, slot);
+```
+
+**IMPORTANTE:** Devi ricompilare per applicare questa correzione!
+
+---
+
 ## ❌ PROBLEMA ATTUALE
 Il bridge .NET (SiaeBridge.exe) non è compilato, quindi l'app non funziona.
 
