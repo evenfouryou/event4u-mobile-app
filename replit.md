@@ -1,211 +1,45 @@
 # Event4U Management System
 
 ## Overview
-Event4U is a comprehensive event management and inventory tracking system designed for event organizers. It supports multi-role management of events, inventory, stations, and real-time consumption tracking. The system features a company-centric hierarchy with role-based access control, enabling efficient operations from platform-level oversight to event-specific inventory management and consumption tracking. Key capabilities include email verification, AI-powered analytics for insights, intelligent purchase order management, and multi-bartender station assignments. The system aims to streamline event logistics, optimize inventory, and provide actionable business intelligence.
+Event4U is an event management and inventory tracking system for event organizers. It provides multi-role management of events, inventory, and stations, with real-time consumption tracking. The system features a company-centric hierarchy, role-based access control, email verification, AI-powered analytics, intelligent purchase order management, and multi-bartender station assignments. Its purpose is to streamline event logistics, optimize inventory, and deliver actionable business intelligence.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
 ## System Architecture
 
-### Frontend Architecture
-The frontend is built with React 18, TypeScript, and Vite. It uses Wouter for routing and Shadcn UI with Radix UI primitives, styled with Tailwind CSS, following Material Design 3 principles. State management and data fetching are handled by TanStack Query v5, while form management uses React Hook Form with Zod for validation. The design emphasizes a card-based layout, role-based UI rendering, responsive grid systems, and fixed sidebar navigation. All data-heavy pages are converted to responsive card layouts for mobile, and the system features a dark nightclub-themed UI with glass-morphism effects and Framer Motion animations.
+### Frontend
+Built with React 18, TypeScript, and Vite, using Wouter for routing and Shadcn UI (Radix UI, Tailwind CSS) following Material Design 3. State management is handled by TanStack Query v5, and form management uses React Hook Form with Zod. The design features a dark, nightclub-themed UI with glass-morphism effects, Framer Motion animations, card-based layouts, responsive grids, and fixed sidebar navigation.
 
-### Backend Architecture
-The backend is developed with Node.js and Express.js, using TypeScript with ESM for RESTful APIs. It features centralized error handling and session-based authentication. The database layer employs Drizzle ORM for type-safe PostgreSQL operations via Neon's serverless driver, following a schema-first approach. A repository pattern provides an abstraction layer for CRUD operations. The system maintains a monorepo structure with separate development and production environments.
+### Backend
+Developed with Node.js and Express.js (TypeScript, ESM) for RESTful APIs. It includes centralized error handling and session-based authentication. Drizzle ORM is used for type-safe PostgreSQL operations via Neon's serverless driver, following a schema-first approach and a repository pattern. The system maintains a monorepo structure with separate development and production environments.
 
 ### Authentication & Authorization
-Authentication supports both Replit OAuth and classic email/password registration with BCrypt hashing and email verification. Session management is handled by `express-session` with a PostgreSQL store. Authorization is based on a Role-Based Access Control (RBAC) model with five roles: `super_admin`, `gestore` (company admin), `organizer`, `warehouse`, and `bartender`. Security considerations include HTTP-only secure cookies, encrypted session data, role checks in API middleware, and company-scoped data access for multi-tenant isolation. User-level feature management controls module access dynamically.
+Supports Replit OAuth and email/password registration (BCrypt hashing, email verification). Session management uses `express-session` with a PostgreSQL store. Authorization is role-based (RBAC) with `super_admin`, `gestore`, `organizer`, `warehouse`, and `bartender` roles. Security features include HTTP-only secure cookies, encrypted sessions, API middleware role checks, and company-scoped data access for multi-tenancy.
 
 ### Data Model & Business Logic
-The system's data model links Companies to Users, Locations, Events, Products, and Price Lists. Events contain Stations, which track inventory via Stocks. Stock Movements log all inventory changes. The stock movement workflow involves loading general warehouse stock, transferring to events, allocating to stations, consumption by bartenders, and returning remaining stock. Events progress through `draft`, `scheduled`, `ongoing`, and `closed` lifecycle states. Features include an email verification system, AI-powered analytics for low stock alerts and consumption patterns, a step-by-step event creation wizard with recurrence configuration, and a purchase order management system. New modules include Contabilità (Accounting), Personale (Personnel), Cassa (Cash Register), and File della Serata (Night File).
+The data model links Companies to Users, Locations, Events, Products, and Price Lists. Events contain Stations with inventory tracking via Stocks and Stock Movements. The stock workflow covers loading, transfer, allocation, consumption, and returns. Events progress through `draft`, `scheduled`, `ongoing`, and `closed` states. Features include email verification, AI analytics for low stock and consumption, a step-by-step event creation wizard, and purchase order management.
 
-### Import/Export Features
-The system supports CSV import for bulk product and price list item uploads. Reporting capabilities include PDF generation for event reports and Excel export for data analysis, covering revenue and consumption reports.
-
-### SIAE Ticketing Module (Event Four You Manage)
-A comprehensive SIAE-compliant event ticketing and fiscal management system for Italian clubs and event organizers, designed to comply with Italian fiscal regulations (Decreto 23/07/2001, Provvedimento 356768/2025).
-
-**Database Architecture (18+ SIAE tables in production):**
-- **TAB.1-5 Reference Tables**: Event genres, sector codes, ticket types, service codes, cancellation reasons
-- **Fiscal Compliance**: Activation cards (Carta di Attivazione), emission channels, fiscal seals
-- **Customer Management**: SIAE customers with OTP/SPID authentication, unique customer codes
-- **Ticketing**: Ticketed events, event sectors, numbered/unnumbered seats, tickets with fiscal seals
-- **Transactions**: Purchase transactions, name changes, secondary ticketing (resales)
-- **Operations**: Box office sessions, subscriptions, audit logs, XML transmissions to SIAE
-
-**API Endpoints (`/api/siae/*`):**
-- Reference tables (TAB.1-5) with CRUD operations
-- Activation cards and emission channels management
-- Customer registration with OTP verification
-- Ticketed events and sector configuration
-- Ticket emission with fiscal seal generation
-- Transaction processing and name change requests
-- Secondary ticketing marketplace
-- Box office session management
-- Audit logs with company scoping and Zod validation
-- Numbered seats management with sector-based organization
-- SIAE XML transmission tracking
-
-**Frontend Pages (`/siae/*`):**
-- `/siae/system-config` - System configuration for SIAE integration
-- `/siae/ticketed-events` - Ticketed events management
-- `/siae/sectors` - Event sectors configuration
-- `/siae/fiscal-seals` - Fiscal seal management
-- `/siae/tickets` - Ticket emission and management
-- `/siae/transactions` - Transaction processing
-- `/siae/customers` - Customer registry with OTP
-- `/siae/name-changes` - Nominative ticket changes
-- `/siae/resales` - Secondary ticketing marketplace
-- `/siae/box-office` - Box office session management
-- `/siae/subscriptions` - Subscription management
-- `/siae/transmissions` - XML transmission to SIAE
-- `/siae/audit-logs` - Audit log viewing with filtering
-- `/siae/numbered-seats` - Numbered seat management by sector
-
-**Key Files:**
-- `server/siae-storage.ts`: Storage layer with CRUD operations for all SIAE tables (20+ tables)
-- `server/siae-routes.ts`: REST API routes with role-based access control and Zod validation
-- `shared/schema.ts`: Database schema definitions with Zod validation and TypeScript types
-
-**Security Features:**
-- Zod validation on all POST/PATCH endpoints
-- Company-scoped data access for multi-tenant isolation
-- Role-based authorization (requireGestore, requireOrganizer)
-- Proper 404/403 responses for access control
-
-**Feature Activation:**
-- SIAE module is disabled by default for all users
-- Super Admin can enable/disable SIAE for individual gestore users via the Users page
-- When siaeEnabled=true, the "Biglietteria SIAE" section appears in the sidebar for that gestore
-- Feature toggle stored in user_features table (siaeEnabled field)
+### SIAE Ticketing Module
+A SIAE-compliant ticketing and fiscal management system for Italian clubs, adhering to Italian fiscal regulations. It includes 18+ database tables for reference data, fiscal compliance, customer management, ticketing, transactions, and operations. API endpoints (`/api/siae/*`) provide CRUD for reference data, activation cards, customer registration, ticket emission with fiscal seals, transaction processing, and XML transmission tracking. Frontend pages (`/siae/*`) offer comprehensive management for all module functionalities. All fiscal seal generation is server-side and mandatory for ticket emission, using a Desktop Bridge Relay System to interact with physical smart cards. The module is disabled by default and can be enabled per `gestore` user by a Super Admin.
 
 ### Event Command Center (Event Hub)
-A unified real-time dashboard for managing events during operation, replacing scattered navigation with a single comprehensive view.
-
-**Route**: `/events/:id/hub`
-
-**Tab Navigation:**
-- **Panoramica (Overview)**: Main dashboard with KPIs, activity log, entrance charts, venue map
-- **Biglietteria (Ticketing)**: SIAE ticket management integration
-- **Liste (Guest Lists)**: Guest list management with check-in tracking
-- **Tavoli (Tables)**: Table booking and seating management
-- **Staff**: Staff assignments and coordination
-- **Inventario (Inventory)**: Stock management and transfers
-- **Incassi (Finance)**: Revenue tracking and financial summaries
-
-**Key Components:**
-- `KPICard`: Real-time metrics with trend indicators (entries, capacity, tables, revenue)
-- `EntranceChart`: Recharts area chart showing entry flow by time slot
-- `VenueMap`: Interactive table grid organized by type (standard/VIP/privé) with status colors
-- `ActivityLogEntry`: Real-time activity feed for check-ins, sales, bookings
-- `AlertBanner`: Warning/error/success notifications for operational alerts
-- `QuickActionButton`: Rapid action triggers (QR scan, add guest, book table)
-- `TopConsumptionsWidget`: Pie chart of top-selling products
-
-**Real-time Features:**
-- WebSocket connection on port 18765 for live updates
-- Live indicator showing connection status
-- Automatic activity log updates
-- Alert system for low stock, capacity warnings
-
-**Quick Actions Sheet:**
-- QR code scanning
-- Guest addition
-- Table booking
-- Stock transfer
-- Report generation
-- Emergency actions (pause ticketing, close doors, call security)
-
-**Navigation:**
-- Events list (`/events`) now routes to Event Hub (`/events/:id/hub`) for non-draft events
-- Draft events route to wizard (`/events/wizard/:id`)
+A real-time dashboard (`/events/:id/hub`) for event operations, featuring tabbed navigation for Overview (KPIs, activity log, entrance charts, venue map), Ticketing, Guest Lists, Tables, Staff, Inventory, and Finance. Key components include `KPICard` for real-time metrics, `EntranceChart`, `VenueMap`, `ActivityLogEntry`, `AlertBanner`, and `QuickActionButton` for rapid actions. Real-time updates are powered by WebSockets.
 
 ### Desktop Bridge Relay System
-A WebSocket relay system enabling remote smart card reader access from the desktop Electron app to the web application.
-
-**Architecture:**
-- **Server Relay** (`server/bridge-relay.ts`): WebSocket endpoint at `/ws/bridge` handling bidirectional message routing
-- **Desktop App** (`desktop-app/`): Electron application with local PC/SC bridge and remote relay connection
-- **SmartCardService** (`client/src/lib/smart-card-service.ts`): Frontend service connecting to relay for card operations
-
-**Authentication Flow:**
-1. Admin/Gestore generates bridge token via Settings page (GET `/api/bridge/token`)
-2. Token + Company ID copied to desktop app relay configuration
-3. Desktop app connects to `wss://manage.eventfouryou.com/ws/bridge` with token
-4. Web clients connect via session cookies, routed to matching company bridge
-
-**Message Types:**
-- `bridge_registration`: Desktop app registers with token/companyId
-- `client_request`: Web client request to read card
-- `bridge_response`: Desktop bridge response with card data
-- `bridge_status`: Connection status updates (connected/disconnected)
-- `REQUEST_FISCAL_SEAL`: Server-side seal request for self-service purchases
-- `SEAL_RESPONSE`: Desktop bridge response with seal data (sealCode, counter, MAC)
-- `ping/pong`: Heartbeat for connection keepalive (30s interval)
-
-**Key Files:**
-- `server/bridge-relay.ts`: WebSocket relay implementation with company-scoped routing and seal request broker
-- `desktop-app/main.js`: Electron main process with dual WebSocket (local + relay)
-- `desktop-app/renderer.js`: Desktop UI with relay configuration panel
-- `client/src/lib/smart-card-service.ts`: Frontend WebSocket client with heartbeat management
-
-**Security:**
-- Token-based authentication for desktop bridges (stored in `companies.bridgeToken`)
-- Session-based authentication for web clients
-- Company-scoped message routing (bridges only receive messages from their company)
-- HTTPS/WSS required for production connections
-
-### SIAE Fiscal Seal System (MANDATORY)
-**CRITICAL REQUIREMENT**: Every ticket emission MUST have a fiscal seal from the physical SIAE smart card. No seal = No ticket. This is a legal requirement per Italian fiscal regulations (Decreto 23/07/2001).
-
-**Seal Generation Flow:**
-1. **Manual Emission** (siae-tickets.tsx): Operator clicks "Emetti Biglietto" → seal requested from card → ticket created
-2. **Self-Service Purchase** (public-routes.ts): Customer pays → payment confirmed → seal requested via server broker → ticket created
-
-**Architecture:**
-- **Seal Request Broker** (`server/bridge-relay.ts`): Server-side async seal requester with 15s timeout
-- **Functions**: `requestFiscalSeal(priceInCents)`, `isCardReadyForSeals()`, `isBridgeConnected()`
-- **Desktop Handler** (`desktop-app/main.js`): Handles `REQUEST_FISCAL_SEAL` messages, calls C# bridge for COMPUTE_SIGILLO
-
-**Seal Data Structure:**
-```typescript
-interface FiscalSealData {
-  sealCode: string;      // MAC signature from card
-  sealNumber: string;    // serialNumber-counter format
-  serialNumber: string;  // Card serial number (sistema code)
-  counter: number;       // Progressive counter from card
-  mac: string;           // Cryptographic MAC
-  dateTime: string;      // Emission timestamp
-}
-```
-
-**Error Handling:**
-- Bridge offline: HTTP 503 with `SEAL_BRIDGE_OFFLINE` code
-- Card not ready: HTTP 503 with `SEAL_CARD_NOT_READY` code
-- Timeout (15s): `SEAL_TIMEOUT` error, checkout marked as `waiting_for_seal`
-- All failures prevent ticket creation - payment remains confirmed but tickets not issued
-
-**API Endpoints:**
-- `GET /api/public/checkout/seal-status`: Check if seal system is available before checkout
-- `POST /api/public/checkout/confirm`: Requests seals during checkout confirmation
+A WebSocket relay system enabling remote smart card reader access from a desktop Electron app to the web application. It involves a server relay (`/ws/bridge`), an Electron desktop app, and a frontend `SmartCardService`. Authentication is token-based for desktop apps and session-based for web clients, with company-scoped message routing.
 
 ### Progressive Web App (PWA)
-Event4U is a fully installable PWA with:
-- **manifest.json**: App metadata, icons, and shortcuts for installation
-- **Service Worker (sw.js)**: Caching strategy for offline support
-- **Install Prompt**: Native installation prompt on Android/Chrome, instructions for iOS
-- **Offline Support**: Cached assets and graceful API error handling
-- Users can install the app from browser to home screen for native-like experience
+The system is an installable PWA with a `manifest.json` for metadata, a Service Worker (`sw.js`) for caching and offline support, and native installation prompts.
 
 ## External Dependencies
 
 ### Third-Party Services
 - **Neon Database**: Serverless PostgreSQL hosting.
-- **Google Fonts CDN**: For consistent typography.
-- **SMTP Email**: For sending verification emails.
-- **Replit OAuth**: Optional authentication provider.
-- **OpenAI API**: For AI-powered analytics and insights (`gpt-4o-mini`).
+- **Google Fonts CDN**: Typography.
+- **SMTP Email**: Email verification.
+- **Replit OAuth**: Optional authentication.
+- **OpenAI API**: AI analytics (`gpt-4o-mini`).
 
 ### Key NPM Packages
 - **UI Components**: `@radix-ui/*`, `shadcn/ui`.
