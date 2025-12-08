@@ -69,7 +69,7 @@ let lastStatusJson = '';
 let pinVerified = false;
 let cardWasInserted = false;
 let pinLocked = false;  // True when waiting for PIN after card removal
-const SIAE_PIN = '1234';  // Default PIN - should be configurable
+// Note: PIN is now verified on the SIAE card itself, not hardcoded
 
 // Current status for WebSocket clients
 let currentStatus = {
@@ -1044,26 +1044,35 @@ ipcMain.handle('relay:status', () => {
 // PIN Verification (SIAE Compliance)
 // ============================================
 
-ipcMain.handle('pin:verify', (event, enteredPin) => {
+ipcMain.handle('pin:verify', async (event, enteredPin) => {
   log.info('IPC: pin:verify');
   
-  if (enteredPin === SIAE_PIN) {
-    log.info('SIAE: PIN verificato correttamente');
-    pinVerified = true;
-    pinLocked = false;
+  // Verify PIN on the actual SIAE card via bridge
+  try {
+    const result = await sendBridgeCommand(`VERIFY_PIN:${enteredPin}`);
+    log.info('PIN verification result:', result);
     
-    // Update and broadcast status
-    const newStatus = {
-      ...currentStatus,
-      pinLocked: false,
-      pinRequired: false
-    };
-    updateStatus(newStatus);
-    
-    return { success: true, message: 'PIN verificato' };
-  } else {
-    log.warn('SIAE: PIN errato');
-    return { success: false, error: 'PIN errato' };
+    if (result.verified) {
+      log.info('SIAE: PIN verificato correttamente sulla carta');
+      pinVerified = true;
+      pinLocked = false;
+      
+      // Update and broadcast status
+      const newStatus = {
+        ...currentStatus,
+        pinLocked: false,
+        pinRequired: false
+      };
+      updateStatus(newStatus);
+      
+      return { success: true, message: 'PIN verificato sulla carta SIAE' };
+    } else {
+      log.warn('SIAE: PIN errato -', result.error || 'verifica fallita');
+      return { success: false, error: result.error || 'PIN errato' };
+    }
+  } catch (err) {
+    log.error('PIN verification error:', err.message);
+    return { success: false, error: 'Errore verifica PIN: ' + err.message };
   }
 });
 

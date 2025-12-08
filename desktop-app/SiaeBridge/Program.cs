@@ -58,6 +58,9 @@ namespace SiaeBridge
         [DllImport(DLL, CallingConvention = CallingConvention.StdCall)]
         static extern int ComputeSigilloML(byte[] dt, uint price, byte[] sn, byte[] mac, ref uint cnt, int slot);
 
+        [DllImport(DLL, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
+        static extern int VerifyPINML(int nPIN, string pin, int nSlot);
+
         // Windows API
         [DllImport("winscard.dll", CharSet = CharSet.Unicode)]
         static extern int SCardListReadersW(IntPtr hContext, string mszGroups, byte[] mszReaders, ref int pcchReaders);
@@ -159,6 +162,7 @@ namespace SiaeBridge
                 if (cmd == "EXIT") { Environment.Exit(0); return OK("BYE"); }
                 if (cmd == "CHECK_READER") return CheckReader();
                 if (cmd == "READ_CARD") return ReadCard();
+                if (cmd.StartsWith("VERIFY_PIN:")) return VerifyPin(cmd.Substring(11));
                 if (cmd.StartsWith("COMPUTE_SIGILLO:")) return ComputeSigillo(cmd.Substring(16));
                 return ERR($"Comando sconosciuto: {cmd}");
             }
@@ -362,6 +366,96 @@ namespace SiaeBridge
             catch (Exception ex)
             {
                 Log($"ReadCard error: {ex.Message}");
+                return ERR(ex.Message);
+            }
+            finally
+            {
+                if (tx)
+                {
+                    try
+                    {
+                        EndTransactionML(_slot);
+                        Log("  EndTransactionML done");
+                    }
+                    catch { }
+                }
+            }
+        }
+
+        // ============================================================
+        // VERIFY PIN - Verifica PIN sulla carta SIAE
+        // ============================================================
+        static string VerifyPin(string pin)
+        {
+            if (_slot < 0) return ERR("Nessuna carta rilevata - prima fai CHECK_READER");
+
+            bool tx = false;
+            try
+            {
+                Log($"VerifyPin: slot={_slot}, pin={new string('*', pin.Length)}");
+
+                int state = isCardIn(_slot);
+                Log($"  isCardIn({_slot}) = {state} ({DecodeCardState(state)})");
+                if (!IsCardPresent(state))
+                {
+                    _slot = -1;
+                    return ERR("Carta rimossa");
+                }
+
+                int init = Initialize(_slot);
+                Log($"  Initialize = {init}");
+
+                int txResult = BeginTransactionML(_slot);
+                Log($"  BeginTransactionML = {txResult}");
+                tx = (txResult == 0);
+
+                // nPIN = 1 per PIN utente SIAE (0 = PIN admin, 1 = PIN utente)
+                int pinResult = VerifyPINML(1, pin, _slot);
+                Log($"  VerifyPINML = {pinResult} (0x{pinResult:X4})");
+
+                if (pinResult == 0)
+                {
+                    return JsonConvert.SerializeObject(new
+                    {
+                        success = true,
+                        verified = true,
+                        message = "PIN verificato correttamente"
+                    });
+                }
+                else if (pinResult == 0x6982)
+                {
+                    return JsonConvert.SerializeObject(new
+                    {
+                        success = true,
+                        verified = false,
+                        error = "PIN errato",
+                        errorCode = pinResult
+                    });
+                }
+                else if (pinResult == 0x6983)
+                {
+                    return JsonConvert.SerializeObject(new
+                    {
+                        success = true,
+                        verified = false,
+                        error = "PIN bloccato - troppi tentativi errati",
+                        errorCode = pinResult
+                    });
+                }
+                else
+                {
+                    return JsonConvert.SerializeObject(new
+                    {
+                        success = true,
+                        verified = false,
+                        error = $"Errore verifica PIN: 0x{pinResult:X4}",
+                        errorCode = pinResult
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"VerifyPin error: {ex.Message}");
                 return ERR(ex.Message);
             }
             finally

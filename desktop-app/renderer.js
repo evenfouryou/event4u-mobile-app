@@ -428,7 +428,7 @@ document.addEventListener('DOMContentLoaded', () => {
         </button>
       </div>
       <p style="text-align: center; color: #666; font-size: 12px; margin-top: 16px;">
-        PIN predefinito: 1234
+        Inserisci il PIN della tua carta SIAE
       </p>
     `;
     
