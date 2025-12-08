@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using Newtonsoft.Json;
@@ -58,8 +59,9 @@ namespace SiaeBridge
         [DllImport(DLL, CallingConvention = CallingConvention.StdCall)]
         static extern int ComputeSigilloML(byte[] dt, uint price, byte[] sn, byte[] mac, ref uint cnt, int slot);
 
+        // PIN deve essere passato come puntatore a stringa ANSI null-terminated
         [DllImport(DLL, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
-        static extern int VerifyPINML(int nPIN, string pin, int nSlot);
+        static extern int VerifyPINML(int nPIN, [MarshalAs(UnmanagedType.LPStr)] string pin, int nSlot);
 
         // Windows API
         [DllImport("winscard.dll", CharSet = CharSet.Unicode)]
@@ -86,7 +88,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.2 - SCARD_STATE bitmask fix");
+            Log("SiaeBridge v3.3 - PIN marshalling fix + input sanitization");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -388,6 +390,14 @@ namespace SiaeBridge
         static string VerifyPin(string pin)
         {
             if (_slot < 0) return ERR("Nessuna carta rilevata - prima fai CHECK_READER");
+
+            // Pulisci il PIN: rimuovi spazi e caratteri non numerici
+            pin = new string(pin.Where(char.IsDigit).ToArray());
+            
+            if (string.IsNullOrEmpty(pin) || pin.Length < 4)
+            {
+                return ERR("PIN non valido - deve contenere almeno 4 cifre");
+            }
 
             bool tx = false;
             try
