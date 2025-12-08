@@ -174,9 +174,36 @@ export default function SiaeCardReaderPage() {
                   <div className="grid gap-3">
                     {status.cardSerial && (
                       <div className="flex items-center justify-between p-3 rounded-lg bg-background/50">
-                        <span className="text-sm text-muted-foreground">Numero Seriale</span>
+                        <span className="text-sm text-muted-foreground">Numero Carta</span>
                         <span className="font-mono font-semibold" data-testid="text-card-serial">
                           {status.cardSerial}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {status.cardKeyId !== null && status.cardKeyId !== undefined && (
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-background/50">
+                        <span className="text-sm text-muted-foreground">Codice Sistema</span>
+                        <span className="font-mono font-semibold" data-testid="text-card-keyid">
+                          {status.cardKeyId}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {status.cardCounter !== null && status.cardCounter !== undefined && (
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-background/50">
+                        <span className="text-sm text-muted-foreground">Contatore Sigilli</span>
+                        <span className="font-mono font-semibold" data-testid="text-card-counter">
+                          {status.cardCounter.toLocaleString('it-IT')}
+                        </span>
+                      </div>
+                    )}
+                    
+                    {status.cardBalance !== null && status.cardBalance !== undefined && (
+                      <div className="flex items-center justify-between p-3 rounded-lg bg-background/50">
+                        <span className="text-sm text-muted-foreground">Saldo Disponibile</span>
+                        <span className="font-mono font-semibold text-green-600" data-testid="text-card-balance">
+                          {status.cardBalance.toLocaleString('it-IT')}
                         </span>
                       </div>
                     )}

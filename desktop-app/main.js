@@ -710,12 +710,35 @@ function startStatusPolling() {
         log.info('SIAE: Carta reinserita - PIN ancora richiesto');
       }
       
+      // Auto-read card data when card is inserted
+      let cardData = {};
+      if (cardCurrentlyInserted && !pinLocked) {
+        try {
+          const readResult = await sendBridgeCommand('READ_CARD');
+          if (readResult.success) {
+            cardData = {
+              cardSerial: readResult.serialNumber,
+              cardCounter: readResult.counter,
+              cardBalance: readResult.balance,
+              cardKeyId: readResult.keyId,  // Codice Sistema
+              cardSlot: readResult.slot
+            };
+            log.debug('Card data read:', cardData);
+          }
+        } catch (e) {
+          // Card read failed, continue with basic status
+        }
+      }
+      
       const newStatus = {
         bridgeConnected: true,
         readerConnected: result.readerConnected || false,
         cardInserted: cardCurrentlyInserted,
         readerName: result.readerName || null,
-        cardSerial: result.cardSerial || null,
+        cardSerial: cardData.cardSerial || result.cardSerial || null,
+        cardCounter: cardData.cardCounter || null,
+        cardBalance: cardData.cardBalance || null,
+        cardKeyId: cardData.cardKeyId || null,  // Codice Sistema dalla carta
         cardAtr: result.cardAtr || null,
         pinLocked: pinLocked,
         pinRequired: pinLocked && !pinVerified

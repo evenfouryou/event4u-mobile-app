@@ -13,6 +13,9 @@ export interface SmartCardStatus {
   readerName: string | null;
   cardAtr: string | null;
   cardSerial: string | null;
+  cardCounter: number | null;      // Contatore progressivo sigilli
+  cardBalance: number | null;      // Saldo carta
+  cardKeyId: number | null;        // Codice Sistema / KeyID
   cardType: string | null;
   lastCheck: Date;
   error: string | null;
@@ -49,6 +52,9 @@ class SmartCardService {
       readerName: null,
       cardAtr: null,
       cardSerial: null,
+      cardCounter: null,
+      cardBalance: null,
+      cardKeyId: null,
       cardType: null,
       lastCheck: new Date(),
       error: 'Lettore Smart Card non connesso',
@@ -100,6 +106,9 @@ class SmartCardService {
           readerName: data.readerName || null,
           cardAtr: data.cardAtr || null,
           cardSerial: data.cardSerial || null,
+          cardCounter: data.cardCounter || null,
+          cardBalance: data.cardBalance || null,
+          cardKeyId: data.cardKeyId || null,
           cardType: data.cardInserted ? 'Smart Card SIAE' : null,
           lastCheck: new Date(),
           error: this.getErrorFromData(data),
@@ -277,6 +286,9 @@ class SmartCardService {
       readerName: data.readerName || null,
       cardAtr: data.cardAtr || data.cardATR || null,
       cardSerial: data.cardSerial || null,
+      cardCounter: data.cardCounter || null,
+      cardBalance: data.cardBalance || null,
+      cardKeyId: data.cardKeyId || null,
       cardType: cardInserted ? 'Smart Card SIAE' : null,
       lastCheck: new Date(),
       error: this.getErrorMessage(data, bridgeConnected, readerDetected, cardInserted),
@@ -439,6 +451,9 @@ class SmartCardService {
       readerName: 'Bit4id MiniLector EVO V3 (DEMO)',
       cardAtr: '3B9813400AA503010101AD1311',
       cardSerial: 'DEMO-12345678',
+      cardCounter: 12345,
+      cardBalance: 100000,
+      cardKeyId: 1,
       cardType: 'SIAE Fiscal Card (Demo)',
       lastCheck: new Date(),
       error: null,
