@@ -83,6 +83,13 @@ import {
   nightFiles,
   type NightFile,
   type InsertNightFile,
+  guestLists,
+  guestListEntries,
+  tableBookings,
+  eventTables,
+  eventFloorplans,
+  eventStaffAssignments,
+  siaeTicketedEvents,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, isNull, inArray, sql, desc } from "drizzle-orm";
@@ -340,6 +347,9 @@ export interface IStorage {
   updateNightFile(id: string, companyId: string, nightFile: Partial<NightFile>): Promise<NightFile | undefined>;
   approveNightFile(id: string, companyId: string, userId: string): Promise<NightFile | undefined>;
   deleteNightFile(id: string, companyId: string): Promise<boolean>;
+  
+  // Event deletion with cascade
+  deleteEventWithRelatedData(eventId: string, companyId: string): Promise<boolean>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1863,6 +1873,77 @@ ${context ? `Contesto aggiuntivo: ${context}` : ''}`;
     const result = await db.delete(nightFiles).where(
       and(eq(nightFiles.id, id), eq(nightFiles.companyId, companyId))
     );
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // Delete event with all related data (cascade delete)
+  async deleteEventWithRelatedData(eventId: string, companyId: string): Promise<boolean> {
+    // Delete in order to respect foreign key constraints
+    // Child tables first, then parent
+
+    // 1. Delete guest list entries
+    await db.delete(guestListEntries).where(eq(guestListEntries.eventId, eventId));
+
+    // 2. Delete guest lists
+    await db.delete(guestLists).where(eq(guestLists.eventId, eventId));
+
+    // 3. Delete table bookings
+    await db.delete(tableBookings).where(eq(tableBookings.eventId, eventId));
+
+    // 4. Delete event tables
+    await db.delete(eventTables).where(eq(eventTables.eventId, eventId));
+
+    // 5. Delete event floorplans
+    await db.delete(eventFloorplans).where(eq(eventFloorplans.eventId, eventId));
+
+    // 6. Delete event staff assignments
+    await db.delete(eventStaffAssignments).where(eq(eventStaffAssignments.eventId, eventId));
+
+    // 7. Delete SIAE ticketed events config
+    await db.delete(siaeTicketedEvents).where(eq(siaeTicketedEvents.eventId, eventId));
+
+    // 8. Delete night files
+    await db.delete(nightFiles).where(eq(nightFiles.eventId, eventId));
+
+    // 9. Delete cash funds
+    await db.delete(cashFunds).where(eq(cashFunds.eventId, eventId));
+
+    // 10. Delete cash entries
+    await db.delete(cashEntries).where(eq(cashEntries.eventId, eventId));
+
+    // 11. Delete cash positions
+    await db.delete(cashPositions).where(eq(cashPositions.eventId, eventId));
+
+    // 12. Delete accounting documents
+    await db.delete(accountingDocuments).where(eq(accountingDocuments.eventId, eventId));
+
+    // 13. Delete maintenances
+    await db.delete(maintenances).where(eq(maintenances.eventId, eventId));
+
+    // 14. Delete extra costs
+    await db.delete(extraCosts).where(eq(extraCosts.eventId, eventId));
+
+    // 15. Delete stock movements (set event references to null)
+    await db.update(stockMovements)
+      .set({ fromEventId: null })
+      .where(eq(stockMovements.fromEventId, eventId));
+    await db.update(stockMovements)
+      .set({ toEventId: null })
+      .where(eq(stockMovements.toEventId, eventId));
+
+    // 16. Delete event stocks
+    await db.delete(stocks).where(eq(stocks.eventId, eventId));
+
+    // 17. Soft-delete stations (set deletedAt)
+    await db.update(stations)
+      .set({ deletedAt: new Date() })
+      .where(eq(stations.eventId, eventId));
+
+    // 18. Finally delete the event itself
+    const result = await db.delete(events).where(
+      and(eq(events.id, eventId), eq(events.companyId, companyId))
+    );
+
     return result.rowCount ? result.rowCount > 0 : false;
   }
 }

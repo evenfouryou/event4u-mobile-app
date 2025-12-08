@@ -1242,6 +1242,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Delete event with all related data
+  app.delete('/api/events/:id', isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+
+      const { id } = req.params;
+      const event = await storage.getEvent(id);
+      if (!event || event.companyId !== companyId) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      // Delete all related data in order to respect foreign key constraints
+      await storage.deleteEventWithRelatedData(id, companyId);
+
+      res.json({ success: true, message: "Evento eliminato con successo" });
+    } catch (error: any) {
+      console.error("Error deleting event:", error);
+      res.status(500).json({ message: error.message || "Failed to delete event" });
+    }
+  });
+
   app.get('/api/events/:id/revenue-analysis', isAuthenticated, async (req: any, res) => {
     try {
       const companyId = await getUserCompanyId(req);
@@ -2260,6 +2284,54 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching general stocks:", error);
       res.status(500).json({ message: "Failed to fetch general stocks" });
+    }
+  });
+
+  // Reset general warehouse (set all quantities to 0)
+  app.post('/api/stock/reset-warehouse', isAdminOrSuperAdmin, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      const userId = req.user.claims.sub;
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+
+      // Get current stocks before reset
+      const currentStocks = await storage.getGeneralStocks(companyId);
+      let resetCount = 0;
+      
+      // Set all quantities to 0 and log movements
+      for (const stock of currentStocks) {
+        const currentQty = parseFloat(stock.quantity);
+        if (currentQty > 0) {
+          // Update stock to 0
+          await storage.upsertStock({
+            companyId,
+            productId: stock.productId,
+            quantity: "0",
+          });
+
+          // Log adjustment movement
+          await storage.createStockMovement({
+            companyId,
+            productId: stock.productId,
+            quantity: (-currentQty).toString(),
+            type: 'ADJUST',
+            reason: 'Reset magazzino generale - azzeramento quantità',
+            performedBy: userId,
+          });
+          resetCount++;
+        }
+      }
+
+      res.json({ 
+        success: true, 
+        message: "Quantità magazzino azzerate con successo",
+        resetCount 
+      });
+    } catch (error) {
+      console.error("Error resetting warehouse:", error);
+      res.status(500).json({ message: "Failed to reset warehouse" });
     }
   });
 
