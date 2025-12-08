@@ -409,10 +409,11 @@ namespace SiaeBridge
                 Log($"  BeginTransactionML = {txResult}");
                 tx = (txResult == 0);
 
-                // nPIN = lunghezza del PIN (4-12 caratteri per SIAE)
-                int pinLength = pin.Length;
-                int pinResult = VerifyPINML(pinLength, pin, _slot);
-                Log($"  VerifyPINML(nPIN={pinLength}, pin=***, slot={_slot}) = {pinResult} (0x{pinResult:X4})");
+                // nPIN = 1 (identificatore PIN utente, NON la lunghezza!)
+                // Dalla documentazione SIAE test.c: pVerifyPINML(1, pin, slot)
+                const int USER_PIN_REFERENCE = 1;
+                int pinResult = VerifyPINML(USER_PIN_REFERENCE, pin, _slot);
+                Log($"  VerifyPINML(nPIN={USER_PIN_REFERENCE}, pin=***, slot={_slot}) = {pinResult} (0x{pinResult:X4})");
 
                 if (pinResult == 0)
                 {
