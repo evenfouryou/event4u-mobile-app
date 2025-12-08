@@ -57,7 +57,8 @@ import {
   Clock, 
   FilePenLine, 
   CalendarCheck,
-  MapPin
+  MapPin,
+  Pencil
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { useForm } from "react-hook-form";
@@ -127,6 +128,10 @@ export default function EventDetail() {
   const [selectedBartenderIds, setSelectedBartenderIds] = useState<string[]>([]);
   const [editingBartenderIds, setEditingBartenderIds] = useState<Map<string, string[]>>(new Map());
   const [editingStationIds, setEditingStationIds] = useState<Set<string>>(new Set());
+  const [editStockDialogOpen, setEditStockDialogOpen] = useState(false);
+  const [editingStock, setEditingStock] = useState<{ stockId: string; productId: string; stationId: string | null; currentQuantity: string; productName: string } | null>(null);
+  const [newQuantity, setNewQuantity] = useState('');
+  const [adjustReason, setAdjustReason] = useState('');
   const { toast } = useToast();
   const { user } = useAuth();
 
@@ -368,6 +373,78 @@ export default function EventDetail() {
       });
     },
   });
+
+  const adjustStockMutation = useMutation({
+    mutationFn: async ({ productId, newQuantity, reason, stationId }: { productId: string; newQuantity: number; reason?: string; stationId: string | null }) => {
+      await apiRequest('POST', '/api/stock/adjust', {
+        productId,
+        newQuantity,
+        reason,
+        eventId: id,
+        stationId,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'stocks'] });
+      setEditStockDialogOpen(false);
+      setEditingStock(null);
+      setNewQuantity('');
+      setAdjustReason('');
+      toast({
+        title: "Successo",
+        description: "Quantità corretta con successo",
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Non autorizzato",
+          description: "Effettua nuovamente il login...",
+          variant: "destructive",
+        });
+        setTimeout(() => window.location.href = '/api/login', 500);
+        return;
+      }
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile correggere la quantità",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const handleEditStock = (stock: { id: string; productId: string; stationId: string | null; quantity: string }) => {
+    const product = products?.find(p => p.id === stock.productId);
+    setEditingStock({
+      stockId: stock.id,
+      productId: stock.productId,
+      stationId: stock.stationId,
+      currentQuantity: stock.quantity,
+      productName: product?.name || 'Prodotto',
+    });
+    setNewQuantity(stock.quantity);
+    setAdjustReason('');
+    setEditStockDialogOpen(true);
+  };
+
+  const submitStockAdjustment = () => {
+    if (!editingStock) return;
+    const qty = parseFloat(newQuantity);
+    if (isNaN(qty) || qty < 0) {
+      toast({
+        title: "Errore",
+        description: "Inserisci una quantità valida",
+        variant: "destructive",
+      });
+      return;
+    }
+    adjustStockMutation.mutate({
+      productId: editingStock.productId,
+      newQuantity: qty,
+      reason: adjustReason || undefined,
+      stationId: editingStock.stationId,
+    });
+  };
 
   const bartenders = users?.filter(u => u.role === 'bartender') || [];
 
@@ -913,12 +990,22 @@ export default function EventDetail() {
                         {station ? station.name : 'Magazzino Evento'}
                       </p>
                     </div>
-                    {isLowStock && (
-                      <Badge variant="destructive" className="flex-shrink-0 ml-2" data-testid={`badge-low-stock-event-${stock.id}`}>
-                        <AlertTriangle className="h-3 w-3 mr-1" />
-                        Basso
-                      </Badge>
-                    )}
+                    <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                      {isLowStock && (
+                        <Badge variant="destructive" data-testid={`badge-low-stock-event-${stock.id}`}>
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          Basso
+                        </Badge>
+                      )}
+                      <Button
+                        size="icon"
+                        variant="ghost"
+                        onClick={() => handleEditStock(stock)}
+                        data-testid={`button-edit-stock-${stock.id}`}
+                      >
+                        <Pencil className="h-4 w-4" />
+                      </Button>
+                    </div>
                   </div>
                   <div className="flex items-center gap-2">
                     <div className="w-8 h-8 rounded-xl bg-blue-500/20 flex items-center justify-center">
@@ -1228,6 +1315,72 @@ export default function EventDetail() {
           </div>
         )}
       </motion.div>
+
+      {/* Dialog per correzione quantità stock */}
+      <Dialog open={editStockDialogOpen} onOpenChange={setEditStockDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Correggi Quantità</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Prodotto</p>
+              <p className="font-semibold">{editingStock?.productName}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Quantità attuale</p>
+              <p className="font-semibold">{editingStock?.currentQuantity}</p>
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="newQuantity" className="text-sm font-medium">
+                Nuova Quantità
+              </label>
+              <Input
+                id="newQuantity"
+                type="number"
+                step="0.01"
+                min="0"
+                value={newQuantity}
+                onChange={(e) => setNewQuantity(e.target.value)}
+                placeholder="Inserisci la nuova quantità"
+                data-testid="input-new-quantity"
+              />
+            </div>
+            <div className="space-y-2">
+              <label htmlFor="adjustReason" className="text-sm font-medium">
+                Motivo (opzionale)
+              </label>
+              <Input
+                id="adjustReason"
+                value={adjustReason}
+                onChange={(e) => setAdjustReason(e.target.value)}
+                placeholder="Es. Correzione inventario, rottura, ecc."
+                data-testid="input-adjust-reason"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setEditStockDialogOpen(false);
+                setEditingStock(null);
+              }}
+              data-testid="button-cancel-adjust"
+            >
+              Annulla
+            </Button>
+            <Button
+              onClick={submitStockAdjustment}
+              disabled={adjustStockMutation.isPending}
+              className="gradient-golden text-black font-semibold"
+              data-testid="button-submit-adjust"
+            >
+              {adjustStockMutation.isPending ? 'Salvataggio...' : 'Salva Correzione'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
