@@ -14,6 +14,16 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import {
   Form,
   FormControl,
   FormField,
@@ -40,7 +50,7 @@ import {
 } from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Warehouse as WarehouseIcon, TrendingUp, TrendingDown, Package, AlertTriangle, X, ListPlus, ArrowLeft, Pencil, BoxesIcon, Activity } from "lucide-react";
+import { Plus, Warehouse as WarehouseIcon, TrendingUp, TrendingDown, Package, AlertTriangle, X, ListPlus, ArrowLeft, Pencil, BoxesIcon, Activity, Trash2 } from "lucide-react";
 import { Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -131,6 +141,7 @@ export default function Warehouse() {
   const [adjustingProduct, setAdjustingProduct] = useState<{ id: string; name: string; quantity: string } | null>(null);
   const [adjustQuantity, setAdjustQuantity] = useState("");
   const [adjustReason, setAdjustReason] = useState("");
+  const [clearWarehouseDialogOpen, setClearWarehouseDialogOpen] = useState(false);
   const { toast } = useToast();
 
   // Auto-open load dialog if URL contains ?action=load
@@ -535,6 +546,37 @@ export default function Warehouse() {
       toast({
         title: "Errore",
         description: error.message || "Impossibile effettuare la correzione",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const clearWarehouseMutation = useMutation({
+    mutationFn: async () => {
+      await apiRequest('POST', '/api/stock/reset-warehouse');
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
+      queryClient.invalidateQueries({ predicate: (query) => Boolean(query.queryKey[0]?.toString().includes('/api/reports')) });
+      setClearWarehouseDialogOpen(false);
+      toast({
+        title: "Magazzino svuotato",
+        description: "Tutte le giacenze sono state azzerate",
+      });
+    },
+    onError: (error: Error) => {
+      if (isUnauthorizedError(error)) {
+        toast({
+          title: "Non autorizzato",
+          description: "Solo gestore e admin possono svuotare il magazzino",
+          variant: "destructive",
+        });
+        return;
+      }
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile svuotare il magazzino",
         variant: "destructive",
       });
     },
@@ -1281,7 +1323,7 @@ export default function Warehouse() {
           </TabsList>
 
           <TabsContent value="stocks" className="space-y-4">
-            <div className="flex gap-2">
+            <div className="flex flex-wrap gap-2 items-center">
               <Input
                 placeholder="Cerca prodotto per nome o codice..."
                 value={searchQuery}
@@ -1289,6 +1331,16 @@ export default function Warehouse() {
                 data-testid="input-search-products"
                 className="flex-1 md:max-w-md"
               />
+              {canAdjustStock && stocks && stocks.filter(s => parseFloat(s.quantity) > 0).length > 0 && (
+                <Button
+                  variant="destructive"
+                  onClick={() => setClearWarehouseDialogOpen(true)}
+                  data-testid="button-clear-warehouse"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Svuota Magazzino
+                </Button>
+              )}
             </div>
 
             <div className="glass-card overflow-hidden">
@@ -1313,6 +1365,7 @@ export default function Warehouse() {
                       </TableHeader>
                       <TableBody>
                         {stocks
+                          .filter(stock => parseFloat(stock.quantity) > 0)
                           .filter(stock => {
                             if (!searchQuery) return true;
                             const query = searchQuery.toLowerCase();
@@ -1362,6 +1415,7 @@ export default function Warehouse() {
                   {/* Mobile Cards */}
                   <div className="md:hidden space-y-3 p-4">
                     {stocks
+                      .filter(stock => parseFloat(stock.quantity) > 0)
                       .filter(stock => {
                         if (!searchQuery) return true;
                         const query = searchQuery.toLowerCase();
@@ -1828,6 +1882,29 @@ export default function Warehouse() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Clear Warehouse Confirmation Dialog */}
+      <AlertDialog open={clearWarehouseDialogOpen} onOpenChange={setClearWarehouseDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Svuota Magazzino</AlertDialogTitle>
+            <AlertDialogDescription>
+              Sei sicuro di voler azzerare tutte le giacenze del magazzino? Questa operazione non può essere annullata.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-clear-warehouse">Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => clearWarehouseMutation.mutate()}
+              disabled={clearWarehouseMutation.isPending}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              data-testid="button-confirm-clear-warehouse"
+            >
+              {clearWarehouseMutation.isPending ? "Svuotamento..." : "Svuota Magazzino"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
