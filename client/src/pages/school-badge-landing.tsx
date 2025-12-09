@@ -97,10 +97,13 @@ export default function SchoolBadgeLanding() {
   const submitMutation = useMutation({
     mutationFn: async (data: RequestFormData) => {
       const payload = {
-        ...data,
+        landingId: landing?.id,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.email,
         phone: data.phone ? `${data.phonePrefix} ${data.phone}` : undefined,
       };
-      const response = await apiRequest("POST", `/api/school-badges/landing/${slug}/request`, payload);
+      const response = await apiRequest("POST", `/api/school-badges/request`, payload);
       return response.json();
     },
     onSuccess: () => {
