@@ -4654,7 +4654,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
   
   // Update landing
-  app.put('/api/school-badges/landings/:id', isAuthenticated, async (req: any, res) => {
+  app.patch('/api/school-badges/landings/:id', isAuthenticated, async (req: any, res) => {
     try {
       const companyId = await getUserCompanyId(req);
       if (!companyId) {
