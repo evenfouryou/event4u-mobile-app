@@ -64,6 +64,8 @@ import {
   Loader2,
   ExternalLink,
   Copy,
+  Upload,
+  Image,
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -73,7 +75,7 @@ import type { SchoolBadgeLanding, SchoolBadgeRequest } from "@shared/schema";
 const landingFormSchema = z.object({
   schoolName: z.string().min(1, "Nome scuola obbligatorio"),
   slug: z.string().min(1, "Slug obbligatorio").regex(/^[a-z0-9-]+$/, "Solo lettere minuscole, numeri e trattini"),
-  logoUrl: z.string().url("URL non valido").optional().or(z.literal("")),
+  logoUrl: z.string().optional().or(z.literal("")),
   description: z.string().optional(),
   authorizedDomains: z.string().optional(),
   primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Colore esadecimale non valido").default("#3b82f6"),
@@ -97,6 +99,54 @@ export default function SchoolBadgeManager() {
   const [viewingLanding, setViewingLanding] = useState<SchoolBadgeLanding | null>(null);
   const [deletingLanding, setDeletingLanding] = useState<SchoolBadgeLanding | null>(null);
   const [revokingRequest, setRevokingRequest] = useState<SchoolBadgeRequest | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+
+  const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      toast({
+        title: "Errore",
+        description: "Il file deve essere un'immagine",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    if (file.size > 2 * 1024 * 1024) {
+      toast({
+        title: "Errore",
+        description: "L'immagine deve essere inferiore a 2MB",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsUploadingLogo(true);
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const dataUrl = event.target?.result as string;
+      setLogoPreview(dataUrl);
+      form.setValue("logoUrl", dataUrl);
+      setIsUploadingLogo(false);
+    };
+    reader.onerror = () => {
+      toast({
+        title: "Errore",
+        description: "Impossibile leggere il file",
+        variant: "destructive",
+      });
+      setIsUploadingLogo(false);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const clearLogo = () => {
+    setLogoPreview(null);
+    form.setValue("logoUrl", "");
+  };
 
   const { data: landings = [], isLoading } = useQuery<SchoolBadgeLanding[]>({
     queryKey: ["/api/school-badges/landings"],
@@ -195,6 +245,7 @@ export default function SchoolBadgeManager() {
 
   const openCreateDialog = () => {
     setEditingLanding(null);
+    setLogoPreview(null);
     form.reset({
       schoolName: "",
       slug: "",
@@ -210,6 +261,7 @@ export default function SchoolBadgeManager() {
 
   const openEditDialog = (landing: SchoolBadgeLanding) => {
     setEditingLanding(landing);
+    setLogoPreview(landing.logoUrl || null);
     form.reset({
       schoolName: landing.schoolName,
       slug: landing.slug,
@@ -436,9 +488,47 @@ export default function SchoolBadgeManager() {
                 name="logoUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>URL Logo (opzionale)</FormLabel>
+                    <FormLabel>Logo (opzionale)</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="https://..." data-testid="input-logo-url" />
+                      <div className="space-y-3">
+                        {(logoPreview || field.value) && (
+                          <div className="relative inline-block">
+                            <img 
+                              src={logoPreview || field.value} 
+                              alt="Anteprima logo" 
+                              className="w-24 h-24 rounded-lg object-cover border"
+                            />
+                            <Button
+                              type="button"
+                              size="icon"
+                              variant="destructive"
+                              className="absolute -top-2 -right-2 h-6 w-6"
+                              onClick={clearLogo}
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        )}
+                        <div className="flex gap-2">
+                          <label className="flex items-center gap-2 px-4 py-2 border rounded-md cursor-pointer hover-elevate">
+                            {isUploadingLogo ? (
+                              <Loader2 className="h-4 w-4 animate-spin" />
+                            ) : (
+                              <Upload className="h-4 w-4" />
+                            )}
+                            <span className="text-sm">Carica immagine</span>
+                            <input
+                              type="file"
+                              accept="image/*"
+                              className="hidden"
+                              onChange={handleLogoFileChange}
+                              disabled={isUploadingLogo}
+                              data-testid="input-logo-file"
+                            />
+                          </label>
+                        </div>
+                        <p className="text-xs text-muted-foreground">Max 2MB. Formati: JPG, PNG, GIF, WebP</p>
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
