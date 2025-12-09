@@ -93,7 +93,7 @@ const landingFormSchema = z.object({
   termsText: z.string().optional(),
   privacyText: z.string().optional(),
   marketingText: z.string().optional(),
-  requireTerms: z.boolean().default(true),
+  requireTerms: z.boolean().default(false),
   showMarketing: z.boolean().default(true),
 });
 
@@ -185,7 +185,7 @@ export default function SchoolBadgeManager() {
       termsText: "",
       privacyText: "",
       marketingText: "",
-      requireTerms: true,
+      requireTerms: false,
       showMarketing: true,
     },
   });
@@ -294,7 +294,7 @@ export default function SchoolBadgeManager() {
       termsText: "",
       privacyText: "",
       marketingText: "",
-      requireTerms: true,
+      requireTerms: false,
       showMarketing: true,
     });
     setIsDialogOpen(true);
@@ -315,7 +315,7 @@ export default function SchoolBadgeManager() {
       termsText: landing.termsText || "",
       privacyText: landing.privacyText || "",
       marketingText: landing.marketingText || "",
-      requireTerms: landing.requireTerms ?? true,
+      requireTerms: landing.requireTerms ?? false,
       showMarketing: landing.showMarketing ?? true,
     });
     setIsDialogOpen(true);

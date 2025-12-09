@@ -104,7 +104,7 @@ export default function SchoolBadgeLanding() {
   });
 
   const form = useForm<RequestFormData>({
-    resolver: zodResolver(createRequestSchema(landing?.requirePhone ?? true, landing?.requireTerms ?? true)),
+    resolver: zodResolver(createRequestSchema(landing?.requirePhone ?? true, landing?.requireTerms ?? false)),
     defaultValues: {
       firstName: "",
       lastName: "",
