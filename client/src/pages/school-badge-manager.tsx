@@ -52,6 +52,12 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   GraduationCap,
   Plus,
@@ -67,6 +73,8 @@ import {
   Copy,
   Upload,
   Image,
+  ChevronDown,
+  Shield,
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -82,6 +90,11 @@ const landingFormSchema = z.object({
   primaryColor: z.string().regex(/^#[0-9A-Fa-f]{6}$/, "Colore esadecimale non valido").default("#3b82f6"),
   customWelcomeText: z.string().optional(),
   customThankYouText: z.string().optional(),
+  termsText: z.string().optional(),
+  privacyText: z.string().optional(),
+  marketingText: z.string().optional(),
+  requireTerms: z.boolean().default(true),
+  showMarketing: z.boolean().default(true),
 });
 
 type LandingFormData = z.infer<typeof landingFormSchema>;
@@ -169,6 +182,11 @@ export default function SchoolBadgeManager() {
       primaryColor: "#3b82f6",
       customWelcomeText: "",
       customThankYouText: "",
+      termsText: "",
+      privacyText: "",
+      marketingText: "",
+      requireTerms: true,
+      showMarketing: true,
     },
   });
 
@@ -273,6 +291,11 @@ export default function SchoolBadgeManager() {
       primaryColor: "#3b82f6",
       customWelcomeText: "",
       customThankYouText: "",
+      termsText: "",
+      privacyText: "",
+      marketingText: "",
+      requireTerms: true,
+      showMarketing: true,
     });
     setIsDialogOpen(true);
   };
@@ -289,6 +312,11 @@ export default function SchoolBadgeManager() {
       primaryColor: landing.primaryColor || "#3b82f6",
       customWelcomeText: landing.customWelcomeText || "",
       customThankYouText: landing.customThankYouText || "",
+      termsText: landing.termsText || "",
+      privacyText: landing.privacyText || "",
+      marketingText: landing.marketingText || "",
+      requireTerms: landing.requireTerms ?? true,
+      showMarketing: landing.showMarketing ?? true,
     });
     setIsDialogOpen(true);
   };
@@ -630,6 +658,111 @@ export default function SchoolBadgeManager() {
                   </FormItem>
                 )}
               />
+              
+              <Collapsible className="border rounded-lg">
+                <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover-elevate" data-testid="collapsible-privacy-trigger">
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-muted-foreground" />
+                    <span className="font-medium">Termini e Privacy</span>
+                  </div>
+                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
+                </CollapsibleTrigger>
+                <CollapsibleContent className="px-4 pb-4 space-y-4">
+                  <FormField
+                    control={form.control}
+                    name="termsText"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Testo Termini e Condizioni (opzionale)</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            {...field} 
+                            placeholder="Inserisci il testo dei termini e condizioni..." 
+                            className="min-h-[100px]"
+                            data-testid="input-terms-text" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="privacyText"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Testo Privacy Policy (opzionale)</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            {...field} 
+                            placeholder="Inserisci il testo dell'informativa privacy..." 
+                            className="min-h-[100px]"
+                            data-testid="input-privacy-text" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="marketingText"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Testo Consenso Marketing (opzionale)</FormLabel>
+                        <FormControl>
+                          <Textarea 
+                            {...field} 
+                            placeholder="Inserisci il testo per il consenso marketing..." 
+                            className="min-h-[100px]"
+                            data-testid="input-marketing-text" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <div className="flex flex-col gap-4 pt-2">
+                    <FormField
+                      control={form.control}
+                      name="requireTerms"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center gap-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-require-terms"
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal cursor-pointer">
+                            Richiedi accettazione termini
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="showMarketing"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center gap-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-show-marketing"
+                            />
+                          </FormControl>
+                          <FormLabel className="font-normal cursor-pointer">
+                            Mostra opzione consenso marketing
+                          </FormLabel>
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </CollapsibleContent>
+              </Collapsible>
+              
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
                   Annulla

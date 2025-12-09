@@ -80,6 +80,7 @@ import SchoolBadgeLanding from "@/pages/school-badge-landing";
 import SchoolBadgeVerify from "@/pages/school-badge-verify";
 import SchoolBadgeView from "@/pages/school-badge-view";
 import SchoolBadgeError from "@/pages/school-badge-error";
+import SchoolBadgeScanner from "@/pages/school-badge-scanner";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -192,6 +193,7 @@ function Router() {
               <Route path="/pr/staff" component={PrStaff} />
               <Route path="/pr/my-events" component={PrMyEvents} />
               <Route path="/school-badges" component={SchoolBadgeManager} />
+              <Route path="/school-badges/scanner" component={SchoolBadgeScanner} />
               <Route path="/badge-error" component={SchoolBadgeError} />
               <Route path="/badge/verify" component={SchoolBadgeVerify} />
               <Route path="/badge/view/:code" component={SchoolBadgeView} />

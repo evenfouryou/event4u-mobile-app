@@ -3126,6 +3126,12 @@ export const schoolBadgeLandings = pgTable("school_badge_landings", {
   requirePhone: boolean("require_phone").notNull().default(true),
   customWelcomeText: text("custom_welcome_text"),
   customThankYouText: text("custom_thank_you_text"),
+  // Policy fields
+  termsText: text("terms_text"), // Custom terms and conditions text
+  privacyText: text("privacy_text"), // Custom privacy policy text
+  marketingText: text("marketing_text"), // Custom marketing consent text
+  requireTerms: boolean("require_terms").notNull().default(true), // Require terms acceptance
+  showMarketing: boolean("show_marketing").notNull().default(true), // Show marketing checkbox
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -3155,6 +3161,9 @@ export const schoolBadgeRequests = pgTable("school_badge_requests", {
   status: varchar("status", { length: 30 }).notNull().default('pending'), // pending, verified, badge_generated, revoked
   verifiedAt: timestamp("verified_at"),
   ipAddress: varchar("ip_address", { length: 45 }),
+  // Consent fields
+  acceptedTerms: boolean("accepted_terms").notNull().default(false),
+  acceptedMarketing: boolean("accepted_marketing").notNull().default(false),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

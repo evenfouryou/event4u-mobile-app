@@ -101,7 +101,7 @@ import {
   type InsertSchoolBadge,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, or, isNull, inArray, sql, desc } from "drizzle-orm";
+import { eq, ne, and, or, isNull, inArray, sql, desc } from "drizzle-orm";
 
 export interface IStorage {
   // User operations - Required for Replit Auth
@@ -376,6 +376,7 @@ export interface IStorage {
   getSchoolBadgeRequest(id: string): Promise<SchoolBadgeRequest | undefined>;
   getSchoolBadgeRequestByToken(token: string): Promise<SchoolBadgeRequest | undefined>;
   getSchoolBadgeRequestByEmail(landingId: string, email: string): Promise<SchoolBadgeRequest | undefined>;
+  getActiveSchoolBadgeRequestByEmail(landingId: string, email: string): Promise<SchoolBadgeRequest | undefined>;
   createSchoolBadgeRequest(request: InsertSchoolBadgeRequest): Promise<SchoolBadgeRequest>;
   updateSchoolBadgeRequest(id: string, request: Partial<SchoolBadgeRequest>): Promise<SchoolBadgeRequest | undefined>;
 
@@ -2053,6 +2054,19 @@ ${context ? `Contesto aggiuntivo: ${context}` : ''}`;
         eq(schoolBadgeRequests.landingId, landingId),
         eq(schoolBadgeRequests.email, email)
       ));
+    return request;
+  }
+  
+  async getActiveSchoolBadgeRequestByEmail(landingId: string, email: string): Promise<SchoolBadgeRequest | undefined> {
+    // Get the most recent non-revoked request for this email and landing
+    const [request] = await db.select().from(schoolBadgeRequests)
+      .where(and(
+        eq(schoolBadgeRequests.landingId, landingId),
+        eq(schoolBadgeRequests.email, email),
+        ne(schoolBadgeRequests.status, 'revoked')
+      ))
+      .orderBy(desc(schoolBadgeRequests.createdAt))
+      .limit(1);
     return request;
   }
 

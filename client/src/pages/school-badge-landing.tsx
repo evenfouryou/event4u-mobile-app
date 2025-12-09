@@ -24,6 +24,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
 import {
   Select,
   SelectContent,
@@ -39,6 +45,7 @@ import {
   Loader2,
   CheckCircle2,
   AlertCircle,
+  ChevronDown,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { SchoolBadgeLanding } from "@shared/schema";
@@ -62,7 +69,13 @@ const PHONE_PREFIXES = [
   { code: "+386", country: "Slovenia" },
 ];
 
-const createRequestSchema = (requirePhone: boolean) => z.object({
+const DEFAULT_TERMS_TEXT = `Accettando questi termini, l'utente dichiara di aver letto e compreso le condizioni di utilizzo del servizio di badge digitale. Il badge è personale e non cedibile. L'utente si impegna a fornire informazioni veritiere e aggiornate. L'organizzazione si riserva il diritto di revocare il badge in caso di uso improprio o violazione dei termini.`;
+
+const DEFAULT_PRIVACY_TEXT = `I dati personali raccolti (nome, cognome, email e numero di telefono) saranno trattati in conformità con il Regolamento UE 2016/679 (GDPR). I dati saranno utilizzati esclusivamente per la generazione e gestione del badge digitale e per comunicazioni relative al servizio. I dati saranno conservati per il tempo necessario all'erogazione del servizio e potranno essere cancellati su richiesta dell'interessato.`;
+
+const DEFAULT_MARKETING_TEXT = `Acconsento a ricevere comunicazioni promozionali e informative via email relative a eventi, iniziative e servizi offerti. Posso revocare questo consenso in qualsiasi momento cliccando sul link di disiscrizione presente in ogni comunicazione o contattando il servizio clienti.`;
+
+const createRequestSchema = (requirePhone: boolean, requireTerms: boolean) => z.object({
   firstName: z.string().min(2, "Nome troppo corto (min 2 caratteri)"),
   lastName: z.string().min(2, "Cognome troppo corto (min 2 caratteri)"),
   email: z.string().email("Email non valida"),
@@ -70,6 +83,10 @@ const createRequestSchema = (requirePhone: boolean) => z.object({
   phone: requirePhone 
     ? z.string().min(6, "Numero di telefono richiesto (min 6 cifre)") 
     : z.string().optional(),
+  acceptedTerms: requireTerms 
+    ? z.boolean().refine(val => val === true, "Devi accettare i termini e le condizioni")
+    : z.boolean().optional(),
+  acceptedMarketing: z.boolean().optional(),
 });
 
 type RequestFormData = z.infer<ReturnType<typeof createRequestSchema>>;
@@ -78,19 +95,24 @@ export default function SchoolBadgeLanding() {
   const { slug } = useParams<{ slug: string }>();
   const { toast } = useToast();
   const [submitted, setSubmitted] = useState(false);
+  const [termsOpen, setTermsOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [marketingOpen, setMarketingOpen] = useState(false);
 
   const { data: landing, isLoading, error } = useQuery<SchoolBadgeLanding>({
     queryKey: ["/api/school-badges/landing", slug],
   });
 
   const form = useForm<RequestFormData>({
-    resolver: zodResolver(createRequestSchema(landing?.requirePhone ?? true)),
+    resolver: zodResolver(createRequestSchema(landing?.requirePhone ?? true, landing?.requireTerms ?? true)),
     defaultValues: {
       firstName: "",
       lastName: "",
       email: "",
       phonePrefix: "+39",
       phone: "",
+      acceptedTerms: false,
+      acceptedMarketing: false,
     },
   });
 
@@ -102,6 +124,8 @@ export default function SchoolBadgeLanding() {
         lastName: data.lastName,
         email: data.email,
         phone: data.phone ? `${data.phonePrefix} ${data.phone}` : undefined,
+        acceptedTerms: data.acceptedTerms ?? false,
+        acceptedMarketing: data.acceptedMarketing ?? false,
       };
       const response = await apiRequest("POST", `/api/school-badges/request`, payload);
       return response.json();
@@ -228,6 +252,10 @@ export default function SchoolBadgeLanding() {
     );
   }
 
+  const termsTextToShow = landing.termsText || DEFAULT_TERMS_TEXT;
+  const privacyTextToShow = landing.privacyText || DEFAULT_PRIVACY_TEXT;
+  const marketingTextToShow = landing.marketingText || DEFAULT_MARKETING_TEXT;
+
   return (
     <div className="min-h-screen flex items-center justify-center p-4 bg-background">
       <motion.div
@@ -237,6 +265,14 @@ export default function SchoolBadgeLanding() {
       >
         <Card className="glass-card" data-testid="card-badge-request">
           <CardHeader className="text-center">
+            <div className="flex items-center justify-center gap-2 mb-4">
+              <img 
+                src="/logo.png" 
+                alt="Event4U" 
+                className="h-8 w-auto"
+                data-testid="img-event4u-logo"
+              />
+            </div>
             {landing.logoUrl ? (
               <img 
                 src={landing.logoUrl} 
@@ -351,6 +387,118 @@ export default function SchoolBadgeLanding() {
                   </div>
                   <FormMessage />
                 </FormItem>
+
+                {landing.requireTerms && (
+                  <div className="space-y-3 pt-2">
+                    <FormField
+                      control={form.control}
+                      name="acceptedTerms"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-terms"
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="text-sm font-normal cursor-pointer">
+                              Accetto i <span className="text-primary underline cursor-pointer" onClick={(e) => { e.preventDefault(); setTermsOpen(!termsOpen); }}>termini e condizioni</span> e l'<span className="text-primary underline cursor-pointer" onClick={(e) => { e.preventDefault(); setPrivacyOpen(!privacyOpen); }}>informativa sulla privacy</span> *
+                            </FormLabel>
+                            <FormMessage />
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+                    
+                    <Collapsible open={termsOpen} onOpenChange={setTermsOpen}>
+                      <CollapsibleTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full justify-between p-2 h-auto text-muted-foreground hover:text-foreground"
+                          type="button"
+                          data-testid="button-toggle-terms"
+                        >
+                          <span className="text-xs">Termini e condizioni</span>
+                          <ChevronDown className={`h-4 w-4 transition-transform ${termsOpen ? 'rotate-180' : ''}`} />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="p-3 text-xs text-muted-foreground bg-muted/50 rounded-md mt-1" data-testid="text-terms-content">
+                          {termsTextToShow}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+
+                    <Collapsible open={privacyOpen} onOpenChange={setPrivacyOpen}>
+                      <CollapsibleTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full justify-between p-2 h-auto text-muted-foreground hover:text-foreground"
+                          type="button"
+                          data-testid="button-toggle-privacy"
+                        >
+                          <span className="text-xs">Informativa sulla privacy</span>
+                          <ChevronDown className={`h-4 w-4 transition-transform ${privacyOpen ? 'rotate-180' : ''}`} />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="p-3 text-xs text-muted-foreground bg-muted/50 rounded-md mt-1" data-testid="text-privacy-content">
+                          {privacyTextToShow}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </div>
+                )}
+
+                {landing.showMarketing && (
+                  <div className="space-y-3 pt-2">
+                    <FormField
+                      control={form.control}
+                      name="acceptedMarketing"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                          <FormControl>
+                            <Checkbox
+                              checked={field.value}
+                              onCheckedChange={field.onChange}
+                              data-testid="checkbox-marketing"
+                            />
+                          </FormControl>
+                          <div className="space-y-1 leading-none">
+                            <FormLabel className="text-sm font-normal cursor-pointer">
+                              Acconsento a ricevere comunicazioni promozionali
+                            </FormLabel>
+                          </div>
+                        </FormItem>
+                      )}
+                    />
+
+                    <Collapsible open={marketingOpen} onOpenChange={setMarketingOpen}>
+                      <CollapsibleTrigger asChild>
+                        <Button 
+                          variant="ghost" 
+                          size="sm" 
+                          className="w-full justify-between p-2 h-auto text-muted-foreground hover:text-foreground"
+                          type="button"
+                          data-testid="button-toggle-marketing"
+                        >
+                          <span className="text-xs">Dettagli sul consenso marketing</span>
+                          <ChevronDown className={`h-4 w-4 transition-transform ${marketingOpen ? 'rotate-180' : ''}`} />
+                        </Button>
+                      </CollapsibleTrigger>
+                      <CollapsibleContent>
+                        <div className="p-3 text-xs text-muted-foreground bg-muted/50 rounded-md mt-1" data-testid="text-marketing-content">
+                          {marketingTextToShow}
+                        </div>
+                      </CollapsibleContent>
+                    </Collapsible>
+                  </div>
+                )}
+
                 <Button 
                   type="submit" 
                   className="w-full"

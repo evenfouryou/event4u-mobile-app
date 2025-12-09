@@ -4811,8 +4811,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         primaryColor: landing.primaryColor,
         requirePhone: landing.requirePhone,
         customWelcomeText: landing.customWelcomeText,
+        customThankYouText: landing.customThankYouText,
         isActive: landing.isActive,
         authorizedDomains: landing.authorizedDomains,
+        termsText: landing.termsText,
+        privacyText: landing.privacyText,
+        marketingText: landing.marketingText,
+        requireTerms: landing.requireTerms,
+        showMarketing: landing.showMarketing,
       });
     } catch (error: any) {
       console.error("Error fetching school badge landing by slug:", error);
@@ -4858,24 +4864,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
       
-      // Check if email already has a verified badge for this landing
-      const existingRequest = await storage.getSchoolBadgeRequestByEmail(landingId, email);
+      // Check if email already has an active (non-revoked) badge request for this landing
+      const existingRequest = await storage.getActiveSchoolBadgeRequestByEmail(landingId, email);
       if (existingRequest) {
+        // Only block if there's an active badge already
         if (existingRequest.status === 'badge_generated') {
-          return res.status(400).json({ message: "A badge has already been generated for this email" });
+          // Check if the badge is revoked - if revoked, allow new request
+          const existingBadge = await storage.getSchoolBadgeByRequest(existingRequest.id);
+          if (existingBadge && existingBadge.isActive && !existingBadge.revokedAt) {
+            return res.status(400).json({ message: "Un badge è già stato generato per questa email" });
+          }
+          // Badge is revoked, allow new request (create new record)
+          // Fall through to create new request
+        } else if (existingRequest.status === 'verified') {
+          return res.status(400).json({ message: "Questa email è già stata verificata. Il badge sarà generato a breve." });
+        } else if (existingRequest.status === 'pending') {
+          // For pending requests, check if token is still valid
+          if (existingRequest.tokenExpiresAt && new Date() < new Date(existingRequest.tokenExpiresAt)) {
+            return res.status(400).json({ message: "Una email di verifica è già stata inviata. Controlla la tua casella di posta." });
+          }
+          // Token expired, update existing request
         }
-        if (existingRequest.status === 'verified') {
-          return res.status(400).json({ message: "This email has already been verified" });
-        }
-        if (existingRequest.status === 'revoked') {
-          return res.status(400).json({ message: "This badge request has been revoked" });
-        }
-        // For pending requests, check if token is still valid
-        if (existingRequest.tokenExpiresAt && new Date() < new Date(existingRequest.tokenExpiresAt)) {
-          return res.status(400).json({ message: "A verification email has already been sent. Please check your inbox." });
-        }
-        // Token expired, delete old request and create new one
-        // Note: We don't have a delete method, so we'll update the existing one
       }
       
       // Generate verification token
@@ -4886,9 +4895,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || 
                         req.socket.remoteAddress || '';
       
+      // Get consent fields from request body
+      const acceptedTerms = req.body.acceptedTerms || false;
+      const acceptedMarketing = req.body.acceptedMarketing || false;
+      
       let requestRecord;
-      if (existingRequest) {
-        // Update existing request with new token
+      // Only update existing pending request with expired token, otherwise create new
+      const shouldUpdateExisting = existingRequest && 
+        existingRequest.status === 'pending' && 
+        existingRequest.tokenExpiresAt && 
+        new Date() >= new Date(existingRequest.tokenExpiresAt);
+        
+      if (shouldUpdateExisting) {
+        // Update existing pending request with new token
         requestRecord = await storage.updateSchoolBadgeRequest(existingRequest.id, {
           firstName,
           lastName,
@@ -4897,9 +4916,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tokenExpiresAt,
           status: 'pending',
           ipAddress,
+          acceptedTerms,
+          acceptedMarketing,
         });
       } else {
-        // Create new request
+        // Create new request (for new users, revoked badges, or badge_generated with revoked badge)
         requestRecord = await storage.createSchoolBadgeRequest({
           landingId,
           firstName,
@@ -4910,6 +4931,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
           tokenExpiresAt,
           status: 'pending',
           ipAddress,
+          acceptedTerms,
+          acceptedMarketing,
         } as any);
       }
       
