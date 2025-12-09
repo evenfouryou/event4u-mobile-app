@@ -5140,23 +5140,23 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       res.json({
-        badge: {
-          uniqueCode: badge.uniqueCode,
-          isActive: badge.isActive,
-          createdAt: badge.createdAt,
-          revokedAt: badge.revokedAt,
-          revokedReason: badge.revokedReason,
-        },
-        holder: {
+        id: badge.id,
+        uniqueCode: badge.uniqueCode,
+        qrCodeUrl: badge.qrCodeUrl,
+        badgeImageUrl: badge.badgeImageUrl,
+        isActive: badge.isActive,
+        revokedAt: badge.revokedAt,
+        revokedReason: badge.revokedReason,
+        createdAt: badge.createdAt,
+        request: {
           firstName: request.firstName,
           lastName: request.lastName,
           email: request.email,
-          verifiedAt: request.verifiedAt,
-        },
-        organization: {
-          schoolName: landing.schoolName,
-          logoUrl: landing.logoUrl,
-          primaryColor: landing.primaryColor,
+          landing: {
+            schoolName: landing.schoolName,
+            logoUrl: landing.logoUrl,
+            primaryColor: landing.primaryColor,
+          },
         },
       });
     } catch (error: any) {
