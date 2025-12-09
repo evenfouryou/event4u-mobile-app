@@ -1,0 +1,226 @@
+Perfetto Jonathan, aggiorno il prompt in modo preciso e definitivo integrando il fatto che dal pannello organizzatore si devono poter richiedere anche: nome, cognome e numero di telefono durante la fase di richiesta del badge.
+
+Ecco la versione aggiornata e completa pronta da fornire allo sviluppatore o all’AI tecnica 👇
+
+⸻
+
+✅ PROMPT DEFINITIVO – “Badge Scuola con QR Code + Verifica Email + Dati Utente (Nome, Cognome, Telefono)”
+
+Sei uno sviluppatore senior full-stack.
+Devi sviluppare una funzione che permette agli organizzatori di creare una landing per la propria scuola, dalla quale gli utenti possono richiedere un badge digitale con QR code, verificato tramite email del dominio scolastico.
+L’utente non crea un profilo; fornisce solo i dati richiesti e riceve un badge digitale.
+
+⸻
+
+🎯 Obiettivo della Funzione
+	1.	L’organizzatore crea una Landing della scuola dal pannello admin.
+	2.	L’utente visita la landing e compila un form con:
+	•	Nome
+	•	Cognome
+	•	Numero di telefono
+	•	Email istituzionale
+	3.	Il sistema controlla se l’email appartiene al dominio autorizzato.
+	4.	Se valida:
+	•	invia una mail di verifica con un link.
+	5.	Quando l’utente clicca il link:
+	•	il sistema conferma la verifica
+	•	genera automaticamente un badge digitale contenente:
+	•	Nome e Cognome
+	•	Scuola
+	•	Numero di telefono (non sul badge, ma salvato nel sistema)
+	•	QR code univoco
+	•	Stato: “Verificato”
+	6.	Il sistema invia una seconda email con:
+	•	il badge digitale (immagine o PDF)
+	•	il link alla pagina pubblica verificata dal QR code
+
+⸻
+
+🏫 Pannello Organizzatore – “School Badge Manager”
+
+Nel pannello dell’organizzatore deve essere presente una nuova sezione.
+
+📌 L’organizzatore può:
+	1.	Creare una Landing della scuola
+	•	Nome scuola
+	•	Logo
+	•	Domini email autorizzati
+	•	Testo descrittivo
+	•	URL automatico (es: /badge/immacolata)
+	2.	Configurare i campi obbligatori del form
+	•	Nome (obbligatorio)
+	•	Cognome (obbligatorio)
+	•	Telefono (obbligatorio)
+	•	Email istituzionale (obbligatorio)
+	3.	Vedere le richieste ricevute
+	•	Nome
+	•	Cognome
+	•	Telefono
+	•	Email
+	•	Stato (pending → verified → badge_generated)
+	•	Data richiesta
+	•	Data verifica
+	4.	Gestire i badge
+	•	Rigenerare un badge
+	•	Revocare un badge
+	•	Visualizzare badge già generati
+	5.	Gestire i domini della scuola
+
+⸻
+
+🌐 Landing Page pubblica – Form Utente
+
+Struttura:
+	•	Logo scuola
+	•	Titolo: “Richiedi il tuo Badge Ufficiale”
+	•	Testo introduttivo
+	•	Modulo con questi campi:
+	•	Nome
+	•	Cognome
+	•	Numero di telefono
+	•	Email istituzionale
+	•	Pulsante: “Richiedi Verifica”
+
+Comportamento:
+	•	Se il dominio dell’email non è autorizzato → messaggio errore.
+	•	Se valido → invio della mail di verifica.
+	•	Messaggio:
+“Email inviata! Controlla la tua casella istituzionale.”
+
+⸻
+
+🧩 Generazione del Badge
+
+Il badge digitale deve contenere:
+	•	Logo della scuola
+	•	Nome e cognome dell’utente
+	•	“Badge Verificato – [Nome Scuola]”
+	•	QR Code univoco
+	•	Codice identificativo univoco
+	•	Data emissione
+
+Note:
+	•	Il numero telefonico resta solo nel database (non sul badge).
+	•	Il QR code punta alla pagina pubblica di verifica.
+
+⸻
+
+🔗 Pagina pubblica del QR code
+
+URL tipo:
+
+/verify-badge/{unique_id}
+
+Contiene:
+	•	Nome e cognome
+	•	Scuola
+	•	Stato: “Verificato”
+	•	Data di emissione
+	•	Eventuale nota della scuola
+
+⸻
+
+🛠 Requisiti tecnici Backend
+
+Endpoint richiesti
+
+1️⃣ Richiesta badge
+POST /badge/request
+Input:
+	•	first_name
+	•	last_name
+	•	phone
+	•	email
+	•	school_id
+
+Controlli:
+	•	dominio email
+	•	email non già verificata
+	•	telefono valido
+
+Output:
+	•	success/failure
+	•	messaggi errore
+
+2️⃣ Verifica email via token
+GET /badge/verify?token=...
+Azioni:
+	•	valida token
+	•	crea badge
+	•	genera QR code
+	•	salva badge
+	•	aggiorna stato in “badge_generated”
+
+3️⃣ Pagina pubblica badge
+GET /verify-badge/{unique_id}
+
+⸻
+
+🗄 Database (aggiornato)
+
+school_badge_requests
+	•	id
+	•	school_id
+	•	first_name
+	•	last_name
+	•	phone
+	•	email
+	•	token
+	•	token_expires_at
+	•	status (pending / verified / badge_generated / revoked)
+	•	badge_url
+	•	created_at
+	•	updated_at
+
+generated_badges
+	•	id
+	•	badge_request_id
+	•	unique_id
+	•	qr_code_url
+	•	badge_image_url
+	•	created_at
+
+⸻
+
+📧 Email
+
+1️⃣ Email di verifica
+
+Oggetto:
+Conferma la tua identità per ottenere il Badge della Scuola
+
+Contenuto:
+	•	testo introduttivo
+	•	link con token
+
+2️⃣ Email con badge
+
+Oggetto:
+Ecco il tuo Badge digitale!
+
+Contenuto:
+	•	immagine / PDF badge
+	•	link pagina pubblica
+
+⸻
+
+🚀 Output richiesto allo sviluppatore
+
+Produrre:
+	1.	Schema database completo
+	2.	API + documentazione
+	3.	Landing page completa
+	4.	Pannello organizzatore School Badge Manager
+	5.	Generazione badge + QR code
+	6.	Email doppia (verifica + badge)
+	7.	Sicurezze: token, scadenze, rate limit
+	8.	Pagina pubblica QR
+
+⸻
+
+Se vuoi, ti preparo anche:
+✅ un design grafico del badge
+✅ un mockup della landing
+✅ il testo delle email già formattato
+
+Vuoi anche questi?

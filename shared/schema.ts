@@ -3108,3 +3108,117 @@ export type UpdateGuestListEntry = z.infer<typeof updateGuestListEntrySchema>;
 
 export type PrOtpAttempt = typeof prOtpAttempts.$inferSelect;
 export type InsertPrOtpAttempt = z.infer<typeof insertPrOtpAttemptSchema>;
+
+// ==================== SCHOOL BADGE SYSTEM ====================
+
+// School Badge Landings - Created by organizers
+export const schoolBadgeLandings = pgTable("school_badge_landings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  createdByUserId: varchar("created_by_user_id").notNull().references(() => users.id),
+  schoolName: varchar("school_name", { length: 255 }).notNull(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(), // URL-friendly identifier
+  logoUrl: text("logo_url"),
+  description: text("description"),
+  authorizedDomains: text("authorized_domains").array().default(sql`ARRAY[]::text[]`), // email domains
+  primaryColor: varchar("primary_color", { length: 7 }).default('#3b82f6'),
+  isActive: boolean("is_active").notNull().default(true),
+  requirePhone: boolean("require_phone").notNull().default(true),
+  customWelcomeText: text("custom_welcome_text"),
+  customThankYouText: text("custom_thank_you_text"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const schoolBadgeLandingsRelations = relations(schoolBadgeLandings, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [schoolBadgeLandings.companyId],
+    references: [companies.id],
+  }),
+  createdByUser: one(users, {
+    fields: [schoolBadgeLandings.createdByUserId],
+    references: [users.id],
+  }),
+  requests: many(schoolBadgeRequests),
+}));
+
+// School Badge Requests - From users
+export const schoolBadgeRequests = pgTable("school_badge_requests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  landingId: varchar("landing_id").notNull().references(() => schoolBadgeLandings.id),
+  firstName: varchar("first_name", { length: 100 }).notNull(),
+  lastName: varchar("last_name", { length: 100 }).notNull(),
+  phone: varchar("phone", { length: 20 }),
+  email: varchar("email", { length: 255 }).notNull(),
+  verificationToken: varchar("verification_token", { length: 100 }),
+  tokenExpiresAt: timestamp("token_expires_at"),
+  status: varchar("status", { length: 30 }).notNull().default('pending'), // pending, verified, badge_generated, revoked
+  verifiedAt: timestamp("verified_at"),
+  ipAddress: varchar("ip_address", { length: 45 }),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const schoolBadgeRequestsRelations = relations(schoolBadgeRequests, ({ one, many }) => ({
+  landing: one(schoolBadgeLandings, {
+    fields: [schoolBadgeRequests.landingId],
+    references: [schoolBadgeLandings.id],
+  }),
+  badges: many(schoolBadges),
+}));
+
+// School Badges - Generated badges
+export const schoolBadges = pgTable("school_badges", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  requestId: varchar("request_id").notNull().references(() => schoolBadgeRequests.id),
+  uniqueCode: varchar("unique_code", { length: 20 }).notNull().unique(), // Short code for QR
+  qrCodeUrl: text("qr_code_url"),
+  badgeImageUrl: text("badge_image_url"),
+  isActive: boolean("is_active").notNull().default(true),
+  revokedAt: timestamp("revoked_at"),
+  revokedReason: text("revoked_reason"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const schoolBadgesRelations = relations(schoolBadges, ({ one }) => ({
+  request: one(schoolBadgeRequests, {
+    fields: [schoolBadges.requestId],
+    references: [schoolBadgeRequests.id],
+  }),
+}));
+
+// ==================== SCHEMAS SCHOOL BADGE ====================
+
+export const insertSchoolBadgeLandingSchema = createInsertSchema(schoolBadgeLandings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateSchoolBadgeLandingSchema = insertSchoolBadgeLandingSchema.partial().omit({ companyId: true, createdByUserId: true });
+
+export const insertSchoolBadgeRequestSchema = createInsertSchema(schoolBadgeRequests).omit({
+  id: true,
+  verificationToken: true,
+  tokenExpiresAt: true,
+  status: true,
+  verifiedAt: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertSchoolBadgeSchema = createInsertSchema(schoolBadges).omit({
+  id: true,
+  createdAt: true,
+});
+
+// ==================== TYPES SCHOOL BADGE ====================
+
+export type SchoolBadgeLanding = typeof schoolBadgeLandings.$inferSelect;
+export type InsertSchoolBadgeLanding = z.infer<typeof insertSchoolBadgeLandingSchema>;
+export type UpdateSchoolBadgeLanding = z.infer<typeof updateSchoolBadgeLandingSchema>;
+
+export type SchoolBadgeRequest = typeof schoolBadgeRequests.$inferSelect;
+export type InsertSchoolBadgeRequest = z.infer<typeof insertSchoolBadgeRequestSchema>;
+
+export type SchoolBadge = typeof schoolBadges.$inferSelect;
+export type InsertSchoolBadge = z.infer<typeof insertSchoolBadgeSchema>;
