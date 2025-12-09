@@ -51,6 +51,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
 import {
   GraduationCap,
   Plus,
@@ -228,6 +229,23 @@ export default function SchoolBadgeManager() {
     },
   });
 
+  const toggleActiveMutation = useMutation({
+    mutationFn: async ({ id, isActive }: { id: string; isActive: boolean }) => {
+      const response = await apiRequest("PATCH", `/api/school-badges/landings/${id}`, { isActive });
+      return response.json();
+    },
+    onSuccess: (_, variables) => {
+      toast({ 
+        title: variables.isActive ? "Landing attivata" : "Landing disattivata",
+        description: variables.isActive ? "Le richieste sono ora aperte" : "Le richieste sono chiuse"
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/school-badges/landings"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    },
+  });
+
   const revokeMutation = useMutation({
     mutationFn: async (requestId: string) => {
       const response = await apiRequest("POST", `/api/school-badges/requests/${requestId}/revoke`, {});
@@ -373,9 +391,19 @@ export default function SchoolBadgeManager() {
                       </div>
                     </div>
                   </div>
-                  <Badge variant={landing.isActive ? "default" : "secondary"}>
-                    {landing.isActive ? "Attiva" : "Inattiva"}
-                  </Badge>
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs text-muted-foreground">
+                      {landing.isActive ? "Attiva" : "Inattiva"}
+                    </span>
+                    <Switch
+                      checked={landing.isActive}
+                      onCheckedChange={(checked) => 
+                        toggleActiveMutation.mutate({ id: landing.id, isActive: checked })
+                      }
+                      disabled={toggleActiveMutation.isPending}
+                      data-testid={`switch-active-${landing.id}`}
+                    />
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {landing.description && (
