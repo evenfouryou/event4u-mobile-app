@@ -25,6 +25,13 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   GraduationCap,
   Mail,
   User,
@@ -36,12 +43,32 @@ import {
 import { motion } from "framer-motion";
 import type { SchoolBadgeLanding } from "@shared/schema";
 
+const PHONE_PREFIXES = [
+  { code: "+39", country: "Italia" },
+  { code: "+1", country: "USA/Canada" },
+  { code: "+44", country: "Regno Unito" },
+  { code: "+49", country: "Germania" },
+  { code: "+33", country: "Francia" },
+  { code: "+34", country: "Spagna" },
+  { code: "+41", country: "Svizzera" },
+  { code: "+43", country: "Austria" },
+  { code: "+32", country: "Belgio" },
+  { code: "+31", country: "Paesi Bassi" },
+  { code: "+351", country: "Portogallo" },
+  { code: "+48", country: "Polonia" },
+  { code: "+40", country: "Romania" },
+  { code: "+30", country: "Grecia" },
+  { code: "+385", country: "Croazia" },
+  { code: "+386", country: "Slovenia" },
+];
+
 const createRequestSchema = (requirePhone: boolean) => z.object({
   firstName: z.string().min(2, "Nome troppo corto (min 2 caratteri)"),
   lastName: z.string().min(2, "Cognome troppo corto (min 2 caratteri)"),
   email: z.string().email("Email non valida"),
+  phonePrefix: z.string().default("+39"),
   phone: requirePhone 
-    ? z.string().min(8, "Numero di telefono richiesto") 
+    ? z.string().min(6, "Numero di telefono richiesto (min 6 cifre)") 
     : z.string().optional(),
 });
 
@@ -62,13 +89,18 @@ export default function SchoolBadgeLanding() {
       firstName: "",
       lastName: "",
       email: "",
+      phonePrefix: "+39",
       phone: "",
     },
   });
 
   const submitMutation = useMutation({
     mutationFn: async (data: RequestFormData) => {
-      const response = await apiRequest("POST", `/api/school-badges/landing/${slug}/request`, data);
+      const payload = {
+        ...data,
+        phone: data.phone ? `${data.phonePrefix} ${data.phone}` : undefined,
+      };
+      const response = await apiRequest("POST", `/api/school-badges/landing/${slug}/request`, payload);
       return response.json();
     },
     onSuccess: () => {
@@ -278,22 +310,44 @@ export default function SchoolBadgeLanding() {
                     </FormItem>
                   )}
                 />
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Telefono {!landing.requirePhone && "(opzionale)"}</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input {...field} type="tel" className="pl-10" placeholder="+39 123 456 7890" data-testid="input-phone" />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <FormItem>
+                  <FormLabel>Telefono {!landing.requirePhone && "(opzionale)"}</FormLabel>
+                  <div className="flex gap-2">
+                    <FormField
+                      control={form.control}
+                      name="phonePrefix"
+                      render={({ field }) => (
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger className="w-28" data-testid="select-phone-prefix">
+                              <SelectValue placeholder="+39" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            {PHONE_PREFIXES.map((prefix) => (
+                              <SelectItem key={prefix.code} value={prefix.code}>
+                                {prefix.code}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="phone"
+                      render={({ field }) => (
+                        <FormControl>
+                          <div className="relative flex-1">
+                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                            <Input {...field} type="tel" className="pl-10" placeholder="123 456 7890" data-testid="input-phone" />
+                          </div>
+                        </FormControl>
+                      )}
+                    />
+                  </div>
+                  <FormMessage />
+                </FormItem>
                 <Button 
                   type="submit" 
                   className="w-full"
