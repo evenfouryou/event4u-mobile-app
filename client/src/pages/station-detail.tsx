@@ -325,7 +325,7 @@ export default function StationDetail() {
                 <Skeleton className="h-16 w-full" />
                 <Skeleton className="h-16 w-full" />
               </div>
-            ) : stationStocks && stationStocks.length > 0 ? (
+            ) : stationStocks && stationStocks.filter(s => parseFloat(s.quantity) > 0).length > 0 ? (
               <Card>
                 <Table>
                   <TableHeader>
@@ -337,7 +337,7 @@ export default function StationDetail() {
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {stationStocks.map((stock) => {
+                    {stationStocks.filter(s => parseFloat(s.quantity) > 0).map((stock) => {
                       const product = getProductInfo(stock.productId);
                       const quantity = parseFloat(stock.quantity);
                       const isLowStock = product?.minThreshold && !isNaN(quantity) && quantity < parseFloat(product.minThreshold);
