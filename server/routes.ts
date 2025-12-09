@@ -607,8 +607,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
-      const userId = req.user.claims.sub;
+      // If impersonating, use the impersonated user ID from session
+      const userId = req.session.impersonatorId ? req.session.userId : req.user.claims.sub;
       const user = await storage.getUser(userId);
+      
+      // Add flag to indicate if this is an impersonated session
+      if (user && req.session.impersonatorId) {
+        return res.json({ 
+          ...sanitizeUser(user), 
+          isImpersonated: true,
+          impersonatorId: req.session.impersonatorId 
+        });
+      }
+      
       res.json(user ? sanitizeUser(user) : null);
     } catch (error) {
       console.error("Error fetching user:", error);
@@ -633,22 +644,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // Helper function to get current user ID (respecting impersonation)
+  const getCurrentUserId = (req: any): string => {
+    return req.session.impersonatorId ? req.session.userId : req.user.claims.sub;
+  };
+
   // Helper function to get user's company ID
   const getUserCompanyId = async (req: any): Promise<string | null> => {
-    const userId = req.user.claims.sub;
+    const userId = getCurrentUserId(req);
     const user = await storage.getUser(userId);
     return user?.companyId || null;
   };
 
   // Helper function to check if user is super admin
   const isSuperAdmin = async (req: any): Promise<boolean> => {
-    const userId = req.user.claims.sub;
+    const userId = getCurrentUserId(req);
     const user = await storage.getUser(userId);
     return user?.role === 'super_admin';
   };
 
   const isGestore = async (req: any): Promise<boolean> => {
-    const userId = req.user.claims.sub;
+    const userId = getCurrentUserId(req);
     const user = await storage.getUser(userId);
     return user?.role === 'gestore';
   };
@@ -2267,9 +2283,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Original user not found" });
       }
 
-      // Only the actual impersonator (super_admin) can stop impersonation
-      if (impersonator.role !== 'super_admin') {
-        return res.status(403).json({ message: "Forbidden: Only super admin can stop impersonation" });
+      // Only super_admin or gestore can stop impersonation
+      if (impersonator.role !== 'super_admin' && impersonator.role !== 'gestore') {
+        return res.status(403).json({ message: "Forbidden: Only admin users can stop impersonation" });
       }
 
       // Restore original user session
