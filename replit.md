@@ -32,6 +32,15 @@ A WebSocket relay system enabling remote smart card reader access from a desktop
 ### Progressive Web App (PWA)
 The system is an installable PWA with a `manifest.json` for metadata, a Service Worker (`sw.js`) for caching and offline support, and native installation prompts.
 
+### School Badge Manager Module
+A digital badge creation system for schools and organizations, accessible via "Badge Scuole" in the sidebar (for gestore/admin users). Database schema includes 3 tables: `schoolBadgeLandings` (organization landing pages), `schoolBadgeRequests` (badge applications), and `schoolBadges` (generated badges with QR codes). Features include:
+- **Landing Page Creation**: Custom branded pages with school name, description, logo URL, email domain validation, and primary color
+- **Public Badge Request Flow**: `/badge/:slug` public landing where users submit name/email for badge request
+- **Email Verification**: 24-hour verification tokens sent via SMTP with automatic expiration
+- **QR Code Generation**: Uses `qrcode` library to generate QR codes (data URLs) pointing to `/badge/view/:code`
+- **Badge View Page**: Public page at `/badge/view/:code` showing badge holder info, school branding, and QR code for verification
+- **Organizer Management**: Dashboard showing all landings with request counts and badge statistics
+
 ## External Dependencies
 
 ### Third-Party Services
@@ -49,4 +58,5 @@ The system is an installable PWA with a `manifest.json` for metadata, a Service 
 - **Authentication**: `passport`, `openid-client`, `express-session`, `bcryptjs`.
 - **Charts**: `recharts`.
 - **File Processing**: `papaparse` (CSV), `jspdf` (PDF), `xlsx` (Excel).
+- **QR Code**: `qrcode` for generating QR code data URLs.
 - **Build Tools**: `vite`, `esbuild`, `typescript`, `tsx`.
