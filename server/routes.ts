@@ -1374,6 +1374,93 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // ===== SYSTEM SETTINGS (Super Admin only) =====
+  app.get('/api/system-settings', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Unauthorized: Super Admin access required" });
+      }
+
+      const settings = await storage.getAllSystemSettings();
+      res.json(settings);
+    } catch (error) {
+      console.error("Error fetching system settings:", error);
+      res.status(500).json({ message: "Failed to fetch system settings" });
+    }
+  });
+
+  app.get('/api/system-settings/:key', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Unauthorized: Super Admin access required" });
+      }
+
+      const setting = await storage.getSystemSetting(req.params.key);
+      if (!setting) {
+        return res.status(404).json({ message: "Setting not found" });
+      }
+      res.json(setting);
+    } catch (error) {
+      console.error("Error fetching system setting:", error);
+      res.status(500).json({ message: "Failed to fetch system setting" });
+    }
+  });
+
+  app.put('/api/system-settings/:key', isAuthenticated, async (req: any, res) => {
+    try {
+      const userId = req.user?.claims?.sub || req.user?.id;
+      if (!userId) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
+      const user = await storage.getUser(userId);
+      if (!user || user.role !== 'super_admin') {
+        return res.status(403).json({ message: "Unauthorized: Super Admin access required" });
+      }
+
+      const { value, description } = req.body;
+      if (value === undefined) {
+        return res.status(400).json({ message: "Value is required" });
+      }
+
+      const setting = await storage.upsertSystemSetting(
+        req.params.key, 
+        String(value), 
+        description,
+        userId
+      );
+      res.json(setting);
+    } catch (error) {
+      console.error("Error updating system setting:", error);
+      res.status(500).json({ message: "Failed to update system setting" });
+    }
+  });
+
+  // Public endpoint to check if registration is enabled (no auth required)
+  app.get('/api/public/registration-enabled', async (_req, res) => {
+    try {
+      const setting = await storage.getSystemSetting('registration_enabled');
+      // Default to true if setting doesn't exist
+      const enabled = setting ? setting.value === 'true' : true;
+      res.json({ enabled });
+    } catch (error) {
+      console.error("Error checking registration status:", error);
+      res.json({ enabled: true }); // Default to true on error
+    }
+  });
+
   // ===== STATIONS =====
   // Get all stations (general + event-specific)
   app.get('/api/stations', isAuthenticated, async (req: any, res) => {

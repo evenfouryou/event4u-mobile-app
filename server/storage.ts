@@ -1,5 +1,6 @@
 // Referenced from blueprints: javascript_database, javascript_log_in_with_replit
 import {
+  systemSettings,
   users,
   companies,
   companyFeatures,
@@ -99,6 +100,8 @@ import {
   type InsertSchoolBadgeRequest,
   type SchoolBadge,
   type InsertSchoolBadge,
+  type SystemSetting,
+  type InsertSystemSetting,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, ne, and, or, isNull, inArray, sql, desc } from "drizzle-orm";
@@ -386,6 +389,11 @@ export interface IStorage {
   getSchoolBadgeByRequest(requestId: string): Promise<SchoolBadge | undefined>;
   createSchoolBadge(badge: InsertSchoolBadge): Promise<SchoolBadge>;
   updateSchoolBadge(id: string, badge: Partial<SchoolBadge>): Promise<SchoolBadge | undefined>;
+
+  // ==================== SYSTEM SETTINGS ====================
+  getSystemSetting(key: string): Promise<SystemSetting | undefined>;
+  getAllSystemSettings(): Promise<SystemSetting[]>;
+  upsertSystemSetting(key: string, value: string, description?: string, updatedBy?: string): Promise<SystemSetting>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -2113,6 +2121,39 @@ ${context ? `Contesto aggiuntivo: ${context}` : ''}`;
       .where(eq(schoolBadges.id, id))
       .returning();
     return updated;
+  }
+
+  // ==================== SYSTEM SETTINGS ====================
+  async getSystemSetting(key: string): Promise<SystemSetting | undefined> {
+    const [setting] = await db.select().from(systemSettings)
+      .where(eq(systemSettings.key, key));
+    return setting;
+  }
+
+  async getAllSystemSettings(): Promise<SystemSetting[]> {
+    return db.select().from(systemSettings);
+  }
+
+  async upsertSystemSetting(key: string, value: string, description?: string, updatedBy?: string): Promise<SystemSetting> {
+    const existing = await this.getSystemSetting(key);
+    
+    if (existing) {
+      const [updated] = await db.update(systemSettings)
+        .set({ 
+          value, 
+          description: description ?? existing.description,
+          updatedAt: new Date(),
+          updatedBy: updatedBy ?? existing.updatedBy
+        })
+        .where(eq(systemSettings.key, key))
+        .returning();
+      return updated;
+    } else {
+      const [created] = await db.insert(systemSettings)
+        .values({ key, value, description, updatedBy })
+        .returning();
+      return created;
+    }
   }
 }
 
