@@ -289,6 +289,48 @@
     .touch-action-manipulation {
       touch-action: manipulation;
     }
+    
+    /* Prevent horizontal overflow on mobile */
+    main {
+      overflow-x: hidden;
+    }
+    
+    /* Make tables scrollable on mobile */
+    table {
+      display: block;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+      max-width: 100%;
+    }
+    
+    /* Reduce header padding on mobile */
+    header {
+      padding: 0.75rem 1rem !important;
+    }
+    
+    /* Reduce font sizes for titles on mobile */
+    h1 {
+      font-size: 1.5rem !important;
+    }
+    
+    h2 {
+      font-size: 1.25rem !important;
+    }
+    
+    /* Smaller cards padding on mobile */
+    .glass-card {
+      padding: 1rem;
+    }
+    
+    /* Stack button groups on mobile */
+    .button-group-mobile {
+      flex-direction: column;
+      width: 100%;
+    }
+    
+    .button-group-mobile > * {
+      width: 100%;
+    }
   }
 }
 
@@ -506,6 +548,16 @@
  * Automatic contrast adjustment.
  */
 @layer utilities {
+
+  /* Hide scrollbar but keep scroll functionality */
+  .scrollbar-hide {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+  
+  .scrollbar-hide::-webkit-scrollbar {
+    display: none;
+  }
 
   /* Hide ugly search cancel button in Chrome until we can style it properly */
   input[type="search"]::-webkit-search-cancel-button {
