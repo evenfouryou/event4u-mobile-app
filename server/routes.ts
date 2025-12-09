@@ -4627,7 +4627,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Accesso non autorizzato" });
       }
       
-      const userId = req.user.claims.sub;
+      const userId = req.user.id || req.user.claims?.sub;
       const validated = insertSchoolBadgeLandingSchema.parse({
         ...req.body,
         companyId,
