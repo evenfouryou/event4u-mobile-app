@@ -47,6 +47,9 @@ import {
   insertCashFundSchema,
   updateCashFundSchema,
   updateNightFileSchema,
+  insertSchoolBadgeLandingSchema,
+  updateSchoolBadgeLandingSchema,
+  insertSchoolBadgeRequestSchema,
 } from "@shared/schema";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
@@ -4581,6 +4584,560 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       res.json({ success: true });
     } catch (error: any) {
+      res.status(500).json({ message: error.message });
+    }
+  });
+
+  // ===== SCHOOL BADGE SYSTEM =====
+  
+  // Organizer endpoints (require auth + organizer role)
+  
+  // Get all landings for company
+  app.get('/api/school-badges/landings', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      
+      const userRole = req.user?.role;
+      if (userRole !== 'super_admin' && userRole !== 'gestore' && userRole !== 'organizer') {
+        return res.status(403).json({ message: "Accesso non autorizzato" });
+      }
+      
+      const landings = await storage.getSchoolBadgeLandingsByCompany(companyId);
+      res.json(landings);
+    } catch (error: any) {
+      console.error("Error fetching school badge landings:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Create landing
+  app.post('/api/school-badges/landings', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      
+      const userRole = req.user?.role;
+      if (userRole !== 'super_admin' && userRole !== 'gestore' && userRole !== 'organizer') {
+        return res.status(403).json({ message: "Accesso non autorizzato" });
+      }
+      
+      const userId = req.user.claims.sub;
+      const validated = insertSchoolBadgeLandingSchema.parse({
+        ...req.body,
+        companyId,
+        createdByUserId: userId,
+      });
+      
+      const landing = await storage.createSchoolBadgeLanding(validated);
+      res.json(landing);
+    } catch (error: any) {
+      console.error("Error creating school badge landing:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Update landing
+  app.put('/api/school-badges/landings/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      
+      const userRole = req.user?.role;
+      if (userRole !== 'super_admin' && userRole !== 'gestore' && userRole !== 'organizer') {
+        return res.status(403).json({ message: "Accesso non autorizzato" });
+      }
+      
+      // Verify landing belongs to company
+      const existing = await storage.getSchoolBadgeLanding(req.params.id);
+      if (!existing || existing.companyId !== companyId) {
+        return res.status(404).json({ message: "Landing page not found" });
+      }
+      
+      const validated = updateSchoolBadgeLandingSchema.parse(req.body);
+      const landing = await storage.updateSchoolBadgeLanding(req.params.id, validated);
+      res.json(landing);
+    } catch (error: any) {
+      console.error("Error updating school badge landing:", error);
+      if (error.name === 'ZodError') {
+        return res.status(400).json({ message: error.errors[0].message });
+      }
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Delete landing
+  app.delete('/api/school-badges/landings/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      
+      const userRole = req.user?.role;
+      if (userRole !== 'super_admin' && userRole !== 'gestore' && userRole !== 'organizer') {
+        return res.status(403).json({ message: "Accesso non autorizzato" });
+      }
+      
+      // Verify landing belongs to company
+      const existing = await storage.getSchoolBadgeLanding(req.params.id);
+      if (!existing || existing.companyId !== companyId) {
+        return res.status(404).json({ message: "Landing page not found" });
+      }
+      
+      const deleted = await storage.deleteSchoolBadgeLanding(req.params.id);
+      res.json({ success: deleted });
+    } catch (error: any) {
+      console.error("Error deleting school badge landing:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Get requests for landing
+  app.get('/api/school-badges/landings/:id/requests', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      
+      const userRole = req.user?.role;
+      if (userRole !== 'super_admin' && userRole !== 'gestore' && userRole !== 'organizer') {
+        return res.status(403).json({ message: "Accesso non autorizzato" });
+      }
+      
+      // Verify landing belongs to company
+      const landing = await storage.getSchoolBadgeLanding(req.params.id);
+      if (!landing || landing.companyId !== companyId) {
+        return res.status(404).json({ message: "Landing page not found" });
+      }
+      
+      const requests = await storage.getSchoolBadgeRequestsByLanding(req.params.id);
+      
+      // Include badge info for each request
+      const requestsWithBadges = await Promise.all(
+        requests.map(async (request) => {
+          const badge = await storage.getSchoolBadgeByRequest(request.id);
+          return { ...request, badge };
+        })
+      );
+      
+      res.json(requestsWithBadges);
+    } catch (error: any) {
+      console.error("Error fetching school badge requests:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Revoke a badge request
+  app.put('/api/school-badges/requests/:id/revoke', isAuthenticated, async (req: any, res) => {
+    try {
+      const companyId = await getUserCompanyId(req);
+      if (!companyId) {
+        return res.status(403).json({ message: "No company associated" });
+      }
+      
+      const userRole = req.user?.role;
+      if (userRole !== 'super_admin' && userRole !== 'gestore' && userRole !== 'organizer') {
+        return res.status(403).json({ message: "Accesso non autorizzato" });
+      }
+      
+      const request = await storage.getSchoolBadgeRequest(req.params.id);
+      if (!request) {
+        return res.status(404).json({ message: "Request not found" });
+      }
+      
+      // Verify request belongs to a landing in this company
+      const landing = await storage.getSchoolBadgeLanding(request.landingId);
+      if (!landing || landing.companyId !== companyId) {
+        return res.status(404).json({ message: "Request not found" });
+      }
+      
+      // Update request status to revoked
+      await storage.updateSchoolBadgeRequest(req.params.id, { status: 'revoked' });
+      
+      // Also revoke any associated badge
+      const badge = await storage.getSchoolBadgeByRequest(req.params.id);
+      if (badge) {
+        await storage.updateSchoolBadge(badge.id, {
+          isActive: false,
+          revokedAt: new Date(),
+          revokedReason: req.body.reason || 'Revoked by administrator',
+        });
+      }
+      
+      res.json({ success: true });
+    } catch (error: any) {
+      console.error("Error revoking school badge request:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Public endpoints (no auth)
+  
+  // Get landing by slug (for public landing page)
+  app.get('/api/school-badges/landing/:slug', async (req, res) => {
+    try {
+      const landing = await storage.getSchoolBadgeLandingBySlug(req.params.slug);
+      if (!landing || !landing.isActive) {
+        return res.status(404).json({ message: "Landing page not found" });
+      }
+      
+      // Return public-safe landing data (exclude internal fields)
+      res.json({
+        id: landing.id,
+        schoolName: landing.schoolName,
+        slug: landing.slug,
+        logoUrl: landing.logoUrl,
+        description: landing.description,
+        primaryColor: landing.primaryColor,
+        requirePhone: landing.requirePhone,
+        customWelcomeText: landing.customWelcomeText,
+      });
+    } catch (error: any) {
+      console.error("Error fetching school badge landing by slug:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Submit badge request
+  app.post('/api/school-badges/request', async (req, res) => {
+    try {
+      const { landingId, firstName, lastName, email, phone } = req.body;
+      
+      if (!landingId || !firstName || !lastName || !email) {
+        return res.status(400).json({ message: "Missing required fields" });
+      }
+      
+      // Get landing
+      const landing = await storage.getSchoolBadgeLanding(landingId);
+      if (!landing || !landing.isActive) {
+        return res.status(404).json({ message: "Landing page not found or inactive" });
+      }
+      
+      // Validate phone if required
+      if (landing.requirePhone && !phone) {
+        return res.status(400).json({ message: "Phone number is required" });
+      }
+      
+      // Validate email domain
+      const emailDomain = email.split('@')[1]?.toLowerCase();
+      if (!emailDomain) {
+        return res.status(400).json({ message: "Invalid email format" });
+      }
+      
+      const authorizedDomains = landing.authorizedDomains || [];
+      if (authorizedDomains.length > 0) {
+        const isAuthorized = authorizedDomains.some(
+          (domain: string) => domain.toLowerCase() === emailDomain
+        );
+        if (!isAuthorized) {
+          return res.status(400).json({ 
+            message: `Email domain not authorized. Allowed domains: ${authorizedDomains.join(', ')}` 
+          });
+        }
+      }
+      
+      // Check if email already has a verified badge for this landing
+      const existingRequest = await storage.getSchoolBadgeRequestByEmail(landingId, email);
+      if (existingRequest) {
+        if (existingRequest.status === 'badge_generated') {
+          return res.status(400).json({ message: "A badge has already been generated for this email" });
+        }
+        if (existingRequest.status === 'verified') {
+          return res.status(400).json({ message: "This email has already been verified" });
+        }
+        if (existingRequest.status === 'revoked') {
+          return res.status(400).json({ message: "This badge request has been revoked" });
+        }
+        // For pending requests, check if token is still valid
+        if (existingRequest.tokenExpiresAt && new Date() < new Date(existingRequest.tokenExpiresAt)) {
+          return res.status(400).json({ message: "A verification email has already been sent. Please check your inbox." });
+        }
+        // Token expired, delete old request and create new one
+        // Note: We don't have a delete method, so we'll update the existing one
+      }
+      
+      // Generate verification token
+      const verificationToken = crypto.randomUUID();
+      const tokenExpiresAt = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+      
+      // Get IP address
+      const ipAddress = (req.headers['x-forwarded-for'] as string)?.split(',')[0] || 
+                        req.socket.remoteAddress || '';
+      
+      let requestRecord;
+      if (existingRequest) {
+        // Update existing request with new token
+        requestRecord = await storage.updateSchoolBadgeRequest(existingRequest.id, {
+          firstName,
+          lastName,
+          phone,
+          verificationToken,
+          tokenExpiresAt,
+          status: 'pending',
+          ipAddress,
+        });
+      } else {
+        // Create new request
+        requestRecord = await storage.createSchoolBadgeRequest({
+          landingId,
+          firstName,
+          lastName,
+          email,
+          phone,
+          verificationToken,
+          tokenExpiresAt,
+          status: 'pending',
+          ipAddress,
+        } as any);
+      }
+      
+      // Send verification email
+      const baseUrl = process.env.PUBLIC_URL 
+        ? process.env.PUBLIC_URL.replace(/\/$/, '')
+        : process.env.REPLIT_DEV_DOMAIN 
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : 'http://localhost:5000';
+      const verificationLink = `${baseUrl}/api/school-badges/verify?token=${verificationToken}`;
+      const fromEmail = process.env.SMTP_FROM || 'Event4U <noreply@event4u.com>';
+      
+      const smtpTransporter = nodemailer.createTransport({
+        host: process.env.SMTP_HOST || 'smtp.gmail.com',
+        port: parseInt(process.env.SMTP_PORT || '587'),
+        secure: false,
+        auth: {
+          user: process.env.SMTP_USER,
+          pass: process.env.SMTP_PASS,
+        },
+      });
+      
+      try {
+        await smtpTransporter.sendMail({
+          from: fromEmail,
+          to: email,
+          subject: `Verifica il tuo badge - ${landing.schoolName}`,
+          html: `
+            <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+              <h2 style="color: ${landing.primaryColor || '#3b82f6'};">Ciao ${firstName}!</h2>
+              <p>Hai richiesto un badge per <strong>${landing.schoolName}</strong>.</p>
+              
+              <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <p style="margin-top: 0;"><strong>Per completare la richiesta, clicca sul pulsante qui sotto:</strong></p>
+                <a href="${verificationLink}" 
+                   style="display: inline-block; background-color: ${landing.primaryColor || '#3b82f6'}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0;">
+                  Verifica Email e Ottieni Badge
+                </a>
+                <p style="margin-bottom: 0; font-size: 12px; color: #6b7280;">
+                  Il link scade tra 24 ore.<br/>
+                  Oppure copia e incolla questo link nel browser:<br/>
+                  <span style="word-break: break-all;">${verificationLink}</span>
+                </p>
+              </div>
+              
+              <p style="color: #6b7280; font-size: 14px;">
+                Se non hai richiesto questo badge, puoi ignorare questa email.
+              </p>
+            </div>
+          `,
+        });
+      } catch (emailError) {
+        console.error("Failed to send verification email:", emailError);
+        return res.status(500).json({ 
+          message: "Impossibile inviare l'email di verifica. Riprova più tardi." 
+        });
+      }
+      
+      res.json({ 
+        success: true, 
+        message: "Email di verifica inviata. Controlla la tua casella di posta." 
+      });
+    } catch (error: any) {
+      console.error("Error creating school badge request:", error);
+      res.status(500).json({ message: error.message });
+    }
+  });
+  
+  // Verify email token and generate badge
+  app.get('/api/school-badges/verify', async (req, res) => {
+    try {
+      const { token } = req.query;
+      
+      if (!token || typeof token !== 'string') {
+        return res.redirect('/badge-error?reason=missing-token');
+      }
+      
+      // Find request by token
+      const request = await storage.getSchoolBadgeRequestByToken(token);
+      if (!request) {
+        return res.redirect('/badge-error?reason=invalid-token');
+      }
+      
+      // Check if token is expired
+      if (request.tokenExpiresAt && new Date() > new Date(request.tokenExpiresAt)) {
+        return res.redirect('/badge-error?reason=expired-token');
+      }
+      
+      // Check if already verified
+      if (request.status === 'badge_generated') {
+        const existingBadge = await storage.getSchoolBadgeByRequest(request.id);
+        if (existingBadge) {
+          return res.redirect(`/badge/${existingBadge.uniqueCode}`);
+        }
+      }
+      
+      // Update request status to verified
+      await storage.updateSchoolBadgeRequest(request.id, {
+        status: 'verified',
+        verifiedAt: new Date(),
+        verificationToken: null,
+        tokenExpiresAt: null,
+      });
+      
+      // Generate unique badge code (6 char alphanumeric)
+      const generateUniqueCode = () => {
+        const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'; // Exclude confusing chars
+        let code = '';
+        for (let i = 0; i < 6; i++) {
+          code += chars.charAt(Math.floor(Math.random() * chars.length));
+        }
+        return code;
+      };
+      
+      let uniqueCode = generateUniqueCode();
+      let attempts = 0;
+      // Ensure uniqueness
+      while (await storage.getSchoolBadgeByCode(uniqueCode) && attempts < 10) {
+        uniqueCode = generateUniqueCode();
+        attempts++;
+      }
+      
+      // Create badge record
+      const badge = await storage.createSchoolBadge({
+        requestId: request.id,
+        uniqueCode,
+        isActive: true,
+      });
+      
+      // Update request status to badge_generated
+      await storage.updateSchoolBadgeRequest(request.id, {
+        status: 'badge_generated',
+      });
+      
+      // Get landing for email
+      const landing = await storage.getSchoolBadgeLanding(request.landingId);
+      
+      // Send badge email
+      if (landing) {
+        const baseUrl = process.env.PUBLIC_URL 
+          ? process.env.PUBLIC_URL.replace(/\/$/, '')
+          : process.env.REPLIT_DEV_DOMAIN 
+            ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+            : 'http://localhost:5000';
+        const badgeUrl = `${baseUrl}/badge/${uniqueCode}`;
+        const fromEmail = process.env.SMTP_FROM || 'Event4U <noreply@event4u.com>';
+        
+        const smtpTransporter = nodemailer.createTransport({
+          host: process.env.SMTP_HOST || 'smtp.gmail.com',
+          port: parseInt(process.env.SMTP_PORT || '587'),
+          secure: false,
+          auth: {
+            user: process.env.SMTP_USER,
+            pass: process.env.SMTP_PASS,
+          },
+        });
+        
+        try {
+          await smtpTransporter.sendMail({
+            from: fromEmail,
+            to: request.email,
+            subject: `Il tuo badge - ${landing.schoolName}`,
+            html: `
+              <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+                <h2 style="color: ${landing.primaryColor || '#3b82f6'};">Badge Generato!</h2>
+                <p>Ciao ${request.firstName},</p>
+                <p>Il tuo badge per <strong>${landing.schoolName}</strong> è pronto.</p>
+                
+                <div style="background-color: #f3f4f6; padding: 20px; border-radius: 8px; margin: 20px 0; text-align: center;">
+                  <p style="font-size: 24px; font-weight: bold; letter-spacing: 4px; margin: 10px 0;">${uniqueCode}</p>
+                  <p style="font-size: 14px; color: #6b7280;">Il tuo codice badge</p>
+                  <a href="${badgeUrl}" 
+                     style="display: inline-block; background-color: ${landing.primaryColor || '#3b82f6'}; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; margin: 10px 0;">
+                    Visualizza Badge
+                  </a>
+                </div>
+                
+                <p style="color: #6b7280; font-size: 14px;">
+                  Conserva questa email per accedere al tuo badge in qualsiasi momento.
+                </p>
+              </div>
+            `,
+          });
+        } catch (emailError) {
+          console.error("Failed to send badge email:", emailError);
+          // Don't fail the request, badge is still generated
+        }
+      }
+      
+      // Redirect to badge page
+      return res.redirect(`/badge/${uniqueCode}`);
+    } catch (error: any) {
+      console.error("Error verifying school badge:", error);
+      return res.redirect('/badge-error?reason=server-error');
+    }
+  });
+  
+  // Get badge by unique code (for QR verification page)
+  app.get('/api/school-badges/badge/:code', async (req, res) => {
+    try {
+      const badge = await storage.getSchoolBadgeByCode(req.params.code);
+      if (!badge) {
+        return res.status(404).json({ message: "Badge not found" });
+      }
+      
+      // Get request info
+      const request = await storage.getSchoolBadgeRequest(badge.requestId);
+      if (!request) {
+        return res.status(404).json({ message: "Badge data not found" });
+      }
+      
+      // Get landing info
+      const landing = await storage.getSchoolBadgeLanding(request.landingId);
+      if (!landing) {
+        return res.status(404).json({ message: "Badge organization not found" });
+      }
+      
+      res.json({
+        badge: {
+          uniqueCode: badge.uniqueCode,
+          isActive: badge.isActive,
+          createdAt: badge.createdAt,
+          revokedAt: badge.revokedAt,
+          revokedReason: badge.revokedReason,
+        },
+        holder: {
+          firstName: request.firstName,
+          lastName: request.lastName,
+          email: request.email,
+          verifiedAt: request.verifiedAt,
+        },
+        organization: {
+          schoolName: landing.schoolName,
+          logoUrl: landing.logoUrl,
+          primaryColor: landing.primaryColor,
+        },
+      });
+    } catch (error: any) {
+      console.error("Error fetching school badge:", error);
       res.status(500).json({ message: error.message });
     }
   });

@@ -90,6 +90,15 @@ import {
   eventFloorplans,
   eventStaffAssignments,
   siaeTicketedEvents,
+  schoolBadgeLandings,
+  schoolBadgeRequests,
+  schoolBadges,
+  type SchoolBadgeLanding,
+  type InsertSchoolBadgeLanding,
+  type SchoolBadgeRequest,
+  type InsertSchoolBadgeRequest,
+  type SchoolBadge,
+  type InsertSchoolBadge,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, or, isNull, inArray, sql, desc } from "drizzle-orm";
@@ -351,6 +360,31 @@ export interface IStorage {
   
   // Event deletion with cascade
   deleteEventWithRelatedData(eventId: string, companyId: string): Promise<boolean>;
+  
+  // ==================== SCHOOL BADGE SYSTEM ====================
+  
+  // School Badge Landing operations
+  getSchoolBadgeLandingsByCompany(companyId: string): Promise<SchoolBadgeLanding[]>;
+  getSchoolBadgeLanding(id: string): Promise<SchoolBadgeLanding | undefined>;
+  getSchoolBadgeLandingBySlug(slug: string): Promise<SchoolBadgeLanding | undefined>;
+  createSchoolBadgeLanding(landing: InsertSchoolBadgeLanding): Promise<SchoolBadgeLanding>;
+  updateSchoolBadgeLanding(id: string, landing: Partial<SchoolBadgeLanding>): Promise<SchoolBadgeLanding | undefined>;
+  deleteSchoolBadgeLanding(id: string): Promise<boolean>;
+
+  // School Badge Request operations
+  getSchoolBadgeRequestsByLanding(landingId: string): Promise<SchoolBadgeRequest[]>;
+  getSchoolBadgeRequest(id: string): Promise<SchoolBadgeRequest | undefined>;
+  getSchoolBadgeRequestByToken(token: string): Promise<SchoolBadgeRequest | undefined>;
+  getSchoolBadgeRequestByEmail(landingId: string, email: string): Promise<SchoolBadgeRequest | undefined>;
+  createSchoolBadgeRequest(request: InsertSchoolBadgeRequest): Promise<SchoolBadgeRequest>;
+  updateSchoolBadgeRequest(id: string, request: Partial<SchoolBadgeRequest>): Promise<SchoolBadgeRequest | undefined>;
+
+  // School Badge operations
+  getSchoolBadge(id: string): Promise<SchoolBadge | undefined>;
+  getSchoolBadgeByCode(uniqueCode: string): Promise<SchoolBadge | undefined>;
+  getSchoolBadgeByRequest(requestId: string): Promise<SchoolBadge | undefined>;
+  createSchoolBadge(badge: InsertSchoolBadge): Promise<SchoolBadge>;
+  updateSchoolBadge(id: string, badge: Partial<SchoolBadge>): Promise<SchoolBadge | undefined>;
 }
 
 export class DatabaseStorage implements IStorage {
@@ -1952,6 +1986,119 @@ ${context ? `Contesto aggiuntivo: ${context}` : ''}`;
     );
 
     return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // ==================== SCHOOL BADGE SYSTEM ====================
+  
+  // School Badge Landing operations
+  async getSchoolBadgeLandingsByCompany(companyId: string): Promise<SchoolBadgeLanding[]> {
+    return await db.select().from(schoolBadgeLandings)
+      .where(eq(schoolBadgeLandings.companyId, companyId))
+      .orderBy(desc(schoolBadgeLandings.createdAt));
+  }
+
+  async getSchoolBadgeLanding(id: string): Promise<SchoolBadgeLanding | undefined> {
+    const [landing] = await db.select().from(schoolBadgeLandings)
+      .where(eq(schoolBadgeLandings.id, id));
+    return landing;
+  }
+
+  async getSchoolBadgeLandingBySlug(slug: string): Promise<SchoolBadgeLanding | undefined> {
+    const [landing] = await db.select().from(schoolBadgeLandings)
+      .where(eq(schoolBadgeLandings.slug, slug));
+    return landing;
+  }
+
+  async createSchoolBadgeLanding(landing: InsertSchoolBadgeLanding): Promise<SchoolBadgeLanding> {
+    const [created] = await db.insert(schoolBadgeLandings).values(landing).returning();
+    return created;
+  }
+
+  async updateSchoolBadgeLanding(id: string, landing: Partial<SchoolBadgeLanding>): Promise<SchoolBadgeLanding | undefined> {
+    const [updated] = await db.update(schoolBadgeLandings)
+      .set({ ...landing, updatedAt: new Date() })
+      .where(eq(schoolBadgeLandings.id, id))
+      .returning();
+    return updated;
+  }
+
+  async deleteSchoolBadgeLanding(id: string): Promise<boolean> {
+    const result = await db.delete(schoolBadgeLandings)
+      .where(eq(schoolBadgeLandings.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  // School Badge Request operations
+  async getSchoolBadgeRequestsByLanding(landingId: string): Promise<SchoolBadgeRequest[]> {
+    return await db.select().from(schoolBadgeRequests)
+      .where(eq(schoolBadgeRequests.landingId, landingId))
+      .orderBy(desc(schoolBadgeRequests.createdAt));
+  }
+
+  async getSchoolBadgeRequest(id: string): Promise<SchoolBadgeRequest | undefined> {
+    const [request] = await db.select().from(schoolBadgeRequests)
+      .where(eq(schoolBadgeRequests.id, id));
+    return request;
+  }
+
+  async getSchoolBadgeRequestByToken(token: string): Promise<SchoolBadgeRequest | undefined> {
+    const [request] = await db.select().from(schoolBadgeRequests)
+      .where(eq(schoolBadgeRequests.verificationToken, token));
+    return request;
+  }
+
+  async getSchoolBadgeRequestByEmail(landingId: string, email: string): Promise<SchoolBadgeRequest | undefined> {
+    const [request] = await db.select().from(schoolBadgeRequests)
+      .where(and(
+        eq(schoolBadgeRequests.landingId, landingId),
+        eq(schoolBadgeRequests.email, email)
+      ));
+    return request;
+  }
+
+  async createSchoolBadgeRequest(request: InsertSchoolBadgeRequest): Promise<SchoolBadgeRequest> {
+    const [created] = await db.insert(schoolBadgeRequests).values(request).returning();
+    return created;
+  }
+
+  async updateSchoolBadgeRequest(id: string, request: Partial<SchoolBadgeRequest>): Promise<SchoolBadgeRequest | undefined> {
+    const [updated] = await db.update(schoolBadgeRequests)
+      .set({ ...request, updatedAt: new Date() })
+      .where(eq(schoolBadgeRequests.id, id))
+      .returning();
+    return updated;
+  }
+
+  // School Badge operations
+  async getSchoolBadge(id: string): Promise<SchoolBadge | undefined> {
+    const [badge] = await db.select().from(schoolBadges)
+      .where(eq(schoolBadges.id, id));
+    return badge;
+  }
+
+  async getSchoolBadgeByCode(uniqueCode: string): Promise<SchoolBadge | undefined> {
+    const [badge] = await db.select().from(schoolBadges)
+      .where(eq(schoolBadges.uniqueCode, uniqueCode));
+    return badge;
+  }
+
+  async getSchoolBadgeByRequest(requestId: string): Promise<SchoolBadge | undefined> {
+    const [badge] = await db.select().from(schoolBadges)
+      .where(eq(schoolBadges.requestId, requestId));
+    return badge;
+  }
+
+  async createSchoolBadge(badge: InsertSchoolBadge): Promise<SchoolBadge> {
+    const [created] = await db.insert(schoolBadges).values(badge).returning();
+    return created;
+  }
+
+  async updateSchoolBadge(id: string, badge: Partial<SchoolBadge>): Promise<SchoolBadge | undefined> {
+    const [updated] = await db.update(schoolBadges)
+      .set(badge)
+      .where(eq(schoolBadges.id, id))
+      .returning();
+    return updated;
   }
 }
 
