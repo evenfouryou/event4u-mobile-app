@@ -116,6 +116,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Public registration endpoint
   app.post('/api/register', async (req, res) => {
     try {
+      // Check if registration is enabled
+      const registrationSetting = await storage.getSystemSetting('registration_enabled');
+      if (registrationSetting && registrationSetting.value === 'false') {
+        return res.status(403).json({ message: "Registrazione temporaneamente disabilitata" });
+      }
+
       const validated = registerSchema.parse(req.body);
       
       // Check if user already exists

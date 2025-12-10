@@ -2,13 +2,13 @@ import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { CheckCircle2, Sparkles, ArrowLeft, User, Mail, Lock } from "lucide-react";
+import { CheckCircle2, Sparkles, ArrowLeft, User, Mail, Lock, XCircle } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 
@@ -28,6 +28,11 @@ type RegisterFormValues = z.infer<typeof registerSchema>;
 export default function Register() {
   const [registrationSuccess, setRegistrationSuccess] = useState(false);
   const { toast } = useToast();
+
+  // Check if registration is enabled
+  const { data: registrationStatus, isLoading: checkingStatus } = useQuery<{ enabled: boolean }>({
+    queryKey: ['/api/public/registration-enabled'],
+  });
 
   const form = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -115,6 +120,77 @@ export default function Register() {
             <Link href="/login">Vai al Login</Link>
           </Button>
         </motion.div>
+      </div>
+    );
+  }
+
+  // Show message if registration is disabled
+  if (!checkingStatus && registrationStatus && !registrationStatus.enabled) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-4 md:p-6 relative overflow-hidden">
+        {/* Animated background */}
+        <div className="fixed inset-0 pointer-events-none">
+          <motion.div 
+            className="absolute top-1/3 left-1/4 w-[400px] h-[400px] rounded-full opacity-20"
+            style={{ background: "radial-gradient(circle, rgba(239,68,68,0.3) 0%, transparent 70%)" }}
+            animate={{ scale: [1, 1.2, 1] }}
+            transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+          />
+        </div>
+
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="glass-card p-8 md:p-10 max-w-md w-full text-center relative z-10"
+        >
+          <motion.div 
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
+            className="mx-auto mb-6 h-20 w-20 rounded-full bg-gradient-to-br from-red-400 to-red-500 flex items-center justify-center"
+          >
+            <XCircle className="h-10 w-10 text-white" />
+          </motion.div>
+          
+          <h1 className="text-2xl md:text-3xl font-bold mb-2">Registrazioni Disabilitate</h1>
+          <p className="text-muted-foreground mb-6">
+            Al momento le nuove registrazioni non sono disponibili
+          </p>
+          
+          <div className="glass p-4 rounded-xl mb-6">
+            <p className="text-sm text-muted-foreground">
+              La registrazione di nuovi organizzatori è stata temporaneamente sospesa. 
+              Se hai già un account, puoi effettuare il login.
+            </p>
+          </div>
+
+          <Button 
+            className="w-full h-12 gradient-golden text-black font-semibold" 
+            asChild
+            data-testid="button-go-to-login-disabled"
+          >
+            <Link href="/login">Vai al Login</Link>
+          </Button>
+          
+          <Link 
+            href="/" 
+            className="inline-flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground mt-4"
+            data-testid="link-back-to-home"
+          >
+            <ArrowLeft className="w-4 h-4" />
+            Torna alla Home
+          </Link>
+        </motion.div>
+      </div>
+    );
+  }
+
+  // Show loading state
+  if (checkingStatus) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <p className="text-muted-foreground">Caricamento...</p>
       </div>
     );
   }
