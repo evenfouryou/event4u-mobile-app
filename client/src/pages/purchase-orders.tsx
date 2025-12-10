@@ -78,7 +78,7 @@ import {
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import jsPDF from "jspdf";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 // Form schema with string dates for HTML inputs
 const purchaseOrderFormSchema = insertPurchaseOrderSchema.extend({

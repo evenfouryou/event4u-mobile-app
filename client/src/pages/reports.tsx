@@ -16,7 +16,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useAuth } from "@/hooks/useAuth";
 import jsPDF from "jspdf";
-import * as XLSX from "xlsx";
+import ExcelJS from "exceljs";
 
 type Event = {
   id: string;
@@ -294,36 +294,31 @@ export default function Reports() {
     pdf.save(`report-${event.name.replace(/\s+/g, '-')}-${Date.now()}.pdf`);
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     if (!reportData) return;
 
     const event = events.find(e => e.id === selectedEventId);
     if (!event) return;
 
     // Create workbook
-    const wb = XLSX.utils.book_new();
+    const wb = new ExcelJS.Workbook();
 
     // Summary sheet
-    const summaryData = [
-      ["Event Four You - Report Fine Serata"],
-      [""],
-      ["Evento", event.name],
-      ["Data", new Date((event as any).startDatetime || (event as any).eventDate).toLocaleDateString('it-IT')],
-      ["Costo Totale", `€${reportData.totalCost.toFixed(2)}`],
-      [""],
-    ];
-
-    const summaryWs = XLSX.utils.aoa_to_sheet(summaryData);
-    XLSX.utils.book_append_sheet(wb, summaryWs, "Riepilogo");
+    const summaryWs = wb.addWorksheet("Riepilogo");
+    summaryWs.addRow(["Event Four You - Report Fine Serata"]);
+    summaryWs.addRow([]);
+    summaryWs.addRow(["Evento", event.name]);
+    summaryWs.addRow(["Data", new Date((event as any).startDatetime || (event as any).eventDate).toLocaleDateString('it-IT')]);
+    summaryWs.addRow(["Costo Totale", `€${reportData.totalCost.toFixed(2)}`]);
+    summaryWs.addRow([]);
 
     // Detailed breakdown sheet
-    const detailedData: any[] = [
-      ["Postazione", "Prodotto", "Quantità", "Prezzo Unitario", "Costo Totale"],
-    ];
+    const detailedWs = wb.addWorksheet("Dettaglio");
+    detailedWs.addRow(["Postazione", "Prodotto", "Quantità", "Prezzo Unitario", "Costo Totale"]);
 
     reportData.stations.forEach((station) => {
       station.items.forEach((item) => {
-        detailedData.push([
+        detailedWs.addRow([
           station.stationName,
           item.productName,
           item.quantity.toFixed(2),
@@ -333,19 +328,15 @@ export default function Reports() {
       });
     });
 
-    const detailedWs = XLSX.utils.aoa_to_sheet(detailedData);
-    XLSX.utils.book_append_sheet(wb, detailedWs, "Dettaglio");
-
     // Consumo Beverage sheet
     if (reportData.consumedProducts && reportData.consumedProducts.length > 0) {
-      const beverageData: any[] = [
-        ["Riepilogo Consumo Beverage"],
-        [""],
-        ["Prodotto", "Quantità Totale", "Prezzo Unitario", "Costo Totale"],
-      ];
+      const beverageWs = wb.addWorksheet("Consumo Beverage");
+      beverageWs.addRow(["Riepilogo Consumo Beverage"]);
+      beverageWs.addRow([]);
+      beverageWs.addRow(["Prodotto", "Quantità Totale", "Prezzo Unitario", "Costo Totale"]);
 
       reportData.consumedProducts.forEach((product) => {
-        beverageData.push([
+        beverageWs.addRow([
           product.productName,
           product.totalQuantity.toFixed(2),
           `€${parseFloat(product.costPrice).toFixed(2)}`,
@@ -353,14 +344,18 @@ export default function Reports() {
         ]);
       });
 
-      beverageData.push(["", "", "TOTALE", `€${reportData.totalCost.toFixed(2)}`]);
-
-      const beverageWs = XLSX.utils.aoa_to_sheet(beverageData);
-      XLSX.utils.book_append_sheet(wb, beverageWs, "Consumo Beverage");
+      beverageWs.addRow(["", "", "TOTALE", `€${reportData.totalCost.toFixed(2)}`]);
     }
 
     // Download
-    XLSX.writeFile(wb, `report-${event.name.replace(/\s+/g, '-')}-${Date.now()}.xlsx`);
+    const buffer = await wb.xlsx.writeBuffer();
+    const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `report-${event.name.replace(/\s+/g, '-')}-${Date.now()}.xlsx`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   if (eventsLoading) {
