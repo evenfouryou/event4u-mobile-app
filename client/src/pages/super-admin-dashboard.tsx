@@ -62,11 +62,7 @@ export default function SuperAdminDashboard() {
 
   const updateSettingMutation = useMutation({
     mutationFn: async ({ key, value }: { key: string; value: string }) => {
-      return apiRequest(`/api/system-settings/${key}`, {
-        method: 'PUT',
-        body: JSON.stringify({ value }),
-        headers: { 'Content-Type': 'application/json' },
-      });
+      return apiRequest('PUT', `/api/system-settings/${key}`, { value });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/system-settings'] });
