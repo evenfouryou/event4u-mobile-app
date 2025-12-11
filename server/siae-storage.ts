@@ -80,7 +80,8 @@ import {
   type InsertSiaeSmartCardSealLog,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, lt, gt, isNull } from "drizzle-orm";
+import { eq, and, desc, sql, lt, gt, isNull, count } from "drizzle-orm";
+import { users } from "@shared/schema";
 
 export interface ISiaeStorage {
   // ==================== TAB.1-5 Reference Tables ====================
@@ -1379,6 +1380,74 @@ export class SiaeStorage implements ISiaeStorage {
       })
       .returning();
     return log;
+  }
+
+  // ==================== Activation Card Usage Stats ====================
+
+  async getActivationCardUsageStats(cardId: string): Promise<{
+    totalSeals: number;
+    totalTickets: number;
+    organizers: {
+      userId: string;
+      username: string;
+      fullName: string;
+      ticketCount: number;
+      lastEmission: Date | null;
+    }[];
+  }> {
+    // Get total seals for this card
+    const sealsResult = await db
+      .select({ count: count() })
+      .from(siaeFiscalSeals)
+      .where(eq(siaeFiscalSeals.cardId, cardId));
+    
+    const totalSeals = sealsResult[0]?.count || 0;
+
+    // Get tickets with organizer info grouped by user
+    const ticketsWithOrganizers = await db
+      .select({
+        userId: siaeTickets.issuedByUserId,
+        username: users.username,
+        fullName: users.fullName,
+        ticketCount: count(),
+        lastEmission: sql<Date>`MAX(${siaeTickets.emissionDate})`,
+      })
+      .from(siaeTickets)
+      .innerJoin(siaeFiscalSeals, eq(siaeTickets.fiscalSealId, siaeFiscalSeals.id))
+      .innerJoin(users, eq(siaeTickets.issuedByUserId, users.id))
+      .where(eq(siaeFiscalSeals.cardId, cardId))
+      .groupBy(siaeTickets.issuedByUserId, users.username, users.fullName);
+
+    // Get total tickets
+    const totalTicketsResult = await db
+      .select({ count: count() })
+      .from(siaeTickets)
+      .innerJoin(siaeFiscalSeals, eq(siaeTickets.fiscalSealId, siaeFiscalSeals.id))
+      .where(eq(siaeFiscalSeals.cardId, cardId));
+
+    const totalTickets = totalTicketsResult[0]?.count || 0;
+
+    return {
+      totalSeals,
+      totalTickets,
+      organizers: ticketsWithOrganizers.map(row => ({
+        userId: row.userId || '',
+        username: row.username || '',
+        fullName: row.fullName || '',
+        ticketCount: Number(row.ticketCount),
+        lastEmission: row.lastEmission,
+      })),
+    };
+  }
+
+  // Get activation card by card serial (matching physical card)
+  async getActivationCardBySerial(serial: string): Promise<SiaeActivationCard | undefined> {
+    // Try matching against cardCode field first
+    const [card] = await db
+      .select()
+      .from(siaeActivationCards)
+      .where(eq(siaeActivationCards.cardCode, serial));
+    return card;
   }
 }
 

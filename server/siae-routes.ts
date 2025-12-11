@@ -322,6 +322,34 @@ router.patch("/api/siae/activation-cards/:id", requireAuth, requireSuperAdmin, a
   }
 });
 
+// Get usage statistics for activation card (which organizers used it)
+router.get("/api/siae/activation-cards/:id/usage", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const card = await siaeStorage.getSiaeActivationCard(req.params.id);
+    if (!card) {
+      return res.status(404).json({ message: "Carta di attivazione non trovata" });
+    }
+    const stats = await siaeStorage.getActivationCardUsageStats(req.params.id);
+    res.json({ card, ...stats });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get activation card by serial (matching physical card)
+router.get("/api/siae/activation-cards/by-serial/:serial", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const card = await siaeStorage.getActivationCardBySerial(req.params.serial);
+    if (!card) {
+      return res.status(404).json({ message: "Carta non trovata con questo seriale" });
+    }
+    const stats = await siaeStorage.getActivationCardUsageStats(card.id);
+    res.json({ card, ...stats });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // ==================== Emission Channels (Gestore) ====================
 
 router.get("/api/siae/companies/:companyId/emission-channels", requireAuth, requireGestore, async (req: Request, res: Response) => {
