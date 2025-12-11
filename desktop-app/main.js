@@ -702,13 +702,20 @@ function startStatusPolling() {
         }
       }
       
+      // When card is RE-INSERTED and PIN was locked, show PIN dialog ONCE
+      // Only trigger when card transitions from not-inserted to inserted while locked
+      if (!cardWasInserted && cardCurrentlyInserted && pinLocked && !pinVerified) {
+        log.info('SIAE: Carta reinserita - richiesta verifica PIN');
+        // Notify renderer to show PIN dialog (only once per reinsert)
+        if (mainWindow && mainWindow.webContents) {
+          mainWindow.webContents.send('pin:required', {
+            reason: 'Carta SIAE reinserita - inserire PIN per continuare'
+          });
+        }
+      }
+      
       // Update card state tracking
       cardWasInserted = cardCurrentlyInserted;
-      
-      // When card is inserted and PIN was locked, require PIN to unlock
-      if (cardCurrentlyInserted && pinLocked) {
-        log.info('SIAE: Carta reinserita - PIN ancora richiesto');
-      }
       
       // Auto-read card data when card is inserted
       let cardData = {};
