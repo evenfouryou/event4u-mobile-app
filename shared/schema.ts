@@ -3284,6 +3284,7 @@ export const printerAgents = pgTable("printer_agents", {
 export const printerProfiles = pgTable("printer_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   companyId: varchar("company_id").notNull().references(() => companies.id),
+  agentId: varchar("agent_id").references(() => printerAgents.id), // Optional: link profile to specific agent
   printerModelId: varchar("printer_model_id").references(() => printerModels.id),
   name: varchar("name", { length: 100 }).notNull(), // e.g., "Biglietto Standard", "Ingresso VIP"
   paperWidthMm: integer("paper_width_mm").notNull().default(80),

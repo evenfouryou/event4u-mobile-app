@@ -510,11 +510,11 @@ router.get('/templates/:templateId/agents', requireSuperAdmin, async (req: Reque
 router.post('/templates/:templateId/test-print', requireSuperAdmin, async (req: Request, res: Response) => {
   try {
     const { templateId } = req.params;
-    const { agentId } = req.body;
+    const { agentId, profileId } = req.body;
     const user = getUser(req);
     
-    if (!agentId) {
-      return res.status(400).json({ error: 'ID agente richiesto' });
+    if (!agentId || !profileId) {
+      return res.status(400).json({ error: 'ID agente e profilo stampante richiesti' });
     }
     
     // Verify template exists and belongs to user's company
@@ -535,25 +535,29 @@ router.post('/templates/:templateId/test-print', requireSuperAdmin, async (req: 
       .where(eq(ticketTemplateElements.templateId, templateId))
       .orderBy(ticketTemplateElements.zIndex);
     
-    // Build the print job payload
+    // Build the print job payload with profileId at top level (required by desktop app)
     const printPayload = {
-      type: 'test_print',
-      template: {
-        id: template.id,
-        name: template.name,
-        paperWidthMm: template.paperWidthMm,
-        paperHeightMm: template.paperHeightMm,
-        backgroundImageUrl: template.backgroundImageUrl,
-        elements: elements.map(el => ({
-          ...el,
-          x: parseFloat(el.x as any),
-          y: parseFloat(el.y as any),
-          width: parseFloat(el.width as any),
-          height: parseFloat(el.height as any),
-        })),
+      id: `test-${Date.now()}`,
+      profileId,
+      payload: {
+        type: 'test_print',
+        template: {
+          id: template.id,
+          name: template.name,
+          paperWidthMm: template.paperWidthMm,
+          paperHeightMm: template.paperHeightMm,
+          backgroundImageUrl: template.backgroundImageUrl,
+          elements: elements.map(el => ({
+            ...el,
+            x: parseFloat(el.x as any),
+            y: parseFloat(el.y as any),
+            width: parseFloat(el.width as any),
+            height: parseFloat(el.height as any),
+          })),
+        },
+        data: TEST_PRINT_DATA,
+        isTestPrint: true,
       },
-      data: TEST_PRINT_DATA,
-      isTestPrint: true,
     };
     
     // Send to agent via WebSocket

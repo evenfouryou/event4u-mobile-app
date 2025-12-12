@@ -27,7 +27,7 @@ const activeAgents = new Map<string, PrintAgentConnection>();
 const activeClients = new Map<string, WebClientConnection[]>();
 
 const HEARTBEAT_INTERVAL = 30000;
-const CONNECTION_TIMEOUT = 35000;
+const CONNECTION_TIMEOUT = 120000; // 2 minutes - allows for background/minimized apps
 
 export function setupPrintRelay(server: Server): void {
   const wss = new WebSocketServer({ noServer: true });
