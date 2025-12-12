@@ -3450,3 +3450,92 @@ export type InsertPrintJob = z.infer<typeof insertPrintJobSchema>;
 
 export type CashierSession = typeof cashierSessions.$inferSelect;
 export type InsertCashierSession = z.infer<typeof insertCashierSessionSchema>;
+
+// ==================== TICKET TEMPLATE BUILDER ====================
+
+// Ticket Templates - Visual ticket layout templates (per-company)
+export const ticketTemplates = pgTable("ticket_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  name: varchar("name", { length: 255 }).notNull(), // e.g., "Template Standard", "VIP Gold"
+  backgroundImageUrl: text("background_image_url"), // Uploaded background image
+  paperWidthMm: integer("paper_width_mm").notNull().default(80),
+  paperHeightMm: integer("paper_height_mm").notNull().default(50),
+  dpi: integer("dpi").default(203), // Print resolution for accurate sizing
+  isDefault: boolean("is_default").default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  version: integer("version").default(1), // Template versioning
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Ticket Template Elements - Positioned fields on the template
+export const ticketTemplateElements = pgTable("ticket_template_elements", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  templateId: varchar("template_id").notNull().references(() => ticketTemplates.id, { onDelete: 'cascade' }),
+  type: varchar("type", { length: 50 }).notNull(), // text, qrcode, barcode, image, line, rect
+  fieldKey: varchar("field_key", { length: 100 }), // Dynamic field: event_name, event_date, price, ticket_number, organizer_name, etc.
+  staticValue: text("static_value"), // For static text/images
+  // Position (in mm, relative to paper)
+  x: decimal("x", { precision: 8, scale: 2 }).notNull().default('0'),
+  y: decimal("y", { precision: 8, scale: 2 }).notNull().default('0'),
+  width: decimal("width", { precision: 8, scale: 2 }).notNull().default('20'),
+  height: decimal("height", { precision: 8, scale: 2 }).notNull().default('5'),
+  rotation: integer("rotation").default(0), // Degrees
+  // Text styling
+  fontFamily: varchar("font_family", { length: 100 }).default('Arial'),
+  fontSize: integer("font_size").default(12), // Points
+  fontWeight: varchar("font_weight", { length: 20 }).default('normal'), // normal, bold
+  textAlign: varchar("text_align", { length: 20 }).default('left'), // left, center, right
+  color: varchar("color", { length: 20 }).default('#000000'),
+  // QR/Barcode settings
+  barcodeFormat: varchar("barcode_format", { length: 50 }), // CODE128, EAN13, QR
+  qrErrorCorrection: varchar("qr_error_correction", { length: 1 }).default('M'), // L, M, Q, H
+  // Display order
+  zIndex: integer("z_index").default(0),
+  // Visibility conditions (JSON for conditional display)
+  visibilityConditions: jsonb("visibility_conditions"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Relations
+export const ticketTemplatesRelations = relations(ticketTemplates, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [ticketTemplates.companyId],
+    references: [companies.id],
+  }),
+  elements: many(ticketTemplateElements),
+}));
+
+export const ticketTemplateElementsRelations = relations(ticketTemplateElements, ({ one }) => ({
+  template: one(ticketTemplates, {
+    fields: [ticketTemplateElements.templateId],
+    references: [ticketTemplates.id],
+  }),
+}));
+
+// ==================== SCHEMAS TICKET TEMPLATE ====================
+
+export const insertTicketTemplateSchema = createInsertSchema(ticketTemplates).omit({
+  id: true,
+  version: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateTicketTemplateSchema = insertTicketTemplateSchema.partial();
+
+export const insertTicketTemplateElementSchema = createInsertSchema(ticketTemplateElements).omit({
+  id: true,
+  createdAt: true,
+});
+export const updateTicketTemplateElementSchema = insertTicketTemplateElementSchema.partial();
+
+// ==================== TYPES TICKET TEMPLATE ====================
+
+export type TicketTemplate = typeof ticketTemplates.$inferSelect;
+export type InsertTicketTemplate = z.infer<typeof insertTicketTemplateSchema>;
+export type UpdateTicketTemplate = z.infer<typeof updateTicketTemplateSchema>;
+
+export type TicketTemplateElement = typeof ticketTemplateElements.$inferSelect;
+export type InsertTicketTemplateElement = z.infer<typeof insertTicketTemplateElementSchema>;
+export type UpdateTicketTemplateElement = z.infer<typeof updateTicketTemplateElementSchema>;
