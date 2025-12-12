@@ -151,8 +151,8 @@ router.get('/profiles', requireAdmin, async (req: Request, res: Response) => {
   }
 });
 
-// POST create profile (super_admin only)
-router.post('/profiles', requireSuperAdmin, async (req: Request, res: Response) => {
+// POST create profile (admin - gestore or super_admin)
+router.post('/profiles', requireAdmin, async (req: Request, res: Response) => {
   try {
     const user = getUser(req);
     const companyId = user?.companyId;
