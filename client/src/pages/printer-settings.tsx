@@ -71,7 +71,11 @@ import {
   Key,
   Copy,
   Check,
+  Layout,
+  Eye,
 } from "lucide-react";
+import { Link } from "wouter";
+import type { TicketTemplate } from "@shared/schema";
 import type { 
   PrinterModel, 
   PrinterAgent, 
@@ -127,6 +131,23 @@ export default function PrinterSettings() {
 
   const { data: profiles = [], isLoading: profilesLoading, refetch: refetchProfiles } = useQuery<PrinterProfile[]>({
     queryKey: ["/api/printers/profiles"],
+  });
+
+  const { data: templates = [], isLoading: templatesLoading, refetch: refetchTemplates } = useQuery<TicketTemplate[]>({
+    queryKey: ["/api/ticket/templates"],
+  });
+
+  const deleteTemplateMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/ticket/templates/${id}`);
+    },
+    onSuccess: () => {
+      toast({ title: "Template eliminato" });
+      queryClient.invalidateQueries({ queryKey: ["/api/ticket/templates"] });
+    },
+    onError: () => {
+      toast({ title: "Errore", description: "Impossibile eliminare il template", variant: "destructive" });
+    },
   });
 
   const modelForm = useForm<PrinterModelFormData>({
@@ -392,6 +413,10 @@ export default function PrinterSettings() {
           <TabsTrigger value="profiles" data-testid="tab-profiles">
             <FileText className="h-4 w-4 mr-2" />
             Profili Carta
+          </TabsTrigger>
+          <TabsTrigger value="templates" data-testid="tab-templates">
+            <Layout className="h-4 w-4 mr-2" />
+            Template Biglietti
           </TabsTrigger>
           {isSuperAdmin && (
             <TabsTrigger value="models" data-testid="tab-models">
@@ -796,6 +821,92 @@ export default function PrinterSettings() {
                               <Edit className="h-4 w-4" />
                             </Button>
                             <Button size="icon" variant="ghost" onClick={() => deleteProfileMutation.mutate(profile.id)} data-testid={`button-delete-profile-${profile.id}`}>
+                              <Trash2 className="h-4 w-4 text-destructive" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="templates">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between gap-2">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  <Layout className="h-5 w-5" />
+                  Template Biglietti
+                </CardTitle>
+                <CardDescription>
+                  Crea e gestisci template grafici per la stampa dei biglietti
+                </CardDescription>
+              </div>
+              <Link href="/template-builder">
+                <Button data-testid="button-new-template">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Nuovo Template
+                </Button>
+              </Link>
+            </CardHeader>
+            <CardContent>
+              {templatesLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : templates.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <Layout className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>Nessun template creato</p>
+                  <p className="text-sm mt-2">Crea il tuo primo template per personalizzare la stampa dei biglietti</p>
+                </div>
+              ) : (
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Nome</TableHead>
+                      <TableHead>Dimensioni</TableHead>
+                      <TableHead>Stato</TableHead>
+                      <TableHead>Versione</TableHead>
+                      <TableHead className="text-right">Azioni</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {templates.map((template) => (
+                      <TableRow key={template.id} data-testid={`row-template-${template.id}`}>
+                        <TableCell className="font-medium">{template.name}</TableCell>
+                        <TableCell>
+                          {template.paperWidthMm}mm × {template.paperHeightMm}mm
+                        </TableCell>
+                        <TableCell>
+                          {template.isActive ? (
+                            <Badge className="bg-green-600"><CheckCircle2 className="h-3 w-3 mr-1" />Attivo</Badge>
+                          ) : (
+                            <Badge variant="secondary"><XCircle className="h-3 w-3 mr-1" />Inattivo</Badge>
+                          )}
+                          {template.isDefault && (
+                            <Badge variant="outline" className="ml-1">Default</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>v{template.version || 1}</TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Link href={`/template-builder/${template.id}`}>
+                              <Button size="icon" variant="ghost" data-testid={`button-edit-template-${template.id}`}>
+                                <Edit className="h-4 w-4" />
+                              </Button>
+                            </Link>
+                            <Button 
+                              size="icon" 
+                              variant="ghost" 
+                              onClick={() => deleteTemplateMutation.mutate(template.id)}
+                              disabled={deleteTemplateMutation.isPending}
+                              data-testid={`button-delete-template-${template.id}`}
+                            >
                               <Trash2 className="h-4 w-4 text-destructive" />
                             </Button>
                           </div>

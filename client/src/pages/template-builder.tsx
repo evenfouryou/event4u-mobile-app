@@ -1,0 +1,717 @@
+import { useState, useRef, useEffect } from 'react';
+import { useParams, useLocation } from 'wouter';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { apiRequest } from '@/lib/queryClient';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Separator } from '@/components/ui/separator';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { useToast } from '@/hooks/use-toast';
+import { 
+  ArrowLeft, Save, Eye, Trash2, Plus, Move, 
+  Type, Calendar, Hash, QrCode, Image, 
+  AlignLeft, AlignCenter, AlignRight, 
+  GripVertical, Settings2, Layers
+} from 'lucide-react';
+import type { TicketTemplate, TicketTemplateElement } from '@shared/schema';
+
+// Element types available in the toolbox
+const ELEMENT_TYPES = [
+  { type: 'text', label: 'Testo Statico', icon: Type, fieldKey: null },
+  { type: 'dynamic', label: 'Nome Evento', icon: Type, fieldKey: 'event_name' },
+  { type: 'dynamic', label: 'Data Evento', icon: Calendar, fieldKey: 'event_date' },
+  { type: 'dynamic', label: 'Ora Evento', icon: Calendar, fieldKey: 'event_time' },
+  { type: 'dynamic', label: 'Luogo', icon: Type, fieldKey: 'venue_name' },
+  { type: 'dynamic', label: 'Prezzo', icon: Hash, fieldKey: 'price' },
+  { type: 'dynamic', label: 'Numero Biglietto', icon: Hash, fieldKey: 'ticket_number' },
+  { type: 'dynamic', label: 'Settore', icon: Type, fieldKey: 'sector' },
+  { type: 'dynamic', label: 'Fila', icon: Type, fieldKey: 'row' },
+  { type: 'dynamic', label: 'Posto', icon: Type, fieldKey: 'seat' },
+  { type: 'dynamic', label: 'Acquirente', icon: Type, fieldKey: 'buyer_name' },
+  { type: 'qrcode', label: 'QR Code', icon: QrCode, fieldKey: 'qr_code' },
+  { type: 'barcode', label: 'Barcode', icon: Hash, fieldKey: 'barcode' },
+];
+
+// Sample data for preview
+const SAMPLE_DATA = {
+  event_name: 'Concerto Rock Festival',
+  event_date: '25/12/2024',
+  event_time: '21:00',
+  venue_name: 'Stadio San Siro',
+  price: '€ 45,00',
+  ticket_number: 'TKT-2024-001234',
+  sector: 'Tribuna A',
+  row: '12',
+  seat: '45',
+  buyer_name: 'Mario Rossi',
+};
+
+// mm to px conversion (approximate, 96 DPI screen)
+const MM_TO_PX = 3.78;
+
+interface CanvasElement {
+  id: string;
+  type: string;
+  fieldKey: string | null;
+  staticValue: string;
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  rotation: number;
+  fontFamily: string;
+  fontSize: number;
+  fontWeight: string;
+  textAlign: string;
+  color: string;
+  barcodeFormat: string | null;
+  zIndex: number;
+}
+
+export default function TemplateBuilder() {
+  const { id } = useParams<{ id: string }>();
+  const [, navigate] = useLocation();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
+  const canvasRef = useRef<HTMLDivElement>(null);
+  
+  // Canvas state
+  const [elements, setElements] = useState<CanvasElement[]>([]);
+  const [selectedElement, setSelectedElement] = useState<string | null>(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
+  const [showPreview, setShowPreview] = useState(false);
+  
+  // Template metadata
+  const [templateName, setTemplateName] = useState('Nuovo Template');
+  const [paperWidth, setPaperWidth] = useState(80);
+  const [paperHeight, setPaperHeight] = useState(50);
+  const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+
+  // Fetch template if editing
+  const { data: template, isLoading } = useQuery<TicketTemplate & { elements: TicketTemplateElement[] }>({
+    queryKey: ['/api/ticket/templates', id],
+    enabled: !!id,
+  });
+
+  // Load template data when fetched
+  useEffect(() => {
+    if (template) {
+      setTemplateName(template.name);
+      setPaperWidth(template.paperWidthMm || 80);
+      setPaperHeight(template.paperHeightMm || 50);
+      setBackgroundImage(template.backgroundImageUrl || null);
+      
+      if (template.elements) {
+        setElements(template.elements.map((el: TicketTemplateElement) => ({
+          id: el.id,
+          type: el.type,
+          fieldKey: el.fieldKey || null,
+          staticValue: el.staticValue || '',
+          x: parseFloat(el.x as any) || 0,
+          y: parseFloat(el.y as any) || 0,
+          width: parseFloat(el.width as any) || 20,
+          height: parseFloat(el.height as any) || 5,
+          rotation: el.rotation || 0,
+          fontFamily: el.fontFamily || 'Arial',
+          fontSize: el.fontSize || 12,
+          fontWeight: el.fontWeight || 'normal',
+          textAlign: el.textAlign || 'left',
+          color: el.color || '#000000',
+          barcodeFormat: el.barcodeFormat || null,
+          zIndex: el.zIndex || 0,
+        })));
+      }
+    }
+  }, [template]);
+
+  // Save template mutation
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const templateData = {
+        name: templateName,
+        paperWidthMm: paperWidth,
+        paperHeightMm: paperHeight,
+        backgroundImageUrl: backgroundImage,
+        isActive: true,
+      };
+
+      let templateId = id;
+      
+      if (id) {
+        // Update existing template
+        await apiRequest('PATCH', `/api/ticket/templates/${id}`, templateData);
+      } else {
+        // Create new template
+        const res = await apiRequest('POST', '/api/ticket/templates', templateData);
+        const newTemplate = await res.json();
+        templateId = newTemplate.id;
+      }
+      
+      // Bulk save elements
+      const bulkRes = await apiRequest('POST', `/api/ticket/templates/${templateId}/elements/bulk`, {
+        elements: elements.map((el, index) => ({
+          type: el.type,
+          fieldKey: el.fieldKey,
+          staticValue: el.staticValue,
+          x: el.x,
+          y: el.y,
+          width: el.width,
+          height: el.height,
+          rotation: el.rotation,
+          fontFamily: el.fontFamily,
+          fontSize: el.fontSize,
+          fontWeight: el.fontWeight,
+          textAlign: el.textAlign,
+          color: el.color,
+          barcodeFormat: el.barcodeFormat,
+          zIndex: index,
+        })),
+      });
+      
+      const bulkData = await bulkRes.json();
+      
+      return { templateId, savedElements: bulkData.elements };
+    },
+    onSuccess: ({ templateId, savedElements }) => {
+      // Always update local elements with database IDs (even if empty array)
+      const updatedElements = (savedElements || []).map((el: any) => ({
+        id: el.id,
+        type: el.type,
+        fieldKey: el.fieldKey || null,
+        staticValue: el.staticValue || '',
+        x: parseFloat(el.x) || 0,
+        y: parseFloat(el.y) || 0,
+        width: parseFloat(el.width) || 20,
+        height: parseFloat(el.height) || 5,
+        rotation: el.rotation || 0,
+        fontFamily: el.fontFamily || 'Arial',
+        fontSize: el.fontSize || 12,
+        fontWeight: el.fontWeight || 'normal',
+        textAlign: el.textAlign || 'left',
+        color: el.color || '#000000',
+        barcodeFormat: el.barcodeFormat || null,
+        zIndex: el.zIndex || 0,
+      }));
+      setElements(updatedElements);
+      
+      queryClient.invalidateQueries({ queryKey: ['/api/ticket/templates'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/ticket/templates', templateId] });
+      toast({ title: 'Template salvato', description: 'Il template è stato salvato con successo' });
+      if (!id) {
+        navigate(`/template-builder/${templateId}`);
+      }
+    },
+    onError: () => {
+      toast({ title: 'Errore', description: 'Impossibile salvare il template', variant: 'destructive' });
+    },
+  });
+
+  // Add new element
+  const addElement = (elementType: typeof ELEMENT_TYPES[0]) => {
+    const newElement: CanvasElement = {
+      id: `temp-${Date.now()}`,
+      type: elementType.type,
+      fieldKey: elementType.fieldKey,
+      staticValue: elementType.type === 'text' ? 'Testo' : '',
+      x: 10,
+      y: 10,
+      width: elementType.type === 'qrcode' ? 15 : 30,
+      height: elementType.type === 'qrcode' ? 15 : 5,
+      rotation: 0,
+      fontFamily: 'Arial',
+      fontSize: 12,
+      fontWeight: 'normal',
+      textAlign: 'left',
+      color: '#000000',
+      barcodeFormat: elementType.type === 'barcode' ? 'CODE128' : null,
+      zIndex: elements.length,
+    };
+    setElements([...elements, newElement]);
+    setSelectedElement(newElement.id);
+  };
+
+  // Delete selected element
+  const deleteSelected = () => {
+    if (selectedElement) {
+      setElements(elements.filter(el => el.id !== selectedElement));
+      setSelectedElement(null);
+    }
+  };
+
+  // Update element property
+  const updateElement = (id: string, updates: Partial<CanvasElement>) => {
+    setElements(elements.map(el => el.id === id ? { ...el, ...updates } : el));
+  };
+
+  // Handle mouse down on element
+  const handleMouseDown = (e: React.MouseEvent, elementId: string) => {
+    e.stopPropagation();
+    setSelectedElement(elementId);
+    setIsDragging(true);
+    
+    const element = elements.find(el => el.id === elementId);
+    if (element && canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      setDragOffset({
+        x: e.clientX - rect.left - (element.x * MM_TO_PX),
+        y: e.clientY - rect.top - (element.y * MM_TO_PX),
+      });
+    }
+  };
+
+  // Handle mouse move
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && selectedElement && canvasRef.current) {
+      const rect = canvasRef.current.getBoundingClientRect();
+      const newX = (e.clientX - rect.left - dragOffset.x) / MM_TO_PX;
+      const newY = (e.clientY - rect.top - dragOffset.y) / MM_TO_PX;
+      
+      updateElement(selectedElement, {
+        x: Math.max(0, Math.min(newX, paperWidth)),
+        y: Math.max(0, Math.min(newY, paperHeight)),
+      });
+    }
+  };
+
+  // Handle mouse up
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  // Get display value for element
+  const getDisplayValue = (element: CanvasElement) => {
+    if (element.type === 'text') return element.staticValue;
+    if (element.fieldKey && SAMPLE_DATA[element.fieldKey as keyof typeof SAMPLE_DATA]) {
+      return SAMPLE_DATA[element.fieldKey as keyof typeof SAMPLE_DATA];
+    }
+    return `{${element.fieldKey}}`;
+  };
+
+  const selected = elements.find(el => el.id === selectedElement);
+
+  // Handle background image upload
+  const handleBackgroundUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        setBackgroundImage(event.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-full">
+        <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
+      </div>
+    );
+  }
+
+  return (
+    <div className="h-full flex flex-col">
+      {/* Header */}
+      <div className="border-b p-4 flex items-center justify-between gap-4 bg-card">
+        <div className="flex items-center gap-4">
+          <Button variant="ghost" size="icon" onClick={() => navigate('/printer-settings')} data-testid="button-back">
+            <ArrowLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <Input
+              value={templateName}
+              onChange={(e) => setTemplateName(e.target.value)}
+              className="text-lg font-semibold border-none px-0 h-auto focus-visible:ring-0"
+              data-testid="input-template-name"
+            />
+            <p className="text-sm text-muted-foreground">
+              {paperWidth}mm × {paperHeight}mm
+            </p>
+          </div>
+        </div>
+        
+        <div className="flex items-center gap-2">
+          <Button variant="outline" onClick={() => setShowPreview(!showPreview)} data-testid="button-preview">
+            <Eye className="h-4 w-4 mr-2" />
+            {showPreview ? 'Editor' : 'Anteprima'}
+          </Button>
+          <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} data-testid="button-save">
+            <Save className="h-4 w-4 mr-2" />
+            {saveMutation.isPending ? 'Salvataggio...' : 'Salva'}
+          </Button>
+        </div>
+      </div>
+
+      <div className="flex-1 flex overflow-hidden">
+        {/* Toolbox Sidebar */}
+        <div className="w-64 border-r bg-card overflow-y-auto">
+          <Tabs defaultValue="elements" className="h-full">
+            <TabsList className="w-full grid grid-cols-2">
+              <TabsTrigger value="elements" data-testid="tab-elements">
+                <Layers className="h-4 w-4 mr-2" />
+                Elementi
+              </TabsTrigger>
+              <TabsTrigger value="settings" data-testid="tab-settings">
+                <Settings2 className="h-4 w-4 mr-2" />
+                Impostazioni
+              </TabsTrigger>
+            </TabsList>
+            
+            <TabsContent value="elements" className="p-4 space-y-4 m-0">
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground uppercase">Campi Disponibili</Label>
+                {ELEMENT_TYPES.map((elType, idx) => (
+                  <Button
+                    key={idx}
+                    variant="outline"
+                    className="w-full justify-start gap-2"
+                    onClick={() => addElement(elType)}
+                    data-testid={`button-add-${elType.fieldKey || elType.type}`}
+                  >
+                    <elType.icon className="h-4 w-4" />
+                    {elType.label}
+                  </Button>
+                ))}
+              </div>
+            </TabsContent>
+            
+            <TabsContent value="settings" className="p-4 space-y-4 m-0">
+              <div className="space-y-3">
+                <div>
+                  <Label>Larghezza (mm)</Label>
+                  <Input
+                    type="number"
+                    value={paperWidth}
+                    onChange={(e) => setPaperWidth(parseInt(e.target.value) || 80)}
+                    data-testid="input-paper-width"
+                  />
+                </div>
+                <div>
+                  <Label>Altezza (mm)</Label>
+                  <Input
+                    type="number"
+                    value={paperHeight}
+                    onChange={(e) => setPaperHeight(parseInt(e.target.value) || 50)}
+                    data-testid="input-paper-height"
+                  />
+                </div>
+                <Separator />
+                <div>
+                  <Label>Immagine di sfondo</Label>
+                  <Input
+                    type="file"
+                    accept="image/*"
+                    onChange={handleBackgroundUpload}
+                    data-testid="input-background-image"
+                  />
+                  {backgroundImage && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-2 text-destructive"
+                      onClick={() => setBackgroundImage(null)}
+                      data-testid="button-remove-background"
+                    >
+                      Rimuovi sfondo
+                    </Button>
+                  )}
+                </div>
+              </div>
+            </TabsContent>
+          </Tabs>
+        </div>
+
+        {/* Canvas Area */}
+        <div className="flex-1 bg-muted/30 p-8 overflow-auto flex items-center justify-center">
+          <div
+            ref={canvasRef}
+            className="bg-white shadow-lg relative overflow-hidden"
+            style={{
+              width: paperWidth * MM_TO_PX,
+              height: paperHeight * MM_TO_PX,
+              backgroundImage: backgroundImage ? `url(${backgroundImage})` : undefined,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+            onMouseMove={handleMouseMove}
+            onMouseUp={handleMouseUp}
+            onMouseLeave={handleMouseUp}
+            onClick={() => setSelectedElement(null)}
+            data-testid="canvas-area"
+          >
+            {/* Grid overlay for positioning */}
+            <div 
+              className="absolute inset-0 pointer-events-none"
+              style={{
+                backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)',
+                backgroundSize: `${5 * MM_TO_PX}px ${5 * MM_TO_PX}px`,
+              }}
+            />
+            
+            {/* Elements */}
+            {elements.map((element) => (
+              <div
+                key={element.id}
+                className={`absolute cursor-move transition-shadow ${
+                  selectedElement === element.id 
+                    ? 'ring-2 ring-primary ring-offset-1' 
+                    : 'hover:ring-1 hover:ring-muted-foreground'
+                }`}
+                style={{
+                  left: element.x * MM_TO_PX,
+                  top: element.y * MM_TO_PX,
+                  width: element.width * MM_TO_PX,
+                  height: element.height * MM_TO_PX,
+                  transform: `rotate(${element.rotation}deg)`,
+                  zIndex: element.zIndex,
+                }}
+                onMouseDown={(e) => handleMouseDown(e, element.id)}
+                data-testid={`element-${element.id}`}
+              >
+                {element.type === 'qrcode' ? (
+                  <div className="w-full h-full bg-gray-100 flex items-center justify-center text-xs text-gray-500 border border-dashed">
+                    QR
+                  </div>
+                ) : element.type === 'barcode' ? (
+                  <div className="w-full h-full bg-gray-100 flex items-center justify-center text-xs text-gray-500 border border-dashed">
+                    |||||||
+                  </div>
+                ) : (
+                  <div
+                    className="w-full h-full flex items-center overflow-hidden whitespace-nowrap"
+                    style={{
+                      fontFamily: element.fontFamily,
+                      fontSize: element.fontSize,
+                      fontWeight: element.fontWeight as any,
+                      textAlign: element.textAlign as any,
+                      color: element.color,
+                      justifyContent: element.textAlign === 'center' ? 'center' : element.textAlign === 'right' ? 'flex-end' : 'flex-start',
+                    }}
+                  >
+                    {getDisplayValue(element)}
+                  </div>
+                )}
+                
+                {/* Drag handle */}
+                {selectedElement === element.id && (
+                  <div className="absolute -top-3 -left-3 w-6 h-6 bg-primary rounded-full flex items-center justify-center text-white cursor-grab">
+                    <Move className="h-3 w-3" />
+                  </div>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Properties Panel */}
+        <div className="w-72 border-l bg-card overflow-y-auto">
+          <div className="p-4">
+            <h3 className="font-semibold mb-4">Proprietà</h3>
+            
+            {selected ? (
+              <div className="space-y-4">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">
+                    {ELEMENT_TYPES.find(t => t.fieldKey === selected.fieldKey)?.label || 
+                     (selected.type === 'text' ? 'Testo Statico' : selected.type)}
+                  </span>
+                  <Button variant="ghost" size="icon" onClick={deleteSelected} data-testid="button-delete-element">
+                    <Trash2 className="h-4 w-4 text-destructive" />
+                  </Button>
+                </div>
+                
+                <Separator />
+                
+                {selected.type === 'text' && (
+                  <div>
+                    <Label>Testo</Label>
+                    <Input
+                      value={selected.staticValue}
+                      onChange={(e) => updateElement(selected.id, { staticValue: e.target.value })}
+                      data-testid="input-static-value"
+                    />
+                  </div>
+                )}
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label>X (mm)</Label>
+                    <Input
+                      type="number"
+                      value={Math.round(selected.x * 10) / 10}
+                      onChange={(e) => updateElement(selected.id, { x: parseFloat(e.target.value) || 0 })}
+                      data-testid="input-x"
+                    />
+                  </div>
+                  <div>
+                    <Label>Y (mm)</Label>
+                    <Input
+                      type="number"
+                      value={Math.round(selected.y * 10) / 10}
+                      onChange={(e) => updateElement(selected.id, { y: parseFloat(e.target.value) || 0 })}
+                      data-testid="input-y"
+                    />
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <Label>Larghezza (mm)</Label>
+                    <Input
+                      type="number"
+                      value={Math.round(selected.width * 10) / 10}
+                      onChange={(e) => updateElement(selected.id, { width: parseFloat(e.target.value) || 10 })}
+                      data-testid="input-width"
+                    />
+                  </div>
+                  <div>
+                    <Label>Altezza (mm)</Label>
+                    <Input
+                      type="number"
+                      value={Math.round(selected.height * 10) / 10}
+                      onChange={(e) => updateElement(selected.id, { height: parseFloat(e.target.value) || 5 })}
+                      data-testid="input-height"
+                    />
+                  </div>
+                </div>
+                
+                {(selected.type === 'text' || selected.type === 'dynamic') && (
+                  <>
+                    <Separator />
+                    
+                    <div>
+                      <Label>Font</Label>
+                      <Select
+                        value={selected.fontFamily}
+                        onValueChange={(v) => updateElement(selected.id, { fontFamily: v })}
+                      >
+                        <SelectTrigger data-testid="select-font">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="Arial">Arial</SelectItem>
+                          <SelectItem value="Helvetica">Helvetica</SelectItem>
+                          <SelectItem value="Times New Roman">Times New Roman</SelectItem>
+                          <SelectItem value="Courier New">Courier New</SelectItem>
+                          <SelectItem value="Georgia">Georgia</SelectItem>
+                          <SelectItem value="Verdana">Verdana</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <Label>Dimensione</Label>
+                        <Input
+                          type="number"
+                          value={selected.fontSize}
+                          onChange={(e) => updateElement(selected.id, { fontSize: parseInt(e.target.value) || 12 })}
+                          data-testid="input-font-size"
+                        />
+                      </div>
+                      <div>
+                        <Label>Peso</Label>
+                        <Select
+                          value={selected.fontWeight}
+                          onValueChange={(v) => updateElement(selected.id, { fontWeight: v })}
+                        >
+                          <SelectTrigger data-testid="select-font-weight">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="normal">Normale</SelectItem>
+                            <SelectItem value="bold">Grassetto</SelectItem>
+                            <SelectItem value="lighter">Leggero</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label>Allineamento</Label>
+                      <div className="flex gap-1 mt-1">
+                        <Button
+                          variant={selected.textAlign === 'left' ? 'default' : 'outline'}
+                          size="icon"
+                          onClick={() => updateElement(selected.id, { textAlign: 'left' })}
+                          data-testid="button-align-left"
+                        >
+                          <AlignLeft className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant={selected.textAlign === 'center' ? 'default' : 'outline'}
+                          size="icon"
+                          onClick={() => updateElement(selected.id, { textAlign: 'center' })}
+                          data-testid="button-align-center"
+                        >
+                          <AlignCenter className="h-4 w-4" />
+                        </Button>
+                        <Button
+                          variant={selected.textAlign === 'right' ? 'default' : 'outline'}
+                          size="icon"
+                          onClick={() => updateElement(selected.id, { textAlign: 'right' })}
+                          data-testid="button-align-right"
+                        >
+                          <AlignRight className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    </div>
+                    
+                    <div>
+                      <Label>Colore</Label>
+                      <div className="flex gap-2 mt-1">
+                        <Input
+                          type="color"
+                          value={selected.color}
+                          onChange={(e) => updateElement(selected.id, { color: e.target.value })}
+                          className="w-12 h-9 p-1"
+                          data-testid="input-color"
+                        />
+                        <Input
+                          value={selected.color}
+                          onChange={(e) => updateElement(selected.id, { color: e.target.value })}
+                          className="flex-1"
+                          data-testid="input-color-hex"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+                
+                {selected.type === 'barcode' && (
+                  <div>
+                    <Label>Formato Barcode</Label>
+                    <Select
+                      value={selected.barcodeFormat || 'CODE128'}
+                      onValueChange={(v) => updateElement(selected.id, { barcodeFormat: v })}
+                    >
+                      <SelectTrigger data-testid="select-barcode-format">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="CODE128">CODE128</SelectItem>
+                        <SelectItem value="CODE39">CODE39</SelectItem>
+                        <SelectItem value="EAN13">EAN13</SelectItem>
+                        <SelectItem value="EAN8">EAN8</SelectItem>
+                        <SelectItem value="UPC">UPC</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
+              </div>
+            ) : (
+              <div className="text-center text-muted-foreground py-8">
+                <Move className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Seleziona un elemento per modificarne le proprietà</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}

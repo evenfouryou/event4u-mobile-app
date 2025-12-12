@@ -82,6 +82,7 @@ import SchoolBadgeView from "@/pages/school-badge-view";
 import SchoolBadgeError from "@/pages/school-badge-error";
 import SchoolBadgeScanner from "@/pages/school-badge-scanner";
 import PrinterSettings from "@/pages/printer-settings";
+import TemplateBuilder from "@/pages/template-builder";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -200,6 +201,8 @@ function Router() {
               <Route path="/badge/view/:code" component={SchoolBadgeView} />
               <Route path="/badge/:slug" component={SchoolBadgeLanding} />
               <Route path="/printer-settings" component={PrinterSettings} />
+              <Route path="/template-builder" component={TemplateBuilder} />
+              <Route path="/template-builder/:id" component={TemplateBuilder} />
               <Route component={NotFound} />
             </Switch>
           </main>
