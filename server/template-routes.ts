@@ -10,6 +10,7 @@ import {
   updateTicketTemplateElementSchema,
 } from '@shared/schema';
 import { z } from 'zod';
+import { getConnectedAgents, sendPrintJobToAgent } from './print-relay';
 
 const router = Router();
 
@@ -452,6 +453,120 @@ router.post('/templates/:templateId/elements/bulk', requireSuperAdmin, async (re
       return res.status(400).json({ error: 'Dati elementi non validi', details: error.errors });
     }
     res.status(500).json({ error: 'Errore nel salvataggio elementi' });
+  }
+});
+
+// ==================== TEST PRINT ====================
+
+// Sample data for test prints
+const TEST_PRINT_DATA: Record<string, string> = {
+  event_name: 'Concerto Rock Festival',
+  event_date: '25/12/2024',
+  event_time: '21:00',
+  venue_name: 'Stadio San Siro',
+  price: '€ 45,00',
+  ticket_number: 'TKT-TEST-001234',
+  sector: 'Tribuna A',
+  row: '12',
+  seat: '45',
+  buyer_name: 'Mario Rossi',
+  organizer_company: 'Eventi SpA',
+  ticketing_manager: 'Biglietteria Centrale Srl',
+  emission_datetime: new Date().toLocaleString('it-IT'),
+  fiscal_seal: 'TEST-SIAE-PROVA',
+  qr_code: 'https://event4u.test/verify/TEST001',
+};
+
+// GET connected agents for test print (super_admin only)
+router.get('/templates/:templateId/agents', requireSuperAdmin, async (req: Request, res: Response) => {
+  try {
+    const { templateId } = req.params;
+    const user = getUser(req);
+    
+    // Get template to determine company
+    const [template] = await db.select().from(ticketTemplates)
+      .where(eq(ticketTemplates.id, templateId))
+      .limit(1);
+    
+    if (!template) {
+      return res.status(404).json({ error: 'Template non trovato' });
+    }
+    
+    // Verify access (super_admin can access all, gestore only their company)
+    if (user.role !== 'super_admin' && template.companyId !== user.companyId) {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+    
+    // Use template's company to get connected agents
+    const agents = getConnectedAgents(template.companyId);
+    res.json(agents);
+  } catch (error) {
+    console.error('Error fetching connected agents:', error);
+    res.status(500).json({ error: 'Errore nel recupero agenti' });
+  }
+});
+
+// POST send test print (super_admin only)
+router.post('/templates/:templateId/test-print', requireSuperAdmin, async (req: Request, res: Response) => {
+  try {
+    const { templateId } = req.params;
+    const { agentId } = req.body;
+    const user = getUser(req);
+    
+    if (!agentId) {
+      return res.status(400).json({ error: 'ID agente richiesto' });
+    }
+    
+    // Verify template exists and belongs to user's company
+    const [template] = await db.select().from(ticketTemplates)
+      .where(eq(ticketTemplates.id, templateId))
+      .limit(1);
+    
+    if (!template) {
+      return res.status(404).json({ error: 'Template non trovato' });
+    }
+    
+    if (user.role !== 'super_admin' && template.companyId !== user.companyId) {
+      return res.status(403).json({ error: 'Accesso negato' });
+    }
+    
+    // Get template elements
+    const elements = await db.select().from(ticketTemplateElements)
+      .where(eq(ticketTemplateElements.templateId, templateId))
+      .orderBy(ticketTemplateElements.zIndex);
+    
+    // Build the print job payload
+    const printPayload = {
+      type: 'test_print',
+      template: {
+        id: template.id,
+        name: template.name,
+        paperWidthMm: template.paperWidthMm,
+        paperHeightMm: template.paperHeightMm,
+        backgroundImageUrl: template.backgroundImageUrl,
+        elements: elements.map(el => ({
+          ...el,
+          x: parseFloat(el.x as any),
+          y: parseFloat(el.y as any),
+          width: parseFloat(el.width as any),
+          height: parseFloat(el.height as any),
+        })),
+      },
+      data: TEST_PRINT_DATA,
+      isTestPrint: true,
+    };
+    
+    // Send to agent via WebSocket
+    const sent = sendPrintJobToAgent(agentId, printPayload);
+    
+    if (!sent) {
+      return res.status(503).json({ error: 'Agente non connesso o non raggiungibile' });
+    }
+    
+    res.json({ success: true, message: 'Stampa di prova inviata' });
+  } catch (error) {
+    console.error('Error sending test print:', error);
+    res.status(500).json({ error: 'Errore nell\'invio stampa di prova' });
   }
 });
 

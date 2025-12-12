@@ -10,13 +10,14 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Separator } from '@/components/ui/separator';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { useToast } from '@/hooks/use-toast';
 import { 
   ArrowLeft, Save, Eye, Trash2, Plus, Move, 
   Type, Calendar, Hash, QrCode, Image, 
   AlignLeft, AlignCenter, AlignRight, 
   GripVertical, Settings2, Layers,
-  ZoomIn, ZoomOut, RotateCw, RotateCcw, Shield
+  ZoomIn, ZoomOut, RotateCw, RotateCcw, Shield, Printer
 } from 'lucide-react';
 import type { TicketTemplate, TicketTemplateElement } from '@shared/schema';
 
@@ -108,6 +109,8 @@ export default function TemplateBuilder() {
   const [showPreview, setShowPreview] = useState(false);
   const [zoom, setZoom] = useState(1); // Zoom level (0.5 to 2)
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
+  const [showTestPrintDialog, setShowTestPrintDialog] = useState(false);
+  const [selectedAgentId, setSelectedAgentId] = useState<string>('');
   
   // Template metadata
   const [templateName, setTemplateName] = useState('Nuovo Template');
@@ -125,6 +128,12 @@ export default function TemplateBuilder() {
   const { data: template, isLoading } = useQuery<TicketTemplate & { elements: TicketTemplateElement[] }>({
     queryKey: ['/api/ticket/templates', id],
     enabled: !!id,
+  });
+
+  // Fetch connected print agents (only when dialog is open)
+  const { data: connectedAgents = [], isLoading: agentsLoading } = useQuery<{ agentId: string; deviceName: string }[]>({
+    queryKey: ['/api/ticket/templates', id, 'agents'],
+    enabled: !!id && showTestPrintDialog,
   });
 
   // Load template data when fetched
@@ -247,6 +256,21 @@ export default function TemplateBuilder() {
       console.error('Template save error:', error);
       const message = error?.message || 'Impossibile salvare il template';
       toast({ title: 'Errore', description: message, variant: 'destructive' });
+    },
+  });
+
+  // Test print mutation
+  const testPrintMutation = useMutation({
+    mutationFn: async (agentId: string) => {
+      const res = await apiRequest('POST', `/api/ticket/templates/${id}/test-print`, { agentId });
+      return res.json();
+    },
+    onSuccess: () => {
+      toast({ title: 'Stampa di prova inviata', description: 'Verifica la stampante' });
+      setShowTestPrintDialog(false);
+    },
+    onError: (error: any) => {
+      toast({ title: 'Errore', description: error?.message || 'Impossibile inviare la stampa di prova', variant: 'destructive' });
     },
   });
 
@@ -437,6 +461,12 @@ export default function TemplateBuilder() {
             <Eye className="h-4 w-4 mr-2" />
             {showPreview ? 'Editor' : 'Anteprima'}
           </Button>
+          {id && (
+            <Button variant="outline" onClick={() => setShowTestPrintDialog(true)} data-testid="button-test-print">
+              <Printer className="h-4 w-4 mr-2" />
+              Prova Stampa
+            </Button>
+          )}
           <Button onClick={() => saveMutation.mutate()} disabled={saveMutation.isPending} data-testid="button-save">
             <Save className="h-4 w-4 mr-2" />
             {saveMutation.isPending ? 'Salvataggio...' : 'Salva'}
@@ -898,6 +928,58 @@ export default function TemplateBuilder() {
           </div>
         </div>
       </div>
+
+      <Dialog open={showTestPrintDialog} onOpenChange={setShowTestPrintDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Prova di Stampa</DialogTitle>
+            <DialogDescription>
+              Seleziona un agente di stampa connesso per inviare una stampa di prova con dati di esempio.
+            </DialogDescription>
+          </DialogHeader>
+          
+          {agentsLoading ? (
+            <div className="flex justify-center py-4">
+              <div className="animate-spin w-6 h-6 border-2 border-primary border-t-transparent rounded-full" />
+            </div>
+          ) : connectedAgents.length === 0 ? (
+            <div className="text-center py-4 text-muted-foreground">
+              <Printer className="h-12 w-12 mx-auto mb-2 opacity-50" />
+              <p>Nessun agente di stampa connesso.</p>
+              <p className="text-sm">Avvia l'app desktop Event4U su un computer con stampante.</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              <Label>Seleziona Agente</Label>
+              <Select value={selectedAgentId} onValueChange={setSelectedAgentId}>
+                <SelectTrigger data-testid="select-agent-test-print">
+                  <SelectValue placeholder="Seleziona agente..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {connectedAgents.map((agent) => (
+                    <SelectItem key={agent.agentId} value={agent.agentId}>
+                      {agent.deviceName}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
+          
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowTestPrintDialog(false)} data-testid="button-cancel-test-print">
+              Annulla
+            </Button>
+            <Button 
+              onClick={() => selectedAgentId && testPrintMutation.mutate(selectedAgentId)}
+              disabled={!selectedAgentId || testPrintMutation.isPending || connectedAgents.length === 0}
+              data-testid="button-confirm-test-print"
+            >
+              {testPrintMutation.isPending ? 'Invio...' : 'Stampa Prova'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
