@@ -287,8 +287,15 @@ router.patch('/templates/:templateId/elements/:elementId', requireAdmin, async (
     
     const validated = elementUpdateSchema.parse(req.body);
     
+    // Convert numeric values to strings for decimal columns
+    const updateData: Record<string, any> = { ...validated };
+    if (updateData.x !== undefined) updateData.x = String(updateData.x);
+    if (updateData.y !== undefined) updateData.y = String(updateData.y);
+    if (updateData.width !== undefined) updateData.width = String(updateData.width);
+    if (updateData.height !== undefined) updateData.height = String(updateData.height);
+    
     const [element] = await db.update(ticketTemplateElements)
-      .set(validated)
+      .set(updateData)
       .where(and(
         eq(ticketTemplateElements.id, elementId),
         eq(ticketTemplateElements.templateId, templateId)
@@ -407,9 +414,14 @@ router.post('/templates/:templateId/elements/bulk', requireAdmin, async (req: Re
     
     let insertedElements: any[] = [];
     if (elementsArray.length > 0) {
+      // Convert numeric values to strings for decimal columns
       const elementsWithTemplateId = elementsArray.map((el) => ({
         ...el,
         templateId,
+        x: String(el.x),
+        y: String(el.y),
+        width: String(el.width),
+        height: String(el.height),
       }));
       
       insertedElements = await db.insert(ticketTemplateElements)
