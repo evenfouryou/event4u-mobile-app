@@ -536,29 +536,28 @@ router.post('/templates/:templateId/test-print', requireSuperAdmin, async (req: 
       .orderBy(ticketTemplateElements.zIndex);
     
     // Build the print job payload using template dimensions directly
+    // Note: 'type' must be at top level for print-agent to recognize the job
     const printPayload = {
       id: `test-${Date.now()}`,
+      type: 'test', // Required for print-agent to handle the job
       paperWidthMm: template.paperWidthMm,
       paperHeightMm: template.paperHeightMm,
-      payload: {
-        type: 'test_print',
-        template: {
-          id: template.id,
-          name: template.name,
-          paperWidthMm: template.paperWidthMm,
-          paperHeightMm: template.paperHeightMm,
-          backgroundImageUrl: template.backgroundImageUrl,
-          elements: elements.map(el => ({
-            ...el,
-            x: parseFloat(el.x as any),
-            y: parseFloat(el.y as any),
-            width: parseFloat(el.width as any),
-            height: parseFloat(el.height as any),
-          })),
-        },
-        data: TEST_PRINT_DATA,
-        isTestPrint: true,
+      template: {
+        id: template.id,
+        name: template.name,
+        paperWidthMm: template.paperWidthMm,
+        paperHeightMm: template.paperHeightMm,
+        backgroundImageUrl: template.backgroundImageUrl,
+        elements: elements.map(el => ({
+          ...el,
+          x: parseFloat(el.x as any),
+          y: parseFloat(el.y as any),
+          width: parseFloat(el.width as any),
+          height: parseFloat(el.height as any),
+        })),
       },
+      data: TEST_PRINT_DATA,
+      isTestPrint: true,
     };
     
     // Send to agent via WebSocket
