@@ -120,6 +120,8 @@ export default function PrinterSettings() {
   const [deviceName, setDeviceName] = useState("");
   const [tokenCopied, setTokenCopied] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
+  const [profileAssignDialogOpen, setProfileAssignDialogOpen] = useState(false);
+  const [selectedAgentForProfiles, setSelectedAgentForProfiles] = useState<PrinterAgent | null>(null);
 
   // Load companies for super_admin to select
   const { data: companies = [] } = useQuery<{ id: string; name: string }[]>({
@@ -307,6 +309,20 @@ export default function PrinterSettings() {
     },
   });
 
+  const assignProfileToAgentMutation = useMutation({
+    mutationFn: async ({ profileId, agentId }: { profileId: string; agentId: string | null }) => {
+      const response = await apiRequest("PATCH", `/api/printers/profiles/${profileId}`, { agentId });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Profilo aggiornato", description: "Il profilo è stato assegnato all'agente" });
+      queryClient.invalidateQueries({ queryKey: ["/api/printers/profiles"] });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    },
+  });
+
   const handleCopyToken = () => {
     if (generatedToken) {
       navigator.clipboard.writeText(generatedToken);
@@ -410,6 +426,19 @@ export default function PrinterSettings() {
       hour: "2-digit",
       minute: "2-digit",
     });
+  };
+
+  const getProfilesForAgent = (agentId: string) => {
+    return profiles.filter(p => p.agentId === agentId);
+  };
+
+  const getUnassignedProfiles = () => {
+    return profiles.filter(p => !p.agentId);
+  };
+
+  const openProfileAssignDialog = (agent: PrinterAgent) => {
+    setSelectedAgentForProfiles(agent);
+    setProfileAssignDialogOpen(true);
   };
 
   return (
@@ -594,32 +623,60 @@ export default function PrinterSettings() {
                     <TableRow>
                       <TableHead>Dispositivo</TableHead>
                       <TableHead>Stampante</TableHead>
+                      <TableHead>Profili Collegati</TableHead>
                       <TableHead>Stato</TableHead>
                       <TableHead>Ultimo Heartbeat</TableHead>
                       <TableHead className="text-right">Azioni</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
-                    {agents.map((agent) => (
-                      <TableRow key={agent.id} data-testid={`row-agent-${agent.id}`}>
-                        <TableCell className="font-medium">{agent.deviceName}</TableCell>
-                        <TableCell>{agent.printerName || "Non configurata"}</TableCell>
-                        <TableCell>{getStatusBadge(agent.status)}</TableCell>
-                        <TableCell className="text-muted-foreground">
-                          {formatDate(agent.lastHeartbeat)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Button 
-                            size="icon" 
-                            variant="ghost" 
-                            onClick={() => deleteAgentMutation.mutate(agent.id)}
-                            data-testid={`button-delete-agent-${agent.id}`}
-                          >
-                            <Trash2 className="h-4 w-4 text-destructive" />
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    ))}
+                    {agents.map((agent) => {
+                      const agentProfiles = getProfilesForAgent(agent.id);
+                      return (
+                        <TableRow key={agent.id} data-testid={`row-agent-${agent.id}`}>
+                          <TableCell className="font-medium">{agent.deviceName}</TableCell>
+                          <TableCell>{agent.printerName || "Non configurata"}</TableCell>
+                          <TableCell>
+                            {agentProfiles.length > 0 ? (
+                              <div className="flex flex-wrap gap-1">
+                                {agentProfiles.map(profile => (
+                                  <Badge key={profile.id} variant="secondary" className="text-xs">
+                                    {profile.name}
+                                  </Badge>
+                                ))}
+                              </div>
+                            ) : (
+                              <span className="text-muted-foreground text-sm">Nessun profilo</span>
+                            )}
+                          </TableCell>
+                          <TableCell>{getStatusBadge(agent.status)}</TableCell>
+                          <TableCell className="text-muted-foreground">
+                            {formatDate(agent.lastHeartbeat)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                onClick={() => openProfileAssignDialog(agent)}
+                                data-testid={`button-manage-profiles-${agent.id}`}
+                                title="Gestisci profili"
+                              >
+                                <FileText className="h-4 w-4" />
+                              </Button>
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                onClick={() => deleteAgentMutation.mutate(agent.id)}
+                                data-testid={`button-delete-agent-${agent.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      );
+                    })}
                   </TableBody>
                 </Table>
               )}
@@ -939,6 +996,101 @@ export default function PrinterSettings() {
           </TabsContent>
         )}
       </Tabs>
+
+      {/* Dialog per gestione profili agente */}
+      <Dialog open={profileAssignDialogOpen} onOpenChange={(open) => {
+        setProfileAssignDialogOpen(open);
+        if (!open) setSelectedAgentForProfiles(null);
+      }}>
+        <DialogContent className="max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <FileText className="h-5 w-5" />
+              Gestisci Profili
+            </DialogTitle>
+            <DialogDescription>
+              Assegna o rimuovi profili stampante per "{selectedAgentForProfiles?.deviceName}"
+            </DialogDescription>
+          </DialogHeader>
+          
+          {selectedAgentForProfiles && (
+            <div className="space-y-4">
+              {/* Profili assegnati a questo agente */}
+              <div>
+                <h4 className="font-medium text-sm mb-2">Profili assegnati</h4>
+                {getProfilesForAgent(selectedAgentForProfiles.id).length > 0 ? (
+                  <div className="space-y-2">
+                    {getProfilesForAgent(selectedAgentForProfiles.id).map(profile => (
+                      <div key={profile.id} className="flex items-center justify-between p-2 border rounded-md">
+                        <div>
+                          <span className="font-medium">{profile.name}</span>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {profile.paperWidthMm}×{profile.paperHeightMm}mm
+                          </span>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="ghost"
+                          onClick={() => assignProfileToAgentMutation.mutate({ profileId: profile.id, agentId: null })}
+                          disabled={assignProfileToAgentMutation.isPending}
+                          data-testid={`button-unassign-profile-${profile.id}`}
+                        >
+                          <XCircle className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Nessun profilo assegnato</p>
+                )}
+              </div>
+
+              {/* Profili non assegnati */}
+              <div>
+                <h4 className="font-medium text-sm mb-2">Profili disponibili</h4>
+                {getUnassignedProfiles().length > 0 ? (
+                  <div className="space-y-2">
+                    {getUnassignedProfiles().map(profile => (
+                      <div key={profile.id} className="flex items-center justify-between p-2 border rounded-md">
+                        <div>
+                          <span className="font-medium">{profile.name}</span>
+                          <span className="text-xs text-muted-foreground ml-2">
+                            {profile.paperWidthMm}×{profile.paperHeightMm}mm
+                          </span>
+                        </div>
+                        <Button 
+                          size="sm" 
+                          variant="outline"
+                          onClick={() => assignProfileToAgentMutation.mutate({ profileId: profile.id, agentId: selectedAgentForProfiles.id })}
+                          disabled={assignProfileToAgentMutation.isPending}
+                          data-testid={`button-assign-profile-${profile.id}`}
+                        >
+                          <Plus className="h-4 w-4" />
+                        </Button>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-sm text-muted-foreground">Tutti i profili sono già assegnati</p>
+                )}
+              </div>
+
+              {profiles.length === 0 && (
+                <div className="text-center py-4 text-muted-foreground">
+                  <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                  <p className="text-sm">Non ci sono profili nel sistema</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setProfileAssignDialogOpen(false)} data-testid="button-close-profile-dialog">
+              Chiudi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
