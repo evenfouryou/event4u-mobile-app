@@ -498,6 +498,149 @@ export default function PrinterSettings() {
                   <Download className="h-4 w-4 mr-2" />
                   Scarica Print Agent
                 </Button>
+
+                {/* Nuovo Profilo Button */}
+                <Dialog open={profileDialogOpen} onOpenChange={(open) => {
+                  setProfileDialogOpen(open);
+                  if (!open) {
+                    setEditingProfile(null);
+                    profileForm.reset();
+                  }
+                }}>
+                  <DialogTrigger asChild>
+                    <Button variant="outline" data-testid="button-new-profile">
+                      <FileText className="h-4 w-4 mr-2" />
+                      Nuovo Profilo
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>{editingProfile ? "Modifica Profilo" : "Nuovo Profilo Carta"}</DialogTitle>
+                      <DialogDescription>
+                        Crea un profilo per definire le dimensioni della carta e i margini di stampa
+                      </DialogDescription>
+                    </DialogHeader>
+                    <Form {...profileForm}>
+                      <form onSubmit={profileForm.handleSubmit(onSubmitProfile)} className="space-y-4">
+                        <FormField
+                          control={profileForm.control}
+                          name="name"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Nome Profilo</FormLabel>
+                              <FormControl>
+                                <Input placeholder="es. Biglietto Standard" {...field} data-testid="input-profile-name" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={profileForm.control}
+                            name="paperWidthMm"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Larghezza (mm)</FormLabel>
+                                <FormControl>
+                                  <Input type="number" {...field} data-testid="input-paper-width" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={profileForm.control}
+                            name="paperHeightMm"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Altezza (mm)</FormLabel>
+                                <FormControl>
+                                  <Input type="number" {...field} data-testid="input-paper-height" />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-4 gap-2">
+                          <FormField
+                            control={profileForm.control}
+                            name="marginTopMm"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Margine Su</FormLabel>
+                                <FormControl>
+                                  <Input type="number" {...field} data-testid="input-margin-top" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={profileForm.control}
+                            name="marginBottomMm"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Margine Giù</FormLabel>
+                                <FormControl>
+                                  <Input type="number" {...field} data-testid="input-margin-bottom" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={profileForm.control}
+                            name="marginLeftMm"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Margine Sx</FormLabel>
+                                <FormControl>
+                                  <Input type="number" {...field} data-testid="input-margin-left" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={profileForm.control}
+                            name="marginRightMm"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Margine Dx</FormLabel>
+                                <FormControl>
+                                  <Input type="number" {...field} data-testid="input-margin-right" />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <FormField
+                          control={profileForm.control}
+                          name="isDefault"
+                          render={({ field }) => (
+                            <FormItem className="flex items-center gap-2">
+                              <FormControl>
+                                <Switch checked={field.value ?? false} onCheckedChange={field.onChange} />
+                              </FormControl>
+                              <FormLabel className="!mt-0">Profilo predefinito</FormLabel>
+                            </FormItem>
+                          )}
+                        />
+
+                        <DialogFooter>
+                          <Button type="submit" disabled={createProfileMutation.isPending || updateProfileMutation.isPending} data-testid="button-save-profile">
+                            {(createProfileMutation.isPending || updateProfileMutation.isPending) && (
+                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            )}
+                            {editingProfile ? "Salva Modifiche" : "Crea Profilo"}
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
                 
                 <Dialog open={registerDialogOpen} onOpenChange={(open) => {
                   if (!open) resetRegisterDialog();
