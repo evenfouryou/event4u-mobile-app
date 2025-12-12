@@ -1,9 +1,10 @@
 /**
- * Script per creare repository GitHub e fare push del progetto
+ * Script per fare push del Print Agent su GitHub
  * Usa l'integrazione GitHub di Replit
  */
 
 import { Octokit } from '@octokit/rest';
+import * as fs from 'fs';
 
 let connectionSettings: any;
 
@@ -42,7 +43,10 @@ async function getAccessToken() {
 }
 
 async function main() {
-  console.log('🚀 Push Event Four You SIAE Lettore su GitHub\n');
+  console.log('🚀 Push Event4U Print Agent su GitHub\n');
+  
+  const owner = 'evenfouryou';
+  const repo = 'event4u-print-agent';
   
   try {
     const accessToken = await getAccessToken();
@@ -52,41 +56,111 @@ async function main() {
     const { data: user } = await octokit.users.getAuthenticated();
     console.log(`✅ Connesso come: ${user.login}`);
     
-    const repoName = 'event-four-you-siae-lettore';
+    // Files da pushare
+    const files = [
+      { path: 'main.js', localPath: 'print-agent-desktop/main.js' },
+      { path: 'index.html', localPath: 'print-agent-desktop/index.html' },
+      { path: 'package.json', localPath: 'print-agent-desktop/package.json' },
+      { path: 'README.md', localPath: 'print-agent-desktop/README.md' }
+    ];
     
-    // Verifica se il repo esiste già
-    let repoExists = false;
+    console.log(`📂 Target: https://github.com/${owner}/${repo}`);
+    
+    // Get current commit SHA
+    let currentSha: string | undefined;
+    let treeSha: string | undefined;
+    
     try {
-      await octokit.repos.get({ owner: user.login, repo: repoName });
-      repoExists = true;
-      console.log(`📂 Repository esistente: https://github.com/${user.login}/${repoName}`);
-    } catch {
-      repoExists = false;
-    }
-    
-    // Crea repository se non esiste
-    if (!repoExists) {
-      console.log('📦 Creazione nuovo repository...');
-      await octokit.repos.createForAuthenticatedUser({
-        name: repoName,
-        description: 'Event Four You SIAE Lettore - Smart Card Reader per MiniLector EVO V3',
-        private: false,
-        auto_init: false
+      const { data: ref } = await octokit.git.getRef({
+        owner,
+        repo,
+        ref: 'heads/main'
       });
-      console.log(`✅ Repository creato: https://github.com/${user.login}/${repoName}`);
+      currentSha = ref.object.sha;
+      
+      const { data: commit } = await octokit.git.getCommit({
+        owner,
+        repo,
+        commit_sha: currentSha
+      });
+      treeSha = commit.tree.sha;
+      console.log(`📍 Current commit: ${currentSha.substring(0, 7)}`);
+    } catch (e) {
+      console.log('📝 No existing commits, creating initial commit...');
     }
     
-    console.log('\n📋 Istruzioni per completare il push:\n');
-    console.log('Esegui questi comandi nel terminale Replit Shell:\n');
-    console.log(`  git remote add github https://github.com/${user.login}/${repoName}.git`);
-    console.log('  git add .');
-    console.log('  git commit -m "Event Four You SIAE Lettore - Initial commit"');
-    console.log('  git push github main\n');
-    console.log('Poi vai su GitHub Actions per avviare la build!');
-    console.log(`  https://github.com/${user.login}/${repoName}/actions\n`);
+    // Create blobs for each file
+    console.log('📦 Creating file blobs...');
+    const treeItems: Array<{path: string, mode: '100644', type: 'blob', sha: string}> = [];
+    
+    for (const file of files) {
+      const content = fs.readFileSync(file.localPath, 'utf-8');
+      
+      const { data: blob } = await octokit.git.createBlob({
+        owner,
+        repo,
+        content: Buffer.from(content).toString('base64'),
+        encoding: 'base64'
+      });
+      
+      treeItems.push({
+        path: file.path,
+        mode: '100644',
+        type: 'blob',
+        sha: blob.sha
+      });
+      console.log(`   ✓ ${file.path}`);
+    }
+    
+    // Create tree
+    console.log('🌳 Creating tree...');
+    const { data: tree } = await octokit.git.createTree({
+      owner,
+      repo,
+      tree: treeItems,
+      base_tree: treeSha
+    });
+    
+    // Create commit
+    console.log('📝 Creating commit...');
+    const commitMessage = 'Security fix: token-only authentication\n\n- Server validates token and returns canonical companyId\n- Desktop app no longer sends companyId (prevents cross-company spoofing)\n- Updated README with simplified setup instructions';
+    
+    const { data: commit } = await octokit.git.createCommit({
+      owner,
+      repo,
+      message: commitMessage,
+      tree: tree.sha,
+      parents: currentSha ? [currentSha] : []
+    });
+    
+    // Update reference
+    console.log('🔄 Updating main branch...');
+    try {
+      await octokit.git.updateRef({
+        owner,
+        repo,
+        ref: 'heads/main',
+        sha: commit.sha
+      });
+    } catch (e) {
+      // Branch doesn't exist, create it
+      await octokit.git.createRef({
+        owner,
+        repo,
+        ref: 'refs/heads/main',
+        sha: commit.sha
+      });
+    }
+    
+    console.log('\n✅ Push completato!');
+    console.log(`   Commit: ${commit.sha.substring(0, 7)}`);
+    console.log(`   URL: https://github.com/${owner}/${repo}`);
     
   } catch (error: any) {
     console.error('❌ Errore:', error.message);
+    if (error.status === 404) {
+      console.error('   Il repository non esiste o non hai accesso.');
+    }
     process.exit(1);
   }
 }

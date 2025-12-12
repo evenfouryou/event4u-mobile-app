@@ -1,6 +1,6 @@
 # Event4U Print Agent
 
-App desktop per la stampa termica di biglietti.
+App desktop per la stampa termica di biglietti SIAE-compliant.
 
 ## URL Server Integrato
 `https://manage.eventfouryou.com`
@@ -29,18 +29,20 @@ Il file .dmg sarà in `dist/`
 
 ## Configurazione
 
-1. **Nel sito web Event4U** (come admin):
+1. **Nel sito web Event4U** (come admin/gestore):
    - Vai a "Impostazioni Stampanti"
    - Clicca "Registra Nuovo Agente"
    - Inserisci il nome del dispositivo
-   - Copia il **TOKEN** e il **Company ID**
+   - Copia il **TOKEN** generato
 
 2. **Nel Print Agent**:
    - Incolla il Token
-   - Incolla il Company ID
+   - Inserisci un nome dispositivo (es. "Cassa 1")
    - Seleziona la stampante termica
    - Clicca "Salva e Connetti"
 
+Il Company ID viene recuperato automaticamente dal server.
+
 ## Requisiti
 - Node.js 18+
-- Una stampante termica (es. XP-420B, XP-208P)
+- Una stampante termica (es. XP-420B, XP-208P, Epson TM-T88)
