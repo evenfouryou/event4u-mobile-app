@@ -14,29 +14,42 @@ import {
   ArrowLeft, Save, Eye, Trash2, Plus, Move, 
   Type, Calendar, Hash, QrCode, Image, 
   AlignLeft, AlignCenter, AlignRight, 
-  GripVertical, Settings2, Layers
+  GripVertical, Settings2, Layers,
+  ZoomIn, ZoomOut, RotateCw, RotateCcw, Shield
 } from 'lucide-react';
 import type { TicketTemplate, TicketTemplateElement } from '@shared/schema';
 
-// Element types available in the toolbox
+// Element types available in the toolbox - SIAE compliant fields
 const ELEMENT_TYPES = [
-  { type: 'text', label: 'Testo Statico', icon: Type, fieldKey: null },
-  { type: 'dynamic', label: 'Nome Evento', icon: Type, fieldKey: 'event_name' },
-  { type: 'dynamic', label: 'Data Evento', icon: Calendar, fieldKey: 'event_date' },
-  { type: 'dynamic', label: 'Ora Evento', icon: Calendar, fieldKey: 'event_time' },
-  { type: 'dynamic', label: 'Luogo', icon: Type, fieldKey: 'venue_name' },
-  { type: 'dynamic', label: 'Prezzo', icon: Hash, fieldKey: 'price' },
-  { type: 'dynamic', label: 'Numero Biglietto', icon: Hash, fieldKey: 'ticket_number' },
-  { type: 'dynamic', label: 'Settore', icon: Type, fieldKey: 'sector' },
-  { type: 'dynamic', label: 'Fila', icon: Type, fieldKey: 'row' },
-  { type: 'dynamic', label: 'Posto', icon: Type, fieldKey: 'seat' },
-  { type: 'dynamic', label: 'Acquirente', icon: Type, fieldKey: 'buyer_name' },
-  { type: 'qrcode', label: 'QR Code', icon: QrCode, fieldKey: 'qr_code' },
-  { type: 'barcode', label: 'Barcode', icon: Hash, fieldKey: 'barcode' },
+  // Testo generico
+  { type: 'text', label: 'Testo Statico', icon: Type, fieldKey: null, category: 'general' },
+  
+  // Campi evento
+  { type: 'dynamic', label: 'Nome Evento', icon: Type, fieldKey: 'event_name', category: 'event' },
+  { type: 'dynamic', label: 'Data Evento', icon: Calendar, fieldKey: 'event_date', category: 'event' },
+  { type: 'dynamic', label: 'Ora Evento', icon: Calendar, fieldKey: 'event_time', category: 'event' },
+  { type: 'dynamic', label: 'Luogo', icon: Type, fieldKey: 'venue_name', category: 'event' },
+  { type: 'dynamic', label: 'Prezzo', icon: Hash, fieldKey: 'price', category: 'event' },
+  
+  // Campi biglietto
+  { type: 'dynamic', label: 'Numero Biglietto', icon: Hash, fieldKey: 'ticket_number', category: 'ticket' },
+  { type: 'dynamic', label: 'Settore', icon: Type, fieldKey: 'sector', category: 'ticket' },
+  { type: 'dynamic', label: 'Fila', icon: Type, fieldKey: 'row', category: 'ticket' },
+  { type: 'dynamic', label: 'Posto', icon: Type, fieldKey: 'seat', category: 'ticket' },
+  { type: 'dynamic', label: 'Acquirente', icon: Type, fieldKey: 'buyer_name', category: 'ticket' },
+  
+  // CAMPI OBBLIGATORI SIAE
+  { type: 'dynamic', label: 'Ditta Organizzatrice', icon: Type, fieldKey: 'organizer_company', category: 'siae', required: true },
+  { type: 'dynamic', label: 'Gestore Biglietteria', icon: Type, fieldKey: 'ticketing_manager', category: 'siae', required: true },
+  { type: 'dynamic', label: 'Data/Ora Emissione', icon: Calendar, fieldKey: 'emission_datetime', category: 'siae', required: true },
+  { type: 'dynamic', label: 'Sigillo Fiscale', icon: Hash, fieldKey: 'fiscal_seal', category: 'siae', required: true },
+  
+  // QR Code (obbligatorio per validazione)
+  { type: 'qrcode', label: 'QR Code', icon: QrCode, fieldKey: 'qr_code', category: 'siae', required: true },
 ];
 
-// Sample data for preview
-const SAMPLE_DATA = {
+// Sample data for preview - includes all SIAE required fields
+const SAMPLE_DATA: Record<string, string> = {
   event_name: 'Concerto Rock Festival',
   event_date: '25/12/2024',
   event_time: '21:00',
@@ -47,6 +60,12 @@ const SAMPLE_DATA = {
   row: '12',
   seat: '45',
   buyer_name: 'Mario Rossi',
+  // SIAE required fields
+  organizer_company: 'Eventi SpA',
+  ticketing_manager: 'Biglietteria Centrale Srl',
+  emission_datetime: '20/12/2024 15:30',
+  fiscal_seal: 'SIAE-2024-A1B2C3D4',
+  qr_code: 'QR-VALIDATION-CODE',
 };
 
 // mm to px conversion (approximate, 96 DPI screen)
@@ -84,6 +103,7 @@ export default function TemplateBuilder() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [showPreview, setShowPreview] = useState(false);
+  const [zoom, setZoom] = useState(1); // Zoom level (0.5 to 2)
   
   // Template metadata
   const [templateName, setTemplateName] = useState('Nuovo Template');
@@ -257,18 +277,18 @@ export default function TemplateBuilder() {
     if (element && canvasRef.current) {
       const rect = canvasRef.current.getBoundingClientRect();
       setDragOffset({
-        x: e.clientX - rect.left - (element.x * MM_TO_PX),
-        y: e.clientY - rect.top - (element.y * MM_TO_PX),
+        x: e.clientX - rect.left - (element.x * MM_TO_PX * zoom),
+        y: e.clientY - rect.top - (element.y * MM_TO_PX * zoom),
       });
     }
   };
 
-  // Handle mouse move
+  // Handle mouse move (zoom-aware)
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isDragging && selectedElement && canvasRef.current) {
       const rect = canvasRef.current.getBoundingClientRect();
-      const newX = (e.clientX - rect.left - dragOffset.x) / MM_TO_PX;
-      const newY = (e.clientY - rect.top - dragOffset.y) / MM_TO_PX;
+      const newX = (e.clientX - rect.left - dragOffset.x) / (MM_TO_PX * zoom);
+      const newY = (e.clientY - rect.top - dragOffset.y) / (MM_TO_PX * zoom);
       
       updateElement(selectedElement, {
         x: Math.max(0, Math.min(newX, paperWidth)),
@@ -335,6 +355,31 @@ export default function TemplateBuilder() {
         </div>
         
         <div className="flex items-center gap-2">
+          {/* Zoom controls */}
+          <div className="flex items-center gap-1 border rounded-md px-2 py-1">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-7 w-7"
+              onClick={() => setZoom(z => Math.max(0.5, z - 0.25))}
+              disabled={zoom <= 0.5}
+              data-testid="button-zoom-out"
+            >
+              <ZoomOut className="h-4 w-4" />
+            </Button>
+            <span className="text-sm min-w-[3rem] text-center">{Math.round(zoom * 100)}%</span>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-7 w-7"
+              onClick={() => setZoom(z => Math.min(2, z + 0.25))}
+              disabled={zoom >= 2}
+              data-testid="button-zoom-in"
+            >
+              <ZoomIn className="h-4 w-4" />
+            </Button>
+          </div>
+          
           <Button variant="outline" onClick={() => setShowPreview(!showPreview)} data-testid="button-preview">
             <Eye className="h-4 w-4 mr-2" />
             {showPreview ? 'Editor' : 'Anteprima'}
@@ -362,9 +407,64 @@ export default function TemplateBuilder() {
             </TabsList>
             
             <TabsContent value="elements" className="p-4 space-y-4 m-0">
+              {/* SIAE Required Fields */}
               <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground uppercase">Campi Disponibili</Label>
-                {ELEMENT_TYPES.map((elType, idx) => (
+                <Label className="text-xs text-muted-foreground uppercase flex items-center gap-1">
+                  <Shield className="h-3 w-3" />
+                  Campi SIAE Obbligatori
+                </Label>
+                {ELEMENT_TYPES.filter(el => (el as any).category === 'siae').map((elType, idx) => (
+                  <Button
+                    key={idx}
+                    variant="outline"
+                    className="w-full justify-start gap-2 border-amber-500/50 bg-amber-500/10"
+                    onClick={() => addElement(elType)}
+                    data-testid={`button-add-${elType.fieldKey || elType.type}`}
+                  >
+                    <elType.icon className="h-4 w-4 text-amber-600" />
+                    {elType.label}
+                  </Button>
+                ))}
+              </div>
+              
+              {/* Event Fields */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground uppercase">Campi Evento</Label>
+                {ELEMENT_TYPES.filter(el => (el as any).category === 'event').map((elType, idx) => (
+                  <Button
+                    key={idx}
+                    variant="outline"
+                    className="w-full justify-start gap-2"
+                    onClick={() => addElement(elType)}
+                    data-testid={`button-add-${elType.fieldKey || elType.type}`}
+                  >
+                    <elType.icon className="h-4 w-4" />
+                    {elType.label}
+                  </Button>
+                ))}
+              </div>
+              
+              {/* Ticket Fields */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground uppercase">Campi Biglietto</Label>
+                {ELEMENT_TYPES.filter(el => (el as any).category === 'ticket').map((elType, idx) => (
+                  <Button
+                    key={idx}
+                    variant="outline"
+                    className="w-full justify-start gap-2"
+                    onClick={() => addElement(elType)}
+                    data-testid={`button-add-${elType.fieldKey || elType.type}`}
+                  >
+                    <elType.icon className="h-4 w-4" />
+                    {elType.label}
+                  </Button>
+                ))}
+              </div>
+              
+              {/* General Fields */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground uppercase">Altri Elementi</Label>
+                {ELEMENT_TYPES.filter(el => (el as any).category === 'general' || !(el as any).category).map((elType, idx) => (
                   <Button
                     key={idx}
                     variant="outline"
@@ -431,11 +531,13 @@ export default function TemplateBuilder() {
             ref={canvasRef}
             className="bg-white shadow-lg relative overflow-hidden"
             style={{
-              width: paperWidth * MM_TO_PX,
-              height: paperHeight * MM_TO_PX,
+              width: paperWidth * MM_TO_PX * zoom,
+              height: paperHeight * MM_TO_PX * zoom,
               backgroundImage: backgroundImage ? `url(${backgroundImage})` : undefined,
               backgroundSize: 'cover',
               backgroundPosition: 'center',
+              transform: `scale(1)`,
+              transformOrigin: 'center center',
             }}
             onMouseMove={handleMouseMove}
             onMouseUp={handleMouseUp}
@@ -443,12 +545,12 @@ export default function TemplateBuilder() {
             onClick={() => setSelectedElement(null)}
             data-testid="canvas-area"
           >
-            {/* Grid overlay for positioning */}
+            {/* Grid overlay for positioning (zoom-aware) */}
             <div 
               className="absolute inset-0 pointer-events-none"
               style={{
                 backgroundImage: 'linear-gradient(to right, rgba(0,0,0,0.05) 1px, transparent 1px), linear-gradient(to bottom, rgba(0,0,0,0.05) 1px, transparent 1px)',
-                backgroundSize: `${5 * MM_TO_PX}px ${5 * MM_TO_PX}px`,
+                backgroundSize: `${5 * MM_TO_PX * zoom}px ${5 * MM_TO_PX * zoom}px`,
               }}
             />
             
@@ -462,10 +564,10 @@ export default function TemplateBuilder() {
                     : 'hover:ring-1 hover:ring-muted-foreground'
                 }`}
                 style={{
-                  left: element.x * MM_TO_PX,
-                  top: element.y * MM_TO_PX,
-                  width: element.width * MM_TO_PX,
-                  height: element.height * MM_TO_PX,
+                  left: element.x * MM_TO_PX * zoom,
+                  top: element.y * MM_TO_PX * zoom,
+                  width: element.width * MM_TO_PX * zoom,
+                  height: element.height * MM_TO_PX * zoom,
                   transform: `rotate(${element.rotation}deg)`,
                   zIndex: element.zIndex,
                 }}
@@ -485,7 +587,7 @@ export default function TemplateBuilder() {
                     className="w-full h-full flex items-center overflow-hidden whitespace-nowrap"
                     style={{
                       fontFamily: element.fontFamily,
-                      fontSize: element.fontSize,
+                      fontSize: element.fontSize * zoom,
                       fontWeight: element.fontWeight as any,
                       textAlign: element.textAlign as any,
                       color: element.color,
@@ -576,6 +678,37 @@ export default function TemplateBuilder() {
                       onChange={(e) => updateElement(selected.id, { height: parseFloat(e.target.value) || 5 })}
                       data-testid="input-height"
                     />
+                  </div>
+                </div>
+                
+                {/* Rotation Controls */}
+                <div>
+                  <Label>Rotazione</Label>
+                  <div className="flex items-center gap-2 mt-1">
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => updateElement(selected.id, { rotation: (selected.rotation - 90 + 360) % 360 })}
+                      data-testid="button-rotate-ccw"
+                    >
+                      <RotateCcw className="h-4 w-4" />
+                    </Button>
+                    <Input
+                      type="number"
+                      value={selected.rotation}
+                      onChange={(e) => updateElement(selected.id, { rotation: parseInt(e.target.value) || 0 })}
+                      className="w-20 text-center"
+                      data-testid="input-rotation"
+                    />
+                    <span className="text-sm text-muted-foreground">°</span>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      onClick={() => updateElement(selected.id, { rotation: (selected.rotation + 90) % 360 })}
+                      data-testid="button-rotate-cw"
+                    >
+                      <RotateCw className="h-4 w-4" />
+                    </Button>
                   </div>
                 </div>
                 
