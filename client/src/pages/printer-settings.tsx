@@ -440,10 +440,6 @@ export default function PrinterSettings() {
             <Monitor className="h-4 w-4 mr-2" />
             Agenti Collegati
           </TabsTrigger>
-          <TabsTrigger value="profiles" data-testid="tab-profiles">
-            <FileText className="h-4 w-4 mr-2" />
-            Profili Carta
-          </TabsTrigger>
           <TabsTrigger value="templates" data-testid="tab-templates">
             <Layout className="h-4 w-4 mr-2" />
             Template Biglietti
@@ -631,275 +627,6 @@ export default function PrinterSettings() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="profiles">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-2">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <FileText className="h-5 w-5" />
-                  Profili Carta / Biglietto
-                </CardTitle>
-                <CardDescription>
-                  Configura le dimensioni della carta e i margini per diversi tipi di biglietti
-                </CardDescription>
-              </div>
-              {isSuperAdmin && (
-                <Dialog open={profileDialogOpen} onOpenChange={(open) => {
-                  setProfileDialogOpen(open);
-                  if (!open) {
-                    setEditingProfile(null);
-                    profileForm.reset();
-                  }
-                }}>
-                  <DialogTrigger asChild>
-                    <Button data-testid="button-add-profile">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Nuovo Profilo
-                    </Button>
-                  </DialogTrigger>
-                <DialogContent className="max-w-md">
-                  <DialogHeader>
-                    <DialogTitle>
-                      {editingProfile ? "Modifica Profilo" : "Nuovo Profilo Carta"}
-                    </DialogTitle>
-                    <DialogDescription>
-                      Configura le dimensioni del biglietto in millimetri
-                    </DialogDescription>
-                  </DialogHeader>
-                  <Form {...profileForm}>
-                    <form onSubmit={profileForm.handleSubmit(onSubmitProfile)} className="space-y-4">
-                      <FormField
-                        control={profileForm.control}
-                        name="name"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Nome Profilo</FormLabel>
-                            <FormControl>
-                              <Input placeholder="es. Biglietto Standard" {...field} data-testid="input-profile-name" />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-
-                      {isSuperAdmin && models.length > 0 && (
-                        <FormField
-                          control={profileForm.control}
-                          name="printerModelId"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Modello Stampante</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value ?? ""}>
-                                <FormControl>
-                                  <SelectTrigger data-testid="select-profile-model">
-                                    <SelectValue placeholder="Qualsiasi modello" />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  {models.filter(m => m.isActive).map((m) => (
-                                    <SelectItem key={m.id} value={m.id}>
-                                      {m.vendor} {m.model}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      )}
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={profileForm.control}
-                          name="paperWidthMm"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Larghezza (mm)</FormLabel>
-                              <FormControl>
-                                <Input type="number" {...field} data-testid="input-profile-width" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={profileForm.control}
-                          name="paperHeightMm"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Altezza (mm)</FormLabel>
-                              <FormControl>
-                                <Input type="number" {...field} data-testid="input-profile-height" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={profileForm.control}
-                          name="marginTopMm"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Margine Sup. (mm)</FormLabel>
-                              <FormControl>
-                                <Input type="number" {...field} data-testid="input-margin-top" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={profileForm.control}
-                          name="marginBottomMm"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Margine Inf. (mm)</FormLabel>
-                              <FormControl>
-                                <Input type="number" {...field} data-testid="input-margin-bottom" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-4">
-                        <FormField
-                          control={profileForm.control}
-                          name="marginLeftMm"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Margine Sx. (mm)</FormLabel>
-                              <FormControl>
-                                <Input type="number" {...field} data-testid="input-margin-left" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={profileForm.control}
-                          name="marginRightMm"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Margine Dx. (mm)</FormLabel>
-                              <FormControl>
-                                <Input type="number" {...field} data-testid="input-margin-right" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <div className="flex items-center gap-4">
-                        <FormField
-                          control={profileForm.control}
-                          name="isDefault"
-                          render={({ field }) => (
-                            <FormItem className="flex items-center gap-2">
-                              <FormControl>
-                                <Switch checked={field.value ?? false} onCheckedChange={field.onChange} />
-                              </FormControl>
-                              <FormLabel className="!mt-0">Predefinito</FormLabel>
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={profileForm.control}
-                          name="isActive"
-                          render={({ field }) => (
-                            <FormItem className="flex items-center gap-2">
-                              <FormControl>
-                                <Switch checked={field.value} onCheckedChange={field.onChange} />
-                              </FormControl>
-                              <FormLabel className="!mt-0">Attivo</FormLabel>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-
-                      <DialogFooter>
-                        <Button type="submit" disabled={createProfileMutation.isPending || updateProfileMutation.isPending} data-testid="button-save-profile">
-                          {(createProfileMutation.isPending || updateProfileMutation.isPending) && (
-                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                          )}
-                          {editingProfile ? "Salva Modifiche" : "Crea Profilo"}
-                        </Button>
-                      </DialogFooter>
-                    </form>
-                  </Form>
-                </DialogContent>
-                </Dialog>
-              )}
-            </CardHeader>
-            <CardContent>
-              {profilesLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                </div>
-              ) : profiles.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nessun profilo carta configurato</p>
-                  <p className="text-sm">Crea un profilo per definire le dimensioni dei biglietti</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Dimensioni</TableHead>
-                      <TableHead>Margini</TableHead>
-                      <TableHead>Stato</TableHead>
-                      {isSuperAdmin && <TableHead className="text-right">Azioni</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {profiles.map((profile) => (
-                      <TableRow key={profile.id} data-testid={`row-profile-${profile.id}`}>
-                        <TableCell className="font-medium">
-                          {profile.name}
-                          {profile.isDefault && (
-                            <Badge variant="secondary" className="ml-2">Predefinito</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>{profile.paperWidthMm} x {profile.paperHeightMm} mm</TableCell>
-                        <TableCell className="text-muted-foreground text-sm">
-                          {profile.marginTopMm}/{profile.marginBottomMm}/{profile.marginLeftMm}/{profile.marginRightMm}
-                        </TableCell>
-                        <TableCell>
-                          {profile.isActive ? (
-                            <Badge className="bg-green-600"><CheckCircle2 className="h-3 w-3 mr-1" />Attivo</Badge>
-                          ) : (
-                            <Badge variant="secondary"><XCircle className="h-3 w-3 mr-1" />Inattivo</Badge>
-                          )}
-                        </TableCell>
-                        {isSuperAdmin && (
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button size="icon" variant="ghost" onClick={() => handleEditProfile(profile)} data-testid={`button-edit-profile-${profile.id}`}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" onClick={() => deleteProfileMutation.mutate(profile.id)} data-testid={`button-delete-profile-${profile.id}`}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
         <TabsContent value="templates">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between gap-2">
@@ -909,15 +636,20 @@ export default function PrinterSettings() {
                   Template Biglietti
                 </CardTitle>
                 <CardDescription>
-                  Crea e gestisci template grafici per la stampa dei biglietti
+                  {isSuperAdmin 
+                    ? "Crea e gestisci template grafici per la stampa dei biglietti"
+                    : "Visualizza i template disponibili per la stampa dei biglietti"
+                  }
                 </CardDescription>
               </div>
-              <Link href="/template-builder">
-                <Button data-testid="button-new-template">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nuovo Template
-                </Button>
-              </Link>
+              {isSuperAdmin && (
+                <Link href="/template-builder">
+                  <Button data-testid="button-new-template">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Nuovo Template
+                  </Button>
+                </Link>
+              )}
             </CardHeader>
             <CardContent>
               {templatesLoading ? (
@@ -927,8 +659,10 @@ export default function PrinterSettings() {
               ) : templates.length === 0 ? (
                 <div className="text-center py-8 text-muted-foreground">
                   <Layout className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nessun template creato</p>
-                  <p className="text-sm mt-2">Crea il tuo primo template per personalizzare la stampa dei biglietti</p>
+                  <p>Nessun template disponibile</p>
+                  {isSuperAdmin && (
+                    <p className="text-sm mt-2">Crea il tuo primo template per personalizzare la stampa dei biglietti</p>
+                  )}
                 </div>
               ) : (
                 <Table>
@@ -938,7 +672,7 @@ export default function PrinterSettings() {
                       <TableHead>Dimensioni</TableHead>
                       <TableHead>Stato</TableHead>
                       <TableHead>Versione</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
+                      {isSuperAdmin && <TableHead className="text-right">Azioni</TableHead>}
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -959,24 +693,26 @@ export default function PrinterSettings() {
                           )}
                         </TableCell>
                         <TableCell>v{template.version || 1}</TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Link href={`/template-builder/${template.id}`}>
-                              <Button size="icon" variant="ghost" data-testid={`button-edit-template-${template.id}`}>
-                                <Edit className="h-4 w-4" />
+                        {isSuperAdmin && (
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Link href={`/template-builder/${template.id}`}>
+                                <Button size="icon" variant="ghost" data-testid={`button-edit-template-${template.id}`}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </Link>
+                              <Button 
+                                size="icon" 
+                                variant="ghost" 
+                                onClick={() => deleteTemplateMutation.mutate(template.id)}
+                                disabled={deleteTemplateMutation.isPending}
+                                data-testid={`button-delete-template-${template.id}`}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
                               </Button>
-                            </Link>
-                            <Button 
-                              size="icon" 
-                              variant="ghost" 
-                              onClick={() => deleteTemplateMutation.mutate(template.id)}
-                              disabled={deleteTemplateMutation.isPending}
-                              data-testid={`button-delete-template-${template.id}`}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
+                            </div>
+                          </TableCell>
+                        )}
                       </TableRow>
                     ))}
                   </TableBody>

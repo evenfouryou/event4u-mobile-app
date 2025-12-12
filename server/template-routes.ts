@@ -17,21 +17,32 @@ function getUser(req: Request) {
   return (req as any).user;
 }
 
-function requireAdmin(req: Request, res: Response, next: Function) {
+function requireAuth(req: Request, res: Response, next: Function) {
   const user = getUser(req);
   if (!user) {
     return res.status(401).json({ error: 'Non autenticato' });
   }
   if (!['super_admin', 'gestore'].includes(user.role)) {
-    return res.status(403).json({ error: 'Accesso negato - solo admin' });
+    return res.status(403).json({ error: 'Accesso negato' });
+  }
+  next();
+}
+
+function requireSuperAdmin(req: Request, res: Response, next: Function) {
+  const user = getUser(req);
+  if (!user) {
+    return res.status(401).json({ error: 'Non autenticato' });
+  }
+  if (user.role !== 'super_admin') {
+    return res.status(403).json({ error: 'Accesso negato - solo super admin' });
   }
   next();
 }
 
 // ==================== TICKET TEMPLATES ====================
 
-// GET all templates for company
-router.get('/templates', requireAdmin, async (req: Request, res: Response) => {
+// GET all templates for company (gestore and super_admin can view)
+router.get('/templates', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = getUser(req);
     const companyId = user?.companyId;
@@ -49,8 +60,8 @@ router.get('/templates', requireAdmin, async (req: Request, res: Response) => {
   }
 });
 
-// GET single template with elements
-router.get('/templates/:id', requireAdmin, async (req: Request, res: Response) => {
+// GET single template with elements (gestore and super_admin can view)
+router.get('/templates/:id', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const user = getUser(req);
@@ -79,8 +90,8 @@ router.get('/templates/:id', requireAdmin, async (req: Request, res: Response) =
   }
 });
 
-// POST create template
-router.post('/templates', requireAdmin, async (req: Request, res: Response) => {
+// POST create template (super_admin only)
+router.post('/templates', requireSuperAdmin, async (req: Request, res: Response) => {
   try {
     const user = getUser(req);
     const validated = insertTicketTemplateSchema.parse(req.body);
@@ -106,8 +117,8 @@ router.post('/templates', requireAdmin, async (req: Request, res: Response) => {
   }
 });
 
-// PATCH update template
-router.patch('/templates/:id', requireAdmin, async (req: Request, res: Response) => {
+// PATCH update template (super_admin only)
+router.patch('/templates/:id', requireSuperAdmin, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const user = getUser(req);
@@ -165,8 +176,8 @@ router.patch('/templates/:id', requireAdmin, async (req: Request, res: Response)
   }
 });
 
-// DELETE template
-router.delete('/templates/:id', requireAdmin, async (req: Request, res: Response) => {
+// DELETE template (super_admin only)
+router.delete('/templates/:id', requireSuperAdmin, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const user = getUser(req);
@@ -195,8 +206,8 @@ router.delete('/templates/:id', requireAdmin, async (req: Request, res: Response
 
 // ==================== TEMPLATE ELEMENTS ====================
 
-// POST add element to template
-router.post('/templates/:templateId/elements', requireAdmin, async (req: Request, res: Response) => {
+// POST add element to template (super_admin only)
+router.post('/templates/:templateId/elements', requireSuperAdmin, async (req: Request, res: Response) => {
   try {
     const { templateId } = req.params;
     const user = getUser(req);
@@ -233,8 +244,8 @@ router.post('/templates/:templateId/elements', requireAdmin, async (req: Request
   }
 });
 
-// PATCH update element - with Zod validation and explicit element ownership check
-router.patch('/templates/:templateId/elements/:elementId', requireAdmin, async (req: Request, res: Response) => {
+// PATCH update element - with Zod validation and explicit element ownership check (super_admin only)
+router.patch('/templates/:templateId/elements/:elementId', requireSuperAdmin, async (req: Request, res: Response) => {
   try {
     const { templateId, elementId } = req.params;
     const user = getUser(req);
@@ -317,8 +328,8 @@ router.patch('/templates/:templateId/elements/:elementId', requireAdmin, async (
   }
 });
 
-// DELETE element - with explicit element ownership check
-router.delete('/templates/:templateId/elements/:elementId', requireAdmin, async (req: Request, res: Response) => {
+// DELETE element - with explicit element ownership check (super_admin only)
+router.delete('/templates/:templateId/elements/:elementId', requireSuperAdmin, async (req: Request, res: Response) => {
   try {
     const { templateId, elementId } = req.params;
     const user = getUser(req);
@@ -385,8 +396,8 @@ const bulkElementSchema = z.object({
   zIndex: z.number().optional().default(0),
 });
 
-// POST bulk update elements (for save all at once from editor)
-router.post('/templates/:templateId/elements/bulk', requireAdmin, async (req: Request, res: Response) => {
+// POST bulk update elements (for save all at once from editor) (super_admin only)
+router.post('/templates/:templateId/elements/bulk', requireSuperAdmin, async (req: Request, res: Response) => {
   try {
     const { templateId } = req.params;
     const { elements } = req.body;

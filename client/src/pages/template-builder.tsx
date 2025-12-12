@@ -343,6 +343,24 @@ export default function TemplateBuilder() {
     }
   };
 
+  // Block access for non-super_admin users
+  if (!isSuperAdmin) {
+    return (
+      <div className="flex flex-col items-center justify-center h-full gap-4">
+        <Shield className="h-16 w-16 text-muted-foreground" />
+        <h2 className="text-xl font-semibold">Accesso non autorizzato</h2>
+        <p className="text-muted-foreground text-center max-w-md">
+          Solo i Super Admin possono creare e modificare i template di stampa.
+          Contatta un amministratore per richiedere modifiche.
+        </p>
+        <Button variant="outline" onClick={() => navigate('/printer-settings')} data-testid="button-back-unauthorized">
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Torna alle Impostazioni
+        </Button>
+      </div>
+    );
+  }
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-full">
