@@ -294,6 +294,54 @@ router.post('/agents/register', requireAdmin, async (req: Request, res: Response
   }
 });
 
+// POST verify/connect agent (for desktop app - no session required)
+router.post('/agents/connect', async (req: Request, res: Response) => {
+  try {
+    const { token, companyId, deviceName } = req.body;
+    
+    if (!token || !companyId) {
+      return res.status(400).json({ error: 'Token e companyId richiesti' });
+    }
+    
+    const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    
+    const agents = await db.select().from(printerAgents)
+      .where(and(
+        eq(printerAgents.companyId, companyId),
+        eq(printerAgents.authToken, hashedToken)
+      ))
+      .limit(1);
+    
+    if (agents.length === 0) {
+      return res.status(401).json({ error: 'Token o companyId non valido' });
+    }
+    
+    const agent = agents[0];
+    
+    // Update status and heartbeat
+    await db.update(printerAgents)
+      .set({
+        status: 'online',
+        lastHeartbeat: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(printerAgents.id, agent.id));
+    
+    // Return agent info (without auth token)
+    res.json({
+      success: true,
+      agentId: agent.id,
+      companyId: agent.companyId,
+      deviceName: agent.deviceName,
+      printerName: agent.printerName,
+      wsUrl: '/ws/print-agent'
+    });
+  } catch (error) {
+    console.error('Error connecting printer agent:', error);
+    res.status(500).json({ error: 'Errore nella connessione agente stampante' });
+  }
+});
+
 // Middleware per verificare token agente stampante (per endpoint desktop app)
 async function verifyAgentToken(req: Request, res: Response, next: Function) {
   const authHeader = req.headers.authorization;
