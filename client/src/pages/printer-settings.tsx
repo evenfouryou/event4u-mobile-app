@@ -119,6 +119,13 @@ export default function PrinterSettings() {
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [deviceName, setDeviceName] = useState("");
   const [tokenCopied, setTokenCopied] = useState(false);
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
+
+  // Load companies for super_admin to select
+  const { data: companies = [] } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ["/api/companies"],
+    enabled: isSuperAdmin,
+  });
 
   const { data: models = [], isLoading: modelsLoading, refetch: refetchModels } = useQuery<PrinterModel[]>({
     queryKey: ["/api/printers/models"],
@@ -273,7 +280,7 @@ export default function PrinterSettings() {
   });
 
   const registerAgentMutation = useMutation({
-    mutationFn: async (data: { deviceName: string }) => {
+    mutationFn: async (data: { deviceName: string; companyId?: string }) => {
       const response = await apiRequest("POST", "/api/printers/agents/register", data);
       return response.json();
     },
@@ -301,7 +308,16 @@ export default function PrinterSettings() {
       toast({ title: "Errore", description: "Inserisci un nome per il dispositivo", variant: "destructive" });
       return;
     }
-    registerAgentMutation.mutate({ deviceName: deviceName.trim() });
+    // Super admin must select a company
+    if (isSuperAdmin && !selectedCompanyId) {
+      toast({ title: "Errore", description: "Seleziona un'azienda", variant: "destructive" });
+      return;
+    }
+    const data: { deviceName: string; companyId?: string } = { deviceName: deviceName.trim() };
+    if (isSuperAdmin && selectedCompanyId) {
+      data.companyId = selectedCompanyId;
+    }
+    registerAgentMutation.mutate(data);
   };
 
   const resetRegisterDialog = () => {
@@ -309,6 +325,7 @@ export default function PrinterSettings() {
     setGeneratedToken(null);
     setDeviceName("");
     setTokenCopied(false);
+    setSelectedCompanyId("");
   };
 
   const handleEditModel = (model: PrinterModel) => {
@@ -464,6 +481,27 @@ export default function PrinterSettings() {
                     
                     {!generatedToken ? (
                       <div className="space-y-4">
+                        {/* Company selector for super_admin */}
+                        {isSuperAdmin && (
+                          <div className="space-y-2">
+                            <label className="text-sm font-medium">Azienda</label>
+                            <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+                              <SelectTrigger data-testid="select-company-agent">
+                                <SelectValue placeholder="Seleziona azienda..." />
+                              </SelectTrigger>
+                              <SelectContent>
+                                {companies.map((company) => (
+                                  <SelectItem key={company.id} value={company.id}>
+                                    {company.name}
+                                  </SelectItem>
+                                ))}
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground">
+                              L'azienda a cui associare questo Print Agent
+                            </p>
+                          </div>
+                        )}
                         <div className="space-y-2">
                           <label className="text-sm font-medium">Nome Dispositivo</label>
                           <Input
@@ -479,7 +517,7 @@ export default function PrinterSettings() {
                         <DialogFooter>
                           <Button
                             onClick={handleRegisterAgent}
-                            disabled={registerAgentMutation.isPending || !deviceName.trim()}
+                            disabled={registerAgentMutation.isPending || !deviceName.trim() || (isSuperAdmin && !selectedCompanyId)}
                             data-testid="button-confirm-register"
                           >
                             {registerAgentMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}

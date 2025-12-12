@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from 'react';
 import { useParams, useLocation } from 'wouter';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { apiRequest } from '@/lib/queryClient';
+import { useAuth } from '@/hooks/useAuth';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -94,8 +95,10 @@ export default function TemplateBuilder() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const queryClient = useQueryClient();
   const canvasRef = useRef<HTMLDivElement>(null);
+  const isSuperAdmin = user?.role === 'super_admin';
   
   // Canvas state
   const [elements, setElements] = useState<CanvasElement[]>([]);
@@ -104,12 +107,19 @@ export default function TemplateBuilder() {
   const [dragOffset, setDragOffset] = useState({ x: 0, y: 0 });
   const [showPreview, setShowPreview] = useState(false);
   const [zoom, setZoom] = useState(1); // Zoom level (0.5 to 2)
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>('');
   
   // Template metadata
   const [templateName, setTemplateName] = useState('Nuovo Template');
   const [paperWidth, setPaperWidth] = useState(80);
   const [paperHeight, setPaperHeight] = useState(50);
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+  
+  // Load companies for super_admin
+  const { data: companies = [] } = useQuery<{ id: string; name: string }[]>({
+    queryKey: ['/api/companies'],
+    enabled: isSuperAdmin && !id, // Only for new templates
+  });
 
   // Fetch template if editing
   const { data: template, isLoading } = useQuery<TicketTemplate & { elements: TicketTemplateElement[] }>({
@@ -151,13 +161,18 @@ export default function TemplateBuilder() {
   // Save template mutation
   const saveMutation = useMutation({
     mutationFn: async () => {
-      const templateData = {
+      const templateData: any = {
         name: templateName,
         paperWidthMm: paperWidth,
         paperHeightMm: paperHeight,
         backgroundImageUrl: backgroundImage,
         isActive: true,
       };
+      
+      // Super admin must provide companyId for new templates
+      if (isSuperAdmin && !id && selectedCompanyId) {
+        templateData.companyId = selectedCompanyId;
+      }
 
       let templateId = id;
       
@@ -165,7 +180,10 @@ export default function TemplateBuilder() {
         // Update existing template
         await apiRequest('PATCH', `/api/ticket/templates/${id}`, templateData);
       } else {
-        // Create new template
+        // Create new template - check companyId for super_admin
+        if (isSuperAdmin && !selectedCompanyId) {
+          throw new Error('Seleziona un\'azienda');
+        }
         const res = await apiRequest('POST', '/api/ticket/templates', templateData);
         const newTemplate = await res.json();
         templateId = newTemplate.id;
@@ -352,6 +370,21 @@ export default function TemplateBuilder() {
               {paperWidth}mm × {paperHeight}mm
             </p>
           </div>
+          {/* Company selector for super_admin creating new template */}
+          {isSuperAdmin && !id && (
+            <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+              <SelectTrigger className="w-48" data-testid="select-company-template">
+                <SelectValue placeholder="Seleziona azienda..." />
+              </SelectTrigger>
+              <SelectContent>
+                {companies.map((company) => (
+                  <SelectItem key={company.id} value={company.id}>
+                    {company.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
         </div>
         
         <div className="flex items-center gap-2">
