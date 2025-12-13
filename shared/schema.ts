@@ -395,7 +395,7 @@ export const stockMovements = pgTable("stock_movements", {
   toEventId: varchar("to_event_id").references(() => events.id),
   toStationId: varchar("to_station_id").references(() => stations.id),
   quantity: decimal("quantity", { precision: 10, scale: 2 }).notNull(),
-  type: varchar("type", { length: 50 }).notNull(), // LOAD, UNLOAD, TRANSFER, CONSUME
+  type: varchar("type", { length: 50 }).notNull(), // LOAD, UNLOAD, TRANSFER, CONSUME, RETURN, ADJUSTMENT, DIRECT_LOAD, DIRECT_CONSUME
   reason: text("reason"),
   supplier: varchar("supplier", { length: 255 }), // for LOAD operations
   performedBy: varchar("performed_by").notNull().references(() => users.id),
