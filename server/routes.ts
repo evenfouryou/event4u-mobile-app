@@ -57,7 +57,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import nodemailer from "nodemailer";
 import { db } from "./db";
-import { eq, and, or, inArray, desc } from "drizzle-orm";
+import { eq, and, or, inArray, desc, isNull } from "drizzle-orm";
 import crypto from "crypto";
 import QRCode from "qrcode";
 import { 
@@ -2067,9 +2067,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         inArray(stockMovements.type, ['DIRECT_LOAD', 'DIRECT_CONSUME'])
       ];
       
-      // Add station filter if provided
+      // Add station filter if provided - include products loaded at event level (no stationId)
       if (stationId) {
-        whereConditions.push(eq(stockMovements.toStationId, stationId));
+        whereConditions.push(
+          or(
+            eq(stockMovements.toStationId, stationId),
+            isNull(stockMovements.toStationId)
+          )
+        );
       }
       
       // Get all DIRECT_LOAD and DIRECT_CONSUME movements for this event
@@ -2283,9 +2288,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
         inArray(stockMovements.type, ['DIRECT_LOAD', 'DIRECT_CONSUME'])
       ];
       
-      // Add station filter if provided
+      // Add station filter if provided - include products loaded at event level (no stationId)
       if (stationId) {
-        summaryConditions.push(eq(stockMovements.toStationId, stationId));
+        summaryConditions.push(
+          or(
+            eq(stockMovements.toStationId, stationId),
+            isNull(stockMovements.toStationId)
+          )
+        );
       }
       
       // Get all movements with limit
