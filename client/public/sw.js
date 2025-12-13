@@ -1,4 +1,4 @@
-const CACHE_NAME = 'event4u-v1';
+const CACHE_NAME = 'event4u-v2';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
@@ -26,9 +26,16 @@ self.addEventListener('activate', (event) => {
           .filter((name) => name !== CACHE_NAME)
           .map((name) => caches.delete(name))
       );
+    }).then(() => {
+      return self.clients.claim();
     })
   );
-  self.clients.claim();
+});
+
+self.addEventListener('message', (event) => {
+  if (event.data && event.data.type === 'SKIP_WAITING') {
+    self.skipWaiting();
+  }
 });
 
 self.addEventListener('fetch', (event) => {
@@ -63,7 +70,24 @@ self.addEventListener('fetch', (event) => {
     return;
   }
   
-  if (url.pathname.match(/\.(js|css|woff2?|ttf|eot|svg|png|jpg|jpeg|gif|ico)$/)) {
+  if (url.pathname.match(/\.(js|css)$/) && url.pathname.includes('assets')) {
+    event.respondWith(
+      fetch(event.request)
+        .then((response) => {
+          if (response.ok) {
+            const responseClone = response.clone();
+            caches.open(CACHE_NAME).then((cache) => {
+              cache.put(event.request, responseClone);
+            });
+          }
+          return response;
+        })
+        .catch(() => caches.match(event.request))
+    );
+    return;
+  }
+  
+  if (url.pathname.match(/\.(woff2?|ttf|eot|svg|png|jpg|jpeg|gif|ico)$/)) {
     event.respondWith(
       caches.match(event.request).then((cached) => {
         if (cached) return cached;
@@ -83,8 +107,8 @@ self.addEventListener('fetch', (event) => {
   }
   
   event.respondWith(
-    caches.match(event.request).then((cached) => {
-      const fetchPromise = fetch(event.request).then((response) => {
+    fetch(event.request)
+      .then((response) => {
         if (response.ok) {
           const responseClone = response.clone();
           caches.open(CACHE_NAME).then((cache) => {
@@ -92,9 +116,7 @@ self.addEventListener('fetch', (event) => {
           });
         }
         return response;
-      }).catch(() => cached);
-      
-      return cached || fetchPromise;
-    })
+      })
+      .catch(() => caches.match(event.request))
   );
 });
