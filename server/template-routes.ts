@@ -460,6 +460,19 @@ router.post('/templates/:templateId/elements/bulk', requireSuperAdmin, async (re
 
 // Generate HTML for printing a ticket from template
 // skipBackground: true when printing on pre-printed paper (carta pre-stampata)
+// Helper: check if a color is too light for printing on white paper
+function isLightColor(hex: string | null): boolean {
+  if (!hex) return false;
+  const color = hex.replace('#', '');
+  if (color.length !== 6) return false;
+  const r = parseInt(color.substring(0, 2), 16);
+  const g = parseInt(color.substring(2, 4), 16);
+  const b = parseInt(color.substring(4, 6), 16);
+  // Calculate perceived brightness (YIQ formula)
+  const brightness = (r * 299 + g * 587 + b * 114) / 1000;
+  return brightness > 180; // Colors with brightness > 180 are too light
+}
+
 function generateTicketHtml(
   template: { paperWidthMm: number; paperHeightMm: number; backgroundImageUrl: string | null; dpi?: number },
   elements: Array<{ type: string; x: number; y: number; width: number; height: number; content: string | null; fontSize: number | null; fontFamily: string | null; fontWeight: string | null; fontColor: string | null; textAlign: string | null; rotation: number | null }>,
@@ -478,6 +491,16 @@ function generateTicketHtml(
   const replacePlaceholders = (text: string | null): string => {
     if (!text) return '';
     return text.replace(/\{\{(\w+)\}\}/g, (_, key) => data[key] || `{{${key}}}`);
+  };
+  
+  // When skipBackground is true (pre-printed paper), force dark colors
+  // because light colors (white text) would be invisible on white paper
+  const getVisibleColor = (color: string | null, defaultColor: string = '#000000'): string => {
+    if (skipBackground && isLightColor(color)) {
+      console.log(`[Print] Forcing dark color: ${color} -> #000000 (skipBackground=true)`);
+      return '#000000'; // Force black for visibility
+    }
+    return color || defaultColor;
   };
   
   // Generate element HTML
@@ -499,11 +522,12 @@ function generateTicketHtml(
     
     if (el.type === 'text') {
       const content = replacePlaceholders(el.content);
+      const textColor = getVisibleColor(el.fontColor, '#000000');
       return `<div style="${baseStyle}
         font-size: ${el.fontSize || 12}px;
         font-family: ${el.fontFamily || 'Arial'}, sans-serif;
         font-weight: ${el.fontWeight || 'normal'};
-        color: ${el.fontColor || '#000000'};
+        color: ${textColor};
         text-align: ${el.textAlign || 'left'};
         overflow: hidden;
         white-space: pre-wrap;
@@ -517,13 +541,15 @@ function generateTicketHtml(
         <img src="https://api.qrserver.com/v1/create-qr-code/?size=${Math.min(w, h)}x${Math.min(w, h)}&data=${encodeURIComponent(qrContent)}" style="max-width: 100%; max-height: 100%;" />
       </div>`;
     } else if (el.type === 'rectangle') {
+      const rectColor = getVisibleColor(el.fontColor, '#000000');
       return `<div style="${baseStyle}
-        background-color: ${el.fontColor || 'transparent'};
-        border: 1px solid ${el.fontColor || '#000000'};
+        background-color: ${rectColor};
+        border: 1px solid ${rectColor};
       "></div>`;
     } else if (el.type === 'line') {
+      const lineColor = getVisibleColor(el.fontColor, '#000000');
       return `<div style="${baseStyle}
-        border-top: 1px solid ${el.fontColor || '#000000'};
+        border-top: 1px solid ${lineColor};
         height: 0;
       "></div>`;
     }
