@@ -404,6 +404,10 @@ router.post('/templates/:templateId/elements/bulk', requireSuperAdmin, async (re
     const { elements } = req.body;
     const user = getUser(req);
     
+    console.log('[BulkSave] Template ID:', templateId);
+    console.log('[BulkSave] Elements received:', JSON.stringify(elements, null, 2));
+    console.log('[BulkSave] Elements count:', elements?.length || 0);
+    
     // Verify template ownership
     const [template] = await db.select().from(ticketTemplates)
       .where(eq(ticketTemplates.id, templateId))
@@ -418,7 +422,14 @@ router.post('/templates/:templateId/elements/bulk', requireSuperAdmin, async (re
     }
     
     // Validate all elements
-    const elementsArray = z.array(bulkElementSchema).parse(elements || []);
+    let elementsArray;
+    try {
+      elementsArray = z.array(bulkElementSchema).parse(elements || []);
+      console.log('[BulkSave] Validated elements:', elementsArray.length);
+    } catch (validationError: any) {
+      console.error('[BulkSave] Validation failed:', validationError.errors);
+      throw validationError;
+    }
     
     // Delete existing elements and replace with new ones
     await db.delete(ticketTemplateElements)
