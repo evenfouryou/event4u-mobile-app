@@ -459,10 +459,12 @@ router.post('/templates/:templateId/elements/bulk', requireSuperAdmin, async (re
 // ==================== TEST PRINT ====================
 
 // Generate HTML for printing a ticket from template
+// skipBackground: true when printing on pre-printed paper (carta pre-stampata)
 function generateTicketHtml(
   template: { paperWidthMm: number; paperHeightMm: number; backgroundImageUrl: string | null },
   elements: Array<{ type: string; x: number; y: number; width: number; height: number; content: string | null; fontSize: number | null; fontFamily: string | null; fontWeight: string | null; fontColor: string | null; textAlign: string | null; rotation: number | null }>,
-  data: Record<string, string>
+  data: Record<string, string>,
+  skipBackground: boolean = false
 ): string {
   // Convert mm to pixels (assuming 96 DPI, 1mm = 3.78px)
   const mmToPx = 3.78;
@@ -554,7 +556,7 @@ function generateTicketHtml(
   </style>
 </head>
 <body>
-  ${template.backgroundImageUrl ? `<img class="background" src="${template.backgroundImageUrl}" />` : ''}
+  ${(template.backgroundImageUrl && !skipBackground) ? `<img class="background" src="${template.backgroundImageUrl}" />` : ''}
   ${elementsHtml}
 </body>
 </html>`;
@@ -612,7 +614,7 @@ router.get('/templates/:templateId/agents', requireSuperAdmin, async (req: Reque
 router.post('/templates/:templateId/test-print', requireSuperAdmin, async (req: Request, res: Response) => {
   try {
     const { templateId } = req.params;
-    const { agentId } = req.body;
+    const { agentId, skipBackground = true } = req.body; // Default: skip background for pre-printed paper
     const user = getUser(req);
     
     if (!agentId) {
@@ -654,6 +656,7 @@ router.post('/templates/:templateId/test-print', requireSuperAdmin, async (req: 
     }));
     
     // Generate HTML for the ticket
+    // skipBackground: true = don't print background (for pre-printed paper)
     const ticketHtml = generateTicketHtml(
       {
         paperWidthMm: template.paperWidthMm,
@@ -661,7 +664,8 @@ router.post('/templates/:templateId/test-print', requireSuperAdmin, async (req: 
         backgroundImageUrl: template.backgroundImageUrl,
       },
       parsedElements,
-      TEST_PRINT_DATA
+      TEST_PRINT_DATA,
+      skipBackground // Default true for pre-printed paper
     );
     
     // Build the print job payload with pre-rendered HTML
