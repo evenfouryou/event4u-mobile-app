@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useParams, Link } from "wouter";
+import { useState, useEffect } from "react";
+import { useParams, Link, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -56,13 +56,25 @@ type DirectStockSummary = {
 
 export default function BartenderDirectStock() {
   const { id } = useParams();
+  const searchString = useSearch();
   const { toast } = useToast();
   const { user } = useAuth();
 
-  const [selectedStationId, setSelectedStationId] = useState<string>("");
+  // Parse stationId from URL query parameter
+  const urlParams = new URLSearchParams(searchString);
+  const urlStationId = urlParams.get('stationId') || '';
+
+  const [selectedStationId, setSelectedStationId] = useState<string>(urlStationId);
   const [consumeProductId, setConsumeProductId] = useState<string>("");
   const [consumeQuantity, setConsumeQuantity] = useState<string>("");
   const [consumeReason, setConsumeReason] = useState<string>("");
+
+  // Update selectedStationId when URL changes
+  useEffect(() => {
+    if (urlStationId) {
+      setSelectedStationId(urlStationId);
+    }
+  }, [urlStationId]);
 
   const { data: event, isLoading: eventLoading } = useQuery<Event>({
     queryKey: ['/api/events', id],

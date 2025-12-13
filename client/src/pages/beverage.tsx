@@ -213,56 +213,51 @@ export default function Beverage() {
             </div>
           </motion.div>
 
-          {/* Direct Stock Action Card */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="mb-6"
-          >
-            <Link href={`/bartender/events/${selectedEventId}/direct-stock`}>
-              <div className="glass-card p-5 cursor-pointer hover:border-amber-500/30 transition-all group" data-testid="button-direct-stock">
-                <div className="flex items-center gap-4">
-                  <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                    <GlassWater className="h-7 w-7 text-white" />
-                  </div>
-                  <div className="flex-1">
-                    <h3 className="text-lg font-semibold">Consumi Diretti</h3>
-                    <p className="text-sm text-muted-foreground">Registra consumi senza magazzino</p>
-                  </div>
-                  <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-amber-500 group-hover:translate-x-1 transition-all" />
-                </div>
-              </div>
-            </Link>
-          </motion.div>
-
-          <h2 className="text-lg font-semibold mb-4">Le tue postazioni</h2>
-
           {stationsLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Skeleton className="h-24 rounded-2xl" />
               <Skeleton className="h-24 rounded-2xl" />
             </div>
           ) : myStations.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-6">
               {myStations.map((station, index) => (
                 <motion.div
                   key={station.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: index * 0.1 }}
-                  onClick={() => setLocation(`/consumption-tracking?eventId=${selectedEventId}&stationId=${station.id}`)}
-                  className="glass-card p-5 cursor-pointer hover:border-teal/30 transition-all group"
+                  className="glass-card p-5"
                   data-testid={`station-card-${station.id}`}
                 >
-                  <div className="flex items-center gap-4">
-                    <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center group-hover:scale-110 transition-transform">
-                      <MapPin className="h-7 w-7 text-white" />
+                  <div className="flex items-center gap-4 mb-4">
+                    <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center">
+                      <MapPin className="h-6 w-6 text-white" />
                     </div>
                     <div className="flex-1">
                       <h3 className="text-lg font-semibold">{station.name}</h3>
                       <p className="text-sm text-muted-foreground">Postazione assegnata</p>
                     </div>
-                    <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-teal group-hover:translate-x-1 transition-all" />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant="outline"
+                      className="h-auto py-3 flex flex-col items-center gap-1"
+                      onClick={() => setLocation(`/consumption-tracking?eventId=${selectedEventId}&stationId=${station.id}`)}
+                      data-testid={`button-consumption-${station.id}`}
+                    >
+                      <Wine className="h-5 w-5 text-teal" />
+                      <span className="text-xs">Tracking Consumi</span>
+                    </Button>
+                    <Link href={`/bartender/events/${selectedEventId}/direct-stock?stationId=${station.id}`}>
+                      <Button
+                        variant="outline"
+                        className="h-auto py-3 w-full flex flex-col items-center gap-1"
+                        data-testid={`button-direct-stock-${station.id}`}
+                      >
+                        <GlassWater className="h-5 w-5 text-amber-500" />
+                        <span className="text-xs">Consumi Diretti</span>
+                      </Button>
+                    </Link>
                   </div>
                 </motion.div>
               ))}
