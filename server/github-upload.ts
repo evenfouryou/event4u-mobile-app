@@ -258,8 +258,19 @@ export async function updateSmartCardReaderRepo(): Promise<{ success: boolean; r
 // Keep old function name for backward compatibility
 export const createSmartCardReaderRepo = updateSmartCardReaderRepo;
 
-// Update Print Agent Repository
-export async function updatePrintAgentRepo(mainJsContent: string): Promise<{ success: boolean; repoUrl?: string; error?: string }> {
+// Read file from print-agent directory
+function readPrintAgentFile(filename: string): string {
+  try {
+    const filePath = path.join(process.cwd(), 'print-agent', filename);
+    return fs.readFileSync(filePath, 'utf-8');
+  } catch (e) {
+    console.error(`Failed to read print-agent/${filename}:`, e);
+    return '';
+  }
+}
+
+// Update Print Agent Repository - uploads all files
+export async function updatePrintAgentRepo(): Promise<{ success: boolean; repoUrl?: string; error?: string; filesUploaded?: number }> {
   try {
     const octokit = await getUncachableGitHubClient();
     const { data: user } = await octokit.users.getAuthenticated();
@@ -267,45 +278,79 @@ export async function updatePrintAgentRepo(mainJsContent: string): Promise<{ suc
     
     const repoName = 'event4u-print-agent';
     
-    // Check if repo exists
+    // Check if repo exists, create if not
+    let repoExists = false;
     try {
       await octokit.repos.get({ owner: user.login, repo: repoName });
+      repoExists = true;
     } catch (e: any) {
-      if (e.status === 404) {
-        return { success: false, error: 'Repository non trovato' };
-      }
-      throw e;
+      if (e.status !== 404) throw e;
     }
     
-    // Get current file SHA
-    let sha: string | undefined;
-    try {
-      const { data: existingFile } = await octokit.repos.getContent({
+    if (!repoExists) {
+      console.log('Creating print-agent repository...');
+      await octokit.repos.createForAuthenticatedUser({
+        name: repoName,
+        description: 'Event4U Print Agent - Thermal Ticket Printer for Electron',
+        private: false,
+        auto_init: true
+      });
+      await new Promise(resolve => setTimeout(resolve, 3000));
+    }
+    
+    // Files to upload
+    const filesToUpload: Record<string, string> = {
+      'main.js': readPrintAgentFile('main.js'),
+      'package.json': readPrintAgentFile('package.json'),
+      'preload.js': readPrintAgentFile('preload.js'),
+      'index.html': readPrintAgentFile('index.html'),
+      'renderer.js': readPrintAgentFile('renderer.js'),
+      'styles.css': readPrintAgentFile('styles.css'),
+      'README.md': readPrintAgentFile('README.md')
+    };
+    
+    let filesUploaded = 0;
+    
+    for (const [filename, content] of Object.entries(filesToUpload)) {
+      if (!content) {
+        console.log(`Skipping ${filename} (empty)`);
+        continue;
+      }
+      
+      console.log(`Uploading ${filename}...`);
+      
+      // Get current file SHA if exists
+      let sha: string | undefined;
+      try {
+        const { data: existingFile } = await octokit.repos.getContent({
+          owner: user.login,
+          repo: repoName,
+          path: filename
+        });
+        if ('sha' in existingFile) {
+          sha = existingFile.sha;
+        }
+      } catch (e: any) {
+        // File doesn't exist
+      }
+      
+      await octokit.repos.createOrUpdateFileContents({
         owner: user.login,
         repo: repoName,
-        path: 'main.js'
+        path: filename,
+        message: sha ? `Update ${filename} (v1.4.0)` : `Add ${filename}`,
+        content: Buffer.from(content).toString('base64'),
+        ...(sha ? { sha } : {})
       });
-      if ('sha' in existingFile) {
-        sha = existingFile.sha;
-      }
-    } catch (e: any) {
-      // File doesn't exist
+      
+      filesUploaded++;
+      await new Promise(resolve => setTimeout(resolve, 500));
     }
     
-    // Update main.js
-    await octokit.repos.createOrUpdateFileContents({
-      owner: user.login,
-      repo: repoName,
-      path: 'main.js',
-      message: 'Fix print scaling and margins (v1.3.0)',
-      content: Buffer.from(mainJsContent).toString('base64'),
-      ...(sha ? { sha } : {})
-    });
-    
     const repoUrl = `https://github.com/${user.login}/${repoName}`;
-    console.log(`Print Agent updated: ${repoUrl}`);
+    console.log(`Print Agent updated: ${repoUrl}, files: ${filesUploaded}`);
     
-    return { success: true, repoUrl };
+    return { success: true, repoUrl, filesUploaded };
   } catch (error: any) {
     console.error('GitHub error:', error.message);
     return { success: false, error: error.message };
