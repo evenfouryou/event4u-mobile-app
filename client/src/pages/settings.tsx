@@ -36,6 +36,8 @@ export default function Settings() {
   const { toast } = useToast();
   const { user } = useAuth();
   const smartCardStatus = useSmartCardStatus();
+  
+  const isBartender = user?.role === 'bartender';
   const [bridgeToken, setBridgeToken] = useState<string | null>(null);
   const [tokenCopied, setTokenCopied] = useState(false);
 
@@ -169,91 +171,93 @@ export default function Settings() {
         </p>
       </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="glass-card p-6"
-        data-testid="card-company-settings"
-      >
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-            <Building2 className="h-5 w-5 text-white" />
-          </div>
-          <h2 className="text-lg font-semibold">Informazioni Azienda</h2>
-        </div>
-
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit((data) => updateMutation.mutate(data))} className="space-y-6">
-            <FormField
-              control={form.control}
-              name="name"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Nome Azienda *</FormLabel>
-                  <FormControl>
-                    <Input 
-                      {...field} 
-                      placeholder="Nome della tua azienda" 
-                      data-testid="input-company-name"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="taxId"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Partita IVA / Codice Fiscale</FormLabel>
-                  <FormControl>
-                    <Input 
-                      {...field} 
-                      placeholder="IT12345678901" 
-                      data-testid="input-company-tax-id"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="address"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Indirizzo</FormLabel>
-                  <FormControl>
-                    <Textarea 
-                      {...field} 
-                      placeholder="Via, città, CAP, provincia" 
-                      rows={3}
-                      data-testid="input-company-address"
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <div className="flex justify-end gap-3 pt-4">
-              <Button
-                type="submit"
-                disabled={updateMutation.isPending}
-                className="gradient-golden text-black font-semibold hover:opacity-90 min-h-[48px] md:min-h-9"
-                data-testid="button-save-settings"
-              >
-                <Save className="h-4 w-4 mr-2" />
-                {updateMutation.isPending ? 'Salvataggio...' : 'Salva Modifiche'}
-              </Button>
+      {!isBartender && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.1 }}
+          className="glass-card p-6"
+          data-testid="card-company-settings"
+        >
+          <div className="flex items-center gap-3 mb-6">
+            <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+              <Building2 className="h-5 w-5 text-white" />
             </div>
-          </form>
-        </Form>
-      </motion.div>
+            <h2 className="text-lg font-semibold">Informazioni Azienda</h2>
+          </div>
+
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit((data) => updateMutation.mutate(data))} className="space-y-6">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome Azienda *</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="Nome della tua azienda" 
+                        data-testid="input-company-name"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="taxId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Partita IVA / Codice Fiscale</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="IT12345678901" 
+                        data-testid="input-company-tax-id"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="address"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Indirizzo</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        {...field} 
+                        placeholder="Via, città, CAP, provincia" 
+                        rows={3}
+                        data-testid="input-company-address"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <div className="flex justify-end gap-3 pt-4">
+                <Button
+                  type="submit"
+                  disabled={updateMutation.isPending}
+                  className="gradient-golden text-black font-semibold hover:opacity-90 min-h-[48px] md:min-h-9"
+                  data-testid="button-save-settings"
+                >
+                  <Save className="h-4 w-4 mr-2" />
+                  {updateMutation.isPending ? 'Salvataggio...' : 'Salva Modifiche'}
+                </Button>
+              </div>
+            </form>
+          </Form>
+        </motion.div>
+      )}
 
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -308,14 +312,15 @@ export default function Settings() {
         </div>
       </motion.div>
 
-      {/* Bridge Lettore Smart Card Section */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="glass-card p-6 mt-6"
-        data-testid="card-bridge-config"
-      >
+      {/* Bridge Lettore Smart Card Section - Hidden for bartenders */}
+      {!isBartender && (
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.3 }}
+          className="glass-card p-6 mt-6"
+          data-testid="card-bridge-config"
+        >
         <div className="flex items-center gap-3 mb-6">
           <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center">
             <Monitor className="h-5 w-5 text-white" />
@@ -469,6 +474,7 @@ export default function Settings() {
           )}
         </div>
       </motion.div>
+      )}
     </div>
   );
 }
