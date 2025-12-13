@@ -93,6 +93,7 @@ export default function Products() {
   const { user } = useAuth();
   
   const canCreateProducts = user?.role === 'super_admin' || user?.role === 'gestore';
+  const isBartender = user?.role === 'bartender';
 
   const { data: products, isLoading } = useQuery<Product[]>({
     queryKey: ['/api/products'],
@@ -544,10 +545,10 @@ export default function Products() {
                   <TableHead className="text-muted-foreground">Nome</TableHead>
                   <TableHead className="text-muted-foreground">Categoria</TableHead>
                   <TableHead className="text-muted-foreground">Unità</TableHead>
-                  <TableHead className="text-muted-foreground">Costo</TableHead>
+                  {!isBartender && <TableHead className="text-muted-foreground">Costo</TableHead>}
                   <TableHead className="text-muted-foreground">Soglia Min.</TableHead>
                   <TableHead className="text-muted-foreground">Stato</TableHead>
-                  <TableHead></TableHead>
+                  {!isBartender && <TableHead></TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -568,7 +569,7 @@ export default function Products() {
                       </Badge>
                     </TableCell>
                     <TableCell className="text-muted-foreground">{product.unitOfMeasure}</TableCell>
-                    <TableCell className="text-muted-foreground">€ {product.costPrice}</TableCell>
+                    {!isBartender && <TableCell className="text-muted-foreground">€ {product.costPrice}</TableCell>}
                     <TableCell className="text-muted-foreground">{product.minThreshold || '-'}</TableCell>
                     <TableCell>
                       {product.active ? (
@@ -581,6 +582,7 @@ export default function Products() {
                         </Badge>
                       )}
                     </TableCell>
+                    {!isBartender && (
                     <TableCell>
                       <Button
                         variant="ghost"
@@ -592,6 +594,7 @@ export default function Products() {
                         <Edit className="h-4 w-4" />
                       </Button>
                     </TableCell>
+                    )}
                   </motion.tr>
                 ))}
               </TableBody>
@@ -624,15 +627,17 @@ export default function Products() {
                         Inattivo
                       </Badge>
                     )}
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => handleEdit(product)}
-                      className="min-h-[48px] min-w-[48px] rounded-xl hover:bg-primary/10"
-                      data-testid={`button-edit-product-mobile-${product.id}`}
-                    >
-                      <Edit className="h-4 w-4" />
-                    </Button>
+                    {!isBartender && (
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleEdit(product)}
+                        className="min-h-[48px] min-w-[48px] rounded-xl hover:bg-primary/10"
+                        data-testid={`button-edit-product-mobile-${product.id}`}
+                      >
+                        <Edit className="h-4 w-4" />
+                      </Button>
+                    )}
                   </div>
                 </div>
                 <div className="flex flex-wrap items-center gap-2 mt-3 pt-3 border-t border-white/5">
@@ -640,7 +645,7 @@ export default function Products() {
                     {product.category || 'N/A'}
                   </Badge>
                   <span className="text-sm text-muted-foreground">{product.unitOfMeasure}</span>
-                  <span className="text-sm font-medium">€ {product.costPrice}</span>
+                  {!isBartender && <span className="text-sm font-medium">€ {product.costPrice}</span>}
                   {product.minThreshold && (
                     <span className="text-xs text-muted-foreground">Min: {product.minThreshold}</span>
                   )}
