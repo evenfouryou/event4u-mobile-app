@@ -245,7 +245,8 @@ async function handlePrintJob(job) {
   try {
     sendJobStatus(job.id, 'printing');
 
-    const result = await printTicket(job.payload);
+    // job is the payload directly, not job.payload
+    const result = await printTicket(job);
     
     if (result.success) {
       sendJobStatus(job.id, 'completed');
@@ -270,11 +271,116 @@ async function printTicket(payload) {
   }
 
   log.info('Printing to:', printerName);
-  log.info('Payload:', JSON.stringify(payload).substring(0, 200));
+  log.info('Job type:', payload.type);
+  log.info('Paper size:', payload.paperWidthMm + 'x' + payload.paperHeightMm + 'mm');
 
-  await new Promise(resolve => setTimeout(resolve, 1000));
+  // Create a hidden window for printing
+  let printWindow = null;
+  
+  try {
+    printWindow = new BrowserWindow({
+      width: 800,
+      height: 600,
+      show: false,
+      webPreferences: {
+        nodeIntegration: false,
+        contextIsolation: true
+      }
+    });
 
-  return { success: true };
+    // Build the HTML content
+    let htmlContent;
+    
+    if (payload.type === 'ticket' && payload.html) {
+      // Use pre-rendered HTML from server
+      htmlContent = payload.html;
+    } else if (payload.type === 'test') {
+      // Generate test print HTML
+      const widthMm = payload.paperWidthMm || 80;
+      const heightMm = payload.paperHeightMm || 120;
+      htmlContent = '<!DOCTYPE html>' +
+        '<html><head><meta charset="utf-8">' +
+        '<style>' +
+        '@page { size: ' + widthMm + 'mm ' + heightMm + 'mm; margin: 0; }' +
+        '* { margin: 0; padding: 0; box-sizing: border-box; }' +
+        'body { ' +
+        '  width: ' + widthMm + 'mm; ' +
+        '  height: ' + heightMm + 'mm; ' +
+        '  font-family: Arial, sans-serif; ' +
+        '  padding: 5mm; ' +
+        '  -webkit-print-color-adjust: exact; ' +
+        '  print-color-adjust: exact; ' +
+        '}' +
+        '.border { ' +
+        '  border: 1px dashed #333; ' +
+        '  width: calc(100% - 4mm); ' +
+        '  height: calc(100% - 4mm); ' +
+        '  margin: 2mm; ' +
+        '  padding: 3mm; ' +
+        '}' +
+        'h1 { font-size: 14px; margin-bottom: 5mm; }' +
+        'p { font-size: 11px; margin-bottom: 2mm; }' +
+        '</style></head><body>' +
+        '<div class="border">' +
+        '<h1>Event4U Print Agent v1.4</h1>' +
+        '<p>Stampante: ' + printerName + '</p>' +
+        '<p>Data: ' + new Date().toLocaleString('it-IT') + '</p>' +
+        '<p>Dimensioni: ' + widthMm + 'mm x ' + heightMm + 'mm</p>' +
+        '<p style="margin-top:5mm;">Se vedi questo bordo tratteggiato vicino ai margini del foglio, la stampa funziona correttamente!</p>' +
+        '</div></body></html>';
+    } else {
+      return { success: false, error: 'Unknown print job type: ' + payload.type };
+    }
+
+    // Load HTML content
+    await printWindow.loadURL('data:text/html;charset=utf-8,' + encodeURIComponent(htmlContent));
+    
+    // Wait for images/QR codes to load
+    await new Promise(resolve => setTimeout(resolve, 800));
+
+    // Calculate page size in microns (mm * 1000)
+    const widthMicrons = (payload.paperWidthMm || 80) * 1000;
+    const heightMicrons = (payload.paperHeightMm || 120) * 1000;
+
+    log.info('Page size in microns:', widthMicrons + 'x' + heightMicrons);
+
+    // Print with exact settings
+    return new Promise((resolve) => {
+      printWindow.webContents.print({
+        silent: true,
+        deviceName: printerName,
+        printBackground: true,
+        margins: {
+          marginType: 'none'
+        },
+        pageSize: {
+          width: widthMicrons,
+          height: heightMicrons
+        },
+        scaleFactor: 100
+      }, (success, failureReason) => {
+        if (printWindow) {
+          printWindow.close();
+          printWindow = null;
+        }
+        
+        if (success) {
+          log.info('Print completed successfully');
+          resolve({ success: true });
+        } else {
+          log.error('Print failed:', failureReason);
+          resolve({ success: false, error: failureReason || 'Print failed' });
+        }
+      });
+    });
+
+  } catch (error) {
+    log.error('Print error:', error.message);
+    if (printWindow) {
+      try { printWindow.close(); } catch (e) { }
+    }
+    return { success: false, error: error.message };
+  }
 }
 
 function sendJobStatus(jobId, status, errorMessage = null) {
@@ -381,11 +487,13 @@ ipcMain.handle('test-print', async () => {
     return { success: false, error: 'No printer configured' };
   }
   
-  log.info('Test print requested');
+  log.info('Local test print requested');
   
+  // Use the same printTicket function with test type
   const result = await printTicket({
     type: 'test',
-    text: 'Event4U Print Agent - Test\n\nPrinter: ' + printerName + '\nDate: ' + new Date().toLocaleString()
+    paperWidthMm: 80,
+    paperHeightMm: 120
   });
   
   return result;
