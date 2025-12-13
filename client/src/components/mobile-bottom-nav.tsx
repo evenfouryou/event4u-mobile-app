@@ -67,6 +67,7 @@ export function MobileBottomNav() {
       { icon: Calendar, label: "Attivi", href: "/beverage" },
       { icon: Plus, label: "Servizio", href: "/beverage", isFab: true },
       { icon: Wine, label: "Prodotti", href: "/products" },
+      { icon: User, label: "Profilo", href: "/settings" },
     ];
   } else {
     // Default organizer view
