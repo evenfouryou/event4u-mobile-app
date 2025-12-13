@@ -58,10 +58,13 @@ async function main() {
     
     // Files da pushare
     const files = [
-      { path: 'main.js', localPath: 'print-agent-desktop/main.js' },
-      { path: 'index.html', localPath: 'print-agent-desktop/index.html' },
-      { path: 'package.json', localPath: 'print-agent-desktop/package.json' },
-      { path: 'README.md', localPath: 'print-agent-desktop/README.md' }
+      { path: 'main.js', localPath: 'print-agent/main.js' },
+      { path: 'index.html', localPath: 'print-agent/index.html' },
+      { path: 'package.json', localPath: 'print-agent/package.json' },
+      { path: 'preload.js', localPath: 'print-agent/preload.js' },
+      { path: 'renderer.js', localPath: 'print-agent/renderer.js' },
+      { path: 'styles.css', localPath: 'print-agent/styles.css' },
+      { path: 'README.md', localPath: 'print-agent/README.md' }
     ];
     
     console.log(`📂 Target: https://github.com/${owner}/${repo}`);
@@ -123,7 +126,7 @@ async function main() {
     
     // Create commit
     console.log('📝 Creating commit...');
-    const commitMessage = 'Security fix: token-only authentication\n\n- Server validates token and returns canonical companyId\n- Desktop app no longer sends companyId (prevents cross-company spoofing)\n- Updated README with simplified setup instructions';
+    const commitMessage = 'Fix stampa: DPI corretto e timeout aumentato v1.4.5\n\n- Timeout caricamento immagini da 800ms a 2000ms per QR code\n- Versione 1.4.5';
     
     const { data: commit } = await octokit.git.createCommit({
       owner,
