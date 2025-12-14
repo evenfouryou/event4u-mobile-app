@@ -568,6 +568,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       const user = await storage.getUserByEmail(email);
+      console.log('[Login] Email:', email, 'Found:', !!user, 'Has passwordHash:', !!user?.passwordHash);
       if (!user || !user.passwordHash) {
         return res.status(401).json({ message: "Credenziali non valide" });
       }
