@@ -3462,6 +3462,7 @@ export const ticketTemplates = pgTable("ticket_templates", {
   backgroundImageUrl: text("background_image_url"), // Uploaded background image
   paperWidthMm: integer("paper_width_mm").notNull().default(80),
   paperHeightMm: integer("paper_height_mm").notNull().default(50),
+  printOrientation: varchar("print_orientation", { length: 20 }).default('auto'), // auto, portrait, landscape
   dpi: integer("dpi").default(203), // Print resolution for accurate sizing
   isDefault: boolean("is_default").default(false),
   isActive: boolean("is_active").notNull().default(true),

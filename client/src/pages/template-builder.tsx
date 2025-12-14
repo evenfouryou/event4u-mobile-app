@@ -122,6 +122,7 @@ export default function TemplateBuilder() {
   const [templateName, setTemplateName] = useState('Nuovo Template');
   const [paperWidth, setPaperWidth] = useState(80);
   const [paperHeight, setPaperHeight] = useState(50);
+  const [printOrientation, setPrintOrientation] = useState<'auto' | 'portrait' | 'landscape'>('auto');
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
   
   // Load companies for super_admin
@@ -149,6 +150,7 @@ export default function TemplateBuilder() {
       setTemplateName(template.name);
       setPaperWidth(template.paperWidthMm || 80);
       setPaperHeight(template.paperHeightMm || 50);
+      setPrintOrientation((template as any).printOrientation || 'auto');
       setBackgroundImage(template.backgroundImageUrl || null);
       
       if (template.elements) {
@@ -181,6 +183,7 @@ export default function TemplateBuilder() {
         name: templateName,
         paperWidthMm: paperWidth,
         paperHeightMm: paperHeight,
+        printOrientation: printOrientation,
         backgroundImageUrl: backgroundImage,
         isActive: true,
       };
@@ -621,6 +624,25 @@ export default function TemplateBuilder() {
                     onChange={(e) => setPaperHeight(parseInt(e.target.value) || 50)}
                     data-testid="input-paper-height"
                   />
+                </div>
+                <div>
+                  <Label>Orientamento Stampa</Label>
+                  <Select
+                    value={printOrientation}
+                    onValueChange={(value: 'auto' | 'portrait' | 'landscape') => setPrintOrientation(value)}
+                  >
+                    <SelectTrigger data-testid="select-print-orientation">
+                      <SelectValue placeholder="Seleziona orientamento" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="auto">Automatico</SelectItem>
+                      <SelectItem value="portrait">Verticale (Portrait)</SelectItem>
+                      <SelectItem value="landscape">Orizzontale (Landscape)</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Automatico: basato sulle dimensioni del foglio
+                  </p>
                 </div>
                 <Separator />
                 <div>

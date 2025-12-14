@@ -573,8 +573,10 @@ function generateTicketHtml(
     return '';
   }).join('\n');
   
-  // Determine print orientation based on paper dimensions
-  const printOrientation = template.paperWidthMm > template.paperHeightMm ? 'landscape' : 'portrait';
+  // Determine print orientation: use template setting or calculate from dimensions
+  const printOrientation = (template as any).printOrientation === 'auto' || !(template as any).printOrientation
+    ? (template.paperWidthMm > template.paperHeightMm ? 'landscape' : 'portrait')
+    : (template as any).printOrientation;
   
   return `<!DOCTYPE html>
 <html>
