@@ -160,14 +160,14 @@ export default function BartenderDirectStock() {
       setConsumeQuantity("");
       setConsumeReason("");
       toast({
-        title: "Consumo registrato",
-        description: "Prodotto consumato con successo",
+        title: "Scarico registrato",
+        description: "Prodotto scaricato con successo",
       });
     },
     onError: (error: Error) => {
       toast({
         title: "Errore",
-        description: error.message || "Impossibile registrare il consumo",
+        description: error.message || "Impossibile registrare lo scarico",
         variant: "destructive",
       });
     },
@@ -453,7 +453,7 @@ export default function BartenderDirectStock() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-lg">
                   <Minus className="h-5 w-5 text-amber-500" />
-                  Registra Consumo
+                  Scarica Prodotto
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -516,7 +516,7 @@ export default function BartenderDirectStock() {
                   data-testid="button-consume"
                 >
                   <Minus className="h-4 w-4 mr-2" />
-                  {consumeMutation.isPending ? "Registrazione..." : "Registra Consumo"}
+                  {consumeMutation.isPending ? "Scaricamento..." : "Scarica Prodotto"}
                 </Button>
               </CardContent>
             </Card>
