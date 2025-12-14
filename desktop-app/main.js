@@ -71,6 +71,10 @@ let cardWasInserted = false;
 let pinLocked = false;  // True when waiting for PIN after card removal
 // Note: PIN is now verified on the SIAE card itself, not hardcoded
 
+// Debounce for card removal detection - prevents false positives from intermittent contact
+let cardRemovalCounter = 0;
+const CARD_REMOVAL_THRESHOLD = 3; // Card must be "removed" for 3 consecutive polls (1.5s) to trigger PIN lock
+
 // Current status for WebSocket clients
 let currentStatus = {
   bridgeConnected: false,
@@ -688,17 +692,31 @@ function startStatusPolling() {
       const result = await sendBridgeCommand('CHECK_READER');
       const cardCurrentlyInserted = result.cardPresent || false;
       
-      // SIAE PIN verification: detect card removal
+      // SIAE PIN verification: detect card removal with debounce
+      // Card must be detected as removed for CARD_REMOVAL_THRESHOLD consecutive polls
+      // This prevents false positives from intermittent reader contact
       if (cardWasInserted && !cardCurrentlyInserted && !pinLocked) {
-        log.info('SIAE: Carta rimossa - richiesta verifica PIN');
-        pinLocked = true;
-        pinVerified = false;
+        cardRemovalCounter++;
+        log.debug(`SIAE: Card removal detected, counter=${cardRemovalCounter}/${CARD_REMOVAL_THRESHOLD}`);
         
-        // Notify renderer to show PIN dialog
-        if (mainWindow && mainWindow.webContents) {
-          mainWindow.webContents.send('pin:required', {
-            reason: 'Carta SIAE rimossa - inserire PIN per continuare'
-          });
+        if (cardRemovalCounter >= CARD_REMOVAL_THRESHOLD) {
+          log.info('SIAE: Carta rimossa (confermata) - richiesta verifica PIN');
+          pinLocked = true;
+          pinVerified = false;
+          cardRemovalCounter = 0;
+          
+          // Notify renderer to show PIN dialog
+          if (mainWindow && mainWindow.webContents) {
+            mainWindow.webContents.send('pin:required', {
+              reason: 'Carta SIAE rimossa - inserire PIN per continuare'
+            });
+          }
+        }
+      } else if (cardCurrentlyInserted) {
+        // Reset removal counter when card is detected as present
+        if (cardRemovalCounter > 0) {
+          log.debug('SIAE: Card detected, resetting removal counter');
+          cardRemovalCounter = 0;
         }
       }
       
