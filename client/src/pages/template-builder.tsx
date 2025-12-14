@@ -17,7 +17,8 @@ import {
   Type, Calendar, Hash, QrCode, Image, 
   AlignLeft, AlignCenter, AlignRight, 
   GripVertical, Settings2, Layers,
-  ZoomIn, ZoomOut, RotateCw, RotateCcw, Shield, Printer
+  ZoomIn, ZoomOut, RotateCw, RotateCcw, Shield, Printer,
+  Minus, Square, Scissors
 } from 'lucide-react';
 import type { TicketTemplate, TicketTemplateElement } from '@shared/schema';
 
@@ -25,6 +26,11 @@ import type { TicketTemplate, TicketTemplateElement } from '@shared/schema';
 const ELEMENT_TYPES = [
   // Testo generico
   { type: 'text', label: 'Testo Statico', icon: Type, fieldKey: null, category: 'general' },
+  
+  // Elementi grafici
+  { type: 'line', label: 'Linea', icon: Minus, fieldKey: null, category: 'graphics' },
+  { type: 'cutline', label: 'Linea di Taglio', icon: Scissors, fieldKey: null, category: 'graphics' },
+  { type: 'rectangle', label: 'Rettangolo', icon: Square, fieldKey: null, category: 'graphics' },
   
   // Campi evento
   { type: 'dynamic', label: 'Nome Evento', icon: Type, fieldKey: 'event_name', category: 'event' },
@@ -278,6 +284,21 @@ export default function TemplateBuilder() {
 
   // Add new element
   const addElement = (elementType: typeof ELEMENT_TYPES[0]) => {
+    // Determine default dimensions based on element type
+    let defaultWidth = 30;
+    let defaultHeight = 5;
+    
+    if (elementType.type === 'qrcode') {
+      defaultWidth = 15;
+      defaultHeight = 15;
+    } else if (elementType.type === 'line' || elementType.type === 'cutline') {
+      defaultWidth = 60;
+      defaultHeight = 1;
+    } else if (elementType.type === 'rectangle') {
+      defaultWidth = 30;
+      defaultHeight = 20;
+    }
+    
     const newElement: CanvasElement = {
       id: `temp-${Date.now()}`,
       type: elementType.type,
@@ -285,8 +306,8 @@ export default function TemplateBuilder() {
       staticValue: elementType.type === 'text' ? 'Testo' : '',
       x: 10,
       y: 10,
-      width: elementType.type === 'qrcode' ? 15 : 30,
-      height: elementType.type === 'qrcode' ? 15 : 5,
+      width: defaultWidth,
+      height: defaultHeight,
       rotation: 0,
       fontFamily: 'Arial',
       fontSize: 12,
@@ -562,6 +583,23 @@ export default function TemplateBuilder() {
                   </Button>
                 ))}
               </div>
+              
+              {/* Graphics Elements */}
+              <div className="space-y-2">
+                <Label className="text-xs text-muted-foreground uppercase">Elementi Grafici</Label>
+                {ELEMENT_TYPES.filter(el => (el as any).category === 'graphics').map((elType, idx) => (
+                  <Button
+                    key={idx}
+                    variant="outline"
+                    className="w-full justify-start gap-2"
+                    onClick={() => addElement(elType)}
+                    data-testid={`button-add-${elType.fieldKey || elType.type}`}
+                  >
+                    <elType.icon className="h-4 w-4" />
+                    {elType.label}
+                  </Button>
+                ))}
+              </div>
             </TabsContent>
             
             <TabsContent value="settings" className="p-4 space-y-4 m-0">
@@ -667,6 +705,29 @@ export default function TemplateBuilder() {
                   <div className="w-full h-full bg-gray-100 flex items-center justify-center text-xs text-gray-500 border border-dashed">
                     |||||||
                   </div>
+                ) : element.type === 'line' ? (
+                  <div
+                    className="w-full"
+                    style={{
+                      borderTop: `1px solid ${element.color}`,
+                      height: 0,
+                    }}
+                  />
+                ) : element.type === 'cutline' ? (
+                  <div
+                    className="w-full"
+                    style={{
+                      borderTop: `1px dashed ${element.color}`,
+                      height: 0,
+                    }}
+                  />
+                ) : element.type === 'rectangle' ? (
+                  <div
+                    className="w-full h-full"
+                    style={{
+                      border: `1px solid ${element.color}`,
+                    }}
+                  />
                 ) : (
                   <div
                     className="w-full h-full flex items-center overflow-hidden whitespace-nowrap"

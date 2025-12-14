@@ -563,6 +563,12 @@ function generateTicketHtml(
         border-top: 1px solid ${lineColor};
         height: 0;
       "></div>`;
+    } else if (el.type === 'cutline') {
+      const lineColor = getVisibleColor(el.fontColor, '#000000');
+      return `<div style="${baseStyle}
+        border-top: 1px dashed ${lineColor};
+        height: 0;
+      "></div>`;
     }
     return '';
   }).join('\n');
