@@ -531,7 +531,7 @@ function generateTicketHtml(
       ${rotation ? `transform: rotate(${rotation}deg);` : ''}
     `;
     
-    if (el.type === 'text') {
+    if (el.type === 'text' || el.type === 'dynamic') {
       const content = replacePlaceholders(el.content);
       const textColor = getVisibleColor(el.fontColor, '#000000');
       return `<div style="${baseStyle}
