@@ -1,36 +1,9 @@
 import { useState } from "react";
-import { useQuery, useMutation } from "@tanstack/react-query";
-import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Plus, CreditCard, Building2, Calendar, Shield, Loader2, Wifi, WifiOff, RefreshCw, Users, Hash, Wallet } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
-import { useForm } from "react-hook-form";
-import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { CreditCard, Building2, Shield, Loader2, Wifi, WifiOff, RefreshCw, Users, Hash, Wallet } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { useSmartCardStatus, smartCardService } from "@/lib/smart-card-service";
@@ -65,9 +38,6 @@ type CardUsageStats = {
 };
 
 export default function SiaeActivationCardsPage() {
-  const { toast } = useToast();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedCompany, setSelectedCompany] = useState<string | null>(null);
   const [isRefreshing, setIsRefreshing] = useState(false);
   
   const smartCardStatus = useSmartCardStatus();
@@ -78,85 +48,21 @@ export default function SiaeActivationCardsPage() {
     setTimeout(() => setIsRefreshing(false), 2000);
   };
 
-  const form = useForm({
-    defaultValues: {
-      companyId: "",
-      cardNumber: "",
-      fiscalCode: "",
-      status: "pending",
-    },
-  });
-
-  const { data: companies = [], isLoading: companiesLoading } = useQuery<Company[]>({
+  const { data: companies = [] } = useQuery<Company[]>({
     queryKey: ['/api/companies'],
   });
 
-  const { data: cards = [], isLoading: cardsLoading } = useQuery<SiaeActivationCard[]>({
-    queryKey: ['/api/siae/activation-cards', { companyId: selectedCompany }],
+  const { data: cards = [] } = useQuery<SiaeActivationCard[]>({
+    queryKey: ['/api/siae/activation-cards'],
   });
 
   // Query to get usage stats when a physical card is inserted - auto-refresh every 5 seconds
   const { data: cardUsageStats, isLoading: usageStatsLoading } = useQuery<CardUsageStats>({
     queryKey: ['/api/siae/activation-cards/by-serial', smartCardStatus.cardSerial],
     enabled: !!smartCardStatus.cardSerial && smartCardStatus.cardInserted,
-    refetchInterval: smartCardStatus.cardInserted ? 5000 : false, // Auto-refresh every 5 seconds while card inserted
-    retry: false, // Don't retry on 404
+    refetchInterval: smartCardStatus.cardInserted ? 5000 : false,
+    retry: false,
   });
-
-  const createMutation = useMutation({
-    mutationFn: (data: any) =>
-      apiRequest('POST', '/api/siae/activation-cards', data),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        predicate: (query) => query.queryKey[0] === '/api/siae/activation-cards' 
-      });
-      toast({ title: "Carta di attivazione creata" });
-      setIsDialogOpen(false);
-      form.reset();
-    },
-    onError: (error: any) => {
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
-    },
-  });
-
-  const updateStatusMutation = useMutation({
-    mutationFn: ({ id, status }: { id: string; status: string }) =>
-      apiRequest('PATCH', `/api/siae/activation-cards/${id}`, { status }),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ 
-        predicate: (query) => query.queryKey[0] === '/api/siae/activation-cards' 
-      });
-      toast({ title: "Stato aggiornato" });
-    },
-  });
-
-  const onSubmit = (data: any) => {
-    createMutation.mutate(data);
-  };
-
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'active': return 'default';
-      case 'pending': return 'secondary';
-      case 'expired': return 'destructive';
-      case 'revoked': return 'destructive';
-      default: return 'outline';
-    }
-  };
-
-  const getStatusLabel = (status: string) => {
-    switch (status) {
-      case 'active': return 'Attiva';
-      case 'pending': return 'In attesa';
-      case 'expired': return 'Scaduta';
-      case 'revoked': return 'Revocata';
-      default: return status;
-    }
-  };
-
-  const filteredCards = selectedCompany 
-    ? cards.filter(c => c.companyId === selectedCompany)
-    : cards;
 
   return (
     <div className="p-4 md:p-6 space-y-6 overflow-auto h-full pb-24 md:pb-8" data-testid="page-siae-activation-cards">

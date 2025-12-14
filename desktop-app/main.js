@@ -82,10 +82,15 @@ let currentStatus = {
   cardInserted: false,
   readerName: null,
   cardSerial: null,
+  cardCounter: null,
+  cardBalance: null,
+  cardKeyId: null,
   cardAtr: null,
   demoMode: false,
   canEmitTickets: false,
-  relayConnected: false
+  relayConnected: false,
+  pinLocked: false,
+  pinRequired: false
 };
 
 // Log buffer for live updates
