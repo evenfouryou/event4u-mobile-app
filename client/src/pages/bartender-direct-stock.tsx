@@ -24,9 +24,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Minus, Package, GlassWater, History, MapPin } from "lucide-react";
+import { ArrowLeft, Minus, Plus, Package, GlassWater, History, MapPin } from "lucide-react";
 import { motion } from "framer-motion";
-import type { Event, Station } from "@shared/schema";
+import type { Event, Station, Product } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
 
 type DirectStock = {
@@ -65,6 +65,9 @@ export default function BartenderDirectStock() {
   const urlStationId = urlParams.get('stationId') || '';
 
   const [selectedStationId, setSelectedStationId] = useState<string>(urlStationId);
+  const [loadProductId, setLoadProductId] = useState<string>("");
+  const [loadQuantity, setLoadQuantity] = useState<string>("");
+  const [loadReason, setLoadReason] = useState<string>("");
   const [consumeProductId, setConsumeProductId] = useState<string>("");
   const [consumeQuantity, setConsumeQuantity] = useState<string>("");
   const [consumeReason, setConsumeReason] = useState<string>("");
@@ -83,6 +86,10 @@ export default function BartenderDirectStock() {
   const { data: stations } = useQuery<Station[]>({
     queryKey: ['/api/events', id, 'stations'],
     enabled: !!id,
+  });
+
+  const { data: products } = useQuery<Product[]>({
+    queryKey: ['/api/products'],
   });
 
   const myStations = stations?.filter(s => 
@@ -118,6 +125,30 @@ export default function BartenderDirectStock() {
     },
   });
 
+  const loadMutation = useMutation({
+    mutationFn: async (data: { productId: string; quantity: number; stationId?: string; reason?: string }) => {
+      await apiRequest('POST', `/api/events/${id}/direct-stock/load`, data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'direct-stock'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'direct-stock', 'summary'] });
+      setLoadProductId("");
+      setLoadQuantity("");
+      setLoadReason("");
+      toast({
+        title: "Carico registrato",
+        description: "Prodotto caricato con successo",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile registrare il carico",
+        variant: "destructive",
+      });
+    },
+  });
+
   const consumeMutation = useMutation({
     mutationFn: async (data: { productId: string; quantity: number; stationId?: string; reason?: string }) => {
       await apiRequest('POST', `/api/events/${id}/direct-stock/consume`, data);
@@ -141,6 +172,32 @@ export default function BartenderDirectStock() {
       });
     },
   });
+
+  const handleLoad = () => {
+    const qty = parseFloat(loadQuantity);
+    if (!loadProductId || isNaN(qty) || qty <= 0) {
+      toast({
+        title: "Dati non validi",
+        description: "Seleziona un prodotto e inserisci una quantità valida",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!activeStationId) {
+      toast({
+        title: "Stazione non selezionata",
+        description: "Seleziona la tua stazione di lavoro",
+        variant: "destructive",
+      });
+      return;
+    }
+    loadMutation.mutate({
+      productId: loadProductId,
+      quantity: qty,
+      stationId: activeStationId,
+      reason: loadReason || undefined,
+    });
+  };
 
   const handleConsume = () => {
     const qty = parseFloat(consumeQuantity);
@@ -320,6 +377,75 @@ export default function BartenderDirectStock() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1 }}
+            className="mb-6"
+          >
+            <Card className="glass-card">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Plus className="h-5 w-5 text-teal" />
+                  Carica Prodotto
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="load-product">Prodotto</Label>
+                  <Select
+                    value={loadProductId}
+                    onValueChange={setLoadProductId}
+                    data-testid="select-load-product"
+                  >
+                    <SelectTrigger id="load-product" data-testid="trigger-load-product">
+                      <SelectValue placeholder="Seleziona prodotto" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {products?.map((product) => (
+                        <SelectItem key={product.id} value={product.id}>
+                          {product.name} ({product.unitOfMeasure})
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="load-quantity">Quantità</Label>
+                  <Input
+                    id="load-quantity"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                    value={loadQuantity}
+                    onChange={(e) => setLoadQuantity(e.target.value)}
+                    data-testid="input-load-quantity"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="load-reason">Note (opzionale)</Label>
+                  <Input
+                    id="load-reason"
+                    placeholder="Es: Acquisto fornitore"
+                    value={loadReason}
+                    onChange={(e) => setLoadReason(e.target.value)}
+                    data-testid="input-load-reason"
+                  />
+                </div>
+                <Button
+                  onClick={handleLoad}
+                  disabled={loadMutation.isPending || !loadProductId}
+                  className="w-full"
+                  data-testid="button-load"
+                >
+                  <Plus className="h-4 w-4 mr-2" />
+                  {loadMutation.isPending ? "Caricamento..." : "Carica Prodotto"}
+                </Button>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.15 }}
             className="mb-6"
           >
             <Card className="glass-card">
