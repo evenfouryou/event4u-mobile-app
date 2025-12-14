@@ -212,16 +212,44 @@ router.delete('/profiles/:id', requireSuperAdmin, async (req: Request, res: Resp
 // ==================== PRINTER AGENTS ====================
 
 // GET agents for company (cassiere+ access per widget dashboard)
+// Super admin sees all agents, other users see only their own agents
 router.get('/agents', requireCashierOrAbove, async (req: Request, res: Response) => {
   try {
     const user = getUser(req);
     const companyId = user?.companyId;
-    let query = db.select().from(printerAgents);
-    if (companyId) {
-      query = query.where(eq(printerAgents.companyId, companyId)) as any;
+    const userId = user?.id;
+    
+    let agents: typeof printerAgents.$inferSelect[] = [];
+    if (user?.role === 'super_admin') {
+      // Super admin sees all agents (optionally filtered by company)
+      if (companyId) {
+        agents = await db.select().from(printerAgents)
+          .where(eq(printerAgents.companyId, companyId))
+          .orderBy(desc(printerAgents.lastHeartbeat));
+      } else {
+        agents = await db.select().from(printerAgents)
+          .orderBy(desc(printerAgents.lastHeartbeat));
+      }
+    } else if (user?.role === 'gestore') {
+      // Gestore sees all agents of their company
+      if (companyId) {
+        agents = await db.select().from(printerAgents)
+          .where(eq(printerAgents.companyId, companyId))
+          .orderBy(desc(printerAgents.lastHeartbeat));
+      } else {
+        agents = [];
+      }
+    } else {
+      // Other users see only their own agents
+      if (userId) {
+        agents = await db.select().from(printerAgents)
+          .where(eq(printerAgents.userId, userId))
+          .orderBy(desc(printerAgents.lastHeartbeat));
+      } else {
+        agents = [];
+      }
     }
     
-    const agents = await query.orderBy(desc(printerAgents.lastHeartbeat));
     res.json(agents);
   } catch (error) {
     console.error('Error fetching printer agents:', error);
@@ -229,30 +257,32 @@ router.get('/agents', requireCashierOrAbove, async (req: Request, res: Response)
   }
 });
 
-// POST register agent (admin authenticated, returns token for desktop app)
-router.post('/agents/register', requireAdmin, async (req: Request, res: Response) => {
+// POST register agent (any authenticated user, returns token for desktop app)
+router.post('/agents/register', requireCashierOrAbove, async (req: Request, res: Response) => {
   try {
     const user = getUser(req);
     const { deviceName, printerModelId, printerName, capabilities } = req.body;
     
-    // Use admin's company or allow super_admin to specify company
+    // Use user's company or allow super_admin to specify company
     let companyId = user?.companyId;
     if (user?.role === 'super_admin' && req.body.companyId) {
       companyId = req.body.companyId;
     }
     
-    if (!companyId || !deviceName) {
-      return res.status(400).json({ error: 'companyId e deviceName richiesti' });
+    const userId = user?.id;
+    
+    if (!companyId || !deviceName || !userId) {
+      return res.status(400).json({ error: 'companyId, userId e deviceName richiesti' });
     }
     
     // Generate auth token
     const authToken = crypto.randomBytes(32).toString('hex');
     const hashedToken = crypto.createHash('sha256').update(authToken).digest('hex');
     
-    // Check if agent already exists
+    // Check if agent already exists for this user and device
     const existing = await db.select().from(printerAgents)
       .where(and(
-        eq(printerAgents.companyId, companyId),
+        eq(printerAgents.userId, userId),
         eq(printerAgents.deviceName, deviceName)
       ))
       .limit(1);
@@ -272,9 +302,10 @@ router.post('/agents/register', requireAdmin, async (req: Request, res: Response
         .where(eq(printerAgents.id, existing[0].id))
         .returning();
     } else {
-      // Create new
+      // Create new with userId
       [agent] = await db.insert(printerAgents).values({
         companyId,
+        userId,
         deviceName,
         authToken: hashedToken,
         printerModelId,

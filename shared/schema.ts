@@ -3265,10 +3265,11 @@ export const printerModels = pgTable("printer_models", {
   createdAt: timestamp("created_at").defaultNow(),
 });
 
-// Printer Agents - Connected desktop apps (per-company)
+// Printer Agents - Connected desktop apps (per-company, per-user)
 export const printerAgents = pgTable("printer_agents", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   companyId: varchar("company_id").notNull().references(() => companies.id),
+  userId: varchar("user_id").references(() => users.id), // Owner of this agent
   deviceName: varchar("device_name", { length: 255 }).notNull(), // Computer name
   authToken: varchar("auth_token", { length: 128 }), // Hashed token for authentication
   printerModelId: varchar("printer_model_id").references(() => printerModels.id),
@@ -3340,6 +3341,10 @@ export const printerAgentsRelations = relations(printerAgents, ({ one, many }) =
   company: one(companies, {
     fields: [printerAgents.companyId],
     references: [companies.id],
+  }),
+  user: one(users, {
+    fields: [printerAgents.userId],
+    references: [users.id],
   }),
   model: one(printerModels, {
     fields: [printerAgents.printerModelId],
