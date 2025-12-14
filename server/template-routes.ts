@@ -582,39 +582,23 @@ function generateTicketHtml(
     ? naturalOrientation
     : templateOrientation;
   
-  // Calculate actual print dimensions - swap if orientation differs from natural
-  let printWidthMm = template.paperWidthMm;
-  let printHeightMm = template.paperHeightMm;
-  let printWidthPx = widthPx;
-  let printHeightPx = heightPx;
-  
-  // If forced orientation is different from natural, swap dimensions for print
-  const needsSwap = templateOrientation && templateOrientation !== 'auto' && templateOrientation !== naturalOrientation;
-  if (needsSwap) {
-    printWidthMm = template.paperHeightMm;
-    printHeightMm = template.paperWidthMm;
-    printWidthPx = heightPx;
-    printHeightPx = widthPx;
-  }
-  
   return `<!DOCTYPE html>
 <html>
 <head>
   <meta charset="utf-8">
   <style>
     @page {
-      size: ${printWidthMm}mm ${printHeightMm}mm;
+      size: ${template.paperWidthMm}mm ${template.paperHeightMm}mm;
       margin: 0;
     }
     * { margin: 0; padding: 0; box-sizing: border-box; }
     body { 
-      width: ${printWidthPx}px; 
-      height: ${printHeightPx}px; 
+      width: ${widthPx}px; 
+      height: ${heightPx}px; 
       position: relative;
       overflow: hidden;
       -webkit-print-color-adjust: exact;
       print-color-adjust: exact;
-      ${needsSwap ? `transform-origin: top left; transform: rotate(-90deg) translateX(-${printHeightPx}px);` : ''}
     }
     .background {
       position: absolute;
