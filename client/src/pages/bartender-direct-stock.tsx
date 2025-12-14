@@ -1,12 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useParams, Link, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
   Select,
@@ -15,16 +14,16 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Minus, Plus, Package, GlassWater, History, MapPin } from "lucide-react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import { ArrowLeft, Minus, Plus, Package, Search, MapPin, History } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Event, Station, Product } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
@@ -60,19 +59,18 @@ export default function BartenderDirectStock() {
   const { toast } = useToast();
   const { user, isLoading: authLoading } = useAuth();
 
-  // Parse stationId from URL query parameter
   const urlParams = new URLSearchParams(searchString);
   const urlStationId = urlParams.get('stationId') || '';
 
   const [selectedStationId, setSelectedStationId] = useState<string>(urlStationId);
-  const [loadProductId, setLoadProductId] = useState<string>("");
-  const [loadQuantity, setLoadQuantity] = useState<string>("");
-  const [loadReason, setLoadReason] = useState<string>("");
-  const [consumeProductId, setConsumeProductId] = useState<string>("");
-  const [consumeQuantity, setConsumeQuantity] = useState<string>("");
-  const [consumeReason, setConsumeReason] = useState<string>("");
+  const [activeTab, setActiveTab] = useState<string>("scarica");
+  const [searchQuery, setSearchQuery] = useState("");
+  const [actionDialogOpen, setActionDialogOpen] = useState(false);
+  const [actionType, setActionType] = useState<"load" | "unload">("load");
+  const [selectedProduct, setSelectedProduct] = useState<{ id: string; name: string; unit: string; available?: number } | null>(null);
+  const [quantity, setQuantity] = useState("");
+  const [reason, setReason] = useState("");
 
-  // Update selectedStationId when URL changes
   useEffect(() => {
     if (urlStationId) {
       setSelectedStationId(urlStationId);
@@ -112,7 +110,7 @@ export default function BartenderDirectStock() {
     },
   });
 
-  const { data: summary, isLoading: summaryLoading } = useQuery<DirectStockSummary>({
+  const { data: summary } = useQuery<DirectStockSummary>({
     queryKey: ['/api/events', id, 'direct-stock', 'summary', { stationId: activeStationId }],
     enabled: !!id && !!activeStationId,
     queryFn: async () => {
@@ -125,6 +123,28 @@ export default function BartenderDirectStock() {
     },
   });
 
+  const filteredProducts = useMemo(() => {
+    if (!products) return [];
+    if (!searchQuery.trim()) return products;
+    const query = searchQuery.toLowerCase();
+    return products.filter(p => 
+      p.name.toLowerCase().includes(query) || 
+      p.code?.toLowerCase().includes(query)
+    );
+  }, [products, searchQuery]);
+
+  const filteredStock = useMemo(() => {
+    if (!directStock) return [];
+    if (!searchQuery.trim()) return directStock.filter(s => s.available > 0);
+    const query = searchQuery.toLowerCase();
+    return directStock.filter(s => 
+      s.available > 0 && (
+        s.productName.toLowerCase().includes(query) || 
+        s.productCode?.toLowerCase().includes(query)
+      )
+    );
+  }, [directStock, searchQuery]);
+
   const loadMutation = useMutation({
     mutationFn: async (data: { productId: string; quantity: number; stationId?: string; reason?: string }) => {
       await apiRequest('POST', `/api/events/${id}/direct-stock/load`, data);
@@ -132,9 +152,7 @@ export default function BartenderDirectStock() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'direct-stock'] });
       queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'direct-stock', 'summary'] });
-      setLoadProductId("");
-      setLoadQuantity("");
-      setLoadReason("");
+      closeDialog();
       toast({
         title: "Carico registrato",
         description: "Prodotto caricato con successo",
@@ -156,9 +174,7 @@ export default function BartenderDirectStock() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'direct-stock'] });
       queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'direct-stock', 'summary'] });
-      setConsumeProductId("");
-      setConsumeQuantity("");
-      setConsumeReason("");
+      closeDialog();
       toast({
         title: "Scarico registrato",
         description: "Prodotto scaricato con successo",
@@ -173,12 +189,35 @@ export default function BartenderDirectStock() {
     },
   });
 
-  const handleLoad = () => {
-    const qty = parseFloat(loadQuantity);
-    if (!loadProductId || isNaN(qty) || qty <= 0) {
+  const openLoadDialog = (product: Product) => {
+    setSelectedProduct({ id: product.id, name: product.name, unit: product.unitOfMeasure });
+    setActionType("load");
+    setQuantity("");
+    setReason("");
+    setActionDialogOpen(true);
+  };
+
+  const openUnloadDialog = (stock: DirectStock) => {
+    setSelectedProduct({ id: stock.productId, name: stock.productName, unit: stock.unitOfMeasure, available: stock.available });
+    setActionType("unload");
+    setQuantity("");
+    setReason("");
+    setActionDialogOpen(true);
+  };
+
+  const closeDialog = () => {
+    setActionDialogOpen(false);
+    setSelectedProduct(null);
+    setQuantity("");
+    setReason("");
+  };
+
+  const handleSubmit = () => {
+    const qty = parseFloat(quantity);
+    if (!selectedProduct || isNaN(qty) || qty <= 0) {
       toast({
-        title: "Dati non validi",
-        description: "Seleziona un prodotto e inserisci una quantità valida",
+        title: "Quantità non valida",
+        description: "Inserisci una quantità maggiore di zero",
         variant: "destructive",
       });
       return;
@@ -191,60 +230,40 @@ export default function BartenderDirectStock() {
       });
       return;
     }
-    loadMutation.mutate({
-      productId: loadProductId,
+
+    const data = {
+      productId: selectedProduct.id,
       quantity: qty,
       stationId: activeStationId,
-      reason: loadReason || undefined,
-    });
+      reason: reason || undefined,
+    };
+
+    if (actionType === "load") {
+      loadMutation.mutate(data);
+    } else {
+      consumeMutation.mutate(data);
+    }
   };
 
-  const handleConsume = () => {
-    const qty = parseFloat(consumeQuantity);
-    if (!consumeProductId || isNaN(qty) || qty <= 0) {
-      toast({
-        title: "Dati non validi",
-        description: "Seleziona un prodotto e inserisci una quantità valida",
-        variant: "destructive",
-      });
-      return;
-    }
-    if (!activeStationId) {
-      toast({
-        title: "Stazione non selezionata",
-        description: "Seleziona la tua stazione di lavoro",
-        variant: "destructive",
-      });
-      return;
-    }
-    consumeMutation.mutate({
-      productId: consumeProductId,
-      quantity: qty,
-      stationId: activeStationId,
-      reason: consumeReason || undefined,
-    });
-  };
-
-  const getAvailableForConsume = (productId: string): number => {
-    const stock = directStock?.find(s => s.productId === productId);
-    return stock?.available || 0;
-  };
+  const quickQuantities = [1, 2, 5, 10];
 
   const currentStation = stations?.find(s => s.id === activeStationId);
 
-  // Wait for event, auth, and stations to load before showing content
   if (eventLoading || authLoading || stationsLoading) {
     return (
-      <div className="p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
-        <Skeleton className="h-12 w-64 mb-8 rounded-xl" />
-        <Skeleton className="h-64 rounded-2xl" />
+      <div className="p-4 max-w-lg mx-auto pb-24">
+        <Skeleton className="h-12 w-48 mb-6 rounded-xl" />
+        <Skeleton className="h-12 w-full mb-4 rounded-xl" />
+        <div className="grid grid-cols-2 gap-3">
+          {[1,2,3,4].map(i => <Skeleton key={i} className="h-24 rounded-xl" />)}
+        </div>
       </div>
     );
   }
 
   if (!event) {
     return (
-      <div className="p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
+      <div className="p-4 max-w-lg mx-auto pb-24">
         <div className="glass-card p-12 text-center">
           <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">Evento non trovato</p>
@@ -260,377 +279,312 @@ export default function BartenderDirectStock() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
-      <motion.div
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="flex items-center gap-4 mb-6"
-      >
-        <Button
-          asChild
-          variant="ghost"
-          size="icon"
-          className="rounded-xl"
-          data-testid="button-back"
-        >
-          <Link href={`/events/${id}`}>
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </Button>
-        <div className="flex-1">
-          <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2" data-testid="text-page-title">
-            <GlassWater className="h-6 w-6 text-amber-500" />
-            Consumi Diretti
-          </h1>
-          <p className="text-sm text-muted-foreground">{event.name}</p>
-        </div>
-      </motion.div>
+    <div className="min-h-screen pb-24">
+      <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
+        <div className="p-4 max-w-lg mx-auto">
+          <div className="flex items-center gap-3 mb-3">
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              className="shrink-0"
+              data-testid="button-back"
+            >
+              <Link href={`/events/${id}`}>
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg font-bold truncate" data-testid="text-page-title">
+                Carico/Scarico Diretto
+              </h1>
+              <p className="text-xs text-muted-foreground truncate">{event.name}</p>
+            </div>
+            {summary && (
+              <Badge variant="outline" className="shrink-0">
+                <History className="h-3 w-3 mr-1" />
+                {summary.totalConsumed.toFixed(0)}
+              </Badge>
+            )}
+          </div>
 
-      {myStations.length > 1 && !selectedStationId && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.05 }}
-          className="mb-6"
-        >
-          <Card className="glass-card">
-            <CardContent className="p-4">
-              <div className="flex items-center gap-3">
-                <MapPin className="h-5 w-5 text-primary" />
-                <div className="flex-1">
-                  <Label htmlFor="station-select" className="text-sm text-muted-foreground">
-                    Seleziona la tua stazione
-                  </Label>
-                  <Select
-                    value={selectedStationId}
-                    onValueChange={setSelectedStationId}
-                    data-testid="select-station"
-                  >
-                    <SelectTrigger id="station-select" data-testid="trigger-station-select">
-                      <SelectValue placeholder="Seleziona stazione" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {myStations.map((station) => (
-                        <SelectItem key={station.id} value={station.id}>
-                          {station.name}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+          {myStations.length > 1 ? (
+            <Select value={selectedStationId} onValueChange={setSelectedStationId}>
+              <SelectTrigger className="w-full" data-testid="trigger-station-select">
+                <MapPin className="h-4 w-4 mr-2 text-primary" />
+                <SelectValue placeholder="Seleziona stazione" />
+              </SelectTrigger>
+              <SelectContent>
+                {myStations.map((station) => (
+                  <SelectItem key={station.id} value={station.id}>
+                    {station.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          ) : currentStation && (
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              <MapPin className="h-4 w-4 text-primary" />
+              <span>{currentStation.name}</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className="p-4 max-w-lg mx-auto">
+        {!activeStationId && myStations.length === 0 ? (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="glass-card p-8 text-center"
+          >
+            <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+            <p className="text-muted-foreground">Non sei assegnato a nessuna stazione</p>
+            <p className="text-sm text-muted-foreground mt-1">Contatta l'organizzatore</p>
+          </motion.div>
+        ) : (
+          <>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-4">
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="scarica" className="gap-2" data-testid="tab-scarica">
+                  <Minus className="h-4 w-4" />
+                  Scarica
+                </TabsTrigger>
+                <TabsTrigger value="carica" className="gap-2" data-testid="tab-carica">
+                  <Plus className="h-4 w-4" />
+                  Carica
+                </TabsTrigger>
+              </TabsList>
+
+              <div className="relative mt-4 mb-4">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                <Input
+                  placeholder="Cerca prodotto..."
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="pl-10"
+                  data-testid="input-search-product"
+                />
+              </div>
+
+              <TabsContent value="scarica" className="mt-0">
+                {stockLoading ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {[1,2,3,4].map(i => <Skeleton key={i} className="h-28 rounded-xl" />)}
+                  </div>
+                ) : filteredStock.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {filteredStock.map((stock) => (
+                      <motion.div
+                        key={stock.productId}
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                      >
+                        <Card 
+                          className="glass-card cursor-pointer hover-elevate active-elevate-2 overflow-visible"
+                          onClick={() => openUnloadDialog(stock)}
+                          data-testid={`card-stock-${stock.productId}`}
+                        >
+                          <CardContent className="p-4">
+                            <div className="flex items-start justify-between mb-2">
+                              <Badge variant="secondary" className="text-xs">
+                                {stock.productCode}
+                              </Badge>
+                              <Badge variant="default" className="text-xs">
+                                {stock.available.toFixed(1)}
+                              </Badge>
+                            </div>
+                            <p className="font-medium text-sm leading-tight line-clamp-2">
+                              {stock.productName}
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {stock.unitOfMeasure}
+                            </p>
+                            <Button 
+                              size="sm" 
+                              variant="destructive" 
+                              className="w-full mt-3"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                openUnloadDialog(stock);
+                              }}
+                              data-testid={`button-unload-${stock.productId}`}
+                            >
+                              <Minus className="h-4 w-4 mr-1" />
+                              Scarica
+                            </Button>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Package className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                    <p className="text-muted-foreground">
+                      {searchQuery ? "Nessun prodotto trovato" : "Nessun prodotto da scaricare"}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {searchQuery ? "Prova con un'altra ricerca" : "Carica prima dei prodotti"}
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="carica" className="mt-0">
+                {filteredProducts.length > 0 ? (
+                  <div className="grid grid-cols-2 gap-3">
+                    {filteredProducts.map((product) => {
+                      const stockInfo = directStock?.find(s => s.productId === product.id);
+                      return (
+                        <motion.div
+                          key={product.id}
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                        >
+                          <Card 
+                            className="glass-card cursor-pointer hover-elevate active-elevate-2 overflow-visible"
+                            onClick={() => openLoadDialog(product)}
+                            data-testid={`card-product-${product.id}`}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between mb-2">
+                                <Badge variant="secondary" className="text-xs">
+                                  {product.code}
+                                </Badge>
+                                {stockInfo && (
+                                  <Badge variant="outline" className="text-xs">
+                                    {stockInfo.available.toFixed(1)}
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="font-medium text-sm leading-tight line-clamp-2">
+                                {product.name}
+                              </p>
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {product.unitOfMeasure}
+                              </p>
+                              <Button 
+                                size="sm" 
+                                className="w-full mt-3"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  openLoadDialog(product);
+                                }}
+                                data-testid={`button-load-${product.id}`}
+                              >
+                                <Plus className="h-4 w-4 mr-1" />
+                                Carica
+                              </Button>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <div className="text-center py-12">
+                    <Package className="h-12 w-12 text-muted-foreground mx-auto mb-3 opacity-50" />
+                    <p className="text-muted-foreground">
+                      {searchQuery ? "Nessun prodotto trovato" : "Nessun prodotto disponibile"}
+                    </p>
+                  </div>
+                )}
+              </TabsContent>
+            </Tabs>
+          </>
+        )}
+      </div>
+
+      <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
+        <DialogContent className="max-w-sm mx-4">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              {actionType === "load" ? (
+                <>
+                  <Plus className="h-5 w-5 text-primary" />
+                  Carica Prodotto
+                </>
+              ) : (
+                <>
+                  <Minus className="h-5 w-5 text-destructive" />
+                  Scarica Prodotto
+                </>
+              )}
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedProduct && (
+            <div className="space-y-4">
+              <div className="bg-muted/50 rounded-lg p-3">
+                <p className="font-medium">{selectedProduct.name}</p>
+                <p className="text-sm text-muted-foreground">{selectedProduct.unit}</p>
+                {actionType === "unload" && selectedProduct.available !== undefined && (
+                  <p className="text-sm text-primary mt-1">
+                    Disponibile: {selectedProduct.available.toFixed(2)}
+                  </p>
+                )}
+              </div>
+
+              <div>
+                <p className="text-sm font-medium mb-2">Quantità rapida</p>
+                <div className="flex gap-2">
+                  {quickQuantities.map((q) => (
+                    <Button
+                      key={q}
+                      variant={quantity === String(q) ? "default" : "outline"}
+                      size="sm"
+                      onClick={() => setQuantity(String(q))}
+                      className="flex-1"
+                      data-testid={`button-qty-${q}`}
+                    >
+                      {q}
+                    </Button>
+                  ))}
                 </div>
               </div>
-            </CardContent>
-          </Card>
-        </motion.div>
-      )}
 
-      {myStations.length > 1 && selectedStationId && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-6"
-        >
-          <div className="flex items-center gap-2">
-            <Badge variant="outline" className="text-sm py-1.5 px-3">
-              <MapPin className="h-3.5 w-3.5 mr-1.5" />
-              {myStations.find(s => s.id === selectedStationId)?.name}
-            </Badge>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setSelectedStationId("")}
-              data-testid="button-change-station"
-            >
-              Cambia
+              <div>
+                <p className="text-sm font-medium mb-2">Quantità personalizzata</p>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  placeholder="0"
+                  value={quantity}
+                  onChange={(e) => setQuantity(e.target.value)}
+                  className="text-lg text-center"
+                  data-testid="input-quantity"
+                />
+              </div>
+
+              <div>
+                <p className="text-sm font-medium mb-2">Note (opzionale)</p>
+                <Input
+                  placeholder={actionType === "load" ? "Es: Acquisto fornitore" : "Es: Tavolo 5"}
+                  value={reason}
+                  onChange={(e) => setReason(e.target.value)}
+                  data-testid="input-reason"
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter className="gap-2 sm:gap-0">
+            <Button variant="outline" onClick={closeDialog} data-testid="button-cancel">
+              Annulla
             </Button>
-          </div>
-        </motion.div>
-      )}
-
-      {currentStation && (
-        <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="mb-6"
-        >
-          <Badge variant="outline" className="text-sm py-1.5 px-3">
-            <MapPin className="h-3.5 w-3.5 mr-1.5" />
-            Stazione: {currentStation.name}
-          </Badge>
-        </motion.div>
-      )}
-
-      {!activeStationId && myStations.length === 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass-card p-8 text-center mb-6"
-        >
-          <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <p className="text-muted-foreground">Non sei assegnato a nessuna stazione per questo evento</p>
-          <p className="text-sm text-muted-foreground mt-1">Contatta l'organizzatore per essere assegnato</p>
-        </motion.div>
-      )}
-
-      {activeStationId && (
-        <>
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.1 }}
-            className="mb-6"
-          >
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Plus className="h-5 w-5 text-teal" />
-                  Carica Prodotto
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="load-product">Prodotto</Label>
-                  <Select
-                    value={loadProductId}
-                    onValueChange={setLoadProductId}
-                    data-testid="select-load-product"
-                  >
-                    <SelectTrigger id="load-product" data-testid="trigger-load-product">
-                      <SelectValue placeholder="Seleziona prodotto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {products?.map((product) => (
-                        <SelectItem key={product.id} value={product.id}>
-                          {product.name} ({product.unitOfMeasure})
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="load-quantity">Quantità</Label>
-                  <Input
-                    id="load-quantity"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0"
-                    value={loadQuantity}
-                    onChange={(e) => setLoadQuantity(e.target.value)}
-                    data-testid="input-load-quantity"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="load-reason">Note (opzionale)</Label>
-                  <Input
-                    id="load-reason"
-                    placeholder="Es: Acquisto fornitore"
-                    value={loadReason}
-                    onChange={(e) => setLoadReason(e.target.value)}
-                    data-testid="input-load-reason"
-                  />
-                </div>
-                <Button
-                  onClick={handleLoad}
-                  disabled={loadMutation.isPending || !loadProductId}
-                  className="w-full"
-                  data-testid="button-load"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  {loadMutation.isPending ? "Caricamento..." : "Carica Prodotto"}
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.15 }}
-            className="mb-6"
-          >
-            <Card className="glass-card">
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-lg">
-                  <Minus className="h-5 w-5 text-amber-500" />
-                  Scarica Prodotto
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="space-y-2">
-                  <Label htmlFor="consume-product">Prodotto</Label>
-                  <Select
-                    value={consumeProductId}
-                    onValueChange={setConsumeProductId}
-                    data-testid="select-consume-product"
-                  >
-                    <SelectTrigger id="consume-product" data-testid="trigger-consume-product">
-                      <SelectValue placeholder="Seleziona prodotto" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {directStock?.filter(s => s.available > 0).map((stock) => (
-                        <SelectItem key={stock.productId} value={stock.productId}>
-                          {stock.productName} (Disp: {stock.available.toFixed(2)})
-                        </SelectItem>
-                      ))}
-                      {(!directStock || directStock.filter(s => s.available > 0).length === 0) && (
-                        <SelectItem value="_empty" disabled>
-                          Nessun prodotto disponibile
-                        </SelectItem>
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {consumeProductId && (
-                    <p className="text-xs text-muted-foreground">
-                      Disponibile: {getAvailableForConsume(consumeProductId).toFixed(2)}
-                    </p>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="consume-quantity">Quantità</Label>
-                  <Input
-                    id="consume-quantity"
-                    type="number"
-                    min="0"
-                    step="0.01"
-                    placeholder="0"
-                    value={consumeQuantity}
-                    onChange={(e) => setConsumeQuantity(e.target.value)}
-                    data-testid="input-consume-quantity"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="consume-reason">Note (opzionale)</Label>
-                  <Input
-                    id="consume-reason"
-                    placeholder="Es: Tavolo 5"
-                    value={consumeReason}
-                    onChange={(e) => setConsumeReason(e.target.value)}
-                    data-testid="input-consume-reason"
-                  />
-                </div>
-                <Button
-                  onClick={handleConsume}
-                  disabled={consumeMutation.isPending || !consumeProductId}
-                  className="w-full"
-                  data-testid="button-consume"
-                >
-                  <Minus className="h-4 w-4 mr-2" />
-                  {consumeMutation.isPending ? "Scaricamento..." : "Scarica Prodotto"}
-                </Button>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.2 }}
-            className="glass-card mb-6"
-          >
-            <div className="p-4 border-b border-border">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <Package className="h-5 w-5" />
-                Stock Disponibile
-              </h2>
-            </div>
-            <div className="overflow-x-auto">
-              {stockLoading ? (
-                <div className="p-6">
-                  <Skeleton className="h-32 w-full rounded-xl" />
-                </div>
-              ) : directStock && directStock.length > 0 ? (
-                <Table data-testid="table-direct-stock">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Prodotto</TableHead>
-                      <TableHead className="text-right">Disponibile</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {directStock.map((stock) => (
-                      <TableRow key={stock.productId} data-testid={`row-stock-${stock.productId}`}>
-                        <TableCell className="font-medium">{stock.productName}</TableCell>
-                        <TableCell className="text-right">
-                          <Badge variant={stock.available > 0 ? "default" : "secondary"}>
-                            {stock.available.toFixed(2)} {stock.unitOfMeasure}
-                          </Badge>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="p-8 text-center text-muted-foreground">
-                  <Package className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                  <p>Nessun prodotto disponibile</p>
-                </div>
-              )}
-            </div>
-          </motion.div>
-
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.3 }}
-            className="glass-card"
-          >
-            <div className="p-4 border-b border-border">
-              <h2 className="text-lg font-semibold flex items-center gap-2">
-                <History className="h-5 w-5" />
-                I Miei Consumi
-                {summary && (
-                  <span className="text-sm font-normal text-muted-foreground ml-auto">
-                    Totale: {summary.totalConsumed.toFixed(2)}
-                  </span>
-                )}
-              </h2>
-            </div>
-            <div className="overflow-x-auto">
-              {summaryLoading ? (
-                <div className="p-6">
-                  <Skeleton className="h-32 w-full rounded-xl" />
-                </div>
-              ) : summary?.movements && summary.movements.filter(m => m.type === 'DIRECT_CONSUME').length > 0 ? (
-                <Table data-testid="table-movements">
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Ora</TableHead>
-                      <TableHead>Prodotto</TableHead>
-                      <TableHead className="text-right">Qty</TableHead>
-                      <TableHead>Note</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {summary.movements.filter(m => m.type === 'DIRECT_CONSUME').map((mov) => (
-                      <TableRow key={mov.id} data-testid={`row-movement-${mov.id}`}>
-                        <TableCell className="text-muted-foreground whitespace-nowrap">
-                          {mov.createdAt ? new Date(mov.createdAt).toLocaleTimeString('it-IT', {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          }) : '-'}
-                        </TableCell>
-                        <TableCell className="font-medium">{mov.productName}</TableCell>
-                        <TableCell className="text-right text-amber-500">
-                          -{parseFloat(mov.quantity).toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-muted-foreground max-w-[120px] truncate">
-                          {mov.reason || '-'}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              ) : (
-                <div className="p-8 text-center text-muted-foreground">
-                  <History className="h-10 w-10 mx-auto mb-3 opacity-50" />
-                  <p>Nessun consumo registrato</p>
-                </div>
-              )}
-            </div>
-          </motion.div>
-        </>
-      )}
+            <Button 
+              onClick={handleSubmit}
+              disabled={loadMutation.isPending || consumeMutation.isPending || !quantity}
+              variant={actionType === "load" ? "default" : "destructive"}
+              data-testid="button-confirm"
+            >
+              {loadMutation.isPending || consumeMutation.isPending ? "..." : "Conferma"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
