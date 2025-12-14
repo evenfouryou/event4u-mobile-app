@@ -714,6 +714,7 @@ export default function TemplateBuilder() {
                   width: element.width * MM_TO_PX * zoom,
                   height: element.height * MM_TO_PX * zoom,
                   transform: `rotate(${element.rotation}deg)`,
+                  transformOrigin: 'center center',
                   zIndex: element.zIndex,
                 }}
                 onMouseDown={(e) => handleMouseDown(e, element.id)}
