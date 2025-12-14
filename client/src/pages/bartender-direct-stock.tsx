@@ -58,7 +58,7 @@ export default function BartenderDirectStock() {
   const { id } = useParams();
   const searchString = useSearch();
   const { toast } = useToast();
-  const { user } = useAuth();
+  const { user, isLoading: authLoading } = useAuth();
 
   // Parse stationId from URL query parameter
   const urlParams = new URLSearchParams(searchString);
@@ -83,7 +83,7 @@ export default function BartenderDirectStock() {
     queryKey: ['/api/events', id],
   });
 
-  const { data: stations } = useQuery<Station[]>({
+  const { data: stations, isLoading: stationsLoading } = useQuery<Station[]>({
     queryKey: ['/api/events', id, 'stations'],
     enabled: !!id,
   });
@@ -232,7 +232,8 @@ export default function BartenderDirectStock() {
 
   const currentStation = stations?.find(s => s.id === activeStationId);
 
-  if (eventLoading) {
+  // Wait for event, auth, and stations to load before showing content
+  if (eventLoading || authLoading || stationsLoading) {
     return (
       <div className="p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
         <Skeleton className="h-12 w-64 mb-8 rounded-xl" />
