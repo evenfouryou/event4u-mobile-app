@@ -354,15 +354,19 @@ export default function TemplateBuilder() {
   };
 
   // Handle mouse move (zoom-aware)
+  // Extended limits to allow positioning rotated elements properly
   const handleMouseMove = (e: React.MouseEvent) => {
     if (isDragging && selectedElement && canvasRef.current) {
       const rect = canvasRef.current.getBoundingClientRect();
       const newX = (e.clientX - rect.left - dragOffset.x) / (MM_TO_PX * zoom);
       const newY = (e.clientY - rect.top - dragOffset.y) / (MM_TO_PX * zoom);
       
+      const element = elements.find(el => el.id === selectedElement);
+      const maxDim = element ? Math.max(element.width, element.height) : 30;
+      
       updateElement(selectedElement, {
-        x: Math.max(0, Math.min(newX, paperWidth)),
-        y: Math.max(0, Math.min(newY, paperHeight)),
+        x: Math.max(-maxDim, Math.min(newX, paperWidth + maxDim)),
+        y: Math.max(-maxDim, Math.min(newY, paperHeight + maxDim)),
       });
     }
   };
