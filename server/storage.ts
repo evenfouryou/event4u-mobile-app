@@ -273,6 +273,7 @@ export interface IStorage {
   // Maintenances operations
   getMaintenancesByCompany(companyId: string): Promise<Maintenance[]>;
   getMaintenancesByLocation(locationId: string, companyId: string): Promise<Maintenance[]>;
+  getMaintenancesByEvent(eventId: string, companyId: string): Promise<Maintenance[]>;
   getMaintenance(id: string, companyId: string): Promise<Maintenance | undefined>;
   createMaintenance(maintenance: InsertMaintenance): Promise<Maintenance>;
   updateMaintenance(id: string, companyId: string, maintenance: Partial<Maintenance>): Promise<Maintenance | undefined>;
@@ -1521,6 +1522,12 @@ ${context ? `Contesto aggiuntivo: ${context}` : ''}`;
   async getMaintenancesByLocation(locationId: string, companyId: string): Promise<Maintenance[]> {
     return await db.select().from(maintenances).where(
       and(eq(maintenances.locationId, locationId), eq(maintenances.companyId, companyId))
+    );
+  }
+
+  async getMaintenancesByEvent(eventId: string, companyId: string): Promise<Maintenance[]> {
+    return await db.select().from(maintenances).where(
+      and(eq(maintenances.eventId, eventId), eq(maintenances.companyId, companyId))
     );
   }
 

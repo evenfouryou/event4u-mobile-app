@@ -1192,8 +1192,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
           }
 
           // Generate recurring event occurrences
+          // Convert recurrenceEndDate to Date if it's a string to satisfy type requirements
+          const baseEventForGeneration = {
+            ...validated,
+            recurrenceEndDate: validated.recurrenceEndDate 
+              ? new Date(validated.recurrenceEndDate) 
+              : null,
+          };
           const occurrences = generateRecurringEvents({
-            baseEvent: validated,
+            baseEvent: baseEventForGeneration,
             pattern: validated.recurrencePattern as 'daily' | 'weekly' | 'monthly',
             interval: validated.recurrenceInterval,
             count: validated.recurrenceCount || undefined,
@@ -3110,7 +3117,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
             companyId,
             productId: stock.productId,
             quantity: (-currentQty).toString(),
-            type: 'ADJUST',
+            type: 'ADJUSTMENT',
             reason: 'Reset magazzino generale - azzeramento quantità',
             performedBy: userId,
           });
@@ -3896,7 +3903,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }).filter(p => p.totalQuantity > 0); // Only include products with positive consumption
 
       // Get unique station IDs from consume movements (excluding null stations)
-      const stationIds = [...new Set(consumeMovements.map(m => m.fromStationId).filter(Boolean))] as string[];
+      const stationIds = Array.from(new Set(consumeMovements.map(m => m.fromStationId).filter((id): id is string => Boolean(id))));
       
       // Fetch station details for all referenced stations
       const allStations = await storage.getStationsByCompany(companyId);
@@ -5250,27 +5257,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
       ]);
 
       // Calculate totals
-      const totalExtraCosts = extraCosts.reduce((sum, c) => sum + parseFloat(c.amount || '0'), 0);
-      const totalMaintenances = maintenances.reduce((sum, m) => sum + parseFloat(m.amount || '0'), 0);
+      const totalExtraCosts = extraCosts.reduce((sum: number, c: any) => sum + parseFloat(c.amount || '0'), 0);
+      const totalMaintenances = maintenances.reduce((sum: number, m: any) => sum + parseFloat(m.amount || '0'), 0);
       
       const totalStaffCount = staffAssignments.length;
-      const totalStaffCosts = staffAssignments.reduce((sum, a) => 
+      const totalStaffCosts = staffAssignments.reduce((sum: number, a: any) => 
         sum + parseFloat(a.compensationAmount || '0') + parseFloat(a.bonus || '0'), 0);
 
-      const totalCashRevenue = cashEntries.filter(e => e.paymentMethod === 'cash')
-        .reduce((sum, e) => sum + parseFloat(e.totalAmount || '0'), 0);
-      const totalCardRevenue = cashEntries.filter(e => e.paymentMethod === 'card')
-        .reduce((sum, e) => sum + parseFloat(e.totalAmount || '0'), 0);
-      const totalOnlineRevenue = cashEntries.filter(e => e.paymentMethod === 'online')
-        .reduce((sum, e) => sum + parseFloat(e.totalAmount || '0'), 0);
-      const totalCreditsRevenue = cashEntries.filter(e => e.paymentMethod === 'credits')
-        .reduce((sum, e) => sum + parseFloat(e.totalAmount || '0'), 0);
+      const totalCashRevenue = cashEntries.filter((e: any) => e.paymentMethod === 'cash')
+        .reduce((sum: number, e: any) => sum + parseFloat(e.totalAmount || '0'), 0);
+      const totalCardRevenue = cashEntries.filter((e: any) => e.paymentMethod === 'card')
+        .reduce((sum: number, e: any) => sum + parseFloat(e.totalAmount || '0'), 0);
+      const totalOnlineRevenue = cashEntries.filter((e: any) => e.paymentMethod === 'online')
+        .reduce((sum: number, e: any) => sum + parseFloat(e.totalAmount || '0'), 0);
+      const totalCreditsRevenue = cashEntries.filter((e: any) => e.paymentMethod === 'credits')
+        .reduce((sum: number, e: any) => sum + parseFloat(e.totalAmount || '0'), 0);
       const totalRevenue = totalCashRevenue + totalCardRevenue + totalOnlineRevenue + totalCreditsRevenue;
 
-      const openingFunds = cashFunds.filter(f => f.type === 'opening');
-      const closingFunds = cashFunds.filter(f => f.type === 'closing');
-      const openingFund = openingFunds.reduce((sum, f) => sum + parseFloat(f.amount || '0'), 0);
-      const closingFund = closingFunds.reduce((sum, f) => sum + parseFloat(f.amount || '0'), 0);
+      const openingFunds = cashFunds.filter((f: any) => f.type === 'opening');
+      const closingFunds = cashFunds.filter((f: any) => f.type === 'closing');
+      const openingFund = openingFunds.reduce((sum: number, f: any) => sum + parseFloat(f.amount || '0'), 0);
+      const closingFund = closingFunds.reduce((sum: number, f: any) => sum + parseFloat(f.amount || '0'), 0);
 
       const totalExpenses = totalExtraCosts + totalMaintenances + totalStaffCosts;
       const netResult = totalRevenue - totalExpenses;
