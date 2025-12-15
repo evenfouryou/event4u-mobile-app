@@ -1,6 +1,9 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
 import { siaeStorage } from "./siae-storage";
+import { db } from "./db";
+import { events } from "@shared/schema";
+import { eq } from "drizzle-orm";
 import { z } from "zod";
 import { requestFiscalSeal, isCardReadyForSeals, isBridgeConnected } from "./bridge-relay";
 import {
@@ -665,6 +668,61 @@ router.patch("/api/siae/ticketed-events/:id", requireAuth, requireOrganizer, asy
     res.json(event);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
+  }
+});
+
+// Update event public info (image and description)
+router.patch("/api/siae/ticketed-events/:id/public-info", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { description, imageUrl } = req.body;
+    
+    // Get the ticketed event to find the associated event
+    const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(req.params.id);
+    if (!ticketedEvent) {
+      return res.status(404).json({ message: "Evento biglietteria non trovato" });
+    }
+    
+    // Update the base event with description and imageUrl
+    const [updated] = await db
+      .update(events)
+      .set({
+        description: description ?? null,
+        imageUrl: imageUrl ?? null,
+        updatedAt: new Date(),
+      })
+      .where(eq(events.id, ticketedEvent.eventId))
+      .returning();
+    
+    if (!updated) {
+      return res.status(404).json({ message: "Evento non trovato" });
+    }
+    
+    res.json({ 
+      message: "Informazioni pubbliche aggiornate",
+      description: updated.description,
+      imageUrl: updated.imageUrl
+    });
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// Get event public info
+router.get("/api/siae/ticketed-events/:id/public-info", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(req.params.id);
+    if (!ticketedEvent) {
+      return res.status(404).json({ message: "Evento biglietteria non trovato" });
+    }
+    
+    const [event] = await db
+      .select({ description: events.description, imageUrl: events.imageUrl })
+      .from(events)
+      .where(eq(events.id, ticketedEvent.eventId));
+    
+    res.json(event || { description: null, imageUrl: null });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 });
 

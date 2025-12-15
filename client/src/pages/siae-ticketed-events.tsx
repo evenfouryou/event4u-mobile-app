@@ -38,6 +38,7 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
 import {
   Select,
@@ -91,6 +92,7 @@ import {
   Tag,
   ExternalLink,
   Copy,
+  Image,
 } from "lucide-react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -120,6 +122,8 @@ export default function SiaeTicketedEventsPage() {
   const [isSectorDialogOpen, setIsSectorDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<SiaeTicketedEvent | null>(null);
   const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
+  const [publicInfoImageUrl, setPublicInfoImageUrl] = useState("");
+  const [publicInfoDescription, setPublicInfoDescription] = useState("");
 
   const companyId = user?.companyId;
 
@@ -143,6 +147,11 @@ export default function SiaeTicketedEventsPage() {
 
   const { data: selectedEventSectors, isLoading: sectorsLoading } = useQuery<SiaeEventSector[]>({
     queryKey: ['/api/siae/ticketed-events', expandedEventId, 'sectors'],
+    enabled: !!expandedEventId,
+  });
+
+  const { data: publicInfoData } = useQuery<{ description: string | null; imageUrl: string | null }>({
+    queryKey: ['/api/siae/ticketed-events', expandedEventId, 'public-info'],
     enabled: !!expandedEventId,
   });
 
@@ -222,6 +231,22 @@ export default function SiaeTicketedEventsPage() {
     }
   }, [watchedTicketType, sectorForm]);
 
+  // Initialize public info fields from query data
+  useEffect(() => {
+    if (publicInfoData) {
+      setPublicInfoImageUrl(publicInfoData.imageUrl || "");
+      setPublicInfoDescription(publicInfoData.description || "");
+    }
+  }, [publicInfoData]);
+
+  // Reset public info fields when accordion closes
+  useEffect(() => {
+    if (!expandedEventId) {
+      setPublicInfoImageUrl("");
+      setPublicInfoDescription("");
+    }
+  }, [expandedEventId]);
+
   const createMutation = useMutation({
     mutationFn: async (data: FormData) => {
       const response = await apiRequest("POST", `/api/siae/ticketed-events`, { ...data, companyId });
@@ -278,6 +303,29 @@ export default function SiaeTicketedEventsPage() {
       toast({
         title: "Settore Creato",
         description: "Il nuovo settore è stato aggiunto all'evento.",
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Errore",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const updatePublicInfoMutation = useMutation({
+    mutationFn: async ({ id, description, imageUrl }: { id: string; description: string; imageUrl: string }) => {
+      const response = await apiRequest("PATCH", `/api/siae/ticketed-events/${id}/public-info`, { description, imageUrl });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ 
+        predicate: (q) => q.queryKey[0] === '/api/siae/ticketed-events' && q.queryKey[2] === 'public-info' 
+      });
+      toast({
+        title: "Informazioni Salvate",
+        description: "Le informazioni pubbliche sono state aggiornate.",
       });
     },
     onError: (error: Error) => {
@@ -358,7 +406,7 @@ export default function SiaeTicketedEventsPage() {
     <div className="p-6 space-y-6" data-testid="page-siae-ticketed-events">
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <Link href="/events">
+          <Link href="/">
             <Button variant="ghost" size="icon" data-testid="button-back-siae-events">
               <ArrowLeft className="w-5 h-5" />
             </Button>
@@ -659,6 +707,58 @@ export default function SiaeTicketedEventsPage() {
                                 </Table>
                               </div>
                             )}
+
+                            {/* Informazioni Pubbliche */}
+                            <div className="mt-6 p-4 rounded-lg bg-background/50 border border-border/50" data-testid={`section-public-info-${ticketedEvent.id}`}>
+                              <h4 className="font-medium mb-4 flex items-center gap-2">
+                                <Image className="w-4 h-4" />
+                                Informazioni Pubbliche
+                              </h4>
+                              <div className="space-y-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor={`image-url-${ticketedEvent.id}`}>URL Immagine</Label>
+                                  <Input
+                                    id={`image-url-${ticketedEvent.id}`}
+                                    placeholder="https://esempio.com/immagine.jpg"
+                                    value={publicInfoImageUrl}
+                                    onChange={(e) => setPublicInfoImageUrl(e.target.value)}
+                                    data-testid={`input-image-url-${ticketedEvent.id}`}
+                                  />
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor={`description-${ticketedEvent.id}`}>Descrizione</Label>
+                                  <Textarea
+                                    id={`description-${ticketedEvent.id}`}
+                                    placeholder="Descrizione dell'evento..."
+                                    value={publicInfoDescription}
+                                    onChange={(e) => setPublicInfoDescription(e.target.value)}
+                                    rows={3}
+                                    data-testid={`input-description-${ticketedEvent.id}`}
+                                  />
+                                </div>
+                                <Button
+                                  size="sm"
+                                  onClick={() => {
+                                    updatePublicInfoMutation.mutate({
+                                      id: ticketedEvent.id,
+                                      description: publicInfoDescription,
+                                      imageUrl: publicInfoImageUrl,
+                                    });
+                                  }}
+                                  disabled={updatePublicInfoMutation.isPending}
+                                  data-testid={`button-save-public-info-${ticketedEvent.id}`}
+                                >
+                                  {updatePublicInfoMutation.isPending ? (
+                                    <>
+                                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                      Salvataggio...
+                                    </>
+                                  ) : (
+                                    "Salva"
+                                  )}
+                                </Button>
+                              </div>
+                            </div>
                           </div>
                         </AccordionContent>
                       </AccordionItem>

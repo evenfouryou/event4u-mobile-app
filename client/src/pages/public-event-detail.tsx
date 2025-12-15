@@ -61,6 +61,8 @@ interface EventDetail {
   requiresNominative: boolean;
   allowsChangeName: boolean;
   eventName: string;
+  eventDescription: string | null;
+  eventImageUrl: string | null;
   eventStart: Date;
   eventEnd: Date;
   eventNotes: string | null;
@@ -369,6 +371,14 @@ export default function PublicEventDetailPage() {
             className="space-y-8"
           >
             <Card className="relative overflow-hidden rounded-2xl border-0 bg-gradient-to-br from-indigo-900/50 via-purple-900/40 to-pink-900/30">
+              {event.eventImageUrl && (
+                <img
+                  src={event.eventImageUrl}
+                  alt={event.eventName}
+                  className="absolute inset-0 w-full h-full object-cover opacity-40"
+                  data-testid="img-event-cover"
+                />
+              )}
               <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e17] via-transparent to-transparent" />
               <CardContent className="relative p-8 md:p-12">
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-6">
@@ -416,10 +426,10 @@ export default function PublicEventDetailPage() {
               </CardContent>
             </Card>
 
-            {event.eventNotes && (
+            {event.eventDescription && (
               <Card className="bg-[#151922] border-white/10 p-6">
                 <h3 className="text-lg font-semibold text-white mb-2">Descrizione</h3>
-                <p className="text-slate-400">{event.eventNotes}</p>
+                <p className="text-slate-400 whitespace-pre-line" data-testid="text-event-description">{event.eventDescription}</p>
               </Card>
             )}
 

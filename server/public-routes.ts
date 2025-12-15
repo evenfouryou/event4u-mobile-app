@@ -201,6 +201,8 @@ router.get("/api/public/events/:id", async (req, res) => {
         allowsChangeName: siaeTicketedEvents.allowsChangeName,
         genreCode: siaeTicketedEvents.genreCode,
         eventName: events.name,
+        eventDescription: events.description,
+        eventImageUrl: events.imageUrl,
         eventStart: events.startDatetime,
         eventEnd: events.endDatetime,
         eventNotes: events.notes,

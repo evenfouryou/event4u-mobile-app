@@ -1,0 +1,235 @@
+Perfetto 👍
+di seguito trovi **LA SPIEGAZIONE COMPLETA AGGIORNATA**, con **l’aggiunta esplicita e chiara** del fatto che **il pannello evento contiene le sezioni Liste, Tavoli e Staff & PR**, integrata **dentro la descrizione generale**, non come nota a parte.
+
+Puoi usare questo testo **come specifica ufficiale** (documentazione, banca, sviluppatori, GitHub).
+
+---
+
+# STRUTTURA COMPLETA EVENT FOUR YOU
+
+### (Versione definitiva – con Pannello Evento strutturato)
+
+Event Four You è una piattaforma di gestione eventi basata su una **struttura modulare e gerarchica**, in cui **ogni evento dispone di un pannello dedicato** che rappresenta il **centro operativo dell’evento stesso**.
+
+---
+
+## 🎯 PANNELLO EVENTO (CENTRO OPERATIVO)
+
+👉 **Ogni evento ha un proprio pannello evento**, accessibile solo agli utenti abilitati, dal quale vengono gestite **tutte le attività operative**.
+
+### Il pannello evento è suddiviso in **sezioni funzionali dedicate**, nello specifico:
+
+* **Liste**
+* **Tavoli**
+* **Staff & PR**
+* Scanner QR
+* Report
+* Impostazioni Evento
+
+📌 Tutte le sezioni sono **contestualizzate all’evento selezionato**
+📌 La visibilità e le azioni disponibili dipendono dal **ruolo dell’utente**
+
+---
+
+## 1️⃣ UTENTI & RUOLI
+
+### 👑 Organizzatore
+
+* Crea e gestisce eventi
+* Accede a **tutte le sezioni del pannello evento**
+* Approva prenotazioni tavoli
+* Gestisce staff, PR e scanner
+* Visualizza report completi
+* Gestisce le stampanti del proprio account
+
+---
+
+### 👔 Staff
+
+* Creato da Organizzatore o altro Staff
+* Se **abilitato nel pannello evento**, può:
+
+  * Operare nelle sezioni **Liste** e **Tavoli**
+  * Creare e gestire PR
+  * Vendere biglietti
+  * Inserire persone in lista
+  * Inserire prenotazioni tavolo
+  * (se autorizzato) approvare tavoli
+* Ha una gerarchia di PR sotto di sé
+
+---
+
+### 🎧 PR
+
+* Creato da Staff o Organizzatore
+* Se **abilitato nel pannello evento**, può:
+
+  * Inserire persone nelle **Liste**
+  * Passare prenotazioni **Tavoli**
+* ❌ Non approva tavoli
+* ❌ Non gestisce impostazioni evento
+
+---
+
+### 📱 Scanner
+
+* Creato nella sezione Utenti
+* Abilitato **dal pannello evento**
+* Accede solo alla funzione di:
+
+  * Scansione QR (liste, tavoli, biglietti)
+
+---
+
+### 🧍 Cliente
+
+* Si registra con **numero di telefono**
+* Visualizza i propri QR nel **Wallet**
+* Accede agli eventi tramite QR personale
+
+---
+
+## 2️⃣ SEZIONE LISTE (PANNELLO EVENTO → LISTE)
+
+* Le liste sono **create e gestite all’interno del pannello evento**
+* Ogni lista prevede:
+
+  * Nome
+  * Quantità massima
+  * Orari di validità
+  * Prezzo
+* **QR code obbligatorio per ogni persona**
+
+### Dati persona obbligatori:
+
+* Nome
+* Cognome
+* Numero di telefono (identificativo)
+* Sesso
+
+📌 Ogni persona riceve il QR via:
+
+* Email (se presente)
+* Wallet cliente (se registrata)
+
+---
+
+## 3️⃣ SEZIONE TAVOLI (PANNELLO EVENTO → TAVOLI)
+
+### Tipologie Tavolo
+
+* Nome
+* Prezzo
+* Numero massimo persone
+* Quantità disponibile
+
+---
+
+### Prenotazione Tavolo
+
+1. PR o Staff inserisce la prenotazione
+2. Stato iniziale: **In attesa di approvazione**
+3. Organizzatore o Staff abilitato approva
+4. Dopo l’approvazione:
+
+   * Si inseriscono le persone
+   * **Ogni persona riceve il proprio QR**
+
+📌 Non esiste un QR del tavolo
+📌 Esistono **QR individuali collegati allo stesso tavolo**
+
+---
+
+## 4️⃣ SEZIONE STAFF & PR (PANNELLO EVENTO → STAFF & PR)
+
+Dal pannello evento è possibile:
+
+* Abilitare Staff e PR all’evento
+* Definire cosa possono fare:
+
+  * Vendita biglietti
+  * Inserimento liste
+  * Prenotazioni tavoli
+  * Approvazione tavoli
+* Visualizzare la struttura:
+
+  * Staff
+  * PR sotto ogni staff
+
+📌 Nessun PR o Staff può operare sull’evento se non è **abilitato dal pannello evento**
+
+---
+
+## 5️⃣ PLANIMETRIA (LOCATION → MAPPA EVENTO)
+
+* Upload immagine base (jpg / png / svg)
+* Costruzione di un **layer interattivo sopra l’immagine**
+* Associazione dei tavoli:
+
+  * Tipologia
+  * Stato
+* La planimetria è utilizzata:
+
+  * Nella sezione Tavoli del pannello evento
+  * Per visualizzare disponibilità e prenotazioni
+
+---
+
+## 6️⃣ QR CODE & WALLET CLIENTE
+
+* Ogni persona ha sempre un QR
+* Il QR è:
+
+  * Unico
+  * Monouso
+  * Tracciato
+* Il wallet cliente mostra:
+
+  * QR liste
+  * QR tavoli
+  * QR biglietti
+
+---
+
+## 7️⃣ STAMPANTI
+
+* Ogni account vede **solo le proprie stampanti**
+* Nessuna stampante condivisa
+* Utilizzabili per:
+
+  * Biglietti
+  * Ricevute
+  * Supporto operativo
+
+---
+
+## 8️⃣ REPORT (PANNELLO EVENTO → REPORT)
+
+### Report PR
+
+* Persone in lista
+* Ingressi
+* Tavoli proposti
+* Tavoli approvati
+* Incassi
+
+### Report Staff
+
+* Performance personali
+* Performance PR sotto staff
+
+---
+
+## ✅ FRASE CHIAVE DA USARE OVUNQUE (IMPORTANTE)
+
+> **Il pannello evento rappresenta il centro operativo dell’evento e include sezioni dedicate alla gestione di Liste, Tavoli e Staff & PR, consentendo un controllo completo e strutturato di tutte le attività operative.**
+
+---
+
+Se vuoi, al prossimo messaggio posso:
+
+* trasformare **questa spiegazione in PDF ufficiale**
+* prepararla in **inglese tecnico**
+* o convertirla direttamente in **task GitHub strutturati**
+
+Dimmi il prossimo passo e la chiudiamo definitivamente 🚀

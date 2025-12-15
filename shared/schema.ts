@@ -190,6 +190,8 @@ export const events = pgTable("events", {
   locationId: varchar("location_id").notNull().references(() => locations.id),
   formatId: varchar("format_id").references(() => eventFormats.id), // optional event format/category
   name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"), // Public description for event page
+  imageUrl: text("image_url"), // Public image URL for event page
   startDatetime: timestamp("start_datetime").notNull(),
   endDatetime: timestamp("end_datetime").notNull(),
   capacity: integer("capacity"),
