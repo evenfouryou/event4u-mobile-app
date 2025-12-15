@@ -393,39 +393,6 @@ export function AppSidebar() {
       );
     }
 
-    // PR Module for Gestore
-    menuItems.push(
-      {
-        title: "Liste Ospiti",
-        icon: ListChecks,
-        url: "/pr/guest-lists",
-        group: "Gestione PR",
-      },
-      {
-        title: "Tavoli Evento",
-        icon: Armchair,
-        url: "/pr/tables",
-        group: "Gestione PR",
-      },
-      {
-        title: "Scanner QR",
-        icon: ScanLine,
-        url: "/pr/scanner",
-        group: "Gestione PR",
-      },
-      {
-        title: "Scanner E4U",
-        icon: QrCode,
-        url: "/scanner",
-        group: "Gestione PR",
-      },
-      {
-        title: "Staff Eventi",
-        icon: UserPlus,
-        url: "/pr/staff",
-        group: "Gestione PR",
-      }
-    );
   }
 
   // Gestore Covisione menu
