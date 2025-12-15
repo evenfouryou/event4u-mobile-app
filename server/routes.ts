@@ -1004,6 +1004,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.get('/api/locations/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const location = await storage.getLocation(req.params.id);
+      if (!location) {
+        return res.status(404).json({ message: "Location not found" });
+      }
+      res.json(location);
+    } catch (error) {
+      console.error("Error fetching location:", error);
+      res.status(500).json({ message: "Failed to fetch location" });
+    }
+  });
+
   app.patch('/api/locations/:id', isAuthenticated, async (req: any, res) => {
     try {
       const location = await storage.updateLocation(req.params.id, req.body);
