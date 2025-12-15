@@ -987,15 +987,15 @@ export default function EventWizard() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Euro className="h-5 w-5" />
-                  Settori e Prezzi
+                  Biglietti e Prezzi
                 </CardTitle>
-                <CardDescription>Configura i settori dell'evento con i relativi prezzi</CardDescription>
+                <CardDescription>Configura i biglietti dell'evento con i relativi prezzi</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {siaeSectors.length === 0 ? (
                   <div className="text-center py-8 border-2 border-dashed rounded-lg">
                     <Users className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-                    <p className="text-muted-foreground mb-4">Nessun settore configurato</p>
+                    <p className="text-muted-foreground mb-4">Nessun biglietto configurato</p>
                     <Button
                       type="button"
                       onClick={() => {
@@ -1015,7 +1015,7 @@ export default function EventWizard() {
                       data-testid="button-add-first-sector"
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      Aggiungi Primo Settore
+                      Crea Primo Biglietto
                     </Button>
                   </div>
                 ) : (
@@ -1023,7 +1023,7 @@ export default function EventWizard() {
                     {siaeSectors.map((sector, index) => (
                       <Card key={sector.id} className="p-4">
                         <div className="flex items-center justify-between mb-4">
-                          <h4 className="font-medium">Settore {index + 1}</h4>
+                          <h4 className="font-medium">Biglietto {index + 1}</h4>
                           <Button
                             type="button"
                             variant="ghost"
