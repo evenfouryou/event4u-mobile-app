@@ -151,6 +151,7 @@ export const locations = pgTable("locations", {
   shortDescription: text("short_description"),
   openingHours: text("opening_hours"),
   isPublic: boolean("is_public").notNull().default(false), // Mostra nella vetrina pubblica
+  siaeLocationCode: varchar("siae_location_code", { length: 50 }), // Codice locale SIAE
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1026,6 +1027,9 @@ export const siaeSystemConfig = pgTable("siae_system_config", {
   // Dati Azienda Titolare Sistema Biglietteria
   businessName: varchar("business_name", { length: 255 }), // Ragione Sociale
   businessAddress: text("business_address"), // Indirizzo sede legale
+  businessCity: varchar("business_city", { length: 100 }), // Città sede legale
+  businessProvince: varchar("business_province", { length: 2 }), // Provincia (sigla)
+  businessPostalCode: varchar("business_postal_code", { length: 10 }), // CAP
   systemCode: varchar("system_code", { length: 8 }), // Codice sistema emissione SIAE
   taxId: varchar("tax_id", { length: 16 }), // Codice Fiscale Titolare (CFTitolare)
   vatNumber: varchar("vat_number", { length: 11 }), // Partita IVA
@@ -1140,6 +1144,7 @@ export const siaeTicketedEvents = pgTable("siae_ticketed_events", {
   // Dati SIAE
   siaeEventCode: varchar("siae_event_code", { length: 50 }), // Codice evento SIAE
   siaeLocationCode: varchar("siae_location_code", { length: 50 }), // Codice locale SIAE
+  organizerType: varchar("organizer_type", { length: 10 }), // Tipo organizzatore SIAE
   genreCode: varchar("genre_code", { length: 2 }).notNull(), // TAB.1
   taxType: varchar("tax_type", { length: 1 }).notNull().default('S'), // S=spettacolo, I=intrattenimento
   ivaPreassolta: varchar("iva_preassolta", { length: 1 }).notNull().default('N'), // N, B, F
@@ -3546,3 +3551,37 @@ export type UpdateTicketTemplate = z.infer<typeof updateTicketTemplateSchema>;
 export type TicketTemplateElement = typeof ticketTemplateElements.$inferSelect;
 export type InsertTicketTemplateElement = z.infer<typeof insertTicketTemplateElementSchema>;
 export type UpdateTicketTemplateElement = z.infer<typeof updateTicketTemplateElementSchema>;
+
+// ==================== TABELLE PER COMPATIBILITÀ PRODUZIONE ====================
+
+// User Companies - Associazione utenti a più company
+export const userCompanies = pgTable("user_companies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  role: varchar("role", { length: 50 }).default('member'),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// SIAE Custom Ticket Prices - Prezzi personalizzati biglietti
+export const siaeCustomTicketPrices = pgTable("siae_custom_ticket_prices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketedEventId: varchar("ticketed_event_id").references(() => siaeTicketedEvents.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  description: text("description"),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// SIAE C1 Reports - Report C1 SIAE
+export const siaeC1Reports = pgTable("siae_c1_reports", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").references(() => companies.id),
+  ticketedEventId: varchar("ticketed_event_id").references(() => siaeTicketedEvents.id),
+  reportDate: timestamp("report_date").notNull(),
+  reportData: jsonb("report_data"),
+  status: varchar("status", { length: 20 }).default('draft'),
+  transmittedAt: timestamp("transmitted_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
