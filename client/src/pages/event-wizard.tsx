@@ -44,7 +44,7 @@ const BASE_STEPS = [
 // Step SIAE (mostrati solo se biglietteria abilitata)
 const SIAE_STEPS = [
   { id: 4, title: "Biglietteria SIAE", icon: Ticket },
-  { id: 5, title: "Settori e Prezzi", icon: Euro },
+  { id: 5, title: "Biglietti", icon: Euro },
 ];
 
 // Step finale
@@ -991,10 +991,10 @@ export default function EventWizard() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
-                  <Euro className="h-5 w-5" />
-                  Biglietti e Prezzi
+                  <Ticket className="h-5 w-5" />
+                  Biglietti
                 </CardTitle>
-                <CardDescription>Configura i biglietti dell'evento con i relativi prezzi</CardDescription>
+                <CardDescription>Configura i biglietti per l'evento</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 {siaeSectors.length === 0 ? (
@@ -1131,49 +1131,64 @@ export default function EventWizard() {
                           />
                         </div>
 
-                        {/* 5. Opzioni avanzate (opzionali) */}
+                        {/* 5. Opzioni avanzate (opzionali) - con toggle */}
                         <div className="border-t pt-4 mt-4">
-                          <p className="text-sm text-muted-foreground mb-3">Opzioni avanzate (opzionali)</p>
-                          <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                              <Label>Codice Settore SIAE</Label>
-                              <Select 
-                                value={ticket.sectorCode} 
-                                onValueChange={(value) => {
-                                  const updated = siaeSectors.map(s => 
-                                    s.id === ticket.id ? { ...s, sectorCode: value } : s
-                                  );
-                                  setSiaeSectors(updated);
-                                }}
-                              >
-                                <SelectTrigger data-testid={`select-sector-code-${index}`}>
-                                  <SelectValue placeholder="Opzionale" />
-                                </SelectTrigger>
-                                <SelectContent>
-                                  {siaeSectorCodes?.map((code) => (
-                                    <SelectItem key={code.id} value={code.code}>
-                                      <span className="font-mono mr-2">{code.code}</span>
-                                      {code.name}
-                                    </SelectItem>
-                                  ))}
-                                </SelectContent>
-                              </Select>
-                            </div>
-
-                            <div className="flex items-center gap-2 pt-6">
-                              <Checkbox
-                                checked={ticket.isNumbered}
-                                onCheckedChange={(checked) => {
-                                  const updated = siaeSectors.map(s => 
-                                    s.id === ticket.id ? { ...s, isNumbered: !!checked } : s
-                                  );
-                                  setSiaeSectors(updated);
-                                }}
-                                data-testid={`checkbox-numbered-${index}`}
-                              />
-                              <Label>Posti numerati</Label>
-                            </div>
+                          <div className="flex items-center gap-2 mb-3">
+                            <Checkbox
+                              checked={!!ticket.sectorCode}
+                              onCheckedChange={(checked) => {
+                                const updated = siaeSectors.map(s => 
+                                  s.id === ticket.id ? { ...s, sectorCode: checked ? 'PU' : '' } : s
+                                );
+                                setSiaeSectors(updated);
+                              }}
+                              data-testid={`checkbox-show-sector-${index}`}
+                            />
+                            <Label className="text-sm text-muted-foreground">Mostra opzioni settore</Label>
                           </div>
+                          
+                          {ticket.sectorCode && (
+                            <div className="grid grid-cols-2 gap-4">
+                              <div className="space-y-2">
+                                <Label>Codice Settore SIAE</Label>
+                                <Select 
+                                  value={ticket.sectorCode} 
+                                  onValueChange={(value) => {
+                                    const updated = siaeSectors.map(s => 
+                                      s.id === ticket.id ? { ...s, sectorCode: value } : s
+                                    );
+                                    setSiaeSectors(updated);
+                                  }}
+                                >
+                                  <SelectTrigger data-testid={`select-sector-code-${index}`}>
+                                    <SelectValue placeholder="Seleziona" />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    {siaeSectorCodes?.map((code) => (
+                                      <SelectItem key={code.id} value={code.code}>
+                                        <span className="font-mono mr-2">{code.code}</span>
+                                        {code.name}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div className="flex items-center gap-2 pt-6">
+                                <Checkbox
+                                  checked={ticket.isNumbered}
+                                  onCheckedChange={(checked) => {
+                                    const updated = siaeSectors.map(s => 
+                                      s.id === ticket.id ? { ...s, isNumbered: !!checked } : s
+                                    );
+                                    setSiaeSectors(updated);
+                                  }}
+                                  data-testid={`checkbox-numbered-${index}`}
+                                />
+                                <Label>Posti numerati</Label>
+                              </div>
+                            </div>
+                          )}
                         </div>
                       </Card>
                     ))}
