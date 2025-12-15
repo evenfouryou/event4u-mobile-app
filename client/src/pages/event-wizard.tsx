@@ -19,18 +19,20 @@ import { Calendar, MapPin, Clock, Repeat, FileText, Save, CheckCircle2, ArrowLef
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
 
-// Tipo per i settori configurati nel wizard
-interface SectorConfig {
+// Tipo per i biglietti configurati nel wizard
+interface TicketConfig {
   id: string;
-  sectorCode: string;
   name: string;
-  capacity: number;
+  ticketType: 'INT' | 'RID' | 'OMA'; // Intero, Ridotto, Omaggio
+  price: string;
+  ddp: string;
+  sectorCode: string; // opzionale
   isNumbered: boolean;
-  priceIntero: string;
-  priceRidotto: string;
-  priceOmaggio: string;
-  prevendita: string;
+  quantity: number;
 }
+
+// Alias per compatibilità
+type SectorConfig = TicketConfig;
 
 // Step base sempre visibili
 const BASE_STEPS = [
@@ -303,7 +305,7 @@ export default function EventWizard() {
             eventId: savedEvent.id,
             genreCode: siaeGenreCode,
             taxType: siaeTaxType,
-            totalCapacity: siaeSectors.reduce((sum, s) => sum + s.capacity, 0),
+            totalCapacity: siaeSectors.reduce((sum, s) => sum + s.quantity, 0),
             requiresNominative: siaeRequiresNominative,
             maxTicketsPerUser: siaeMaxTicketsPerUser,
             ticketingStatus: 'draft',
@@ -314,18 +316,21 @@ export default function EventWizard() {
           
           // Create sectors for the SIAE event
           if (siaeEvent?.id && siaeSectors.length > 0) {
-            for (const sector of siaeSectors) {
+            for (const ticket of siaeSectors) {
+              // Map new ticket format to backend sector format
+              const priceValue = ticket.price || '0';
               await apiRequest('POST', '/api/siae/event-sectors', {
                 ticketedEventId: siaeEvent.id,
-                sectorCode: sector.sectorCode,
-                name: sector.name,
-                capacity: sector.capacity,
-                availableSeats: sector.capacity,
-                isNumbered: sector.isNumbered,
-                priceIntero: sector.priceIntero,
-                priceRidotto: sector.priceRidotto || '0',
-                priceOmaggio: sector.priceOmaggio || '0',
-                prevendita: sector.prevendita || '0',
+                sectorCode: ticket.sectorCode || 'PU', // Default to Posto Unico if not specified
+                name: ticket.name,
+                capacity: ticket.quantity,
+                availableSeats: ticket.quantity,
+                isNumbered: ticket.isNumbered,
+                // Map price based on ticket type
+                priceIntero: ticket.ticketType === 'INT' ? priceValue : '0',
+                priceRidotto: ticket.ticketType === 'RID' ? priceValue : '0',
+                priceOmaggio: ticket.ticketType === 'OMA' ? '0' : '0',
+                prevendita: ticket.ddp || '0',
               });
             }
           }
@@ -999,18 +1004,17 @@ export default function EventWizard() {
                     <Button
                       type="button"
                       onClick={() => {
-                        const newSector: SectorConfig = {
+                        const newTicket: TicketConfig = {
                           id: Date.now().toString(),
-                          sectorCode: '',
                           name: '',
-                          capacity: 100,
+                          ticketType: 'INT',
+                          price: '20.00',
+                          ddp: '2.00',
+                          sectorCode: '',
                           isNumbered: false,
-                          priceIntero: '20.00',
-                          priceRidotto: '15.00',
-                          priceOmaggio: '0.00',
-                          prevendita: '2.00',
+                          quantity: 100,
                         };
-                        setSiaeSectors([...siaeSectors, newSector]);
+                        setSiaeSectors([...siaeSectors, newTicket]);
                       }}
                       data-testid="button-add-first-sector"
                     >
@@ -1020,8 +1024,8 @@ export default function EventWizard() {
                   </div>
                 ) : (
                   <div className="space-y-4">
-                    {siaeSectors.map((sector, index) => (
-                      <Card key={sector.id} className="p-4">
+                    {siaeSectors.map((ticket, index) => (
+                      <Card key={ticket.id} className="p-4">
                         <div className="flex items-center justify-between mb-4">
                           <h4 className="font-medium">Biglietto {index + 1}</h4>
                           <Button
@@ -1029,7 +1033,7 @@ export default function EventWizard() {
                             variant="ghost"
                             size="icon"
                             onClick={() => {
-                              setSiaeSectors(siaeSectors.filter(s => s.id !== sector.id));
+                              setSiaeSectors(siaeSectors.filter(s => s.id !== ticket.id));
                             }}
                             data-testid={`button-remove-sector-${index}`}
                           >
@@ -1037,137 +1041,138 @@ export default function EventWizard() {
                           </Button>
                         </div>
                         
-                        <div className="grid grid-cols-2 gap-4">
-                          <div className="space-y-2">
-                            <Label>Codice Settore (TAB.2)</Label>
-                            <Select 
-                              value={sector.sectorCode} 
-                              onValueChange={(value) => {
-                                const updated = siaeSectors.map(s => 
-                                  s.id === sector.id ? { ...s, sectorCode: value } : s
-                                );
-                                setSiaeSectors(updated);
-                              }}
-                            >
-                              <SelectTrigger data-testid={`select-sector-code-${index}`}>
-                                <SelectValue placeholder="Seleziona" />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {siaeSectorCodes?.map((code) => (
-                                  <SelectItem key={code.id} value={code.code}>
-                                    <span className="font-mono mr-2">{code.code}</span>
-                                    {code.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                          </div>
+                        {/* 1. Nome Biglietto */}
+                        <div className="space-y-2 mb-4">
+                          <Label>Nome Biglietto *</Label>
+                          <Input
+                            value={ticket.name}
+                            onChange={(e) => {
+                              const updated = siaeSectors.map(s => 
+                                s.id === ticket.id ? { ...s, name: e.target.value } : s
+                              );
+                              setSiaeSectors(updated);
+                            }}
+                            placeholder="es. Ingresso Standard, VIP, Early Bird"
+                            data-testid={`input-ticket-name-${index}`}
+                          />
+                        </div>
 
-                          <div className="space-y-2">
-                            <Label>Nome Biglietto</Label>
-                            <Input
-                              value={sector.name}
-                              onChange={(e) => {
-                                const updated = siaeSectors.map(s => 
-                                  s.id === sector.id ? { ...s, name: e.target.value } : s
-                                );
-                                setSiaeSectors(updated);
-                              }}
-                              placeholder="es. Ingresso Standard, VIP, Early Bird"
-                              data-testid={`input-sector-name-${index}`}
-                            />
-                          </div>
+                        {/* 2. Tipologia */}
+                        <div className="space-y-2 mb-4">
+                          <Label>Tipologia *</Label>
+                          <Select 
+                            value={ticket.ticketType} 
+                            onValueChange={(value: 'INT' | 'RID' | 'OMA') => {
+                              const updated = siaeSectors.map(s => 
+                                s.id === ticket.id ? { ...s, ticketType: value } : s
+                              );
+                              setSiaeSectors(updated);
+                            }}
+                          >
+                            <SelectTrigger data-testid={`select-ticket-type-${index}`}>
+                              <SelectValue placeholder="Seleziona tipologia" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="INT">Intero</SelectItem>
+                              <SelectItem value="RID">Ridotto</SelectItem>
+                              <SelectItem value="OMA">Omaggio</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
 
+                        {/* 3. Prezzo e DDP */}
+                        <div className="grid grid-cols-2 gap-4 mb-4">
                           <div className="space-y-2">
-                            <Label>Quantità</Label>
+                            <Label>Prezzo € *</Label>
                             <Input
                               type="number"
-                              value={sector.capacity}
+                              step="0.01"
+                              value={ticket.price}
                               onChange={(e) => {
                                 const updated = siaeSectors.map(s => 
-                                  s.id === sector.id ? { ...s, capacity: parseInt(e.target.value) || 0 } : s
+                                  s.id === ticket.id ? { ...s, price: e.target.value } : s
                                 );
                                 setSiaeSectors(updated);
                               }}
-                              data-testid={`input-sector-capacity-${index}`}
+                              data-testid={`input-price-${index}`}
                             />
                           </div>
-
-                          <div className="flex items-center gap-2 pt-6">
-                            <Checkbox
-                              checked={sector.isNumbered}
-                              onCheckedChange={(checked) => {
+                          <div className="space-y-2">
+                            <Label>DDP €</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              value={ticket.ddp}
+                              onChange={(e) => {
                                 const updated = siaeSectors.map(s => 
-                                  s.id === sector.id ? { ...s, isNumbered: !!checked } : s
+                                  s.id === ticket.id ? { ...s, ddp: e.target.value } : s
                                 );
                                 setSiaeSectors(updated);
                               }}
-                              data-testid={`checkbox-numbered-${index}`}
+                              placeholder="0.00"
+                              data-testid={`input-ddp-${index}`}
                             />
-                            <Label>Posti numerati</Label>
                           </div>
                         </div>
 
-                        <div className="grid grid-cols-4 gap-3 mt-4">
-                          <div className="space-y-2">
-                            <Label className="text-xs">Intero €</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={sector.priceIntero}
-                              onChange={(e) => {
-                                const updated = siaeSectors.map(s => 
-                                  s.id === sector.id ? { ...s, priceIntero: e.target.value } : s
-                                );
-                                setSiaeSectors(updated);
-                              }}
-                              data-testid={`input-price-intero-${index}`}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-xs">Ridotto €</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={sector.priceRidotto}
-                              onChange={(e) => {
-                                const updated = siaeSectors.map(s => 
-                                  s.id === sector.id ? { ...s, priceRidotto: e.target.value } : s
-                                );
-                                setSiaeSectors(updated);
-                              }}
-                              data-testid={`input-price-ridotto-${index}`}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-xs">Omaggio €</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={sector.priceOmaggio}
-                              onChange={(e) => {
-                                const updated = siaeSectors.map(s => 
-                                  s.id === sector.id ? { ...s, priceOmaggio: e.target.value } : s
-                                );
-                                setSiaeSectors(updated);
-                              }}
-                              data-testid={`input-price-omaggio-${index}`}
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label className="text-xs">DDP €</Label>
-                            <Input
-                              type="number"
-                              step="0.01"
-                              value={sector.prevendita}
-                              onChange={(e) => {
-                                const updated = siaeSectors.map(s => 
-                                  s.id === sector.id ? { ...s, prevendita: e.target.value } : s
-                                );
-                                setSiaeSectors(updated);
-                              }}
-                              data-testid={`input-prevendita-${index}`}
-                            />
+                        {/* 4. Quantità */}
+                        <div className="space-y-2 mb-4">
+                          <Label>Quantità *</Label>
+                          <Input
+                            type="number"
+                            value={ticket.quantity}
+                            onChange={(e) => {
+                              const updated = siaeSectors.map(s => 
+                                s.id === ticket.id ? { ...s, quantity: parseInt(e.target.value) || 0 } : s
+                              );
+                              setSiaeSectors(updated);
+                            }}
+                            data-testid={`input-quantity-${index}`}
+                          />
+                        </div>
+
+                        {/* 5. Opzioni avanzate (opzionali) */}
+                        <div className="border-t pt-4 mt-4">
+                          <p className="text-sm text-muted-foreground mb-3">Opzioni avanzate (opzionali)</p>
+                          <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                              <Label>Codice Settore SIAE</Label>
+                              <Select 
+                                value={ticket.sectorCode} 
+                                onValueChange={(value) => {
+                                  const updated = siaeSectors.map(s => 
+                                    s.id === ticket.id ? { ...s, sectorCode: value } : s
+                                  );
+                                  setSiaeSectors(updated);
+                                }}
+                              >
+                                <SelectTrigger data-testid={`select-sector-code-${index}`}>
+                                  <SelectValue placeholder="Opzionale" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {siaeSectorCodes?.map((code) => (
+                                    <SelectItem key={code.id} value={code.code}>
+                                      <span className="font-mono mr-2">{code.code}</span>
+                                      {code.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="flex items-center gap-2 pt-6">
+                              <Checkbox
+                                checked={ticket.isNumbered}
+                                onCheckedChange={(checked) => {
+                                  const updated = siaeSectors.map(s => 
+                                    s.id === ticket.id ? { ...s, isNumbered: !!checked } : s
+                                  );
+                                  setSiaeSectors(updated);
+                                }}
+                                data-testid={`checkbox-numbered-${index}`}
+                              />
+                              <Label>Posti numerati</Label>
+                            </div>
                           </div>
                         </div>
                       </Card>
@@ -1177,18 +1182,17 @@ export default function EventWizard() {
                       type="button"
                       variant="outline"
                       onClick={() => {
-                        const newSector: SectorConfig = {
+                        const newTicket: TicketConfig = {
                           id: Date.now().toString(),
-                          sectorCode: '',
                           name: '',
-                          capacity: 100,
+                          ticketType: 'INT',
+                          price: '20.00',
+                          ddp: '2.00',
+                          sectorCode: '',
                           isNumbered: false,
-                          priceIntero: '20.00',
-                          priceRidotto: '15.00',
-                          priceOmaggio: '0.00',
-                          prevendita: '2.00',
+                          quantity: 100,
                         };
-                        setSiaeSectors([...siaeSectors, newSector]);
+                        setSiaeSectors([...siaeSectors, newTicket]);
                       }}
                       className="w-full"
                       data-testid="button-add-sector"
@@ -1265,12 +1269,12 @@ export default function EventWizard() {
                         <span>{siaeRequiresNominative ? 'Sì' : 'No'}</span>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Settori: </span>
+                        <span className="text-muted-foreground">Biglietti: </span>
                         <span>{siaeSectors.length}</span>
                       </div>
                       <div>
-                        <span className="text-muted-foreground">Capienza Totale: </span>
-                        <span>{siaeSectors.reduce((sum, s) => sum + s.capacity, 0)} posti</span>
+                        <span className="text-muted-foreground">Quantità Totale: </span>
+                        <span>{siaeSectors.reduce((sum, s) => sum + s.quantity, 0)} biglietti</span>
                       </div>
                     </div>
                   </div>
