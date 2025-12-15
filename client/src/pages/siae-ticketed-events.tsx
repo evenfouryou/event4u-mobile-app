@@ -89,6 +89,8 @@ import {
   ArrowLeft,
   Gift,
   Tag,
+  ExternalLink,
+  Copy,
 } from "lucide-react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -295,17 +297,18 @@ export default function SiaeTicketedEventsPage() {
     if (!selectedEvent) return;
     
     // Map new ticket format to backend sector format
-    const priceValue = data.price || '0';
+    // Note: Omaggio tickets have price 0, others use the entered price
+    const priceValue = data.ticketType === 'OMA' ? '0' : (data.price || '0');
     const submitData = {
       sectorCode: data.sectorCode,
       name: data.name,
       capacity: data.capacity,
       availableSeats: data.capacity,
       isNumbered: data.isNumbered,
-      // Map price based on ticket type
+      // Map price based on ticket type - only one field gets the price, others are 0
       priceIntero: data.ticketType === 'INT' ? priceValue : '0',
       priceRidotto: data.ticketType === 'RID' ? priceValue : '0',
-      priceOmaggio: data.ticketType === 'OMA' ? '0' : '0',
+      priceOmaggio: '0', // Omaggio is always free
       prevendita: data.ddp || '0',
       ivaRate: data.ivaRate,
       sortOrder: data.sortOrder,
@@ -521,6 +524,48 @@ export default function SiaeTicketedEventsPage() {
                         </div>
                       </div>
                     </div>
+
+                    {/* Link Pubblico Acquisto */}
+                    {ticketedEvent.ticketingStatus === "active" && (
+                      <div className="mb-4 p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                        <div className="flex items-center justify-between gap-4">
+                          <div className="flex items-center gap-2 text-sm">
+                            <ExternalLink className="w-4 h-4 text-emerald-400" />
+                            <span className="text-muted-foreground">Link Pubblico:</span>
+                            <code className="px-2 py-1 rounded bg-background/50 text-emerald-400 text-xs">
+                              {window.location.origin}/acquista/{ticketedEvent.eventId}
+                            </code>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() => {
+                                navigator.clipboard.writeText(`${window.location.origin}/acquista/${ticketedEvent.eventId}`);
+                                toast({
+                                  title: "Link Copiato",
+                                  description: "Il link è stato copiato negli appunti.",
+                                });
+                              }}
+                              data-testid={`button-copy-link-${ticketedEvent.id}`}
+                            >
+                              <Copy className="w-4 h-4 mr-1" />
+                              Copia
+                            </Button>
+                            <a
+                              href={`/acquista/${ticketedEvent.eventId}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                            >
+                              <Button size="sm" variant="outline" data-testid={`button-open-link-${ticketedEvent.id}`}>
+                                <ExternalLink className="w-4 h-4 mr-1" />
+                                Apri
+                              </Button>
+                            </a>
+                          </div>
+                        </div>
+                      </div>
+                    )}
 
                     <Accordion
                       type="single"
