@@ -487,13 +487,13 @@ export default function SiaeTicketedEventsPage() {
                         <AccordionTrigger className="py-2 text-sm hover:no-underline" data-testid={`accordion-trigger-${ticketedEvent.id}`}>
                           <span className="flex items-center gap-2">
                             <Settings className="w-4 h-4" />
-                            Settori e Prezzi
+                            Biglietti e Prezzi
                           </span>
                         </AccordionTrigger>
                         <AccordionContent>
                           <div className="pt-2">
                             <div className="flex items-center justify-between mb-3">
-                              <h4 className="font-medium">Settori Configurati</h4>
+                              <h4 className="font-medium">Biglietti Configurati</h4>
                               <Button
                                 size="sm"
                                 variant="outline"
@@ -504,7 +504,7 @@ export default function SiaeTicketedEventsPage() {
                                 data-testid={`button-add-sector-${ticketedEvent.id}`}
                               >
                                 <Plus className="w-4 h-4 mr-2" />
-                                Aggiungi Settore
+                                Crea Biglietto
                               </Button>
                             </div>
 
@@ -517,19 +517,19 @@ export default function SiaeTicketedEventsPage() {
                             ) : selectedEventSectors?.length === 0 ? (
                               <div className="p-4 text-center text-muted-foreground bg-background/50 rounded-lg border border-dashed">
                                 <AlertTriangle className="w-6 h-6 mx-auto mb-2 text-amber-500" />
-                                Nessun settore configurato. Aggiungi almeno un settore per iniziare a vendere biglietti.
+                                Nessun biglietto configurato. Crea almeno un biglietto per iniziare a vendere.
                               </div>
                             ) : (
                               <div className="rounded-lg border overflow-hidden">
                                 <Table>
                                   <TableHeader>
                                     <TableRow className="bg-muted/50">
-                                      <TableHead>Settore</TableHead>
-                                      <TableHead>Capienza</TableHead>
+                                      <TableHead>Biglietto</TableHead>
+                                      <TableHead>Quantità</TableHead>
                                       <TableHead>Disponibili</TableHead>
                                       <TableHead>Intero</TableHead>
                                       <TableHead>Ridotto</TableHead>
-                                      <TableHead>Prevendita</TableHead>
+                                      <TableHead>DDP</TableHead>
                                       <TableHead>Stato</TableHead>
                                     </TableRow>
                                   </TableHeader>
@@ -830,10 +830,10 @@ export default function SiaeTicketedEventsPage() {
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Plus className="w-5 h-5 text-[#FFD700]" />
-              Aggiungi Settore
+              Crea Nuovo Biglietto
             </DialogTitle>
             <DialogDescription>
-              Configura un nuovo settore per l'evento
+              Configura un nuovo tipo di biglietto per l'evento
             </DialogDescription>
           </DialogHeader>
 
@@ -870,9 +870,9 @@ export default function SiaeTicketedEventsPage() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nome Settore</FormLabel>
+                      <FormLabel>Nome Biglietto</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="es. Platea" data-testid="input-sector-name" />
+                        <Input {...field} placeholder="es. Ingresso Standard" data-testid="input-sector-name" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -886,7 +886,7 @@ export default function SiaeTicketedEventsPage() {
                   name="capacity"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Capienza</FormLabel>
+                      <FormLabel>Quantità</FormLabel>
                       <FormControl>
                         <Input
                           type="number"
@@ -958,7 +958,7 @@ export default function SiaeTicketedEventsPage() {
                   name="prevendita"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Prevendita (€)</FormLabel>
+                      <FormLabel>DDP - Diritto di Prevendita (€)</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -1011,7 +1011,7 @@ export default function SiaeTicketedEventsPage() {
                   ) : (
                     <>
                       <Plus className="w-4 h-4 mr-2" />
-                      Aggiungi Settore
+                      Crea Biglietto
                     </>
                   )}
                 </Button>
