@@ -25,7 +25,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import type { Event, Station, EventFormat } from "@shared/schema";
+import type { Event, Station, EventFormat, Location } from "@shared/schema";
 
 type TabType = 'ongoing' | 'scheduled' | 'draft' | 'closed';
 
@@ -84,6 +84,7 @@ function EventCard({
   isDraft,
   onNavigate,
   delay = 0,
+  locationName,
 }: { 
   event: Event; 
   format?: EventFormat;
@@ -91,6 +92,7 @@ function EventCard({
   isDraft: boolean;
   onNavigate: (path: string) => void;
   delay?: number;
+  locationName?: string;
 }) {
   const status = statusConfig[event.status] || statusConfig.draft;
   const StatusIcon = status.icon;
@@ -162,6 +164,17 @@ function EventCard({
             </div>
           </div>
 
+          {locationName && (
+            <div className="flex items-center gap-3 text-sm">
+              <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center flex-shrink-0">
+                <MapPin className="h-4 w-4 text-teal-500" />
+              </div>
+              <div>
+                <p className="font-medium">{locationName}</p>
+              </div>
+            </div>
+          )}
+
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             {event.capacity && (
               <div className="flex items-center gap-1.5">
@@ -171,7 +184,7 @@ function EventCard({
             )}
             {stationCount > 0 && (
               <div className="flex items-center gap-1.5">
-                <MapPin className="h-4 w-4" />
+                <Warehouse className="h-4 w-4" />
                 <span>{stationCount} postazioni</span>
               </div>
             )}
@@ -225,6 +238,10 @@ export default function Events() {
     queryKey: ['/api/stations'],
   });
 
+  const { data: locations } = useQuery<Location[]>({
+    queryKey: ['/api/locations'],
+  });
+
   const fixedStations = useMemo(() => {
     if (!allStations) return [];
     return allStations.filter(s => !s.eventId && !s.deletedAt);
@@ -234,6 +251,11 @@ export default function Events() {
     if (!formats) return new Map<string, EventFormat>();
     return new Map(formats.map(f => [f.id, f]));
   }, [formats]);
+
+  const locationsMap = useMemo(() => {
+    if (!locations) return new Map<string, Location>();
+    return new Map(locations.map(l => [l.id, l]));
+  }, [locations]);
 
   const getEventStationCount = (eventId: string) => {
     const eventSpecific = allStations?.filter(s => s.eventId === eventId).length || 0;
@@ -427,6 +449,7 @@ export default function Events() {
                 isDraft={activeTab === 'draft'}
                 onNavigate={navigate}
                 delay={index * 0.05}
+                locationName={event.locationId ? locationsMap.get(event.locationId)?.name : undefined}
               />
             ))}
           </motion.div>

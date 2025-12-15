@@ -29,8 +29,9 @@ import { Badge } from "@/components/ui/badge";
 import { Plus, MapPin, Edit, Users, Clock, Globe, Ticket } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
-import { insertLocationSchema, type Location, type InsertLocation } from "@shared/schema";
+import { insertLocationSchema, type Location, type InsertLocation, type Event } from "@shared/schema";
 import { useLocation } from "wouter";
+import { Calendar } from "lucide-react";
 
 export default function Locations() {
   const [dialogOpen, setDialogOpen] = useState(false);
@@ -40,6 +41,18 @@ export default function Locations() {
   const { data: locations, isLoading } = useQuery<Location[]>({
     queryKey: ['/api/locations'],
   });
+
+  const { data: events } = useQuery<Event[]>({
+    queryKey: ['/api/events'],
+  });
+
+  // Count events per location (only active/scheduled events)
+  const getLocationEventCount = (locationId: string) => {
+    if (!events) return { active: 0, total: 0 };
+    const locationEvents = events.filter(e => e.locationId === locationId);
+    const activeEvents = locationEvents.filter(e => e.status === 'ongoing' || e.status === 'scheduled');
+    return { active: activeEvents.length, total: locationEvents.length };
+  };
 
   const form = useForm<InsertLocation>({
     resolver: zodResolver(insertLocationSchema),
@@ -394,6 +407,20 @@ export default function Locations() {
                       </span>
                     </div>
                   )}
+                  {(() => {
+                    const eventCounts = getLocationEventCount(location.id);
+                    return eventCounts.total > 0 ? (
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-muted-foreground" />
+                        <span className="text-sm">
+                          <span className="font-medium">{eventCounts.active}</span> eventi attivi
+                          {eventCounts.total > eventCounts.active && (
+                            <span className="text-muted-foreground"> ({eventCounts.total} totali)</span>
+                          )}
+                        </span>
+                      </div>
+                    ) : null;
+                  })()}
                   {location.openingHours && (
                     <div className="flex items-center gap-2">
                       <Clock className="h-4 w-4 text-muted-foreground" />
