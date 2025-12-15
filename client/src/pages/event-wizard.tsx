@@ -1064,7 +1064,7 @@ export default function EventWizard() {
                           </div>
 
                           <div className="space-y-2">
-                            <Label>Nome Settore</Label>
+                            <Label>Nome Biglietto</Label>
                             <Input
                               value={sector.name}
                               onChange={(e) => {
@@ -1073,13 +1073,13 @@ export default function EventWizard() {
                                 );
                                 setSiaeSectors(updated);
                               }}
-                              placeholder="es. Platea, VIP, Balconata"
+                              placeholder="es. Ingresso Standard, VIP, Early Bird"
                               data-testid={`input-sector-name-${index}`}
                             />
                           </div>
 
                           <div className="space-y-2">
-                            <Label>Capienza</Label>
+                            <Label>Quantità</Label>
                             <Input
                               type="number"
                               value={sector.capacity}
@@ -1155,7 +1155,7 @@ export default function EventWizard() {
                             />
                           </div>
                           <div className="space-y-2">
-                            <Label className="text-xs">Prevendita €</Label>
+                            <Label className="text-xs">DDP €</Label>
                             <Input
                               type="number"
                               step="0.01"
@@ -1194,7 +1194,7 @@ export default function EventWizard() {
                       data-testid="button-add-sector"
                     >
                       <Plus className="h-4 w-4 mr-2" />
-                      Aggiungi Settore
+                      Crea Biglietto
                     </Button>
                   </div>
                 )}
