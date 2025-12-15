@@ -3554,6 +3554,383 @@ export type TicketTemplateElement = typeof ticketTemplateElements.$inferSelect;
 export type InsertTicketTemplateElement = z.infer<typeof insertTicketTemplateElementSchema>;
 export type UpdateTicketTemplateElement = z.infer<typeof updateTicketTemplateElementSchema>;
 
+// ==================== EVENT FOUR YOU - LISTE & TAVOLI ====================
+
+// Event Lists - Liste per evento
+export const eventLists = pgTable("event_lists", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id").notNull().references(() => events.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  maxCapacity: integer("max_capacity"),
+  validFrom: timestamp("valid_from"),
+  validTo: timestamp("valid_to"),
+  price: decimal("price", { precision: 10, scale: 2 }).default('0'),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// List Entries - Persone iscritte alle liste
+export const listEntries = pgTable("list_entries", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  listId: varchar("list_id").notNull().references(() => eventLists.id),
+  eventId: varchar("event_id").notNull().references(() => events.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  firstName: varchar("first_name", { length: 100 }).notNull(),
+  lastName: varchar("last_name", { length: 100 }).notNull(),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  gender: varchar("gender", { length: 1 }),
+  email: varchar("email", { length: 255 }),
+  clientUserId: varchar("client_user_id").references(() => users.id),
+  qrCode: varchar("qr_code", { length: 100 }).unique(),
+  status: varchar("status", { length: 20 }).notNull().default('pending'),
+  checkedInAt: timestamp("checked_in_at"),
+  checkedInBy: varchar("checked_in_by").references(() => users.id),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdByRole: varchar("created_by_role", { length: 20 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Table Types - Tipologie tavolo per evento
+export const tableTypes = pgTable("table_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id").notNull().references(() => events.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  maxGuests: integer("max_guests").notNull(),
+  totalQuantity: integer("total_quantity").notNull(),
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Table Reservations - Prenotazioni tavolo
+export const tableReservations = pgTable("table_reservations", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  tableTypeId: varchar("table_type_id").notNull().references(() => tableTypes.id),
+  eventId: varchar("event_id").notNull().references(() => events.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  reservationName: varchar("reservation_name", { length: 255 }).notNull(),
+  reservationPhone: varchar("reservation_phone", { length: 20 }),
+  status: varchar("status", { length: 20 }).notNull().default('pending'),
+  approvedAt: timestamp("approved_at"),
+  approvedBy: varchar("approved_by").references(() => users.id),
+  rejectedAt: timestamp("rejected_at"),
+  rejectionReason: text("rejection_reason"),
+  createdBy: varchar("created_by").references(() => users.id),
+  createdByRole: varchar("created_by_role", { length: 20 }),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Table Guests - Persone associate a prenotazione tavolo
+export const tableGuests = pgTable("table_guests", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  reservationId: varchar("reservation_id").notNull().references(() => tableReservations.id),
+  eventId: varchar("event_id").notNull().references(() => events.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  firstName: varchar("first_name", { length: 100 }).notNull(),
+  lastName: varchar("last_name", { length: 100 }).notNull(),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  gender: varchar("gender", { length: 1 }),
+  email: varchar("email", { length: 255 }),
+  clientUserId: varchar("client_user_id").references(() => users.id),
+  qrCode: varchar("qr_code", { length: 100 }).unique(),
+  status: varchar("status", { length: 20 }).notNull().default('pending'),
+  checkedInAt: timestamp("checked_in_at"),
+  checkedInBy: varchar("checked_in_by").references(() => users.id),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// E4U Staff Assignments - Abilitazione staff per evento (Event Four You)
+// Note: Named e4uStaffAssignments to avoid conflict with existing eventStaffAssignments
+export const e4uStaffAssignments = pgTable("e4u_staff_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id").notNull().references(() => events.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  canManageLists: boolean("can_manage_lists").notNull().default(true),
+  canManageTables: boolean("can_manage_tables").notNull().default(true),
+  canCreatePr: boolean("can_create_pr").notNull().default(true),
+  canApproveTables: boolean("can_approve_tables").notNull().default(false),
+  canSellTickets: boolean("can_sell_tickets").notNull().default(false),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Event PR Assignments - Abilitazione PR per evento (sotto Staff)
+export const eventPrAssignments = pgTable("event_pr_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id").notNull().references(() => events.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  staffUserId: varchar("staff_user_id").references(() => users.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  canAddToLists: boolean("can_add_to_lists").notNull().default(true),
+  canProposeTables: boolean("can_propose_tables").notNull().default(true),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Event Scanners - Scanner abilitati per evento
+export const eventScanners = pgTable("event_scanners", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id").notNull().references(() => events.id),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  canScanLists: boolean("can_scan_lists").notNull().default(true),
+  canScanTables: boolean("can_scan_tables").notNull().default(true),
+  canScanTickets: boolean("can_scan_tickets").notNull().default(true),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// ==================== RELATIONS EVENT FOUR YOU ====================
+
+export const eventListsRelations = relations(eventLists, ({ one, many }) => ({
+  event: one(events, {
+    fields: [eventLists.eventId],
+    references: [events.id],
+  }),
+  company: one(companies, {
+    fields: [eventLists.companyId],
+    references: [companies.id],
+  }),
+  entries: many(listEntries),
+}));
+
+export const listEntriesRelations = relations(listEntries, ({ one }) => ({
+  list: one(eventLists, {
+    fields: [listEntries.listId],
+    references: [eventLists.id],
+  }),
+  event: one(events, {
+    fields: [listEntries.eventId],
+    references: [events.id],
+  }),
+  company: one(companies, {
+    fields: [listEntries.companyId],
+    references: [companies.id],
+  }),
+  clientUser: one(users, {
+    fields: [listEntries.clientUserId],
+    references: [users.id],
+  }),
+  checkedInByUser: one(users, {
+    fields: [listEntries.checkedInBy],
+    references: [users.id],
+  }),
+  createdByUser: one(users, {
+    fields: [listEntries.createdBy],
+    references: [users.id],
+  }),
+}));
+
+export const tableTypesRelations = relations(tableTypes, ({ one, many }) => ({
+  event: one(events, {
+    fields: [tableTypes.eventId],
+    references: [events.id],
+  }),
+  company: one(companies, {
+    fields: [tableTypes.companyId],
+    references: [companies.id],
+  }),
+  reservations: many(tableReservations),
+}));
+
+export const tableReservationsRelations = relations(tableReservations, ({ one, many }) => ({
+  tableType: one(tableTypes, {
+    fields: [tableReservations.tableTypeId],
+    references: [tableTypes.id],
+  }),
+  event: one(events, {
+    fields: [tableReservations.eventId],
+    references: [events.id],
+  }),
+  company: one(companies, {
+    fields: [tableReservations.companyId],
+    references: [companies.id],
+  }),
+  approvedByUser: one(users, {
+    fields: [tableReservations.approvedBy],
+    references: [users.id],
+  }),
+  createdByUser: one(users, {
+    fields: [tableReservations.createdBy],
+    references: [users.id],
+  }),
+  guests: many(tableGuests),
+}));
+
+export const tableGuestsRelations = relations(tableGuests, ({ one }) => ({
+  reservation: one(tableReservations, {
+    fields: [tableGuests.reservationId],
+    references: [tableReservations.id],
+  }),
+  event: one(events, {
+    fields: [tableGuests.eventId],
+    references: [events.id],
+  }),
+  company: one(companies, {
+    fields: [tableGuests.companyId],
+    references: [companies.id],
+  }),
+  clientUser: one(users, {
+    fields: [tableGuests.clientUserId],
+    references: [users.id],
+  }),
+  checkedInByUser: one(users, {
+    fields: [tableGuests.checkedInBy],
+    references: [users.id],
+  }),
+}));
+
+export const e4uStaffAssignmentsRelations = relations(e4uStaffAssignments, ({ one }) => ({
+  event: one(events, {
+    fields: [e4uStaffAssignments.eventId],
+    references: [events.id],
+  }),
+  user: one(users, {
+    fields: [e4uStaffAssignments.userId],
+    references: [users.id],
+  }),
+  company: one(companies, {
+    fields: [e4uStaffAssignments.companyId],
+    references: [companies.id],
+  }),
+}));
+
+export const eventPrAssignmentsRelations = relations(eventPrAssignments, ({ one }) => ({
+  event: one(events, {
+    fields: [eventPrAssignments.eventId],
+    references: [events.id],
+  }),
+  user: one(users, {
+    fields: [eventPrAssignments.userId],
+    references: [users.id],
+  }),
+  staffUser: one(users, {
+    fields: [eventPrAssignments.staffUserId],
+    references: [users.id],
+  }),
+  company: one(companies, {
+    fields: [eventPrAssignments.companyId],
+    references: [companies.id],
+  }),
+}));
+
+export const eventScannersRelations = relations(eventScanners, ({ one }) => ({
+  event: one(events, {
+    fields: [eventScanners.eventId],
+    references: [events.id],
+  }),
+  user: one(users, {
+    fields: [eventScanners.userId],
+    references: [users.id],
+  }),
+  company: one(companies, {
+    fields: [eventScanners.companyId],
+    references: [companies.id],
+  }),
+}));
+
+// ==================== SCHEMAS EVENT FOUR YOU ====================
+
+export const insertEventListSchema = createInsertSchema(eventLists).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateEventListSchema = insertEventListSchema.partial().omit({ eventId: true, companyId: true });
+
+export const insertListEntrySchema = createInsertSchema(listEntries).omit({
+  id: true,
+  createdAt: true,
+});
+export const updateListEntrySchema = insertListEntrySchema.partial().omit({ listId: true, eventId: true, companyId: true });
+
+export const insertTableTypeSchema = createInsertSchema(tableTypes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+}).extend({
+  price: z.union([z.string(), z.coerce.number()]).transform(val => typeof val === 'number' ? val.toString() : val),
+});
+export const updateTableTypeSchema = insertTableTypeSchema.partial().omit({ eventId: true, companyId: true });
+
+export const insertTableReservationSchema = createInsertSchema(tableReservations).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateTableReservationSchema = insertTableReservationSchema.partial().omit({ tableTypeId: true, eventId: true, companyId: true });
+
+export const insertTableGuestSchema = createInsertSchema(tableGuests).omit({
+  id: true,
+  createdAt: true,
+});
+export const updateTableGuestSchema = insertTableGuestSchema.partial().omit({ reservationId: true, eventId: true, companyId: true });
+
+export const insertE4uStaffAssignmentSchema = createInsertSchema(e4uStaffAssignments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateE4uStaffAssignmentSchema = insertE4uStaffAssignmentSchema.partial().omit({ eventId: true, userId: true, companyId: true });
+
+export const insertEventPrAssignmentSchema = createInsertSchema(eventPrAssignments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateEventPrAssignmentSchema = insertEventPrAssignmentSchema.partial().omit({ eventId: true, userId: true, companyId: true });
+
+export const insertEventScannerSchema = createInsertSchema(eventScanners).omit({
+  id: true,
+  createdAt: true,
+});
+export const updateEventScannerSchema = insertEventScannerSchema.partial().omit({ eventId: true, userId: true, companyId: true });
+
+// ==================== TYPES EVENT FOUR YOU ====================
+
+export type EventList = typeof eventLists.$inferSelect;
+export type InsertEventList = z.infer<typeof insertEventListSchema>;
+export type UpdateEventList = z.infer<typeof updateEventListSchema>;
+
+export type ListEntry = typeof listEntries.$inferSelect;
+export type InsertListEntry = z.infer<typeof insertListEntrySchema>;
+export type UpdateListEntry = z.infer<typeof updateListEntrySchema>;
+
+export type TableType = typeof tableTypes.$inferSelect;
+export type InsertTableType = z.infer<typeof insertTableTypeSchema>;
+export type UpdateTableType = z.infer<typeof updateTableTypeSchema>;
+
+export type TableReservation = typeof tableReservations.$inferSelect;
+export type InsertTableReservation = z.infer<typeof insertTableReservationSchema>;
+export type UpdateTableReservation = z.infer<typeof updateTableReservationSchema>;
+
+export type TableGuest = typeof tableGuests.$inferSelect;
+export type InsertTableGuest = z.infer<typeof insertTableGuestSchema>;
+export type UpdateTableGuest = z.infer<typeof updateTableGuestSchema>;
+
+export type E4uStaffAssignment = typeof e4uStaffAssignments.$inferSelect;
+export type InsertE4uStaffAssignment = z.infer<typeof insertE4uStaffAssignmentSchema>;
+export type UpdateE4uStaffAssignment = z.infer<typeof updateE4uStaffAssignmentSchema>;
+
+export type EventPrAssignment = typeof eventPrAssignments.$inferSelect;
+export type InsertEventPrAssignment = z.infer<typeof insertEventPrAssignmentSchema>;
+export type UpdateEventPrAssignment = z.infer<typeof updateEventPrAssignmentSchema>;
+
+export type EventScanner = typeof eventScanners.$inferSelect;
+export type InsertEventScanner = z.infer<typeof insertEventScannerSchema>;
+export type UpdateEventScanner = z.infer<typeof updateEventScannerSchema>;
+
 // ==================== TABELLE PER COMPATIBILITÀ PRODUZIONE ====================
 
 // User Companies - Associazione utenti a più company
