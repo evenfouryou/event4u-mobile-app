@@ -319,6 +319,10 @@ export default function EventWizard() {
           
           // Create sectors for the SIAE event
           if (siaeEvent?.id && siaeSectors.length > 0) {
+            // Get IVA rate from selected genre
+            const selectedGenre = siaeGenres?.find(g => g.code === siaeGenreCode);
+            const genreVatRate = selectedGenre?.vatRate || '22';
+            
             for (const ticket of siaeSectors) {
               // Map new ticket format to backend sector format
               const priceValue = ticket.price || '0';
@@ -334,6 +338,8 @@ export default function EventWizard() {
                 priceRidotto: ticket.ticketType === 'RID' ? priceValue : '0',
                 priceOmaggio: ticket.ticketType === 'OMA' ? '0' : '0',
                 prevendita: ticket.ddp || '0',
+                // Apply IVA rate from selected genre
+                ivaRate: genreVatRate,
               });
             }
           }
