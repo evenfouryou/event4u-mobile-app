@@ -130,7 +130,7 @@ async function main() {
     
     // Create commit
     console.log('📝 Creating commit...');
-    const commitMessage = 'v3.8: SelectML before PIN verification\n\n- Call SelectML with file IDs (0x3F00, 0x5000, 0x0000) before PIN\n- Expanded nPIN values: 1, 0, 2, 3, 0x11, 0x21, 0x81, 0x82\n- Fixes "Referenced data not found" (0x6A88) error\n\nSee BUILD_INSTRUCTIONS.md for details.';
+    const commitMessage = 'v3.9: FinalizeML before Initialize in CHECK_READER\n\n- Add FinalizeML before Initialize in CheckReader function\n- Fixes Initialize returning 3 instead of 0 on repeated calls\n- SelectML and expanded nPIN values for PIN verification\n\nSee BUILD_INSTRUCTIONS.md for details.';
     
     const { data: commit } = await octokit.git.createCommit({
       owner,

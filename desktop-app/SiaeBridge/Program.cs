@@ -222,6 +222,10 @@ namespace SiaeBridge
                         {
                             Log($"  ✓ CARTA PRESENTE in slot {s}!");
 
+                            // Reset card state before initialize
+                            int finRes = FinalizeML(s);
+                            Log($"  FinalizeML({s}) = {finRes}");
+                            
                             // Try to initialize
                             Log($"  Trying Initialize({s})...");
                             int init = Initialize(s);

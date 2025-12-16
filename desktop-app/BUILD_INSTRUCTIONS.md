@@ -1,5 +1,17 @@
 # 🔧 ISTRUZIONI DI BUILD - Event Four You SIAE Lettore
 
+## ✅ BUG FIX v3.9 (Dicembre 2024)
+
+**Problema:** Initialize ritorna 3 ripetutamente durante CHECK_READER
+
+### Correzioni applicate v3.9:
+
+1. **FinalizeML in CHECK_READER:**
+   - Chiama `FinalizeML` prima di `Initialize` anche in CheckReader
+   - Ora Initialize ritorna 0 invece di 3 ad ogni controllo
+
+---
+
 ## ✅ BUG FIX v3.8 (Dicembre 2024)
 
 **Problema:** Errore 0x6A88 "Referenced data not found" anche con Initialize = 0
