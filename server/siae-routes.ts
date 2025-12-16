@@ -7,7 +7,7 @@ import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions 
 import { eq, and, sql } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { requestFiscalSeal, isCardReadyForSeals, isBridgeConnected } from "./bridge-relay";
+import { requestFiscalSeal, isCardReadyForSeals, isBridgeConnected, getCachedBridgeStatus } from "./bridge-relay";
 import {
   insertSiaeEventGenreSchema,
   insertSiaeSectorCodeSchema,
@@ -2756,8 +2756,14 @@ router.post("/api/cashiers/events/:eventId/tickets", requireAuth, async (req: Re
       return res.status(404).json({ message: "Evento non trovato" });
     }
     
-    // Calculate ticket price before requesting seal
-    const ticketPrice = price || Number(sector.price) || 0;
+    // Calculate ticket price before requesting seal (use appropriate price based on ticket type)
+    let sectorPrice = Number(sector.priceIntero) || 0;
+    if (ticketType === 'ridotto' && sector.priceRidotto) {
+      sectorPrice = Number(sector.priceRidotto);
+    } else if (ticketType === 'omaggio' && sector.priceOmaggio) {
+      sectorPrice = Number(sector.priceOmaggio);
+    }
+    const ticketPrice = price || sectorPrice;
     const priceInCents = Math.round(ticketPrice * 100);
     
     // Get or create customer if participant data provided (only for nominative tickets)
@@ -2770,18 +2776,14 @@ router.post("/api/cashiers/events/:eventId/tickets", requireAuth, async (req: Re
           : undefined;
       
       if (!customer && (participantFirstName || participantLastName)) {
+        // Generate a unique code for the customer
+        const uniqueCode = `C${Date.now().toString(36).toUpperCase()}${Math.random().toString(36).substring(2, 6).toUpperCase()}`;
         customer = await siaeStorage.createSiaeCustomer({
-          companyId: user.companyId,
           firstName: participantFirstName || '',
           lastName: participantLastName || '',
           phone: participantPhone || null,
           email: participantEmail || null,
-          fiscalCode: null,
-          idNumber: null,
-          idType: null,
-          privacyAccepted: true,
-          privacyAcceptedAt: new Date(),
-          marketingConsent: false
+          uniqueCode
         });
       }
       if (customer) {
