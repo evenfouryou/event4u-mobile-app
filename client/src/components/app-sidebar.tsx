@@ -117,7 +117,7 @@ export function AppSidebar() {
         group: "Biglietteria SIAE",
       },
       {
-        title: "Carte Attivazione",
+        title: "Lettore Carte SIAE",
         icon: CreditCard,
         url: "/siae/activation-cards",
         group: "Biglietteria SIAE",
@@ -192,12 +192,6 @@ export function AppSidebar() {
         title: "Posti Numerati",
         icon: Grid3X3,
         url: "/siae/numbered-seats",
-        group: "Biglietteria SIAE",
-      },
-      {
-        title: "Lettore Carte",
-        icon: CreditCard,
-        url: "/siae/card-reader",
         group: "Biglietteria SIAE",
       },
       {

@@ -738,17 +738,12 @@ function startStatusPolling() {
         log.debug(`SIAE: Card removal detected, counter=${cardRemovalCounter}/${CARD_REMOVAL_THRESHOLD}`);
         
         if (cardRemovalCounter >= CARD_REMOVAL_THRESHOLD) {
-          log.info('SIAE: Carta rimossa (confermata) - richiesta verifica PIN');
+          log.info('SIAE: Carta rimossa (confermata) - PIN sarà richiesto al reinserimento');
           pinLocked = true;
           pinVerified = false;
           cardRemovalCounter = 0;
-          
-          // Notify renderer to show PIN dialog
-          if (mainWindow && mainWindow.webContents) {
-            mainWindow.webContents.send('pin:required', {
-              reason: 'Carta SIAE rimossa - inserire PIN per continuare'
-            });
-          }
+          // DON'T show PIN dialog here - the card is gone!
+          // Dialog will be shown when card is reinserted (see below)
         }
       } else if (cardCurrentlyInserted) {
         // Reset removal counter when card is detected as present

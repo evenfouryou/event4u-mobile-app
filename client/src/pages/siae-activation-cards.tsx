@@ -3,7 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { CreditCard, Building2, Shield, Loader2, Wifi, WifiOff, RefreshCw, Users, Hash, Wallet } from "lucide-react";
+import { CreditCard, Building2, Shield, Loader2, Wifi, WifiOff, RefreshCw, Users, Hash, Wallet, Monitor, CheckCircle2, XCircle, Download } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { useSmartCardStatus, smartCardService } from "@/lib/smart-card-service";
@@ -66,11 +66,22 @@ export default function SiaeActivationCardsPage() {
 
   return (
     <div className="p-4 md:p-6 space-y-6 overflow-auto h-full pb-24 md:pb-8" data-testid="page-siae-activation-cards">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-semibold mb-2" data-testid="title-page">Carte di Attivazione SIAE</h1>
-        <p className="text-muted-foreground text-sm md:text-base" data-testid="description-page">
-          Gestione delle Carte di Attivazione per la biglietteria elettronica
-        </p>
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl md:text-3xl font-semibold mb-2" data-testid="title-page">Lettore Carte SIAE</h1>
+          <p className="text-muted-foreground text-sm md:text-base" data-testid="description-page">
+            Gestione Smart Card e Carte di Attivazione per biglietteria elettronica
+          </p>
+        </div>
+        <Button 
+          variant="outline" 
+          onClick={handleRefreshCard}
+          disabled={isRefreshing}
+          data-testid="button-refresh-main"
+        >
+          <RefreshCw className={`h-4 w-4 mr-2 ${isRefreshing ? 'animate-spin' : ''}`} />
+          Aggiorna
+        </Button>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -110,6 +121,62 @@ export default function SiaeActivationCardsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* Connection Status */}
+      <Card className="glass-card" data-testid="card-connection-status">
+        <CardHeader className="pb-2">
+          <CardTitle className="text-sm font-medium flex items-center gap-2">
+            <Monitor className="w-4 h-4" />
+            Stato Connessione Lettore
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
+              <div className={`w-2.5 h-2.5 rounded-full ${smartCardStatus.relayConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+              <div>
+                <p className="text-xs font-medium">Server Relay</p>
+                <p className="text-xs text-muted-foreground">
+                  {smartCardStatus.relayConnected ? 'Connesso' : 'Non connesso'}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
+              <div className={`w-2.5 h-2.5 rounded-full ${smartCardStatus.bridgeConnected ? 'bg-green-500' : 'bg-yellow-500'}`} />
+              <div>
+                <p className="text-xs font-medium">Bridge .NET</p>
+                <p className="text-xs text-muted-foreground">
+                  {smartCardStatus.bridgeConnected ? 'Attivo' : 'Non attivo'}
+                </p>
+              </div>
+            </div>
+            
+            <div className="flex items-center gap-3 p-2 rounded-lg bg-muted/30">
+              {smartCardStatus.readerDetected ? (
+                <CheckCircle2 className="h-3 w-3 text-green-500 flex-shrink-0" />
+              ) : (
+                <XCircle className="h-3 w-3 text-muted-foreground flex-shrink-0" />
+              )}
+              <div>
+                <p className="text-xs font-medium">Lettore</p>
+                <p className="text-xs text-muted-foreground truncate max-w-[120px]">
+                  {smartCardStatus.readerDetected ? (smartCardStatus.readerName || 'Rilevato') : 'Non rilevato'}
+                </p>
+              </div>
+            </div>
+          </div>
+          
+          {!smartCardStatus.connected && (
+            <div className="mt-3 p-2 rounded-lg bg-amber-500/10 border border-amber-500/30">
+              <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-2">
+                <Download className="w-3 h-3" />
+                Scarica l'app desktop Event4U per connettere il lettore
+              </p>
+            </div>
+          )}
+        </CardContent>
+      </Card>
 
       <Card className={`glass-card border-2 ${smartCardStatus.cardInserted ? 'border-green-500/50' : 'border-orange-500/30'}`} data-testid="card-live-smartcard">
         <CardHeader>

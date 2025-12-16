@@ -130,7 +130,7 @@ async function main() {
     
     // Create commit
     console.log('📝 Creating commit...');
-    const commitMessage = 'v3.14: Fix race conditions + correct SIAE sequence\n\n- Command queue serializes bridge commands (prevents response mixing)\n- Polling interval 500ms -> 1000ms (reduces collisions)\n- SelectML(0x0000) -> SelectML(0x1112) -> VerifyPINML(1, pin)\n- Based on official libSIAE test.c documentation\n\nSee BUILD_INSTRUCTIONS.md for details.';
+    const commitMessage = 'v3.16: Improved Genera Sigillo history with guards\n\n- Fix: Guard against invalid datetime in sigillo history\n- Fix: Use escapeHtml for MAC display\n- Each entry shows: MAC, counter, time, price with fallbacks\n- PIN verification only on card reinsertion (not removal)\n\nSee BUILD_INSTRUCTIONS.md for details.';
     
     const { data: commit } = await octokit.git.createCommit({
       owner,

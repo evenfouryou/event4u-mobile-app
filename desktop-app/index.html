@@ -113,36 +113,27 @@
       <section class="panel sigillo-panel" id="sigillo-panel" style="display: none;">
         <h2>Genera Sigillo Fiscale</h2>
         <form id="sigillo-form">
-          <div class="form-group">
-            <label for="input-price">Importo (€)</label>
-            <input type="number" id="input-price" step="0.01" min="0" placeholder="0.00" required>
+          <div class="form-row">
+            <div class="form-group">
+              <label for="input-price">Importo (€)</label>
+              <input type="number" id="input-price" step="0.01" min="0" placeholder="0.00" required>
+            </div>
+            <div class="form-group">
+              <label for="input-datetime">Data/Ora</label>
+              <input type="datetime-local" id="input-datetime">
+            </div>
+            <button type="submit" class="btn btn-success">
+              <span class="btn-icon">✅</span>
+              Genera
+            </button>
           </div>
-          <div class="form-group">
-            <label for="input-datetime">Data/Ora</label>
-            <input type="datetime-local" id="input-datetime">
-          </div>
-          <button type="submit" class="btn btn-success btn-large">
-            <span class="btn-icon">✅</span>
-            Genera Sigillo
-          </button>
         </form>
         
-        <!-- Sigillo Result -->
-        <div id="sigillo-result" class="sigillo-result" style="display: none;">
-          <h3>Sigillo Generato</h3>
-          <div class="sigillo-data">
-            <div class="sigillo-item">
-              <span class="sigillo-label">MAC</span>
-              <span class="sigillo-value" id="sigillo-mac">-</span>
-            </div>
-            <div class="sigillo-item">
-              <span class="sigillo-label">Seriale</span>
-              <span class="sigillo-value" id="sigillo-serial">-</span>
-            </div>
-            <div class="sigillo-item">
-              <span class="sigillo-label">Contatore</span>
-              <span class="sigillo-value" id="sigillo-counter">-</span>
-            </div>
+        <!-- Sigilli History - simple list -->
+        <div id="sigilli-history" class="sigilli-history">
+          <h3>Sigilli Generati</h3>
+          <div id="sigilli-list" class="sigilli-list">
+            <div class="sigilli-empty">Nessun sigillo generato</div>
           </div>
         </div>
       </section>

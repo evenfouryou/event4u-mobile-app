@@ -323,6 +323,83 @@ body {
   color: var(--text-primary);
 }
 
+/* Form row layout */
+.form-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 12px;
+}
+
+.form-row .form-group {
+  flex: 1;
+}
+
+.form-row .btn {
+  margin-bottom: 0;
+}
+
+/* Sigilli History - simple list */
+.sigilli-history {
+  margin-top: 20px;
+}
+
+.sigilli-history h3 {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+.sigilli-list {
+  max-height: 250px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.sigilli-empty {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 24px;
+  font-size: 13px;
+}
+
+.sigillo-entry {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 12px;
+  background: var(--bg-panel);
+  border-radius: 6px;
+  border-left: 3px solid var(--success);
+}
+
+.sigillo-entry-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.sigillo-entry-mac {
+  font-family: 'Consolas', monospace;
+  font-size: 13px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.sigillo-entry-details {
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.sigillo-entry-price {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--success);
+}
+
 /* Log Panel */
 .log-panel {
   background: var(--bg-secondary);
