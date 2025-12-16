@@ -461,7 +461,7 @@ export function AppSidebar() {
     );
   }
 
-  // Capo Staff menu - pannello dedicato con tutte le funzionalità
+  // Capo Staff menu - pannello dedicato (senza scanner - assegnato solo se necessario)
   if (isCapoStaff) {
     menuItems.push(
       {
@@ -493,12 +493,6 @@ export function AppSidebar() {
         icon: Users,
         url: "/pr/staff",
         group: "Gestione PR",
-      },
-      {
-        title: "Scanner QR",
-        icon: QrCode,
-        url: "/scanner",
-        group: "Operazioni",
       },
       {
         title: "Impostazioni",
