@@ -447,7 +447,7 @@ namespace SiaeBridge
                 ushort[] fileIds = { 0x3F00, 0x5000, 0x0000 }; // MF, DF SIAE, root
                 foreach (ushort fid in fileIds)
                 {
-                    int selRes = SelectML(fid, _slot);
+                    int selRes = LibSiae.SelectML(fid, _slot);
                     Log($"  SelectML(0x{fid:X4}) = {selRes} (0x{selRes:X4})");
                     if (selRes == 0)
                     {
