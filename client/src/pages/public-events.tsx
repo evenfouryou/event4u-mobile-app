@@ -60,10 +60,10 @@ function EventCard({ event, index }: { event: PublicEvent; index: number }) {
               />
             ) : (
               <div className="absolute inset-0 flex items-center justify-center opacity-20">
-                <Sparkles className="w-32 h-32 text-yellow-500" />
+                <Sparkles className="w-32 h-32 text-primary" />
               </div>
             )}
-            <div className="absolute inset-0 bg-gradient-to-t from-[#0a0e17] via-[#0a0e17]/40 to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
             {isToday && (
               <Badge
                 className="absolute top-4 left-4 bg-emerald-500/90 text-white border-0 px-3 py-1 shadow-lg shadow-emerald-500/25 z-10"
@@ -74,21 +74,22 @@ function EventCard({ event, index }: { event: PublicEvent; index: number }) {
             )}
             {isSoldOut && (
               <Badge
-                className="absolute top-4 right-4 bg-red-500/90 text-white border-0 z-10"
+                variant="destructive"
+                className="absolute top-4 right-4 border-0 z-10"
                 data-testid={`badge-soldout-${event.id}`}
               >
                 Sold Out
               </Badge>
             )}
           </div>
-          <CardContent className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-[#0a0e17] via-[#0a0e17]/95 to-transparent">
+          <CardContent className="absolute bottom-0 left-0 right-0 p-6 bg-gradient-to-t from-background via-background/95 to-transparent">
             <h3
-              className="text-2xl font-bold text-white mb-3 group-hover:text-yellow-400 transition-colors"
+              className="text-2xl font-bold text-foreground mb-3 group-hover:text-primary transition-colors"
               data-testid={`text-eventname-${event.id}`}
             >
               {event.eventName}
             </h3>
-            <div className="flex flex-col gap-2 text-sm text-slate-300">
+            <div className="flex flex-col gap-2 text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
                 <Calendar className="w-4 h-4 text-teal-400" />
                 <span data-testid={`text-date-${event.id}`}>
@@ -108,16 +109,15 @@ function EventCard({ event, index }: { event: PublicEvent; index: number }) {
                 </span>
               </div>
             </div>
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
               <div className="flex items-center gap-1">
-                <span className="text-yellow-400 text-sm font-medium">A partire da</span>
-                <span className="text-2xl font-bold text-yellow-400" data-testid={`text-price-${event.id}`}>
+                <span className="text-primary text-sm font-medium">A partire da</span>
+                <span className="text-2xl font-bold text-primary" data-testid={`text-price-${event.id}`}>
                   €{event.minPrice.toFixed(2)}
                 </span>
               </div>
               <Button
                 size="sm"
-                className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold"
                 disabled={isSoldOut}
                 data-testid={`button-buy-${event.id}`}
               >
@@ -162,8 +162,8 @@ export default function PublicEventsPage() {
   );
 
   return (
-    <div className="min-h-screen bg-[#0a0e17]">
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#0a0e17]/80 border-b border-white/5">
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border">
         <div className="max-w-7xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between gap-4">
             <Link href="/">
@@ -171,32 +171,32 @@ export default function PublicEventsPage() {
                 <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center">
                   <Sparkles className="w-6 h-6 text-black" />
                 </div>
-                <span className="text-xl font-bold text-white group-hover:text-yellow-400 transition-colors">
+                <span className="text-xl font-bold text-foreground group-hover:text-primary transition-colors">
                   Event4U
                 </span>
               </div>
             </Link>
             <div className="flex-1 max-w-md">
               <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                 <Input
                   placeholder="Cerca eventi..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10 bg-white/5 border-white/10 text-white placeholder:text-slate-500 focus:border-yellow-500 focus:ring-yellow-500/20"
+                  className="pl-10 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-primary/20"
                   data-testid="input-search"
                 />
               </div>
             </div>
             <div className="flex items-center gap-2">
               <Link href="/carrello">
-                <Button variant="outline" size="sm" className="border-white/10 text-white hover:bg-white/10" data-testid="button-cart">
+                <Button variant="outline" size="sm" className="border-border text-foreground" data-testid="button-cart">
                   <Ticket className="w-4 h-4 mr-1" />
                   Carrello
                 </Button>
               </Link>
               <Link href="/login">
-                <Button size="sm" className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold" data-testid="button-login">
+                <Button size="sm" data-testid="button-login">
                   Accedi
                 </Button>
               </Link>
@@ -211,38 +211,38 @@ export default function PublicEventsPage() {
           animate={{ opacity: 1, y: 0 }}
           className="text-center mb-12"
         >
-          <h1 className="text-4xl md:text-5xl font-bold text-white mb-4" data-testid="text-page-title">
+          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4" data-testid="text-page-title">
             Scopri gli Eventi
           </h1>
-          <p className="text-slate-400 text-lg max-w-2xl mx-auto">
+          <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
             Acquista i tuoi biglietti per le migliori serate. Pagamenti sicuri, biglietti digitali e accesso garantito.
           </p>
         </motion.div>
 
         <div className="flex flex-wrap gap-3 mb-8">
           <Badge
-            className="px-4 py-2 bg-yellow-500 text-black font-semibold cursor-pointer"
+            className="px-4 py-2 bg-primary text-primary-foreground font-semibold cursor-pointer"
             data-testid="filter-all"
           >
             Tutti
           </Badge>
           <Badge
             variant="outline"
-            className="px-4 py-2 border-white/20 text-slate-300 cursor-pointer hover:border-yellow-500/50"
+            className="px-4 py-2 border-border text-muted-foreground cursor-pointer"
             data-testid="filter-tonight"
           >
             <Star className="w-4 h-4 mr-1" /> Stasera
           </Badge>
           <Badge
             variant="outline"
-            className="px-4 py-2 border-white/20 text-slate-300 cursor-pointer hover:border-yellow-500/50"
+            className="px-4 py-2 border-border text-muted-foreground cursor-pointer"
             data-testid="filter-weekend"
           >
             Weekend
           </Badge>
           <Badge
             variant="outline"
-            className="px-4 py-2 border-white/20 text-slate-300 cursor-pointer hover:border-yellow-500/50"
+            className="px-4 py-2 border-border text-muted-foreground cursor-pointer"
             data-testid="filter-month"
           >
             Questo Mese
@@ -268,10 +268,10 @@ export default function PublicEventsPage() {
             ))}
           </div>
         ) : (
-          <Card className="p-12 text-center bg-white/5 border-white/10">
-            <Ticket className="w-16 h-16 mx-auto mb-4 text-slate-600" />
-            <h3 className="text-xl font-semibold text-white mb-2">Nessun evento disponibile</h3>
-            <p className="text-slate-400">
+          <Card className="p-12 text-center bg-muted/50 border-border">
+            <Ticket className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+            <h3 className="text-xl font-semibold text-foreground mb-2">Nessun evento disponibile</h3>
+            <p className="text-muted-foreground">
               {searchQuery
                 ? "Nessun evento corrisponde alla tua ricerca."
                 : "Al momento non ci sono eventi in vendita. Torna presto!"}
@@ -280,19 +280,19 @@ export default function PublicEventsPage() {
         )}
       </main>
 
-      <footer className="border-t border-white/5 py-8 mt-12">
+      <footer className="border-t border-border py-8 mt-12">
         <div className="max-w-7xl mx-auto px-4">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4">
             <div className="flex items-center gap-2">
-              <Sparkles className="w-5 h-5 text-yellow-500" />
-              <span className="text-sm text-slate-400">
+              <Sparkles className="w-5 h-5 text-primary" />
+              <span className="text-sm text-muted-foreground">
                 © {new Date().getFullYear()} Event4U. Tutti i diritti riservati.
               </span>
             </div>
-            <div className="flex gap-6 text-sm text-slate-500">
-              <a href="#" className="hover:text-yellow-400 transition-colors">Privacy Policy</a>
-              <a href="#" className="hover:text-yellow-400 transition-colors">Termini di Servizio</a>
-              <a href="#" className="hover:text-yellow-400 transition-colors">Contatti</a>
+            <div className="flex gap-6 text-sm text-muted-foreground">
+              <a href="#" className="hover:text-primary transition-colors">Privacy Policy</a>
+              <a href="#" className="hover:text-primary transition-colors">Termini di Servizio</a>
+              <a href="#" className="hover:text-primary transition-colors">Contatti</a>
             </div>
           </div>
         </div>

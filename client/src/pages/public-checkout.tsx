@@ -144,7 +144,7 @@ function CheckoutForm({
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
-      <div className="p-4 bg-white/5 rounded-xl">
+      <div className="p-4 bg-muted/50 rounded-xl">
         <PaymentElement
           options={{
             layout: "tabs",
@@ -162,7 +162,7 @@ function CheckoutForm({
       <Button
         type="submit"
         disabled={!stripe || !elements || isProcessing}
-        className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-semibold h-14 text-lg"
+        className="w-full h-14 text-lg"
         data-testid="button-pay"
       >
         {isProcessing ? (
@@ -178,7 +178,7 @@ function CheckoutForm({
         )}
       </Button>
 
-      <div className="flex items-center justify-center gap-2 text-sm text-slate-500">
+      <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
         <ShieldCheck className="w-4 h-4" />
         <span>Pagamento sicuro e crittografato</span>
       </div>
@@ -239,14 +239,14 @@ function CheckoutContent() {
 
   if (!customer) {
     return (
-      <Card className="p-8 text-center bg-yellow-500/10 border-yellow-500/20">
-        <User className="w-16 h-16 mx-auto mb-4 text-yellow-400" />
-        <h3 className="text-xl font-semibold text-white mb-2">Accesso Richiesto</h3>
-        <p className="text-slate-400 mb-6">
+      <Card className="p-8 text-center bg-primary/10 border-primary/20">
+        <User className="w-16 h-16 mx-auto mb-4 text-primary" />
+        <h3 className="text-xl font-semibold text-foreground mb-2">Accesso Richiesto</h3>
+        <p className="text-muted-foreground mb-6">
           Per completare l'acquisto devi accedere al tuo account o registrarti.
         </p>
         <Link href="/login?redirect=/checkout">
-          <Button className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold" data-testid="button-login">
+          <Button data-testid="button-login">
             Accedi o Registrati
           </Button>
         </Link>
@@ -256,12 +256,12 @@ function CheckoutContent() {
 
   if (!cart || cart.items.length === 0) {
     return (
-      <Card className="p-8 text-center bg-white/5 border-white/10">
-        <Ticket className="w-16 h-16 mx-auto mb-4 text-slate-600" />
-        <h3 className="text-xl font-semibold text-white mb-2">Carrello Vuoto</h3>
-        <p className="text-slate-400 mb-6">Aggiungi biglietti al carrello per procedere al pagamento.</p>
+      <Card className="p-8 text-center bg-muted/50 border-border">
+        <Ticket className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+        <h3 className="text-xl font-semibold text-foreground mb-2">Carrello Vuoto</h3>
+        <p className="text-muted-foreground mb-6">Aggiungi biglietti al carrello per procedere al pagamento.</p>
         <Link href="/acquista">
-          <Button className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold" data-testid="button-browse">
+          <Button data-testid="button-browse">
             Sfoglia Eventi
           </Button>
         </Link>
@@ -289,9 +289,9 @@ function CheckoutContent() {
   return (
     <div className="grid lg:grid-cols-5 gap-6">
       <div className="lg:col-span-3 space-y-6">
-        <Card className="bg-[#151922] border-white/10">
-          <CardHeader className="border-b border-white/5">
-            <CardTitle className="text-white flex items-center gap-2">
+        <Card className="bg-card border-border">
+          <CardHeader className="border-b border-border">
+            <CardTitle className="text-card-foreground flex items-center gap-2">
               <User className="w-5 h-5 text-teal-400" />
               Dati Acquirente
             </CardTitle>
@@ -299,28 +299,28 @@ function CheckoutContent() {
           <CardContent className="p-6">
             <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label className="text-slate-400">Nome</Label>
-                <p className="text-white font-medium" data-testid="text-firstname">{customer.firstName}</p>
+                <Label className="text-muted-foreground">Nome</Label>
+                <p className="text-foreground font-medium" data-testid="text-firstname">{customer.firstName}</p>
               </div>
               <div>
-                <Label className="text-slate-400">Cognome</Label>
-                <p className="text-white font-medium" data-testid="text-lastname">{customer.lastName}</p>
+                <Label className="text-muted-foreground">Cognome</Label>
+                <p className="text-foreground font-medium" data-testid="text-lastname">{customer.lastName}</p>
               </div>
               <div>
-                <Label className="text-slate-400">Email</Label>
-                <p className="text-white font-medium" data-testid="text-email">{customer.email}</p>
+                <Label className="text-muted-foreground">Email</Label>
+                <p className="text-foreground font-medium" data-testid="text-email">{customer.email}</p>
               </div>
               <div>
-                <Label className="text-slate-400">Telefono</Label>
-                <p className="text-white font-medium" data-testid="text-phone">{customer.phone}</p>
+                <Label className="text-muted-foreground">Telefono</Label>
+                <p className="text-foreground font-medium" data-testid="text-phone">{customer.phone}</p>
               </div>
             </div>
           </CardContent>
         </Card>
 
-        <Card className="bg-[#151922] border-white/10">
-          <CardHeader className="border-b border-white/5">
-            <CardTitle className="text-white flex items-center gap-2">
+        <Card className="bg-card border-border">
+          <CardHeader className="border-b border-border">
+            <CardTitle className="text-card-foreground flex items-center gap-2">
               <CreditCard className="w-5 h-5 text-teal-400" />
               Metodo di Pagamento
             </CardTitle>
@@ -328,7 +328,7 @@ function CheckoutContent() {
           <CardContent className="p-6">
             {createPaymentIntent.isPending ? (
               <div className="flex items-center justify-center py-12">
-                <Loader2 className="w-8 h-8 animate-spin text-yellow-400" />
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
             ) : createPaymentIntent.data && elementsOptions && stripePromise ? (
               <Elements stripe={stripePromise} options={elementsOptions}>
@@ -345,7 +345,7 @@ function CheckoutContent() {
                 <Button
                   onClick={() => createPaymentIntent.mutate()}
                   variant="outline"
-                  className="mt-4 border-white/20 text-white"
+                  className="mt-4 border-border text-foreground"
                 >
                   Riprova
                 </Button>
@@ -356,28 +356,28 @@ function CheckoutContent() {
       </div>
 
       <div className="lg:col-span-2">
-        <Card className="bg-[#151922] border-white/10 sticky top-24">
-          <CardHeader className="border-b border-white/5">
-            <CardTitle className="text-white">Riepilogo Ordine</CardTitle>
+        <Card className="bg-card border-border sticky top-24">
+          <CardHeader className="border-b border-border">
+            <CardTitle className="text-card-foreground">Riepilogo Ordine</CardTitle>
           </CardHeader>
           <CardContent className="p-6 space-y-4">
             {cart.items.map((item) => (
               <div
                 key={item.id}
-                className="flex justify-between items-start py-3 border-b border-white/5 last:border-0"
+                className="flex justify-between items-start py-3 border-b border-border last:border-0"
               >
                 <div className="flex-1">
-                  <p className="font-medium text-white text-sm">{item.eventName}</p>
-                  <p className="text-xs text-slate-400 mt-1">
+                  <p className="font-medium text-foreground text-sm">{item.eventName}</p>
+                  <p className="text-xs text-muted-foreground mt-1">
                     {item.sectorName} - {item.ticketType === "intero" ? "Intero" : "Ridotto"}
                   </p>
-                  <p className="text-xs text-slate-500">
+                  <p className="text-xs text-muted-foreground">
                     {format(new Date(item.eventStart), "d MMM yyyy, HH:mm", { locale: it })}
                   </p>
                 </div>
                 <div className="text-right">
-                  <p className="font-medium text-white">x{item.quantity}</p>
-                  <p className="text-sm text-yellow-400">
+                  <p className="font-medium text-foreground">x{item.quantity}</p>
+                  <p className="text-sm text-primary">
                     €{(Number(item.unitPrice) * item.quantity).toFixed(2)}
                   </p>
                 </div>
@@ -385,27 +385,27 @@ function CheckoutContent() {
             ))}
 
             <div className="pt-4 space-y-2">
-              <div className="flex justify-between text-slate-400">
+              <div className="flex justify-between text-muted-foreground">
                 <span>Subtotale</span>
                 <span>€{cart.total.toFixed(2)}</span>
               </div>
-              <div className="flex justify-between text-slate-400">
+              <div className="flex justify-between text-muted-foreground">
                 <span>Commissioni</span>
                 <span className="text-teal-400">Gratuite</span>
               </div>
             </div>
 
-            <div className="border-t border-white/10 pt-4">
+            <div className="border-t border-border pt-4">
               <div className="flex justify-between items-center">
-                <span className="text-lg font-semibold text-white">Totale</span>
-                <span className="text-2xl font-bold text-yellow-400" data-testid="text-total">
+                <span className="text-lg font-semibold text-foreground">Totale</span>
+                <span className="text-2xl font-bold text-primary" data-testid="text-total">
                   €{cart.total.toFixed(2)}
                 </span>
               </div>
-              <p className="text-xs text-slate-500 mt-1">IVA inclusa</p>
+              <p className="text-xs text-muted-foreground mt-1">IVA inclusa</p>
             </div>
 
-            <div className="pt-4 space-y-2 text-xs text-slate-500">
+            <div className="pt-4 space-y-2 text-xs text-muted-foreground">
               <div className="flex items-center gap-2">
                 <Check className="w-4 h-4 text-teal-400" />
                 <span>Biglietti digitali immediati via email</span>
@@ -428,24 +428,24 @@ function CheckoutContent() {
 
 export default function PublicCheckoutPage() {
   return (
-    <div className="min-h-screen bg-[#0a0e17]">
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#0a0e17]/80 border-b border-white/5">
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border">
         <div className="max-w-6xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href="/carrello">
-              <Button variant="ghost" className="text-white hover:bg-white/10" data-testid="button-back">
+              <Button variant="ghost" className="text-foreground" data-testid="button-back">
                 <ChevronLeft className="w-4 h-4 mr-1" /> Carrello
               </Button>
             </Link>
             <Link href="/">
               <div className="flex items-center gap-2 cursor-pointer">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-black" />
+                  <Sparkles className="w-4 h-4 text-primary-foreground" />
                 </div>
-                <span className="text-lg font-bold text-white">Event4U</span>
+                <span className="text-lg font-bold text-foreground">Event4U</span>
               </div>
             </Link>
-            <div className="flex items-center gap-2 text-sm text-slate-400">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Lock className="w-4 h-4" />
               <span>Checkout Sicuro</span>
             </div>
@@ -459,11 +459,11 @@ export default function PublicCheckoutPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3" data-testid="text-page-title">
-            <CreditCard className="w-8 h-8 text-yellow-400" />
+          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3" data-testid="text-page-title">
+            <CreditCard className="w-8 h-8 text-primary" />
             Checkout
           </h1>
-          <p className="text-slate-400 mt-2">Completa il pagamento per ricevere i tuoi biglietti</p>
+          <p className="text-muted-foreground mt-2">Completa il pagamento per ricevere i tuoi biglietti</p>
         </motion.div>
 
         <CheckoutContent />

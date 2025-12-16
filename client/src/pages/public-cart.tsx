@@ -66,34 +66,34 @@ function CartItemCard({
       exit={{ opacity: 0, x: 20 }}
     >
       <Card
-        className={`bg-[#151922] border-white/10 overflow-hidden ${isExpired ? "opacity-50" : ""}`}
+        className={`bg-card border-border overflow-hidden ${isExpired ? "opacity-50" : ""}`}
         data-testid={`card-item-${item.id}`}
       >
         <CardContent className="p-4">
           <div className="flex gap-4">
             <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-indigo-900/50 to-purple-900/50 flex items-center justify-center shrink-0">
-              <Ticket className="w-10 h-10 text-yellow-400" />
+              <Ticket className="w-10 h-10 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <div>
-                  <h3 className="font-semibold text-white truncate" data-testid={`text-event-${item.id}`}>
+                  <h3 className="font-semibold text-foreground truncate" data-testid={`text-event-${item.id}`}>
                     {item.eventName}
                   </h3>
-                  <p className="text-sm text-slate-400">{item.sectorName}</p>
+                  <p className="text-sm text-muted-foreground">{item.sectorName}</p>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={onRemove}
                   disabled={isRemoving}
-                  className="text-slate-400 hover:text-red-400 hover:bg-red-400/10 shrink-0"
+                  className="text-muted-foreground hover:text-red-400 hover:bg-red-400/10 shrink-0"
                   data-testid={`button-remove-${item.id}`}
                 >
                   <Trash2 className="w-4 h-4" />
                 </Button>
               </div>
-              <div className="flex flex-wrap gap-3 mt-2 text-xs text-slate-400">
+              <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
                   <Calendar className="w-3 h-3" />
                   {format(new Date(item.eventStart), "d MMM", { locale: it })}
@@ -109,10 +109,10 @@ function CartItemCard({
               </div>
               <div className="flex items-center justify-between mt-3">
                 <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="border-white/20 text-slate-300">
+                  <Badge variant="outline" className="border-border text-muted-foreground">
                     {item.ticketType === "intero" ? "Intero" : "Ridotto"}
                   </Badge>
-                  <Badge variant="outline" className="border-white/20 text-slate-300">
+                  <Badge variant="outline" className="border-border text-muted-foreground">
                     x{item.quantity}
                   </Badge>
                   {item.participantFirstName && (
@@ -122,13 +122,13 @@ function CartItemCard({
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-yellow-400" data-testid={`text-price-${item.id}`}>
+                  <p className="text-lg font-bold text-primary" data-testid={`text-price-${item.id}`}>
                     €{(Number(item.unitPrice) * item.quantity).toFixed(2)}
                   </p>
                 </div>
               </div>
               {!isExpired && minutesLeft <= 5 && (
-                <p className="text-xs text-yellow-400 mt-2">
+                <p className="text-xs text-amber-400 mt-2">
                   Riserva scade tra {minutesLeft} minuti
                 </p>
               )}
@@ -199,21 +199,21 @@ export default function PublicCartPage() {
   };
 
   return (
-    <div className="min-h-screen bg-[#0a0e17]">
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-[#0a0e17]/80 border-b border-white/5">
+    <div className="min-h-screen bg-background">
+      <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             <Link href="/acquista">
-              <Button variant="ghost" className="text-white hover:bg-white/10" data-testid="button-back">
+              <Button variant="ghost" className="text-foreground" data-testid="button-back">
                 <ChevronLeft className="w-4 h-4 mr-1" /> Continua Acquisti
               </Button>
             </Link>
             <Link href="/">
               <div className="flex items-center gap-2 cursor-pointer">
                 <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-black" />
+                  <Sparkles className="w-4 h-4 text-primary-foreground" />
                 </div>
-                <span className="text-lg font-bold text-white">Event4U</span>
+                <span className="text-lg font-bold text-foreground">Event4U</span>
               </div>
             </Link>
             <div className="w-32" /> {/* Spacer per bilanciare */}
@@ -227,8 +227,8 @@ export default function PublicCartPage() {
           animate={{ opacity: 1, y: 0 }}
           className="mb-8"
         >
-          <h1 className="text-3xl font-bold text-white flex items-center gap-3" data-testid="text-page-title">
-            <ShoppingCart className="w-8 h-8 text-yellow-400" />
+          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3" data-testid="text-page-title">
+            <ShoppingCart className="w-8 h-8 text-primary" />
             Il Tuo Carrello
           </h1>
         </motion.div>
@@ -248,7 +248,7 @@ export default function PublicCartPage() {
           <div className="grid lg:grid-cols-3 gap-6">
             <div className="lg:col-span-2 space-y-4">
               <div className="flex items-center justify-between">
-                <p className="text-slate-400">
+                <p className="text-muted-foreground">
                   {cart.itemsCount} {cart.itemsCount === 1 ? "biglietto" : "biglietti"}
                 </p>
                 <Button
@@ -276,37 +276,37 @@ export default function PublicCartPage() {
             </div>
 
             <div className="lg:col-span-1">
-              <Card className="bg-[#151922] border-white/10 sticky top-24">
-                <CardHeader className="border-b border-white/5">
-                  <CardTitle className="text-white">Riepilogo</CardTitle>
+              <Card className="bg-card border-border sticky top-24">
+                <CardHeader className="border-b border-border">
+                  <CardTitle className="text-card-foreground">Riepilogo</CardTitle>
                 </CardHeader>
                 <CardContent className="p-6 space-y-4">
-                  <div className="flex justify-between text-slate-400">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>Subtotale</span>
                     <span>€{cart.total.toFixed(2)}</span>
                   </div>
-                  <div className="flex justify-between text-slate-400">
+                  <div className="flex justify-between text-muted-foreground">
                     <span>Commissioni</span>
                     <span className="text-teal-400">Gratuite</span>
                   </div>
-                  <div className="border-t border-white/10 pt-4">
+                  <div className="border-t border-border pt-4">
                     <div className="flex justify-between items-center">
-                      <span className="text-lg font-semibold text-white">Totale</span>
-                      <span className="text-2xl font-bold text-yellow-400" data-testid="text-total">
+                      <span className="text-lg font-semibold text-foreground">Totale</span>
+                      <span className="text-2xl font-bold text-primary" data-testid="text-total">
                         €{cart.total.toFixed(2)}
                       </span>
                     </div>
-                    <p className="text-xs text-slate-500 mt-1">IVA inclusa</p>
+                    <p className="text-xs text-muted-foreground mt-1">IVA inclusa</p>
                   </div>
                   <Button
                     onClick={handleCheckout}
-                    className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-semibold h-12"
+                    className="w-full h-12"
                     data-testid="button-checkout"
                   >
                     Procedi al Pagamento
                     <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
-                  <p className="text-xs text-center text-slate-500">
+                  <p className="text-xs text-center text-muted-foreground">
                     Pagamenti sicuri con Stripe
                   </p>
                 </CardContent>
@@ -318,15 +318,15 @@ export default function PublicCartPage() {
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
           >
-            <Card className="p-12 text-center bg-white/5 border-white/10">
-              <ShoppingCart className="w-20 h-20 mx-auto mb-6 text-slate-600" />
-              <h3 className="text-2xl font-semibold text-white mb-3">Carrello vuoto</h3>
-              <p className="text-slate-400 mb-6 max-w-md mx-auto">
+            <Card className="p-12 text-center bg-muted/50 border-border">
+              <ShoppingCart className="w-20 h-20 mx-auto mb-6 text-muted-foreground" />
+              <h3 className="text-2xl font-semibold text-foreground mb-3">Carrello vuoto</h3>
+              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
                 Non hai ancora aggiunto biglietti al carrello.
                 Scopri gli eventi disponibili e scegli i tuoi biglietti.
               </p>
               <Link href="/acquista">
-                <Button className="bg-yellow-500 hover:bg-yellow-400 text-black font-semibold" data-testid="button-browse">
+                <Button data-testid="button-browse">
                   <Ticket className="w-4 h-4 mr-2" />
                   Sfoglia Eventi
                 </Button>
