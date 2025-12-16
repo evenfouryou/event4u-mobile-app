@@ -420,8 +420,23 @@ namespace SiaeBridge
                     return ERR("Carta rimossa");
                 }
 
+                // Prima chiama Finalize per resettare lo stato della carta
+                int finRes = FinalizeML(_slot);
+                Log($"  FinalizeML = {finRes}");
+                
                 int init = Initialize(_slot);
                 Log($"  Initialize = {init}");
+                
+                // Se Initialize non ritorna 0, la carta potrebbe essere in uno stato inconsistente
+                // Questo può accadere se la sessione precedente non è stata chiusa correttamente
+                if (init != 0)
+                {
+                    Log($"  Initialize returned {init}, trying to reset card state...");
+                    FinalizeML(_slot);
+                    System.Threading.Thread.Sleep(100);  // Breve pausa
+                    init = Initialize(_slot);
+                    Log($"  Initialize (2nd attempt) = {init}");
+                }
 
                 int txResult = BeginTransactionML(_slot);
                 Log($"  BeginTransactionML = {txResult}");

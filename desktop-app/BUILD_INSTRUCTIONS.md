@@ -1,5 +1,21 @@
 # 🔧 ISTRUZIONI DI BUILD - Event Four You SIAE Lettore
 
+## ✅ BUG FIX v3.7 (Dicembre 2024)
+
+**Problema:** Initialize ritorna 3 invece di 0, causando errore 0x6A88 nella verifica PIN
+
+### Correzioni applicate v3.7:
+
+1. **Reset stato carta prima del PIN:**
+   - Chiama `FinalizeML` prima di `Initialize` per resettare lo stato della carta
+   - Se `Initialize` ritorna non-zero, riprova con `Finalize + pausa + Initialize`
+
+2. **Diagnosi migliorata:**
+   - Log del risultato di FinalizeML
+   - Log del secondo tentativo di Initialize se necessario
+
+---
+
 ## ✅ BUG FIX v3.6 (Dicembre 2024)
 
 **Problema:** La v3.5 non provava tutti i valori nPIN perché controllava solo errore 0x6A88

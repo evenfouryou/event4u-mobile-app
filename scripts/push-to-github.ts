@@ -130,7 +130,7 @@ async function main() {
     
     // Create commit
     console.log('📝 Creating commit...');
-    const commitMessage = 'v3.6: Fixed nPIN retry logic to try ALL values\n\n- Now tries nPIN = 1, 0, 2, 0x81, 0x82 regardless of error code\n- Stops only on success or PIN-specific errors (wrong PIN, blocked)\n- Detailed logging shows which nPIN works\n\nSee BUILD_INSTRUCTIONS.md for details.';
+    const commitMessage = 'v3.7: Reset card state before PIN verification\n\n- Call FinalizeML before Initialize to reset card state\n- If Initialize returns non-zero, retry Finalize+Initialize\n- Fixes "Referenced data not found" (0x6A88) error\n\nSee BUILD_INSTRUCTIONS.md for details.';
     
     const { data: commit } = await octokit.git.createCommit({
       owner,
