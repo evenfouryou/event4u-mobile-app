@@ -202,7 +202,7 @@ router.get("/api/public/all-events", async (req, res) => {
         locationName: locations.name,
         locationAddress: locations.address,
         locationCity: locations.city,
-        locationImageUrl: locations.imageUrl,
+        locationImageUrl: locations.heroImageUrl,
       })
       .from(events)
       .innerJoin(locations, eq(events.locationId, locations.id))
@@ -236,8 +236,8 @@ router.get("/api/public/all-locations", async (req, res) => {
         address: locations.address,
         city: locations.city,
         capacity: locations.capacity,
-        description: locations.description,
-        imageUrl: locations.imageUrl,
+        description: locations.shortDescription,
+        imageUrl: locations.heroImageUrl,
         isPublic: locations.isPublic,
       })
       .from(locations)
@@ -1218,7 +1218,7 @@ router.get("/api/public/venues", async (req, res) => {
           upcomingEvents.map(async (event) => {
             const sectors = await db
               .select({
-                price: siaeEventSectors.basePrice,
+                price: siaeEventSectors.priceIntero,
               })
               .from(siaeEventSectors)
               .where(eq(siaeEventSectors.ticketedEventId, event.id));
@@ -1305,9 +1305,9 @@ router.get("/api/public/venues/:id", async (req, res) => {
           .select({
             id: siaeEventSectors.id,
             name: siaeEventSectors.name,
-            price: siaeEventSectors.basePrice,
+            price: siaeEventSectors.priceIntero,
             capacity: siaeEventSectors.capacity,
-            soldCount: siaeEventSectors.soldCount,
+            availableSeats: siaeEventSectors.availableSeats,
           })
           .from(siaeEventSectors)
           .where(eq(siaeEventSectors.ticketedEventId, event.id));
