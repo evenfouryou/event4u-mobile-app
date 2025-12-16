@@ -1,5 +1,5 @@
 import { Link, useLocation } from "wouter";
-import { Home, Calendar, Wine, Warehouse, User, Plus, Package, BarChart3, Ticket, Store } from "lucide-react";
+import { Home, Calendar, Wine, Warehouse, User, Plus, Package, BarChart3, Ticket, Store, ListChecks, Armchair, ScanLine, Users, QrCode } from "lucide-react";
 import { useQuery } from "@tanstack/react-query";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/hooks/useAuth";
@@ -18,6 +18,9 @@ export function MobileBottomNav() {
 
   const isSuperAdmin = user?.role === 'super_admin';
   const isAdmin = user?.role === 'gestore';
+  const isGestoreCovisione = user?.role === 'gestore_covisione';
+  const isCapoStaff = user?.role === 'capo_staff';
+  const isPr = user?.role === 'pr';
   const isWarehouse = user?.role === 'warehouse';
   const isBartender = user?.role === 'bartender';
   const isCassiere = user?.role === 'cassiere';
@@ -75,6 +78,33 @@ export function MobileBottomNav() {
     navItems = [
       { icon: Store, label: "I Miei Eventi", href: "/cashier/dashboard" },
       { icon: Ticket, label: "Emetti", href: "/cassa-biglietti", isFab: true },
+      { icon: User, label: "Profilo", href: "/settings" },
+    ];
+  } else if (isGestoreCovisione) {
+    // Menu specifico per Gestore Covisione
+    navItems = [
+      { icon: Home, label: "Home", href: "/" },
+      { icon: Calendar, label: "Eventi", href: "/pr/my-events" },
+      { icon: ListChecks, label: "Liste", href: "/pr/guest-lists", isFab: true },
+      { icon: Armchair, label: "Tavoli", href: "/pr/tables" },
+      { icon: QrCode, label: "Scanner", href: "/scanner" },
+    ];
+  } else if (isCapoStaff) {
+    // Menu specifico per Capo Staff
+    navItems = [
+      { icon: Home, label: "Home", href: "/staff-pr-home" },
+      { icon: Calendar, label: "Eventi", href: "/staff-pr-home" },
+      { icon: QrCode, label: "Scanner", href: "/scanner", isFab: true },
+      { icon: Users, label: "Team", href: "/pr/staff" },
+      { icon: User, label: "Profilo", href: "/settings" },
+    ];
+  } else if (isPr) {
+    // Menu specifico per PR
+    navItems = [
+      { icon: Home, label: "Home", href: "/staff-pr-home" },
+      { icon: Calendar, label: "Eventi", href: "/staff-pr-home" },
+      { icon: ListChecks, label: "Aggiungi", href: "/staff-pr-home", isFab: true },
+      { icon: Armchair, label: "Tavoli", href: "/staff-pr-home" },
       { icon: User, label: "Profilo", href: "/settings" },
     ];
   } else {

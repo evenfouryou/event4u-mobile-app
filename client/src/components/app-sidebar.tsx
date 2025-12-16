@@ -407,11 +407,11 @@ export function AppSidebar() {
 
   }
 
-  // Gestore Covisione menu
+  // Gestore Covisione menu - accesso completo alla gestione PR
   if (isGestoreCovisione) {
     menuItems.push(
       {
-        title: "Home",
+        title: "Dashboard",
         icon: Home,
         url: "/",
         group: "Bacheca",
@@ -435,25 +435,37 @@ export function AppSidebar() {
         group: "Gestione PR",
       },
       {
+        title: "Team PR",
+        icon: Users,
+        url: "/pr/staff",
+        group: "Gestione PR",
+      },
+      {
         title: "Scanner QR",
         icon: ScanLine,
         url: "/pr/scanner",
-        group: "Gestione PR",
+        group: "Operazioni",
       },
       {
         title: "Scanner E4U",
         icon: QrCode,
         url: "/scanner",
-        group: "Gestione PR",
+        group: "Operazioni",
+      },
+      {
+        title: "Impostazioni",
+        icon: Settings,
+        url: "/settings",
+        group: "Sistema",
       }
     );
   }
 
-  // Capo Staff menu - pannello dedicato
+  // Capo Staff menu - pannello dedicato con tutte le funzionalità
   if (isCapoStaff) {
     menuItems.push(
       {
-        title: "Home",
+        title: "Dashboard",
         icon: Home,
         url: "/staff-pr-home",
         group: "Bacheca",
@@ -463,21 +475,45 @@ export function AppSidebar() {
         icon: Calendar,
         url: "/staff-pr-home",
         group: "Gestione",
+      },
+      {
+        title: "Liste Ospiti",
+        icon: ListChecks,
+        url: "/pr/guest-lists",
+        group: "Gestione PR",
+      },
+      {
+        title: "Tavoli Evento",
+        icon: Armchair,
+        url: "/pr/tables",
+        group: "Gestione PR",
+      },
+      {
+        title: "Team PR",
+        icon: Users,
+        url: "/pr/staff",
+        group: "Gestione PR",
       },
       {
         title: "Scanner QR",
         icon: QrCode,
         url: "/scanner",
         group: "Operazioni",
+      },
+      {
+        title: "Impostazioni",
+        icon: Settings,
+        url: "/settings",
+        group: "Sistema",
       }
     );
   }
 
-  // PR menu - pannello dedicato (PR semplice non può scansionare)
+  // PR menu - pannello dedicato
   if (isPr) {
     menuItems.push(
       {
-        title: "Home",
+        title: "Dashboard",
         icon: Home,
         url: "/staff-pr-home",
         group: "Bacheca",
@@ -487,6 +523,24 @@ export function AppSidebar() {
         icon: Calendar,
         url: "/staff-pr-home",
         group: "Gestione",
+      },
+      {
+        title: "Liste Ospiti",
+        icon: ListChecks,
+        url: "/pr/guest-lists",
+        group: "Gestione PR",
+      },
+      {
+        title: "Tavoli Evento",
+        icon: Armchair,
+        url: "/pr/tables",
+        group: "Gestione PR",
+      },
+      {
+        title: "Impostazioni",
+        icon: Settings,
+        url: "/settings",
+        group: "Sistema",
       }
     );
   }
