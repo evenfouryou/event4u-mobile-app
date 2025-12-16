@@ -130,7 +130,7 @@ async function main() {
     
     // Create commit
     console.log('📝 Creating commit...');
-    const commitMessage = 'v3.12: Try PIN after selecting each existing EF\n\n- Select each found EF (0x2F01, 0x2F02, 0x0000) before PIN verify\n- Test multiple nPIN values per EF\n- Better logging for PIN discovery\n\nSee BUILD_INSTRUCTIONS.md for details.';
+    const commitMessage = 'v3.13: Correct sequence from SIAE documentation\n\n- SelectML(0x0000) -> SelectML(0x1112) -> VerifyPINML(1, pin)\n- Uses official libSIAE test.c as reference\n- 0x1112 = DF Sigilli Fiscali, 0x1111 = DF PKI\n\nSee BUILD_INSTRUCTIONS.md for details.';
     
     const { data: commit } = await octokit.git.createCommit({
       owner,

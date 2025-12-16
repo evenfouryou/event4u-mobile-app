@@ -446,76 +446,46 @@ namespace SiaeBridge
                 Log($"  BeginTransactionML = {txResult}");
                 tx = (txResult == 0);
 
-                // Seleziona MF (0x3F00) - la root della carta
-                int selMF = LibSiae.SelectML(0x3F00, _slot);
-                Log($"  SelectML(0x3F00 MF) = {selMF} (0x{selMF:X4})");
+                // ========================================
+                // SEQUENZA CORRETTA DA DOCUMENTAZIONE SIAE
+                // ========================================
+                // Per Sigillo Fiscale: SelectML(0x0000) -> SelectML(0x1112) -> VerifyPINML(1, pin)
+                // Per PKI (firma):     SelectML(0x0000) -> SelectML(0x1111) -> VerifyPINML(1, pin)
                 
-                // Prova a selezionare vari file/DF sulla carta per capire la struttura
-                // 0x6A82 = file not found, 0 = success
-                ushort[] fileIds = { 
-                    0x5000, 0x5001, 0x5100,  // DF SIAE possibili
-                    0x2F00, 0x2F01, 0x2F02,  // EF comuni per PIN/chiavi
-                    0x0100, 0x0101, 0x0102,  // EF di servizio
-                    0x0000,                   // Root EF
-                    0x7F00, 0x7F10, 0x7F20,  // DF telecom
-                    0x3F01, 0x3F02           // DF sotto MF
-                };
+                // 1. Seleziona root (0x0000)
+                int sel0000 = LibSiae.SelectML(0x0000, _slot);
+                Log($"  SelectML(0x0000 root) = {sel0000} (0x{sel0000:X4})");
                 
-                int selectedFile = 0;
-                Log($"  --- Scanning file sulla carta ---");
-                foreach (ushort fid in fileIds)
+                // 2. Seleziona DF Sigilli Fiscali (0x1112)
+                int sel1112 = LibSiae.SelectML(0x1112, _slot);
+                Log($"  SelectML(0x1112 DF Sigilli) = {sel1112} (0x{sel1112:X4})");
+                
+                // Se 0x1112 fallisce, prova 0x1111 (DF PKI)
+                if (sel1112 != 0)
                 {
-                    int res = LibSiae.SelectML(fid, _slot);
-                    if (res == 0)
-                    {
-                        Log($"  ✓ File 0x{fid:X4} ESISTE!");
-                        selectedFile = fid;
-                    }
-                    else if (res != 0x6A82) // Non loggare tutti i "file not found"
-                    {
-                        Log($"  SelectML(0x{fid:X4}) = {res} (0x{res:X4})");
-                    }
+                    int sel1111 = LibSiae.SelectML(0x1111, _slot);
+                    Log($"  SelectML(0x1111 DF PKI) = {sel1111} (0x{sel1111:X4})");
                 }
-                Log($"  --- Fine scan ---");
                 
-                // Prova a selezionare i file trovati e verificare PIN dopo ognuno
-                ushort[] existingFiles = { 0x2F01, 0x2F02, 0x0000, 0x3F00 };
-                int[] nPinValues = { 1, 0, 2, 0x80, 0x81 };
-                int pinResult = -1;
-                int successfulNPin = -1;
-                bool foundPin = false;
+                // 3. Verifica PIN con nPIN=1 (dalla documentazione ufficiale)
+                int pinResult = VerifyPINML(1, pin, _slot);
+                Log($"  VerifyPINML(nPIN=1, pin=***) = {pinResult} (0x{pinResult:X4})");
                 
-                foreach (ushort ef in existingFiles)
+                // Se nPIN=1 non funziona, proviamo altri valori
+                if (pinResult != 0 && pinResult != 0x6983 && (pinResult < 0x63C0 || pinResult > 0x63CF))
                 {
-                    int selEf = LibSiae.SelectML(ef, _slot);
-                    Log($"  --- Provo PIN dopo SelectML(0x{ef:X4}) = {selEf} ---");
-                    
-                    foreach (int nPin in nPinValues)
+                    Log($"  nPIN=1 fallito, provo altri valori...");
+                    int[] altNPin = { 0, 2, 0x81 };
+                    foreach (int nPin in altNPin)
                     {
-                        pinResult = VerifyPINML(nPin, pin, _slot);
-                        Log($"  VerifyPINML(nPIN={nPin}, pin=***) = {pinResult} (0x{pinResult:X4})");
-                        
-                        if (pinResult == 0)
+                        int res = VerifyPINML(nPin, pin, _slot);
+                        Log($"  VerifyPINML(nPIN={nPin}) = {res} (0x{res:X4})");
+                        if (res == 0 || res == 0x6983 || (res >= 0x63C0 && res <= 0x63CF))
                         {
-                            successfulNPin = nPin;
-                            Log($"  ✓ PIN VERIFICATO con EF=0x{ef:X4}, nPIN={nPin}!");
-                            foundPin = true;
-                            break;
-                        }
-                        else if (pinResult >= 0x63C0 && pinResult <= 0x63CF)
-                        {
-                            Log($"  PIN errato ma nPIN corretto! (tentativi: {pinResult & 0x0F})");
-                            foundPin = true; // Trovato il nPIN giusto, PIN sbagliato
-                            break;
-                        }
-                        else if (pinResult == 0x6983)
-                        {
-                            Log($"  PIN BLOCCATO!");
-                            foundPin = true;
+                            pinResult = res;
                             break;
                         }
                     }
-                    if (foundPin) break;
                 }
 
                 if (pinResult == 0)
