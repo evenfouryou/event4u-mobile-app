@@ -446,29 +446,40 @@ namespace SiaeBridge
                 Log($"  BeginTransactionML = {txResult}");
                 tx = (txResult == 0);
 
-                // Seleziona prima MF (0x3F00), poi DF SIAE (0x5000)
-                // La selezione gerarchica è necessaria per accedere ai file SIAE
+                // Seleziona MF (0x3F00) - la root della carta
                 int selMF = LibSiae.SelectML(0x3F00, _slot);
                 Log($"  SelectML(0x3F00 MF) = {selMF} (0x{selMF:X4})");
                 
-                int selDF = LibSiae.SelectML(0x5000, _slot);
-                Log($"  SelectML(0x5000 DF SIAE) = {selDF} (0x{selDF:X4})");
+                // Prova a selezionare vari file/DF sulla carta per capire la struttura
+                // 0x6A82 = file not found, 0 = success
+                ushort[] fileIds = { 
+                    0x5000, 0x5001, 0x5100,  // DF SIAE possibili
+                    0x2F00, 0x2F01, 0x2F02,  // EF comuni per PIN/chiavi
+                    0x0100, 0x0101, 0x0102,  // EF di servizio
+                    0x0000,                   // Root EF
+                    0x7F00, 0x7F10, 0x7F20,  // DF telecom
+                    0x3F01, 0x3F02           // DF sotto MF
+                };
                 
-                // Prova anche altri DF se 0x5000 fallisce
-                if (selDF != 0)
+                int selectedFile = 0;
+                Log($"  --- Scanning file sulla carta ---");
+                foreach (ushort fid in fileIds)
                 {
-                    ushort[] dfIds = { 0x0001, 0x0002, 0x0010, 0x1000 };
-                    foreach (ushort df in dfIds)
+                    int res = LibSiae.SelectML(fid, _slot);
+                    if (res == 0)
                     {
-                        int res = LibSiae.SelectML(df, _slot);
-                        Log($"  SelectML(0x{df:X4}) = {res} (0x{res:X4})");
-                        if (res == 0)
-                        {
-                            Log($"  ✓ DF 0x{df:X4} selezionato!");
-                            break;
-                        }
+                        Log($"  ✓ File 0x{fid:X4} ESISTE!");
+                        selectedFile = fid;
+                    }
+                    else if (res != 0x6A82) // Non loggare tutti i "file not found"
+                    {
+                        Log($"  SelectML(0x{fid:X4}) = {res} (0x{res:X4})");
                     }
                 }
+                Log($"  --- Fine scan ---");
+                
+                // Riseleziona MF prima di verificare PIN
+                LibSiae.SelectML(0x3F00, _slot);
 
                 // nPIN = identificatore PIN (provare diversi valori)
                 // Dalla documentazione SIAE test.c: pVerifyPINML(1, pin, slot)
