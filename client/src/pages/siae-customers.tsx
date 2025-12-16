@@ -67,6 +67,8 @@ import {
   UserCheck,
   Send,
   Clock,
+  Trash2,
+  ShieldCheck,
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -94,6 +96,8 @@ export default function SiaeCustomersPage() {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isOtpDialogOpen, setIsOtpDialogOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [customerToDelete, setCustomerToDelete] = useState<SiaeCustomer | null>(null);
   const [pendingCustomerId, setPendingCustomerId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [otpCooldown, setOtpCooldown] = useState(0);
@@ -213,6 +217,50 @@ export default function SiaeCustomersPage() {
     onError: (error: Error) => {
       toast({
         title: "Errore",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const manualVerifyMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("POST", `/api/siae/customers/${id}/verify-manual`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Cliente verificato",
+        description: "Il cliente è stato verificato manualmente",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/siae/customers"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Errore verifica manuale",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deleteMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("DELETE", `/api/siae/customers/${id}`, {});
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Cliente eliminato",
+        description: "Il cliente è stato rimosso dal sistema",
+      });
+      setIsDeleteDialogOpen(false);
+      setCustomerToDelete(null);
+      queryClient.invalidateQueries({ queryKey: ["/api/siae/customers"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Errore eliminazione",
         description: error.message,
         variant: "destructive",
       });
@@ -519,6 +567,55 @@ export default function SiaeCustomersPage() {
         </DialogContent>
       </Dialog>
 
+      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <DialogContent className="max-w-md" data-testid="dialog-delete-confirmation">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-destructive">
+              <Trash2 className="w-5 h-5" />
+              Conferma Eliminazione
+            </DialogTitle>
+            <DialogDescription>
+              Sei sicuro di voler eliminare il cliente{" "}
+              <strong>{customerToDelete?.firstName} {customerToDelete?.lastName}</strong>?
+              <br />
+              Questa azione è irreversibile.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button
+              type="button"
+              variant="outline"
+              onClick={() => {
+                setIsDeleteDialogOpen(false);
+                setCustomerToDelete(null);
+              }}
+              data-testid="button-cancel-delete"
+            >
+              Annulla
+            </Button>
+            <Button
+              type="button"
+              variant="destructive"
+              onClick={() => customerToDelete && deleteMutation.mutate(customerToDelete.id)}
+              disabled={deleteMutation.isPending}
+              data-testid="button-confirm-delete"
+            >
+              {deleteMutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Eliminazione...
+                </>
+              ) : (
+                <>
+                  <Trash2 className="w-4 h-4 mr-2" />
+                  Elimina
+                </>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Card className="glass-card" data-testid="card-search">
         <CardContent className="p-4">
           <div className="relative">
@@ -619,6 +716,15 @@ export default function SiaeCustomersPage() {
                                 Verifica Telefono
                               </DropdownMenuItem>
                             )}
+                            {!customer.phoneVerified && (
+                              <DropdownMenuItem
+                                onClick={() => manualVerifyMutation.mutate(customer.id)}
+                                data-testid={`menu-verify-manual-${customer.id}`}
+                              >
+                                <ShieldCheck className="w-4 h-4 mr-2" />
+                                Verifica Manuale (Admin)
+                              </DropdownMenuItem>
+                            )}
                             {!customer.isActive && (
                               <DropdownMenuItem
                                 onClick={() => updateStatusMutation.mutate({ id: customer.id, status: "active" })}
@@ -638,6 +744,17 @@ export default function SiaeCustomersPage() {
                                 Blocca
                               </DropdownMenuItem>
                             )}
+                            <DropdownMenuItem
+                              onClick={() => {
+                                setCustomerToDelete(customer);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                              className="text-destructive"
+                              data-testid={`menu-delete-${customer.id}`}
+                            >
+                              <Trash2 className="w-4 h-4 mr-2" />
+                              Elimina
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
