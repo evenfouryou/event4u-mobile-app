@@ -95,7 +95,12 @@ class SmartCardService {
       
       if (response.ok) {
         const data = await response.json();
-        console.log('[DEBUG SC] HTTP status received:', JSON.stringify(data));
+        console.log('[DEBUG SC] HTTP status received:', JSON.stringify(data, null, 2));
+        console.log('[DEBUG SC] HTTP - cardSerial:', data.cardSerial);
+        console.log('[DEBUG SC] HTTP - cardCounter:', data.cardCounter);
+        console.log('[DEBUG SC] HTTP - cardBalance:', data.cardBalance);
+        console.log('[DEBUG SC] HTTP - cardKeyId:', data.cardKeyId);
+        console.log('[DEBUG SC] HTTP - cardInserted:', data.cardInserted);
         
         // Update status immediately with cached data from server
         this.updateStatus({
@@ -274,6 +279,16 @@ class SmartCardService {
   }
 
   private handleWebSocketStatus(data: any): void {
+    console.log('[DEBUG SC] ====== CARD STATUS DATA RECEIVED ======');
+    console.log('[DEBUG SC] Full data object:', JSON.stringify(data, null, 2));
+    console.log('[DEBUG SC] data.cardSerial:', data.cardSerial);
+    console.log('[DEBUG SC] data.cardCounter:', data.cardCounter);
+    console.log('[DEBUG SC] data.cardBalance:', data.cardBalance);
+    console.log('[DEBUG SC] data.cardKeyId:', data.cardKeyId);
+    console.log('[DEBUG SC] data.cardInserted:', data.cardInserted);
+    console.log('[DEBUG SC] data.readerDetected:', data.readerDetected);
+    console.log('[DEBUG SC] data.readerConnected:', data.readerConnected);
+    
     const bridgeConnected = data.bridgeConnected ?? data.initialized ?? false;
     const readerDetected = data.readerDetected ?? data.readerConnected ?? false;
     const cardInserted = data.cardInserted ?? false;

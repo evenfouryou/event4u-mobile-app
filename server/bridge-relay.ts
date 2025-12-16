@@ -175,7 +175,8 @@ export function setupBridgeRelay(server: Server): void {
             // Cache the status for new clients
             cachedBridgeStatus = message;
             // Bridge status update - broadcast to ALL clients
-            console.log(`[Bridge] Broadcasting status update to all clients:`, JSON.stringify(message).substring(0, 100));
+            console.log(`[Bridge] Broadcasting status update to all clients:`, JSON.stringify(message).substring(0, 500));
+            console.log(`[Bridge] Status payload details:`, JSON.stringify(message.payload, null, 2));
             broadcastToAllClients(message);
           } else if (message.type === 'SEAL_RESPONSE') {
             // Handle seal response from desktop app (for server-side seal requests)
