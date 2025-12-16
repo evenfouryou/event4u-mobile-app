@@ -4,7 +4,7 @@ import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
 import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions } from "@shared/schema";
-import { eq, and } from "drizzle-orm";
+import { eq, and, sql } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { requestFiscalSeal, isCardReadyForSeals, isBridgeConnected } from "./bridge-relay";
