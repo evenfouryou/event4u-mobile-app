@@ -1,0 +1,299 @@
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2025-12-16 23:06:25.777] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":177,"balance":380011,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2025-12-16 23:06:25.778] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":177,"cardBalance":380011,"cardKeyId":129,"cardSlot":0}
+[2025-12-16 23:06:25.778] [info]  Status changed, broadcasting update
+[2025-12-16 23:06:25.779] [info]  Broadcasting status: {"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"cardSerial":"4130313238343837","cardCounter":177,"cardBalance":380011,"cardKeyId":129,"pinLocked":false}
+[2025-12-16 23:06:25.780] [debug] Sent status to relay
+[2025-12-16 23:06:25.780] [debug] SIAE: Card removal detected, counter=1/3
+[2025-12-16 23:06:25.781] [info]  Status changed, broadcasting update
+[2025-12-16 23:06:25.781] [info]  Broadcasting status: {"bridgeConnected":true,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2025-12-16 23:06:25.782] [debug] Sent status to relay
+[2025-12-16 23:06:25.819] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:25.820] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2025-12-16 23:06:25.821] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2025-12-16 23:06:25.822] [debug] SIAE: Card detected, resetting removal counter
+[2025-12-16 23:06:25.822] [info]  Auto-reading card data...
+[2025-12-16 23:06:25.823] [info]  >> Command: READ_CARD
+[2025-12-16 23:06:25.842] [info]  IPC: checkReader
+[2025-12-16 23:06:25.843] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:25.867] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2025-12-16 23:06:25.867] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2025-12-16 23:06:25.868] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2025-12-16 23:06:25.869] [info]  READ_CARD result: {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2025-12-16 23:06:25.869] [info]  Card data extracted: {"cardSlot":0}
+[2025-12-16 23:06:25.870] [info]  Status changed, broadcasting update
+[2025-12-16 23:06:25.870] [info]  Broadcasting status: {"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2025-12-16 23:06:25.871] [debug] Sent status to relay
+[2025-12-16 23:06:26.334] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:26.770] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":177,"balance":380011,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2025-12-16 23:06:26.772] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 177,
+  balance: 380011,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2025-12-16 23:06:26.774] [debug] SIAE: Card removal detected, counter=1/3
+[2025-12-16 23:06:26.775] [info]  Status changed, broadcasting update
+[2025-12-16 23:06:26.777] [info]  Broadcasting status: {"bridgeConnected":true,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2025-12-16 23:06:26.778] [debug] Sent status to relay
+[2025-12-16 23:06:26.823] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2025-12-16 23:06:26.847] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:26.866] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2025-12-16 23:06:26.867] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2025-12-16 23:06:26.868] [debug] SIAE: Card detected, resetting removal counter
+[2025-12-16 23:06:26.868] [info]  Auto-reading card data...
+[2025-12-16 23:06:26.868] [info]  >> Command: READ_CARD
+[2025-12-16 23:06:26.912] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2025-12-16 23:06:26.913] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2025-12-16 23:06:26.914] [info]  READ_CARD result: {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2025-12-16 23:06:26.914] [info]  Card data extracted: {"cardSlot":0}
+[2025-12-16 23:06:26.915] [info]  Status changed, broadcasting update
+[2025-12-16 23:06:26.915] [info]  Broadcasting status: {"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2025-12-16 23:06:26.916] [debug] Sent status to relay
+[2025-12-16 23:06:27.361] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:27.623] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":177,"balance":null,"keyId":0,"slot":0,"counterError":null,"balanceError":"0x6A82"}
+[2025-12-16 23:06:27.625] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 177,
+  balance: null,
+  keyId: 0,
+  slot: 0,
+  counterError: null,
+  balanceError: '0x6A82'
+}
+[2025-12-16 23:06:27.626] [debug] SIAE: Card removal detected, counter=1/3
+[2025-12-16 23:06:27.627] [info]  Status changed, broadcasting update
+[2025-12-16 23:06:27.629] [info]  Broadcasting status: {"bridgeConnected":true,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2025-12-16 23:06:27.630] [debug] Sent status to relay
+[2025-12-16 23:06:27.636] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-16 23:06:27.863] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:27.878] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-16 23:06:27.879] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-16 23:06:27.880] [info]  Status changed, broadcasting update
+[2025-12-16 23:06:27.881] [info]  Broadcasting status: {"bridgeConnected":true,"readerConnected":true,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2025-12-16 23:06:27.882] [debug] Sent status to relay
+[2025-12-16 23:06:28.378] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:28.401] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-16 23:06:28.403] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-16 23:06:28.779] [info]  IPC: checkReader
+[2025-12-16 23:06:28.781] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:28.798] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-16 23:06:28.799] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-16 23:06:28.888] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:28.896] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-16 23:06:28.896] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-16 23:06:28.934] [info]  Relay message received: ping
+[2025-12-16 23:06:29.404] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:29.420] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-16 23:06:29.422] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-16 23:06:29.917] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:29.935] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-16 23:06:29.936] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-16 23:06:30.431] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:30.449] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-16 23:06:30.450] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-16 23:06:30.946] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:30.955] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-16 23:06:30.956] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-16 23:06:31.461] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:31.478] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-16 23:06:31.480] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-16 23:06:31.788] [info]  IPC: checkReader
+[2025-12-16 23:06:31.790] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:31.810] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-16 23:06:31.812] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-16 23:06:31.976] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:31.994] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-16 23:06:31.995] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-16 23:06:32.487] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:32.509] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2025-12-16 23:06:32.511] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2025-12-16 23:06:33.003] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:33.119] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2025-12-16 23:06:33.120] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2025-12-16 23:06:33.122] [debug] SIAE: Card detected, resetting removal counter
+[2025-12-16 23:06:33.122] [info]  Auto-reading card data...
+[2025-12-16 23:06:33.123] [info]  >> Command: READ_CARD
+[2025-12-16 23:06:33.505] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:34.009] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:34.512] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:34.778] [info]  IPC: checkReader
+[2025-12-16 23:06:34.780] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:35.027] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:35.542] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:36.057] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:36.572] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:37.085] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:37.599] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:37.787] [info]  IPC: checkReader
+[2025-12-16 23:06:37.789] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:38.117] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:38.628] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:39.143] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:39.659] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:40.175] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:40.689] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:40.784] [info]  IPC: checkReader
+[2025-12-16 23:06:40.785] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:41.203] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:41.716] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:42.232] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:42.296] [info]  Relay message received: ping
+[2025-12-16 23:06:42.746] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:43.259] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:43.775] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:43.814] [info]  IPC: checkReader
+[2025-12-16 23:06:43.815] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:44.290] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:44.803] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:45.318] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:45.833] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:46.348] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:46.785] [info]  IPC: checkReader
+[2025-12-16 23:06:46.787] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:46.847] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:47.363] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:47.877] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:48.127] [warn]  Timeout, partial: 
+[2025-12-16 23:06:48.129] [error] Card read failed: Timeout risposta
+[2025-12-16 23:06:48.131] [info]  Status changed, broadcasting update
+[2025-12-16 23:06:48.133] [info]  Broadcasting status: {"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2025-12-16 23:06:48.135] [debug] Sent status to relay
+[2025-12-16 23:06:48.377] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:48.518] [warn]  Timeout, partial: 
+[2025-12-16 23:06:48.892] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:49.018] [warn]  Timeout, partial: 
+[2025-12-16 23:06:49.397] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:49.524] [warn]  Timeout, partial: 
+[2025-12-16 23:06:49.790] [warn]  Timeout, partial: 
+[2025-12-16 23:06:49.792] [info]  IPC: checkReader
+[2025-12-16 23:06:49.794] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:49.899] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:50.042] [warn]  Timeout, partial: 
+[2025-12-16 23:06:50.402] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:50.557] [warn]  Timeout, partial: 
+[2025-12-16 23:06:50.914] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:51.071] [warn]  Timeout, partial: 
+[2025-12-16 23:06:51.428] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:51.586] [warn]  Timeout, partial: 
+[2025-12-16 23:06:51.941] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:52.097] [warn]  Timeout, partial: 
+[2025-12-16 23:06:52.456] [info]  >> Command: CHECK_READER
+[2025-12-16 23:06:52.613] [warn]  Timeout, partial: 

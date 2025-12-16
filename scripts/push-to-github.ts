@@ -130,7 +130,7 @@ async function main() {
     
     // Create commit
     console.log('📝 Creating commit...');
-    const commitMessage = 'v3.13: Correct sequence from SIAE documentation\n\n- SelectML(0x0000) -> SelectML(0x1112) -> VerifyPINML(1, pin)\n- Uses official libSIAE test.c as reference\n- 0x1112 = DF Sigilli Fiscali, 0x1111 = DF PKI\n\nSee BUILD_INSTRUCTIONS.md for details.';
+    const commitMessage = 'v3.14: Fix race conditions + correct SIAE sequence\n\n- Command queue serializes bridge commands (prevents response mixing)\n- Polling interval 500ms -> 1000ms (reduces collisions)\n- SelectML(0x0000) -> SelectML(0x1112) -> VerifyPINML(1, pin)\n- Based on official libSIAE test.c documentation\n\nSee BUILD_INSTRUCTIONS.md for details.';
     
     const { data: commit } = await octokit.git.createCommit({
       owner,

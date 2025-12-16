@@ -61,7 +61,7 @@ const RELAY_HEARTBEAT_INTERVAL = 30000;
 let relayHeartbeatTimer = null;
 
 // Periodic status check timer
-const STATUS_CHECK_INTERVAL = 500; // Check every 0.5 seconds
+const STATUS_CHECK_INTERVAL = 1000; // Check every 1 second (reduced from 500ms to prevent race conditions)
 let statusCheckTimer = null;
 let lastStatusJson = '';
 
@@ -327,12 +327,29 @@ function stopBridge() {
   });
 }
 
+// Command queue to serialize bridge commands and prevent race conditions
+let commandQueue = Promise.resolve();
+let isCommandRunning = false;
+
 function sendBridgeCommand(command) {
+  // Queue this command to run after the previous one completes
+  const execute = () => sendBridgeCommandInternal(command);
+  commandQueue = commandQueue.then(execute, execute);
+  return commandQueue;
+}
+
+function sendBridgeCommandInternal(command) {
   return new Promise((resolve, reject) => {
     if (!bridgeProcess) {
       reject(new Error('Bridge non avviato'));
       return;
     }
+
+    // Wait if another command is running (extra safety)
+    if (isCommandRunning) {
+      log.debug(`Waiting for previous command to complete...`);
+    }
+    isCommandRunning = true;
 
     log.info(`>> Command: ${command}`);
     
@@ -353,6 +370,7 @@ function sendBridgeCommand(command) {
             clearTimeout(timeout);
             bridgeProcess.stdout.removeListener('data', onData);
             log.info(`<< Response:`, parsed);
+            isCommandRunning = false;
             resolve(parsed);
             return;
           } catch (e) {
@@ -368,6 +386,7 @@ function sendBridgeCommand(command) {
     timeout = setTimeout(() => {
       bridgeProcess.stdout.removeListener('data', onData);
       log.warn(`Timeout, partial: ${response}`);
+      isCommandRunning = false;
       reject(new Error('Timeout risposta'));
     }, 15000);
   });
@@ -702,7 +721,7 @@ function startRelayHeartbeat() {
 
 function startStatusPolling() {
   stopStatusPolling();
-  log.info('Starting automatic status polling every 500ms');
+  log.info(`Starting automatic status polling every ${STATUS_CHECK_INTERVAL}ms`);
   
   statusCheckTimer = setInterval(async () => {
     if (!bridgeProcess) return;
