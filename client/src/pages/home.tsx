@@ -133,6 +133,7 @@ export default function Home() {
   const isSuperAdmin = user?.role === 'super_admin';
   const isBartender = user?.role === 'bartender';
   const isWarehouse = user?.role === 'warehouse';
+  const isCassiere = user?.role === 'cassiere';
 
   const { data: companies, isLoading: companiesLoading } = useQuery<Company[]>({
     queryKey: ['/api/companies'],
@@ -141,12 +142,12 @@ export default function Home() {
 
   const { data: userFeatures } = useQuery<UserFeatures>({
     queryKey: ['/api/user-features/current/my'],
-    enabled: !isSuperAdmin && !isBartender && !isWarehouse,
+    enabled: !isSuperAdmin && !isBartender && !isWarehouse && !isCassiere,
   });
 
   const { data: printerAgents = [] } = useQuery<PrinterAgent[]>({
     queryKey: ['/api/printers/agents'],
-    enabled: !isSuperAdmin && !isBartender && !isWarehouse,
+    enabled: !isSuperAdmin && !isBartender && !isWarehouse && !isCassiere,
     refetchInterval: 30000,
   });
   
@@ -156,9 +157,12 @@ export default function Home() {
     if (isBartender || isWarehouse) {
       setLocation('/beverage');
     }
-  }, [isBartender, isWarehouse, setLocation]);
+    if (isCassiere) {
+      setLocation('/cashier-dashboard');
+    }
+  }, [isBartender, isWarehouse, isCassiere, setLocation]);
 
-  if (isBartender || isWarehouse) {
+  if (isBartender || isWarehouse || isCassiere) {
     return null;
   }
 
