@@ -30,6 +30,13 @@
       <!-- Remote Relay Panel - Auto-connect to Event4U server -->
       <section class="panel relay-panel">
         <h2>Connessione Server Event4U</h2>
+        <div class="server-selector">
+          <label for="server-select">Server:</label>
+          <select id="server-select" class="server-dropdown">
+            <option value="production">Produzione (manage.eventfouryou.com)</option>
+            <option value="development">Sviluppo (Replit)</option>
+          </select>
+        </div>
         <div class="status-grid">
           <div class="status-item" id="status-relay">
             <div class="status-indicator"></div>
@@ -39,7 +46,7 @@
             </div>
           </div>
         </div>
-        <p class="relay-info">L'app si connette automaticamente a manage.eventfouryou.com</p>
+        <p class="relay-info" id="relay-info-text">Connesso a manage.eventfouryou.com</p>
       </section>
 
       <!-- Status Panel -->

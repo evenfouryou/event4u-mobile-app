@@ -34,6 +34,7 @@ contextBridge.exposeInMainWorld('siaeAPI', {
   connectRelay: () => ipcRenderer.invoke('relay:connect'),
   disconnectRelay: () => ipcRenderer.invoke('relay:disconnect'),
   getRelayStatus: () => ipcRenderer.invoke('relay:status'),
+  switchServer: (serverType) => ipcRenderer.invoke('relay:switchServer', serverType),
   
   // PIN verification (SIAE compliance)
   verifyPin: (pin) => ipcRenderer.invoke('pin:verify', pin),

@@ -11,6 +11,8 @@ document.addEventListener('DOMContentLoaded', () => {
   
   // Relay elements (auto-connect - no user input needed)
   const statusRelay = document.getElementById('status-relay');
+  const serverSelect = document.getElementById('server-select');
+  const relayInfoText = document.getElementById('relay-info-text');
   
   const statusBridge = document.getElementById('status-bridge');
   const statusReader = document.getElementById('status-reader');
@@ -89,12 +91,41 @@ document.addEventListener('DOMContentLoaded', () => {
     });
   }
   
+  // Server selector event handler
+  serverSelect.addEventListener('change', async (e) => {
+    const serverType = e.target.value;
+    addLog('info', `Cambio server a: ${serverType}`);
+    updateStatus(statusRelay, 'warning', 'Cambio server...');
+    
+    try {
+      const result = await window.siaeAPI.switchServer(serverType);
+      if (result.success) {
+        addLog('info', `✓ Server cambiato a ${serverType}`);
+        updateRelayInfoText(serverType);
+        // Wait a bit for reconnection
+        setTimeout(async () => {
+          const config = await window.siaeAPI.getRelayConfig();
+          updateRelayStatusUI(config?.connected || false, serverType);
+        }, 2000);
+      } else {
+        addLog('error', `Errore cambio server: ${result.error}`);
+      }
+    } catch (e) {
+      addLog('error', `Errore cambio server: ${e.message}`);
+    }
+  });
+
   // Relay functions - auto-connect (no user input needed)
   async function loadRelayConfig() {
     try {
       const config = await window.siaeAPI.getRelayConfig();
       if (config) {
-        updateRelayStatusUI(config.connected);
+        // Set dropdown to current server type
+        if (config.serverType) {
+          serverSelect.value = config.serverType;
+        }
+        updateRelayInfoText(config.serverType || 'production');
+        updateRelayStatusUI(config.connected, config.serverType || 'production');
         
         if (config.connected) {
           addLog('info', '✓ Connesso al server Event4U');
@@ -103,7 +134,7 @@ document.addEventListener('DOMContentLoaded', () => {
           // Wait for auto-connect
           setTimeout(async () => {
             const newConfig = await window.siaeAPI.getRelayConfig();
-            updateRelayStatusUI(newConfig?.connected || false);
+            updateRelayStatusUI(newConfig?.connected || false, newConfig?.serverType || 'production');
           }, 3000);
         }
       }
@@ -112,12 +143,21 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  function updateRelayStatusUI(connected) {
-    relayConnected = connected;
-    if (connected) {
-      updateStatus(statusRelay, 'connected', 'Connesso a manage.eventfouryou.com');
+  function updateRelayInfoText(serverType) {
+    if (serverType === 'development') {
+      relayInfoText.textContent = 'Connesso al server di sviluppo (Replit)';
     } else {
-      updateStatus(statusRelay, 'warning', 'Connessione in corso...');
+      relayInfoText.textContent = 'Connesso a manage.eventfouryou.com';
+    }
+  }
+  
+  function updateRelayStatusUI(connected, serverType = 'production') {
+    relayConnected = connected;
+    const serverName = serverType === 'development' ? 'Sviluppo (Replit)' : 'Produzione';
+    if (connected) {
+      updateStatus(statusRelay, 'connected', `Connesso - ${serverName}`);
+    } else {
+      updateStatus(statusRelay, 'warning', `Connessione in corso - ${serverName}...`);
     }
   }
 

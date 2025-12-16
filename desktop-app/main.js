@@ -51,10 +51,17 @@ let relayReconnectTimer = null;
 // This authenticates the official desktop app - not individual companies
 const MASTER_TOKEN = '61f12bc11ad07f8042ac953211cefe4127c900070cf51f66903988f90a31dfe4';
 
+// Available servers for connection
+const AVAILABLE_SERVERS = {
+  production: 'wss://manage.eventfouryou.com',
+  development: 'wss://event4u-management-system-evenfouryou.replit.app'
+};
+
 let relayConfig = {
-  serverUrl: 'wss://manage.eventfouryou.com',
+  serverUrl: AVAILABLE_SERVERS.production,
   token: MASTER_TOKEN,
-  enabled: true
+  enabled: true,
+  serverType: 'production' // 'production' or 'development'
 };
 const RELAY_RECONNECT_DELAY = 5000;
 const RELAY_HEARTBEAT_INTERVAL = 30000;
@@ -1175,7 +1182,40 @@ ipcMain.handle('relay:getConfig', () => {
     companyId: relayConfig.companyId,
     enabled: relayConfig.enabled,
     hasToken: !!relayConfig.token,
-    connected: currentStatus.relayConnected
+    connected: currentStatus.relayConnected,
+    serverType: relayConfig.serverType || 'production',
+    availableServers: AVAILABLE_SERVERS
+  };
+});
+
+// Switch between production and development servers
+ipcMain.handle('relay:switchServer', async (event, serverType) => {
+  log.info(`IPC: relay:switchServer to ${serverType}`);
+  
+  if (!AVAILABLE_SERVERS[serverType]) {
+    return { success: false, error: 'Server type non valido' };
+  }
+  
+  // Disconnect existing connection
+  if (relayWs) {
+    disconnectRelay();
+  }
+  
+  // Update config
+  relayConfig.serverType = serverType;
+  relayConfig.serverUrl = AVAILABLE_SERVERS[serverType];
+  
+  log.info(`Server switched to: ${relayConfig.serverUrl}`);
+  
+  // Reconnect with new server
+  setTimeout(() => {
+    connectToRelay();
+  }, 500);
+  
+  return { 
+    success: true, 
+    serverType,
+    serverUrl: relayConfig.serverUrl 
   };
 });
 

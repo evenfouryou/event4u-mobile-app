@@ -549,6 +549,50 @@ body {
   font-size: 13px;
 }
 
+.server-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 16px;
+  padding: 12px;
+  background: var(--bg-panel);
+  border-radius: 8px;
+}
+
+.server-selector label {
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+}
+
+.server-dropdown {
+  flex: 1;
+  padding: 10px 14px;
+  border: 2px solid var(--border-primary);
+  border-radius: 8px;
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  font-size: 14px;
+  cursor: pointer;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.server-dropdown:hover {
+  border-color: var(--accent-primary);
+}
+
+.server-dropdown:focus {
+  outline: none;
+  border-color: var(--accent-primary);
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+.server-dropdown option {
+  background: var(--bg-secondary);
+  color: var(--text-primary);
+  padding: 8px;
+}
+
 .relay-config {
   display: grid;
   gap: 12px;
