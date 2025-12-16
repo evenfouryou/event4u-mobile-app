@@ -258,7 +258,8 @@ router.get("/api/public/events/:id", async (req, res) => {
   try {
     const { id } = req.params;
 
-    const [ticketedEvent] = await db
+    // Prima cerca per siaeTicketedEvents.id
+    let [ticketedEvent] = await db
       .select({
         id: siaeTicketedEvents.id,
         eventId: siaeTicketedEvents.eventId,
@@ -288,17 +289,50 @@ router.get("/api/public/events/:id", async (req, res) => {
       .innerJoin(locations, eq(events.locationId, locations.id))
       .where(eq(siaeTicketedEvents.id, id));
 
+    // Se non trovato, cerca per eventId (ID evento base)
     if (!ticketedEvent) {
-      return res.status(404).json({ message: "Evento non trovato" });
+      [ticketedEvent] = await db
+        .select({
+          id: siaeTicketedEvents.id,
+          eventId: siaeTicketedEvents.eventId,
+          siaeEventCode: siaeTicketedEvents.siaeEventCode,
+          totalCapacity: siaeTicketedEvents.totalCapacity,
+          ticketsSold: siaeTicketedEvents.ticketsSold,
+          ticketingStatus: siaeTicketedEvents.ticketingStatus,
+          saleStartDate: siaeTicketedEvents.saleStartDate,
+          saleEndDate: siaeTicketedEvents.saleEndDate,
+          maxTicketsPerUser: siaeTicketedEvents.maxTicketsPerUser,
+          requiresNominative: siaeTicketedEvents.requiresNominative,
+          allowsChangeName: siaeTicketedEvents.allowsChangeName,
+          genreCode: siaeTicketedEvents.genreCode,
+          eventName: events.name,
+          eventDescription: events.description,
+          eventImageUrl: events.imageUrl,
+          eventStart: events.startDatetime,
+          eventEnd: events.endDatetime,
+          eventNotes: events.notes,
+          locationId: locations.id,
+          locationName: locations.name,
+          locationAddress: locations.address,
+          locationCapacity: locations.capacity,
+        })
+        .from(siaeTicketedEvents)
+        .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+        .innerJoin(locations, eq(events.locationId, locations.id))
+        .where(eq(siaeTicketedEvents.eventId, id));
     }
 
-    // Carica settori
+    if (!ticketedEvent) {
+      return res.status(404).json({ message: "Evento non trovato o non abilitato alla vendita biglietti" });
+    }
+
+    // Carica settori usando l'ID del ticketedEvent (non l'id dal parametro URL)
     const sectors = await db
       .select()
       .from(siaeEventSectors)
       .where(
         and(
-          eq(siaeEventSectors.ticketedEventId, id),
+          eq(siaeEventSectors.ticketedEventId, ticketedEvent.id),
           eq(siaeEventSectors.active, true)
         )
       )
