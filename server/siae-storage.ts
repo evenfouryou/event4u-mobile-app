@@ -682,6 +682,8 @@ export class SiaeStorage implements ISiaeStorage {
       updatedAt: siaeTicketedEvents.updatedAt,
       eventName: events.name,
       eventDate: events.startDatetime,
+      status: events.status,
+      eventLocation: events.locationId,
     })
     .from(siaeTicketedEvents)
     .leftJoin(events, eq(siaeTicketedEvents.eventId, events.id))
@@ -715,6 +717,8 @@ export class SiaeStorage implements ISiaeStorage {
       updatedAt: siaeTicketedEvents.updatedAt,
       eventName: events.name,
       eventDate: events.startDatetime,
+      status: events.status,
+      eventLocation: events.locationId,
       companyName: companies.name,
     })
     .from(siaeTicketedEvents)
