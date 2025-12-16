@@ -427,7 +427,8 @@ export default function SiaeTicketsPage() {
                 <SelectContent>
                   {ticketedEvents?.map((event) => (
                     <SelectItem key={event.id} value={event.id}>
-                      Evento #{event.id.slice(0, 8)} - {event.ticketingStatus}
+                      {(event as any).eventName || `Evento #${event.id.slice(0, 8)}`}
+                      {(event as any).eventDate && ` - ${format(new Date((event as any).eventDate), "dd/MM/yyyy", { locale: it })}`}
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -687,7 +688,8 @@ export default function SiaeTicketsPage() {
                           ?.filter(e => e.ticketingStatus === "active")
                           .map((event) => (
                             <SelectItem key={event.id} value={event.id}>
-                              Evento #{event.id.slice(0, 8)}
+                              {(event as any).eventName || `Evento #${event.id.slice(0, 8)}`}
+                              {(event as any).eventDate && ` - ${format(new Date((event as any).eventDate), "dd/MM/yyyy", { locale: it })}`}
                             </SelectItem>
                           ))}
                       </SelectContent>

@@ -87,7 +87,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, lt, gt, isNull, count } from "drizzle-orm";
-import { users } from "@shared/schema";
+import { users, events } from "@shared/schema";
 
 export interface ISiaeStorage {
   // ==================== TAB.1-5 Reference Tables ====================
@@ -654,10 +654,37 @@ export class SiaeStorage implements ISiaeStorage {
   
   // ==================== Ticketed Events ====================
   
-  async getSiaeTicketedEventsByCompany(companyId: string): Promise<SiaeTicketedEvent[]> {
-    return await db.select().from(siaeTicketedEvents)
-      .where(eq(siaeTicketedEvents.companyId, companyId))
-      .orderBy(desc(siaeTicketedEvents.createdAt));
+  async getSiaeTicketedEventsByCompany(companyId: string) {
+    return await db.select({
+      id: siaeTicketedEvents.id,
+      eventId: siaeTicketedEvents.eventId,
+      companyId: siaeTicketedEvents.companyId,
+      siaeEventCode: siaeTicketedEvents.siaeEventCode,
+      siaeLocationCode: siaeTicketedEvents.siaeLocationCode,
+      organizerType: siaeTicketedEvents.organizerType,
+      genreCode: siaeTicketedEvents.genreCode,
+      taxType: siaeTicketedEvents.taxType,
+      ivaPreassolta: siaeTicketedEvents.ivaPreassolta,
+      totalCapacity: siaeTicketedEvents.totalCapacity,
+      requiresNominative: siaeTicketedEvents.requiresNominative,
+      allowsChangeName: siaeTicketedEvents.allowsChangeName,
+      allowsResale: siaeTicketedEvents.allowsResale,
+      saleStartDate: siaeTicketedEvents.saleStartDate,
+      saleEndDate: siaeTicketedEvents.saleEndDate,
+      maxTicketsPerUser: siaeTicketedEvents.maxTicketsPerUser,
+      ticketingStatus: siaeTicketedEvents.ticketingStatus,
+      ticketsSold: siaeTicketedEvents.ticketsSold,
+      ticketsCancelled: siaeTicketedEvents.ticketsCancelled,
+      totalRevenue: siaeTicketedEvents.totalRevenue,
+      createdAt: siaeTicketedEvents.createdAt,
+      updatedAt: siaeTicketedEvents.updatedAt,
+      eventName: events.name,
+      eventDate: events.startDatetime,
+    })
+    .from(siaeTicketedEvents)
+    .leftJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+    .where(eq(siaeTicketedEvents.companyId, companyId))
+    .orderBy(desc(siaeTicketedEvents.createdAt));
   }
   
   async getSiaeTicketedEvent(id: string): Promise<SiaeTicketedEvent | undefined> {
