@@ -26,7 +26,16 @@ export default function Login() {
     setIsLoading(true);
 
     try {
-      await apiRequest('POST', '/api/auth/login', { email, password });
+      // Check if input is email or username (cashier)
+      const isEmail = email.includes('@');
+      
+      if (isEmail) {
+        // Normal user login with email
+        await apiRequest('POST', '/api/auth/login', { email, password });
+      } else {
+        // Cashier login with username
+        await apiRequest('POST', '/api/cashiers/login', { username: email, password });
+      }
       window.location.href = '/';
     } catch (err: any) {
       setError(err.message || "Credenziali non valide");
@@ -156,11 +165,11 @@ export default function Login() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="email" className="text-sm font-medium">Email</Label>
+                <Label htmlFor="email" className="text-sm font-medium">Email o Username</Label>
                 <Input
                   id="email"
-                  type="email"
-                  placeholder="tua@email.com"
+                  type="text"
+                  placeholder="tua@email.com o username"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required

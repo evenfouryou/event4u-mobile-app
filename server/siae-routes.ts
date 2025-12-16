@@ -3121,17 +3121,15 @@ router.delete("/api/cashiers/:id", requireAuth, requireGestore, async (req: Requ
 // POST /api/cashiers/login - Cashier login with username/password
 router.post("/api/cashiers/login", async (req: Request, res: Response) => {
   try {
-    const { companyId, username, password } = req.body;
+    const { username, password } = req.body;
     
-    if (!companyId || !username || !password) {
-      return res.status(400).json({ message: "CompanyId, username e password sono obbligatori" });
+    if (!username || !password) {
+      return res.status(400).json({ message: "Username e password sono obbligatori" });
     }
     
+    // Search for cashier by username only (global search)
     const [cashier] = await db.select().from(siaeCashiers)
-      .where(and(
-        eq(siaeCashiers.companyId, companyId),
-        eq(siaeCashiers.username, username)
-      ));
+      .where(eq(siaeCashiers.username, username));
     
     if (!cashier) {
       return res.status(401).json({ message: "Credenziali non valide" });
