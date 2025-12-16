@@ -1,0 +1,209 @@
+ SW registered: https://manage.eventfouryou.com/
+ [DEBUG SC] Fetching initial status via HTTP...
+ [DEBUG SC] ====== SMART CARD CONNECTION START ======
+ [DEBUG SC] URL: wss://manage.eventfouryou.com/ws/bridge
+ [DEBUG SC] Cookies present: YES
+ [DEBUG SC] Cookie value: _ga=GA1.1.962813290.1739208627; _fbp=fb.1.17397993...
+ [DEBUG SC] WebSocket created, state: 0
+ [DEBUG SC] HTTP status received: {
+  "bridgeConnected": false,
+  "readerConnected": false,
+  "cardInserted": false,
+  "readerName": null,
+  "cardSerial": null
+}
+ [DEBUG SC] HTTP - cardSerial: null
+ [DEBUG SC] HTTP - cardCounter: undefined
+ [DEBUG SC] HTTP - cardBalance: undefined
+ [DEBUG SC] HTTP - cardKeyId: undefined
+ [DEBUG SC] HTTP - cardInserted: false
+ [DEBUG SC] WebSocket OPEN! State: 1
+ [DEBUG SC] Sending get_status request...
+ [DEBUG SC] MESSAGE RECEIVED: {"type":"connection_status","bridgeConnected":false,"connected":false,"message":"Bridge desktop app is not connected"}
+ [DEBUG SC] Parsed message type: connection_status
+ [DEBUG SC] Handling bridge/connection status: connection_status Object
+ [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+ [DEBUG SC] Message type: connection_status
+ [DEBUG SC] msg.connected: false
+ [DEBUG SC] msg.bridgeConnected: false
+ [DEBUG SC] isConnected (final): false
+ [DEBUG SC] Full message: {"type":"connection_status","bridgeConnected":false,"connected":false,"message":"Bridge desktop app is not connected"}
+ [DEBUG SC] Bridge NOT connected - updating status to DISCONNECTED
+ [DEBUG SC] Status after update: {"connected":false,"relayConnected":true,"readerDetected":false,"cardInserted":false,"readerName":null,"cardAtr":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardType":null,"lastCheck":"2025-12-16T23:40:56.991Z","error":"App desktop Event4U non connessa. Avviare l'applicazione sul PC.","bridgeConnected":false,"canEmitRealSeals":false,"demoMode":false}
+ [DEBUG SC] MESSAGE RECEIVED: {"type":"bridge_status","connected":true,"message":"Bridge desktop app connected"}
+ [DEBUG SC] Parsed message type: bridge_status
+ [DEBUG SC] Handling bridge/connection status: bridge_status Object
+ [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+ [DEBUG SC] Message type: bridge_status
+index-ClHEie_i.js:879 [DEBUG SC] msg.connected: true
+index-ClHEie_i.js:879 [DEBUG SC] msg.bridgeConnected: undefined
+index-ClHEie_i.js:879 [DEBUG SC] isConnected (final): true
+index-ClHEie_i.js:879 [DEBUG SC] Full message: {"type":"bridge_status","connected":true,"message":"Bridge desktop app connected"}
+index-ClHEie_i.js:879 [DEBUG SC] Bridge IS connected - updating status to CONNECTED
+index-ClHEie_i.js:879 [DEBUG SC] Status after update: {"connected":true,"relayConnected":true,"readerDetected":false,"cardInserted":false,"readerName":null,"cardAtr":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardType":null,"lastCheck":"2025-12-16T23:41:04.765Z","error":null,"bridgeConnected":true,"canEmitRealSeals":false,"demoMode":false}
+index-ClHEie_i.js:879 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","data":{"bridgeConnected":false,"readerConnected":false,"cardInserted":false,"readerName":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardAtr":null,
+index-ClHEie_i.js:879 [DEBUG SC] Parsed message type: status
+index-ClHEie_i.js:879 [DEBUG SC] Handling status message
+index-ClHEie_i.js:879 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-ClHEie_i.js:879 [DEBUG SC] Full data object: {
+  "bridgeConnected": false,
+  "readerConnected": false,
+  "cardInserted": false,
+  "readerName": null,
+  "cardSerial": null,
+  "cardCounter": null,
+  "cardBalance": null,
+  "cardKeyId": null,
+  "cardAtr": null,
+  "demoMode": false,
+  "canEmitTickets": false,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+index-ClHEie_i.js:879 [DEBUG SC] data.cardSerial: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardCounter: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardBalance: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardKeyId: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardInserted: false
+index-ClHEie_i.js:879 [DEBUG SC] data.readerDetected: undefined
+index-ClHEie_i.js:879 [DEBUG SC] data.readerConnected: false
+index-ClHEie_i.js:879 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","data":{"bridgeConnected":false,"readerConnected":false,"cardInserted":false,"readerName":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardAtr":null,
+index-ClHEie_i.js:879 [DEBUG SC] Parsed message type: status
+index-ClHEie_i.js:879 [DEBUG SC] Handling status message
+index-ClHEie_i.js:879 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-ClHEie_i.js:879 [DEBUG SC] Full data object: {
+  "bridgeConnected": false,
+  "readerConnected": false,
+  "cardInserted": false,
+  "readerName": null,
+  "cardSerial": null,
+  "cardCounter": null,
+  "cardBalance": null,
+  "cardKeyId": null,
+  "cardAtr": null,
+  "demoMode": false,
+  "canEmitTickets": false,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+index-ClHEie_i.js:879 [DEBUG SC] data.cardSerial: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardCounter: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardBalance: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardKeyId: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardInserted: false
+index-ClHEie_i.js:879 [DEBUG SC] data.readerDetected: undefined
+index-ClHEie_i.js:879 [DEBUG SC] data.readerConnected: false
+index-ClHEie_i.js:879 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","data":{"bridgeConnected":true,"readerConnected":false,"cardInserted":false,"readerName":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardAtr":null,"
+index-ClHEie_i.js:879 [DEBUG SC] Parsed message type: status
+index-ClHEie_i.js:879 [DEBUG SC] Handling status message
+index-ClHEie_i.js:879 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-ClHEie_i.js:879 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": false,
+  "cardInserted": false,
+  "readerName": null,
+  "cardSerial": null,
+  "cardCounter": null,
+  "cardBalance": null,
+  "cardKeyId": null,
+  "cardAtr": null,
+  "demoMode": false,
+  "canEmitTickets": false,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+index-ClHEie_i.js:879 [DEBUG SC] data.cardSerial: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardCounter: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardBalance: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardKeyId: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardInserted: false
+index-ClHEie_i.js:879 [DEBUG SC] data.readerDetected: undefined
+index-ClHEie_i.js:879 [DEBUG SC] data.readerConnected: false
+index-ClHEie_i.js:879 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardAtr":null,"de
+index-ClHEie_i.js:879 [DEBUG SC] Parsed message type: status
+index-ClHEie_i.js:879 [DEBUG SC] Handling status message
+index-ClHEie_i.js:879 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-ClHEie_i.js:879 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": null,
+  "cardCounter": null,
+  "cardBalance": null,
+  "cardKeyId": null,
+  "cardAtr": null,
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": true,
+  "pinRequired": true
+}
+index-ClHEie_i.js:879 [DEBUG SC] data.cardSerial: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardCounter: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardBalance: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardKeyId: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardInserted: true
+index-ClHEie_i.js:879 [DEBUG SC] data.readerDetected: undefined
+index-ClHEie_i.js:879 [DEBUG SC] data.readerConnected: true
+index-ClHEie_i.js:879 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-ClHEie_i.js:879 [DEBUG SC] Parsed message type: ping
+index-ClHEie_i.js:879 [DEBUG SC] Ping received, sending pong
+index-ClHEie_i.js:879 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardAtr":null,"de
+index-ClHEie_i.js:879 [DEBUG SC] Parsed message type: status
+index-ClHEie_i.js:879 [DEBUG SC] Handling status message
+index-ClHEie_i.js:879 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-ClHEie_i.js:879 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": null,
+  "cardCounter": null,
+  "cardBalance": null,
+  "cardKeyId": null,
+  "cardAtr": null,
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+index-ClHEie_i.js:879 [DEBUG SC] data.cardSerial: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardCounter: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardBalance: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardKeyId: null
+index-ClHEie_i.js:879 [DEBUG SC] data.cardInserted: true
+index-ClHEie_i.js:879 [DEBUG SC] data.readerDetected: undefined
+index-ClHEie_i.js:879 [DEBUG SC] data.readerConnected: true
+index-ClHEie_i.js:879 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":"4130313238343837","cardCounter":177,"cardBalance":380011,"cardKeyId":129,"car
+index-ClHEie_i.js:879 [DEBUG SC] Parsed message type: status
+index-ClHEie_i.js:879 [DEBUG SC] Handling status message
+index-ClHEie_i.js:879 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-ClHEie_i.js:879 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 177,
+  "cardBalance": 380011,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+index-ClHEie_i.js:879 [DEBUG SC] data.cardSerial: 4130313238343837
+index-ClHEie_i.js:879 [DEBUG SC] data.cardCounter: 177
+index-ClHEie_i.js:879 [DEBUG SC] data.cardBalance: 380011
+index-ClHEie_i.js:879 [DEBUG SC] data.cardKeyId: 129
+index-ClHEie_i.js:879 [DEBUG SC] data.cardInserted: true
+index-ClHEie_i.js:879 [DEBUG SC] data.readerDetected: undefined
+index-ClHEie_i.js:879 [DEBUG SC] data.readerConnected: true
+/api/cashiers/events/ecc3d8e1-00e5-4dbd-9369-6e35ac377fd8/tickets:1  Failed to load resource: the server responded with a status of 503 ()

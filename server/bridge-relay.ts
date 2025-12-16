@@ -533,24 +533,35 @@ function generateRequestId(): string {
 
 // Check if card is ready for seal emission
 export function isCardReadyForSeals(): { ready: boolean; error: string | null } {
+  console.log(`[Bridge] isCardReadyForSeals called`);
+  console.log(`[Bridge] globalBridge exists: ${!!globalBridge}`);
+  console.log(`[Bridge] cachedBridgeStatus: ${JSON.stringify(cachedBridgeStatus)}`);
+  
   if (!globalBridge || globalBridge.ws.readyState !== WebSocket.OPEN) {
+    console.log(`[Bridge] Bridge not connected`);
     return { ready: false, error: 'App desktop Event4U non connessa' };
   }
   
   // Desktop app sends { type: 'status', data: {...} }
   const status = cachedBridgeStatus?.data || cachedBridgeStatus?.payload || cachedBridgeStatus;
+  console.log(`[Bridge] Extracted status: ${JSON.stringify(status)}`);
+  
   if (!status) {
+    console.log(`[Bridge] No status available`);
     return { ready: false, error: 'Stato lettore sconosciuto' };
   }
   
   if (!status.readerConnected && !status.readerDetected) {
+    console.log(`[Bridge] Reader not connected: readerConnected=${status.readerConnected}, readerDetected=${status.readerDetected}`);
     return { ready: false, error: 'Lettore Smart Card non rilevato' };
   }
   
   if (!status.cardInserted) {
+    console.log(`[Bridge] Card not inserted: cardInserted=${status.cardInserted}`);
     return { ready: false, error: 'Smart Card SIAE non inserita' };
   }
   
+  console.log(`[Bridge] Card ready for seals!`);
   return { ready: true, error: null };
 }
 
