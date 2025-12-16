@@ -136,20 +136,14 @@ export default function PublicVenueDetail() {
                 </Button>
               </Link>
               
-              <div className="flex flex-wrap gap-2 mb-4">
-                {venue.city && (
+              {venue.city && (
+                <div className="flex flex-wrap gap-2 mb-4">
                   <Badge className="bg-yellow-500 text-black border-0">
                     <MapPin className="w-3 h-3 mr-1" />
                     {venue.city}
                   </Badge>
-                )}
-                {venue.capacity && (
-                  <Badge className="bg-white/20 text-white border-0 backdrop-blur-sm">
-                    <Users className="w-3 h-3 mr-1" />
-                    {venue.capacity} posti
-                  </Badge>
-                )}
-              </div>
+                </div>
+              )}
               
               <h1 className="text-4xl md:text-5xl font-bold text-white mb-3" data-testid="text-venue-name">
                 {venue.name}
@@ -188,16 +182,6 @@ export default function PublicVenueDetail() {
                       <div>
                         <p className="text-slate-400 text-sm">Orari</p>
                         <p className="text-white font-medium" data-testid="text-hours">{venue.openingHours}</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  {venue.capacity && (
-                    <div className="flex items-start gap-3 p-4 rounded-lg bg-white/5">
-                      <Users className="w-5 h-5 text-teal-400 mt-0.5" />
-                      <div>
-                        <p className="text-slate-400 text-sm">Capienza</p>
-                        <p className="text-white font-medium">{venue.capacity} persone</p>
                       </div>
                     </div>
                   )}
@@ -289,8 +273,6 @@ function Header() {
 
 function EventCard({ event }: { event: VenueEvent }) {
   const eventDate = new Date(event.eventStart);
-  const soldPercentage = Math.round((event.ticketsSold / event.totalCapacity) * 100);
-  const isAlmostSoldOut = soldPercentage >= 80;
 
   return (
     <Link href={`/acquista/${event.id}`}>
@@ -318,21 +300,13 @@ function EventCard({ event }: { event: VenueEvent }) {
                 {format(eventDate, "EEEE d MMMM yyyy • HH:mm", { locale: it })}
               </p>
               
-              <div className="flex flex-wrap gap-2">
-                {event.requiresNominative && (
+              {event.requiresNominative && (
+                <div className="flex flex-wrap gap-2">
                   <Badge className="bg-purple-500/20 text-purple-400 border-0">
                     Nominativo
                   </Badge>
-                )}
-                {isAlmostSoldOut && (
-                  <Badge className="bg-red-500/20 text-red-400 border-0">
-                    Ultimi posti!
-                  </Badge>
-                )}
-                <Badge className={`border-0 ${event.availability > 20 ? 'bg-teal-500/20 text-teal-400' : 'bg-orange-500/20 text-orange-400'}`}>
-                  {event.availability} disponibili
-                </Badge>
-              </div>
+                </div>
+              )}
             </div>
             
             <div className="flex flex-col items-end gap-2">

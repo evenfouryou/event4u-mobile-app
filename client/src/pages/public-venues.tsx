@@ -223,20 +223,12 @@ function VenueCard({ venue }: { venue: Venue }) {
           </p>
         )}
 
-        <div className="flex flex-wrap gap-3 mb-4">
-          {venue.capacity && (
-            <div className="flex items-center gap-1.5 text-sm text-slate-400">
-              <Users className="w-4 h-4" />
-              <span>{venue.capacity} posti</span>
-            </div>
-          )}
-          {venue.openingHours && (
-            <div className="flex items-center gap-1.5 text-sm text-slate-400">
-              <Clock className="w-4 h-4" />
-              <span>{venue.openingHours}</span>
-            </div>
-          )}
-        </div>
+        {venue.openingHours && (
+          <div className="flex items-center gap-1.5 text-sm text-slate-400 mb-4">
+            <Clock className="w-4 h-4" />
+            <span>{venue.openingHours}</span>
+          </div>
+        )}
 
         {venue.upcomingEvents.length > 0 && (
           <div className="border-t border-white/10 pt-4 mt-4">
@@ -255,19 +247,13 @@ function VenueCard({ venue }: { venue: Venue }) {
                         {format(new Date(event.eventStart), "d MMM yyyy", { locale: it })}
                       </p>
                     </div>
-                    <div className="text-right ml-3">
-                      {event.minPrice !== null && (
+                    {event.minPrice !== null && (
+                      <div className="text-right ml-3">
                         <p className="text-yellow-400 font-semibold text-sm">
                           da €{event.minPrice.toFixed(0)}
                         </p>
-                      )}
-                      <Badge 
-                        variant={event.availability > 10 ? "default" : "destructive"}
-                        className={`text-xs ${event.availability > 10 ? 'bg-teal-500/20 text-teal-400 border-0' : ''}`}
-                      >
-                        {event.availability} disp.
-                      </Badge>
-                    </div>
+                      </div>
+                    )}
                   </div>
                 </Link>
               ))}
