@@ -181,6 +181,78 @@ router.get("/api/public/events", async (req, res) => {
   }
 });
 
+// Lista TUTTI gli eventi pubblici programmati (non solo SIAE ticketed)
+router.get("/api/public/all-events", async (req, res) => {
+  try {
+    const { limit = 50, offset = 0 } = req.query;
+    const now = new Date();
+
+    // SECURITY: Only show events at PUBLIC locations
+    const result = await db
+      .select({
+        id: events.id,
+        name: events.name,
+        description: events.description,
+        imageUrl: events.imageUrl,
+        startDatetime: events.startDatetime,
+        endDatetime: events.endDatetime,
+        status: events.status,
+        capacity: events.capacity,
+        locationId: locations.id,
+        locationName: locations.name,
+        locationAddress: locations.address,
+        locationCity: locations.city,
+        locationImageUrl: locations.imageUrl,
+      })
+      .from(events)
+      .innerJoin(locations, eq(events.locationId, locations.id))
+      .where(
+        and(
+          eq(events.status, "scheduled"),
+          gt(events.startDatetime, now),
+          eq(locations.isPublic, true) // Only public locations
+        )
+      )
+      .orderBy(events.startDatetime)
+      .limit(Number(limit))
+      .offset(Number(offset));
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("[PUBLIC] Error fetching all events:", error);
+    res.status(500).json({ message: "Errore nel caricamento eventi" });
+  }
+});
+
+// Lista tutte le location pubbliche
+router.get("/api/public/all-locations", async (req, res) => {
+  try {
+    const { limit = 50, offset = 0 } = req.query;
+
+    const result = await db
+      .select({
+        id: locations.id,
+        name: locations.name,
+        address: locations.address,
+        city: locations.city,
+        capacity: locations.capacity,
+        description: locations.description,
+        imageUrl: locations.imageUrl,
+        isPublic: locations.isPublic,
+      })
+      .from(locations)
+      .where(eq(locations.isPublic, true))
+      .orderBy(locations.name)
+      .limit(Number(limit))
+      .offset(Number(offset));
+
+    res.json(result);
+  } catch (error: any) {
+    console.error("[PUBLIC] Error fetching locations:", error);
+    res.status(500).json({ message: "Errore nel caricamento locations" });
+  }
+});
+
 // Dettaglio singolo evento
 router.get("/api/public/events/:id", async (req, res) => {
   try {

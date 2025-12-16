@@ -126,6 +126,7 @@ export default function EventWizard() {
   // Ref to track current draftId for preventing duplicate creations
   const draftIdRef = useRef<string | null>(params?.id || null);
   const isSavingRef = useRef(false);
+  const isPublishingRef = useRef(false);
 
   const { data: locations } = useQuery<LocationType[]>({
     queryKey: ['/api/locations'],
@@ -170,6 +171,7 @@ export default function EventWizard() {
       capacity: undefined,
       notes: '',
       companyId: '',
+      imageUrl: '',
     },
   });
 
@@ -288,6 +290,12 @@ export default function EventWizard() {
 
   const publishMutation = useMutation({
     mutationFn: async (data: any) => {
+      // Prevent duplicate submissions
+      if (isPublishingRef.current) {
+        throw new Error('Already publishing');
+      }
+      isPublishingRef.current = true;
+      
       // If editing an existing event, update it
       let response;
       if (draftIdRef.current) {
@@ -299,6 +307,7 @@ export default function EventWizard() {
       return response.json();
     },
     onSuccess: async (savedEvent: any) => {
+      isPublishingRef.current = false;
       // If SIAE is enabled, create the SIAE ticketed event and sectors
       if (siaeEnabled && savedEvent?.id) {
         try {
@@ -368,6 +377,7 @@ export default function EventWizard() {
       navigate('/events');
     },
     onError: () => {
+      isPublishingRef.current = false;
       toast({
         title: "Errore",
         description: "Impossibile creare l'evento",
@@ -420,6 +430,11 @@ export default function EventWizard() {
   };
 
   const onSubmit = (data: InsertEvent) => {
+    // Prevent duplicate submissions
+    if (isPublishingRef.current || publishMutation.isPending) {
+      return;
+    }
+    
     const payload: any = { ...data };
     
     // Serialize Date objects to ISO strings for backend compatibility
@@ -592,6 +607,45 @@ export default function EventWizard() {
                         </SelectContent>
                       </Select>
                       <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="imageUrl"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Immagine Evento (opzionale)</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="https://esempio.com/immagine.jpg"
+                          {...field}
+                          value={field.value || ''}
+                          data-testid="input-image-url"
+                        />
+                      </FormControl>
+                      <FormDescription>
+                        URL dell'immagine che verrà mostrata nella pagina pubblica dell'evento
+                      </FormDescription>
+                      <FormMessage />
+                      {field.value && (
+                        <div className="mt-2">
+                          <img
+                            key={field.value}
+                            src={field.value}
+                            alt="Anteprima evento"
+                            className="max-w-xs max-h-48 rounded-lg border object-cover"
+                            onError={(e) => {
+                              (e.target as HTMLImageElement).style.opacity = '0';
+                            }}
+                            onLoad={(e) => {
+                              (e.target as HTMLImageElement).style.opacity = '1';
+                            }}
+                            style={{ opacity: 0, transition: 'opacity 0.2s' }}
+                          />
+                        </div>
+                      )}
                     </FormItem>
                   )}
                 />
