@@ -1664,31 +1664,34 @@ export default function EventHub() {
         </div>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="w-full justify-start overflow-x-auto flex-nowrap bg-transparent gap-1 p-0">
-            {[
-              { id: 'overview', label: 'Panoramica', icon: LayoutDashboard },
-              { id: 'ticketing', label: 'Biglietteria', icon: Ticket },
-              { id: 'guests', label: 'Liste', icon: Users },
-              { id: 'tables', label: 'Tavoli', icon: Armchair },
-              { id: 'staff', label: 'Staff', icon: Users },
-              { id: 'pr', label: 'PR', icon: Megaphone },
-              { id: 'links', label: 'Link', icon: Link2 },
-              { id: 'access', label: 'Controllo Accessi', icon: Shield },
-              { id: 'inventory', label: 'Inventario', icon: Package },
-              { id: 'finance', label: 'Incassi', icon: Euro },
-              { id: 'report', label: 'Report', icon: BarChart3 },
-            ].map(tab => (
-              <TabsTrigger
-                key={tab.id}
-                value={tab.id}
-                className="flex items-center gap-2 px-4 py-2 min-h-11 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
-                data-testid={`tab-${tab.id}`}
-              >
-                <tab.icon className="h-4 w-4" />
-                <span className="hidden sm:inline">{tab.label}</span>
-              </TabsTrigger>
-            ))}
-          </TabsList>
+          <div className="overflow-x-auto scrollbar-hide -mx-4 px-4 sm:mx-0 sm:px-0" data-testid="tabs-scroll-container">
+            <TabsList className="inline-flex justify-start bg-transparent gap-1 p-0 min-w-max">
+              {[
+                { id: 'overview', label: 'Panoramica', shortLabel: 'Home', icon: LayoutDashboard },
+                { id: 'ticketing', label: 'Biglietteria', shortLabel: 'Ticket', icon: Ticket },
+                { id: 'guests', label: 'Liste', shortLabel: 'Liste', icon: Users },
+                { id: 'tables', label: 'Tavoli', shortLabel: 'Tavoli', icon: Armchair },
+                { id: 'staff', label: 'Staff', shortLabel: 'Staff', icon: Users },
+                { id: 'pr', label: 'PR', shortLabel: 'PR', icon: Megaphone },
+                { id: 'links', label: 'Link', shortLabel: 'Link', icon: Link2 },
+                { id: 'access', label: 'Controllo Accessi', shortLabel: 'Accessi', icon: Shield },
+                { id: 'inventory', label: 'Inventario', shortLabel: 'Stock', icon: Package },
+                { id: 'finance', label: 'Incassi', shortLabel: 'Incassi', icon: Euro },
+                { id: 'report', label: 'Report', shortLabel: 'Report', icon: BarChart3 },
+              ].map(tab => (
+                <TabsTrigger
+                  key={tab.id}
+                  value={tab.id}
+                  className="flex items-center gap-1.5 px-2.5 py-2 min-h-9 rounded-lg shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap text-xs sm:text-sm sm:px-3 sm:min-h-10"
+                  data-testid={`tab-${tab.id}`}
+                >
+                  <tab.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 shrink-0" />
+                  <span className="sm:hidden">{tab.shortLabel}</span>
+                  <span className="hidden sm:inline">{tab.label}</span>
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </div>
 
           <TabsContent value="overview" className="space-y-6">
             <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">

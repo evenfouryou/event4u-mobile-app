@@ -1798,7 +1798,7 @@ export class SiaeStorage implements ISiaeStorage {
           })
           .where(eq(siaeTicketedEvents.id, params.ticketedEventId));
 
-        // Step 4: Restore cashier quota if issued by a user
+        // Step 4: Restore cashier quota if issued by a cashier
         if (params.issuedByUserId) {
           await tx
             .update(siaeCashierAllocations)
@@ -1807,7 +1807,7 @@ export class SiaeStorage implements ISiaeStorage {
               updatedAt: new Date()
             })
             .where(and(
-              eq(siaeCashierAllocations.userId, params.issuedByUserId),
+              eq(siaeCashierAllocations.cashierId, params.issuedByUserId),
               eq(siaeCashierAllocations.eventId, params.ticketedEventId),
               eq(siaeCashierAllocations.isActive, true)
             ));

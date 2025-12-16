@@ -476,8 +476,9 @@
   
   /* Mobile bottom nav */
   .mobile-nav {
-    @apply fixed bottom-0 left-0 right-0 z-50 backdrop-blur-xl border-t border-white/10;
-    background: rgba(10, 14, 23, 0.9);
+    @apply fixed bottom-0 left-0 right-0 z-50 backdrop-blur-xl;
+    @apply border-t border-border/50;
+    @apply bg-background/90;
     padding-bottom: env(safe-area-inset-bottom);
   }
   

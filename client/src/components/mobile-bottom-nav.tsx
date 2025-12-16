@@ -85,7 +85,7 @@ export function MobileBottomNav() {
   }
 
   return (
-    <nav className="mobile-nav md:hidden">
+    <nav className="mobile-nav md:hidden" data-testid="mobile-bottom-nav">
       <div className="flex items-end justify-around h-20 px-2 pt-2">
         {navItems.map((item, index) => {
           const isActive = location === item.href || 
