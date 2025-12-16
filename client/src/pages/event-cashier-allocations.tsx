@@ -308,7 +308,7 @@ export function EventCashierAllocations({ eventId, siaeEventId }: EventCashierAl
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">
-                        {allocation.sectorName || getSectorName(allocation.sectorId)}
+                        {allocation.sectorName || (allocation.sectorId ? getSectorName(allocation.sectorId) : "Non assegnato")}
                       </Badge>
                     </TableCell>
                     <TableCell>
@@ -422,7 +422,7 @@ export function EventCashierAllocations({ eventId, siaeEventId }: EventCashierAl
                           <SelectContent>
                             {sectors?.map((sector) => (
                               <SelectItem key={sector.id} value={sector.id}>
-                                {sector.name} - €{Number(sector.price).toFixed(2)}
+                                {sector.name} - €{Number(sector.priceIntero || 0).toFixed(2)}
                               </SelectItem>
                             ))}
                           </SelectContent>
@@ -488,9 +488,7 @@ export function EventCashierAllocations({ eventId, siaeEventId }: EventCashierAl
             <AlertDialogDescription>
               Stai per rimuovere l'assegnazione per{" "}
               <strong>
-                {allocationToDelete?.user 
-                  ? `${allocationToDelete.user.firstName} ${allocationToDelete.user.lastName}`
-                  : "questo cassiere"}
+                {allocationToDelete?.cashierName || "questo cassiere"}
               </strong>.
               L'azione non può essere annullata.
             </AlertDialogDescription>
