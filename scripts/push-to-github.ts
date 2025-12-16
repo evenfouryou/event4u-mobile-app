@@ -130,7 +130,7 @@ async function main() {
     
     // Create commit
     console.log('📝 Creating commit...');
-    const commitMessage = 'v3.9: FinalizeML before Initialize in CHECK_READER\n\n- Add FinalizeML before Initialize in CheckReader function\n- Fixes Initialize returning 3 instead of 0 on repeated calls\n- SelectML and expanded nPIN values for PIN verification\n\nSee BUILD_INSTRUCTIONS.md for details.';
+    const commitMessage = 'v3.10: Hierarchical file selection MF then DF SIAE\n\n- Select MF (0x3F00) first, then DF SIAE (0x5000)\n- Try alternative DF IDs if 0x5000 fails\n- Fixes 0x6A88 error after MF selection\n\nSee BUILD_INSTRUCTIONS.md for details.';
     
     const { data: commit } = await octokit.git.createCommit({
       owner,

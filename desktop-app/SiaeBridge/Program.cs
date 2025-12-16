@@ -446,17 +446,27 @@ namespace SiaeBridge
                 Log($"  BeginTransactionML = {txResult}");
                 tx = (txResult == 0);
 
-                // Prova a selezionare diversi file/applicazioni sulla carta
-                // L'errore 0x6A88 potrebbe significare che non è selezionata l'applicazione corretta
-                ushort[] fileIds = { 0x3F00, 0x5000, 0x0000 }; // MF, DF SIAE, root
-                foreach (ushort fid in fileIds)
+                // Seleziona prima MF (0x3F00), poi DF SIAE (0x5000)
+                // La selezione gerarchica è necessaria per accedere ai file SIAE
+                int selMF = LibSiae.SelectML(0x3F00, _slot);
+                Log($"  SelectML(0x3F00 MF) = {selMF} (0x{selMF:X4})");
+                
+                int selDF = LibSiae.SelectML(0x5000, _slot);
+                Log($"  SelectML(0x5000 DF SIAE) = {selDF} (0x{selDF:X4})");
+                
+                // Prova anche altri DF se 0x5000 fallisce
+                if (selDF != 0)
                 {
-                    int selRes = LibSiae.SelectML(fid, _slot);
-                    Log($"  SelectML(0x{fid:X4}) = {selRes} (0x{selRes:X4})");
-                    if (selRes == 0)
+                    ushort[] dfIds = { 0x0001, 0x0002, 0x0010, 0x1000 };
+                    foreach (ushort df in dfIds)
                     {
-                        Log($"  ✓ File 0x{fid:X4} selezionato!");
-                        break;
+                        int res = LibSiae.SelectML(df, _slot);
+                        Log($"  SelectML(0x{df:X4}) = {res} (0x{res:X4})");
+                        if (res == 0)
+                        {
+                            Log($"  ✓ DF 0x{df:X4} selezionato!");
+                            break;
+                        }
                     }
                 }
 
