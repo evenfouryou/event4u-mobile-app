@@ -74,7 +74,7 @@ interface CashierAllocationWithDetails extends SiaeCashierAllocation {
 }
 
 const allocationFormSchema = z.object({
-  userId: z.string().min(1, "Seleziona un cassiere"),
+  cashierId: z.string().min(1, "Seleziona un cassiere"),
   sectorId: z.string().min(1, "Seleziona un settore"),
   quotaQuantity: z.coerce.number().min(1, "La quota deve essere almeno 1"),
 });
@@ -114,7 +114,7 @@ export function EventCashierAllocations({ eventId, siaeEventId }: EventCashierAl
   const form = useForm<AllocationFormValues>({
     resolver: zodResolver(allocationFormSchema),
     defaultValues: {
-      userId: "",
+      cashierId: "",
       sectorId: "",
       quotaQuantity: 50,
     },
@@ -194,14 +194,14 @@ export function EventCashierAllocations({ eventId, siaeEventId }: EventCashierAl
     if (allocation) {
       setEditingAllocation(allocation);
       form.reset({
-        userId: allocation.userId,
-        sectorId: allocation.sectorId,
+        cashierId: allocation.cashierId,
+        sectorId: allocation.sectorId || "",
         quotaQuantity: allocation.quotaQuantity,
       });
     } else {
       setEditingAllocation(null);
       form.reset({
-        userId: "",
+        cashierId: "",
         sectorId: "",
         quotaQuantity: 50,
       });
@@ -226,8 +226,8 @@ export function EventCashierAllocations({ eventId, siaeEventId }: EventCashierAl
     }
   };
 
-  const getCashierName = (userId: string) => {
-    const cashier = cashiers?.find(c => c.id === userId);
+  const getCashierName = (cashierId: string) => {
+    const cashier = cashiers?.find(c => c.id === cashierId);
     return cashier ? cashier.name : "Sconosciuto";
   };
 
@@ -304,7 +304,7 @@ export function EventCashierAllocations({ eventId, siaeEventId }: EventCashierAl
                 return (
                   <TableRow key={allocation.id} data-testid={`row-allocation-${allocation.id}`}>
                     <TableCell className="font-medium">
-                      {allocation.cashierName || getCashierName(allocation.userId)}
+                      {allocation.cashierName || getCashierName(allocation.cashierId)}
                     </TableCell>
                     <TableCell>
                       <Badge variant="outline">
@@ -384,7 +384,7 @@ export function EventCashierAllocations({ eventId, siaeEventId }: EventCashierAl
                 <>
                   <FormField
                     control={form.control}
-                    name="userId"
+                    name="cashierId"
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel>Cassiere</FormLabel>
