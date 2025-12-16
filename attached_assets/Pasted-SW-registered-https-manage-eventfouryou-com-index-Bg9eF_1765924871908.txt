@@ -1,0 +1,104 @@
+SW registered: https://manage.eventfouryou.com/
+index-Bg9eFKdc.js:879 [DEBUG SC] Fetching initial status via HTTP...
+index-Bg9eFKdc.js:879 [DEBUG SC] ====== SMART CARD CONNECTION START ======
+index-Bg9eFKdc.js:879 [DEBUG SC] URL: wss://manage.eventfouryou.com/ws/bridge
+index-Bg9eFKdc.js:879 [DEBUG SC] Cookies present: YES
+index-Bg9eFKdc.js:879 [DEBUG SC] Cookie value: _ga=GA1.1.962813290.1739208627; _fbp=fb.1.17397993...
+index-Bg9eFKdc.js:879 [DEBUG SC] WebSocket created, state: 0
+index-Bg9eFKdc.js:879 [DEBUG SC] HTTP status received: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 177,
+  "cardBalance": 380011,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+index-Bg9eFKdc.js:879 [DEBUG SC] HTTP - cardSerial: 4130313238343837
+index-Bg9eFKdc.js:879 [DEBUG SC] HTTP - cardCounter: 177
+index-Bg9eFKdc.js:879 [DEBUG SC] HTTP - cardBalance: 380011
+index-Bg9eFKdc.js:879 [DEBUG SC] HTTP - cardKeyId: 129
+index-Bg9eFKdc.js:879 [DEBUG SC] HTTP - cardInserted: true
+index-Bg9eFKdc.js:879 [DEBUG SC] WebSocket OPEN! State: 1
+index-Bg9eFKdc.js:879 [DEBUG SC] Sending get_status request...
+index-Bg9eFKdc.js:879 [DEBUG SC] MESSAGE RECEIVED: {"type":"connection_status","bridgeConnected":true,"connected":true,"message":"Bridge desktop app is connected"}
+index-Bg9eFKdc.js:879 [DEBUG SC] Parsed message type: connection_status
+index-Bg9eFKdc.js:879 [DEBUG SC] Handling bridge/connection status: connection_status Object
+index-Bg9eFKdc.js:879 [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+index-Bg9eFKdc.js:879 [DEBUG SC] Message type: connection_status
+index-Bg9eFKdc.js:879 [DEBUG SC] msg.connected: true
+index-Bg9eFKdc.js:879 [DEBUG SC] msg.bridgeConnected: true
+index-Bg9eFKdc.js:879 [DEBUG SC] isConnected (final): true
+index-Bg9eFKdc.js:879 [DEBUG SC] Full message: {"type":"connection_status","bridgeConnected":true,"connected":true,"message":"Bridge desktop app is connected"}
+index-Bg9eFKdc.js:879 [DEBUG SC] Bridge IS connected - updating status to CONNECTED
+index-Bg9eFKdc.js:879 [DEBUG SC] Status after update: {"connected":true,"relayConnected":true,"readerDetected":true,"cardInserted":true,"readerName":null,"cardAtr":null,"cardSerial":"4130313238343837","cardCounter":177,"cardBalance":380011,"cardKeyId":129,"cardType":"Smart Card SIAE","lastCheck":"2025-12-16T22:40:02.179Z","error":null,"bridgeConnected":true,"canEmitRealSeals":true,"demoMode":false}
+index-Bg9eFKdc.js:879 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","toCompanyId":"4186e56b-d6bd-4d1d-b7d6-f0b22ec12b91","toUserId":"1b809fda-2601-452a-9c70-5de6f23ecf97","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"reade
+index-Bg9eFKdc.js:879 [DEBUG SC] Parsed message type: status
+index-Bg9eFKdc.js:879 [DEBUG SC] Handling status message
+index-Bg9eFKdc.js:879 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-Bg9eFKdc.js:879 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 177,
+  "cardBalance": 380011,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+index-Bg9eFKdc.js:879 [DEBUG SC] data.cardSerial: 4130313238343837
+index-Bg9eFKdc.js:879 [DEBUG SC] data.cardCounter: 177
+index-Bg9eFKdc.js:879 [DEBUG SC] data.cardBalance: 380011
+index-Bg9eFKdc.js:879 [DEBUG SC] data.cardKeyId: 129
+index-Bg9eFKdc.js:879 [DEBUG SC] data.cardInserted: true
+index-Bg9eFKdc.js:879 [DEBUG SC] data.readerDetected: undefined
+index-Bg9eFKdc.js:879 [DEBUG SC] data.readerConnected: true
+index-Bg9eFKdc.js:879 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","toCompanyId":"4186e56b-d6bd-4d1d-b7d6-f0b22ec12b91","toUserId":"e47d0cb5-0f02-4c2b-bdad-15ee8882249f","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"reade
+index-Bg9eFKdc.js:879 [DEBUG SC] Parsed message type: status
+index-Bg9eFKdc.js:879 [DEBUG SC] Handling status message
+index-Bg9eFKdc.js:879 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-Bg9eFKdc.js:879 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 177,
+  "cardBalance": 380011,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+index-Bg9eFKdc.js:879 [DEBUG SC] data.cardSerial: 4130313238343837
+index-Bg9eFKdc.js:879 [DEBUG SC] data.cardCounter: 177
+index-Bg9eFKdc.js:879 [DEBUG SC] data.cardBalance: 380011
+index-Bg9eFKdc.js:879 [DEBUG SC] data.cardKeyId: 129
+index-Bg9eFKdc.js:879 [DEBUG SC] data.cardInserted: true
+index-Bg9eFKdc.js:879 [DEBUG SC] data.readerDetected: undefined
+index-Bg9eFKdc.js:879 [DEBUG SC] data.readerConnected: true
+/api/cashiers/events/ecc3d8e1-00e5-4dbd-9369-6e35ac377fd8/today-tickets:1  Failed to load resource: the server responded with a status of 500 ()Understand this error
+/api/cashiers/events/ecc3d8e1-00e5-4dbd-9369-6e35ac377fd8/tickets:1  Failed to load resource: the server responded with a status of 503 ()Understand this error
+index-Bg9eFKdc.js:879 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-Bg9eFKdc.js:879 [DEBUG SC] Parsed message type: ping
+index-Bg9eFKdc.js:879 [DEBUG SC] Ping received, sending pong
+/api/cashiers/events/ecc3d8e1-00e5-4dbd-9369-6e35ac377fd8/tickets:1  Failed to load resource: the server responded with a status of 503 ()Understand this error
+index-Bg9eFKdc.js:879 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-Bg9eFKdc.js:879 [DEBUG SC] Parsed message type: ping
+index-Bg9eFKdc.js:879 [DEBUG SC] Ping received, sending pong
