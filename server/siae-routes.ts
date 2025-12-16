@@ -726,6 +726,29 @@ router.get("/api/siae/companies/:companyId/ticketed-events", requireAuth, requir
   }
 });
 
+// Get ticketed events for current user (gestore, cassiere, super_admin)
+router.get("/api/siae/ticketed-events", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    
+    // Super admin sees all events
+    if (user.role === 'super_admin') {
+      const events = await siaeStorage.getAllSiaeTicketedEventsAdmin();
+      return res.json(events);
+    }
+    
+    // For gestore, organizer, cassiere - return events for their company
+    if (!user.companyId) {
+      return res.json([]);
+    }
+    
+    const events = await siaeStorage.getSiaeTicketedEventsByCompany(user.companyId);
+    res.json(events);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.get("/api/siae/ticketed-events/:id", requireAuth, async (req: Request, res: Response) => {
   try {
     const event = await siaeStorage.getSiaeTicketedEvent(req.params.id);
