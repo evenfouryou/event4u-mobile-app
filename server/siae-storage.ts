@@ -87,7 +87,7 @@ import {
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, lt, gt, isNull, count } from "drizzle-orm";
-import { users, events } from "@shared/schema";
+import { users, events, companies } from "@shared/schema";
 
 export interface ISiaeStorage {
   // ==================== TAB.1-5 Reference Tables ====================
@@ -164,6 +164,7 @@ export interface ISiaeStorage {
   // ==================== Ticketed Events ====================
   
   getSiaeTicketedEventsByCompany(companyId: string): Promise<SiaeTicketedEvent[]>;
+  getAllSiaeTicketedEventsAdmin(): Promise<any[]>;
   getSiaeTicketedEvent(id: string): Promise<SiaeTicketedEvent | undefined>;
   getSiaeTicketedEventByEventId(eventId: string): Promise<SiaeTicketedEvent | undefined>;
   createSiaeTicketedEvent(event: InsertSiaeTicketedEvent): Promise<SiaeTicketedEvent>;
@@ -685,6 +686,40 @@ export class SiaeStorage implements ISiaeStorage {
     .leftJoin(events, eq(siaeTicketedEvents.eventId, events.id))
     .where(eq(siaeTicketedEvents.companyId, companyId))
     .orderBy(desc(siaeTicketedEvents.createdAt));
+  }
+  
+  async getAllSiaeTicketedEventsAdmin() {
+    return await db.select({
+      id: siaeTicketedEvents.id,
+      eventId: siaeTicketedEvents.eventId,
+      companyId: siaeTicketedEvents.companyId,
+      siaeEventCode: siaeTicketedEvents.siaeEventCode,
+      siaeLocationCode: siaeTicketedEvents.siaeLocationCode,
+      organizerType: siaeTicketedEvents.organizerType,
+      genreCode: siaeTicketedEvents.genreCode,
+      taxType: siaeTicketedEvents.taxType,
+      ivaPreassolta: siaeTicketedEvents.ivaPreassolta,
+      totalCapacity: siaeTicketedEvents.totalCapacity,
+      requiresNominative: siaeTicketedEvents.requiresNominative,
+      allowsChangeName: siaeTicketedEvents.allowsChangeName,
+      allowsResale: siaeTicketedEvents.allowsResale,
+      saleStartDate: siaeTicketedEvents.saleStartDate,
+      saleEndDate: siaeTicketedEvents.saleEndDate,
+      maxTicketsPerUser: siaeTicketedEvents.maxTicketsPerUser,
+      ticketingStatus: siaeTicketedEvents.ticketingStatus,
+      ticketsSold: siaeTicketedEvents.ticketsSold,
+      ticketsCancelled: siaeTicketedEvents.ticketsCancelled,
+      totalRevenue: siaeTicketedEvents.totalRevenue,
+      createdAt: siaeTicketedEvents.createdAt,
+      updatedAt: siaeTicketedEvents.updatedAt,
+      eventName: events.name,
+      eventDate: events.startDatetime,
+      companyName: companies.name,
+    })
+    .from(siaeTicketedEvents)
+    .leftJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+    .leftJoin(companies, eq(siaeTicketedEvents.companyId, companies.id))
+    .orderBy(companies.name, desc(siaeTicketedEvents.createdAt));
   }
   
   async getSiaeTicketedEvent(id: string): Promise<SiaeTicketedEvent | undefined> {

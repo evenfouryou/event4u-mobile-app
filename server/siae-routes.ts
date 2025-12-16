@@ -682,6 +682,16 @@ router.post("/api/siae/otp/verify", async (req: Request, res: Response) => {
 
 // ==================== Ticketed Events (Organizer) ====================
 
+// Admin endpoint: Get all ticketed events across all companies (Super Admin only)
+router.get("/api/siae/admin/ticketed-events", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
+  try {
+    const events = await siaeStorage.getAllSiaeTicketedEventsAdmin();
+    res.json(events);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Get ticketing info by event ID (used by event-hub)
 router.get("/api/siae/events/:eventId/ticketing", requireAuth, async (req: Request, res: Response) => {
   try {

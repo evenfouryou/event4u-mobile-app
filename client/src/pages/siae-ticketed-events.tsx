@@ -17,6 +17,13 @@ import {
   type SiaeSectorCode,
   type Event,
 } from "@shared/schema";
+
+type SiaeTicketedEventWithCompany = SiaeTicketedEvent & {
+  eventName?: string | null;
+  eventDate?: string | null;
+  companyName?: string | null;
+};
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -93,6 +100,7 @@ import {
   ExternalLink,
   Copy,
   Image,
+  Building2,
 } from "lucide-react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -126,11 +134,25 @@ export default function SiaeTicketedEventsPage() {
   const [publicInfoDescription, setPublicInfoDescription] = useState("");
 
   const companyId = user?.companyId;
+  const isSuperAdmin = user?.role === 'super_admin';
 
-  const { data: ticketedEvents, isLoading: eventsLoading } = useQuery<SiaeTicketedEvent[]>({
-    queryKey: ['/api/siae/companies', companyId, 'ticketed-events'],
-    enabled: !!companyId,
+  const { data: ticketedEvents, isLoading: eventsLoading } = useQuery<SiaeTicketedEventWithCompany[]>({
+    queryKey: isSuperAdmin 
+      ? ['/api/siae/admin/ticketed-events']
+      : ['/api/siae/companies', companyId, 'ticketed-events'],
+    enabled: isSuperAdmin || !!companyId,
   });
+
+  const eventsGroupedByCompany = isSuperAdmin && ticketedEvents
+    ? ticketedEvents.reduce((groups, event) => {
+        const companyName = event.companyName || 'Organizzatore sconosciuto';
+        if (!groups[companyName]) {
+          groups[companyName] = [];
+        }
+        groups[companyName].push(event);
+        return groups;
+      }, {} as Record<string, SiaeTicketedEventWithCompany[]>)
+    : null;
 
   const { data: availableEvents } = useQuery<Event[]>({
     queryKey: ['/api/events'],
@@ -417,18 +439,22 @@ export default function SiaeTicketedEventsPage() {
               Eventi Biglietteria SIAE
             </h1>
             <p className="text-muted-foreground mt-1">
-              Gestisci la biglietteria SIAE per i tuoi eventi
+              {isSuperAdmin 
+                ? "Visualizza tutti gli eventi biglietteria SIAE di tutti gli organizzatori"
+                : "Gestisci la biglietteria SIAE per i tuoi eventi"}
             </p>
           </div>
         </div>
-        <Button
-          onClick={() => setIsCreateDialogOpen(true)}
-          disabled={!eventsWithoutTicketing?.length}
-          data-testid="button-activate-ticketing"
-        >
-          <Plus className="w-4 h-4 mr-2" />
-          Attiva Biglietteria
-        </Button>
+        {!isSuperAdmin && (
+          <Button
+            onClick={() => setIsCreateDialogOpen(true)}
+            disabled={!eventsWithoutTicketing?.length}
+            data-testid="button-activate-ticketing"
+          >
+            <Plus className="w-4 h-4 mr-2" />
+            Attiva Biglietteria
+          </Button>
+        )}
       </div>
 
       {ticketedEvents?.length === 0 ? (
@@ -447,6 +473,107 @@ export default function SiaeTicketedEventsPage() {
             </Button>
           </CardContent>
         </Card>
+      ) : isSuperAdmin && eventsGroupedByCompany ? (
+        <Accordion type="multiple" className="space-y-4" data-testid="accordion-companies">
+          {Object.entries(eventsGroupedByCompany).map(([companyName, companyEvents]) => (
+            <AccordionItem 
+              key={companyName} 
+              value={companyName}
+              className="border rounded-lg bg-card/50"
+              data-testid={`accordion-company-${companyName}`}
+            >
+              <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                <div className="flex items-center gap-3">
+                  <Building2 className="w-5 h-5 text-[#FFD700]" />
+                  <span className="font-semibold text-lg">{companyName}</span>
+                  <Badge variant="outline" className="ml-2">
+                    {companyEvents.length} {companyEvents.length === 1 ? 'evento' : 'eventi'}
+                  </Badge>
+                </div>
+              </AccordionTrigger>
+              <AccordionContent className="px-4 pb-4 space-y-4">
+                {companyEvents.map((ticketedEvent) => {
+                  const eventInfo = getEventInfo(ticketedEvent.eventId);
+                  const displayEventName = ticketedEvent.eventName || eventInfo?.name || "Evento";
+                  const displayEventDate = ticketedEvent.eventDate || eventInfo?.startDatetime;
+                  const isExpanded = expandedEventId === ticketedEvent.id;
+
+                  return (
+                    <Card
+                      key={ticketedEvent.id}
+                      className="glass-card overflow-hidden"
+                      data-testid={`card-event-${ticketedEvent.id}`}
+                    >
+                      <CardHeader className="pb-2">
+                        <div className="flex items-start justify-between gap-4">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2 mb-1">
+                              {getStatusBadge(ticketedEvent.ticketingStatus)}
+                              {ticketedEvent.requiresNominative && (
+                                <Badge variant="outline" className="text-xs">
+                                  Nominativo
+                                </Badge>
+                              )}
+                            </div>
+                            <CardTitle className="text-xl" data-testid={`title-event-${ticketedEvent.id}`}>
+                              {displayEventName}
+                            </CardTitle>
+                            <CardDescription className="flex items-center flex-wrap gap-4 mt-1">
+                              {displayEventDate && (
+                                <span className="flex items-center gap-1">
+                                  <Calendar className="w-4 h-4" />
+                                  {format(new Date(displayEventDate), "d MMMM yyyy", { locale: it })}
+                                </span>
+                              )}
+                              <span className="flex items-center gap-1">
+                                <Users className="w-4 h-4" />
+                                {ticketedEvent.totalCapacity} posti
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <MapPin className="w-4 h-4" />
+                                Genere: {genres?.find((g) => g.code === ticketedEvent.genreCode)?.description || ticketedEvent.genreCode}
+                              </span>
+                            </CardDescription>
+                          </div>
+                        </div>
+                      </CardHeader>
+
+                      <CardContent className="pt-2">
+                        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                          <div className="p-3 rounded-lg bg-background/50 border border-border/50">
+                            <div className="text-xs text-muted-foreground mb-1">Biglietti Venduti</div>
+                            <div className="text-2xl font-bold text-[#FFD700]" data-testid={`stat-sold-${ticketedEvent.id}`}>
+                              {ticketedEvent.ticketsSold}
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-lg bg-background/50 border border-border/50">
+                            <div className="text-xs text-muted-foreground mb-1">Disponibili</div>
+                            <div className="text-2xl font-bold text-emerald-400" data-testid={`stat-available-${ticketedEvent.id}`}>
+                              {ticketedEvent.totalCapacity - ticketedEvent.ticketsSold}
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-lg bg-background/50 border border-border/50">
+                            <div className="text-xs text-muted-foreground mb-1">Annullati</div>
+                            <div className="text-2xl font-bold text-destructive" data-testid={`stat-cancelled-${ticketedEvent.id}`}>
+                              {ticketedEvent.ticketsCancelled}
+                            </div>
+                          </div>
+                          <div className="p-3 rounded-lg bg-background/50 border border-border/50">
+                            <div className="text-xs text-muted-foreground mb-1">Incasso</div>
+                            <div className="text-2xl font-bold text-[#FFD700] flex items-center gap-1" data-testid={`stat-revenue-${ticketedEvent.id}`}>
+                              <Euro className="w-5 h-5" />
+                              {Number(ticketedEvent.totalRevenue || 0).toFixed(2)}
+                            </div>
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  );
+                })}
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
       ) : (
         <AnimatePresence mode="wait">
           <motion.div
