@@ -92,6 +92,8 @@ import ClientWallet from "@/pages/client-wallet";
 import StaffPrHome from "@/pages/staff-pr-home";
 import StaffPrEventPanel from "@/pages/staff-pr-event-panel";
 import CassaBiglietti from "@/pages/cassa-biglietti";
+import CashierManagement from "@/pages/cashier-management";
+import CashierDashboard from "@/pages/cashier-dashboard";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -221,6 +223,8 @@ function Router() {
               <Route path="/staff-pr-home" component={StaffPrHome} />
               <Route path="/events/:id/panel" component={StaffPrEventPanel} />
               <Route path="/cassa-biglietti" component={CassaBiglietti} />
+              <Route path="/cashier/management" component={CashierManagement} />
+              <Route path="/cashier/dashboard" component={CashierDashboard} />
               <Route component={NotFound} />
             </Switch>
           </main>

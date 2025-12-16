@@ -114,6 +114,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { EventCashierAllocations } from "./event-cashier-allocations";
 import type {
   Event,
   Station,
@@ -2022,6 +2023,14 @@ export default function EventHub() {
                   </div>
                 </CardContent>
               </Card>
+            )}
+
+            {/* Cashier Allocations Section */}
+            {ticketedEvent && (
+              <EventCashierAllocations 
+                eventId={id || ''} 
+                siaeEventId={ticketedEvent?.id}
+              />
             )}
           </TabsContent>
 

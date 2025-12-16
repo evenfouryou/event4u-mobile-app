@@ -290,6 +290,12 @@ export function AppSidebar() {
         group: "Gestione",
       },
       {
+        title: "Gestione Cassieri",
+        icon: UserPlus,
+        url: "/cashier/management",
+        group: "Gestione",
+      },
+      {
         title: "Location",
         icon: MapPin,
         url: "/locations",
@@ -528,14 +534,14 @@ export function AppSidebar() {
   if (isCassiere) {
     menuItems.push(
       {
-        title: "Home",
-        icon: Home,
-        url: "/",
+        title: "I Miei Eventi",
+        icon: Calendar,
+        url: "/cashier/dashboard",
         group: "Bacheca",
       },
       {
-        title: "Cassa Biglietti",
-        icon: Store,
+        title: "Emetti Biglietti",
+        icon: Ticket,
         url: "/cassa-biglietti",
         group: "Operazioni",
       }
