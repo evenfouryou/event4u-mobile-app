@@ -1743,6 +1743,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Public endpoint to check if customer registration is enabled (separate from venue registration)
+  app.get('/api/public/customer-registration-enabled', async (_req, res) => {
+    try {
+      const setting = await storage.getSystemSetting('customer_registration_enabled');
+      // Default to true if setting doesn't exist (customers should be able to register by default)
+      const enabled = setting ? setting.value === 'true' : true;
+      res.json({ enabled });
+    } catch (error) {
+      console.error("Error checking customer registration status:", error);
+      res.json({ enabled: true }); // Default to true on error
+    }
+  });
+
   // ===== SIAE REFERENCE TABLES (Super Admin only) =====
 
   // --- Event Genres ---

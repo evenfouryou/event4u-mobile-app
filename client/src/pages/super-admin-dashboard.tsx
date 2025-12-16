@@ -1,6 +1,6 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Building2, Calendar, TrendingUp, Package, Settings, UserPlus } from "lucide-react";
+import { Building2, Calendar, TrendingUp, Package, Settings, UserPlus, Ticket } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -81,10 +81,18 @@ export default function SuperAdminDashboard() {
   });
 
   const registrationEnabled = systemSettings?.find(s => s.key === 'registration_enabled')?.value !== 'false';
+  const customerRegistrationEnabled = systemSettings?.find(s => s.key === 'customer_registration_enabled')?.value !== 'false';
 
   const handleRegistrationToggle = (enabled: boolean) => {
     updateSettingMutation.mutate({
       key: 'registration_enabled',
+      value: enabled ? 'true' : 'false',
+    });
+  };
+
+  const handleCustomerRegistrationToggle = (enabled: boolean) => {
+    updateSettingMutation.mutate({
+      key: 'customer_registration_enabled',
       value: enabled ? 'true' : 'false',
     });
   };
@@ -202,6 +210,29 @@ export default function SuperAdminDashboard() {
               onCheckedChange={handleRegistrationToggle}
               disabled={updateSettingMutation.isPending}
               data-testid="switch-registration-enabled"
+            />
+          </div>
+
+          <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/50">
+            <div className="flex items-start gap-3">
+              <Ticket className="w-5 h-5 text-muted-foreground mt-0.5" />
+              <div className="space-y-1">
+                <Label htmlFor="customer-registration-toggle" className="text-sm font-medium">
+                  Registrazione Clienti Biglietteria
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  {customerRegistrationEnabled 
+                    ? "La registrazione clienti è attiva. I clienti possono registrarsi per acquistare biglietti."
+                    : "La registrazione clienti è disabilitata. I clienti non possono registrarsi."}
+                </p>
+              </div>
+            </div>
+            <Switch
+              id="customer-registration-toggle"
+              checked={customerRegistrationEnabled}
+              onCheckedChange={handleCustomerRegistrationToggle}
+              disabled={updateSettingMutation.isPending}
+              data-testid="switch-customer-registration-enabled"
             />
           </div>
         </CardContent>

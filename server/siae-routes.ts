@@ -475,6 +475,12 @@ router.get("/api/siae/customers/:id", requireAuth, async (req: Request, res: Res
 
 router.post("/api/siae/customers", async (req: Request, res: Response) => {
   try {
+    // Check if customer registration is enabled (separate from venue registration)
+    const customerRegSetting = await storage.getSystemSetting('customer_registration_enabled');
+    if (customerRegSetting && customerRegSetting.value === 'false') {
+      return res.status(403).json({ message: "Registrazione clienti temporaneamente disabilitata" });
+    }
+    
     const data = insertSiaeCustomerSchema.parse(req.body);
     const customer = await siaeStorage.createSiaeCustomer(data);
     res.status(201).json(customer);
