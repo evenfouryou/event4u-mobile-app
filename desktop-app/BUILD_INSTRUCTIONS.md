@@ -1,19 +1,22 @@
 # 🔧 ISTRUZIONI DI BUILD - Event Four You SIAE Lettore
 
-## ✅ BUG FIX v3.5 (Dicembre 2024)
+## ✅ BUG FIX v3.6 (Dicembre 2024)
 
-**Problema:** Errore PIN 0x6A88 "Referenced data not found" anche con PIN corretto
+**Problema:** La v3.5 non provava tutti i valori nPIN perché controllava solo errore 0x6A88
 
-### Correzioni applicate v3.5:
+### Correzioni applicate v3.6:
 
-1. **Auto-rilevamento nPIN:**
-   - L'errore 0x6A88 indica che il riferimento PIN (nPIN) non esiste sulla carta
-   - Ora prova automaticamente nPIN = 1, 0, 2, 0x81 fino a trovare quello corretto
-   - Log dettagliato di ogni tentativo per debug
+1. **Retry completo nPIN:**
+   - Prova TUTTI i valori nPIN = 1, 0, 2, 0x81, 0x82 in sequenza
+   - Si ferma solo su:
+     - Successo (0)
+     - PIN errato (0x63Cx) - il nPIN è corretto, il PIN no
+     - PIN bloccato (0x6983)
+   - Per qualsiasi altro errore (0x6A88, 0xFFFF, ecc.) continua a provare
 
-2. **Logging migliorato:**
-   - Ogni tentativo PIN viene loggato con risultato
-   - Il bridge.log mostra esattamente quale nPIN funziona
+2. **Logging dettagliato:**
+   - Ogni tentativo mostra nPIN in decimale e esadecimale
+   - Indica chiaramente quando il PIN viene verificato con successo
 
 ---
 

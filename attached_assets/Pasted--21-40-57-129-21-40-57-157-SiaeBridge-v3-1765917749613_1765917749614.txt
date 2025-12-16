@@ -1,0 +1,1569 @@
+[21:40:57.129] ═══════════════════════════════════════════════════════
+[21:40:57.157] SiaeBridge v3.4 - Enhanced card data logging + error reporting
+[21:40:57.157] Time: 2025-12-16 21:40:57
+[21:40:57.157] Dir: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\
+[21:40:57.157] 32-bit Process: True
+[21:40:57.158] ✓ libSIAE.dll: 98304 bytes
+[21:40:57.168] Bridge READY
+[21:40:57.176] >> CHECK_READER
+[21:40:57.198]   Readers: BIT4ID miniLector EVO 0||
+[21:40:57.198] Windows readers: True
+[21:40:57.255]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:40:57.255]   ✓ CARTA PRESENTE in slot 0!
+[21:40:57.256]   Trying Initialize(0)...
+[21:40:57.337]   Initialize(0) = 0 (0x0000)
+[21:40:57.655] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[21:40:57.680] >> CHECK_READER
+[21:40:57.682]   Readers: BIT4ID miniLector EVO 0||
+[21:40:57.682] Windows readers: True
+[21:40:57.684]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:40:57.684]   ✓ CARTA PRESENTE in slot 0!
+[21:40:57.684]   Trying Initialize(0)...
+[21:40:57.684]   Initialize(0) = 3 (0x0003)
+[21:40:57.684] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:40:58.192] >> CHECK_READER
+[21:40:58.195]   Readers: BIT4ID miniLector EVO 0||
+[21:40:58.195] Windows readers: True
+[21:40:58.197]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:40:58.197]   ✓ CARTA PRESENTE in slot 0!
+[21:40:58.197]   Trying Initialize(0)...
+[21:40:58.198]   Initialize(0) = 3 (0x0003)
+[21:40:58.198] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:40:58.694] >> CHECK_READER
+[21:40:58.696]   Readers: BIT4ID miniLector EVO 0||
+[21:40:58.696] Windows readers: True
+[21:40:58.698]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:40:58.698]   ✓ CARTA PRESENTE in slot 0!
+[21:40:58.698]   Trying Initialize(0)...
+[21:40:58.699]   Initialize(0) = 3 (0x0003)
+[21:40:58.699] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:40:59.195] >> CHECK_READER
+[21:40:59.197]   Readers: BIT4ID miniLector EVO 0||
+[21:40:59.198] Windows readers: True
+[21:40:59.200]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:40:59.200]   ✓ CARTA PRESENTE in slot 0!
+[21:40:59.200]   Trying Initialize(0)...
+[21:40:59.201]   Initialize(0) = 3 (0x0003)
+[21:40:59.201] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:40:59.710] >> CHECK_READER
+[21:40:59.711]   Readers: BIT4ID miniLector EVO 0||
+[21:40:59.712] Windows readers: True
+[21:40:59.714]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:40:59.714]   ✓ CARTA PRESENTE in slot 0!
+[21:40:59.714]   Trying Initialize(0)...
+[21:40:59.714]   Initialize(0) = 3 (0x0003)
+[21:40:59.714] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:00.182] >> CHECK_READER
+[21:41:00.192]   Readers: BIT4ID miniLector EVO 0||
+[21:41:00.193] Windows readers: True
+[21:41:00.200]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:00.200]   ✓ CARTA PRESENTE in slot 0!
+[21:41:00.200]   Trying Initialize(0)...
+[21:41:00.201]   Initialize(0) = 3 (0x0003)
+[21:41:00.201] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:00.212] >> CHECK_READER
+[21:41:00.215]   Readers: BIT4ID miniLector EVO 0||
+[21:41:00.215] Windows readers: True
+[21:41:00.218]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:00.218]   ✓ CARTA PRESENTE in slot 0!
+[21:41:00.218]   Trying Initialize(0)...
+[21:41:00.218]   Initialize(0) = 3 (0x0003)
+[21:41:00.218] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:00.724] >> CHECK_READER
+[21:41:00.729]   Readers: BIT4ID miniLector EVO 0||
+[21:41:00.730] Windows readers: True
+[21:41:00.735]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:00.735]   ✓ CARTA PRESENTE in slot 0!
+[21:41:00.735]   Trying Initialize(0)...
+[21:41:00.735]   Initialize(0) = 3 (0x0003)
+[21:41:00.735] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:01.240] >> CHECK_READER
+[21:41:01.248]   Readers: BIT4ID miniLector EVO 0||
+[21:41:01.248] Windows readers: True
+[21:41:01.254]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:01.254]   ✓ CARTA PRESENTE in slot 0!
+[21:41:01.254]   Trying Initialize(0)...
+[21:41:01.254]   Initialize(0) = 3 (0x0003)
+[21:41:01.254] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:01.741] >> CHECK_READER
+[21:41:01.748]   Readers: BIT4ID miniLector EVO 0||
+[21:41:01.749] Windows readers: True
+[21:41:01.756]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:01.756]   ✓ CARTA PRESENTE in slot 0!
+[21:41:01.756]   Trying Initialize(0)...
+[21:41:01.757]   Initialize(0) = 3 (0x0003)
+[21:41:01.757] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:02.256] >> CHECK_READER
+[21:41:02.263]   Readers: BIT4ID miniLector EVO 0||
+[21:41:02.264] Windows readers: True
+[21:41:02.269]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:02.269]   ✓ CARTA PRESENTE in slot 0!
+[21:41:02.269]   Trying Initialize(0)...
+[21:41:02.269]   Initialize(0) = 3 (0x0003)
+[21:41:02.270] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:02.768] >> CHECK_READER
+[21:41:02.776]   Readers: BIT4ID miniLector EVO 0||
+[21:41:02.777] Windows readers: True
+[21:41:02.784]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:02.784]   ✓ CARTA PRESENTE in slot 0!
+[21:41:02.784]   Trying Initialize(0)...
+[21:41:02.785]   Initialize(0) = 3 (0x0003)
+[21:41:02.785] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:03.190] >> CHECK_READER
+[21:41:03.197]   Readers: BIT4ID miniLector EVO 0||
+[21:41:03.198] Windows readers: True
+[21:41:03.205]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:03.205]   ✓ CARTA PRESENTE in slot 0!
+[21:41:03.205]   Trying Initialize(0)...
+[21:41:03.205]   Initialize(0) = 3 (0x0003)
+[21:41:03.205] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:03.280] >> CHECK_READER
+[21:41:03.284]   Readers: BIT4ID miniLector EVO 0||
+[21:41:03.284] Windows readers: True
+[21:41:03.288]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:03.288]   ✓ CARTA PRESENTE in slot 0!
+[21:41:03.288]   Trying Initialize(0)...
+[21:41:03.288]   Initialize(0) = 3 (0x0003)
+[21:41:03.288] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:03.782] >> CHECK_READER
+[21:41:03.790]   Readers: BIT4ID miniLector EVO 0||
+[21:41:03.790] Windows readers: True
+[21:41:03.803]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:03.803]   ✓ CARTA PRESENTE in slot 0!
+[21:41:03.803]   Trying Initialize(0)...
+[21:41:03.804]   Initialize(0) = 3 (0x0003)
+[21:41:03.804] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:04.297] >> CHECK_READER
+[21:41:04.305]   Readers: BIT4ID miniLector EVO 0||
+[21:41:04.306] Windows readers: True
+[21:41:04.314]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:04.314]   ✓ CARTA PRESENTE in slot 0!
+[21:41:04.314]   Trying Initialize(0)...
+[21:41:04.315]   Initialize(0) = 3 (0x0003)
+[21:41:04.315] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:04.797] >> CHECK_READER
+[21:41:04.801]   Readers: BIT4ID miniLector EVO 0||
+[21:41:04.802] Windows readers: True
+[21:41:04.806]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:04.806]   ✓ CARTA PRESENTE in slot 0!
+[21:41:04.806]   Trying Initialize(0)...
+[21:41:04.806]   Initialize(0) = 3 (0x0003)
+[21:41:04.807] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:05.311] >> CHECK_READER
+[21:41:05.316]   Readers: BIT4ID miniLector EVO 0||
+[21:41:05.317] Windows readers: True
+[21:41:05.321]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:05.321]   ✓ CARTA PRESENTE in slot 0!
+[21:41:05.321]   Trying Initialize(0)...
+[21:41:05.321]   Initialize(0) = 3 (0x0003)
+[21:41:05.321] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:05.811] >> CHECK_READER
+[21:41:05.817]   Readers: BIT4ID miniLector EVO 0||
+[21:41:05.817] Windows readers: True
+[21:41:05.822]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:05.822]   ✓ CARTA PRESENTE in slot 0!
+[21:41:05.822]   Trying Initialize(0)...
+[21:41:05.823]   Initialize(0) = 3 (0x0003)
+[21:41:05.823] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:06.187] >> CHECK_READER
+[21:41:06.194]   Readers: BIT4ID miniLector EVO 0||
+[21:41:06.194] Windows readers: True
+[21:41:06.199]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:06.199]   ✓ CARTA PRESENTE in slot 0!
+[21:41:06.199]   Trying Initialize(0)...
+[21:41:06.199]   Initialize(0) = 3 (0x0003)
+[21:41:06.199] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:06.325] >> CHECK_READER
+[21:41:06.328]   Readers: BIT4ID miniLector EVO 0||
+[21:41:06.328] Windows readers: True
+[21:41:06.332]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:06.332]   ✓ CARTA PRESENTE in slot 0!
+[21:41:06.332]   Trying Initialize(0)...
+[21:41:06.332]   Initialize(0) = 3 (0x0003)
+[21:41:06.333] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:06.469] >> VERIFY_PIN:75399990
+[21:41:06.481] VerifyPin: slot=0, pin=******** (length=8)
+[21:41:06.484]   isCardIn(0) = 32 (PRESENT)
+[21:41:06.484]   Initialize = 3
+[21:41:06.485]   BeginTransactionML = 0
+[21:41:06.534]   VerifyPINML(nPIN=1, pin=***, slot=0) = 27272 (0x6A88)
+[21:41:06.534]   nPIN=1 failed with 0x6A88, trying nPIN=0...
+[21:41:06.534]   VerifyPINML(nPIN=0, pin=***, slot=0) = 65535 (0xFFFF)
+[21:41:06.539]   EndTransactionML done
+[21:41:06.539] << {"success":true,"verified":false,"error":"Errore verifica PIN: 0xFFFF","errorCode":65535}
+[21:41:06.841] >> CHECK_READER
+[21:41:06.848]   Readers: BIT4ID miniLector EVO 0||
+[21:41:06.849] Windows readers: True
+[21:41:06.857]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:06.857]   ✓ CARTA PRESENTE in slot 0!
+[21:41:06.857]   Trying Initialize(0)...
+[21:41:06.858]   Initialize(0) = 3 (0x0003)
+[21:41:06.858] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:07.342] >> CHECK_READER
+[21:41:07.348]   Readers: BIT4ID miniLector EVO 0||
+[21:41:07.349] Windows readers: True
+[21:41:07.353]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:07.353]   ✓ CARTA PRESENTE in slot 0!
+[21:41:07.353]   Trying Initialize(0)...
+[21:41:07.354]   Initialize(0) = 3 (0x0003)
+[21:41:07.354] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:07.846] >> CHECK_READER
+[21:41:07.857]   Readers: BIT4ID miniLector EVO 0||
+[21:41:07.857] Windows readers: True
+[21:41:07.865]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:07.866]   ✓ CARTA PRESENTE in slot 0!
+[21:41:07.866]   Trying Initialize(0)...
+[21:41:07.866]   Initialize(0) = 3 (0x0003)
+[21:41:07.866] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:08.360] >> CHECK_READER
+[21:41:08.367]   Readers: BIT4ID miniLector EVO 0||
+[21:41:08.367] Windows readers: True
+[21:41:08.373]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:08.373]   ✓ CARTA PRESENTE in slot 0!
+[21:41:08.373]   Trying Initialize(0)...
+[21:41:08.374]   Initialize(0) = 3 (0x0003)
+[21:41:08.374] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:08.875] >> CHECK_READER
+[21:41:08.884]   Readers: BIT4ID miniLector EVO 0||
+[21:41:08.884] Windows readers: True
+[21:41:08.891]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:08.891]   ✓ CARTA PRESENTE in slot 0!
+[21:41:08.891]   Trying Initialize(0)...
+[21:41:08.892]   Initialize(0) = 3 (0x0003)
+[21:41:08.892] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:09.185] >> CHECK_READER
+[21:41:09.190]   Readers: BIT4ID miniLector EVO 0||
+[21:41:09.190] Windows readers: True
+[21:41:09.195]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:09.195]   ✓ CARTA PRESENTE in slot 0!
+[21:41:09.195]   Trying Initialize(0)...
+[21:41:09.196]   Initialize(0) = 3 (0x0003)
+[21:41:09.196] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:09.390] >> CHECK_READER
+[21:41:09.396]   Readers: BIT4ID miniLector EVO 0||
+[21:41:09.396] Windows readers: True
+[21:41:09.401]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:09.401]   ✓ CARTA PRESENTE in slot 0!
+[21:41:09.401]   Trying Initialize(0)...
+[21:41:09.402]   Initialize(0) = 3 (0x0003)
+[21:41:09.402] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:09.899] >> CHECK_READER
+[21:41:09.904]   Readers: BIT4ID miniLector EVO 0||
+[21:41:09.904] Windows readers: True
+[21:41:09.909]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:09.909]   ✓ CARTA PRESENTE in slot 0!
+[21:41:09.909]   Trying Initialize(0)...
+[21:41:09.910]   Initialize(0) = 3 (0x0003)
+[21:41:09.910] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:10.410] >> CHECK_READER
+[21:41:10.413]   Readers: BIT4ID miniLector EVO 0||
+[21:41:10.413] Windows readers: True
+[21:41:10.416]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:10.416]   ✓ CARTA PRESENTE in slot 0!
+[21:41:10.416]   Trying Initialize(0)...
+[21:41:10.416]   Initialize(0) = 3 (0x0003)
+[21:41:10.416] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:10.924] >> CHECK_READER
+[21:41:10.926]   Readers: BIT4ID miniLector EVO 0||
+[21:41:10.926] Windows readers: True
+[21:41:10.928]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:10.928]   ✓ CARTA PRESENTE in slot 0!
+[21:41:10.928]   Trying Initialize(0)...
+[21:41:10.928]   Initialize(0) = 3 (0x0003)
+[21:41:10.929] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:11.428] >> CHECK_READER
+[21:41:11.430]   Readers: BIT4ID miniLector EVO 0||
+[21:41:11.431] Windows readers: True
+[21:41:11.435]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:11.435]   ✓ CARTA PRESENTE in slot 0!
+[21:41:11.435]   Trying Initialize(0)...
+[21:41:11.435]   Initialize(0) = 3 (0x0003)
+[21:41:11.435] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:11.942] >> CHECK_READER
+[21:41:11.944]   Readers: BIT4ID miniLector EVO 0||
+[21:41:11.944] Windows readers: True
+[21:41:11.946]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:11.946]   ✓ CARTA PRESENTE in slot 0!
+[21:41:11.946]   Trying Initialize(0)...
+[21:41:11.947]   Initialize(0) = 3 (0x0003)
+[21:41:11.947] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:12.302] >> CHECK_READER
+[21:41:12.304]   Readers: BIT4ID miniLector EVO 0||
+[21:41:12.304] Windows readers: True
+[21:41:12.307]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:12.307]   ✓ CARTA PRESENTE in slot 0!
+[21:41:12.307]   Trying Initialize(0)...
+[21:41:12.307]   Initialize(0) = 3 (0x0003)
+[21:41:12.307] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:12.443] >> CHECK_READER
+[21:41:12.446]   Readers: BIT4ID miniLector EVO 0||
+[21:41:12.446] Windows readers: True
+[21:41:12.449]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:12.449]   ✓ CARTA PRESENTE in slot 0!
+[21:41:12.449]   Trying Initialize(0)...
+[21:41:12.449]   Initialize(0) = 3 (0x0003)
+[21:41:12.449] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:12.955] >> CHECK_READER
+[21:41:12.958]   Readers: BIT4ID miniLector EVO 0||
+[21:41:12.958] Windows readers: True
+[21:41:12.962]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:12.962]   ✓ CARTA PRESENTE in slot 0!
+[21:41:12.962]   Trying Initialize(0)...
+[21:41:12.962]   Initialize(0) = 3 (0x0003)
+[21:41:12.962] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:13.466] >> CHECK_READER
+[21:41:13.471]   Readers: BIT4ID miniLector EVO 0||
+[21:41:13.471] Windows readers: True
+[21:41:13.476]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:13.476]   ✓ CARTA PRESENTE in slot 0!
+[21:41:13.476]   Trying Initialize(0)...
+[21:41:13.477]   Initialize(0) = 3 (0x0003)
+[21:41:13.477] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:13.981] >> CHECK_READER
+[21:41:13.983]   Readers: BIT4ID miniLector EVO 0||
+[21:41:13.983] Windows readers: True
+[21:41:13.985]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:13.985]   ✓ CARTA PRESENTE in slot 0!
+[21:41:13.985]   Trying Initialize(0)...
+[21:41:13.986]   Initialize(0) = 3 (0x0003)
+[21:41:13.986] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:14.483] >> CHECK_READER
+[21:41:14.486]   Readers: BIT4ID miniLector EVO 0||
+[21:41:14.486] Windows readers: True
+[21:41:14.488]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:14.488]   ✓ CARTA PRESENTE in slot 0!
+[21:41:14.488]   Trying Initialize(0)...
+[21:41:14.489]   Initialize(0) = 3 (0x0003)
+[21:41:14.489] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:14.997] >> CHECK_READER
+[21:41:14.999]   Readers: BIT4ID miniLector EVO 0||
+[21:41:15.000] Windows readers: True
+[21:41:15.002]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:15.002]   ✓ CARTA PRESENTE in slot 0!
+[21:41:15.002]   Trying Initialize(0)...
+[21:41:15.003]   Initialize(0) = 3 (0x0003)
+[21:41:15.003] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:15.176] >> CHECK_READER
+[21:41:15.178]   Readers: BIT4ID miniLector EVO 0||
+[21:41:15.178] Windows readers: True
+[21:41:15.181]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:15.181]   ✓ CARTA PRESENTE in slot 0!
+[21:41:15.181]   Trying Initialize(0)...
+[21:41:15.181]   Initialize(0) = 3 (0x0003)
+[21:41:15.181] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:15.512] >> CHECK_READER
+[21:41:15.515]   Readers: BIT4ID miniLector EVO 0||
+[21:41:15.515] Windows readers: True
+[21:41:15.519]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:15.519]   ✓ CARTA PRESENTE in slot 0!
+[21:41:15.519]   Trying Initialize(0)...
+[21:41:15.520]   Initialize(0) = 3 (0x0003)
+[21:41:15.520] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:16.027] >> CHECK_READER
+[21:41:16.030]   Readers: BIT4ID miniLector EVO 0||
+[21:41:16.030] Windows readers: True
+[21:41:16.033]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:16.033]   ✓ CARTA PRESENTE in slot 0!
+[21:41:16.033]   Trying Initialize(0)...
+[21:41:16.033]   Initialize(0) = 3 (0x0003)
+[21:41:16.033] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:16.528] >> CHECK_READER
+[21:41:16.531]   Readers: BIT4ID miniLector EVO 0||
+[21:41:16.531] Windows readers: True
+[21:41:16.533]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:16.533]   ✓ CARTA PRESENTE in slot 0!
+[21:41:16.533]   Trying Initialize(0)...
+[21:41:16.533]   Initialize(0) = 3 (0x0003)
+[21:41:16.533] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:17.031] >> CHECK_READER
+[21:41:17.033]   Readers: BIT4ID miniLector EVO 0||
+[21:41:17.033] Windows readers: True
+[21:41:17.037]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:17.037]   ✓ CARTA PRESENTE in slot 0!
+[21:41:17.037]   Trying Initialize(0)...
+[21:41:17.037]   Initialize(0) = 3 (0x0003)
+[21:41:17.037] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:17.532] >> CHECK_READER
+[21:41:17.534]   Readers: BIT4ID miniLector EVO 0||
+[21:41:17.534] Windows readers: True
+[21:41:17.537]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:17.537]   ✓ CARTA PRESENTE in slot 0!
+[21:41:17.537]   Trying Initialize(0)...
+[21:41:17.537]   Initialize(0) = 3 (0x0003)
+[21:41:17.537] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:18.035] >> CHECK_READER
+[21:41:18.037]   Readers: BIT4ID miniLector EVO 0||
+[21:41:18.037] Windows readers: True
+[21:41:18.040]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:18.040]   ✓ CARTA PRESENTE in slot 0!
+[21:41:18.040]   Trying Initialize(0)...
+[21:41:18.040]   Initialize(0) = 3 (0x0003)
+[21:41:18.040] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:18.190] >> CHECK_READER
+[21:41:18.192]   Readers: BIT4ID miniLector EVO 0||
+[21:41:18.192] Windows readers: True
+[21:41:18.194]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:18.194]   ✓ CARTA PRESENTE in slot 0!
+[21:41:18.194]   Trying Initialize(0)...
+[21:41:18.194]   Initialize(0) = 3 (0x0003)
+[21:41:18.195] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:18.549] >> CHECK_READER
+[21:41:18.553]   Readers: BIT4ID miniLector EVO 0||
+[21:41:18.554] Windows readers: True
+[21:41:18.556]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:18.556]   ✓ CARTA PRESENTE in slot 0!
+[21:41:18.556]   Trying Initialize(0)...
+[21:41:18.557]   Initialize(0) = 3 (0x0003)
+[21:41:18.557] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:19.062] >> CHECK_READER
+[21:41:19.064]   Readers: BIT4ID miniLector EVO 0||
+[21:41:19.064] Windows readers: True
+[21:41:19.066]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:19.066]   ✓ CARTA PRESENTE in slot 0!
+[21:41:19.066]   Trying Initialize(0)...
+[21:41:19.066]   Initialize(0) = 3 (0x0003)
+[21:41:19.066] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:19.576] >> CHECK_READER
+[21:41:19.578]   Readers: BIT4ID miniLector EVO 0||
+[21:41:19.578] Windows readers: True
+[21:41:19.580]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:19.580]   ✓ CARTA PRESENTE in slot 0!
+[21:41:19.580]   Trying Initialize(0)...
+[21:41:19.580]   Initialize(0) = 3 (0x0003)
+[21:41:19.580] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:20.092] >> CHECK_READER
+[21:41:20.095]   Readers: BIT4ID miniLector EVO 0||
+[21:41:20.095] Windows readers: True
+[21:41:20.098]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:20.098]   ✓ CARTA PRESENTE in slot 0!
+[21:41:20.098]   Trying Initialize(0)...
+[21:41:20.098]   Initialize(0) = 3 (0x0003)
+[21:41:20.098] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:20.605] >> CHECK_READER
+[21:41:20.607]   Readers: BIT4ID miniLector EVO 0||
+[21:41:20.607] Windows readers: True
+[21:41:20.609]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:20.609]   ✓ CARTA PRESENTE in slot 0!
+[21:41:20.610]   Trying Initialize(0)...
+[21:41:20.610]   Initialize(0) = 3 (0x0003)
+[21:41:20.610] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:21.110] >> CHECK_READER
+[21:41:21.112]   Readers: BIT4ID miniLector EVO 0||
+[21:41:21.112] Windows readers: True
+[21:41:21.114]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:21.114]   ✓ CARTA PRESENTE in slot 0!
+[21:41:21.114]   Trying Initialize(0)...
+[21:41:21.115]   Initialize(0) = 3 (0x0003)
+[21:41:21.115] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:21.185] >> CHECK_READER
+[21:41:21.187]   Readers: BIT4ID miniLector EVO 0||
+[21:41:21.187] Windows readers: True
+[21:41:21.189]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:21.189]   ✓ CARTA PRESENTE in slot 0!
+[21:41:21.189]   Trying Initialize(0)...
+[21:41:21.189]   Initialize(0) = 3 (0x0003)
+[21:41:21.189] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:21.610] >> CHECK_READER
+[21:41:21.612]   Readers: BIT4ID miniLector EVO 0||
+[21:41:21.613] Windows readers: True
+[21:41:21.615]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:21.615]   ✓ CARTA PRESENTE in slot 0!
+[21:41:21.615]   Trying Initialize(0)...
+[21:41:21.616]   Initialize(0) = 3 (0x0003)
+[21:41:21.616] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:22.121] >> CHECK_READER
+[21:41:22.124]   Readers: BIT4ID miniLector EVO 0||
+[21:41:22.124] Windows readers: True
+[21:41:22.127]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:22.127]   ✓ CARTA PRESENTE in slot 0!
+[21:41:22.127]   Trying Initialize(0)...
+[21:41:22.128]   Initialize(0) = 3 (0x0003)
+[21:41:22.128] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:22.636] >> CHECK_READER
+[21:41:22.638]   Readers: BIT4ID miniLector EVO 0||
+[21:41:22.638] Windows readers: True
+[21:41:22.640]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:22.640]   ✓ CARTA PRESENTE in slot 0!
+[21:41:22.640]   Trying Initialize(0)...
+[21:41:22.641]   Initialize(0) = 3 (0x0003)
+[21:41:22.641] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:23.137] >> CHECK_READER
+[21:41:23.139]   Readers: BIT4ID miniLector EVO 0||
+[21:41:23.139] Windows readers: True
+[21:41:23.142]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:23.142]   ✓ CARTA PRESENTE in slot 0!
+[21:41:23.142]   Trying Initialize(0)...
+[21:41:23.142]   Initialize(0) = 3 (0x0003)
+[21:41:23.142] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:23.652] >> CHECK_READER
+[21:41:23.655]   Readers: BIT4ID miniLector EVO 0||
+[21:41:23.656] Windows readers: True
+[21:41:23.659]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:23.659]   ✓ CARTA PRESENTE in slot 0!
+[21:41:23.659]   Trying Initialize(0)...
+[21:41:23.659]   Initialize(0) = 3 (0x0003)
+[21:41:23.659] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:24.168] >> CHECK_READER
+[21:41:24.171]   Readers: BIT4ID miniLector EVO 0||
+[21:41:24.171] Windows readers: True
+[21:41:24.174]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:24.174]   ✓ CARTA PRESENTE in slot 0!
+[21:41:24.174]   Trying Initialize(0)...
+[21:41:24.175]   Initialize(0) = 3 (0x0003)
+[21:41:24.175] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:24.307] >> CHECK_READER
+[21:41:24.310]   Readers: BIT4ID miniLector EVO 0||
+[21:41:24.310] Windows readers: True
+[21:41:24.314]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:24.314]   ✓ CARTA PRESENTE in slot 0!
+[21:41:24.314]   Trying Initialize(0)...
+[21:41:24.314]   Initialize(0) = 3 (0x0003)
+[21:41:24.314] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:24.679] >> CHECK_READER
+[21:41:24.681]   Readers: BIT4ID miniLector EVO 0||
+[21:41:24.681] Windows readers: True
+[21:41:24.684]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:24.684]   ✓ CARTA PRESENTE in slot 0!
+[21:41:24.684]   Trying Initialize(0)...
+[21:41:24.684]   Initialize(0) = 3 (0x0003)
+[21:41:24.684] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:25.181] >> CHECK_READER
+[21:41:25.184]   Readers: BIT4ID miniLector EVO 0||
+[21:41:25.184] Windows readers: True
+[21:41:25.189]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:25.189]   ✓ CARTA PRESENTE in slot 0!
+[21:41:25.189]   Trying Initialize(0)...
+[21:41:25.189]   Initialize(0) = 3 (0x0003)
+[21:41:25.189] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:25.694] >> CHECK_READER
+[21:41:25.696]   Readers: BIT4ID miniLector EVO 0||
+[21:41:25.696] Windows readers: True
+[21:41:25.699]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:25.699]   ✓ CARTA PRESENTE in slot 0!
+[21:41:25.699]   Trying Initialize(0)...
+[21:41:25.699]   Initialize(0) = 3 (0x0003)
+[21:41:25.700] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:26.196] >> CHECK_READER
+[21:41:26.201]   Readers: BIT4ID miniLector EVO 0||
+[21:41:26.201] Windows readers: True
+[21:41:26.207]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:26.207]   ✓ CARTA PRESENTE in slot 0!
+[21:41:26.207]   Trying Initialize(0)...
+[21:41:26.207]   Initialize(0) = 3 (0x0003)
+[21:41:26.207] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:26.712] >> CHECK_READER
+[21:41:26.720]   Readers: BIT4ID miniLector EVO 0||
+[21:41:26.720] Windows readers: True
+[21:41:26.729]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:26.729]   ✓ CARTA PRESENTE in slot 0!
+[21:41:26.729]   Trying Initialize(0)...
+[21:41:26.730]   Initialize(0) = 3 (0x0003)
+[21:41:26.730] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:27.229] >> CHECK_READER
+[21:41:27.240]   Readers: BIT4ID miniLector EVO 0||
+[21:41:27.240] Windows readers: True
+[21:41:27.246]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:27.246]   ✓ CARTA PRESENTE in slot 0!
+[21:41:27.246]   Trying Initialize(0)...
+[21:41:27.247]   Initialize(0) = 3 (0x0003)
+[21:41:27.247] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:27.302] >> CHECK_READER
+[21:41:27.304]   Readers: BIT4ID miniLector EVO 0||
+[21:41:27.304] Windows readers: True
+[21:41:27.307]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:27.307]   ✓ CARTA PRESENTE in slot 0!
+[21:41:27.307]   Trying Initialize(0)...
+[21:41:27.307]   Initialize(0) = 3 (0x0003)
+[21:41:27.307] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:27.739] >> CHECK_READER
+[21:41:27.751]   Readers: BIT4ID miniLector EVO 0||
+[21:41:27.751] Windows readers: True
+[21:41:27.760]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:27.760]   ✓ CARTA PRESENTE in slot 0!
+[21:41:27.760]   Trying Initialize(0)...
+[21:41:27.760]   Initialize(0) = 3 (0x0003)
+[21:41:27.760] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:28.248] >> CHECK_READER
+[21:41:28.251]   Readers: BIT4ID miniLector EVO 0||
+[21:41:28.251] Windows readers: True
+[21:41:28.254]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:28.254]   ✓ CARTA PRESENTE in slot 0!
+[21:41:28.254]   Trying Initialize(0)...
+[21:41:28.254]   Initialize(0) = 3 (0x0003)
+[21:41:28.254] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:28.749] >> CHECK_READER
+[21:41:28.751]   Readers: BIT4ID miniLector EVO 0||
+[21:41:28.752] Windows readers: True
+[21:41:28.754]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:28.754]   ✓ CARTA PRESENTE in slot 0!
+[21:41:28.754]   Trying Initialize(0)...
+[21:41:28.755]   Initialize(0) = 3 (0x0003)
+[21:41:28.755] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:29.268] >> CHECK_READER
+[21:41:29.275]   Readers: BIT4ID miniLector EVO 0||
+[21:41:29.275] Windows readers: True
+[21:41:29.283]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:29.283]   ✓ CARTA PRESENTE in slot 0!
+[21:41:29.283]   Trying Initialize(0)...
+[21:41:29.284]   Initialize(0) = 3 (0x0003)
+[21:41:29.284] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:29.777] >> CHECK_READER
+[21:41:29.781]   Readers: BIT4ID miniLector EVO 0||
+[21:41:29.781] Windows readers: True
+[21:41:29.784]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:29.784]   ✓ CARTA PRESENTE in slot 0!
+[21:41:29.784]   Trying Initialize(0)...
+[21:41:29.784]   Initialize(0) = 3 (0x0003)
+[21:41:29.784] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:30.295] >> CHECK_READER
+[21:41:30.304]   Readers: BIT4ID miniLector EVO 0||
+[21:41:30.304] Windows readers: True
+[21:41:30.311]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:30.311]   ✓ CARTA PRESENTE in slot 0!
+[21:41:30.311]   Trying Initialize(0)...
+[21:41:30.312]   Initialize(0) = 3 (0x0003)
+[21:41:30.312] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:30.338] >> CHECK_READER
+[21:41:30.341]   Readers: BIT4ID miniLector EVO 0||
+[21:41:30.341] Windows readers: True
+[21:41:30.343]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:30.343]   ✓ CARTA PRESENTE in slot 0!
+[21:41:30.343]   Trying Initialize(0)...
+[21:41:30.343]   Initialize(0) = 3 (0x0003)
+[21:41:30.344] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:30.796] >> CHECK_READER
+[21:41:30.806]   Readers: BIT4ID miniLector EVO 0||
+[21:41:30.807] Windows readers: True
+[21:41:30.816]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:30.816]   ✓ CARTA PRESENTE in slot 0!
+[21:41:30.816]   Trying Initialize(0)...
+[21:41:30.817]   Initialize(0) = 3 (0x0003)
+[21:41:30.817] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:31.309] >> CHECK_READER
+[21:41:31.311]   Readers: BIT4ID miniLector EVO 0||
+[21:41:31.311] Windows readers: True
+[21:41:31.314]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:31.314]   ✓ CARTA PRESENTE in slot 0!
+[21:41:31.314]   Trying Initialize(0)...
+[21:41:31.314]   Initialize(0) = 3 (0x0003)
+[21:41:31.314] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:31.814] >> CHECK_READER
+[21:41:31.817]   Readers: BIT4ID miniLector EVO 0||
+[21:41:31.817] Windows readers: True
+[21:41:31.820]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:31.820]   ✓ CARTA PRESENTE in slot 0!
+[21:41:31.820]   Trying Initialize(0)...
+[21:41:31.821]   Initialize(0) = 3 (0x0003)
+[21:41:31.821] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:32.329] >> CHECK_READER
+[21:41:32.334]   Readers: BIT4ID miniLector EVO 0||
+[21:41:32.334] Windows readers: True
+[21:41:32.339]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:32.339]   ✓ CARTA PRESENTE in slot 0!
+[21:41:32.339]   Trying Initialize(0)...
+[21:41:32.339]   Initialize(0) = 3 (0x0003)
+[21:41:32.339] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:32.847] >> CHECK_READER
+[21:41:32.855]   Readers: BIT4ID miniLector EVO 0||
+[21:41:32.855] Windows readers: True
+[21:41:32.864]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:32.864]   ✓ CARTA PRESENTE in slot 0!
+[21:41:32.864]   Trying Initialize(0)...
+[21:41:32.865]   Initialize(0) = 3 (0x0003)
+[21:41:32.865] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:33.316] >> CHECK_READER
+[21:41:33.325]   Readers: BIT4ID miniLector EVO 0||
+[21:41:33.325] Windows readers: True
+[21:41:33.335]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:33.335]   ✓ CARTA PRESENTE in slot 0!
+[21:41:33.335]   Trying Initialize(0)...
+[21:41:33.336]   Initialize(0) = 3 (0x0003)
+[21:41:33.336] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:33.358] >> CHECK_READER
+[21:41:33.362]   Readers: BIT4ID miniLector EVO 0||
+[21:41:33.362] Windows readers: True
+[21:41:33.367]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:33.367]   ✓ CARTA PRESENTE in slot 0!
+[21:41:33.367]   Trying Initialize(0)...
+[21:41:33.368]   Initialize(0) = 3 (0x0003)
+[21:41:33.368] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:33.876] >> CHECK_READER
+[21:41:33.883]   Readers: BIT4ID miniLector EVO 0||
+[21:41:33.884] Windows readers: True
+[21:41:33.894]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:33.894]   ✓ CARTA PRESENTE in slot 0!
+[21:41:33.894]   Trying Initialize(0)...
+[21:41:33.895]   Initialize(0) = 3 (0x0003)
+[21:41:33.895] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:34.385] >> CHECK_READER
+[21:41:34.394]   Readers: BIT4ID miniLector EVO 0||
+[21:41:34.395] Windows readers: True
+[21:41:34.404]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:34.404]   ✓ CARTA PRESENTE in slot 0!
+[21:41:34.404]   Trying Initialize(0)...
+[21:41:34.405]   Initialize(0) = 3 (0x0003)
+[21:41:34.405] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:34.898] >> CHECK_READER
+[21:41:34.905]   Readers: BIT4ID miniLector EVO 0||
+[21:41:34.905] Windows readers: True
+[21:41:34.915]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:34.915]   ✓ CARTA PRESENTE in slot 0!
+[21:41:34.915]   Trying Initialize(0)...
+[21:41:34.916]   Initialize(0) = 3 (0x0003)
+[21:41:34.916] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:35.414] >> CHECK_READER
+[21:41:35.421]   Readers: BIT4ID miniLector EVO 0||
+[21:41:35.421] Windows readers: True
+[21:41:35.427]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:35.428]   ✓ CARTA PRESENTE in slot 0!
+[21:41:35.428]   Trying Initialize(0)...
+[21:41:35.428]   Initialize(0) = 3 (0x0003)
+[21:41:35.428] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:35.922] >> CHECK_READER
+[21:41:35.925]   Readers: BIT4ID miniLector EVO 0||
+[21:41:35.925] Windows readers: True
+[21:41:35.929]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:35.929]   ✓ CARTA PRESENTE in slot 0!
+[21:41:35.929]   Trying Initialize(0)...
+[21:41:35.929]   Initialize(0) = 3 (0x0003)
+[21:41:35.929] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:36.300] >> CHECK_READER
+[21:41:36.302]   Readers: BIT4ID miniLector EVO 0||
+[21:41:36.303] Windows readers: True
+[21:41:36.305]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:36.305]   ✓ CARTA PRESENTE in slot 0!
+[21:41:36.305]   Trying Initialize(0)...
+[21:41:36.305]   Initialize(0) = 3 (0x0003)
+[21:41:36.305] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:36.426] >> CHECK_READER
+[21:41:36.429]   Readers: BIT4ID miniLector EVO 0||
+[21:41:36.429] Windows readers: True
+[21:41:36.432]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:36.432]   ✓ CARTA PRESENTE in slot 0!
+[21:41:36.432]   Trying Initialize(0)...
+[21:41:36.433]   Initialize(0) = 3 (0x0003)
+[21:41:36.433] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:36.927] >> CHECK_READER
+[21:41:36.930]   Readers: BIT4ID miniLector EVO 0||
+[21:41:36.930] Windows readers: True
+[21:41:36.933]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:36.933]   ✓ CARTA PRESENTE in slot 0!
+[21:41:36.933]   Trying Initialize(0)...
+[21:41:36.933]   Initialize(0) = 3 (0x0003)
+[21:41:36.933] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:37.426] >> CHECK_READER
+[21:41:37.429]   Readers: BIT4ID miniLector EVO 0||
+[21:41:37.429] Windows readers: True
+[21:41:37.431]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:37.431]   ✓ CARTA PRESENTE in slot 0!
+[21:41:37.431]   Trying Initialize(0)...
+[21:41:37.432]   Initialize(0) = 3 (0x0003)
+[21:41:37.432] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:37.938] >> CHECK_READER
+[21:41:37.940]   Readers: BIT4ID miniLector EVO 0||
+[21:41:37.940] Windows readers: True
+[21:41:37.942]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:37.942]   ✓ CARTA PRESENTE in slot 0!
+[21:41:37.942]   Trying Initialize(0)...
+[21:41:37.942]   Initialize(0) = 3 (0x0003)
+[21:41:37.942] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:38.452] >> CHECK_READER
+[21:41:38.455]   Readers: BIT4ID miniLector EVO 0||
+[21:41:38.455] Windows readers: True
+[21:41:38.459]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:38.459]   ✓ CARTA PRESENTE in slot 0!
+[21:41:38.459]   Trying Initialize(0)...
+[21:41:38.459]   Initialize(0) = 3 (0x0003)
+[21:41:38.460] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:38.967] >> CHECK_READER
+[21:41:38.970]   Readers: BIT4ID miniLector EVO 0||
+[21:41:38.970] Windows readers: True
+[21:41:38.973]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:38.973]   ✓ CARTA PRESENTE in slot 0!
+[21:41:38.973]   Trying Initialize(0)...
+[21:41:38.973]   Initialize(0) = 3 (0x0003)
+[21:41:38.973] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:39.307] >> CHECK_READER
+[21:41:39.309]   Readers: BIT4ID miniLector EVO 0||
+[21:41:39.309] Windows readers: True
+[21:41:39.311]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:39.311]   ✓ CARTA PRESENTE in slot 0!
+[21:41:39.311]   Trying Initialize(0)...
+[21:41:39.312]   Initialize(0) = 3 (0x0003)
+[21:41:39.312] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:39.475] >> CHECK_READER
+[21:41:39.478]   Readers: BIT4ID miniLector EVO 0||
+[21:41:39.478] Windows readers: True
+[21:41:39.480]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:39.480]   ✓ CARTA PRESENTE in slot 0!
+[21:41:39.480]   Trying Initialize(0)...
+[21:41:39.480]   Initialize(0) = 3 (0x0003)
+[21:41:39.480] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:39.976] >> CHECK_READER
+[21:41:39.979]   Readers: BIT4ID miniLector EVO 0||
+[21:41:39.980] Windows readers: True
+[21:41:39.983]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:39.983]   ✓ CARTA PRESENTE in slot 0!
+[21:41:39.983]   Trying Initialize(0)...
+[21:41:39.983]   Initialize(0) = 3 (0x0003)
+[21:41:39.983] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:40.492] >> CHECK_READER
+[21:41:40.503]   Readers: BIT4ID miniLector EVO 0||
+[21:41:40.504] Windows readers: True
+[21:41:40.512]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:40.512]   ✓ CARTA PRESENTE in slot 0!
+[21:41:40.512]   Trying Initialize(0)...
+[21:41:40.513]   Initialize(0) = 3 (0x0003)
+[21:41:40.513] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:41.005] >> CHECK_READER
+[21:41:41.013]   Readers: BIT4ID miniLector EVO 0||
+[21:41:41.013] Windows readers: True
+[21:41:41.021]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:41.021]   ✓ CARTA PRESENTE in slot 0!
+[21:41:41.021]   Trying Initialize(0)...
+[21:41:41.022]   Initialize(0) = 3 (0x0003)
+[21:41:41.022] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:41.518] >> CHECK_READER
+[21:41:41.529]   Readers: BIT4ID miniLector EVO 0||
+[21:41:41.529] Windows readers: True
+[21:41:41.537]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:41.537]   ✓ CARTA PRESENTE in slot 0!
+[21:41:41.537]   Trying Initialize(0)...
+[21:41:41.537]   Initialize(0) = 3 (0x0003)
+[21:41:41.538] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:42.033] >> CHECK_READER
+[21:41:42.040]   Readers: BIT4ID miniLector EVO 0||
+[21:41:42.040] Windows readers: True
+[21:41:42.048]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:42.048]   ✓ CARTA PRESENTE in slot 0!
+[21:41:42.048]   Trying Initialize(0)...
+[21:41:42.049]   Initialize(0) = 3 (0x0003)
+[21:41:42.049] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:42.317] >> CHECK_READER
+[21:41:42.325]   Readers: BIT4ID miniLector EVO 0||
+[21:41:42.325] Windows readers: True
+[21:41:42.331]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:42.331]   ✓ CARTA PRESENTE in slot 0!
+[21:41:42.331]   Trying Initialize(0)...
+[21:41:42.332]   Initialize(0) = 3 (0x0003)
+[21:41:42.332] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:42.546] >> CHECK_READER
+[21:41:42.552]   Readers: BIT4ID miniLector EVO 0||
+[21:41:42.553] Windows readers: True
+[21:41:42.561]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:42.561]   ✓ CARTA PRESENTE in slot 0!
+[21:41:42.561]   Trying Initialize(0)...
+[21:41:42.562]   Initialize(0) = 3 (0x0003)
+[21:41:42.562] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:43.060] >> CHECK_READER
+[21:41:43.066]   Readers: BIT4ID miniLector EVO 0||
+[21:41:43.067] Windows readers: True
+[21:41:43.073]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:43.073]   ✓ CARTA PRESENTE in slot 0!
+[21:41:43.073]   Trying Initialize(0)...
+[21:41:43.074]   Initialize(0) = 3 (0x0003)
+[21:41:43.074] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:43.575] >> CHECK_READER
+[21:41:43.582]   Readers: BIT4ID miniLector EVO 0||
+[21:41:43.582] Windows readers: True
+[21:41:43.591]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:43.591]   ✓ CARTA PRESENTE in slot 0!
+[21:41:43.591]   Trying Initialize(0)...
+[21:41:43.592]   Initialize(0) = 3 (0x0003)
+[21:41:43.592] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:44.090] >> CHECK_READER
+[21:41:44.095]   Readers: BIT4ID miniLector EVO 0||
+[21:41:44.096] Windows readers: True
+[21:41:44.098]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:44.098]   ✓ CARTA PRESENTE in slot 0!
+[21:41:44.098]   Trying Initialize(0)...
+[21:41:44.099]   Initialize(0) = 3 (0x0003)
+[21:41:44.099] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:44.593] >> CHECK_READER
+[21:41:44.599]   Readers: BIT4ID miniLector EVO 0||
+[21:41:44.599] Windows readers: True
+[21:41:44.608]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:44.608]   ✓ CARTA PRESENTE in slot 0!
+[21:41:44.608]   Trying Initialize(0)...
+[21:41:44.608]   Initialize(0) = 3 (0x0003)
+[21:41:44.609] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:45.106] >> CHECK_READER
+[21:41:45.111]   Readers: BIT4ID miniLector EVO 0||
+[21:41:45.111] Windows readers: True
+[21:41:45.116]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:45.116]   ✓ CARTA PRESENTE in slot 0!
+[21:41:45.116]   Trying Initialize(0)...
+[21:41:45.116]   Initialize(0) = 3 (0x0003)
+[21:41:45.117] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:45.308] >> CHECK_READER
+[21:41:45.311]   Readers: BIT4ID miniLector EVO 0||
+[21:41:45.311] Windows readers: True
+[21:41:45.314]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:45.314]   ✓ CARTA PRESENTE in slot 0!
+[21:41:45.314]   Trying Initialize(0)...
+[21:41:45.314]   Initialize(0) = 3 (0x0003)
+[21:41:45.314] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:45.621] >> CHECK_READER
+[21:41:45.628]   Readers: BIT4ID miniLector EVO 0||
+[21:41:45.628] Windows readers: True
+[21:41:45.636]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:45.636]   ✓ CARTA PRESENTE in slot 0!
+[21:41:45.636]   Trying Initialize(0)...
+[21:41:45.637]   Initialize(0) = 3 (0x0003)
+[21:41:45.637] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:46.121] >> CHECK_READER
+[21:41:46.123]   Readers: BIT4ID miniLector EVO 0||
+[21:41:46.123] Windows readers: True
+[21:41:46.125]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:46.125]   ✓ CARTA PRESENTE in slot 0!
+[21:41:46.125]   Trying Initialize(0)...
+[21:41:46.125]   Initialize(0) = 3 (0x0003)
+[21:41:46.125] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:46.634] >> CHECK_READER
+[21:41:46.636]   Readers: BIT4ID miniLector EVO 0||
+[21:41:46.636] Windows readers: True
+[21:41:46.638]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:46.638]   ✓ CARTA PRESENTE in slot 0!
+[21:41:46.638]   Trying Initialize(0)...
+[21:41:46.639]   Initialize(0) = 3 (0x0003)
+[21:41:46.639] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:47.138] >> CHECK_READER
+[21:41:47.145]   Readers: BIT4ID miniLector EVO 0||
+[21:41:47.146] Windows readers: True
+[21:41:47.154]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:47.155]   ✓ CARTA PRESENTE in slot 0!
+[21:41:47.155]   Trying Initialize(0)...
+[21:41:47.156]   Initialize(0) = 3 (0x0003)
+[21:41:47.157] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:47.653] >> CHECK_READER
+[21:41:47.660]   Readers: BIT4ID miniLector EVO 0||
+[21:41:47.660] Windows readers: True
+[21:41:47.666]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:47.666]   ✓ CARTA PRESENTE in slot 0!
+[21:41:47.666]   Trying Initialize(0)...
+[21:41:47.666]   Initialize(0) = 3 (0x0003)
+[21:41:47.666] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:48.167] >> CHECK_READER
+[21:41:48.169]   Readers: BIT4ID miniLector EVO 0||
+[21:41:48.169] Windows readers: True
+[21:41:48.172]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:48.172]   ✓ CARTA PRESENTE in slot 0!
+[21:41:48.172]   Trying Initialize(0)...
+[21:41:48.172]   Initialize(0) = 3 (0x0003)
+[21:41:48.172] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:48.309] >> CHECK_READER
+[21:41:48.312]   Readers: BIT4ID miniLector EVO 0||
+[21:41:48.312] Windows readers: True
+[21:41:48.315]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:48.315]   ✓ CARTA PRESENTE in slot 0!
+[21:41:48.315]   Trying Initialize(0)...
+[21:41:48.315]   Initialize(0) = 3 (0x0003)
+[21:41:48.315] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:48.669] >> CHECK_READER
+[21:41:48.674]   Readers: BIT4ID miniLector EVO 0||
+[21:41:48.674] Windows readers: True
+[21:41:48.679]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:48.679]   ✓ CARTA PRESENTE in slot 0!
+[21:41:48.679]   Trying Initialize(0)...
+[21:41:48.680]   Initialize(0) = 3 (0x0003)
+[21:41:48.680] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:49.185] >> CHECK_READER
+[21:41:49.193]   Readers: BIT4ID miniLector EVO 0||
+[21:41:49.193] Windows readers: True
+[21:41:49.201]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:49.201]   ✓ CARTA PRESENTE in slot 0!
+[21:41:49.201]   Trying Initialize(0)...
+[21:41:49.202]   Initialize(0) = 3 (0x0003)
+[21:41:49.202] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:49.694] >> CHECK_READER
+[21:41:49.696]   Readers: BIT4ID miniLector EVO 0||
+[21:41:49.696] Windows readers: True
+[21:41:49.698]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:49.698]   ✓ CARTA PRESENTE in slot 0!
+[21:41:49.698]   Trying Initialize(0)...
+[21:41:49.698]   Initialize(0) = 3 (0x0003)
+[21:41:49.699] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:50.198] >> CHECK_READER
+[21:41:50.206]   Readers: BIT4ID miniLector EVO 0||
+[21:41:50.207] Windows readers: True
+[21:41:50.215]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:50.215]   ✓ CARTA PRESENTE in slot 0!
+[21:41:50.215]   Trying Initialize(0)...
+[21:41:50.216]   Initialize(0) = 3 (0x0003)
+[21:41:50.216] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:50.712] >> CHECK_READER
+[21:41:50.716]   Readers: BIT4ID miniLector EVO 0||
+[21:41:50.716] Windows readers: True
+[21:41:50.721]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:50.721]   ✓ CARTA PRESENTE in slot 0!
+[21:41:50.721]   Trying Initialize(0)...
+[21:41:50.721]   Initialize(0) = 3 (0x0003)
+[21:41:50.721] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:51.218] >> CHECK_READER
+[21:41:51.220]   Readers: BIT4ID miniLector EVO 0||
+[21:41:51.220] Windows readers: True
+[21:41:51.222]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:51.222]   ✓ CARTA PRESENTE in slot 0!
+[21:41:51.222]   Trying Initialize(0)...
+[21:41:51.222]   Initialize(0) = 3 (0x0003)
+[21:41:51.222] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:51.313] >> CHECK_READER
+[21:41:51.316]   Readers: BIT4ID miniLector EVO 0||
+[21:41:51.316] Windows readers: True
+[21:41:51.319]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:51.319]   ✓ CARTA PRESENTE in slot 0!
+[21:41:51.319]   Trying Initialize(0)...
+[21:41:51.319]   Initialize(0) = 3 (0x0003)
+[21:41:51.319] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:51.717] >> CHECK_READER
+[21:41:51.719]   Readers: BIT4ID miniLector EVO 0||
+[21:41:51.719] Windows readers: True
+[21:41:51.721]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:51.721]   ✓ CARTA PRESENTE in slot 0!
+[21:41:51.721]   Trying Initialize(0)...
+[21:41:51.721]   Initialize(0) = 3 (0x0003)
+[21:41:51.721] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:52.222] >> CHECK_READER
+[21:41:52.230]   Readers: BIT4ID miniLector EVO 0||
+[21:41:52.230] Windows readers: True
+[21:41:52.238]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:52.239]   ✓ CARTA PRESENTE in slot 0!
+[21:41:52.239]   Trying Initialize(0)...
+[21:41:52.240]   Initialize(0) = 3 (0x0003)
+[21:41:52.240] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:52.734] >> CHECK_READER
+[21:41:52.742]   Readers: BIT4ID miniLector EVO 0||
+[21:41:52.742] Windows readers: True
+[21:41:52.752]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:52.752]   ✓ CARTA PRESENTE in slot 0!
+[21:41:52.752]   Trying Initialize(0)...
+[21:41:52.753]   Initialize(0) = 3 (0x0003)
+[21:41:52.753] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:53.248] >> CHECK_READER
+[21:41:53.258]   Readers: BIT4ID miniLector EVO 0||
+[21:41:53.258] Windows readers: True
+[21:41:53.266]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:53.266]   ✓ CARTA PRESENTE in slot 0!
+[21:41:53.266]   Trying Initialize(0)...
+[21:41:53.266]   Initialize(0) = 3 (0x0003)
+[21:41:53.266] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:53.765] >> CHECK_READER
+[21:41:53.771]   Readers: BIT4ID miniLector EVO 0||
+[21:41:53.771] Windows readers: True
+[21:41:53.778]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:53.778]   ✓ CARTA PRESENTE in slot 0!
+[21:41:53.778]   Trying Initialize(0)...
+[21:41:53.778]   Initialize(0) = 3 (0x0003)
+[21:41:53.778] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:54.182] >> CHECK_READER
+[21:41:54.184]   Readers: BIT4ID miniLector EVO 0||
+[21:41:54.184] Windows readers: True
+[21:41:54.188]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:54.188]   ✓ CARTA PRESENTE in slot 0!
+[21:41:54.188]   Trying Initialize(0)...
+[21:41:54.188]   Initialize(0) = 3 (0x0003)
+[21:41:54.188] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:54.264] >> CHECK_READER
+[21:41:54.265]   Readers: BIT4ID miniLector EVO 0||
+[21:41:54.266] Windows readers: True
+[21:41:54.268]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:54.268]   ✓ CARTA PRESENTE in slot 0!
+[21:41:54.268]   Trying Initialize(0)...
+[21:41:54.268]   Initialize(0) = 3 (0x0003)
+[21:41:54.268] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:54.782] >> CHECK_READER
+[21:41:54.789]   Readers: BIT4ID miniLector EVO 0||
+[21:41:54.789] Windows readers: True
+[21:41:54.795]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:54.795]   ✓ CARTA PRESENTE in slot 0!
+[21:41:54.795]   Trying Initialize(0)...
+[21:41:54.796]   Initialize(0) = 3 (0x0003)
+[21:41:54.796] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:55.296] >> CHECK_READER
+[21:41:55.303]   Readers: BIT4ID miniLector EVO 0||
+[21:41:55.303] Windows readers: True
+[21:41:55.309]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:55.309]   ✓ CARTA PRESENTE in slot 0!
+[21:41:55.309]   Trying Initialize(0)...
+[21:41:55.309]   Initialize(0) = 3 (0x0003)
+[21:41:55.309] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:55.807] >> CHECK_READER
+[21:41:55.809]   Readers: BIT4ID miniLector EVO 0||
+[21:41:55.809] Windows readers: True
+[21:41:55.811]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:55.811]   ✓ CARTA PRESENTE in slot 0!
+[21:41:55.811]   Trying Initialize(0)...
+[21:41:55.811]   Initialize(0) = 3 (0x0003)
+[21:41:55.811] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:56.320] >> CHECK_READER
+[21:41:56.322]   Readers: BIT4ID miniLector EVO 0||
+[21:41:56.322] Windows readers: True
+[21:41:56.324]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:56.324]   ✓ CARTA PRESENTE in slot 0!
+[21:41:56.324]   Trying Initialize(0)...
+[21:41:56.325]   Initialize(0) = 3 (0x0003)
+[21:41:56.325] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:56.824] >> CHECK_READER
+[21:41:56.827]   Readers: BIT4ID miniLector EVO 0||
+[21:41:56.827] Windows readers: True
+[21:41:56.831]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:56.831]   ✓ CARTA PRESENTE in slot 0!
+[21:41:56.831]   Trying Initialize(0)...
+[21:41:56.831]   Initialize(0) = 3 (0x0003)
+[21:41:56.831] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:57.309] >> CHECK_READER
+[21:41:57.314]   Readers: BIT4ID miniLector EVO 0||
+[21:41:57.314] Windows readers: True
+[21:41:57.318]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:57.318]   ✓ CARTA PRESENTE in slot 0!
+[21:41:57.318]   Trying Initialize(0)...
+[21:41:57.319]   Initialize(0) = 3 (0x0003)
+[21:41:57.319] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:57.339] >> CHECK_READER
+[21:41:57.342]   Readers: BIT4ID miniLector EVO 0||
+[21:41:57.342] Windows readers: True
+[21:41:57.345]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:57.345]   ✓ CARTA PRESENTE in slot 0!
+[21:41:57.345]   Trying Initialize(0)...
+[21:41:57.345]   Initialize(0) = 3 (0x0003)
+[21:41:57.346] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:57.841] >> CHECK_READER
+[21:41:57.848]   Readers: BIT4ID miniLector EVO 0||
+[21:41:57.848] Windows readers: True
+[21:41:57.854]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:57.854]   ✓ CARTA PRESENTE in slot 0!
+[21:41:57.854]   Trying Initialize(0)...
+[21:41:57.855]   Initialize(0) = 3 (0x0003)
+[21:41:57.855] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:58.357] >> CHECK_READER
+[21:41:58.368]   Readers: BIT4ID miniLector EVO 0||
+[21:41:58.368] Windows readers: True
+[21:41:58.375]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:58.375]   ✓ CARTA PRESENTE in slot 0!
+[21:41:58.375]   Trying Initialize(0)...
+[21:41:58.376]   Initialize(0) = 3 (0x0003)
+[21:41:58.376] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:58.856] >> CHECK_READER
+[21:41:58.858]   Readers: BIT4ID miniLector EVO 0||
+[21:41:58.858] Windows readers: True
+[21:41:58.861]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:58.861]   ✓ CARTA PRESENTE in slot 0!
+[21:41:58.861]   Trying Initialize(0)...
+[21:41:58.861]   Initialize(0) = 3 (0x0003)
+[21:41:58.861] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:59.370] >> CHECK_READER
+[21:41:59.372]   Readers: BIT4ID miniLector EVO 0||
+[21:41:59.372] Windows readers: True
+[21:41:59.374]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:59.374]   ✓ CARTA PRESENTE in slot 0!
+[21:41:59.374]   Trying Initialize(0)...
+[21:41:59.375]   Initialize(0) = 3 (0x0003)
+[21:41:59.375] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:41:59.885] >> CHECK_READER
+[21:41:59.890]   Readers: BIT4ID miniLector EVO 0||
+[21:41:59.890] Windows readers: True
+[21:41:59.895]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:41:59.895]   ✓ CARTA PRESENTE in slot 0!
+[21:41:59.895]   Trying Initialize(0)...
+[21:41:59.896]   Initialize(0) = 3 (0x0003)
+[21:41:59.896] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:00.308] >> CHECK_READER
+[21:42:00.314]   Readers: BIT4ID miniLector EVO 0||
+[21:42:00.314] Windows readers: True
+[21:42:00.320]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:00.320]   ✓ CARTA PRESENTE in slot 0!
+[21:42:00.320]   Trying Initialize(0)...
+[21:42:00.321]   Initialize(0) = 3 (0x0003)
+[21:42:00.321] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:00.399] >> CHECK_READER
+[21:42:00.401]   Readers: BIT4ID miniLector EVO 0||
+[21:42:00.402] Windows readers: True
+[21:42:00.404]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:00.404]   ✓ CARTA PRESENTE in slot 0!
+[21:42:00.404]   Trying Initialize(0)...
+[21:42:00.404]   Initialize(0) = 3 (0x0003)
+[21:42:00.404] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:00.911] >> CHECK_READER
+[21:42:00.914]   Readers: BIT4ID miniLector EVO 0||
+[21:42:00.914] Windows readers: True
+[21:42:00.917]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:00.917]   ✓ CARTA PRESENTE in slot 0!
+[21:42:00.917]   Trying Initialize(0)...
+[21:42:00.918]   Initialize(0) = 3 (0x0003)
+[21:42:00.918] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:01.415] >> CHECK_READER
+[21:42:01.422]   Readers: BIT4ID miniLector EVO 0||
+[21:42:01.423] Windows readers: True
+[21:42:01.431]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:01.431]   ✓ CARTA PRESENTE in slot 0!
+[21:42:01.432]   Trying Initialize(0)...
+[21:42:01.432]   Initialize(0) = 3 (0x0003)
+[21:42:01.433] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:01.929] >> CHECK_READER
+[21:42:01.937]   Readers: BIT4ID miniLector EVO 0||
+[21:42:01.937] Windows readers: True
+[21:42:01.947]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:01.947]   ✓ CARTA PRESENTE in slot 0!
+[21:42:01.947]   Trying Initialize(0)...
+[21:42:01.948]   Initialize(0) = 3 (0x0003)
+[21:42:01.948] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:02.427] >> CHECK_READER
+[21:42:02.430]   Readers: BIT4ID miniLector EVO 0||
+[21:42:02.430] Windows readers: True
+[21:42:02.433]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:02.433]   ✓ CARTA PRESENTE in slot 0!
+[21:42:02.433]   Trying Initialize(0)...
+[21:42:02.433]   Initialize(0) = 3 (0x0003)
+[21:42:02.433] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:02.943] >> CHECK_READER
+[21:42:02.950]   Readers: BIT4ID miniLector EVO 0||
+[21:42:02.951] Windows readers: True
+[21:42:02.957]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:02.957]   ✓ CARTA PRESENTE in slot 0!
+[21:42:02.957]   Trying Initialize(0)...
+[21:42:02.957]   Initialize(0) = 3 (0x0003)
+[21:42:02.958] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:03.317] >> CHECK_READER
+[21:42:03.323]   Readers: BIT4ID miniLector EVO 0||
+[21:42:03.323] Windows readers: True
+[21:42:03.330]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:03.331]   ✓ CARTA PRESENTE in slot 0!
+[21:42:03.331]   Trying Initialize(0)...
+[21:42:03.332]   Initialize(0) = 3 (0x0003)
+[21:42:03.332] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:03.456] >> CHECK_READER
+[21:42:03.463]   Readers: BIT4ID miniLector EVO 0||
+[21:42:03.463] Windows readers: True
+[21:42:03.473]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:03.474]   ✓ CARTA PRESENTE in slot 0!
+[21:42:03.474]   Trying Initialize(0)...
+[21:42:03.474]   Initialize(0) = 3 (0x0003)
+[21:42:03.475] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:03.971] >> CHECK_READER
+[21:42:03.976]   Readers: BIT4ID miniLector EVO 0||
+[21:42:03.977] Windows readers: True
+[21:42:03.979]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:03.979]   ✓ CARTA PRESENTE in slot 0!
+[21:42:03.979]   Trying Initialize(0)...
+[21:42:03.980]   Initialize(0) = 3 (0x0003)
+[21:42:03.980] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:04.486] >> CHECK_READER
+[21:42:04.493]   Readers: BIT4ID miniLector EVO 0||
+[21:42:04.493] Windows readers: True
+[21:42:04.501]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:04.501]   ✓ CARTA PRESENTE in slot 0!
+[21:42:04.502]   Trying Initialize(0)...
+[21:42:04.502]   Initialize(0) = 3 (0x0003)
+[21:42:04.503] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:05.001] >> CHECK_READER
+[21:42:05.007]   Readers: BIT4ID miniLector EVO 0||
+[21:42:05.007] Windows readers: True
+[21:42:05.015]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:05.015]   ✓ CARTA PRESENTE in slot 0!
+[21:42:05.015]   Trying Initialize(0)...
+[21:42:05.016]   Initialize(0) = 3 (0x0003)
+[21:42:05.016] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:05.518] >> CHECK_READER
+[21:42:05.525]   Readers: BIT4ID miniLector EVO 0||
+[21:42:05.526] Windows readers: True
+[21:42:05.535]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:05.535]   ✓ CARTA PRESENTE in slot 0!
+[21:42:05.535]   Trying Initialize(0)...
+[21:42:05.537]   Initialize(0) = 3 (0x0003)
+[21:42:05.537] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:06.029] >> CHECK_READER
+[21:42:06.031]   Readers: BIT4ID miniLector EVO 0||
+[21:42:06.031] Windows readers: True
+[21:42:06.033]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:06.034]   ✓ CARTA PRESENTE in slot 0!
+[21:42:06.034]   Trying Initialize(0)...
+[21:42:06.034]   Initialize(0) = 3 (0x0003)
+[21:42:06.034] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:06.317] >> CHECK_READER
+[21:42:06.324]   Readers: BIT4ID miniLector EVO 0||
+[21:42:06.325] Windows readers: True
+[21:42:06.331]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:06.331]   ✓ CARTA PRESENTE in slot 0!
+[21:42:06.331]   Trying Initialize(0)...
+[21:42:06.331]   Initialize(0) = 3 (0x0003)
+[21:42:06.331] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:06.534] >> CHECK_READER
+[21:42:06.543]   Readers: BIT4ID miniLector EVO 0||
+[21:42:06.544] Windows readers: True
+[21:42:06.553]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:06.553]   ✓ CARTA PRESENTE in slot 0!
+[21:42:06.553]   Trying Initialize(0)...
+[21:42:06.554]   Initialize(0) = 3 (0x0003)
+[21:42:06.554] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:07.046] >> CHECK_READER
+[21:42:07.054]   Readers: BIT4ID miniLector EVO 0||
+[21:42:07.054] Windows readers: True
+[21:42:07.065]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:07.065]   ✓ CARTA PRESENTE in slot 0!
+[21:42:07.065]   Trying Initialize(0)...
+[21:42:07.066]   Initialize(0) = 3 (0x0003)
+[21:42:07.066] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:07.561] >> CHECK_READER
+[21:42:07.567]   Readers: BIT4ID miniLector EVO 0||
+[21:42:07.568] Windows readers: True
+[21:42:07.576]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:07.577]   ✓ CARTA PRESENTE in slot 0!
+[21:42:07.577]   Trying Initialize(0)...
+[21:42:07.577]   Initialize(0) = 3 (0x0003)
+[21:42:07.577] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:08.078] >> CHECK_READER
+[21:42:08.085]   Readers: BIT4ID miniLector EVO 0||
+[21:42:08.086] Windows readers: True
+[21:42:08.094]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:08.094]   ✓ CARTA PRESENTE in slot 0!
+[21:42:08.094]   Trying Initialize(0)...
+[21:42:08.095]   Initialize(0) = 3 (0x0003)
+[21:42:08.095] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:08.594] >> CHECK_READER
+[21:42:08.600]   Readers: BIT4ID miniLector EVO 0||
+[21:42:08.600] Windows readers: True
+[21:42:08.604]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:08.604]   ✓ CARTA PRESENTE in slot 0!
+[21:42:08.604]   Trying Initialize(0)...
+[21:42:08.604]   Initialize(0) = 3 (0x0003)
+[21:42:08.604] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:09.107] >> CHECK_READER
+[21:42:09.115]   Readers: BIT4ID miniLector EVO 0||
+[21:42:09.116] Windows readers: True
+[21:42:09.124]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:09.124]   ✓ CARTA PRESENTE in slot 0!
+[21:42:09.124]   Trying Initialize(0)...
+[21:42:09.126]   Initialize(0) = 3 (0x0003)
+[21:42:09.126] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:09.314] >> CHECK_READER
+[21:42:09.322]   Readers: BIT4ID miniLector EVO 0||
+[21:42:09.323] Windows readers: True
+[21:42:09.330]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:09.330]   ✓ CARTA PRESENTE in slot 0!
+[21:42:09.330]   Trying Initialize(0)...
+[21:42:09.331]   Initialize(0) = 3 (0x0003)
+[21:42:09.331] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:09.608] >> CHECK_READER
+[21:42:09.609]   Readers: BIT4ID miniLector EVO 0||
+[21:42:09.609] Windows readers: True
+[21:42:09.611]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:09.611]   ✓ CARTA PRESENTE in slot 0!
+[21:42:09.611]   Trying Initialize(0)...
+[21:42:09.611]   Initialize(0) = 3 (0x0003)
+[21:42:09.611] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:10.112] >> CHECK_READER
+[21:42:10.114]   Readers: BIT4ID miniLector EVO 0||
+[21:42:10.114] Windows readers: True
+[21:42:10.116]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:10.116]   ✓ CARTA PRESENTE in slot 0!
+[21:42:10.116]   Trying Initialize(0)...
+[21:42:10.117]   Initialize(0) = 3 (0x0003)
+[21:42:10.117] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:10.613] >> CHECK_READER
+[21:42:10.615]   Readers: BIT4ID miniLector EVO 0||
+[21:42:10.615] Windows readers: True
+[21:42:10.617]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:10.617]   ✓ CARTA PRESENTE in slot 0!
+[21:42:10.617]   Trying Initialize(0)...
+[21:42:10.618]   Initialize(0) = 3 (0x0003)
+[21:42:10.618] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:11.113] >> CHECK_READER
+[21:42:11.115]   Readers: BIT4ID miniLector EVO 0||
+[21:42:11.115] Windows readers: True
+[21:42:11.117]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:11.117]   ✓ CARTA PRESENTE in slot 0!
+[21:42:11.117]   Trying Initialize(0)...
+[21:42:11.118]   Initialize(0) = 3 (0x0003)
+[21:42:11.118] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:11.627] >> CHECK_READER
+[21:42:11.629]   Readers: BIT4ID miniLector EVO 0||
+[21:42:11.629] Windows readers: True
+[21:42:11.631]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:11.631]   ✓ CARTA PRESENTE in slot 0!
+[21:42:11.631]   Trying Initialize(0)...
+[21:42:11.632]   Initialize(0) = 3 (0x0003)
+[21:42:11.632] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:12.132] >> CHECK_READER
+[21:42:12.134]   Readers: BIT4ID miniLector EVO 0||
+[21:42:12.134] Windows readers: True
+[21:42:12.136]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:12.136]   ✓ CARTA PRESENTE in slot 0!
+[21:42:12.136]   Trying Initialize(0)...
+[21:42:12.136]   Initialize(0) = 3 (0x0003)
+[21:42:12.136] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:12.304] >> CHECK_READER
+[21:42:12.306]   Readers: BIT4ID miniLector EVO 0||
+[21:42:12.307] Windows readers: True
+[21:42:12.309]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:12.309]   ✓ CARTA PRESENTE in slot 0!
+[21:42:12.309]   Trying Initialize(0)...
+[21:42:12.310]   Initialize(0) = 3 (0x0003)
+[21:42:12.310] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:12.633] >> CHECK_READER
+[21:42:12.635]   Readers: BIT4ID miniLector EVO 0||
+[21:42:12.635] Windows readers: True
+[21:42:12.638]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:12.638]   ✓ CARTA PRESENTE in slot 0!
+[21:42:12.638]   Trying Initialize(0)...
+[21:42:12.639]   Initialize(0) = 3 (0x0003)
+[21:42:12.639] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:13.146] >> CHECK_READER
+[21:42:13.148]   Readers: BIT4ID miniLector EVO 0||
+[21:42:13.148] Windows readers: True
+[21:42:13.150]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:13.150]   ✓ CARTA PRESENTE in slot 0!
+[21:42:13.150]   Trying Initialize(0)...
+[21:42:13.151]   Initialize(0) = 3 (0x0003)
+[21:42:13.151] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:13.661] >> CHECK_READER
+[21:42:13.663]   Readers: BIT4ID miniLector EVO 0||
+[21:42:13.664] Windows readers: True
+[21:42:13.666]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:13.666]   ✓ CARTA PRESENTE in slot 0!
+[21:42:13.666]   Trying Initialize(0)...
+[21:42:13.666]   Initialize(0) = 3 (0x0003)
+[21:42:13.666] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:14.174] >> CHECK_READER
+[21:42:14.176]   Readers: BIT4ID miniLector EVO 0||
+[21:42:14.176] Windows readers: True
+[21:42:14.178]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:14.178]   ✓ CARTA PRESENTE in slot 0!
+[21:42:14.178]   Trying Initialize(0)...
+[21:42:14.179]   Initialize(0) = 3 (0x0003)
+[21:42:14.179] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:14.677] >> CHECK_READER
+[21:42:14.680]   Readers: BIT4ID miniLector EVO 0||
+[21:42:14.680] Windows readers: True
+[21:42:14.683]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:14.684]   ✓ CARTA PRESENTE in slot 0!
+[21:42:14.684]   Trying Initialize(0)...
+[21:42:14.684]   Initialize(0) = 3 (0x0003)
+[21:42:14.684] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:15.187] >> CHECK_READER
+[21:42:15.190]   Readers: BIT4ID miniLector EVO 0||
+[21:42:15.190] Windows readers: True
+[21:42:15.192]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:15.192]   ✓ CARTA PRESENTE in slot 0!
+[21:42:15.193]   Trying Initialize(0)...
+[21:42:15.193]   Initialize(0) = 3 (0x0003)
+[21:42:15.193] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:15.314] >> CHECK_READER
+[21:42:15.317]   Readers: BIT4ID miniLector EVO 0||
+[21:42:15.317] Windows readers: True
+[21:42:15.320]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:15.320]   ✓ CARTA PRESENTE in slot 0!
+[21:42:15.320]   Trying Initialize(0)...
+[21:42:15.321]   Initialize(0) = 3 (0x0003)
+[21:42:15.321] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:15.688] >> CHECK_READER
+[21:42:15.690]   Readers: BIT4ID miniLector EVO 0||
+[21:42:15.690] Windows readers: True
+[21:42:15.692]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:15.692]   ✓ CARTA PRESENTE in slot 0!
+[21:42:15.692]   Trying Initialize(0)...
+[21:42:15.692]   Initialize(0) = 3 (0x0003)
+[21:42:15.692] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:16.189] >> CHECK_READER
+[21:42:16.191]   Readers: BIT4ID miniLector EVO 0||
+[21:42:16.191] Windows readers: True
+[21:42:16.193]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:16.193]   ✓ CARTA PRESENTE in slot 0!
+[21:42:16.194]   Trying Initialize(0)...
+[21:42:16.194]   Initialize(0) = 3 (0x0003)
+[21:42:16.194] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:16.705] >> CHECK_READER
+[21:42:16.706]   Readers: BIT4ID miniLector EVO 0||
+[21:42:16.707] Windows readers: True
+[21:42:16.709]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:16.709]   ✓ CARTA PRESENTE in slot 0!
+[21:42:16.709]   Trying Initialize(0)...
+[21:42:16.709]   Initialize(0) = 3 (0x0003)
+[21:42:16.709] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:17.219] >> CHECK_READER
+[21:42:17.222]   Readers: BIT4ID miniLector EVO 0||
+[21:42:17.222] Windows readers: True
+[21:42:17.225]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:17.225]   ✓ CARTA PRESENTE in slot 0!
+[21:42:17.225]   Trying Initialize(0)...
+[21:42:17.226]   Initialize(0) = 3 (0x0003)
+[21:42:17.226] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:17.719] >> CHECK_READER
+[21:42:17.722]   Readers: BIT4ID miniLector EVO 0||
+[21:42:17.722] Windows readers: True
+[21:42:17.725]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:17.725]   ✓ CARTA PRESENTE in slot 0!
+[21:42:17.725]   Trying Initialize(0)...
+[21:42:17.726]   Initialize(0) = 3 (0x0003)
+[21:42:17.726] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:18.188] >> CHECK_READER
+[21:42:18.190]   Readers: BIT4ID miniLector EVO 0||
+[21:42:18.190] Windows readers: True
+[21:42:18.193]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:18.193]   ✓ CARTA PRESENTE in slot 0!
+[21:42:18.193]   Trying Initialize(0)...
+[21:42:18.193]   Initialize(0) = 3 (0x0003)
+[21:42:18.194] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:18.234] >> CHECK_READER
+[21:42:18.236]   Readers: BIT4ID miniLector EVO 0||
+[21:42:18.236] Windows readers: True
+[21:42:18.237]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:18.237]   ✓ CARTA PRESENTE in slot 0!
+[21:42:18.237]   Trying Initialize(0)...
+[21:42:18.237]   Initialize(0) = 3 (0x0003)
+[21:42:18.238] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:18.749] >> CHECK_READER
+[21:42:18.751]   Readers: BIT4ID miniLector EVO 0||
+[21:42:18.751] Windows readers: True
+[21:42:18.753]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:18.753]   ✓ CARTA PRESENTE in slot 0!
+[21:42:18.753]   Trying Initialize(0)...
+[21:42:18.753]   Initialize(0) = 3 (0x0003)
+[21:42:18.754] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:19.263] >> CHECK_READER
+[21:42:19.265]   Readers: BIT4ID miniLector EVO 0||
+[21:42:19.265] Windows readers: True
+[21:42:19.268]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:19.268]   ✓ CARTA PRESENTE in slot 0!
+[21:42:19.268]   Trying Initialize(0)...
+[21:42:19.268]   Initialize(0) = 3 (0x0003)
+[21:42:19.268] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:19.769] >> CHECK_READER
+[21:42:19.776]   Readers: BIT4ID miniLector EVO 0||
+[21:42:19.777] Windows readers: True
+[21:42:19.783]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:19.783]   ✓ CARTA PRESENTE in slot 0!
+[21:42:19.783]   Trying Initialize(0)...
+[21:42:19.784]   Initialize(0) = 3 (0x0003)
+[21:42:19.784] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:20.283] >> CHECK_READER
+[21:42:20.291]   Readers: BIT4ID miniLector EVO 0||
+[21:42:20.291] Windows readers: True
+[21:42:20.300]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:20.300]   ✓ CARTA PRESENTE in slot 0!
+[21:42:20.300]   Trying Initialize(0)...
+[21:42:20.301]   Initialize(0) = 3 (0x0003)
+[21:42:20.301] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:20.793] >> CHECK_READER
+[21:42:20.795]   Readers: BIT4ID miniLector EVO 0||
+[21:42:20.795] Windows readers: True
+[21:42:20.797]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:20.797]   ✓ CARTA PRESENTE in slot 0!
+[21:42:20.797]   Trying Initialize(0)...
+[21:42:20.798]   Initialize(0) = 3 (0x0003)
+[21:42:20.798] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:21.294] >> CHECK_READER
+[21:42:21.296]   Readers: BIT4ID miniLector EVO 0||
+[21:42:21.297] Windows readers: True
+[21:42:21.299]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:21.299]   ✓ CARTA PRESENTE in slot 0!
+[21:42:21.299]   Trying Initialize(0)...
+[21:42:21.300]   Initialize(0) = 3 (0x0003)
+[21:42:21.300] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}
+[21:42:21.316] >> CHECK_READER
+[21:42:21.318]   Readers: BIT4ID miniLector EVO 0||
+[21:42:21.318] Windows readers: True
+[21:42:21.320]   isCardIn(0) = 32 (0x20) = PRESENT
+[21:42:21.320]   ✓ CARTA PRESENTE in slot 0!
+[21:42:21.320]   Trying Initialize(0)...
+[21:42:21.321]   Initialize(0) = 3 (0x0003)
+[21:42:21.321] << {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":3,"message":"Carta SIAE rilevata e pronta!"}

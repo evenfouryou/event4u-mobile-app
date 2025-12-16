@@ -130,7 +130,7 @@ async function main() {
     
     // Create commit
     console.log('📝 Creating commit...');
-    const commitMessage = 'v3.5: Auto-detect PIN reference (nPIN) to fix 0x6A88 error\n\n- PIN verification now tries nPIN = 1, 0, 2, 0x81 automatically\n- Fixes "Referenced data not found" error when PIN is correct but nPIN is wrong\n- Detailed logging for each PIN attempt\n\nSee BUILD_INSTRUCTIONS.md for details.';
+    const commitMessage = 'v3.6: Fixed nPIN retry logic to try ALL values\n\n- Now tries nPIN = 1, 0, 2, 0x81, 0x82 regardless of error code\n- Stops only on success or PIN-specific errors (wrong PIN, blocked)\n- Detailed logging shows which nPIN works\n\nSee BUILD_INSTRUCTIONS.md for details.';
     
     const { data: commit } = await octokit.git.createCommit({
       owner,

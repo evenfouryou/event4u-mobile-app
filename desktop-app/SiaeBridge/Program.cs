@@ -427,36 +427,41 @@ namespace SiaeBridge
                 Log($"  BeginTransactionML = {txResult}");
                 tx = (txResult == 0);
 
-                // nPIN = identificatore PIN (provare 0, 1, 2 se uno fallisce)
+                // nPIN = identificatore PIN (provare diversi valori)
                 // Dalla documentazione SIAE test.c: pVerifyPINML(1, pin, slot)
                 // Errore 0x6A88 = "Referenced data not found" = nPIN sbagliato
+                // Errore 0xFFFF = Errore generico
                 
-                // Prima proviamo nPIN=1 (standard)
-                int pinResult = VerifyPINML(1, pin, _slot);
-                Log($"  VerifyPINML(nPIN=1, pin=***, slot={_slot}) = {pinResult} (0x{pinResult:X4})");
+                // Valori nPIN da provare in ordine
+                int[] nPinValues = { 1, 0, 2, 0x81, 0x82, 0x01, 0x00 };
+                int pinResult = -1;
+                int successfulNPin = -1;
                 
-                // Se fallisce con 0x6A88, proviamo nPIN=0
-                if (pinResult == 0x6A88)
+                foreach (int nPin in nPinValues)
                 {
-                    Log("  nPIN=1 failed with 0x6A88, trying nPIN=0...");
-                    pinResult = VerifyPINML(0, pin, _slot);
-                    Log($"  VerifyPINML(nPIN=0, pin=***, slot={_slot}) = {pinResult} (0x{pinResult:X4})");
-                }
-                
-                // Se ancora fallisce con 0x6A88, proviamo nPIN=2
-                if (pinResult == 0x6A88)
-                {
-                    Log("  nPIN=0 failed with 0x6A88, trying nPIN=2...");
-                    pinResult = VerifyPINML(2, pin, _slot);
-                    Log($"  VerifyPINML(nPIN=2, pin=***, slot={_slot}) = {pinResult} (0x{pinResult:X4})");
-                }
-                
-                // Se ancora fallisce con 0x6A88, proviamo nPIN=0x81 (alcune carte usano questo)
-                if (pinResult == 0x6A88)
-                {
-                    Log("  nPIN=2 failed with 0x6A88, trying nPIN=0x81...");
-                    pinResult = VerifyPINML(0x81, pin, _slot);
-                    Log($"  VerifyPINML(nPIN=0x81, pin=***, slot={_slot}) = {pinResult} (0x{pinResult:X4})");
+                    pinResult = VerifyPINML(nPin, pin, _slot);
+                    Log($"  VerifyPINML(nPIN={nPin} (0x{nPin:X2}), pin=***, slot={_slot}) = {pinResult} (0x{pinResult:X4})");
+                    
+                    if (pinResult == 0)
+                    {
+                        // Successo! Ricorda quale nPIN ha funzionato
+                        successfulNPin = nPin;
+                        Log($"  ✓ PIN VERIFICATO con nPIN={nPin}!");
+                        break;
+                    }
+                    else if (pinResult == 0x63C0 || pinResult == 0x63C1 || pinResult == 0x63C2 || pinResult == 0x63C3)
+                    {
+                        // PIN sbagliato ma nPIN corretto - non continuare a provare altri nPIN
+                        Log($"  PIN errato (tentativi rimasti: {pinResult & 0x0F})");
+                        break;
+                    }
+                    else if (pinResult == 0x6983)
+                    {
+                        // PIN bloccato
+                        Log($"  PIN BLOCCATO!");
+                        break;
+                    }
+                    // Per altri errori (0x6A88, 0xFFFF, ecc.), continua a provare il prossimo nPIN
                 }
 
                 if (pinResult == 0)
