@@ -1058,14 +1058,22 @@ router.patch("/api/e4u/scanners/:id/access", requireAuth, requireGestore, async 
       return res.status(403).json({ message: "Non autorizzato a modificare questo scanner" });
     }
     
-    // Validate allowedSectorIds is an array
-    if (!Array.isArray(allowedSectorIds)) {
+    // Default to empty array if not provided, validate it's an array
+    const rawSectorIds = allowedSectorIds ?? [];
+    if (!Array.isArray(rawSectorIds)) {
       return res.status(400).json({ message: "allowedSectorIds deve essere un array" });
     }
     
-    // Update the scanner with new sector access
+    // Sanitize: filter falsy values, remove duplicates, ensure strings only
+    const sanitizedSectorIds = [...new Set(
+      rawSectorIds
+        .filter((id: unknown) => id && typeof id === 'string')
+        .map((id: string) => id.trim())
+    )];
+    
+    // Update the scanner with sanitized sector access
     const [updated] = await db.update(eventScanners)
-      .set({ allowedSectorIds })
+      .set({ allowedSectorIds: sanitizedSectorIds })
       .where(eq(eventScanners.id, id))
       .returning();
     
