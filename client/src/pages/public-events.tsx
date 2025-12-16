@@ -286,7 +286,7 @@ export default function PublicEventsPage() {
             <div className="flex items-center gap-2">
               <Sparkles className="w-5 h-5 text-yellow-500" />
               <span className="text-sm text-slate-400">
-                © 2024 Event4U. Tutti i diritti riservati.
+                © {new Date().getFullYear()} Event4U. Tutti i diritti riservati.
               </span>
             </div>
             <div className="flex gap-6 text-sm text-slate-500">

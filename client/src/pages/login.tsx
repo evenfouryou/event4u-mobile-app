@@ -32,11 +32,12 @@ export default function Login() {
       if (isEmail) {
         // Normal user login with email
         await apiRequest('POST', '/api/auth/login', { email, password });
+        window.location.href = '/';
       } else {
-        // Cashier login with username
+        // Cashier login with username - redirect to cashier dashboard
         await apiRequest('POST', '/api/cashiers/login', { username: email, password });
+        window.location.href = '/cashier/dashboard';
       }
-      window.location.href = '/';
     } catch (err: any) {
       setError(err.message || "Credenziali non valide");
       if (err.message && err.message.includes("non verificata")) {

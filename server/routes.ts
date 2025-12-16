@@ -73,6 +73,8 @@ import {
   siaeTicketTypes,
   siaeServiceCodes,
   siaeCancellationReasons,
+  siaeCashiers,
+  systemSettings,
   insertSiaeEventGenreSchema,
   updateSiaeEventGenreSchema,
   insertSiaeSectorCodeSchema,
@@ -735,6 +737,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
     try {
+      // Check if this is a SIAE cashier session
+      if (req.user?.cashierType === 'siae' && req.user?.cashierId) {
+        const [cashier] = await db.select().from(siaeCashiers)
+          .where(eq(siaeCashiers.id, req.user.cashierId));
+        
+        if (cashier) {
+          const { passwordHash, ...cashierData } = cashier;
+          return res.json({
+            id: cashier.id,
+            email: cashier.email || `${cashier.username}@cashier.local`,
+            name: cashier.name,
+            username: cashier.username,
+            role: 'cassiere',
+            companyId: cashier.companyId,
+            isCashier: true,
+            cashierType: 'siae'
+          });
+        }
+      }
+      
       // If impersonating, use the impersonated user ID from session
       const userId = req.session.impersonatorId ? req.session.userId : req.user.claims.sub;
       const user = await storage.getUser(userId);
@@ -6323,6 +6345,102 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error: any) {
       console.error('[Bridge] Error checking status:', error);
       res.status(500).json({ message: "Failed to check bridge status" });
+    }
+  });
+
+  // ==================== SITE SETTINGS (Super Admin Only) ====================
+  
+  // GET /api/admin/site-settings - Get all site settings
+  app.get('/api/admin/site-settings', isAuthenticated, async (req: any, res) => {
+    try {
+      if (req.user?.role !== 'super_admin') {
+        return res.status(403).json({ message: "Accesso non autorizzato" });
+      }
+      
+      const settings = await db.select().from(systemSettings);
+      const settingsMap: Record<string, any> = {};
+      
+      for (const setting of settings) {
+        try {
+          settingsMap[setting.key] = JSON.parse(setting.value || 'null');
+        } catch {
+          settingsMap[setting.key] = setting.value;
+        }
+      }
+      
+      res.json(settingsMap);
+    } catch (error: any) {
+      console.error("Error fetching site settings:", error);
+      res.status(500).json({ message: "Errore nel recupero delle impostazioni" });
+    }
+  });
+
+  // PATCH /api/admin/site-settings - Update site settings
+  app.patch('/api/admin/site-settings', isAuthenticated, async (req: any, res) => {
+    try {
+      if (req.user?.role !== 'super_admin') {
+        return res.status(403).json({ message: "Accesso non autorizzato" });
+      }
+      
+      const updates = req.body;
+      const userId = req.user.claims.sub;
+      
+      for (const [key, value] of Object.entries(updates)) {
+        const stringValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+        
+        // Upsert setting
+        const existing = await db.select().from(systemSettings).where(eq(systemSettings.key, key));
+        
+        if (existing.length > 0) {
+          await db.update(systemSettings)
+            .set({ value: stringValue, updatedAt: new Date(), updatedBy: userId })
+            .where(eq(systemSettings.key, key));
+        } else {
+          await db.insert(systemSettings).values({
+            key,
+            value: stringValue,
+            updatedBy: userId
+          });
+        }
+      }
+      
+      res.json({ message: "Impostazioni aggiornate con successo" });
+    } catch (error: any) {
+      console.error("Error updating site settings:", error);
+      res.status(500).json({ message: "Errore nell'aggiornamento delle impostazioni" });
+    }
+  });
+
+  // GET /api/public/cookie-settings - Public endpoint for cookie banner settings
+  app.get('/api/public/cookie-settings', async (req, res) => {
+    try {
+      const settings = await db.select().from(systemSettings)
+        .where(or(
+          eq(systemSettings.key, 'cookie_consent_enabled'),
+          eq(systemSettings.key, 'cookie_consent_text'),
+          eq(systemSettings.key, 'privacy_policy_url')
+        ));
+      
+      const result: Record<string, any> = {
+        enabled: true,
+        text: "Utilizziamo i cookie per migliorare la tua esperienza sul nostro sito. Alcuni cookie sono necessari per il funzionamento del sito, mentre altri ci aiutano a capire come lo utilizzi.",
+        privacyUrl: ""
+      };
+      
+      for (const setting of settings) {
+        if (setting.key === 'cookie_consent_enabled') {
+          result.enabled = setting.value === 'true';
+        } else if (setting.key === 'cookie_consent_text' && setting.value) {
+          result.text = setting.value;
+        } else if (setting.key === 'privacy_policy_url' && setting.value) {
+          result.privacyUrl = setting.value;
+        }
+      }
+      
+      res.json(result);
+    } catch (error: any) {
+      console.error("Error fetching cookie settings:", error);
+      res.json({ enabled: true, text: "", privacyUrl: "" });
     }
   });
 

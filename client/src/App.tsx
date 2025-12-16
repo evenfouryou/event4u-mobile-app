@@ -95,6 +95,8 @@ import CassaBiglietti from "@/pages/cassa-biglietti";
 import CashierManagement from "@/pages/cashier-management";
 import CashierDashboard from "@/pages/cashier-dashboard";
 import EventShortLink from "@/pages/event-short-link";
+import AdminSiteSettings from "@/pages/admin-site-settings";
+import { CookieConsent } from "@/components/cookie-consent";
 
 function Router() {
   const { isAuthenticated, isLoading } = useAuth();
@@ -220,6 +222,7 @@ function Router() {
               <Route path="/template-builder" component={TemplateBuilder} />
               <Route path="/template-builder/:id" component={TemplateBuilder} />
               <Route path="/stripe-admin" component={StripeAdmin} />
+              <Route path="/admin/site-settings" component={AdminSiteSettings} />
               <Route path="/scanner/:eventId?" component={E4uScanner} />
               <Route path="/wallet" component={ClientWallet} />
               <Route path="/staff-pr-home" component={StaffPrHome} />
@@ -245,6 +248,7 @@ export default function App() {
           <Router />
           <Toaster />
           <InstallPrompt />
+          <CookieConsent />
         </TooltipProvider>
       </ThemeProvider>
     </QueryClientProvider>

@@ -105,6 +105,12 @@ export function AppSidebar() {
         group: "Sistema",
       },
       {
+        title: "Impostazioni Sito",
+        icon: Settings,
+        url: "/admin/site-settings",
+        group: "Sistema",
+      },
+      {
         title: "Tabelle SIAE",
         icon: Table2,
         url: "/siae/tables",
