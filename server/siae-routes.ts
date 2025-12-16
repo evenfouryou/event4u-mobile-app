@@ -6,6 +6,7 @@ import { db } from "./db";
 import { events, siaeCashiers } from "@shared/schema";
 import { eq, and } from "drizzle-orm";
 import { z } from "zod";
+import bcrypt from "bcryptjs";
 import { requestFiscalSeal, isCardReadyForSeals, isBridgeConnected } from "./bridge-relay";
 import {
   insertSiaeEventGenreSchema,
@@ -2988,7 +2989,6 @@ router.post("/api/cashiers", requireAuth, requireGestore, async (req: Request, r
       return res.status(400).json({ message: "Username già in uso" });
     }
     
-    const bcrypt = require('bcryptjs');
     const passwordHash = await bcrypt.hash(password, 10);
     
     // Normalize "none" sentinel value to null for printer
@@ -3052,7 +3052,6 @@ router.patch("/api/cashiers/:id", requireAuth, requireGestore, async (req: Reque
     if (isActive !== undefined) updateData.isActive = isActive;
     
     if (password) {
-      const bcrypt = require('bcryptjs');
       updateData.passwordHash = await bcrypt.hash(password, 10);
     }
     
@@ -3142,7 +3141,6 @@ router.post("/api/cashiers/login", async (req: Request, res: Response) => {
       return res.status(403).json({ message: "Account disattivato" });
     }
     
-    const bcrypt = require('bcryptjs');
     const isValidPassword = await bcrypt.compare(password, cashier.passwordHash);
     if (!isValidPassword) {
       return res.status(401).json({ message: "Credenziali non valide" });
