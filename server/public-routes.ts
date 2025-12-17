@@ -615,6 +615,186 @@ router.post("/api/public/customers/login", async (req, res) => {
   }
 });
 
+// Richiedi reset password cliente
+router.post("/api/public/customers/forgot-password", async (req, res) => {
+  try {
+    const { email } = req.body;
+
+    if (!email) {
+      return res.status(400).json({ message: "Email richiesta" });
+    }
+
+    const [customer] = await db
+      .select()
+      .from(siaeCustomers)
+      .where(eq(siaeCustomers.email, email.toLowerCase().trim()));
+
+    const successMessage = "Se l'email è registrata, riceverai un link per reimpostare la password.";
+
+    if (!customer) {
+      return res.json({ message: successMessage });
+    }
+
+    const resetToken = crypto.randomBytes(32).toString("hex");
+    const resetExpires = new Date(Date.now() + 3600000);
+
+    await db
+      .update(siaeCustomers)
+      .set({
+        resetPasswordToken: resetToken,
+        resetPasswordExpires: resetExpires,
+        updatedAt: new Date(),
+      })
+      .where(eq(siaeCustomers.id, customer.id));
+
+    const baseUrl = process.env.CUSTOM_DOMAIN
+      ? `https://${process.env.CUSTOM_DOMAIN}`
+      : process.env.PUBLIC_URL
+        ? process.env.PUBLIC_URL.replace(/\/$/, "")
+        : process.env.REPLIT_DEV_DOMAIN
+          ? `https://${process.env.REPLIT_DEV_DOMAIN}`
+          : "http://localhost:5000";
+    const resetLink = `${baseUrl}/public/reset-password?token=${resetToken}`;
+
+    const nodemailer = await import("nodemailer");
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || "smtp.gmail.com",
+      port: parseInt(process.env.SMTP_PORT || "587"),
+      secure: false,
+      auth: {
+        user: process.env.SMTP_USER,
+        pass: process.env.SMTP_PASS,
+      },
+    });
+
+    const fromEmail = process.env.SMTP_FROM || "Event4U <noreply@event4u.com>";
+
+    await transporter.sendMail({
+      from: fromEmail,
+      to: customer.email,
+      subject: "Reimposta la tua password - Event4U",
+      html: `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0e17; color: #ffffff; margin: 0; padding: 0;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+    <div style="text-align: center; margin-bottom: 40px;">
+      <div style="font-size: 32px; font-weight: bold; color: #FFD700; margin-bottom: 10px;">Event4U</div>
+      <div style="font-size: 24px; color: #ffffff;">Reimposta la tua password</div>
+    </div>
+
+    <div style="background-color: #151922; border-radius: 12px; padding: 30px; margin-bottom: 30px;">
+      <p style="color: #ffffff; margin-top: 0;">Ciao ${customer.firstName},</p>
+      <p style="color: #94A3B8;">Hai richiesto di reimpostare la password del tuo account Event4U.</p>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${resetLink}" 
+           style="display: inline-block; background-color: #FFD700; color: #0a0e17; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+          Reimposta Password
+        </a>
+      </div>
+      
+      <p style="color: #94A3B8; font-size: 14px;">Questo link scadrà tra 1 ora.</p>
+      <p style="color: #94A3B8; font-size: 14px;">Se non hai richiesto il reset della password, ignora questa email.</p>
+    </div>
+
+    <div style="text-align: center; padding-top: 20px; border-top: 1px solid #1e2533;">
+      <p style="color: #94A3B8; font-size: 12px;">&copy; ${new Date().getFullYear()} Event4U - Tutti i diritti riservati</p>
+    </div>
+  </div>
+</body>
+</html>
+      `,
+    });
+
+    console.log("[PUBLIC] Password reset email sent to:", customer.email);
+    res.json({ message: successMessage });
+  } catch (error: any) {
+    console.error("[PUBLIC] Forgot password error:", error);
+    res.status(500).json({ message: "Errore durante l'invio. Riprova più tardi." });
+  }
+});
+
+// Verifica token reset password cliente
+router.get("/api/public/customers/verify-reset-token/:token", async (req, res) => {
+  try {
+    const { token } = req.params;
+
+    if (!token) {
+      return res.status(400).json({ valid: false, message: "Token mancante" });
+    }
+
+    const [customer] = await db
+      .select()
+      .from(siaeCustomers)
+      .where(eq(siaeCustomers.resetPasswordToken, token));
+
+    if (!customer) {
+      return res.status(400).json({ valid: false, message: "Link non valido" });
+    }
+
+    if (customer.resetPasswordExpires && new Date() > new Date(customer.resetPasswordExpires)) {
+      return res.status(400).json({ valid: false, message: "Link scaduto" });
+    }
+
+    res.json({ valid: true, email: customer.email });
+  } catch (error: any) {
+    console.error("[PUBLIC] Verify reset token error:", error);
+    res.status(500).json({ valid: false, message: "Errore di verifica" });
+  }
+});
+
+// Reset password cliente
+router.post("/api/public/customers/reset-password", async (req, res) => {
+  try {
+    const { token, password } = req.body;
+
+    if (!token || !password) {
+      return res.status(400).json({ message: "Token e password richiesti" });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ message: "La password deve essere di almeno 8 caratteri" });
+    }
+
+    const [customer] = await db
+      .select()
+      .from(siaeCustomers)
+      .where(eq(siaeCustomers.resetPasswordToken, token));
+
+    if (!customer) {
+      return res.status(400).json({ message: "Link non valido o scaduto" });
+    }
+
+    if (customer.resetPasswordExpires && new Date() > new Date(customer.resetPasswordExpires)) {
+      return res.status(400).json({ message: "Link scaduto. Richiedi un nuovo reset password." });
+    }
+
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    await db
+      .update(siaeCustomers)
+      .set({
+        passwordHash,
+        resetPasswordToken: null,
+        resetPasswordExpires: null,
+        emailVerified: true,
+        updatedAt: new Date(),
+      })
+      .where(eq(siaeCustomers.id, customer.id));
+
+    console.log("[PUBLIC] Password reset successful for customer:", customer.email);
+    res.json({ message: "Password reimpostata con successo! Ora puoi accedere." });
+  } catch (error: any) {
+    console.error("[PUBLIC] Reset password error:", error);
+    res.status(500).json({ message: "Errore durante il reset. Riprova più tardi." });
+  }
+});
+
 // Profilo cliente autenticato
 router.get("/api/public/customers/me", async (req, res) => {
   try {

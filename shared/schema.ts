@@ -1108,6 +1108,9 @@ export const siaeCustomers = pgTable("siae_customers", {
   isActive: boolean("is_active").notNull().default(true),
   blockedUntil: timestamp("blocked_until"),
   blockReason: text("block_reason"),
+  // Password reset
+  resetPasswordToken: varchar("reset_password_token", { length: 255 }),
+  resetPasswordExpires: timestamp("reset_password_expires"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

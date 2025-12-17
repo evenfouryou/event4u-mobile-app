@@ -69,6 +69,8 @@ import SiaeReportC2 from "@/pages/siae-report-c2";
 import PublicEvents from "@/pages/public-events";
 import PublicEventDetail from "@/pages/public-event-detail";
 import PublicLogin from "@/pages/public-login";
+import PublicForgotPassword from "@/pages/public-forgot-password";
+import PublicResetPassword from "@/pages/public-reset-password";
 import PublicCart from "@/pages/public-cart";
 import PublicCheckout from "@/pages/public-checkout";
 import PublicCheckoutSuccess from "@/pages/public-checkout-success";
@@ -134,6 +136,8 @@ function Router() {
         <Route path="/acquista" component={PublicEvents} />
         <Route path="/carrello" component={PublicCart} />
         <Route path="/accedi" component={PublicLogin} />
+        <Route path="/public/forgot-password" component={PublicForgotPassword} />
+        <Route path="/public/reset-password" component={PublicResetPassword} />
         <Route path="/checkout/success" component={PublicCheckoutSuccess} />
         <Route path="/checkout" component={PublicCheckout} />
         <Route path="/locali/:id" component={PublicVenueDetail} />

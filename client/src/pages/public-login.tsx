@@ -320,6 +320,16 @@ export default function PublicLoginPage() {
                         </>
                       )}
                     </Button>
+                    
+                    <div className="text-center">
+                      <Link 
+                        href="/public/forgot-password" 
+                        className="text-sm text-yellow-400 hover:underline"
+                        data-testid="link-forgot-password"
+                      >
+                        Password dimenticata?
+                      </Link>
+                    </div>
                   </form>
                 </CardContent>
               </TabsContent>
