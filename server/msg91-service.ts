@@ -35,12 +35,16 @@ function formatPhoneNumber(phone: string): string {
 }
 
 export async function sendOTP(phone: string, otpExpiry: number = 10): Promise<SendOTPResult> {
+  console.log(`[MSG91] sendOTP called with phone: ${phone}`);
+  console.log(`[MSG91] AUTHKEY configured: ${!!MSG91_AUTHKEY}, TEMPLATE_ID configured: ${!!MSG91_TEMPLATE_ID}`);
+  
   if (!MSG91_AUTHKEY || !MSG91_TEMPLATE_ID) {
-    console.error("[MSG91] Missing AUTHKEY or TEMPLATE_ID");
+    console.error("[MSG91] Missing AUTHKEY or TEMPLATE_ID - AUTHKEY:", !!MSG91_AUTHKEY, "TEMPLATE_ID:", !!MSG91_TEMPLATE_ID);
     return { success: false, message: "Configurazione MSG91 mancante" };
   }
 
   const formattedPhone = formatPhoneNumber(phone);
+  console.log(`[MSG91] Formatted phone: ${formattedPhone}`);
   
   const url = new URL(`${MSG91_BASE_URL}/otp`);
   url.searchParams.append('authkey', MSG91_AUTHKEY);
@@ -49,7 +53,7 @@ export async function sendOTP(phone: string, otpExpiry: number = 10): Promise<Se
   url.searchParams.append('otp_expiry', String(otpExpiry));
   url.searchParams.append('realTimeResponse', '1');
 
-  console.log(`[MSG91] Sending OTP to ${formattedPhone}`);
+  console.log(`[MSG91] Sending OTP to ${formattedPhone} with template ${MSG91_TEMPLATE_ID}`);
 
   try {
     const response = await fetch(url.toString(), {
