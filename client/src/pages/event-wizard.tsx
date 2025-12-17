@@ -356,7 +356,15 @@ export default function EventWizard() {
       // If editing an existing event, update it
       let response;
       if (draftIdRef.current) {
-        response = await apiRequest('PATCH', `/api/events/${draftIdRef.current}`, { ...data, status: 'scheduled' });
+        // Preserve existing status for events that are already ongoing/closed
+        // Only set to 'scheduled' if current status is 'draft' or undefined
+        const currentStatus = existingEvent?.status;
+        const updateData = { ...data };
+        if (!currentStatus || currentStatus === 'draft') {
+          updateData.status = 'scheduled';
+        }
+        // Don't send status if it would be invalid transition
+        response = await apiRequest('PATCH', `/api/events/${draftIdRef.current}`, updateData);
       } else {
         // Otherwise create new event directly as scheduled (no draft)
         response = await apiRequest('POST', '/api/events', { ...data, status: 'scheduled' });
