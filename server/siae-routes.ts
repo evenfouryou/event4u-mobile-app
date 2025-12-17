@@ -2294,7 +2294,7 @@ router.get('/api/siae/ticketed-events/:id/reports/c2', requireAuth, async (req: 
 
     const sectorBreakdown = sectors.map(s => {
       const soldCount = s.capacity - s.availableSeats;
-      const sectorRevenue = soldCount * (Number(s.price) || 0);
+      const sectorRevenue = soldCount * (Number(s.priceIntero) || 0);
       const sectorVat = sectorRevenue * (vatRate / (100 + vatRate));
       return {
         id: s.id,
@@ -2304,7 +2304,7 @@ router.get('/api/siae/ticketed-events/:id/reports/c2', requireAuth, async (req: 
         capacity: s.capacity,
         ticketsSold: soldCount,
         availableSeats: s.availableSeats,
-        price: Number(s.price) || 0,
+        priceIntero: Number(s.priceIntero) || 0,
         grossRevenue: sectorRevenue,
         vatAmount: sectorVat,
         netRevenue: sectorRevenue - sectorVat,
@@ -2383,8 +2383,8 @@ ${sectors.map(s => `    <Settore>
       <Capienza>${s.capacity || 0}</Capienza>
       <BigliettiVenduti>${s.capacity - s.availableSeats}</BigliettiVenduti>
       <PostiDisponibili>${s.availableSeats || 0}</PostiDisponibili>
-      <Prezzo>${Number(s.price || 0).toFixed(2)}</Prezzo>
-      <Incasso>${((s.capacity - s.availableSeats) * Number(s.price || 0)).toFixed(2)}</Incasso>
+      <Prezzo>${Number(s.priceIntero || 0).toFixed(2)}</Prezzo>
+      <Incasso>${((s.capacity - s.availableSeats) * Number(s.priceIntero || 0)).toFixed(2)}</Incasso>
     </Settore>`).join('\n')}
   </Settori>
   <Biglietti>
