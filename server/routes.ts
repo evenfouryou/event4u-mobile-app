@@ -3220,7 +3220,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      await storage.deleteUser(targetUserId);
+      // Handle all foreign key constraints before deleting user
+      await storage.deleteUserWithDependencies(targetUserId);
       res.json({ message: "User deleted successfully" });
     } catch (error) {
       console.error("Error deleting user:", error);

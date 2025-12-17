@@ -91,6 +91,15 @@ import {
   eventFloorplans,
   eventStaffAssignments,
   siaeTicketedEvents,
+  siaeCustomers,
+  siaeBoxOfficeSessions,
+  siaeSmartCardSessions,
+  prOtpAttempts,
+  printerAgents,
+  cashierSessions,
+  e4uStaffAssignments,
+  eventPrAssignments,
+  eventScanners,
   schoolBadgeLandings,
   schoolBadgeRequests,
   schoolBadges,
@@ -118,6 +127,7 @@ export interface IStorage {
   getAllUsers(): Promise<User[]>;
   updateUser(id: string, user: Partial<User>): Promise<User | undefined>;
   deleteUser(id: string): Promise<boolean>;
+  deleteUserWithDependencies(id: string): Promise<boolean>;
   getCashiersByCompany(companyId: string): Promise<User[]>;
   
   // Company operations
@@ -463,6 +473,29 @@ export class DatabaseStorage implements IStorage {
   }
 
   async deleteUser(id: string): Promise<boolean> {
+    const result = await db.delete(users).where(eq(users.id, id));
+    return result.rowCount ? result.rowCount > 0 : false;
+  }
+
+  async deleteUserWithDependencies(id: string): Promise<boolean> {
+    // Delete all related records before deleting user
+    // Tables with userId NOT NULL - must be deleted
+    await db.delete(userFeatures).where(eq(userFeatures.userId, id));
+    await db.delete(eventStaffAssignments).where(eq(eventStaffAssignments.userId, id));
+    await db.delete(siaeBoxOfficeSessions).where(eq(siaeBoxOfficeSessions.userId, id));
+    await db.delete(e4uStaffAssignments).where(eq(e4uStaffAssignments.userId, id));
+    await db.delete(eventPrAssignments).where(eq(eventPrAssignments.userId, id));
+    await db.delete(eventScanners).where(eq(eventScanners.userId, id));
+    await db.delete(cashierSessions).where(eq(cashierSessions.cashierId, id));
+    await db.delete(printerAgents).where(eq(printerAgents.userId, id));
+    
+    // Tables with optional userId - set to NULL
+    await db.update(staff).set({ userId: null }).where(eq(staff.userId, id));
+    await db.update(siaeCustomers).set({ userId: null }).where(eq(siaeCustomers.userId, id));
+    await db.update(siaeSmartCardSessions).set({ userId: null }).where(eq(siaeSmartCardSessions.userId, id));
+    await db.update(prOtpAttempts).set({ userId: null }).where(eq(prOtpAttempts.userId, id));
+    
+    // Now delete the user
     const result = await db.delete(users).where(eq(users.id, id));
     return result.rowCount ? result.rowCount > 0 : false;
   }
