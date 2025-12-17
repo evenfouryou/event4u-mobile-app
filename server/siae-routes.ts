@@ -778,13 +778,16 @@ router.post("/api/siae/ticketed-events", requireAuth, requireOrganizer, async (r
 
 router.patch("/api/siae/ticketed-events/:id", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
   try {
+    console.log("[SIAE PATCH] Received body:", JSON.stringify(req.body).substring(0, 500));
     const data = patchTicketedEventSchema.parse(req.body);
+    console.log("[SIAE PATCH] Parsed data:", JSON.stringify(data).substring(0, 500));
     const event = await siaeStorage.updateSiaeTicketedEvent(req.params.id, data);
     if (!event) {
       return res.status(404).json({ message: "Evento biglietteria non trovato" });
     }
     res.json(event);
   } catch (error: any) {
+    console.log("[SIAE PATCH] Error:", error.message);
     res.status(400).json({ message: error.message });
   }
 });
