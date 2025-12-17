@@ -23,7 +23,18 @@ const router = Router();
 
 // Helper to get authenticated user
 function getUser(req: Request): AuthenticatedUser | null {
-  return req.user as AuthenticatedUser | null;
+  const user = req.user as any;
+  if (!user) return null;
+  
+  // Handle both direct id and claims.sub format
+  return {
+    id: user.id || user.claims?.sub,
+    email: user.email || user.claims?.email,
+    firstName: user.firstName || user.claims?.first_name,
+    lastName: user.lastName || user.claims?.last_name,
+    role: user.role,
+    companyId: user.companyId
+  };
 }
 
 // Middleware per verificare ruolo super admin (modelli stampante solo super admin)
