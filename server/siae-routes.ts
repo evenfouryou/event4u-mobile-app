@@ -3302,6 +3302,7 @@ router.patch("/api/siae/tickets/:id/cancel", requireAuth, async (req: Request, r
       fiscalCancellationRegistered
     });
   } catch (error: any) {
+    console.error(`[TicketCancel] Error in cancel endpoint:`, error);
     res.status(500).json({ message: error.message });
   }
 });
