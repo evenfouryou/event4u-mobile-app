@@ -2172,18 +2172,33 @@ router.get('/smart-card/verify-emission', requireAuth, async (req: Request, res:
 
 // ==================== SIAE Reports ====================
 
-// C1 Report - Daily Register (Registro Giornaliero)
+// C1 Report - Daily/Monthly Register (Registro Giornaliero/Mensile)
 // Uses ALL tickets (including cashier-emitted tickets without transactions)
+// Query param: type=giornaliero (default) or type=mensile
 router.get('/api/siae/ticketed-events/:id/reports/c1', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
+    const reportType = (req.query.type as string) || 'giornaliero';
+    const isMonthly = reportType === 'mensile';
+    
     const event = await siaeStorage.getSiaeTicketedEvent(id);
     if (!event) {
       return res.status(404).json({ message: "Evento non trovato" });
     }
 
     const sectors = await siaeStorage.getSiaeEventSectors(id);
-    const tickets = await siaeStorage.getSiaeTicketsByEvent(id);
+    const allTickets = await siaeStorage.getSiaeTicketsByEvent(id);
+    
+    // For daily report, filter by event date; for monthly, include all tickets
+    let tickets = allTickets;
+    if (!isMonthly && event.eventDate) {
+      const eventDateStr = new Date(event.eventDate).toISOString().split('T')[0];
+      tickets = allTickets.filter(t => {
+        if (!t.emissionDate) return true; // Include tickets without emission date
+        const ticketDateStr = new Date(t.emissionDate).toISOString().split('T')[0];
+        return ticketDateStr === eventDateStr;
+      });
+    }
     
     // Filter only active/emitted tickets
     const activeTickets = tickets.filter(t => t.status !== 'cancelled');
@@ -2249,8 +2264,8 @@ router.get('/api/siae/ticketed-events/:id/reports/c1', requireAuth, async (req: 
     const netRevenue = totalRevenue - vatAmount;
 
     res.json({
-      reportType: 'C1',
-      reportName: 'Registro Giornaliero',
+      reportType: isMonthly ? 'mensile' : 'giornaliero',
+      reportName: isMonthly ? 'Riepilogo Mensile' : 'Registro Giornaliero',
       eventId: id,
       eventName: event.eventName,
       eventCode: event.eventCode,
