@@ -158,7 +158,7 @@ export default function Home() {
       setLocation('/beverage');
     }
     if (isCassiere) {
-      setLocation('/cashier-dashboard');
+      setLocation('/cassa-biglietti');
     }
   }, [isBartender, isWarehouse, isCassiere, setLocation]);
 
