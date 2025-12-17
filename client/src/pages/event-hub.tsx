@@ -1123,25 +1123,12 @@ export default function EventHub() {
     });
   };
 
-  const handleReportC1 = async () => {
+  const handleReportC1 = () => {
     if (!ticketedEvent?.id) {
       toast({ title: "Errore", description: "Nessun evento SIAE associato.", variant: "destructive" });
       return;
     }
-    setReportLoading(true);
-    setReportType('C1');
-    try {
-      const response = await fetch(`/api/siae/ticketed-events/${ticketedEvent.id}/reports/c1`, { credentials: 'include' });
-      if (!response.ok) throw new Error("Errore nel caricamento del report");
-      const data = await response.json();
-      setReportData(data);
-      setReportDialogOpen(true);
-    } catch (error: any) {
-      toast({ title: "Errore", description: error.message || "Impossibile generare il report C1.", variant: "destructive" });
-      setReportType(null);
-    } finally {
-      setReportLoading(false);
-    }
+    window.open(`/siae/reports/c1/${ticketedEvent.id}`, '_blank');
   };
 
   const handleReportC2 = async () => {
