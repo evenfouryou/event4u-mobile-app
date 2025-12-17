@@ -155,14 +155,10 @@ export default function EventWizard() {
     queryKey: ['/api/siae/sector-codes'],
   });
 
-  // Load existing draft if editing
-  const { data: existingEvent } = useQuery({
+  // Load existing draft if editing - use direct API call to get full event data
+  const { data: existingEvent, isLoading: isLoadingEvent } = useQuery<any>({
     queryKey: ['/api/events', draftId],
     enabled: !!draftId,
-    queryFn: async () => {
-      const events = await queryClient.fetchQuery<any[]>({ queryKey: ['/api/events'] });
-      return events.find(e => e.id === draftId);
-    }
   });
 
   // Load existing SIAE ticketing info if editing (includes ticketed event + sectors)
@@ -598,6 +594,16 @@ export default function EventWizard() {
   };
 
   const progress = (currentStep / STEPS.length) * 100;
+
+  // Show loading state when editing and data is being fetched
+  if (draftId && isLoadingEvent) {
+    return (
+      <div className="flex flex-col items-center justify-center gap-4 p-12 max-w-4xl mx-auto">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+        <p className="text-muted-foreground">Caricamento evento...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-6 p-6 max-w-4xl mx-auto">
