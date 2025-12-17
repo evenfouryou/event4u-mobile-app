@@ -1920,13 +1920,15 @@ export class SiaeStorage implements ISiaeStorage {
     try {
       const result = await db.transaction(async (tx) => {
         // Step 1: Update ticket status to cancelled
+        // Extract reason code (first 2 chars) from cancellationReason format "XX: note" or just "XX"
+        const reasonCode = params.cancellationReason.substring(0, 2);
         const [cancelledTicket] = await tx
           .update(siaeTickets)
           .set({
             status: 'cancelled',
-            cancelledAt: new Date(),
+            cancellationDate: new Date(),
             cancelledByUserId: params.cancelledByUserId,
-            cancellationReason: params.cancellationReason,
+            cancellationReasonCode: reasonCode,
             updatedAt: new Date()
           })
           .where(and(

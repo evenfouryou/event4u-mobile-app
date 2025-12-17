@@ -4558,6 +4558,7 @@ router.post("/api/siae/tickets/:id/print", requireAuth, async (req: Request, res
       venue_name: event.venueName || '',
       price: `€ ${Number(ticket.ticketPrice || 0).toFixed(2).replace('.', ',')}`,
       ticket_number: ticket.ticketCode || '',
+      progressive_number: String(ticket.progressiveNumber || ''),
       sector: sector?.sectorName || '',
       row: '',
       seat: '',
