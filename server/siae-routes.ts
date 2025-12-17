@@ -2147,7 +2147,7 @@ router.get('/api/siae/ticketed-events/:id/reports/c1', requireAuth, async (req: 
       return res.status(404).json({ message: "Evento non trovato" });
     }
 
-    const sectors = await siaeStorage.getSiaeEventSectorsByEvent(id);
+    const sectors = await siaeStorage.getSiaeEventSectors(id);
     const tickets = await siaeStorage.getSiaeTicketsByEvent(id);
     
     // Filter only active/emitted tickets
@@ -2271,7 +2271,7 @@ router.get('/api/siae/ticketed-events/:id/reports/c2', requireAuth, async (req: 
       return res.status(404).json({ message: "Evento non trovato" });
     }
 
-    const sectors = await siaeStorage.getSiaeEventSectorsByEvent(id);
+    const sectors = await siaeStorage.getSiaeEventSectors(id);
     const transactions = await siaeStorage.getSiaeTransactionsByEvent(id);
     
     const completedTransactions = transactions.filter(tx => tx.status === 'completed');
@@ -2350,7 +2350,7 @@ router.get('/api/siae/ticketed-events/:id/reports/xml', requireAuth, async (req:
       return res.status(404).json({ message: "Evento non trovato" });
     }
 
-    const sectors = await siaeStorage.getSiaeEventSectorsByEvent(id);
+    const sectors = await siaeStorage.getSiaeEventSectors(id);
     const tickets = await siaeStorage.getSiaeTicketsByEvent(id);
 
     const eventDateStr = event.eventDate ? new Date(event.eventDate).toISOString().split('T')[0] : '';
@@ -2416,7 +2416,7 @@ router.get('/api/siae/ticketed-events/:id/reports/pdf', requireAuth, async (req:
       return res.status(404).json({ message: "Evento non trovato" });
     }
 
-    const sectors = await siaeStorage.getSiaeEventSectorsByEvent(id);
+    const sectors = await siaeStorage.getSiaeEventSectors(id);
     const transactions = await siaeStorage.getSiaeTransactionsByEvent(id);
     const tickets = await siaeStorage.getSiaeTicketsByEvent(id);
 
@@ -3706,7 +3706,7 @@ router.get("/api/cashier/events/:eventId/quotas", requireAuth, requireCashier, a
     }
     
     const event = await siaeStorage.getSiaeTicketedEvent(eventId);
-    const sectors = await siaeStorage.getSiaeEventSectorsByEvent(eventId);
+    const sectors = await siaeStorage.getSiaeEventSectors(eventId);
     const sector = allocation.sectorId ? await siaeStorage.getSiaeEventSector(allocation.sectorId) : null;
     
     // Get today's tickets by this cashier (issuedByUserId = cashier.id for SIAE cashiers)
@@ -4078,7 +4078,7 @@ router.get("/api/siae/events/:eventId/report-c1", requireAuth, requireGestore, a
     
     // Get all tickets for event
     const tickets = await siaeStorage.getSiaeTicketsByEvent(eventId);
-    const sectors = await siaeStorage.getSiaeEventSectorsByEvent(eventId);
+    const sectors = await siaeStorage.getSiaeEventSectors(eventId);
     
     // Aggregate by sector and ticket type
     const sectorStats = new Map<string, {
