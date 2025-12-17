@@ -54,7 +54,7 @@ export default function SiaeReportC1() {
   const isMonthly = reportType === 'mensile';
 
   const { data: report, isLoading, error } = useQuery<C1ReportData>({
-    queryKey: ['/api/siae/ticketed-events', id, 'reports/c1', reportType],
+    queryKey: [`/api/siae/ticketed-events/${id}/reports/c1?type=${reportType}`],
     enabled: !!id,
   });
 
