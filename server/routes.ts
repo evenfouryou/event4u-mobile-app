@@ -1432,7 +1432,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         }
       }
 
-      const validated = updateEventSchema.parse(req.body);
+      let validated;
+      try {
+        validated = updateEventSchema.parse(req.body);
+      } catch (validationError: any) {
+        console.error("Event validation error:", validationError.errors || validationError.message);
+        return res.status(400).json({ 
+          message: "Errore di validazione: " + (validationError.errors?.map((e: any) => `${e.path.join('.')}: ${e.message}`).join(', ') || validationError.message)
+        });
+      }
       // Convert actualRevenue to string for database storage
       const updateData: any = { ...validated };
       if (validated.actualRevenue !== undefined && validated.actualRevenue !== null) {
