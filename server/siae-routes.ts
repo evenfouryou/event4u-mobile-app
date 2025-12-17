@@ -552,7 +552,9 @@ router.delete("/api/siae/customers/:id", requireAuth, requireGestore, async (req
       return res.status(404).json({ message: "Cliente non trovato" });
     }
     
-    // Verifica se ci sono record collegati che impedirebbero l'eliminazione
+    const forceDelete = req.query.force === 'true';
+    
+    // Verifica se ci sono record collegati
     const [hasTickets] = await db.select({ count: sql<number>`count(*)` })
       .from(siaeTickets)
       .where(eq(siaeTickets.customerId, req.params.id));
@@ -565,10 +567,33 @@ router.delete("/api/siae/customers/:id", requireAuth, requireGestore, async (req
       .from(siaeSubscriptions)
       .where(eq(siaeSubscriptions.customerId, req.params.id));
     
-    if (Number(hasTickets?.count) > 0 || Number(hasTransactions?.count) > 0 || Number(hasSubscriptions?.count) > 0) {
+    const ticketCount = Number(hasTickets?.count) || 0;
+    const transactionCount = Number(hasTransactions?.count) || 0;
+    const subscriptionCount = Number(hasSubscriptions?.count) || 0;
+    
+    if ((ticketCount > 0 || transactionCount > 0 || subscriptionCount > 0) && !forceDelete) {
       return res.status(409).json({ 
-        message: "Impossibile eliminare il cliente: ha biglietti, transazioni o abbonamenti associati. Disattivalo invece di eliminarlo." 
+        message: `Questo cliente ha ${ticketCount} biglietti, ${transactionCount} transazioni e ${subscriptionCount} abbonamenti. Usa l'opzione "Elimina comunque" per procedere.`,
+        canForceDelete: true,
+        details: { ticketCount, transactionCount, subscriptionCount }
       });
+    }
+    
+    // Se force delete, prima rimuovi i record associati
+    if (forceDelete) {
+      // Anonimizza i biglietti (non li eliminiamo per integrità fiscale)
+      await db.update(siaeTickets)
+        .set({ customerId: null })
+        .where(eq(siaeTickets.customerId, req.params.id));
+      
+      // Anonimizza le transazioni
+      await db.update(siaeTransactions)
+        .set({ customerId: null })
+        .where(eq(siaeTransactions.customerId, req.params.id));
+      
+      // Elimina abbonamenti (questi possono essere rimossi)
+      await db.delete(siaeSubscriptions)
+        .where(eq(siaeSubscriptions.customerId, req.params.id));
     }
     
     const deleted = await siaeStorage.deleteSiaeCustomer(req.params.id);
@@ -581,7 +606,8 @@ router.delete("/api/siae/customers/:id", requireAuth, requireGestore, async (req
     // Gestisci errori di vincolo FK
     if (error.code === '23503') { // PostgreSQL foreign key violation
       return res.status(409).json({ 
-        message: "Impossibile eliminare il cliente: ha record associati nel sistema. Disattivalo invece di eliminarlo." 
+        message: "Impossibile eliminare il cliente: ha record associati nel sistema.",
+        canForceDelete: true
       });
     }
     res.status(500).json({ message: error.message });

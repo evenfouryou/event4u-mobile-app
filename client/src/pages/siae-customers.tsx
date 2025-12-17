@@ -98,6 +98,8 @@ export default function SiaeCustomersPage() {
   const [isOtpDialogOpen, setIsOtpDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [customerToDelete, setCustomerToDelete] = useState<SiaeCustomer | null>(null);
+  const [deleteErrorMessage, setDeleteErrorMessage] = useState<string | null>(null);
+  const [canForceDelete, setCanForceDelete] = useState(false);
   const [pendingCustomerId, setPendingCustomerId] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [otpCooldown, setOtpCooldown] = useState(0);
@@ -245,8 +247,18 @@ export default function SiaeCustomersPage() {
   });
 
   const deleteMutation = useMutation({
-    mutationFn: async (id: string) => {
-      const response = await apiRequest("DELETE", `/api/siae/customers/${id}`, {});
+    mutationFn: async ({ id, force = false }: { id: string; force?: boolean }) => {
+      const url = force ? `/api/siae/customers/${id}?force=true` : `/api/siae/customers/${id}`;
+      const response = await apiRequest("DELETE", url, {});
+      if (!response.ok) {
+        const data = await response.json();
+        if (data.canForceDelete) {
+          setDeleteErrorMessage(data.message);
+          setCanForceDelete(true);
+          throw new Error("SHOW_FORCE_DELETE");
+        }
+        throw new Error(data.message || "Errore durante l'eliminazione");
+      }
       return response.json();
     },
     onSuccess: () => {
@@ -256,14 +268,18 @@ export default function SiaeCustomersPage() {
       });
       setIsDeleteDialogOpen(false);
       setCustomerToDelete(null);
+      setDeleteErrorMessage(null);
+      setCanForceDelete(false);
       queryClient.invalidateQueries({ queryKey: ["/api/siae/customers"] });
     },
     onError: (error: Error) => {
-      toast({
-        title: "Errore eliminazione",
-        description: error.message,
-        variant: "destructive",
-      });
+      if (error.message !== "SHOW_FORCE_DELETE") {
+        toast({
+          title: "Errore eliminazione",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     },
   });
 
@@ -567,7 +583,14 @@ export default function SiaeCustomersPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <Dialog open={isDeleteDialogOpen} onOpenChange={(open) => {
+        setIsDeleteDialogOpen(open);
+        if (!open) {
+          setDeleteErrorMessage(null);
+          setCanForceDelete(false);
+          setCustomerToDelete(null);
+        }
+      }}>
         <DialogContent className="max-w-md" data-testid="dialog-delete-confirmation">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-destructive">
@@ -575,43 +598,73 @@ export default function SiaeCustomersPage() {
               Conferma Eliminazione
             </DialogTitle>
             <DialogDescription>
-              Sei sicuro di voler eliminare il cliente{" "}
-              <strong>{customerToDelete?.firstName} {customerToDelete?.lastName}</strong>?
-              <br />
-              Questa azione è irreversibile.
+              {deleteErrorMessage ? (
+                <span className="text-amber-500">{deleteErrorMessage}</span>
+              ) : (
+                <>
+                  Sei sicuro di voler eliminare il cliente{" "}
+                  <strong>{customerToDelete?.firstName} {customerToDelete?.lastName}</strong>?
+                  <br />
+                  Questa azione è irreversibile.
+                </>
+              )}
             </DialogDescription>
           </DialogHeader>
-          <DialogFooter>
+          <DialogFooter className="flex-col sm:flex-row gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => {
                 setIsDeleteDialogOpen(false);
                 setCustomerToDelete(null);
+                setDeleteErrorMessage(null);
+                setCanForceDelete(false);
               }}
               data-testid="button-cancel-delete"
             >
               Annulla
             </Button>
-            <Button
-              type="button"
-              variant="destructive"
-              onClick={() => customerToDelete && deleteMutation.mutate(customerToDelete.id)}
-              disabled={deleteMutation.isPending}
-              data-testid="button-confirm-delete"
-            >
-              {deleteMutation.isPending ? (
-                <>
-                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  Eliminazione...
-                </>
-              ) : (
-                <>
-                  <Trash2 className="w-4 h-4 mr-2" />
-                  Elimina
-                </>
-              )}
-            </Button>
+            {canForceDelete ? (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => customerToDelete && deleteMutation.mutate({ id: customerToDelete.id, force: true })}
+                disabled={deleteMutation.isPending}
+                data-testid="button-force-delete"
+              >
+                {deleteMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Eliminazione...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Elimina comunque
+                  </>
+                )}
+              </Button>
+            ) : (
+              <Button
+                type="button"
+                variant="destructive"
+                onClick={() => customerToDelete && deleteMutation.mutate({ id: customerToDelete.id })}
+                disabled={deleteMutation.isPending}
+                data-testid="button-confirm-delete"
+              >
+                {deleteMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Eliminazione...
+                  </>
+                ) : (
+                  <>
+                    <Trash2 className="w-4 h-4 mr-2" />
+                    Elimina
+                  </>
+                )}
+              </Button>
+            )}
           </DialogFooter>
         </DialogContent>
       </Dialog>

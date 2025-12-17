@@ -246,3 +246,65 @@ export async function sendTicketEmail(options: TicketEmailOptions): Promise<void
     throw error;
   }
 }
+
+interface PasswordResetEmailOptions {
+  to: string;
+  firstName: string;
+  resetLink: string;
+}
+
+export async function sendPasswordResetEmail(options: PasswordResetEmailOptions): Promise<void> {
+  const { to, firstName, resetLink } = options;
+
+  const htmlBody = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+</head>
+<body style="font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #0a0e17; color: #ffffff; margin: 0; padding: 0;">
+  <div style="max-width: 600px; margin: 0 auto; padding: 40px 20px;">
+    <div style="text-align: center; margin-bottom: 40px;">
+      <div style="font-size: 32px; font-weight: bold; color: #FFD700; margin-bottom: 10px;">Event4U</div>
+      <div style="font-size: 24px; color: #ffffff;">Reimposta la tua password</div>
+    </div>
+
+    <div style="background-color: #151922; border-radius: 12px; padding: 30px; margin-bottom: 30px;">
+      <p style="color: #ffffff; margin-top: 0;">Ciao ${firstName},</p>
+      <p style="color: #94A3B8;">Hai richiesto di reimpostare la password del tuo account Event4U.</p>
+      
+      <div style="text-align: center; margin: 30px 0;">
+        <a href="${resetLink}" 
+           style="display: inline-block; background-color: #FFD700; color: #0a0e17; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: bold; font-size: 16px;">
+          Reimposta Password
+        </a>
+      </div>
+      
+      <p style="color: #94A3B8; font-size: 14px;">Questo link scadrà tra 1 ora.</p>
+      <p style="color: #94A3B8; font-size: 14px;">Se non hai richiesto il reset della password, ignora questa email.</p>
+    </div>
+
+    <div style="text-align: center; padding-top: 20px; border-top: 1px solid #1e2533;">
+      <p style="color: #94A3B8; font-size: 12px;">&copy; ${new Date().getFullYear()} Event4U - Tutti i diritti riservati</p>
+    </div>
+  </div>
+</body>
+</html>
+  `;
+
+  const mailOptions = {
+    from: process.env.SMTP_FROM || `"Event4U" <${process.env.SMTP_USER || 'noreply@event4u.it'}>`,
+    to,
+    subject: "Reimposta la tua password - Event4U",
+    html: htmlBody,
+  };
+
+  try {
+    await emailTransporter.sendMail(mailOptions);
+    console.log(`[EMAIL-SERVICE] Password reset email sent successfully to ${to}`);
+  } catch (error) {
+    console.error('[EMAIL-SERVICE] Failed to send password reset email:', error);
+    throw error;
+  }
+}
