@@ -54,7 +54,7 @@ const MASTER_TOKEN = '61f12bc11ad07f8042ac953211cefe4127c900070cf51f66903988f90a
 // Available servers for connection
 const AVAILABLE_SERVERS = {
   production: 'wss://manage.eventfouryou.com',
-  development: 'wss://event4u-management-system-evenfouryou.replit.app'
+  development: 'wss://1e140314-d94a-4320-bb5f-edbf06f7b556-00-3atrzxa6r3x8c.kirk.replit.dev'
 };
 
 let relayConfig = {
