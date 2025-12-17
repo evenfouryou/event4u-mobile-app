@@ -2138,6 +2138,7 @@ router.get('/smart-card/verify-emission', requireAuth, async (req: Request, res:
 // ==================== SIAE Reports ====================
 
 // C1 Report - Daily Register (Registro Giornaliero)
+// Uses ALL tickets (including cashier-emitted tickets without transactions)
 router.get('/api/siae/ticketed-events/:id/reports/c1', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -2147,19 +2148,24 @@ router.get('/api/siae/ticketed-events/:id/reports/c1', requireAuth, async (req: 
     }
 
     const sectors = await siaeStorage.getSiaeEventSectorsByEvent(id);
-    const transactions = await siaeStorage.getSiaeTransactionsByEvent(id);
     const tickets = await siaeStorage.getSiaeTicketsByEvent(id);
+    
+    // Filter only active/emitted tickets
+    const activeTickets = tickets.filter(t => t.status !== 'cancelled');
 
     const salesByDate: Record<string, { 
       date: string; 
       ticketsSold: number; 
       totalAmount: number;
       byTicketType: Record<string, { name: string; quantity: number; amount: number }>;
+      bySector: Record<string, { name: string; quantity: number; amount: number }>;
     }> = {};
 
-    for (const tx of transactions) {
-      if (tx.status !== 'completed') continue;
-      const dateStr = tx.transactionDate ? new Date(tx.transactionDate).toISOString().split('T')[0] : 'N/D';
+    // Process ALL tickets (including those without transactions - cashier tickets)
+    for (const ticket of activeTickets) {
+      const dateStr = ticket.emissionDate 
+        ? new Date(ticket.emissionDate).toISOString().split('T')[0] 
+        : 'N/D';
       
       if (!salesByDate[dateStr]) {
         salesByDate[dateStr] = {
@@ -2167,47 +2173,91 @@ router.get('/api/siae/ticketed-events/:id/reports/c1', requireAuth, async (req: 
           ticketsSold: 0,
           totalAmount: 0,
           byTicketType: {},
+          bySector: {},
         };
       }
       
-      salesByDate[dateStr].ticketsSold += tx.ticketsCount || 0;
-      salesByDate[dateStr].totalAmount += Number(tx.totalAmount) || 0;
+      salesByDate[dateStr].ticketsSold += 1;
+      salesByDate[dateStr].totalAmount += Number(ticket.ticketPrice) || 0;
 
-      const txTickets = tickets.filter(t => t.transactionId === tx.id);
-      for (const ticket of txTickets) {
-        const sector = sectors.find(s => s.id === ticket.sectorId);
-        const sectorName = sector?.name || 'Sconosciuto';
-        if (!salesByDate[dateStr].byTicketType[sectorName]) {
-          salesByDate[dateStr].byTicketType[sectorName] = { name: sectorName, quantity: 0, amount: 0 };
-        }
-        salesByDate[dateStr].byTicketType[sectorName].quantity += 1;
-        salesByDate[dateStr].byTicketType[sectorName].amount += Number(ticket.ticketPrice) || 0;
+      // Aggregate by ticket type
+      const ticketType = ticket.ticketType || 'intero';
+      if (!salesByDate[dateStr].byTicketType[ticketType]) {
+        salesByDate[dateStr].byTicketType[ticketType] = { 
+          name: ticketType === 'intero' ? 'Intero' : ticketType === 'ridotto' ? 'Ridotto' : ticketType === 'omaggio' ? 'Omaggio' : ticketType, 
+          quantity: 0, 
+          amount: 0 
+        };
       }
+      salesByDate[dateStr].byTicketType[ticketType].quantity += 1;
+      salesByDate[dateStr].byTicketType[ticketType].amount += Number(ticket.ticketPrice) || 0;
+
+      // Aggregate by sector
+      const sector = sectors.find(s => s.id === ticket.sectorId);
+      const sectorName = sector?.name || 'Sconosciuto';
+      if (!salesByDate[dateStr].bySector[sectorName]) {
+        salesByDate[dateStr].bySector[sectorName] = { name: sectorName, quantity: 0, amount: 0 };
+      }
+      salesByDate[dateStr].bySector[sectorName].quantity += 1;
+      salesByDate[dateStr].bySector[sectorName].amount += Number(ticket.ticketPrice) || 0;
     }
 
     const dailySales = Object.values(salesByDate).sort((a, b) => a.date.localeCompare(b.date));
+    
+    // Calculate totals
+    const totalTicketsSold = activeTickets.length;
+    const totalRevenue = activeTickets.reduce((sum, t) => sum + (Number(t.ticketPrice) || 0), 0);
+    
+    // Calculate VAT
+    const vatRate = event.vatRate || 10;
+    const vatAmount = totalRevenue * (vatRate / (100 + vatRate));
+    const netRevenue = totalRevenue - vatAmount;
 
     res.json({
       reportType: 'C1',
       reportName: 'Registro Giornaliero',
       eventId: id,
       eventName: event.eventName,
+      eventCode: event.eventCode,
       eventDate: event.eventDate,
+      eventTime: event.eventTime,
+      venueName: event.venueName,
       generatedAt: new Date().toISOString(),
-      totalTicketsSold: event.ticketsSold || 0,
-      totalRevenue: Number(event.totalRevenue) || 0,
+      totalTicketsSold,
+      totalRevenue,
+      vatRate,
+      vatAmount,
+      netRevenue,
+      cancelledTickets: tickets.filter(t => t.status === 'cancelled').length,
       dailySales,
       sectors: sectors.map(s => ({
         id: s.id,
         name: s.name,
+        sectorCode: s.sectorCode,
         capacity: s.capacity,
         availableSeats: s.availableSeats,
         soldCount: s.capacity - s.availableSeats,
-        price: Number(s.price) || 0,
-        revenue: (s.capacity - s.availableSeats) * (Number(s.price) || 0),
+        priceIntero: Number(s.priceIntero) || 0,
+        priceRidotto: Number(s.priceRidotto) || 0,
+        revenue: activeTickets.filter(t => t.sectorId === s.id).reduce((sum, t) => sum + (Number(t.ticketPrice) || 0), 0),
       })),
+      ticketTypes: {
+        intero: {
+          count: activeTickets.filter(t => t.ticketType === 'intero').length,
+          amount: activeTickets.filter(t => t.ticketType === 'intero').reduce((s, t) => s + (Number(t.ticketPrice) || 0), 0)
+        },
+        ridotto: {
+          count: activeTickets.filter(t => t.ticketType === 'ridotto').length,
+          amount: activeTickets.filter(t => t.ticketType === 'ridotto').reduce((s, t) => s + (Number(t.ticketPrice) || 0), 0)
+        },
+        omaggio: {
+          count: activeTickets.filter(t => t.ticketType === 'omaggio').length,
+          amount: 0
+        }
+      }
     });
   } catch (error: any) {
+    console.error('[C1 Report] Error:', error);
     res.status(500).json({ message: error.message });
   }
 });
