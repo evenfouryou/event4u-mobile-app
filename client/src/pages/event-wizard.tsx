@@ -391,8 +391,9 @@ export default function EventWizard() {
           
           // Check if SIAE ticketed event already exists (editing mode)
           if (existingSiaeData?.id) {
-            // Update existing SIAE ticketed event
-            const siaeEventResponse = await apiRequest('PATCH', `/api/siae/ticketed-events/${existingSiaeData.id}`, siaeEventData);
+            // Update existing SIAE ticketed event - remove companyId as it's not allowed in PATCH
+            const { companyId, ...patchData } = siaeEventData;
+            const siaeEventResponse = await apiRequest('PATCH', `/api/siae/ticketed-events/${existingSiaeData.id}`, patchData);
             siaeEvent = await siaeEventResponse.json();
             
             // Use the returned siaeEvent.id for all operations
