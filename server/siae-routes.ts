@@ -8,6 +8,9 @@ import { eq, and, sql } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { requestFiscalSeal, isCardReadyForSeals, isBridgeConnected, getCachedBridgeStatus } from "./bridge-relay";
+import { sendPrintJobToAgent, getConnectedAgents } from "./print-relay";
+import { generateTicketHtml } from "./template-routes";
+import { ticketTemplates, ticketTemplateElements } from "@shared/schema";
 import {
   insertSiaeEventGenreSchema,
   insertSiaeSectorCodeSchema,
@@ -4119,6 +4122,179 @@ router.get("/api/siae/events/:eventId/report-c1", requireAuth, requireGestore, a
     
     res.json(report);
   } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// POST /api/siae/tickets/:id/print - Print a ticket to thermal printer
+// Requires: printer agent connected, ticket template configured for event
+router.post("/api/siae/tickets/:id/print", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const { id: ticketId } = req.params;
+    const { agentId, skipBackground = true } = req.body;
+    
+    // Get the ticket
+    const ticket = await siaeStorage.getSiaeTicket(ticketId);
+    if (!ticket) {
+      return res.status(404).json({ message: "Biglietto non trovato" });
+    }
+    
+    // Get event details
+    const event = await siaeStorage.getSiaeTicketedEvent(ticket.eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Evento non trovato" });
+    }
+    
+    // Verify company access
+    if (user.role !== 'super_admin' && event.companyId !== user.companyId) {
+      return res.status(403).json({ message: "Non autorizzato" });
+    }
+    
+    // Get sector
+    const sector = ticket.sectorId ? await siaeStorage.getSiaeEventSector(ticket.sectorId) : null;
+    
+    // Determine print agent ID
+    let printerAgentId = agentId;
+    
+    // If no agent specified, try to get from cashier's default printer
+    if (!printerAgentId && user.role === 'cassiere') {
+      const cashierId = getSiaeCashierId(user);
+      if (cashierId) {
+        const [cashier] = await db.select().from(siaeCashiers).where(eq(siaeCashiers.id, cashierId));
+        if (cashier?.defaultPrinterAgentId) {
+          printerAgentId = cashier.defaultPrinterAgentId;
+        }
+      }
+    }
+    
+    // Get first connected agent for the company if still no agent
+    if (!printerAgentId) {
+      const agents = getConnectedAgents(event.companyId);
+      if (agents.length > 0) {
+        printerAgentId = agents[0].agentId;
+      }
+    }
+    
+    if (!printerAgentId) {
+      return res.status(503).json({ 
+        message: "Nessun agente di stampa connesso. Avviare l'applicazione desktop Event4U.",
+        errorCode: "NO_PRINT_AGENT"
+      });
+    }
+    
+    // Get event's ticket template
+    const [template] = await db.select().from(ticketTemplates)
+      .where(and(
+        eq(ticketTemplates.companyId, event.companyId),
+        eq(ticketTemplates.isActive, true)
+      ))
+      .limit(1);
+    
+    if (!template) {
+      return res.status(404).json({ 
+        message: "Nessun template di stampa configurato per questa azienda",
+        errorCode: "NO_TEMPLATE"
+      });
+    }
+    
+    // Get template elements
+    const elements = await db.select().from(ticketTemplateElements)
+      .where(eq(ticketTemplateElements.templateId, template.id))
+      .orderBy(ticketTemplateElements.zIndex);
+    
+    // Parse elements for HTML generation
+    const parsedElements = elements.map(el => {
+      let content = el.staticValue;
+      if (el.fieldKey && !el.staticValue) {
+        content = `{{${el.fieldKey}}}`;
+      } else if (el.fieldKey && el.staticValue) {
+        content = el.staticValue;
+      }
+      
+      return {
+        type: el.type,
+        x: parseFloat(el.x as any),
+        y: parseFloat(el.y as any),
+        width: parseFloat(el.width as any),
+        height: parseFloat(el.height as any),
+        content,
+        fontSize: el.fontSize,
+        fontFamily: el.fontFamily,
+        fontWeight: el.fontWeight,
+        fontColor: el.color,
+        textAlign: el.textAlign,
+        rotation: el.rotation,
+      };
+    });
+    
+    // Build ticket data for template
+    const ticketData: Record<string, string> = {
+      event_name: event.eventName || '',
+      event_date: event.eventDate ? new Date(event.eventDate).toLocaleDateString('it-IT') : '',
+      event_time: event.eventTime || '',
+      venue_name: event.venueName || '',
+      price: `€ ${Number(ticket.ticketPrice || 0).toFixed(2).replace('.', ',')}`,
+      ticket_number: ticket.ticketCode || '',
+      sector: sector?.sectorName || '',
+      row: '',
+      seat: '',
+      buyer_name: ticket.participantFirstName && ticket.participantLastName 
+        ? `${ticket.participantFirstName} ${ticket.participantLastName}` 
+        : '',
+      organizer_company: event.organizerName || '',
+      ticketing_manager: '',
+      emission_datetime: ticket.emittedAt ? new Date(ticket.emittedAt).toLocaleString('it-IT') : '',
+      fiscal_seal: (ticket as any).fiscalSealNumber || '',
+      qr_code: `https://manage.eventfouryou.com/verify/${ticket.ticketCode}`,
+    };
+    
+    // Generate HTML
+    const ticketHtml = generateTicketHtml(
+      {
+        paperWidthMm: template.paperWidthMm,
+        paperHeightMm: template.paperHeightMm,
+        backgroundImageUrl: template.backgroundImageUrl,
+        dpi: template.dpi || 203,
+        printOrientation: (template as any).printOrientation || 'auto',
+      },
+      parsedElements,
+      ticketData,
+      skipBackground
+    );
+    
+    // Determine orientation
+    const naturalOrientation = template.paperWidthMm > template.paperHeightMm ? 'landscape' : 'portrait';
+    const effectiveOrientation = (template as any).printOrientation === 'auto' || !(template as any).printOrientation
+      ? naturalOrientation
+      : (template as any).printOrientation;
+    
+    // Build print payload
+    const printPayload = {
+      id: `ticket-${ticketId}-${Date.now()}`,
+      type: 'ticket',
+      paperWidthMm: template.paperWidthMm,
+      paperHeightMm: template.paperHeightMm,
+      orientation: effectiveOrientation,
+      html: ticketHtml,
+      ticketId: ticketId,
+    };
+    
+    // Send to print agent
+    const sent = sendPrintJobToAgent(printerAgentId, printPayload);
+    
+    if (!sent) {
+      return res.status(503).json({ 
+        message: "Agente di stampa non raggiungibile",
+        errorCode: "AGENT_UNREACHABLE"
+      });
+    }
+    
+    console.log(`[TicketPrint] Sent ticket ${ticketId} to print agent ${printerAgentId}`);
+    
+    res.json({ success: true, message: "Stampa inviata", agentId: printerAgentId });
+  } catch (error: any) {
+    console.error('[TicketPrint] Error:', error);
     res.status(500).json({ message: error.message });
   }
 });

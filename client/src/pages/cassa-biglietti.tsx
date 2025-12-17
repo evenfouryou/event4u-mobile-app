@@ -177,6 +177,23 @@ export default function CassaBigliettiPage() {
     enabled: !!selectedEventId && isGestore && isC1DialogOpen,
   });
 
+  // Print ticket mutation
+  const printTicketMutation = useMutation({
+    mutationFn: async (ticketId: string) => {
+      const response = await apiRequest("POST", `/api/siae/tickets/${ticketId}/print`, {
+        skipBackground: true // Use pre-printed paper
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      // Silent success - printing started
+    },
+    onError: (error: any) => {
+      console.warn('[Print] Error:', error.message);
+      // Non-blocking error - ticket was already emitted
+    },
+  });
+
   const emitTicketMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await apiRequest("POST", `/api/cashiers/events/${selectedEventId}/tickets`, data);
@@ -192,6 +209,18 @@ export default function CassaBigliettiPage() {
       setTicketQuantity(1);
       
       const emittedCount = Array.isArray(result) ? result.length : 1;
+      
+      // Auto-print the emitted ticket(s)
+      if (Array.isArray(result)) {
+        result.forEach((ticket: any) => {
+          if (ticket.id) {
+            printTicketMutation.mutate(ticket.id);
+          }
+        });
+      } else if (result.id) {
+        printTicketMutation.mutate(result.id);
+      }
+      
       toast({
         title: emittedCount > 1 ? `${emittedCount} Biglietti Emessi` : "Biglietto Emesso",
         description: emittedCount > 1 

@@ -486,7 +486,7 @@ function isLightColor(hex: string | null): boolean {
   return brightness > 180; // Colors with brightness > 180 are too light
 }
 
-function generateTicketHtml(
+export function generateTicketHtml(
   template: { paperWidthMm: number; paperHeightMm: number; backgroundImageUrl: string | null; dpi?: number; printOrientation?: string },
   elements: Array<{ type: string; x: number; y: number; width: number; height: number; content: string | null; fontSize: number | null; fontFamily: string | null; fontWeight: string | null; fontColor: string | null; textAlign: string | null; rotation: number | null }>,
   data: Record<string, string>,
