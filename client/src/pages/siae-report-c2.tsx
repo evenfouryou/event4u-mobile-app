@@ -172,25 +172,56 @@ export default function SiaeReportC2() {
               </tr>
             </thead>
             <tbody>
-              {report.sectorBreakdown.map((sector, index) => (
-                <tr key={sector.id || index}>
-                  <td className="border border-black p-2">{sector.name}</td>
-                  <td className="border border-black p-2 text-center">{sector.sectorCode || 'ABB'}</td>
-                  <td className="border border-black p-2 text-center">S</td>
-                  <td className="border border-black p-2 text-center">F</td>
-                  <td className="border border-black p-2 text-right">{sector.ticketsSold}</td>
-                  <td className="border border-black p-2 text-right">{sector.grossRevenue.toFixed(2)}</td>
-                  <td className="border border-black p-2 text-center">0</td>
-                  <td className="border border-black p-2 text-center">1</td>
-                </tr>
-              ))}
-              {report.sectorBreakdown.length === 0 && (
-                <tr>
-                  <td className="border border-black p-2 text-center text-gray-400" colSpan={8}>
-                    Nessun abbonamento registrato
-                  </td>
-                </tr>
-              )}
+              <tr>
+                <td className="border border-black p-2 h-8"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+              </tr>
+              <tr>
+                <td className="border border-black p-2 h-8"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+              </tr>
+              <tr>
+                <td className="border border-black p-2 h-8"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+              </tr>
+              <tr>
+                <td className="border border-black p-2 h-8"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+              </tr>
+              <tr>
+                <td className="border border-black p-2 h-8"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+                <td className="border border-black p-2"></td>
+              </tr>
             </tbody>
           </table>
         </div>
@@ -200,10 +231,10 @@ export default function SiaeReportC2() {
             <tbody>
               <tr className="bg-gray-100 font-bold">
                 <td className="border border-black p-2 text-center" colSpan={4}>TOTALE</td>
-                <td className="border border-black p-2 text-right">{report.summary.ticketsSold}</td>
-                <td className="border border-black p-2 text-right">{report.financials.grossRevenue.toFixed(2)}</td>
-                <td className="border border-black p-2 text-center">{report.summary.ticketsCancelled}</td>
-                <td className="border border-black p-2 text-center">-</td>
+                <td className="border border-black p-2 text-right"></td>
+                <td className="border border-black p-2 text-right"></td>
+                <td className="border border-black p-2 text-center"></td>
+                <td className="border border-black p-2 text-center"></td>
               </tr>
             </tbody>
           </table>
