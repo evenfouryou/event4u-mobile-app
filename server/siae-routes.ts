@@ -1352,6 +1352,38 @@ router.patch("/api/siae/subscriptions/:id", requireAuth, requireOrganizer, async
   }
 });
 
+// ==================== Event Subscriptions ====================
+
+router.get("/api/siae/ticketed-events/:eventId/subscriptions", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const subscriptions = await db.select()
+      .from(siaeSubscriptions)
+      .where(eq(siaeSubscriptions.ticketedEventId, eventId));
+    res.json(subscriptions);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/api/siae/ticketed-events/:eventId/subscriptions", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const user = req.user as any;
+    
+    const data = insertSiaeSubscriptionSchema.parse({
+      ...req.body,
+      ticketedEventId: eventId,
+      companyId: user.companyId,
+    });
+    
+    const subscription = await siaeStorage.createSiaeSubscription(data);
+    res.status(201).json(subscription);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
 // ==================== Audit Logs ====================
 
 router.get("/api/siae/companies/:companyId/audit-logs", requireAuth, requireGestore, async (req: Request, res: Response) => {

@@ -124,6 +124,9 @@ export default function EventWizard() {
   const [siaeRequiresNominative, setSiaeRequiresNominative] = useState(true);
   const [siaeMaxTicketsPerUser, setSiaeMaxTicketsPerUser] = useState(10);
   const [siaeSubscriptionsEnabled, setSiaeSubscriptionsEnabled] = useState(false);
+  const [siaeSubscriptionTurnType, setSiaeSubscriptionTurnType] = useState<'F' | 'L'>('F');
+  const [siaeSubscriptionEventsCount, setSiaeSubscriptionEventsCount] = useState(5);
+  const [siaeSubscriptionPrice, setSiaeSubscriptionPrice] = useState('100.00');
   const [siaeSectors, setSiaeSectors] = useState<SectorConfig[]>([]);
   
   // Dynamic steps based on SIAE enabled
@@ -1343,8 +1346,61 @@ export default function EventWizard() {
                   </div>
 
                   {siaeSubscriptionsEnabled && (
-                    <div className="rounded-lg bg-muted/50 p-3 text-sm text-muted-foreground">
-                      <p>Gli abbonamenti per questo evento saranno vendibili dalla cassa. Gli operatori potranno creare nuovi abbonamenti o utilizzare quelli esistenti per l'ingresso.</p>
+                    <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
+                      <p className="text-sm text-muted-foreground">
+                        Gli abbonamenti per questo evento saranno vendibili dalla cassa. Configura le opzioni predefinite:
+                      </p>
+                      
+                      <div className="space-y-2">
+                        <Label>Tipo Turno</Label>
+                        <Select 
+                          value={siaeSubscriptionTurnType} 
+                          onValueChange={(v) => setSiaeSubscriptionTurnType(v as 'F' | 'L')}
+                        >
+                          <SelectTrigger data-testid="select-subscription-turn-type">
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="F">Fisso (F)</SelectItem>
+                            <SelectItem value="L">Libero (L)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <p className="text-xs text-muted-foreground">
+                          {siaeSubscriptionTurnType === 'F' 
+                            ? 'Abbonamento per date specifiche fisse' 
+                            : 'Abbonamento valido per qualsiasi data nel periodo'}
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Numero Eventi Inclusi</Label>
+                        <Input
+                          type="number"
+                          min={1}
+                          max={100}
+                          value={siaeSubscriptionEventsCount}
+                          onChange={(e) => setSiaeSubscriptionEventsCount(parseInt(e.target.value) || 5)}
+                          data-testid="input-subscription-events-count"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Quantità di eventi a cui l'abbonato può partecipare
+                        </p>
+                      </div>
+
+                      <div className="space-y-2">
+                        <Label>Prezzo Abbonamento (€)</Label>
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          value={siaeSubscriptionPrice}
+                          onChange={(e) => setSiaeSubscriptionPrice(e.target.value)}
+                          data-testid="input-subscription-price"
+                        />
+                        <p className="text-xs text-muted-foreground">
+                          Prezzo predefinito per gli abbonamenti venduti dalla cassa
+                        </p>
+                      </div>
                     </div>
                   )}
                 </div>

@@ -5,8 +5,9 @@ import { it } from "date-fns/locale";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
-import { type SiaeTicketedEvent, type SiaeEventSector, type SiaeTicket, type SiaeCashierAllocation } from "@shared/schema";
+import { type SiaeTicketedEvent, type SiaeEventSector, type SiaeTicket, type SiaeCashierAllocation, type SiaeSubscription, type SiaeCustomer } from "@shared/schema";
 import { useSmartCardStatus } from "@/lib/smart-card-service";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface CashierEventAllocation {
   allocationId: string;
@@ -102,6 +103,17 @@ export default function CassaBigliettiPage() {
   const [isC1DialogOpen, setIsC1DialogOpen] = useState(false);
   const [isNominative, setIsNominative] = useState<boolean>(false);
   const [ticketQuantity, setTicketQuantity] = useState<number>(1);
+  const [activeTab, setActiveTab] = useState<string>("biglietti");
+  
+  // Subscription form state
+  const [subCustomerId, setSubCustomerId] = useState<string>("");
+  const [subFirstName, setSubFirstName] = useState<string>("");
+  const [subLastName, setSubLastName] = useState<string>("");
+  const [subSectorId, setSubSectorId] = useState<string>("");
+  const [subPrice, setSubPrice] = useState<string>("");
+  const [subTurnType, setSubTurnType] = useState<'F' | 'L'>('F');
+  const [subEventsCount, setSubEventsCount] = useState<number>(5);
+  const [createNewCustomer, setCreateNewCustomer] = useState<boolean>(false);
 
   const companyId = user?.companyId;
   const isGestore = user?.role === "gestore" || user?.role === "admin" || user?.role === "super_admin";
@@ -175,6 +187,47 @@ export default function CassaBigliettiPage() {
   const { data: c1Report, isLoading: c1Loading } = useQuery<any>({
     queryKey: ["/api/siae/events", selectedEventId, "report-c1"],
     enabled: !!selectedEventId && isGestore && isC1DialogOpen,
+  });
+
+  // Subscriptions for this event
+  const { data: eventSubscriptions, isLoading: subscriptionsLoading } = useQuery<SiaeSubscription[]>({
+    queryKey: ["/api/siae/ticketed-events", selectedEventId, "subscriptions"],
+    enabled: !!selectedEventId,
+  });
+
+  // Customers for subscription selection
+  const { data: customers } = useQuery<SiaeCustomer[]>({
+    queryKey: ["/api/siae/companies", companyId, "customers"],
+    enabled: !!companyId && activeTab === "abbonamenti",
+  });
+
+  // Create subscription mutation
+  const createSubscriptionMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("POST", `/api/siae/ticketed-events/${selectedEventId}/subscriptions`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/siae/ticketed-events", selectedEventId, "subscriptions"] });
+      setSubFirstName("");
+      setSubLastName("");
+      setSubCustomerId("");
+      setSubSectorId("");
+      setSubPrice("");
+      setSubEventsCount(5);
+      setCreateNewCustomer(false);
+      toast({
+        title: "Abbonamento Creato",
+        description: "L'abbonamento è stato creato con successo.",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Errore durante la creazione dell'abbonamento",
+        variant: "destructive",
+      });
+    },
   });
 
   // Print ticket mutation
@@ -555,6 +608,19 @@ export default function CassaBigliettiPage() {
             </Card>
           </div>
 
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+            <TabsList className="grid w-full max-w-md grid-cols-2" data-testid="tabs-list">
+              <TabsTrigger value="biglietti" data-testid="tab-biglietti">
+                <Ticket className="w-4 h-4 mr-2" />
+                Biglietti
+              </TabsTrigger>
+              <TabsTrigger value="abbonamenti" data-testid="tab-abbonamenti">
+                <Users className="w-4 h-4 mr-2" />
+                Abbonamenti
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="biglietti" className="mt-4">
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
             <Card className="glass-card lg:col-span-1" data-testid="card-emit-ticket">
               <CardHeader>
@@ -872,6 +938,238 @@ export default function CassaBigliettiPage() {
               </CardContent>
             </Card>
           </div>
+            </TabsContent>
+
+            <TabsContent value="abbonamenti" className="mt-4">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <Card className="glass-card lg:col-span-1" data-testid="card-create-subscription">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Plus className="w-5 h-5 text-[#FFD700]" />
+                      Nuovo Abbonamento
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <div className="space-y-2">
+                      <Label>Settore</Label>
+                      <Select value={subSectorId} onValueChange={setSubSectorId}>
+                        <SelectTrigger data-testid="select-sub-sector">
+                          <SelectValue placeholder="Seleziona settore..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {sectors?.map((sector) => (
+                            <SelectItem key={sector.id} value={sector.id}>
+                              {sector.name} - €{Number(sector.priceIntero).toFixed(2)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <div className="flex flex-col">
+                        <Label>Nuovo Cliente</Label>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          {createNewCustomer ? "Inserisci dati nuovo cliente" : "Seleziona cliente esistente"}
+                        </p>
+                      </div>
+                      <Switch 
+                        checked={createNewCustomer} 
+                        onCheckedChange={setCreateNewCustomer}
+                        data-testid="switch-new-customer"
+                      />
+                    </div>
+
+                    {createNewCustomer ? (
+                      <div className="space-y-2">
+                        <div className="grid grid-cols-2 gap-2">
+                          <Input
+                            placeholder="Nome *"
+                            value={subFirstName}
+                            onChange={(e) => setSubFirstName(e.target.value)}
+                            data-testid="input-sub-firstname"
+                          />
+                          <Input
+                            placeholder="Cognome *"
+                            value={subLastName}
+                            onChange={(e) => setSubLastName(e.target.value)}
+                            data-testid="input-sub-lastname"
+                          />
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="space-y-2">
+                        <Label>Seleziona Cliente</Label>
+                        <Select value={subCustomerId} onValueChange={setSubCustomerId}>
+                          <SelectTrigger data-testid="select-customer">
+                            <SelectValue placeholder="Seleziona cliente..." />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {customers?.map((customer) => (
+                              <SelectItem key={customer.id} value={customer.id}>
+                                {customer.firstName} {customer.lastName}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    )}
+
+                    <div className="space-y-2">
+                      <Label>Tipo Turno</Label>
+                      <Select value={subTurnType} onValueChange={(v) => setSubTurnType(v as 'F' | 'L')}>
+                        <SelectTrigger data-testid="select-sub-turn-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="F">Fisso (F)</SelectItem>
+                          <SelectItem value="L">Libero (L)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Numero Eventi</Label>
+                      <Input
+                        type="number"
+                        min={1}
+                        max={100}
+                        value={subEventsCount}
+                        onChange={(e) => setSubEventsCount(parseInt(e.target.value) || 5)}
+                        data-testid="input-sub-events-count"
+                      />
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label>Prezzo (€)</Label>
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder={sectors?.find(s => s.id === subSectorId) ? `€${Number(sectors.find(s => s.id === subSectorId)?.priceIntero || 0).toFixed(2)} x ${subEventsCount}` : "Prezzo"}
+                        value={subPrice}
+                        onChange={(e) => setSubPrice(e.target.value)}
+                        data-testid="input-sub-price"
+                      />
+                      <p className="text-xs text-muted-foreground">
+                        Lascia vuoto per calcolo automatico dal settore
+                      </p>
+                    </div>
+
+                    <Button
+                      type="button"
+                      className="w-full bg-[#FFD700] text-black hover:bg-[#FFD700]/90"
+                      disabled={
+                        createSubscriptionMutation.isPending ||
+                        !subSectorId ||
+                        (createNewCustomer ? !subFirstName || !subLastName : !subCustomerId)
+                      }
+                      onClick={() => {
+                        const sector = sectors?.find(s => s.id === subSectorId);
+                        const calculatedPrice = subPrice || (sector ? String(Number(sector.priceIntero) * subEventsCount) : '0');
+                        
+                        createSubscriptionMutation.mutate({
+                          customerId: createNewCustomer ? undefined : subCustomerId,
+                          sectorId: subSectorId,
+                          turnType: subTurnType,
+                          eventsCount: subEventsCount,
+                          totalAmount: calculatedPrice,
+                          holderFirstName: createNewCustomer ? subFirstName : customers?.find(c => c.id === subCustomerId)?.firstName || '',
+                          holderLastName: createNewCustomer ? subLastName : customers?.find(c => c.id === subCustomerId)?.lastName || '',
+                          validFrom: new Date().toISOString(),
+                          validTo: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000).toISOString(),
+                          subscriptionCode: `ABB-${Date.now()}`,
+                          progressiveNumber: 1,
+                        });
+                      }}
+                      data-testid="button-create-subscription"
+                    >
+                      {createSubscriptionMutation.isPending ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Creazione...
+                        </>
+                      ) : (
+                        <>
+                          <Plus className="w-4 h-4 mr-2" />
+                          Crea Abbonamento
+                        </>
+                      )}
+                    </Button>
+                  </CardContent>
+                </Card>
+
+                <Card className="glass-card lg:col-span-2" data-testid="card-subscriptions-list">
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="w-5 h-5 text-[#FFD700]" />
+                      Abbonamenti Evento
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    {subscriptionsLoading ? (
+                      <div className="space-y-2">
+                        {[1, 2, 3].map((i) => (
+                          <Skeleton key={i} className="h-12 w-full" />
+                        ))}
+                      </div>
+                    ) : !eventSubscriptions || eventSubscriptions.length === 0 ? (
+                      <div className="text-center py-8 text-muted-foreground">
+                        <Users className="w-12 h-12 mx-auto mb-3 opacity-50" />
+                        <p>Nessun abbonamento per questo evento</p>
+                      </div>
+                    ) : (
+                      <div className="overflow-x-auto">
+                        <Table>
+                          <TableHeader>
+                            <TableRow>
+                              <TableHead>Codice</TableHead>
+                              <TableHead>Intestatario</TableHead>
+                              <TableHead>Turno</TableHead>
+                              <TableHead>Eventi</TableHead>
+                              <TableHead>Importo</TableHead>
+                              <TableHead>Stato</TableHead>
+                            </TableRow>
+                          </TableHeader>
+                          <TableBody>
+                            {eventSubscriptions.map((sub) => (
+                              <TableRow key={sub.id} data-testid={`row-subscription-${sub.id}`}>
+                                <TableCell className="font-mono text-xs">
+                                  {sub.subscriptionCode}
+                                </TableCell>
+                                <TableCell>
+                                  {sub.holderFirstName} {sub.holderLastName}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary">
+                                    {sub.turnType === 'F' ? 'Fisso' : 'Libero'}
+                                  </Badge>
+                                </TableCell>
+                                <TableCell>
+                                  {sub.eventsUsed}/{sub.eventsCount}
+                                </TableCell>
+                                <TableCell className="font-semibold">
+                                  €{Number(sub.totalAmount || 0).toFixed(2)}
+                                </TableCell>
+                                <TableCell>
+                                  {sub.status === "active" ? (
+                                    <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Attivo</Badge>
+                                  ) : sub.status === "expired" ? (
+                                    <Badge variant="secondary">Scaduto</Badge>
+                                  ) : (
+                                    <Badge variant="destructive">Annullato</Badge>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            ))}
+                          </TableBody>
+                        </Table>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+            </TabsContent>
+          </Tabs>
         </>
       )}
 
