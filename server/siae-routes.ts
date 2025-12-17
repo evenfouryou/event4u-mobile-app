@@ -3,7 +3,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
-import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions, siaeCashierAllocations } from "@shared/schema";
+import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions, siaeCashierAllocations, siaeOtpAttempts, siaeNameChanges, siaeResales, publicCartItems, publicCheckoutSessions, publicCustomerSessions, tableReservations, guestListEntries } from "@shared/schema";
 import { eq, and, sql } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -546,13 +546,16 @@ router.post("/api/siae/customers/:id/verify-manual", requireAuth, requireGestore
 
 // Elimina cliente
 router.delete("/api/siae/customers/:id", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  console.log("[SIAE] Delete customer request:", req.params.id, "force:", req.query.force);
   try {
     const customer = await siaeStorage.getSiaeCustomer(req.params.id);
     if (!customer) {
+      console.log("[SIAE] Customer not found:", req.params.id);
       return res.status(404).json({ message: "Cliente non trovato" });
     }
     
     const forceDelete = req.query.force === 'true';
+    console.log("[SIAE] Force delete:", forceDelete);
     
     // Verifica se ci sono record collegati
     const [hasTickets] = await db.select({ count: sql<number>`count(*)` })
@@ -579,8 +582,10 @@ router.delete("/api/siae/customers/:id", requireAuth, requireGestore, async (req
       });
     }
     
-    // Se force delete, prima rimuovi i record associati
+    // Se force delete, prima rimuovi tutti i record associati
     if (forceDelete) {
+      console.log("[SIAE] Force delete: cleaning up all associated records");
+      
       // Anonimizza i biglietti (non li eliminiamo per integrità fiscale)
       await db.update(siaeTickets)
         .set({ customerId: null })
@@ -591,18 +596,63 @@ router.delete("/api/siae/customers/:id", requireAuth, requireGestore, async (req
         .set({ customerId: null })
         .where(eq(siaeTransactions.customerId, req.params.id));
       
-      // Elimina abbonamenti (questi possono essere rimossi)
+      // Elimina abbonamenti
       await db.delete(siaeSubscriptions)
         .where(eq(siaeSubscriptions.customerId, req.params.id));
+      
+      // Elimina tentativi OTP
+      await db.delete(siaeOtpAttempts)
+        .where(eq(siaeOtpAttempts.customerId, req.params.id));
+      
+      // Anonimizza name changes (originalCustomerId)
+      await db.update(siaeNameChanges)
+        .set({ originalCustomerId: null })
+        .where(eq(siaeNameChanges.originalCustomerId, req.params.id));
+      
+      // Anonimizza resales (sellerId, buyerId)
+      await db.update(siaeResales)
+        .set({ sellerId: null })
+        .where(eq(siaeResales.sellerId, req.params.id));
+      await db.update(siaeResales)
+        .set({ buyerId: null })
+        .where(eq(siaeResales.buyerId, req.params.id));
+      
+      // Elimina cart items
+      await db.delete(publicCartItems)
+        .where(eq(publicCartItems.customerId, req.params.id));
+      
+      // Elimina checkout sessions
+      await db.delete(publicCheckoutSessions)
+        .where(eq(publicCheckoutSessions.customerId, req.params.id));
+      
+      // Elimina customer sessions
+      await db.delete(publicCustomerSessions)
+        .where(eq(publicCustomerSessions.customerId, req.params.id));
+      
+      // Anonimizza table reservations
+      await db.update(tableReservations)
+        .set({ customerId: null })
+        .where(eq(tableReservations.customerId, req.params.id));
+      
+      // Anonimizza guest list entries
+      await db.update(guestListEntries)
+        .set({ customerId: null })
+        .where(eq(guestListEntries.customerId, req.params.id));
+      
+      console.log("[SIAE] Force delete: all associated records cleaned up");
     }
     
+    console.log("[SIAE] Proceeding with delete for customer:", customer.id);
     const deleted = await siaeStorage.deleteSiaeCustomer(req.params.id);
+    console.log("[SIAE] Delete result:", deleted);
     if (!deleted) {
       return res.status(500).json({ message: "Errore durante l'eliminazione" });
     }
     
+    console.log("[SIAE] Customer deleted successfully:", req.params.id);
     res.json({ message: "Cliente eliminato con successo" });
   } catch (error: any) {
+    console.error("[SIAE] Delete customer error:", error);
     // Gestisci errori di vincolo FK
     if (error.code === '23503') { // PostgreSQL foreign key violation
       return res.status(409).json({ 
