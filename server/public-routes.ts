@@ -1339,7 +1339,9 @@ router.post("/api/public/checkout/confirm", async (req, res) => {
       } catch (emailError) {
         console.error('[PUBLIC] Async email/PDF generation failed:', emailError);
       }
-    })();
+    })().catch((err) => {
+      console.error('[PUBLIC] Unhandled error in async email/PDF generation:', err);
+    });
 
     // Svuota carrello
     const sessionId = getOrCreateSessionId(req, res);
