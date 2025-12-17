@@ -2294,7 +2294,7 @@ router.get('/api/siae/ticketed-events/:id/reports/c1', requireAuth, async (req: 
   }
 });
 
-// C2 Report - Event Summary (Riepilogo Evento)
+// C2 Report - Event Summary (Riepilogo Abbonamenti)
 router.get('/api/siae/ticketed-events/:id/reports/c2', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -2305,6 +2305,11 @@ router.get('/api/siae/ticketed-events/:id/reports/c2', requireAuth, async (req: 
 
     const sectors = await siaeStorage.getSiaeEventSectors(id);
     const transactions = await siaeStorage.getSiaeTransactionsByEvent(id);
+    
+    // Recupera abbonamenti per questo evento
+    const subscriptions = await db.select()
+      .from(siaeSubscriptions)
+      .where(eq(siaeSubscriptions.ticketedEventId, id));
     
     const completedTransactions = transactions.filter(tx => tx.status === 'completed');
     const totalRevenue = completedTransactions.reduce((sum, tx) => sum + (Number(tx.totalAmount) || 0), 0);
@@ -2343,9 +2348,40 @@ router.get('/api/siae/ticketed-events/:id/reports/c2', requireAuth, async (req: 
       };
     });
 
+    // Calcola totali abbonamenti (includi sia 'active' che 'issued')
+    const soldSubscriptions = subscriptions.filter(s => s.status === 'active' || s.status === 'issued');
+    const cancelledSubscriptions = subscriptions.filter(s => s.status === 'cancelled');
+    const subscriptionRevenue = soldSubscriptions.reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
+    const cancelledAmount = cancelledSubscriptions.reduce((sum, s) => sum + (Number(s.totalAmount) || 0), 0);
+
+    // Raggruppa abbonamenti per tipo
+    const subscriptionsByType = soldSubscriptions.reduce((acc, sub) => {
+      const key = `${sub.turnType || 'F'}-${sub.eventsCount || 1}`;
+      if (!acc[key]) {
+        acc[key] = {
+          turnType: sub.turnType || 'F',
+          eventsCount: sub.eventsCount || 1,
+          count: 0,
+          totalAmount: 0,
+          cancelled: 0,
+        };
+      }
+      acc[key].count += 1;
+      acc[key].totalAmount += Number(sub.totalAmount) || 0;
+      return acc;
+    }, {} as Record<string, any>);
+
+    // Conta annullamenti per tipo
+    cancelledSubscriptions.forEach(sub => {
+      const key = `${sub.turnType || 'F'}-${sub.eventsCount || 1}`;
+      if (subscriptionsByType[key]) {
+        subscriptionsByType[key].cancelled += 1;
+      }
+    });
+
     res.json({
       reportType: 'C2',
-      reportName: 'Riepilogo Evento',
+      reportName: 'Riepilogo Abbonamenti',
       eventId: id,
       eventName: event.eventName,
       eventDate: event.eventDate,
@@ -2357,6 +2393,10 @@ router.get('/api/siae/ticketed-events/:id/reports/c2', requireAuth, async (req: 
         ticketsSold,
         ticketsCancelled: event.ticketsCancelled || 0,
         occupancyRate: event.totalCapacity ? ((ticketsSold / event.totalCapacity) * 100).toFixed(2) : 0,
+        subscriptionsSold: soldSubscriptions.length,
+        subscriptionsCancelled: cancelledSubscriptions.length,
+        subscriptionRevenue,
+        cancelledAmount,
       },
       financials: {
         grossRevenue: totalRevenue,
@@ -2367,6 +2407,19 @@ router.get('/api/siae/ticketed-events/:id/reports/c2', requireAuth, async (req: 
       },
       paymentBreakdown: Object.values(paymentBreakdown),
       sectorBreakdown,
+      subscriptions: [...soldSubscriptions, ...cancelledSubscriptions].map(s => ({
+        id: s.id,
+        subscriptionCode: s.subscriptionCode,
+        turnType: s.turnType,
+        eventsCount: s.eventsCount,
+        eventsUsed: s.eventsUsed,
+        totalAmount: Number(s.totalAmount) || 0,
+        holderName: `${s.holderFirstName} ${s.holderLastName}`,
+        status: s.status,
+        validFrom: s.validFrom,
+        validTo: s.validTo,
+      })),
+      subscriptionSummary: Object.values(subscriptionsByType),
     });
   } catch (error: any) {
     res.status(500).json({ message: error.message });

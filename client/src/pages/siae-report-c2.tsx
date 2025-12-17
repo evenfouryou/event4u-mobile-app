@@ -4,6 +4,27 @@ import { useRef } from "react";
 import { Button } from "@/components/ui/button";
 import { ArrowLeft, Printer } from "lucide-react";
 
+interface SubscriptionData {
+  id: string;
+  subscriptionCode: string;
+  turnType: string;
+  eventsCount: number;
+  eventsUsed: number;
+  totalAmount: number;
+  holderName: string;
+  status: string;
+  validFrom: string;
+  validTo: string;
+}
+
+interface SubscriptionSummary {
+  turnType: string;
+  eventsCount: number;
+  count: number;
+  totalAmount: number;
+  cancelled: number;
+}
+
 interface C2ReportData {
   reportType: string;
   reportName: string;
@@ -18,6 +39,9 @@ interface C2ReportData {
     ticketsSold: number;
     ticketsCancelled: number;
     occupancyRate: number;
+    subscriptionsSold: number;
+    subscriptionsCancelled: number;
+    subscriptionRevenue: number;
   };
   financials: {
     grossRevenue: number;
@@ -44,6 +68,8 @@ interface C2ReportData {
     vatAmount: number;
     netRevenue: number;
   }>;
+  subscriptions: SubscriptionData[];
+  subscriptionSummary: SubscriptionSummary[];
 }
 
 export default function SiaeReportC2() {
@@ -172,56 +198,57 @@ export default function SiaeReportC2() {
               </tr>
             </thead>
             <tbody>
-              <tr>
-                <td className="border border-black p-2 h-8"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-              </tr>
-              <tr>
-                <td className="border border-black p-2 h-8"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-              </tr>
-              <tr>
-                <td className="border border-black p-2 h-8"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-              </tr>
-              <tr>
-                <td className="border border-black p-2 h-8"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-              </tr>
-              <tr>
-                <td className="border border-black p-2 h-8"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-                <td className="border border-black p-2"></td>
-              </tr>
+              {report.subscriptions && report.subscriptions.length > 0 ? (
+                report.subscriptions.map((sub, index) => (
+                  <tr key={sub.id || index}>
+                    <td className="border border-black p-2">
+                      ABBONAMENTO TURNO {sub.turnType || 'F'}
+                    </td>
+                    <td className="border border-black p-2 text-center font-mono text-xs">{sub.subscriptionCode}</td>
+                    <td className="border border-black p-2 text-center">S</td>
+                    <td className="border border-black p-2 text-center">{sub.turnType}</td>
+                    <td className="border border-black p-2 text-right">{sub.status !== 'cancelled' ? 1 : '-'}</td>
+                    <td className="border border-black p-2 text-right">
+                      {sub.totalAmount.toFixed(2)}
+                    </td>
+                    <td className="border border-black p-2 text-center">{sub.status === 'cancelled' ? 1 : '-'}</td>
+                    <td className="border border-black p-2 text-center">{sub.eventsCount}</td>
+                  </tr>
+                ))
+              ) : (
+                <>
+                  <tr>
+                    <td className="border border-black p-2 h-8"></td>
+                    <td className="border border-black p-2"></td>
+                    <td className="border border-black p-2"></td>
+                    <td className="border border-black p-2"></td>
+                    <td className="border border-black p-2"></td>
+                    <td className="border border-black p-2"></td>
+                    <td className="border border-black p-2"></td>
+                    <td className="border border-black p-2"></td>
+                  </tr>
+                  <tr>
+                    <td className="border border-black p-2 h-8"></td>
+                    <td className="border border-black p-2"></td>
+                    <td className="border border-black p-2"></td>
+                    <td className="border border-black p-2"></td>
+                    <td className="border border-black p-2"></td>
+                    <td className="border border-black p-2"></td>
+                    <td className="border border-black p-2"></td>
+                    <td className="border border-black p-2"></td>
+                  </tr>
+                  <tr>
+                    <td className="border border-black p-2 h-8"></td>
+                    <td className="border border-black p-2"></td>
+                    <td className="border border-black p-2"></td>
+                    <td className="border border-black p-2"></td>
+                    <td className="border border-black p-2"></td>
+                    <td className="border border-black p-2"></td>
+                    <td className="border border-black p-2"></td>
+                    <td className="border border-black p-2"></td>
+                  </tr>
+                </>
+              )}
             </tbody>
           </table>
         </div>
@@ -231,10 +258,16 @@ export default function SiaeReportC2() {
             <tbody>
               <tr className="bg-gray-100 font-bold">
                 <td className="border border-black p-2 text-center" colSpan={4}>TOTALE</td>
-                <td className="border border-black p-2 text-right"></td>
-                <td className="border border-black p-2 text-right"></td>
-                <td className="border border-black p-2 text-center"></td>
-                <td className="border border-black p-2 text-center"></td>
+                <td className="border border-black p-2 text-right">
+                  {report.summary.subscriptionsSold || 0}
+                </td>
+                <td className="border border-black p-2 text-right">
+                  {(report.summary.subscriptionRevenue || 0).toFixed(2)}
+                </td>
+                <td className="border border-black p-2 text-center">
+                  {report.summary.subscriptionsCancelled || 0}
+                </td>
+                <td className="border border-black p-2 text-center">-</td>
               </tr>
             </tbody>
           </table>
