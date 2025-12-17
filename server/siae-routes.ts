@@ -74,6 +74,8 @@ const patchNumberedSeatSchema = makePatchSchema(insertSiaeNumberedSeatSchema.omi
 
 const router = Router();
 
+console.log('[SIAE Routes] Router initialized, registering routes...');
+
 // Middleware to check if user is authenticated
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.isAuthenticated || !req.isAuthenticated()) {
@@ -4299,5 +4301,7 @@ router.post("/api/siae/tickets/:id/print", requireAuth, async (req: Request, res
     res.status(500).json({ message: error.message });
   }
 });
+
+console.log('[SIAE Routes] All routes registered including /api/siae/tickets/:id/print');
 
 export default router;
