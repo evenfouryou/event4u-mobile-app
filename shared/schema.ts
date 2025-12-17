@@ -1307,7 +1307,7 @@ export const siaeTickets = pgTable("siae_tickets", {
   // Annullamento
   cancellationReasonCode: varchar("cancellation_reason_code", { length: 3 }), // TAB.5
   cancellationDate: timestamp("cancellation_date"),
-  cancelledByUserId: varchar("cancelled_by_user_id").references(() => users.id),
+  cancelledByUserId: varchar("cancelled_by_user_id"), // Can be users.id OR siaeCashiers.id
   // Riferimento annullamento (per cambio nominativo/rimessa)
   originalTicketId: varchar("original_ticket_id"), // Se derivato da cambio/rimessa
   replacedByTicketId: varchar("replaced_by_ticket_id"), // Se sostituito
@@ -1331,10 +1331,7 @@ export const siaeTicketsRelations = relations(siaeTickets, ({ one }) => ({
     fields: [siaeTickets.customerId],
     references: [siaeCustomers.id],
   }),
-  cancelledByUser: one(users, {
-    fields: [siaeTickets.cancelledByUserId],
-    references: [users.id],
-  }),
+  // cancelledByUserId can be either users.id OR siaeCashiers.id, so no direct relation
 }));
 
 // Transazioni (Transactions) - Allegato B
