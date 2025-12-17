@@ -43,7 +43,7 @@ export function setupPrintRelay(server: Server): void {
   });
 
   wss.on('connection', async (ws: WebSocket, request: IncomingMessage) => {
-    console.log('[PrintRelay] New WebSocket connection');
+    console.log('[PrintRelay] New WebSocket connection from:', request.headers['x-forwarded-for'] || request.socket.remoteAddress);
     
     let connectionType: 'agent' | 'client' | null = null;
     let connectionInfo: { agentId?: string; userId?: string; companyId?: string } = {};
@@ -84,7 +84,9 @@ export function setupPrintRelay(server: Server): void {
         const message = JSON.parse(data.toString());
         
         if (message.type === 'auth' && !connectionType) {
+          console.log(`[PrintRelay] Received auth message with payload:`, JSON.stringify(message.payload, null, 2));
           const result = await authenticateAgent(message.payload);
+          console.log(`[PrintRelay] Auth result:`, result);
           if (result) {
             connectionType = 'agent';
             connectionInfo = {
@@ -100,10 +102,13 @@ export function setupPrintRelay(server: Server): void {
               connectedAt: new Date(),
               lastPing: new Date()
             });
+            
+            console.log(`[PrintRelay] Added agent to activeAgents map. Total agents: ${activeAgents.size}`);
+            console.log(`[PrintRelay] Agent IDs in map: ${Array.from(activeAgents.keys()).join(', ')}`);
 
             ws.send(JSON.stringify({ type: 'auth_success', agentId: result.agentId }));
             
-            console.log(`[PrintRelay] Agent authenticated: ${result.agentId}`);
+            console.log(`[PrintRelay] Agent authenticated and added: ${result.agentId}`);
             
             broadcastToClients(result.companyId, {
               type: 'agent_online',
@@ -200,25 +205,35 @@ async function getSessionData(sessionId: string): Promise<any> {
 }
 
 async function authenticateAgent(payload: any): Promise<{ agentId: string; companyId: string } | null> {
-  const { token } = payload;
+  const { token, agentId: clientAgentId } = payload;
   
-  if (!token) return null;
+  console.log(`[PrintRelay] authenticateAgent called with token: ${token ? token.substring(0, 8) + '...' : 'NONE'}, clientAgentId: ${clientAgentId}`);
+  
+  if (!token) {
+    console.log('[PrintRelay] No token provided');
+    return null;
+  }
   
   try {
     const hashedToken = crypto.createHash('sha256').update(token).digest('hex');
+    console.log(`[PrintRelay] Hashed token: ${hashedToken.substring(0, 16)}...`);
     
     // Find agent by token only - companyId comes from database (trusted source)
     const agents = await db.select().from(printerAgents)
       .where(eq(printerAgents.authToken, hashedToken))
       .limit(1);
     
+    console.log(`[PrintRelay] Found ${agents.length} agents matching token`);
+    
     if (agents.length > 0) {
+      console.log(`[PrintRelay] Agent authenticated: id=${agents[0].id}, company=${agents[0].companyId}`);
       return {
         agentId: agents[0].id,
         companyId: agents[0].companyId
       };
     }
     
+    console.log('[PrintRelay] No agent found with this token');
     return null;
   } catch (error) {
     console.error('[PrintRelay] Auth error:', error);
