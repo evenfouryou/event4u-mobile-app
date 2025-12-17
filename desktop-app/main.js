@@ -77,6 +77,7 @@ let pinVerified = false;
 let cardWasInserted = false;
 let pinLocked = true;  // Start locked - PIN required on first card insertion
 let firstCardHandled = false;  // Track if first card insertion has been handled
+let lastVerifiedPin = null;  // Store PIN for re-authentication on each seal operation
 // Note: PIN is now verified on the SIAE card itself, not hardcoded
 
 // Debounce for card removal detection - prevents false positives from intermittent contact
@@ -517,7 +518,13 @@ async function handleWebSocketMessage(ws, msg) {
       try {
         const sealData = msg.data || {};
         const price = sealData.price || 0;
-        const result = await sendBridgeCommand(`COMPUTE_SIGILLO:${JSON.stringify({ price })}`);
+        // Include PIN for re-authentication on each seal operation
+        const localSealPayload = { price };
+        if (lastVerifiedPin) {
+          localSealPayload.pin = lastVerifiedPin;
+        }
+        log.info(`[UI-SEAL] Sending seal command with PIN: ${lastVerifiedPin ? 'yes' : 'no'}`);
+        const result = await sendBridgeCommand(`COMPUTE_SIGILLO:${JSON.stringify(localSealPayload)}`);
         if (result.success && result.sigillo) {
           sendResponse('sealResponse', {
             success: true,
@@ -748,6 +755,7 @@ function startStatusPolling() {
           log.info('SIAE: Carta rimossa (confermata) - PIN sarà richiesto al reinserimento');
           pinLocked = true;
           pinVerified = false;
+          lastVerifiedPin = null;  // Clear stored PIN on card removal
           cardRemovalCounter = 0;
           // DON'T show PIN dialog here - the card is gone!
           // Dialog will be shown when card is reinserted (see below)
@@ -933,7 +941,13 @@ async function handleRelayCommand(msg) {
       try {
         const sealData = msg.data || {};
         const price = sealData.price || 0;
-        const result = await sendBridgeCommand(`COMPUTE_SIGILLO:${JSON.stringify({ price })}`);
+        // Include PIN for re-authentication on each seal operation
+        const localSealPayload = { price };
+        if (lastVerifiedPin) {
+          localSealPayload.pin = lastVerifiedPin;
+        }
+        log.info(`[UI-SEAL] Sending seal command with PIN: ${lastVerifiedPin ? 'yes' : 'no'}`);
+        const result = await sendBridgeCommand(`COMPUTE_SIGILLO:${JSON.stringify(localSealPayload)}`);
         if (result.success && result.sigillo) {
           sendRelayResponse('sealResponse', {
             success: true,
@@ -1005,8 +1019,13 @@ async function handleRelayCommand(msg) {
           return;
         }
         
-        // Execute seal command
-        const result = await sendBridgeCommand(`COMPUTE_SIGILLO:${JSON.stringify({ price })}`);
+        // Execute seal command with PIN for re-authentication
+        const sealPayload = { price };
+        if (lastVerifiedPin) {
+          sealPayload.pin = lastVerifiedPin;
+        }
+        log.info(`[SEAL] Sending seal command with PIN: ${lastVerifiedPin ? 'yes' : 'no'}`);
+        const result = await sendBridgeCommand(`COMPUTE_SIGILLO:${JSON.stringify(sealPayload)}`);
         
         if (result.success && result.sigillo) {
           log.info(`[SEAL] Seal generated successfully: counter=${result.sigillo.counter}`);
@@ -1314,6 +1333,7 @@ ipcMain.handle('pin:verify', async (event, enteredPin) => {
       log.info('SIAE: PIN verificato correttamente sulla carta');
       pinVerified = true;
       pinLocked = false;
+      lastVerifiedPin = enteredPin;  // Store PIN for seal operations
       
       // Update and broadcast status
       const newStatus = {
