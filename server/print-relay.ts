@@ -26,8 +26,8 @@ interface WebClientConnection {
 const activeAgents = new Map<string, PrintAgentConnection>();
 const activeClients = new Map<string, WebClientConnection[]>();
 
-const HEARTBEAT_INTERVAL = 30000;
-const CONNECTION_TIMEOUT = 120000; // 2 minutes - allows for background/minimized apps
+const HEARTBEAT_INTERVAL = 15000; // Reduced from 30s to keep connection alive through proxies
+const CONNECTION_TIMEOUT = 60000; // 1 minute - faster detection of disconnected agents
 
 export function setupPrintRelay(server: Server): void {
   const wss = new WebSocketServer({ noServer: true });
