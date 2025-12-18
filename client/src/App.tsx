@@ -76,6 +76,7 @@ import PublicCheckout from "@/pages/public-checkout";
 import PublicCheckoutSuccess from "@/pages/public-checkout-success";
 import PublicVenues from "@/pages/public-venues";
 import PublicVenueDetail from "@/pages/public-venue-detail";
+import AccountPage from "@/pages/account";
 import PrGuestLists from "@/pages/pr-guest-lists";
 import PrTables from "@/pages/pr-tables";
 import PrScanner from "@/pages/pr-scanner";
@@ -147,6 +148,8 @@ function Router() {
         <Route path="/badge/verify" component={SchoolBadgeVerify} />
         <Route path="/badge/view/:code" component={SchoolBadgeView} />
         <Route path="/badge/:slug" component={SchoolBadgeLanding} />
+        <Route path="/account/:rest*" component={AccountPage} />
+        <Route path="/account" component={AccountPage} />
         <Route component={NotFound} />
       </Switch>
     );
