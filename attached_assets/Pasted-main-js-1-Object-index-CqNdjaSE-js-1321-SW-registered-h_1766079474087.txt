@@ -1,0 +1,15 @@
+main.js:1 Object
+index-CqNdjaSE.js:1321 SW registered: https://manage.eventfouryou.com/
+index-CqNdjaSE.js:1271 [Checkout] cartLoading: true customerLoading: true cart: undefined customer: undefined
+index-CqNdjaSE.js:1271 [Checkout] cartLoading: true customerLoading: true cart: undefined customer: undefined
+index-CqNdjaSE.js:1271 [Checkout] cartLoading: true customerLoading: false cart: undefined customer: Object
+index-CqNdjaSE.js:1271 [Checkout] cartLoading: false customerLoading: false cart: Object customer: Object
+index-CqNdjaSE.js:1271 [Checkout] Creating payment intent...
+index-CqNdjaSE.js:1271 [Checkout] cartLoading: false customerLoading: false cart: Object customer: Object
+index-CqNdjaSE.js:1271 [Checkout] Response status: 200
+index-CqNdjaSE.js:1271 [Checkout] Response data: Object
+index-CqNdjaSE.js:1271 [Checkout] Payment intent created successfully: Object
+index-CqNdjaSE.js:1271 [Checkout] cartLoading: false customerLoading: false cart: Object customer: Object
+api.stripe.com/v1/elements/sessions?client_secret=pi_3Sfl8h083fDHdLKV0sb8plWw_secret_RRWhtWkpcF7o9qF5txqqNTHRu&key=pk_live_51PkTcs083fDHdLKV9H9dFkEnI1LMk9+3z1kVfR41xwVR0nqKiPjUnhIexzh4H57C5GvB08+rDVRABCwrukjm00Hwh900G0QTzGR0&elements_init_source=stripe.elements&referrer_host=manage.eventfouryou.com&stripe_js_id=110d5aab-baa8-4810-9b9c-15359b5d01a3&locale=it-IT&expand[0]=payment_method_preference.payment_intent.payment_method&type=payment_intent:1  Failed to load resource: the server responded with a status of 401 ()
+api.stripe.com/v1/elements/sessions?client_secret=pi_3Sfl8h083fDHdLKV0sb8plWw_secret_RRWhtWkpcF7o9qF5txqqNTHRu&key=pk_live_51PkTcs083fDHdLKV9H9dFkEnI1LMk9+3z1kVfR41xwVR0nqKiPjUnhIexzh4H57C5GvB08+rDVRABCwrukjm00Hwh900G0QTzGR0&elements_init_source=stripe.elements&referrer_host=manage.eventfouryou.com&stripe_js_id=110d5aab-baa8-4810-9b9c-15359b5d01a3&locale=it-IT&expand[0]=payment_method_preference.payment_intent.payment_method&type=payment_intent:1  Failed to load resource: the server responded with a status of 401 ()
+api.stripe.com/v1/elements/sessions?client_secret=pi_3Sfl8h083fDHdLKV0sb8plWw_secret_RRWhtWkpcF7o9qF5txqqNTHRu&key=pk_live_51PkTcs083fDHdLKV9H9dFkEnI1LMk9+3z1kVfR41xwVR0nqKiPjUnhIexzh4H57C5GvB08+rDVRABCwrukjm00Hwh900G0QTzGR0&elements_init_source=stripe.elements&referrer_host=manage.eventfouryou.com&stripe_js_id=110d5aab-baa8-4810-9b9c-15359b5d01a3&locale=it-IT&expand[0]=payment_method_preference.payment_intent.payment_method&type=payment_intent:1  Failed to load resource: the server responded with a status of 401 ()
