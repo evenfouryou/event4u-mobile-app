@@ -36,6 +36,8 @@ import { generateTicketPdf } from "./pdf-service";
 import { sendTicketEmail, sendPasswordResetEmail } from "./email-service";
 import { ticketTemplates, ticketTemplateElements } from "@shared/schema";
 import { sendOTP as sendMSG91OTP, verifyOTP as verifyMSG91OTP, resendOTP as resendMSG91OTP, isMSG91Configured } from "./msg91-service";
+import { siaeStorage } from "./siae-storage";
+import { siaeNameChanges, siaeResales } from "@shared/schema";
 
 const router = Router();
 
@@ -1829,6 +1831,530 @@ router.get("/api/public/venues/:id", async (req, res) => {
   } catch (error: any) {
     console.error("[PUBLIC] Get venue detail error:", error);
     res.status(500).json({ message: "Errore nel caricamento dettaglio locale" });
+  }
+});
+
+// ==================== CUSTOMER ACCOUNT PORTAL ====================
+
+// Aggiorna profilo cliente
+router.patch("/api/public/account/profile", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const { firstName, lastName, phone } = req.body;
+
+    const [updated] = await db
+      .update(siaeCustomers)
+      .set({
+        ...(firstName && { firstName }),
+        ...(lastName && { lastName }),
+        ...(phone && { phone }),
+        updatedAt: new Date(),
+      })
+      .where(eq(siaeCustomers.id, customer.id))
+      .returning();
+
+    res.json({
+      id: updated.id,
+      email: updated.email,
+      firstName: updated.firstName,
+      lastName: updated.lastName,
+      phone: updated.phone,
+      phoneVerified: updated.phoneVerified || false,
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Update profile error:", error);
+    res.status(500).json({ message: "Errore nell'aggiornamento profilo" });
+  }
+});
+
+// Ottieni biglietti del cliente
+router.get("/api/public/account/tickets", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const tickets = await db
+      .select({
+        id: siaeTickets.id,
+        ticketCode: siaeTickets.ticketCode,
+        ticketType: siaeTickets.ticketType,
+        ticketPrice: siaeTickets.ticketPrice,
+        participantFirstName: siaeTickets.participantFirstName,
+        participantLastName: siaeTickets.participantLastName,
+        status: siaeTickets.status,
+        emittedAt: siaeTickets.emittedAt,
+        qrCode: siaeTickets.qrCode,
+        sectorName: siaeEventSectors.name,
+        eventName: events.name,
+        eventStart: events.startDatetime,
+        eventEnd: events.endDatetime,
+        locationName: locations.name,
+        ticketedEventId: siaeTickets.ticketedEventId,
+      })
+      .from(siaeTickets)
+      .innerJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .innerJoin(locations, eq(events.locationId, locations.id))
+      .where(eq(siaeTickets.customerId, customer.id))
+      .orderBy(desc(events.startDatetime));
+
+    // Separa biglietti futuri/passati
+    const now = new Date();
+    const upcoming = tickets.filter(t => new Date(t.eventStart) >= now && t.status === 'emitted');
+    const past = tickets.filter(t => new Date(t.eventStart) < now || t.status !== 'emitted');
+
+    res.json({
+      upcoming,
+      past,
+      total: tickets.length,
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Get tickets error:", error);
+    res.status(500).json({ message: "Errore nel caricamento biglietti" });
+  }
+});
+
+// Ottieni dettaglio singolo biglietto
+router.get("/api/public/account/tickets/:id", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const { id } = req.params;
+
+    const [ticket] = await db
+      .select({
+        id: siaeTickets.id,
+        ticketCode: siaeTickets.ticketCode,
+        ticketType: siaeTickets.ticketType,
+        ticketTypeCode: siaeTickets.ticketTypeCode,
+        ticketPrice: siaeTickets.ticketPrice,
+        participantFirstName: siaeTickets.participantFirstName,
+        participantLastName: siaeTickets.participantLastName,
+        status: siaeTickets.status,
+        emittedAt: siaeTickets.emittedAt,
+        qrCode: siaeTickets.qrCode,
+        customText: siaeTickets.customText,
+        fiscalSealCode: siaeTickets.fiscalSealCode,
+        sectorId: siaeTickets.sectorId,
+        sectorName: siaeEventSectors.name,
+        ticketedEventId: siaeTickets.ticketedEventId,
+        eventId: siaeTicketedEvents.eventId,
+        eventName: events.name,
+        eventStart: events.startDatetime,
+        eventEnd: events.endDatetime,
+        locationName: locations.name,
+        locationAddress: locations.address,
+        allowNameChange: siaeTicketedEvents.allowNameChange,
+        allowResale: siaeTicketedEvents.allowResale,
+        nameChangeDeadlineHours: siaeTicketedEvents.nameChangeDeadlineHours,
+        resaleDeadlineHours: siaeTicketedEvents.resaleDeadlineHours,
+        resaleMaxMarkupPercent: siaeTicketedEvents.resaleMaxMarkupPercent,
+      })
+      .from(siaeTickets)
+      .innerJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .innerJoin(locations, eq(events.locationId, locations.id))
+      .where(and(
+        eq(siaeTickets.id, id),
+        eq(siaeTickets.customerId, customer.id)
+      ));
+
+    if (!ticket) {
+      return res.status(404).json({ message: "Biglietto non trovato" });
+    }
+
+    // Calcola se cambio nominativo/rivendita sono ancora disponibili
+    const now = new Date();
+    const eventStart = new Date(ticket.eventStart);
+    const hoursToEvent = (eventStart.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    const canNameChange = ticket.allowNameChange && 
+                          ticket.status === 'emitted' && 
+                          hoursToEvent >= (ticket.nameChangeDeadlineHours || 24);
+    
+    const canResale = ticket.allowResale && 
+                      ticket.status === 'emitted' && 
+                      hoursToEvent >= (ticket.resaleDeadlineHours || 48);
+
+    // Verifica se già in rivendita
+    const [existingResale] = await db
+      .select()
+      .from(siaeResales)
+      .where(and(
+        eq(siaeResales.originalTicketId, id),
+        or(eq(siaeResales.status, 'listed'), eq(siaeResales.status, 'pending'))
+      ));
+
+    res.json({
+      ...ticket,
+      canNameChange,
+      canResale: canResale && !existingResale,
+      isListed: !!existingResale,
+      existingResale: existingResale || null,
+      hoursToEvent: Math.floor(hoursToEvent),
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Get ticket detail error:", error);
+    res.status(500).json({ message: "Errore nel caricamento biglietto" });
+  }
+});
+
+// Ottieni wallet e saldo
+router.get("/api/public/account/wallet", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const wallet = await siaeStorage.getOrCreateCustomerWallet(customer.id);
+
+    res.json({
+      id: wallet.id,
+      balance: wallet.balance,
+      currency: wallet.currency,
+      isActive: wallet.isActive,
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Get wallet error:", error);
+    res.status(500).json({ message: "Errore nel caricamento wallet" });
+  }
+});
+
+// Ottieni storico transazioni wallet
+router.get("/api/public/account/wallet/transactions", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const limit = parseInt(req.query.limit as string) || 50;
+    const transactions = await siaeStorage.getWalletTransactions(customer.id, limit);
+
+    res.json({ transactions });
+  } catch (error: any) {
+    console.error("[PUBLIC] Get wallet transactions error:", error);
+    res.status(500).json({ message: "Errore nel caricamento transazioni" });
+  }
+});
+
+// Richiedi cambio nominativo
+router.post("/api/public/account/name-change", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const { ticketId, newFirstName, newLastName, newEmail, newPhone } = req.body;
+
+    if (!ticketId || !newFirstName || !newLastName) {
+      return res.status(400).json({ message: "Dati incompleti" });
+    }
+
+    // Verifica biglietto e permessi
+    const [ticket] = await db
+      .select({
+        id: siaeTickets.id,
+        status: siaeTickets.status,
+        ticketedEventId: siaeTickets.ticketedEventId,
+        customerId: siaeTickets.customerId,
+        ticketPrice: siaeTickets.ticketPrice,
+        participantFirstName: siaeTickets.participantFirstName,
+        participantLastName: siaeTickets.participantLastName,
+        allowNameChange: siaeTicketedEvents.allowNameChange,
+        nameChangeDeadlineHours: siaeTicketedEvents.nameChangeDeadlineHours,
+        nameChangeFee: siaeTicketedEvents.nameChangeFee,
+        eventStart: events.startDatetime,
+      })
+      .from(siaeTickets)
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .where(and(
+        eq(siaeTickets.id, ticketId),
+        eq(siaeTickets.customerId, customer.id)
+      ));
+
+    if (!ticket) {
+      return res.status(404).json({ message: "Biglietto non trovato" });
+    }
+
+    if (ticket.status !== 'emitted') {
+      return res.status(400).json({ message: "Biglietto non valido per cambio nominativo" });
+    }
+
+    if (!ticket.allowNameChange) {
+      return res.status(400).json({ message: "Cambio nominativo non consentito per questo evento" });
+    }
+
+    const now = new Date();
+    const eventStart = new Date(ticket.eventStart);
+    const hoursToEvent = (eventStart.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    if (hoursToEvent < (ticket.nameChangeDeadlineHours || 24)) {
+      return res.status(400).json({ 
+        message: `Cambio nominativo non più disponibile. Scadenza: ${ticket.nameChangeDeadlineHours || 24}h prima dell'evento` 
+      });
+    }
+
+    // Crea richiesta cambio nominativo
+    const [nameChange] = await db
+      .insert(siaeNameChanges)
+      .values({
+        originalTicketId: ticketId,
+        requestedByCustomerId: customer.id,
+        previousFirstName: ticket.participantFirstName,
+        previousLastName: ticket.participantLastName,
+        newFirstName,
+        newLastName,
+        newEmail: newEmail || null,
+        newPhone: newPhone || null,
+        fee: ticket.nameChangeFee || '0',
+        status: 'pending',
+      })
+      .returning();
+
+    console.log("[PUBLIC] Name change request created:", nameChange.id);
+    res.json({ 
+      message: "Richiesta cambio nominativo inviata",
+      nameChangeId: nameChange.id,
+      fee: ticket.nameChangeFee || '0',
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Name change error:", error);
+    res.status(500).json({ message: "Errore nella richiesta cambio nominativo" });
+  }
+});
+
+// Metti biglietto in rivendita
+router.post("/api/public/account/resale", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const { ticketId, resalePrice } = req.body;
+
+    if (!ticketId || resalePrice === undefined) {
+      return res.status(400).json({ message: "Dati incompleti" });
+    }
+
+    // Verifica biglietto e permessi
+    const [ticket] = await db
+      .select({
+        id: siaeTickets.id,
+        status: siaeTickets.status,
+        ticketedEventId: siaeTickets.ticketedEventId,
+        customerId: siaeTickets.customerId,
+        ticketPrice: siaeTickets.ticketPrice,
+        allowResale: siaeTicketedEvents.allowResale,
+        resaleDeadlineHours: siaeTicketedEvents.resaleDeadlineHours,
+        resaleMaxMarkupPercent: siaeTicketedEvents.resaleMaxMarkupPercent,
+        eventStart: events.startDatetime,
+      })
+      .from(siaeTickets)
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .where(and(
+        eq(siaeTickets.id, ticketId),
+        eq(siaeTickets.customerId, customer.id)
+      ));
+
+    if (!ticket) {
+      return res.status(404).json({ message: "Biglietto non trovato" });
+    }
+
+    if (ticket.status !== 'emitted') {
+      return res.status(400).json({ message: "Biglietto non valido per rivendita" });
+    }
+
+    if (!ticket.allowResale) {
+      return res.status(400).json({ message: "Rivendita non consentita per questo evento" });
+    }
+
+    const now = new Date();
+    const eventStart = new Date(ticket.eventStart);
+    const hoursToEvent = (eventStart.getTime() - now.getTime()) / (1000 * 60 * 60);
+
+    if (hoursToEvent < (ticket.resaleDeadlineHours || 48)) {
+      return res.status(400).json({ 
+        message: `Rivendita non più disponibile. Scadenza: ${ticket.resaleDeadlineHours || 48}h prima dell'evento` 
+      });
+    }
+
+    // Verifica prezzo massimo
+    const originalPrice = parseFloat(ticket.ticketPrice);
+    const maxMarkup = (ticket.resaleMaxMarkupPercent || 0) / 100;
+    const maxPrice = originalPrice * (1 + maxMarkup);
+
+    if (resalePrice > maxPrice) {
+      return res.status(400).json({ 
+        message: `Prezzo massimo consentito: €${maxPrice.toFixed(2)} (originale + ${ticket.resaleMaxMarkupPercent || 0}%)` 
+      });
+    }
+
+    // Verifica se già in rivendita
+    const [existing] = await db
+      .select()
+      .from(siaeResales)
+      .where(and(
+        eq(siaeResales.originalTicketId, ticketId),
+        or(eq(siaeResales.status, 'listed'), eq(siaeResales.status, 'pending'))
+      ));
+
+    if (existing) {
+      return res.status(400).json({ message: "Biglietto già in rivendita" });
+    }
+
+    // Crea annuncio rivendita
+    const [resale] = await db
+      .insert(siaeResales)
+      .values({
+        originalTicketId: ticketId,
+        sellerId: customer.id,
+        originalPrice: ticket.ticketPrice,
+        resalePrice: resalePrice.toFixed(2),
+        status: 'listed',
+        listedAt: new Date(),
+      })
+      .returning();
+
+    console.log("[PUBLIC] Resale listing created:", resale.id);
+    res.json({ 
+      message: "Biglietto messo in vendita",
+      resaleId: resale.id,
+      resalePrice: resale.resalePrice,
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Create resale error:", error);
+    res.status(500).json({ message: "Errore nella creazione annuncio" });
+  }
+});
+
+// Rimuovi biglietto dalla rivendita
+router.delete("/api/public/account/resale/:id", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const { id } = req.params;
+
+    const [resale] = await db
+      .select()
+      .from(siaeResales)
+      .where(and(
+        eq(siaeResales.id, id),
+        eq(siaeResales.sellerId, customer.id),
+        eq(siaeResales.status, 'listed')
+      ));
+
+    if (!resale) {
+      return res.status(404).json({ message: "Annuncio non trovato" });
+    }
+
+    await db
+      .update(siaeResales)
+      .set({
+        status: 'cancelled',
+        cancelledAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(siaeResales.id, id));
+
+    console.log("[PUBLIC] Resale cancelled:", id);
+    res.json({ message: "Annuncio rimosso" });
+  } catch (error: any) {
+    console.error("[PUBLIC] Cancel resale error:", error);
+    res.status(500).json({ message: "Errore nella rimozione annuncio" });
+  }
+});
+
+// Ottieni annunci rivendita del cliente
+router.get("/api/public/account/resales", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const resales = await db
+      .select({
+        id: siaeResales.id,
+        originalTicketId: siaeResales.originalTicketId,
+        originalPrice: siaeResales.originalPrice,
+        resalePrice: siaeResales.resalePrice,
+        status: siaeResales.status,
+        listedAt: siaeResales.listedAt,
+        soldAt: siaeResales.soldAt,
+        ticketCode: siaeTickets.ticketCode,
+        eventName: events.name,
+        eventStart: events.startDatetime,
+        sectorName: siaeEventSectors.name,
+      })
+      .from(siaeResales)
+      .innerJoin(siaeTickets, eq(siaeResales.originalTicketId, siaeTickets.id))
+      .innerJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .where(eq(siaeResales.sellerId, customer.id))
+      .orderBy(desc(siaeResales.listedAt));
+
+    res.json({ resales });
+  } catch (error: any) {
+    console.error("[PUBLIC] Get resales error:", error);
+    res.status(500).json({ message: "Errore nel caricamento annunci" });
+  }
+});
+
+// Ottieni richieste cambio nominativo del cliente
+router.get("/api/public/account/name-changes", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const nameChanges = await db
+      .select({
+        id: siaeNameChanges.id,
+        originalTicketId: siaeNameChanges.originalTicketId,
+        previousFirstName: siaeNameChanges.previousFirstName,
+        previousLastName: siaeNameChanges.previousLastName,
+        newFirstName: siaeNameChanges.newFirstName,
+        newLastName: siaeNameChanges.newLastName,
+        fee: siaeNameChanges.fee,
+        status: siaeNameChanges.status,
+        createdAt: siaeNameChanges.createdAt,
+        ticketCode: siaeTickets.ticketCode,
+        eventName: events.name,
+        eventStart: events.startDatetime,
+      })
+      .from(siaeNameChanges)
+      .innerJoin(siaeTickets, eq(siaeNameChanges.originalTicketId, siaeTickets.id))
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .where(eq(siaeNameChanges.requestedByCustomerId, customer.id))
+      .orderBy(desc(siaeNameChanges.createdAt));
+
+    res.json({ nameChanges });
+  } catch (error: any) {
+    console.error("[PUBLIC] Get name changes error:", error);
+    res.status(500).json({ message: "Errore nel caricamento richieste" });
   }
 });
 
