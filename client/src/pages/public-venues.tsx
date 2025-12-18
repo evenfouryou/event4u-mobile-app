@@ -22,7 +22,7 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { useAuth } from "@/hooks/useAuth";
+import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 
 interface VenueEvent {
   id: string;
@@ -51,7 +51,7 @@ interface Venue {
 
 export default function PublicVenues() {
   const [searchCity, setSearchCity] = useState("");
-  const { user, isAuthenticated } = useAuth();
+  const { isAuthenticated } = useCustomerAuth();
 
   const { data: venues, isLoading, error } = useQuery<Venue[]>({
     queryKey: ["/api/public/venues", searchCity],
@@ -86,7 +86,7 @@ export default function PublicVenues() {
                 Eventi
               </Button>
             </Link>
-            {isAuthenticated && user?.role === 'customer' ? (
+            {isAuthenticated ? (
               <Link href="/account">
                 <Avatar className="h-9 w-9 cursor-pointer ring-2 ring-primary/20 hover:ring-primary/50 transition-all" data-testid="avatar-user">
                   <AvatarFallback className="bg-primary/10 text-primary">
