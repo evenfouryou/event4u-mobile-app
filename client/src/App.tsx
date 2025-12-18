@@ -101,6 +101,10 @@ import CashierManagement from "@/pages/cashier-management";
 import CashierDashboard from "@/pages/cashier-dashboard";
 import EventShortLink from "@/pages/event-short-link";
 import AdminSiteSettings from "@/pages/admin-site-settings";
+import AdminBillingPlans from "@/pages/admin-billing-plans";
+import AdminBillingOrganizers from "@/pages/admin-billing-organizers";
+import AdminBillingOrganizerDetail from "@/pages/admin-billing-organizer-detail";
+import AdminBillingInvoices from "@/pages/admin-billing-invoices";
 import { CookieConsent } from "@/components/cookie-consent";
 
 function Router() {
@@ -234,6 +238,10 @@ function Router() {
               <Route path="/template-builder/:id" component={TemplateBuilder} />
               <Route path="/stripe-admin" component={StripeAdmin} />
               <Route path="/admin/site-settings" component={AdminSiteSettings} />
+              <Route path="/admin/billing/plans" component={AdminBillingPlans} />
+              <Route path="/admin/billing/organizers/:companyId" component={AdminBillingOrganizerDetail} />
+              <Route path="/admin/billing/organizers" component={AdminBillingOrganizers} />
+              <Route path="/admin/billing/invoices" component={AdminBillingInvoices} />
               <Route path="/scanner/:eventId?" component={E4uScanner} />
               <Route path="/wallet" component={ClientWallet} />
               <Route path="/staff-pr-home" component={StaffPrHome} />
