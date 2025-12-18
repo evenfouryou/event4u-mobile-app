@@ -1,0 +1,55 @@
+index-BrQJZHPr.js:1321 SW registered: https://manage.eventfouryou.com/
+index-BrQJZHPr.js:1271 [Checkout] cartLoading: true customerLoading: true cart: undefined customer: undefined
+index-BrQJZHPr.js:1271 [Checkout] cartLoading: true customerLoading: true cart: undefined customer: undefined
+index-BrQJZHPr.js:1271 [Checkout] cartLoading: false customerLoading: true cart: {items: Array(2), total: 8, itemsCount: 2} customer: undefined
+index-BrQJZHPr.js:1271 [Checkout] cartLoading: false customerLoading: false cart: {items: Array(2), total: 8, itemsCount: 2} customer: {id: 'f885add2-51df-41ea-b956-6224b151eefd', userId: null, email: 'tickefouryou@gmail.com', firstName: 'Jonathan', lastName: 'Petrelli', …}
+index-BrQJZHPr.js:1271 [Checkout] Creating payment intent...
+index-BrQJZHPr.js:1271 [Checkout] cartLoading: false customerLoading: false cart: {items: Array(2), total: 8, itemsCount: 2} customer: {id: 'f885add2-51df-41ea-b956-6224b151eefd', userId: null, email: 'tickefouryou@gmail.com', firstName: 'Jonathan', lastName: 'Petrelli', …}
+index-BrQJZHPr.js:1271 [Checkout] Response status: 200
+index-BrQJZHPr.js:1271 [Checkout] Response data: {clientSecret: 'pi_3Sfkx7083fDHdLKV1Ju3hkFA_secret_jK4PiKAKWwIXK41CZuEyOTGAd', checkoutSessionId: '3aa094a4-fe0a-4879-aa37-373660bdcb95', total: 8}
+index-BrQJZHPr.js:1271 [Checkout] Payment intent created successfully: {clientSecret: 'pi_3Sfkx7083fDHdLKV1Ju3hkFA_secret_jK4PiKAKWwIXK41CZuEyOTGAd', checkoutSessionId: '3aa094a4-fe0a-4879-aa37-373660bdcb95', total: 8}
+index-BrQJZHPr.js:1271 [Checkout] cartLoading: false customerLoading: false cart: {items: Array(2), total: 8, itemsCount: 2} customer: {id: 'f885add2-51df-41ea-b956-6224b151eefd', userId: null, email: 'tickefouryou@gmail.com', firstName: 'Jonathan', lastName: 'Petrelli', …}
+shared-9b8cd6512cf9b263017772465c821358.js:1  GET https://api.stripe.com/v1/elements/sessions?client_secret=pi_3Sfkx7083fDHdLKV1Ju3hkFA_secret_jK4PiKAKWwIXK41CZuEyOTGAd&key=pk_live_51PkTcs083fDHdLKV9H9dFkEnI1LMk93z1kVfR41xwVR0nqKiPjUnhIexzh4H57C5GvB08rDVRABCwrukjm00Hwh900G0QTzGR0&_stripe_version=2025-09-30.clover&elements_init_source=stripe.elements&referrer_host=manage.eventfouryou.com&stripe_js_id=ef520192-f88e-4e7a-9e4e-961424425e69&locale=it-IT&expand[0]=payment_method_preference.payment_intent.payment_method&type=payment_intent 401 (Unauthorized)
+(anonymous) @ shared-9b8cd6512cf9b263017772465c821358.js:1
+e @ shared-9b8cd6512cf9b263017772465c821358.js:1
+c @ shared-9b8cd6512cf9b263017772465c821358.js:1
+i @ shared-9b8cd6512cf9b263017772465c821358.js:1
+s @ shared-9b8cd6512cf9b263017772465c821358.js:1
+e @ shared-9b8cd6512cf9b263017772465c821358.js:1
+(anonymous) @ shared-9b8cd6512cf9b263017772465c821358.js:1
+n @ shared-9b8cd6512cf9b263017772465c821358.js:1
+(anonymous) @ shared-9b8cd6512cf9b263017772465c821358.js:1
+(anonymous) @ shared-9b8cd6512cf9b263017772465c821358.js:1
+a @ shared-9b8cd6512cf9b263017772465c821358.js:1
+i @ shared-9b8cd6512cf9b263017772465c821358.js:1
+(anonymous) @ shared-9b8cd6512cf9b263017772465c821358.js:1
+(anonymous) @ shared-9b8cd6512cf9b263017772465c821358.js:1
+(anonymous) @ shared-9b8cd6512cf9b263017772465c821358.js:1
+_ @ shared-9b8cd6512cf9b263017772465c821358.js:1
+d @ controller-with-preconnect-6c0c2147d91c94839e454fdd45ba1485.js:1
+t.requestParams @ controller-with-preconnect-6c0c2147d91c94839e454fdd45ba1485.js:1
+rv @ controller-with-preconnect-6c0c2147d91c94839e454fdd45ba1485.js:1
+(anonymous) @ controller-with-preconnect-6c0c2147d91c94839e454fdd45ba1485.js:1
+(anonymous) @ controller-with-preconnect-6c0c2147d91c94839e454fdd45ba1485.js:1
+n @ shared-9b8cd6512cf9b263017772465c821358.js:1
+(anonymous) @ shared-9b8cd6512cf9b263017772465c821358.js:1
+(anonymous) @ shared-9b8cd6512cf9b263017772465c821358.js:1
+a @ shared-9b8cd6512cf9b263017772465c821358.js:1
+i @ shared-9b8cd6512cf9b263017772465c821358.js:1
+(anonymous) @ shared-9b8cd6512cf9b263017772465c821358.js:1
+(anonymous) @ shared-9b8cd6512cf9b263017772465c821358.js:1
+(anonymous) @ controller-with-preconnect-6c0c2147d91c94839e454fdd45ba1485.js:1
+(anonymous) @ controller-with-preconnect-6c0c2147d91c94839e454fdd45ba1485.js:1
+(anonymous) @ controller-with-preconnect-6c0c2147d91c94839e454fdd45ba1485.js:1
+n @ shared-9b8cd6512cf9b263017772465c821358.js:1
+(anonymous) @ shared-9b8cd6512cf9b263017772465c821358.js:1
+(anonymous) @ shared-9b8cd6512cf9b263017772465c821358.js:1
+a @ shared-9b8cd6512cf9b263017772465c821358.js:1
+i @ shared-9b8cd6512cf9b263017772465c821358.js:1
+(anonymous) @ shared-9b8cd6512cf9b263017772465c821358.js:1
+(anonymous) @ shared-9b8cd6512cf9b263017772465c821358.js:1
+(anonymous) @ controller-with-preconnect-6c0c2147d91c94839e454fdd45ba1485.js:1
+value @ controller-with-preconnect-6c0c2147d91c94839e454fdd45ba1485.js:1
+(anonymous) @ controller-with-preconnect-6c0c2147d91c94839e454fdd45ba1485.js:1
+checkout:1 Unable to download payment manifest "https://www.google.com/pay".
+checkout:1 Unable to download payment manifest "https://www.google.com/pay".
