@@ -1,0 +1,62 @@
+12-18 15:57:07
+vary: 'Origin',
+12-18 15:57:07
+vary: 'Origin',
+12-18 15:57:07
+'strict-transport-security': 'max-age=63072000; includeSubDomains; preload'
+12-18 15:57:07
+payment_method_type: undefined,
+12-18 15:57:07
+raw: {
+12-18 15:57:07
+[PUBLIC] Create payment intent error: StripeAuthenticationError: Invalid API Key provided: sk_live_************************************************************************************************McH7
+12-18 15:57:07
+type: 'invalid_request_error',
+12-18 15:57:07
+'content-length': '210',
+12-18 15:57:07
+requestId: undefined
+12-18 15:57:07
+'cache-control': 'no-cache, no-store',
+12-18 15:57:07
+'access-control-allow-methods': 'GET, HEAD, PUT, PATCH, POST, DELETE',
+12-18 15:57:07
+message: 'Invalid API Key provided: sk_live_************************************************************************************************McH7',
+12-18 15:57:07
+},
+12-18 15:57:07
+setup_intent: undefined,
+12-18 15:57:07
+'content-length': '210',
+12-18 15:57:07
+server: 'nginx',
+12-18 15:57:07
+'www-authenticate': 'Bearer realm="Stripe"',
+12-18 15:57:07
+'access-control-max-age': '300',
+12-18 15:57:07
+'access-control-allow-origin': '*',
+12-18 15:57:07
+decline_code: undefined,
+12-18 15:57:07
+},
+12-18 15:57:07
+date: 'Thu, 18 Dec 2025 14:57:07 GMT',
+12-18 15:57:07
+'x-wc': 'ABHIJ',
+12-18 15:57:07
+'content-security-policy': "base-uri 'none'; default-src 'none'; form-action 'none'; frame-ancestors 'none'; img-src 'self'; script-src 'self' 'report-sample'; style-src 'self'; worker-src 'none'; upgrade-insecure-requests; report-uri https://q.stripe.com/csp-violation?q=aqCQs63Hy9DXJrKM3xXjGiAmg9jf-cvrekXERBmxpfzmxPCJBPoTRKj5bGlRg11snGoZuiqc5tFXFvF3",
+12-18 15:57:07
+}
+12-18 15:57:07
+at res.toJSON.then.StripeAPIError.message (file:///home/runner/workspace/node_modules/stripe/esm/RequestSender.js:93:31)
+12-18 15:57:07
+type: 'StripeAuthenticationError',
+12-18 15:57:07
+statusCode: 401,
+12-18 15:57:07
+'access-control-allow-credentials': 'true',
+12-18 15:57:07
+headers: {
+12-18 15:57:07
+'x-robots-tag': 'none',
