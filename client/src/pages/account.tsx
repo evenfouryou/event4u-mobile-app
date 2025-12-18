@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Route, Switch, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { AccountLayout } from "@/components/account-layout";
+import AccountHome from "@/pages/account-home";
 import AccountProfile from "@/pages/account-profile";
 import AccountTickets from "@/pages/account-tickets";
 import AccountTicketDetail from "@/pages/account-ticket-detail";
@@ -25,7 +26,7 @@ export default function AccountPage() {
 
   useEffect(() => {
     if (location === "/account" || location === "/account/") {
-      navigate("/account/profile");
+      navigate("/account/home");
     }
   }, [location, navigate]);
 
@@ -47,6 +48,7 @@ export default function AccountPage() {
   return (
     <AccountLayout>
       <Switch>
+        <Route path="/account/home" component={AccountHome} />
         <Route path="/account/profile" component={AccountProfile} />
         <Route path="/account/tickets/:id" component={AccountTicketDetail} />
         <Route path="/account/tickets" component={AccountTickets} />
