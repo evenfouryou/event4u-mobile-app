@@ -34,7 +34,7 @@ import {
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 
 interface CartItem {
   id: string;
@@ -197,6 +197,7 @@ function CheckoutContent() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
+  const paymentIntentCreated = useRef(false);
 
   const { data: cart, isLoading: cartLoading } = useQuery<CartData>({
     queryKey: ["/api/public/cart"],
@@ -230,7 +231,8 @@ function CheckoutContent() {
   }, []);
 
   useEffect(() => {
-    if (cart && cart.items.length > 0 && customer && !createPaymentIntent.data && !createPaymentIntent.isPending) {
+    if (cart && cart.items.length > 0 && customer && !paymentIntentCreated.current) {
+      paymentIntentCreated.current = true;
       createPaymentIntent.mutate();
     }
   }, [cart, customer]);
@@ -333,14 +335,7 @@ function CheckoutContent() {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-6">
-            {(() => {
-            console.log("[Checkout Debug] isPending:", createPaymentIntent.isPending);
-            console.log("[Checkout Debug] data:", createPaymentIntent.data);
-            console.log("[Checkout Debug] elementsOptions:", !!elementsOptions);
-            console.log("[Checkout Debug] stripePromise:", !!stripePromise);
-            return null;
-          })()}
-          {createPaymentIntent.isPending ? (
+            {createPaymentIntent.isPending ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
               </div>
