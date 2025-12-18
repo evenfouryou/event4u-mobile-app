@@ -1514,11 +1514,47 @@ router.post("/api/public/checkout/confirm", async (req, res) => {
         const emissionDateStr = now.toISOString().slice(0, 10).replace(/-/g, "");
         const emissionTimeStr = now.toTimeString().slice(0, 5).replace(":", "");
 
+        // Trova la carta nel database usando il serialNumber dal bridge
+        let cardId = card?.id;
+        if (!cardId && sealData.serialNumber) {
+          console.log(`[PUBLIC] Looking up card by serialNumber: ${sealData.serialNumber}`);
+          const [bridgeCard] = await db
+            .select()
+            .from(siaeActivationCards)
+            .where(eq(siaeActivationCards.cardCode, sealData.serialNumber))
+            .limit(1);
+          
+          if (bridgeCard) {
+            cardId = bridgeCard.id;
+            console.log(`[PUBLIC] Found card by serialNumber: ${cardId}`);
+          } else {
+            // Se la carta non esiste nel DB, creala automaticamente
+            console.log(`[PUBLIC] Card not found, creating new card for serialNumber: ${sealData.serialNumber}`);
+            const [newCard] = await db
+              .insert(siaeActivationCards)
+              .values({
+                cardCode: sealData.serialNumber,
+                systemCode: "BRIDGE01",
+                companyId: ticketedEvent.companyId,
+                status: "active",
+                activationDate: new Date(),
+                progressiveCounter: sealData.counter,
+              })
+              .returning();
+            cardId = newCard.id;
+            console.log(`[PUBLIC] Created new card: ${cardId}`);
+          }
+        }
+
+        if (!cardId) {
+          throw new Error("Nessuna carta SIAE disponibile per generare il sigillo fiscale");
+        }
+
         // Salva sigillo fiscale reale nel database
         const [fiscalSeal] = await db
           .insert(siaeFiscalSeals)
           .values({
-            cardId: card?.id || "",
+            cardId: cardId,
             sealCode: sealData.sealCode,
             progressiveNumber: sealData.counter,
             emissionDate: now.toISOString().slice(5, 10).replace("-", ""),

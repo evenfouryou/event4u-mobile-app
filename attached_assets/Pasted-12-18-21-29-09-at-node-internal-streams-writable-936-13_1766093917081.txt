@@ -1,0 +1,66 @@
+12-18 21:29:09
+at node:internal/streams/writable:936:13
+12-18 21:29:09
+at WebSocket.emitClose (/home/runner/workspace/node_modules/ws/lib/websocket.js:272:10)
+12-18 21:29:09
+replication: undefined,
+12-18 21:29:09
+user: 'neondb_owner',
+12-18 21:29:09
+_eventsCount: 0,
+12-18 21:29:09
+at WebSocket. (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:988:51)
+12-18 21:29:09
+statement_timeout: false,
+12-18 21:29:09
+at Receiver.emit (node:events:524:28)
+12-18 21:29:09
+},
+12-18 21:29:09
+host: 'ep-quiet-wind-a50p7hw7.us-east-2.aws.neon.tech',
+12-18 21:29:09
+REGPROC: 24,
+12-18 21:29:09
+at WebSocket.onClose (/home/runner/workspace/node_modules/ws/lib/event-target.js:220:9)
+12-18 21:29:09
+_extensions: {},
+12-18 21:29:09
+setTypeParser: [Function: setTypeParser],
+12-18 21:29:09
+at fn. (file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1250:44)
+12-18 22:36:31
+column: undefined,
+12-18 22:36:31
+internalPosition: undefined,
+12-18 22:36:31
+line: '2608',
+12-18 22:36:31
+constraint: 'siae_fiscal_seals_card_id_siae_activation_cards_id_fk',
+12-18 22:36:31
+schema: 'public',
+12-18 22:36:31
+where: undefined,
+12-18 22:36:31
+length: 351,
+12-18 22:36:31
+hint: undefined,
+12-18 22:36:31
+severity: 'ERROR',
+12-18 22:36:31
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+12-18 22:36:31
+dataType: undefined,
+12-18 22:36:31
+routine: 'ri_ReportViolation'
+12-18 22:36:31
+detail: 'Key (card_id)=() is not present in table "siae_activation_cards".',
+12-18 22:36:31
+[PUBLIC] Checkout confirm error: error: insert or update on table "siae_fiscal_seals" violates foreign key constraint "siae_fiscal_seals_card_id_siae_activation_cards_id_fk"
+12-18 22:36:31
+at async file:///home/runner/workspace/dist/index.js:15289:30 {
+12-18 22:36:31
+code: '23503',
+12-18 22:36:31
+at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+12-18 22:36:31
+at async NeonPreparedQuery.execute (file:///home/runner/workspace/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
