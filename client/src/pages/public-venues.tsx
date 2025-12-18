@@ -82,7 +82,7 @@ export default function PublicVenues() {
                 Eventi
               </Button>
             </Link>
-            <Link href="/login">
+            <Link href="/accedi">
               <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" data-testid="button-login">
                 Accedi
               </Button>

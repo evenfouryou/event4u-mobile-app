@@ -245,7 +245,7 @@ function CheckoutContent() {
         <p className="text-muted-foreground mb-6">
           Per completare l'acquisto devi accedere al tuo account o registrarti.
         </p>
-        <Link href="/login?redirect=/checkout">
+        <Link href="/accedi?redirect=/checkout">
           <Button data-testid="button-login">
             Accedi o Registrati
           </Button>
