@@ -3,37 +3,50 @@ import { Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { format, isPast, parseISO } from "date-fns";
+import { format, isPast } from "date-fns";
 import { it } from "date-fns/locale";
 import {
   Ticket,
   Calendar,
-  MapPin,
   ChevronRight,
   Loader2,
   TicketX,
+  MapPin,
 } from "lucide-react";
 
 interface TicketItem {
-  id: number;
-  eventName: string;
-  eventDate: string;
-  sector: string;
+  id: string;
+  ticketCode: string;
+  ticketType: string;
+  ticketPrice: string;
+  participantFirstName: string | null;
+  participantLastName: string | null;
   status: string;
-  qrCode?: string;
-  isListed?: boolean;
+  emittedAt: string;
+  qrCode: string | null;
+  sectorName: string;
+  eventName: string;
+  eventStart: string;
+  eventEnd: string;
+  locationName: string;
+  ticketedEventId: string;
+}
+
+interface TicketsResponse {
+  upcoming: TicketItem[];
+  past: TicketItem[];
+  total: number;
 }
 
 function TicketCard({ ticket }: { ticket: TicketItem }) {
-  const eventDate = parseISO(ticket.eventDate);
+  const eventDate = new Date(ticket.eventStart);
   const isExpired = isPast(eventDate);
 
   const statusVariant = () => {
-    if (ticket.isListed) return "secondary";
     switch (ticket.status) {
-      case "valid":
+      case "emitted":
         return "default";
-      case "used":
+      case "validated":
         return "secondary";
       case "cancelled":
         return "destructive";
@@ -43,11 +56,10 @@ function TicketCard({ ticket }: { ticket: TicketItem }) {
   };
 
   const statusLabel = () => {
-    if (ticket.isListed) return "In Vendita";
     switch (ticket.status) {
-      case "valid":
+      case "emitted":
         return "Valido";
-      case "used":
+      case "validated":
         return "Usato";
       case "cancelled":
         return "Annullato";
@@ -84,7 +96,11 @@ function TicketCard({ ticket }: { ticket: TicketItem }) {
                 </div>
                 <div className="flex items-center gap-2">
                   <Ticket className="w-4 h-4" />
-                  <span data-testid="text-sector">{ticket.sector}</span>
+                  <span data-testid="text-sector">{ticket.sectorName}</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <MapPin className="w-4 h-4" />
+                  <span>{ticket.locationName}</span>
                 </div>
               </div>
             </div>
@@ -97,17 +113,12 @@ function TicketCard({ ticket }: { ticket: TicketItem }) {
 }
 
 export default function AccountTickets() {
-  const { data: tickets, isLoading } = useQuery<TicketItem[]>({
+  const { data, isLoading } = useQuery<TicketsResponse>({
     queryKey: ["/api/public/account/tickets"],
   });
 
-  const upcomingTickets = tickets?.filter(
-    (t) => !isPast(parseISO(t.eventDate)) && t.status !== "cancelled"
-  ) || [];
-  
-  const pastTickets = tickets?.filter(
-    (t) => isPast(parseISO(t.eventDate)) || t.status === "cancelled"
-  ) || [];
+  const upcomingTickets = data?.upcoming || [];
+  const pastTickets = data?.past || [];
 
   if (isLoading) {
     return (
@@ -124,64 +135,59 @@ export default function AccountTickets() {
         <p className="text-slate-400 mt-2">Visualizza e gestisci i tuoi biglietti</p>
       </div>
 
-      <Tabs defaultValue="upcoming" className="w-full">
-        <TabsList className="w-full bg-white/5 border border-white/10 rounded-lg h-12 mb-6">
+      <Tabs defaultValue="upcoming" className="space-y-6">
+        <TabsList className="bg-[#151922] border border-white/10">
           <TabsTrigger
             value="upcoming"
-            className="flex-1 h-full text-white data-[state=active]:bg-yellow-500 data-[state=active]:text-black"
+            className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black"
             data-testid="tab-upcoming"
           >
             Prossimi ({upcomingTickets.length})
           </TabsTrigger>
           <TabsTrigger
             value="past"
-            className="flex-1 h-full text-white data-[state=active]:bg-yellow-500 data-[state=active]:text-black"
+            className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black"
             data-testid="tab-past"
           >
             Passati ({pastTickets.length})
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="upcoming" className="mt-0">
+        <TabsContent value="upcoming" className="space-y-4">
           {upcomingTickets.length === 0 ? (
-            <EmptyState message="Nessun biglietto per eventi futuri" />
+            <Card className="bg-[#151922] border-white/10">
+              <CardContent className="py-12 text-center">
+                <TicketX className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+                <p className="text-slate-400 mb-4">Non hai biglietti per eventi futuri</p>
+                <Link href="/acquista">
+                  <span className="text-yellow-400 hover:text-yellow-300 underline">
+                    Scopri gli eventi disponibili
+                  </span>
+                </Link>
+              </CardContent>
+            </Card>
           ) : (
-            <div className="space-y-4">
-              {upcomingTickets.map((ticket) => (
-                <TicketCard key={ticket.id} ticket={ticket} />
-              ))}
-            </div>
+            upcomingTickets.map((ticket) => (
+              <TicketCard key={ticket.id} ticket={ticket} />
+            ))
           )}
         </TabsContent>
 
-        <TabsContent value="past" className="mt-0">
+        <TabsContent value="past" className="space-y-4">
           {pastTickets.length === 0 ? (
-            <EmptyState message="Nessun biglietto passato" />
+            <Card className="bg-[#151922] border-white/10">
+              <CardContent className="py-12 text-center">
+                <TicketX className="w-12 h-12 text-slate-600 mx-auto mb-4" />
+                <p className="text-slate-400">Non hai biglietti passati</p>
+              </CardContent>
+            </Card>
           ) : (
-            <div className="space-y-4">
-              {pastTickets.map((ticket) => (
-                <TicketCard key={ticket.id} ticket={ticket} />
-              ))}
-            </div>
+            pastTickets.map((ticket) => (
+              <TicketCard key={ticket.id} ticket={ticket} />
+            ))
           )}
         </TabsContent>
       </Tabs>
-    </div>
-  );
-}
-
-function EmptyState({ message }: { message: string }) {
-  return (
-    <div className="flex flex-col items-center justify-center py-16 text-center">
-      <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mb-4">
-        <TicketX className="w-8 h-8 text-slate-500" />
-      </div>
-      <p className="text-slate-400">{message}</p>
-      <Link href="/acquista">
-        <span className="text-yellow-400 hover:underline mt-2 inline-block cursor-pointer">
-          Scopri gli eventi
-        </span>
-      </Link>
     </div>
   );
 }

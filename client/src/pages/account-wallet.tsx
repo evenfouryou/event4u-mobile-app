@@ -1,7 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { format, parseISO } from "date-fns";
+import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import {
   Wallet,
@@ -12,37 +11,52 @@ import {
   Gift,
   CreditCard,
   Loader2,
+  Lock,
+  Unlock,
 } from "lucide-react";
 
 interface WalletData {
-  balance: number;
+  id: string;
+  balance: string;
   currency: string;
+  isActive: boolean;
 }
 
 interface Transaction {
-  id: number;
-  type: "credit" | "debit" | "purchase" | "resale" | "refund" | "bonus";
-  description: string;
-  amount: number;
+  id: string;
+  walletId: string;
+  customerId: string;
+  type: "credit" | "debit" | "hold" | "release" | "refund";
+  amount: string;
+  balanceAfter: string;
+  description: string | null;
+  ticketId: string | null;
+  transactionId: string | null;
+  resaleId: string | null;
+  stripePaymentIntentId: string | null;
+  status: string;
+  metadata: string | null;
   createdAt: string;
+}
+
+interface TransactionsResponse {
+  transactions: Transaction[];
 }
 
 const transactionIcons: Record<string, typeof Wallet> = {
   credit: ArrowDownLeft,
   debit: ArrowUpRight,
-  purchase: ShoppingCart,
-  resale: RefreshCw,
-  refund: CreditCard,
-  bonus: Gift,
+  hold: Lock,
+  release: Unlock,
+  refund: RefreshCw,
 };
 
 const transactionLabels: Record<string, string> = {
   credit: "Ricarica",
-  debit: "Prelievo",
-  purchase: "Acquisto",
-  resale: "Rivendita",
+  debit: "Spesa",
+  hold: "Fondi Bloccati",
+  release: "Fondi Sbloccati",
   refund: "Rimborso",
-  bonus: "Bonus",
 };
 
 export default function AccountWallet() {
@@ -50,7 +64,7 @@ export default function AccountWallet() {
     queryKey: ["/api/public/account/wallet"],
   });
 
-  const { data: transactions, isLoading: transactionsLoading } = useQuery<Transaction[]>({
+  const { data: transactionsData, isLoading: transactionsLoading } = useQuery<TransactionsResponse>({
     queryKey: ["/api/public/account/wallet/transactions"],
   });
 
@@ -64,7 +78,8 @@ export default function AccountWallet() {
     );
   }
 
-  const balance = wallet?.balance || 0;
+  const balance = parseFloat(wallet?.balance || "0");
+  const transactions = transactionsData?.transactions || [];
 
   return (
     <div className="max-w-3xl mx-auto">
@@ -82,8 +97,11 @@ export default function AccountWallet() {
             <div>
               <p className="text-sm text-slate-400">Saldo Disponibile</p>
               <p className="text-4xl font-bold text-white" data-testid="text-balance">
-                €{(balance / 100).toFixed(2)}
+                €{balance.toFixed(2)}
               </p>
+              {wallet?.currency && wallet.currency !== "EUR" && (
+                <p className="text-sm text-slate-500">{wallet.currency}</p>
+              )}
             </div>
           </div>
         </CardContent>
@@ -97,19 +115,21 @@ export default function AccountWallet() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {!transactions || transactions.length === 0 ? (
+          {transactions.length === 0 ? (
             <div className="text-center py-12 text-slate-400">
               <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
                 <Wallet className="w-8 h-8 text-slate-500" />
               </div>
               <p>Nessuna transazione</p>
+              <p className="text-sm mt-2">Le tue transazioni appariranno qui</p>
             </div>
           ) : (
             <div className="space-y-3">
               {transactions.map((tx) => {
                 const Icon = transactionIcons[tx.type] || Wallet;
-                const isPositive = tx.amount > 0;
-                const transactionDate = parseISO(tx.createdAt);
+                const amount = parseFloat(tx.amount || "0");
+                const isPositive = tx.type === "credit" || tx.type === "release" || tx.type === "refund";
+                const transactionDate = new Date(tx.createdAt);
 
                 return (
                   <div
@@ -131,7 +151,7 @@ export default function AccountWallet() {
                       </div>
                       <div>
                         <p className="font-medium text-white" data-testid="text-description">
-                          {tx.description}
+                          {tx.description || transactionLabels[tx.type] || tx.type}
                         </p>
                         <p className="text-sm text-slate-400" data-testid="text-date">
                           {format(transactionDate, "d MMM yyyy, HH:mm", { locale: it })}
@@ -145,11 +165,11 @@ export default function AccountWallet() {
                         }`}
                         data-testid="text-amount"
                       >
-                        {isPositive ? "+" : ""}€{(tx.amount / 100).toFixed(2)}
+                        {isPositive ? "+" : "-"}€{Math.abs(amount).toFixed(2)}
                       </p>
-                      <Badge variant="secondary" className="text-xs">
-                        {transactionLabels[tx.type] || tx.type}
-                      </Badge>
+                      <p className="text-xs text-slate-500">
+                        Saldo: €{parseFloat(tx.balanceAfter || "0").toFixed(2)}
+                      </p>
                     </div>
                   </div>
                 );
