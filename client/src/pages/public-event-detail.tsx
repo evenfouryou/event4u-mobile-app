@@ -156,7 +156,13 @@ function SectorCard({
                 >
                   <Check className="w-8 h-8 text-white" />
                 </motion.div>
-                <p className="text-lg font-semibold text-foreground">Aggiunto al carrello!</p>
+                <p className="text-lg font-semibold text-foreground mb-3">Aggiunto al carrello!</p>
+                <Link href="/carrello">
+                  <Button size="sm" className="bg-white text-black hover:bg-gray-100" data-testid="button-go-to-cart">
+                    <ShoppingCart className="w-4 h-4 mr-2" />
+                    Vai al carrello
+                  </Button>
+                </Link>
               </div>
             </motion.div>
           )}
