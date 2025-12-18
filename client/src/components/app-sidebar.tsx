@@ -205,6 +205,30 @@ export function AppSidebar() {
         icon: CreditCard,
         url: "/stripe-admin",
         group: "Sistema",
+      },
+      {
+        title: "Piani Abbonamento",
+        icon: Receipt,
+        url: "/admin/billing/plans",
+        group: "Fatturazione",
+      },
+      {
+        title: "Organizzatori",
+        icon: Building2,
+        url: "/admin/billing/organizers",
+        group: "Fatturazione",
+      },
+      {
+        title: "Fatture",
+        icon: FileText,
+        url: "/admin/billing/invoices",
+        group: "Fatturazione",
+      },
+      {
+        title: "Report Vendite",
+        icon: BarChart3,
+        url: "/admin/billing/reports",
+        group: "Fatturazione",
       }
     );
   }
@@ -626,6 +650,12 @@ export function AppSidebar() {
 
   if (isAdmin) {
     menuItems.push(
+      {
+        title: "Fatturazione",
+        icon: Receipt,
+        url: "/organizer/billing",
+        group: "Account",
+      },
       {
         title: "Impostazioni",
         icon: Settings,

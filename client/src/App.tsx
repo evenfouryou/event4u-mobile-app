@@ -245,6 +245,7 @@ function Router() {
               <Route path="/admin/billing/organizers" component={AdminBillingOrganizers} />
               <Route path="/admin/billing/invoices" component={AdminBillingInvoices} />
               <Route path="/admin/billing/reports" component={AdminBillingReports} />
+              <Route path="/organizer/billing" component={OrganizerBilling} />
               <Route path="/billing" component={OrganizerBilling} />
               <Route path="/scanner/:eventId?" component={E4uScanner} />
               <Route path="/wallet" component={ClientWallet} />
