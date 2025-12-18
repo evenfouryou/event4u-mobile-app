@@ -1,0 +1,272 @@
+Di seguito trovi la versione “formato Replit”: un prompt tecnico/operativo che puoi incollare in Replit AI per fargli implementare il sistema. (Ho scritto tutto in stile “task + requisiti + schema dati + logiche + API + UI admin”.)
+
+⸻
+
+PROMPT PER REPLIT (COPIA/INCOLLA)
+
+Stiamo sviluppando Event Four You. Implementa un sistema completo di Abbonamenti + Commissioni biglietti + Cash/Saldo + Fatturazione + Report per gli Organizzatori.
+
+1) Obiettivo
+
+Ogni Organizzatore deve avere:
+	•	un Piano Abbonamento (mensile oppure per evento)
+	•	un Piano Commissioni per biglietto venduto, distinto per canale: online / stampato / PR
+	•	un Wallet (cash/saldo) per accumulare debiti/crediti e gestire soglie di fatturazione
+	•	un pannello Admin per gestire abbonamenti, commissioni, fatture e report
+	•	una sezione sull’Organizzatore per vedere fatture, costi, commissioni e report
+
+2) Regole chiave
+	1.	Commissioni ONLINE: vengono calcolate e detratte subito dall’incasso dell’acquisto (netto all’organizzatore).
+	2.	Commissioni STAMPATO e PR: non vengono detratte da transazione online; vengono accumulate come debito nel wallet dell’organizzatore.
+	3.	Esiste una soglia (quota cash) configurabile: quando il debito accumulato supera la soglia, l’Admin può:
+	•	generare una fattura (manuale o automatica)
+	•	segnare pagamenti
+	4.	Se abbonamento non attivo → l’organizzatore non può vendere/creare eventi (blocco lato backend).
+
+⸻
+
+3) Modelli / Tabelle (DB)
+
+organizer_plans (catalogo piani)
+	•	id
+	•	name
+	•	type: monthly | per_event
+	•	price
+	•	duration_days (solo monthly)
+	•	events_included (solo per_event)
+	•	is_active
+
+organizer_subscriptions (abbonamento assegnato)
+	•	id
+	•	organizer_id
+	•	plan_id
+	•	start_date
+	•	end_date
+	•	status: active | suspended | expired
+	•	billing_cycle: monthly | per_event
+	•	next_billing_date (se monthly)
+	•	created_at
+
+organizer_commission_profiles
+	•	id
+	•	organizer_id
+	•	channel_online_type: percent | fixed
+	•	channel_online_value (decimal)
+	•	channel_printed_type: percent | fixed
+	•	channel_printed_value
+	•	channel_pr_type: percent | fixed
+	•	channel_pr_value
+	•	created_at / updated_at
+
+events
+	•	id
+	•	organizer_id
+	•	name
+	•	date
+	•	status
+
+tickets
+	•	id
+	•	event_id
+	•	ticket_type_id
+	•	price_gross
+	•	channel: online | printed | pr
+	•	quantity
+
+orders (solo per online)
+	•	id
+	•	organizer_id
+	•	event_id
+	•	user_id
+	•	total_gross
+	•	commission_amount
+	•	total_net_to_organizer
+	•	payment_status: paid | refunded | pending
+	•	created_at
+
+organizer_wallets
+	•	id
+	•	organizer_id
+	•	balance (decimal)  // saldo: positivo = credito, negativo = debito (scegli una convenzione e mantienila coerente)
+	•	threshold_amount (decimal) // soglia fatturazione
+	•	updated_at
+
+wallet_ledger (movimenti wallet)
+	•	id
+	•	organizer_id
+	•	type: commission | subscription | invoice | payment | adjustment
+	•	direction: debit | credit
+	•	amount
+	•	reference_type (es: order|event|invoice|subscription)
+	•	reference_id
+	•	note
+	•	created_at
+
+invoices
+	•	id
+	•	organizer_id
+	•	invoice_number
+	•	period_start
+	•	period_end
+	•	amount
+	•	status: draft | issued | paid | void
+	•	issued_at
+	•	due_date
+	•	created_at
+
+invoice_items
+	•	id
+	•	invoice_id
+	•	item_type: subscription | commissions_printed | commissions_pr | adjustments
+	•	description
+	•	amount
+
+⸻
+
+4) Funzioni di calcolo
+
+4.1 Calcolo commissione per biglietto
+
+Funzione: calculateCommission(channel, ticketPriceGross, commissionType, commissionValue)
+	•	se type = percent → commission = ticketPriceGross * (value/100)
+	•	se type = fixed → commission = value
+	•	moltiplica per quantità se necessario
+	•	return commission
+
+4.2 Vendita ONLINE (ordine)
+
+Quando un ordine online è paid:
+	1.	calcola commissione online totale
+	2.	salva su orders:
+
+	•	total_gross
+	•	commission_amount
+	•	total_net_to_organizer = total_gross - commission_amount
+
+	3.	registra nel ledger:
+
+	•	una riga commission (credit alla piattaforma o debit all’organizzatore in base alla convenzione scelta)
+
+	4.	NOTA: l’organizzatore riceve già il netto, quindi NON creare debito extra nel wallet oltre a quanto serve per tracciamento.
+
+4.3 Vendita STAMPATO o PR
+
+Quando si registrano vendite stampate o PR (anche manualmente/da report PR):
+	1.	calcola commissione secondo canale
+	2.	registra su ledger come debito (commissione dovuta alla piattaforma)
+	3.	aggiorna wallet balance
+	4.	se supera threshold → flag “ready_for_invoicing = true” (puoi metterlo sul wallet o calcolarlo a runtime)
+
+⸻
+
+5) Abbonamenti e fatturazione abbonamenti
+	•	Ogni subscription genera costi.
+	•	Opzione consigliata:
+	•	registra una riga ledger mensile subscription (debit)
+	•	oppure genera invoice item a parte.
+
+Vincolo: se subscription status != active → blocca:
+	•	creazione evento
+	•	pubblicazione vendita biglietti
+
+⸻
+
+6) Pannello ADMIN (UI + API)
+
+Admin pages
+	1.	Organizzatori list
+	•	stato subscription (attiva/scaduta)
+	•	wallet balance
+	•	threshold
+	•	“da fatturare” se debito >= soglia
+	2.	Dettaglio Organizzatore
+	•	Tab: Abbonamento (gestisci/assegna)
+	•	Tab: Commissioni (online/stampato/PR – percent o fisso)
+	•	Tab: Wallet/Ledger (movimenti)
+	•	Tab: Fatture (lista + crea nuova)
+	•	Tab: Report
+
+Admin actions
+	•	Create/Update Plan
+	•	Assign Subscription
+	•	Update Commission Profile
+	•	Update Wallet Threshold
+	•	Generate Invoice (manual)
+	•	Mark Invoice Paid
+	•	Export report CSV/PDF (almeno CSV)
+
+⸻
+
+7) Sezione ORGANIZZATORE (UI + API)
+
+Pagine in area organizzatore:
+	•	“Abbonamento” (sola lettura)
+	•	“Costi e Commissioni” (ledger filtrabile per periodo/evento)
+	•	“Fatture” (lista + dettaglio)
+	•	“Report vendite” (per evento, per canale, per periodo)
+
+⸻
+
+8) API Endpoints (esempio)
+
+Implementa endpoint REST (o equivalente):
+
+Admin
+	•	GET /admin/organizers
+	•	GET /admin/organizers/:id
+	•	PUT /admin/organizers/:id/commissions
+	•	PUT /admin/organizers/:id/subscription
+	•	PUT /admin/organizers/:id/wallet-threshold
+	•	POST /admin/organizers/:id/invoices
+	•	PUT /admin/invoices/:id/mark-paid
+	•	GET /admin/reports/sales?from=&to=&organizer_id=&event_id=
+
+Organizer
+	•	GET /organizer/me/subscription
+	•	GET /organizer/me/wallet
+	•	GET /organizer/me/ledger?from=&to=&event_id=
+	•	GET /organizer/me/invoices
+	•	GET /organizer/me/reports/sales?from=&to=&event_id=
+
+⸻
+
+9) Report richiesti (minimo)
+
+Genera report con questi campi:
+	•	organizer_id
+	•	event_id
+	•	periodo (from-to)
+	•	tickets_sold_total
+	•	tickets_sold_online / printed / pr
+	•	gross_revenue_total
+	•	commission_online / commission_printed / commission_pr
+	•	net_to_organizer_online
+	•	wallet_debt_current
+	•	invoices_issued_total
+	•	invoices_paid_total
+
+⸻
+
+10) Requisiti implementativi
+	•	Tutti i calcoli devono usare decimal (evitare float)
+	•	Ogni movimento economico deve creare una riga in wallet_ledger
+	•	Gestire rimborsi: se un ordine online viene refunded, crea movimento inverso e aggiorna totals.
+	•	Aggiungi validazioni:
+	•	commission value >= 0
+	•	percent tra 0 e 100
+	•	subscription attiva per operazioni critiche
+
+⸻
+
+OUTPUT ATTESO
+	1.	Migrazioni DB per le tabelle sopra
+	2.	Modelli + servizi (CommissionService, WalletService, BillingService, ReportService)
+	3.	API controllers + routes
+	4.	UI Admin + UI Organizer (pagine base con tabelle e filtri)
+	5.	Seed di esempio per un organizer con commission profile e subscription
+
+Fine.
+
+⸻
+
+Se vuoi, posso anche scriverti una variante “Replit prompt” specifica per il tuo stack (Laravel + MySQL + pannello admin), già con nomi delle migration e classi come li preferisci in Event Four You.

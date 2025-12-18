@@ -4187,3 +4187,236 @@ export const updateSiaeCashierSchema = insertSiaeCashierSchema.partial().omit({ 
 export type SiaeCashier = typeof siaeCashiers.$inferSelect;
 export type InsertSiaeCashier = z.infer<typeof insertSiaeCashierSchema>;
 export type UpdateSiaeCashier = z.infer<typeof updateSiaeCashierSchema>;
+
+// ==================== ORGANIZER SUBSCRIPTION + COMMISSION + BILLING ====================
+
+// Organizer Plans - Subscription plan catalog
+export const organizerPlans = pgTable("organizer_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 255 }).notNull(),
+  type: varchar("type", { length: 20 }).notNull(), // 'monthly' | 'per_event'
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  durationDays: integer("duration_days"), // for monthly plans
+  eventsIncluded: integer("events_included"), // for per_event plans
+  description: text("description"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const organizerPlansRelations = relations(organizerPlans, ({ many }) => ({
+  subscriptions: many(organizerSubscriptions),
+}));
+
+// Organizer Subscriptions - Assigned subscriptions
+export const organizerSubscriptions = pgTable("organizer_subscriptions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  planId: varchar("plan_id").notNull().references(() => organizerPlans.id),
+  startDate: timestamp("start_date").notNull(),
+  endDate: timestamp("end_date"),
+  status: varchar("status", { length: 20 }).notNull().default('active'), // 'active' | 'suspended' | 'expired'
+  billingCycle: varchar("billing_cycle", { length: 20 }).notNull(), // 'monthly' | 'per_event'
+  nextBillingDate: timestamp("next_billing_date"), // for monthly
+  eventsUsed: integer("events_used").notNull().default(0), // for per_event
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const organizerSubscriptionsRelations = relations(organizerSubscriptions, ({ one }) => ({
+  company: one(companies, {
+    fields: [organizerSubscriptions.companyId],
+    references: [companies.id],
+  }),
+  plan: one(organizerPlans, {
+    fields: [organizerSubscriptions.planId],
+    references: [organizerPlans.id],
+  }),
+}));
+
+// Organizer Commission Profiles - Commission rates per channel
+export const organizerCommissionProfiles = pgTable("organizer_commission_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id).unique(),
+  channelOnlineType: varchar("channel_online_type", { length: 20 }).notNull().default('percent'), // 'percent' | 'fixed'
+  channelOnlineValue: decimal("channel_online_value", { precision: 10, scale: 2 }).notNull().default('0'),
+  channelPrintedType: varchar("channel_printed_type", { length: 20 }).notNull().default('percent'), // 'percent' | 'fixed'
+  channelPrintedValue: decimal("channel_printed_value", { precision: 10, scale: 2 }).notNull().default('0'),
+  channelPrType: varchar("channel_pr_type", { length: 20 }).notNull().default('percent'), // 'percent' | 'fixed'
+  channelPrValue: decimal("channel_pr_value", { precision: 10, scale: 2 }).notNull().default('0'),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const organizerCommissionProfilesRelations = relations(organizerCommissionProfiles, ({ one }) => ({
+  company: one(companies, {
+    fields: [organizerCommissionProfiles.companyId],
+    references: [companies.id],
+  }),
+}));
+
+// Organizer Wallets - Wallet for each company
+export const organizerWallets = pgTable("organizer_wallets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id).unique(),
+  balance: decimal("balance", { precision: 12, scale: 2 }).notNull().default('0'), // negative = debt
+  thresholdAmount: decimal("threshold_amount", { precision: 12, scale: 2 }).notNull().default('1000'), // invoice threshold
+  currency: varchar("currency", { length: 3 }).notNull().default('EUR'),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const organizerWalletsRelations = relations(organizerWallets, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [organizerWallets.companyId],
+    references: [companies.id],
+  }),
+  ledgerEntries: many(organizerWalletLedger),
+}));
+
+// Organizer Wallet Ledger - Wallet transactions
+export const organizerWalletLedger = pgTable("organizer_wallet_ledger", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  walletId: varchar("wallet_id").notNull().references(() => organizerWallets.id),
+  type: varchar("type", { length: 20 }).notNull(), // 'commission' | 'subscription' | 'invoice' | 'payment' | 'adjustment'
+  direction: varchar("direction", { length: 10 }).notNull(), // 'debit' | 'credit'
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  balanceAfter: decimal("balance_after", { precision: 12, scale: 2 }).notNull(),
+  referenceType: varchar("reference_type", { length: 20 }), // 'order' | 'event' | 'invoice' | 'subscription' | null
+  referenceId: varchar("reference_id"),
+  channel: varchar("channel", { length: 20 }), // 'online' | 'printed' | 'pr' | null
+  note: text("note"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const organizerWalletLedgerRelations = relations(organizerWalletLedger, ({ one }) => ({
+  company: one(companies, {
+    fields: [organizerWalletLedger.companyId],
+    references: [companies.id],
+  }),
+  wallet: one(organizerWallets, {
+    fields: [organizerWalletLedger.walletId],
+    references: [organizerWallets.id],
+  }),
+}));
+
+// Organizer Invoices - Generated invoices
+export const organizerInvoices = pgTable("organizer_invoices", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  invoiceNumber: varchar("invoice_number", { length: 100 }).notNull().unique(),
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default('draft'), // 'draft' | 'issued' | 'paid' | 'void'
+  issuedAt: timestamp("issued_at"),
+  dueDate: timestamp("due_date"),
+  paidAt: timestamp("paid_at"),
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const organizerInvoicesRelations = relations(organizerInvoices, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [organizerInvoices.companyId],
+    references: [companies.id],
+  }),
+  items: many(organizerInvoiceItems),
+}));
+
+// Organizer Invoice Items - Invoice line items
+export const organizerInvoiceItems = pgTable("organizer_invoice_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  invoiceId: varchar("invoice_id").notNull().references(() => organizerInvoices.id),
+  itemType: varchar("item_type", { length: 30 }).notNull(), // 'subscription' | 'commissions_online' | 'commissions_printed' | 'commissions_pr' | 'adjustment'
+  description: text("description"),
+  quantity: integer("quantity").notNull().default(1),
+  unitPrice: decimal("unit_price", { precision: 12, scale: 2 }).notNull(),
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const organizerInvoiceItemsRelations = relations(organizerInvoiceItems, ({ one }) => ({
+  invoice: one(organizerInvoices, {
+    fields: [organizerInvoiceItems.invoiceId],
+    references: [organizerInvoices.id],
+  }),
+}));
+
+// ==================== SCHEMAS ORGANIZER BILLING ====================
+
+export const insertOrganizerPlanSchema = createInsertSchema(organizerPlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateOrganizerPlanSchema = insertOrganizerPlanSchema.partial();
+
+export const insertOrganizerSubscriptionSchema = createInsertSchema(organizerSubscriptions).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateOrganizerSubscriptionSchema = insertOrganizerSubscriptionSchema.partial().omit({ companyId: true, planId: true });
+
+export const insertOrganizerCommissionProfileSchema = createInsertSchema(organizerCommissionProfiles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateOrganizerCommissionProfileSchema = insertOrganizerCommissionProfileSchema.partial().omit({ companyId: true });
+
+export const insertOrganizerWalletSchema = createInsertSchema(organizerWallets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateOrganizerWalletSchema = insertOrganizerWalletSchema.partial().omit({ companyId: true });
+
+export const insertOrganizerWalletLedgerSchema = createInsertSchema(organizerWalletLedger).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertOrganizerInvoiceSchema = createInsertSchema(organizerInvoices).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateOrganizerInvoiceSchema = insertOrganizerInvoiceSchema.partial().omit({ companyId: true, invoiceNumber: true });
+
+export const insertOrganizerInvoiceItemSchema = createInsertSchema(organizerInvoiceItems).omit({
+  id: true,
+  createdAt: true,
+});
+
+// ==================== TYPES ORGANIZER BILLING ====================
+
+export type OrganizerPlan = typeof organizerPlans.$inferSelect;
+export type InsertOrganizerPlan = z.infer<typeof insertOrganizerPlanSchema>;
+export type UpdateOrganizerPlan = z.infer<typeof updateOrganizerPlanSchema>;
+
+export type OrganizerSubscription = typeof organizerSubscriptions.$inferSelect;
+export type InsertOrganizerSubscription = z.infer<typeof insertOrganizerSubscriptionSchema>;
+export type UpdateOrganizerSubscription = z.infer<typeof updateOrganizerSubscriptionSchema>;
+
+export type OrganizerCommissionProfile = typeof organizerCommissionProfiles.$inferSelect;
+export type InsertOrganizerCommissionProfile = z.infer<typeof insertOrganizerCommissionProfileSchema>;
+export type UpdateOrganizerCommissionProfile = z.infer<typeof updateOrganizerCommissionProfileSchema>;
+
+export type OrganizerWallet = typeof organizerWallets.$inferSelect;
+export type InsertOrganizerWallet = z.infer<typeof insertOrganizerWalletSchema>;
+export type UpdateOrganizerWallet = z.infer<typeof updateOrganizerWalletSchema>;
+
+export type OrganizerWalletLedger = typeof organizerWalletLedger.$inferSelect;
+export type InsertOrganizerWalletLedger = z.infer<typeof insertOrganizerWalletLedgerSchema>;
+
+export type OrganizerInvoice = typeof organizerInvoices.$inferSelect;
+export type InsertOrganizerInvoice = z.infer<typeof insertOrganizerInvoiceSchema>;
+export type UpdateOrganizerInvoice = z.infer<typeof updateOrganizerInvoiceSchema>;
+
+export type OrganizerInvoiceItem = typeof organizerInvoiceItems.$inferSelect;
+export type InsertOrganizerInvoiceItem = z.infer<typeof insertOrganizerInvoiceItemSchema>;
