@@ -84,6 +84,12 @@ import {
   type InsertSiaeCashierAllocation,
   type SiaeTicketAudit,
   type InsertSiaeTicketAudit,
+  siaeCustomerWallets,
+  siaeWalletTransactions,
+  type SiaeCustomerWallet,
+  type InsertSiaeCustomerWallet,
+  type SiaeWalletTransaction,
+  type InsertSiaeWalletTransaction,
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, sql, lt, gt, isNull, count } from "drizzle-orm";
@@ -336,6 +342,21 @@ export interface ISiaeStorage {
   // ==================== Seed Functions ====================
   
   seedSiaeTables(): Promise<void>;
+  
+  // ==================== Customer Wallet ====================
+  
+  getCustomerWallet(customerId: string): Promise<SiaeCustomerWallet | undefined>;
+  createCustomerWallet(customerId: string): Promise<SiaeCustomerWallet>;
+  getOrCreateCustomerWallet(customerId: string): Promise<SiaeCustomerWallet>;
+  updateWalletBalance(walletId: string, newBalance: string): Promise<SiaeCustomerWallet | undefined>;
+  
+  // Wallet Transactions
+  getWalletTransactions(customerId: string, limit?: number): Promise<SiaeWalletTransaction[]>;
+  createWalletTransaction(data: InsertSiaeWalletTransaction): Promise<SiaeWalletTransaction>;
+  addWalletCredit(customerId: string, amount: number, description: string, metadata?: any): Promise<SiaeWalletTransaction>;
+  debitWallet(customerId: string, amount: number, description: string, ticketId?: string, metadata?: any): Promise<SiaeWalletTransaction | null>;
+  holdWalletFunds(customerId: string, amount: number, description: string, resaleId?: string): Promise<SiaeWalletTransaction | null>;
+  releaseWalletHold(customerId: string, amount: number, holdTransactionId: string): Promise<SiaeWalletTransaction | null>;
 }
 
 export class SiaeStorage implements ISiaeStorage {
@@ -2005,6 +2026,172 @@ export class SiaeStorage implements ISiaeStorage {
       }
       throw error;
     }
+  }
+  
+  // ==================== Customer Wallet ====================
+  
+  async getCustomerWallet(customerId: string): Promise<SiaeCustomerWallet | undefined> {
+    const [wallet] = await db
+      .select()
+      .from(siaeCustomerWallets)
+      .where(eq(siaeCustomerWallets.customerId, customerId));
+    return wallet;
+  }
+  
+  async createCustomerWallet(customerId: string): Promise<SiaeCustomerWallet> {
+    const [wallet] = await db
+      .insert(siaeCustomerWallets)
+      .values({ customerId, balance: '0', currency: 'EUR', isActive: true })
+      .returning();
+    return wallet;
+  }
+  
+  async getOrCreateCustomerWallet(customerId: string): Promise<SiaeCustomerWallet> {
+    const existing = await this.getCustomerWallet(customerId);
+    if (existing) return existing;
+    return await this.createCustomerWallet(customerId);
+  }
+  
+  async updateWalletBalance(walletId: string, newBalance: string): Promise<SiaeCustomerWallet | undefined> {
+    const [updated] = await db
+      .update(siaeCustomerWallets)
+      .set({ balance: newBalance, updatedAt: new Date() })
+      .where(eq(siaeCustomerWallets.id, walletId))
+      .returning();
+    return updated;
+  }
+  
+  // ==================== Wallet Transactions ====================
+  
+  async getWalletTransactions(customerId: string, limit: number = 50): Promise<SiaeWalletTransaction[]> {
+    return await db
+      .select()
+      .from(siaeWalletTransactions)
+      .where(eq(siaeWalletTransactions.customerId, customerId))
+      .orderBy(desc(siaeWalletTransactions.createdAt))
+      .limit(limit);
+  }
+  
+  async createWalletTransaction(data: InsertSiaeWalletTransaction): Promise<SiaeWalletTransaction> {
+    const [transaction] = await db
+      .insert(siaeWalletTransactions)
+      .values(data)
+      .returning();
+    return transaction;
+  }
+  
+  async addWalletCredit(
+    customerId: string,
+    amount: number,
+    description: string,
+    metadata?: any
+  ): Promise<SiaeWalletTransaction> {
+    const wallet = await this.getOrCreateCustomerWallet(customerId);
+    const currentBalance = parseFloat(wallet.balance || '0');
+    const newBalance = currentBalance + amount;
+    
+    await this.updateWalletBalance(wallet.id, newBalance.toFixed(2));
+    
+    const transaction = await this.createWalletTransaction({
+      walletId: wallet.id,
+      customerId,
+      type: 'credit',
+      amount: amount.toFixed(2),
+      balanceAfter: newBalance.toFixed(2),
+      description,
+      status: 'completed',
+      metadata: metadata ? JSON.stringify(metadata) : null,
+    });
+    
+    return transaction;
+  }
+  
+  async debitWallet(
+    customerId: string,
+    amount: number,
+    description: string,
+    ticketId?: string,
+    metadata?: any
+  ): Promise<SiaeWalletTransaction | null> {
+    const wallet = await this.getOrCreateCustomerWallet(customerId);
+    const currentBalance = parseFloat(wallet.balance || '0');
+    
+    if (currentBalance < amount) {
+      return null; // Fondi insufficienti
+    }
+    
+    const newBalance = currentBalance - amount;
+    await this.updateWalletBalance(wallet.id, newBalance.toFixed(2));
+    
+    const transaction = await this.createWalletTransaction({
+      walletId: wallet.id,
+      customerId,
+      type: 'debit',
+      amount: amount.toFixed(2),
+      balanceAfter: newBalance.toFixed(2),
+      description,
+      ticketId: ticketId || null,
+      status: 'completed',
+      metadata: metadata ? JSON.stringify(metadata) : null,
+    });
+    
+    return transaction;
+  }
+  
+  async holdWalletFunds(
+    customerId: string,
+    amount: number,
+    description: string,
+    resaleId?: string
+  ): Promise<SiaeWalletTransaction | null> {
+    const wallet = await this.getOrCreateCustomerWallet(customerId);
+    const currentBalance = parseFloat(wallet.balance || '0');
+    
+    if (currentBalance < amount) {
+      return null; // Fondi insufficienti
+    }
+    
+    const newBalance = currentBalance - amount;
+    await this.updateWalletBalance(wallet.id, newBalance.toFixed(2));
+    
+    const transaction = await this.createWalletTransaction({
+      walletId: wallet.id,
+      customerId,
+      type: 'hold',
+      amount: amount.toFixed(2),
+      balanceAfter: newBalance.toFixed(2),
+      description,
+      resaleId: resaleId || null,
+      status: 'pending',
+      metadata: null,
+    });
+    
+    return transaction;
+  }
+  
+  async releaseWalletHold(
+    customerId: string,
+    amount: number,
+    holdTransactionId: string
+  ): Promise<SiaeWalletTransaction | null> {
+    const wallet = await this.getOrCreateCustomerWallet(customerId);
+    const currentBalance = parseFloat(wallet.balance || '0');
+    const newBalance = currentBalance + amount;
+    
+    await this.updateWalletBalance(wallet.id, newBalance.toFixed(2));
+    
+    const transaction = await this.createWalletTransaction({
+      walletId: wallet.id,
+      customerId,
+      type: 'release',
+      amount: amount.toFixed(2),
+      balanceAfter: newBalance.toFixed(2),
+      description: `Rilascio fondi bloccati (rif: ${holdTransactionId})`,
+      status: 'completed',
+      metadata: JSON.stringify({ releasedFrom: holdTransactionId }),
+    });
+    
+    return transaction;
   }
 }
 
