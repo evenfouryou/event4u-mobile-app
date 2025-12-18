@@ -156,18 +156,16 @@ export default function Register() {
     if (otpValue.length !== 6 || !customerId) return;
     setIsLoading(true);
     try {
-      const res = await apiRequest("POST", "/api/public/customers/verify-otp", {
+      await apiRequest("POST", "/api/public/customers/verify-otp", {
         customerId,
         otpCode: otpValue,
       });
-      const data = await res.json();
-      localStorage.setItem("customerToken", data.token);
-      localStorage.setItem("customerData", JSON.stringify(data.customer));
       toast({
         title: "Verifica completata!",
-        description: "Il tuo account è stato attivato.",
+        description: "Il tuo account è stato attivato. Ora puoi accedere.",
       });
-      navigate("/acquista");
+      // Redirect to unified login
+      navigate("/login");
     } catch (error: any) {
       toast({
         title: "Errore verifica",

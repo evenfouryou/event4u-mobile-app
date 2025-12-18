@@ -697,69 +697,7 @@ router.post("/api/public/customers/resend-otp", async (req, res) => {
   }
 });
 
-// Login cliente
-router.post("/api/public/customers/login", async (req, res) => {
-  try {
-    const { email, password } = req.body;
-    console.log("[PUBLIC LOGIN] Attempt for email:", email);
-
-    if (!email || !password) {
-      console.log("[PUBLIC LOGIN] Missing email or password");
-      return res.status(400).json({ message: "Email e password richieste" });
-    }
-
-    // Normalizza email (minuscole e trim) per il confronto
-    const normalizedEmail = email.toLowerCase().trim();
-    console.log("[PUBLIC LOGIN] Normalized email:", normalizedEmail);
-    
-    const [customer] = await db
-      .select()
-      .from(siaeCustomers)
-      .where(eq(siaeCustomers.email, normalizedEmail));
-
-    console.log("[PUBLIC LOGIN] Customer found:", customer ? "YES" : "NO", customer?.id);
-
-    if (!customer || !customer.passwordHash) {
-      console.log("[PUBLIC LOGIN] No customer or no password hash");
-      return res.status(401).json({ message: "Credenziali non valide" });
-    }
-
-    const validPassword = await bcrypt.compare(password, customer.passwordHash);
-    console.log("[PUBLIC LOGIN] Password valid:", validPassword);
-    if (!validPassword) {
-      return res.status(401).json({ message: "Credenziali non valide" });
-    }
-
-    if (!customer.registrationCompleted) {
-      return res.status(403).json({ message: "Completa la registrazione con OTP" });
-    }
-
-    // Crea sessione
-    const sessionToken = crypto.randomBytes(64).toString("hex");
-    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-
-    await db.insert(publicCustomerSessions).values({
-      customerId: customer.id,
-      sessionToken,
-      expiresAt,
-      ipAddress: req.ip,
-      userAgent: req.headers["user-agent"],
-    });
-
-    res.json({
-      token: sessionToken,
-      customer: {
-        id: customer.id,
-        email: customer.email,
-        firstName: customer.firstName,
-        lastName: customer.lastName,
-      },
-    });
-  } catch (error: any) {
-    console.error("[PUBLIC] Login error:", error);
-    res.status(500).json({ message: "Errore durante il login" });
-  }
-});
+// Login cliente - RIMOSSO: ora usa /api/auth/login unificato
 
 // Richiedi reset password cliente
 router.post("/api/public/customers/forgot-password", async (req, res) => {
