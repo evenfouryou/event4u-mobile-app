@@ -1767,6 +1767,68 @@ export const siaeSmartCardSealLogsRelations = relations(siaeSmartCardSealLogs, (
   }),
 }));
 
+// ==================== Customer Wallet ====================
+export const siaeCustomerWallets = pgTable("siae_customer_wallets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  customerId: varchar("customer_id").notNull().references(() => siaeCustomers.id).unique(),
+  balance: decimal("balance", { precision: 12, scale: 2 }).notNull().default('0'),
+  currency: varchar("currency", { length: 3 }).notNull().default('EUR'),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const siaeCustomerWalletsRelations = relations(siaeCustomerWallets, ({ one, many }) => ({
+  customer: one(siaeCustomers, {
+    fields: [siaeCustomerWallets.customerId],
+    references: [siaeCustomers.id],
+  }),
+  transactions: many(siaeWalletTransactions),
+}));
+
+// Wallet Transactions
+export const siaeWalletTransactions = pgTable("siae_wallet_transactions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  walletId: varchar("wallet_id").notNull().references(() => siaeCustomerWallets.id),
+  customerId: varchar("customer_id").notNull().references(() => siaeCustomers.id),
+  type: varchar("type", { length: 20 }).notNull(), // credit, debit, hold, release, refund
+  amount: decimal("amount", { precision: 12, scale: 2 }).notNull(),
+  balanceAfter: decimal("balance_after", { precision: 12, scale: 2 }).notNull(),
+  description: text("description"),
+  // Riferimenti opzionali
+  ticketId: varchar("ticket_id").references(() => siaeTickets.id),
+  transactionId: varchar("transaction_id").references(() => siaeTransactions.id),
+  resaleId: varchar("resale_id").references(() => siaeResales.id),
+  stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
+  // Metadati
+  status: varchar("status", { length: 20 }).notNull().default('completed'), // pending, completed, failed, cancelled
+  metadata: text("metadata"), // JSON per dati aggiuntivi
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const siaeWalletTransactionsRelations = relations(siaeWalletTransactions, ({ one }) => ({
+  wallet: one(siaeCustomerWallets, {
+    fields: [siaeWalletTransactions.walletId],
+    references: [siaeCustomerWallets.id],
+  }),
+  customer: one(siaeCustomers, {
+    fields: [siaeWalletTransactions.customerId],
+    references: [siaeCustomers.id],
+  }),
+  ticket: one(siaeTickets, {
+    fields: [siaeWalletTransactions.ticketId],
+    references: [siaeTickets.id],
+  }),
+  transaction: one(siaeTransactions, {
+    fields: [siaeWalletTransactions.transactionId],
+    references: [siaeTransactions.id],
+  }),
+  resale: one(siaeResales, {
+    fields: [siaeWalletTransactions.resaleId],
+    references: [siaeResales.id],
+  }),
+}));
+
 // Zod schemas for validation
 export const insertUserSchema = createInsertSchema(users).omit({
   id: true,
@@ -2549,6 +2611,23 @@ export const insertSiaeSmartCardSealLogSchema = createInsertSchema(siaeSmartCard
   requestedAt: true,
 });
 
+// Customer Wallet
+export const insertSiaeCustomerWalletSchema = createInsertSchema(siaeCustomerWallets).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateSiaeCustomerWalletSchema = insertSiaeCustomerWalletSchema.partial().omit({ customerId: true });
+
+// Wallet Transactions
+export const insertSiaeWalletTransactionSchema = createInsertSchema(siaeWalletTransactions).omit({
+  id: true,
+  createdAt: true,
+}).extend({
+  amount: z.union([z.string(), z.coerce.number()]).transform(val => typeof val === 'number' ? val.toString() : val),
+  balanceAfter: z.union([z.string(), z.coerce.number()]).transform(val => typeof val === 'number' ? val.toString() : val),
+});
+
 // ==================== MODULO BIGLIETTERIA SIAE - Types ====================
 
 // TAB.1-5
@@ -2664,6 +2743,14 @@ export type UpdateSiaeSmartCardSession = z.infer<typeof updateSiaeSmartCardSessi
 // Smart Card Seal Logs
 export type SiaeSmartCardSealLog = typeof siaeSmartCardSealLogs.$inferSelect;
 export type InsertSiaeSmartCardSealLog = z.infer<typeof insertSiaeSmartCardSealLogSchema>;
+
+// Customer Wallet
+export type SiaeCustomerWallet = typeof siaeCustomerWallets.$inferSelect;
+export type InsertSiaeCustomerWallet = z.infer<typeof insertSiaeCustomerWalletSchema>;
+export type UpdateSiaeCustomerWallet = z.infer<typeof updateSiaeCustomerWalletSchema>;
+
+export type SiaeWalletTransaction = typeof siaeWalletTransactions.$inferSelect;
+export type InsertSiaeWalletTransaction = z.infer<typeof insertSiaeWalletTransactionSchema>;
 
 // ==================== PORTALE PUBBLICO ACQUISTO BIGLIETTI ====================
 
