@@ -1907,17 +1907,17 @@ router.get("/api/public/account/tickets", async (req, res) => {
         ticketedEventId: siaeTickets.ticketedEventId,
       })
       .from(siaeTickets)
-      .innerJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
-      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
-      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
-      .innerJoin(locations, eq(events.locationId, locations.id))
+      .leftJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
+      .leftJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .leftJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .leftJoin(locations, eq(events.locationId, locations.id))
       .where(eq(siaeTickets.customerId, customer.id))
       .orderBy(desc(events.startDatetime));
 
     // Separa biglietti futuri/passati
     const now = new Date();
-    const upcoming = tickets.filter(t => new Date(t.eventStart) >= now && t.status === 'emitted');
-    const past = tickets.filter(t => new Date(t.eventStart) < now || t.status !== 'emitted');
+    const upcoming = tickets.filter(t => t.eventStart && new Date(t.eventStart) >= now && t.status === 'emitted');
+    const past = tickets.filter(t => !t.eventStart || new Date(t.eventStart) < now || t.status !== 'emitted');
 
     res.json({
       upcoming,
