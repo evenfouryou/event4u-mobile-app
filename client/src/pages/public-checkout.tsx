@@ -144,32 +144,27 @@ function CheckoutForm({
           
           if (errorData.refunded || errorCode.includes("REFUNDED")) {
             // Pagamento stornato automaticamente
-            setPaymentError(
-              `${confirmError.message || "Si è verificato un errore."} Il rimborso è stato elaborato automaticamente sul tuo metodo di pagamento.`
-            );
+            setPaymentError(confirmError.message);
             toast({
-              title: "Pagamento stornato",
-              description: "Il rimborso è stato elaborato automaticamente.",
-              variant: "destructive",
+              title: "Rimborso elaborato",
+              description: "L'importo ti sarà restituito entro 5-10 giorni lavorativi.",
             });
           } else if (errorCode === "SEAL_ERROR_REFUND_FAILED" || errorCode === "CRITICAL_ERROR_REFUND_FAILED") {
             // Errore critico - storno fallito
-            setPaymentError(
-              "Errore critico: il pagamento è andato a buon fine ma non è stato possibile generare i biglietti né elaborare il rimborso automatico. Contatta immediatamente l'assistenza per ricevere il rimborso."
-            );
+            setPaymentError(confirmError.message);
             toast({
-              title: "Errore critico",
-              description: "Contatta l'assistenza per il rimborso.",
+              title: "Ti ricontatteremo",
+              description: "Il nostro team verificherà lo stato del tuo ordine.",
               variant: "destructive",
             });
           } else if (errorCode.includes("SEAL_BRIDGE") || errorCode.includes("SEAL_CARD")) {
             // Sistema sigilli non disponibile (senza storno - non dovrebbe accadere)
             setPaymentError(
-              confirmError.message || "Sistema di emissione biglietti temporaneamente non disponibile. Riprova tra qualche minuto."
+              confirmError.message || "Il sistema di emissione biglietti è temporaneamente non disponibile. Ti invitiamo a riprovare tra qualche minuto."
             );
           } else {
-            // Errore generico - verifica se c'è info sullo storno
-            setPaymentError(confirmError.message || "Errore durante la conferma del pagamento.");
+            // Errore generico
+            setPaymentError(confirmError.message || "Si è verificato un problema durante la conferma dell'ordine. Riprova tra qualche istante.");
           }
           setIsProcessing(false);
           return;

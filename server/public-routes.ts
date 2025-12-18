@@ -1851,7 +1851,7 @@ router.post("/api/public/checkout/confirm", async (req, res) => {
             .where(eq(publicCheckoutSessions.id, checkoutSessionId));
           
           return res.status(500).json({ 
-            message: "Errore nella generazione dei biglietti. Il pagamento è stato stornato automaticamente.",
+            message: "Si è verificato un problema tecnico durante l'emissione dei biglietti. Non ti preoccupare: l'importo è stato automaticamente rimborsato sulla tua carta. Riprova tra qualche minuto oppure contatta l'organizzatore per assistenza.",
             code: "TICKET_ERROR_REFUNDED",
             refunded: true,
             refundId: refund.id,
@@ -1874,14 +1874,14 @@ router.post("/api/public/checkout/confirm", async (req, res) => {
         }
         
         return res.status(500).json({ 
-          message: "Errore critico: impossibile completare l'acquisto e stornare il pagamento. Contatta l'assistenza.",
+          message: "Si è verificato un problema durante l'elaborazione dell'ordine. Il nostro team è stato notificato e provvederà a verificare lo stato del pagamento. Riceverai un'email di conferma entro breve. Per assistenza immediata, contatta l'organizzatore dell'evento.",
           code: "CRITICAL_ERROR_REFUND_FAILED",
           refunded: false,
         });
       }
     }
     
-    res.status(500).json({ message: "Errore nella conferma del pagamento" });
+    res.status(500).json({ message: "Si è verificato un problema tecnico durante la conferma dell'ordine. Ti invitiamo a riprovare tra qualche istante." });
   }
 });
 
