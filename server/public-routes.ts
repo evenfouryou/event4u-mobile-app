@@ -265,9 +265,9 @@ router.get("/api/public/all-events", async (req, res) => {
       .innerJoin(locations, eq(events.locationId, locations.id))
       .where(
         and(
-          eq(events.status, "scheduled"),
+          or(eq(events.status, "scheduled"), eq(events.status, "ongoing")), // Include both scheduled and ongoing events
           eq(events.isPublic, true), // Only show events marked as public
-          gt(events.startDatetime, now)
+          gt(events.endDatetime, now) // Event hasn't ended yet
         )
       )
       .orderBy(events.startDatetime)
