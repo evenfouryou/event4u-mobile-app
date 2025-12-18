@@ -6,15 +6,18 @@ let connectionSettings: any;
 
 async function getCredentials() {
   // First, check for environment variables (works in both dev and production)
-  // Remove whitespace and non-ASCII characters that may have been accidentally copied
-  const envPublishableKey = process.env.STRIPE_PUBLISHABLE_KEY?.replace(/[^a-zA-Z0-9_]/g, '');
-  const envSecretKey = process.env.STRIPE_SECRET_KEY?.replace(/[^a-zA-Z0-9_]/g, '');
+  const rawPublishableKey = process.env.STRIPE_PUBLISHABLE_KEY;
+  const rawSecretKey = process.env.STRIPE_SECRET_KEY;
   
-  if (envPublishableKey && envSecretKey) {
+  if (rawPublishableKey && rawSecretKey) {
+    // Log key prefixes for debugging (never log full keys!)
     console.log("[Stripe] Using environment variables for credentials");
+    console.log("[Stripe] Publishable key prefix:", rawPublishableKey.substring(0, 20) + "...");
+    console.log("[Stripe] Secret key prefix:", rawSecretKey.substring(0, 15) + "...");
+    
     return {
-      publishableKey: envPublishableKey,
-      secretKey: envSecretKey,
+      publishableKey: rawPublishableKey.trim(),
+      secretKey: rawSecretKey.trim(),
     };
   }
 
