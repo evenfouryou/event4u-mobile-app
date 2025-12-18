@@ -160,6 +160,32 @@ router.get("/api/public/events", async (req, res) => {
   try {
     const { city, dateFrom, dateTo, limit = 20, offset = 0 } = req.query;
     const now = new Date();
+    
+    // Debug: log all ticketed events with their status
+    const allTicketedEvents = await db
+      .select({
+        id: siaeTicketedEvents.id,
+        eventId: siaeTicketedEvents.eventId,
+        ticketingStatus: siaeTicketedEvents.ticketingStatus,
+        eventName: events.name,
+        eventStatus: events.status,
+        isPublic: events.isPublic,
+        endDatetime: events.endDatetime,
+        saleStartDate: siaeTicketedEvents.saleStartDate,
+        saleEndDate: siaeTicketedEvents.saleEndDate,
+      })
+      .from(siaeTicketedEvents)
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id));
+    
+    console.log("[PUBLIC EVENTS DEBUG] Now:", now.toISOString());
+    console.log("[PUBLIC EVENTS DEBUG] All ticketed events:", JSON.stringify(allTicketedEvents.map(e => ({
+      name: e.eventName,
+      ticketingStatus: e.ticketingStatus,
+      eventStatus: e.eventStatus,
+      isPublic: e.isPublic,
+      endDatetime: e.endDatetime,
+      isEndInFuture: e.endDatetime ? new Date(e.endDatetime) > now : null,
+    })), null, 2));
 
     const result = await db
       .select({
