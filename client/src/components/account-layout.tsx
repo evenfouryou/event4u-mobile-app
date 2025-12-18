@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -125,12 +126,13 @@ export function AccountLayout({ children }: AccountLayoutProps) {
 
   const handleLogout = async () => {
     try {
-      await fetch("/api/logout", { method: "POST", credentials: "include" });
+      await fetch("/api/logout", { method: "GET", credentials: "include" });
     } catch (e) {
       console.error("Logout error:", e);
     }
     localStorage.removeItem("customerToken");
     localStorage.removeItem("customerData");
+    queryClient.clear();
     window.location.href = "/acquista";
   };
 

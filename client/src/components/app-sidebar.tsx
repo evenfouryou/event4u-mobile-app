@@ -38,6 +38,7 @@ import {
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import {
   Sidebar,
   SidebarContent,
@@ -784,12 +785,12 @@ export function AppSidebar() {
           className="w-full justify-start text-muted-foreground hover:text-foreground hover:bg-destructive/10"
           onClick={async () => {
             try {
-              await fetch('/api/logout');
-              window.location.href = '/login';
+              await fetch('/api/logout', { credentials: 'include' });
             } catch (error) {
               console.error("Logout error:", error);
-              window.location.href = '/login';
             }
+            queryClient.clear();
+            window.location.href = '/login';
           }}
           data-testid="button-logout"
         >
