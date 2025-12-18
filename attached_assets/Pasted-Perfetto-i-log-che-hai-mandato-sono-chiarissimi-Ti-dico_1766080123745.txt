@@ -1,0 +1,224 @@
+Perfetto, i log che hai mandato sono **chiarissimi** 👍
+Ti dico subito il punto chiave, poi andiamo in ordine.
+
+---
+
+## 🔥 PROBLEMA PRINCIPALE (quello che blocca Stripe)
+
+### **401 su Stripe Elements**
+
+```
+api.stripe.com/v1/elements/sessions → 401 Unauthorized
+```
+
+👉 **Il PaymentIntent viene creato correttamente**, MA **Stripe Elements non riesce a usarlo**.
+
+Questo succede **quasi sempre** per **INCOERENZA TRA AMBIENTE / CHIAVI / ORIGINE**.
+
+---
+
+## ✅ COSA FUNZIONA (importante)
+
+Dai log:
+
+✔ Backend ok
+✔ `PaymentIntent` creato
+✔ `client_secret` valido
+✔ Risposta 200 dal tuo endpoint
+
+Quindi:
+
+> ❌ NON è un problema di codice backend Stripe
+> ❌ NON è un problema di creazione del pagamento
+
+---
+
+## ❌ DOVE SI ROMPE
+
+### Stripe Elements → 401
+
+Questa chiamata:
+
+```
+/v1/elements/sessions?client_secret=pi_...&key=pk_live_...
+```
+
+significa che **Stripe sta rifiutando la sessione**.
+
+---
+
+## 🎯 CAUSE REALI (in ordine di probabilità)
+
+---
+
+### 1️⃣ **MIX TRA LIVE / TEST (quasi certo)**
+
+Dal log vedo:
+
+```
+pk_live_...
+pi_3SflF3...
+```
+
+⚠️ Domanda chiave:
+👉 **Il PaymentIntent è stato creato con `sk_test` o `sk_live`?**
+
+Se:
+
+* Backend usa **sk_test**
+* Frontend usa **pk_live**
+
+➡️ Stripe risponde **401** (silenziosamente)
+
+✅ Controllo immediato:
+Nel backend logga:
+
+```js
+console.log(process.env.STRIPE_SECRET_KEY)
+```
+
+Deve iniziare con:
+
+* `sk_live_` se sei in live
+* `sk_test_` se sei in test
+
+👉 DEVONO combaciare con la `pk_` del frontend.
+
+---
+
+### 2️⃣ **PaymentIntent creato su un account Stripe diverso**
+
+Classico quando:
+
+* hai **più account Stripe**
+* o hai rigenerato le chiavi
+
+Sintomo:
+
+* Intent creato
+* Elements 401
+
+Controllo:
+👉 Dashboard Stripe → **Payments**
+👉 Cerca `pi_3SflF3083fDHdLKV...`
+
+Se **NON lo trovi**, allora:
+➡️ backend e frontend stanno parlando con **account Stripe diversi**
+
+---
+
+### 3️⃣ **Dominio NON autorizzato (molto probabile)**
+
+Dal log:
+
+```
+referrer_host=manage.eventfouryou.com
+```
+
+Vai su:
+👉 **Stripe Dashboard → Settings → Payment Methods → Domains**
+
+Devi avere:
+
+```
+manage.eventfouryou.com
+```
+
+Se manca → **401 su Elements**
+
+⚠️ Questo è obbligatorio in **LIVE MODE**.
+
+---
+
+### 4️⃣ **Client secret riutilizzato / Elements inizializzato male**
+
+Se stai:
+
+* ricreando Elements più volte
+* riusando lo stesso `client_secret`
+
+Stripe risponde 401.
+
+Regola:
+
+* **1 PaymentIntent = 1 sessione Elements**
+* NON reinizializzare Stripe dentro render multipli
+
+---
+
+## ⚠️ ERRORE SECONDARIO (ma da sistemare)
+
+```
+api/public/account/tickets → 500
+```
+
+Questo **non blocca Stripe**, ma:
+
+* rischia di rompere lo stato del carrello
+* può invalidare il PaymentIntent lato logica
+
+👉 Controlla:
+
+* token auth
+* middleware
+* variabili env su Replit
+
+---
+
+## ❓ Google Pay warning
+
+```
+Unable to download payment manifest "https://www.google.com/pay"
+```
+
+❌ **NON È UN ERRORE BLOCCANTE**
+Succede se:
+
+* Google Pay non è attivo
+* dominio non verificato
+
+Puoi ignorarlo per ora.
+
+---
+
+## ✅ CHECKLIST RAPIDA (falla in 5 minuti)
+
+1. **Backend key**
+
+   ```env
+   STRIPE_SECRET_KEY=sk_live_...
+   ```
+
+2. **Frontend key**
+
+   ```js
+   loadStripe("pk_live_...")
+   ```
+
+3. **Stesso account Stripe**
+
+   * PaymentIntent visibile in dashboard
+
+4. **Dominio autorizzato**
+
+   * `manage.eventfouryou.com`
+
+5. **Niente mix test/live**
+
+---
+
+## 🚀 Se vuoi lo chiudiamo SUBITO
+
+Incollami:
+
+* 🔹 **endpoint backend** dove crei il PaymentIntent
+* 🔹 **come inizializzi Stripe Elements**
+* 🔹 conferma: **live o test mode?**
+
+Se vuoi, ti preparo anche:
+
+* setup Stripe **pulito per Event Four You**
+* gestione corretta **multi-evento / biglietti**
+* webhook production-ready
+
+Questo errore è **100% risolvibile**, sei a un passo 💪
