@@ -15,6 +15,9 @@ import {
   eventScanners,
   events,
   users,
+  siaeTickets,
+  siaeTicketedEvents,
+  siaeEventSectors,
   insertEventListSchema,
   insertListEntrySchema,
   insertTableTypeSchema,
@@ -1101,7 +1104,7 @@ router.delete("/api/e4u/scanners/:id", requireAuth, requireGestore, async (req: 
   }
 });
 
-// POST /api/e4u/scan - Scan QR code (for lists/tables)
+// POST /api/e4u/scan - Scan QR code (for lists/tables/tickets)
 // SECURITY: Verifica permessi scanner per ogni operazione
 router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) => {
   try {
@@ -1112,10 +1115,124 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
       return res.status(400).json({ message: "Codice QR mancante" });
     }
     
-    // Parse QR code format: E4U-{type}-{id}-{random}
+    // Parse QR code - supports multiple formats:
+    // E4U-{type}-{id}-{random} for lists/tables
+    // SIAE-TKT-{ticketId} for SIAE tickets
     const parts = qrCode.split('-');
+    
+    // Check if it's a SIAE ticket QR code
+    if (parts.length === 3 && parts[0] === 'SIAE' && parts[1] === 'TKT') {
+      const ticketId = parts[2];
+      
+      // Find ticket by ID
+      const [ticket] = await db.select({
+        id: siaeTickets.id,
+        ticketCode: siaeTickets.ticketCode,
+        ticketType: siaeTickets.ticketType,
+        ticketPrice: siaeTickets.ticketPrice,
+        participantFirstName: siaeTickets.participantFirstName,
+        participantLastName: siaeTickets.participantLastName,
+        status: siaeTickets.status,
+        usedAt: siaeTickets.usedAt,
+        ticketedEventId: siaeTickets.ticketedEventId,
+        sectorId: siaeTickets.sectorId,
+      })
+        .from(siaeTickets)
+        .where(eq(siaeTickets.id, ticketId));
+      
+      if (!ticket) {
+        return res.status(404).json({ message: "Biglietto non trovato" });
+      }
+      
+      // Get event info
+      const [ticketedEvent] = await db.select({
+        id: siaeTicketedEvents.id,
+        eventId: siaeTicketedEvents.eventId,
+      })
+        .from(siaeTicketedEvents)
+        .where(eq(siaeTicketedEvents.id, ticket.ticketedEventId));
+      
+      if (!ticketedEvent) {
+        return res.status(404).json({ message: "Evento non trovato" });
+      }
+      
+      // Get sector info
+      const [sector] = await db.select({
+        name: siaeEventSectors.name,
+      })
+        .from(siaeEventSectors)
+        .where(eq(siaeEventSectors.id, ticket.sectorId));
+      
+      // SECURITY: Verifica permessi scanner per questo evento
+      const isGestore = await isGestoreForEvent(user, ticketedEvent.eventId);
+      if (!isGestore) {
+        const canScan = await checkScannerPermission(user.id, ticketedEvent.eventId, 'tickets');
+        if (!canScan) {
+          return res.status(403).json({ 
+            message: "Non hai i permessi di scansione biglietti per questo evento. Contatta l'organizzatore.",
+            errorCode: "SCANNER_PERMISSION_DENIED"
+          });
+        }
+      }
+      
+      // Check ticket status
+      if (ticket.status === 'used' || ticket.usedAt) {
+        return res.status(400).json({ 
+          message: "Biglietto già utilizzato",
+          ticket: {
+            id: ticket.id,
+            ticketCode: ticket.ticketCode,
+            firstName: ticket.participantFirstName,
+            lastName: ticket.participantLastName,
+            ticketType: ticket.ticketType,
+            sector: sector?.name,
+            usedAt: ticket.usedAt,
+          },
+          alreadyCheckedIn: true,
+        });
+      }
+      
+      if (ticket.status === 'cancelled') {
+        return res.status(400).json({ 
+          message: "Biglietto annullato",
+          ticket: {
+            id: ticket.id,
+            ticketCode: ticket.ticketCode,
+          },
+          isCancelled: true,
+        });
+      }
+      
+      // Validate ticket - mark as used
+      const [updated] = await db.update(siaeTickets)
+        .set({
+          status: 'used',
+          usedAt: new Date(),
+          usedByScannerId: user.id,
+          updatedAt: new Date(),
+        })
+        .where(eq(siaeTickets.id, ticket.id))
+        .returning();
+      
+      return res.json({
+        success: true,
+        type: 'ticket',
+        message: "Ingresso registrato con successo",
+        person: {
+          firstName: ticket.participantFirstName || '',
+          lastName: ticket.participantLastName || '',
+          type: 'biglietto',
+          ticketType: ticket.ticketType,
+          ticketCode: ticket.ticketCode,
+          sector: sector?.name,
+          price: ticket.ticketPrice,
+        },
+      });
+    }
+    
+    // Original E4U format: E4U-{type}-{id}-{random}
     if (parts.length !== 4 || parts[0] !== 'E4U') {
-      return res.status(400).json({ message: "Formato codice QR non valido" });
+      return res.status(400).json({ message: "Formato codice QR non valido. Formati supportati: E4U-LST-*, E4U-TBL-*, SIAE-TKT-*" });
     }
     
     const type = parts[1]; // LST or TBL

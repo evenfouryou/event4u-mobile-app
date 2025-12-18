@@ -1917,6 +1917,13 @@ export class SiaeStorage implements ISiaeStorage {
             customText: params.customText || null
           })
           .returning();
+        
+        // Step 3b: Update ticket with QR code (needs ticket.id)
+        const qrCode = `SIAE-TKT-${ticket.id}`;
+        await tx
+          .update(siaeTickets)
+          .set({ qrCode })
+          .where(eq(siaeTickets.id, ticket.id));
 
         // Step 3: Update event stats
         await tx

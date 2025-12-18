@@ -1411,6 +1411,16 @@ router.post("/api/public/checkout/confirm", async (req, res) => {
             qrCode: qrData,
           })
           .returning();
+        
+        // Aggiorna qrCode con formato scannable (SIAE-TKT-{ticketId})
+        const scannableQrCode = `SIAE-TKT-${ticket.id}`;
+        await db
+          .update(siaeTickets)
+          .set({ qrCode: scannableQrCode })
+          .where(eq(siaeTickets.id, ticket.id));
+        
+        // Aggiorna ticket locale con qrCode scannable
+        ticket.qrCode = scannableQrCode;
 
         tickets.push(ticket);
 

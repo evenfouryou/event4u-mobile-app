@@ -32,18 +32,24 @@ interface ScanResult {
   success: boolean;
   message?: string;
   error?: string;
+  type?: 'list' | 'table' | 'ticket';
   person?: {
     firstName: string;
     lastName: string;
     phone?: string;
-    type: 'lista' | 'tavolo';
+    type: 'lista' | 'tavolo' | 'biglietto';
     listName?: string;
     tableName?: string;
     status?: string;
     plusOnes?: number;
+    ticketType?: string;
+    ticketCode?: string;
+    sector?: string;
+    price?: string;
   };
   alreadyCheckedIn?: boolean;
   checkedInAt?: string;
+  isCancelled?: boolean;
 }
 
 interface RecentScan extends ScanResult {
@@ -289,6 +295,8 @@ export default function E4uScannerPage() {
                 <Badge variant="outline" className="capitalize" data-testid="badge-type">
                   {scanResult.person.type === 'lista' ? (
                     <><Users className="w-3 h-3 mr-1" /> Lista</>
+                  ) : scanResult.person.type === 'biglietto' ? (
+                    <><Ticket className="w-3 h-3 mr-1" /> Biglietto</>
                   ) : (
                     <><Armchair className="w-3 h-3 mr-1" /> Tavolo</>
                   )}
@@ -325,6 +333,38 @@ export default function E4uScannerPage() {
                     <span className="text-muted-foreground">Accompagnatori:</span>
                     <span className="ml-2 font-medium" data-testid="text-plus-ones">
                       +{scanResult.person.plusOnes}
+                    </span>
+                  </div>
+                )}
+                {scanResult.person.ticketCode && (
+                  <div>
+                    <span className="text-muted-foreground">Codice:</span>
+                    <span className="ml-2 font-medium font-mono" data-testid="text-ticket-code">
+                      {scanResult.person.ticketCode}
+                    </span>
+                  </div>
+                )}
+                {scanResult.person.ticketType && (
+                  <div>
+                    <span className="text-muted-foreground">Tipo:</span>
+                    <span className="ml-2 font-medium" data-testid="text-ticket-type">
+                      {scanResult.person.ticketType}
+                    </span>
+                  </div>
+                )}
+                {scanResult.person.sector && (
+                  <div>
+                    <span className="text-muted-foreground">Settore:</span>
+                    <span className="ml-2 font-medium" data-testid="text-ticket-sector">
+                      {scanResult.person.sector}
+                    </span>
+                  </div>
+                )}
+                {scanResult.person.price && (
+                  <div>
+                    <span className="text-muted-foreground">Prezzo:</span>
+                    <span className="ml-2 font-medium" data-testid="text-ticket-price">
+                      €{parseFloat(scanResult.person.price).toFixed(2)}
                     </span>
                   </div>
                 )}
