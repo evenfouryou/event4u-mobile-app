@@ -174,6 +174,12 @@ function Router() {
         <Route path="/e/:shortId" component={EventShortLink} />
         <Route path="/locali/:id" component={PublicVenueDetail} />
         <Route path="/locali" component={PublicVenues} />
+        <Route path="/accedi">
+          {() => {
+            window.location.href = '/account/home';
+            return null;
+          }}
+        </Route>
         <Route path="/">
           {() => {
             window.location.href = '/account/home';
@@ -278,6 +284,12 @@ function Router() {
               <Route path="/cassa-biglietti" component={CassaBiglietti} />
               <Route path="/cashier/management" component={CashierManagement} />
               <Route path="/cashier/dashboard" component={CashierDashboard} />
+              <Route path="/accedi">
+                {() => {
+                  window.location.href = '/';
+                  return null;
+                }}
+              </Route>
               <Route component={NotFound} />
             </Switch>
           </main>
