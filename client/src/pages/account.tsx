@@ -32,10 +32,10 @@ export default function AccountPage() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#0a0e17] flex items-center justify-center">
+      <div className="min-h-screen bg-background flex items-center justify-center">
         <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-yellow-400 mx-auto" />
-          <p className="text-slate-400 mt-4">Caricamento...</p>
+          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
+          <p className="text-muted-foreground mt-4">Caricamento...</p>
         </div>
       </div>
     );

@@ -73,7 +73,7 @@ export default function AccountWallet() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-yellow-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -84,41 +84,41 @@ export default function AccountWallet() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white" data-testid="text-page-title">Wallet</h1>
-        <p className="text-slate-400 mt-2">Gestisci il tuo saldo e le transazioni</p>
+        <h1 className="text-3xl font-bold text-foreground" data-testid="text-page-title">Wallet</h1>
+        <p className="text-muted-foreground mt-2">Gestisci il tuo saldo e le transazioni</p>
       </div>
 
-      <Card className="bg-gradient-to-br from-yellow-500/20 to-yellow-600/10 border-yellow-500/30 mb-8">
+      <Card className="bg-gradient-to-br from-primary/20 to-primary/10 border-primary/30 mb-8">
         <CardContent className="p-8">
           <div className="flex items-center gap-4 mb-4">
-            <div className="w-14 h-14 rounded-full bg-yellow-500/20 flex items-center justify-center">
-              <Wallet className="w-7 h-7 text-yellow-400" />
+            <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center">
+              <Wallet className="w-7 h-7 text-primary" />
             </div>
             <div>
-              <p className="text-sm text-slate-400">Saldo Disponibile</p>
-              <p className="text-4xl font-bold text-white" data-testid="text-balance">
+              <p className="text-sm text-muted-foreground">Saldo Disponibile</p>
+              <p className="text-4xl font-bold text-foreground" data-testid="text-balance">
                 €{balance.toFixed(2)}
               </p>
               {wallet?.currency && wallet.currency !== "EUR" && (
-                <p className="text-sm text-slate-500">{wallet.currency}</p>
+                <p className="text-sm text-muted-foreground">{wallet.currency}</p>
               )}
             </div>
           </div>
         </CardContent>
       </Card>
 
-      <Card className="bg-[#151922] border-white/10">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-yellow-400" />
+          <CardTitle className="text-foreground flex items-center gap-2">
+            <CreditCard className="w-5 h-5 text-primary" />
             Storico Transazioni
           </CardTitle>
         </CardHeader>
         <CardContent>
           {transactions.length === 0 ? (
-            <div className="text-center py-12 text-slate-400">
-              <div className="w-16 h-16 rounded-full bg-white/5 flex items-center justify-center mx-auto mb-4">
-                <Wallet className="w-8 h-8 text-slate-500" />
+            <div className="text-center py-12 text-muted-foreground">
+              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                <Wallet className="w-8 h-8 text-muted-foreground" />
               </div>
               <p>Nessuna transazione</p>
               <p className="text-sm mt-2">Le tue transazioni appariranno qui</p>
@@ -134,7 +134,7 @@ export default function AccountWallet() {
                 return (
                   <div
                     key={tx.id}
-                    className="flex items-center justify-between p-4 bg-white/5 rounded-lg"
+                    className="flex items-center justify-between p-4 bg-muted rounded-lg"
                     data-testid={`transaction-${tx.id}`}
                   >
                     <div className="flex items-center gap-4">
@@ -150,10 +150,10 @@ export default function AccountWallet() {
                         />
                       </div>
                       <div>
-                        <p className="font-medium text-white" data-testid="text-description">
+                        <p className="font-medium text-foreground" data-testid="text-description">
                           {tx.description || transactionLabels[tx.type] || tx.type}
                         </p>
-                        <p className="text-sm text-slate-400" data-testid="text-date">
+                        <p className="text-sm text-muted-foreground" data-testid="text-date">
                           {format(transactionDate, "d MMM yyyy, HH:mm", { locale: it })}
                         </p>
                       </div>
@@ -167,7 +167,7 @@ export default function AccountWallet() {
                       >
                         {isPositive ? "+" : "-"}€{Math.abs(amount).toFixed(2)}
                       </p>
-                      <p className="text-xs text-slate-500">
+                      <p className="text-xs text-muted-foreground">
                         Saldo: €{parseFloat(tx.balanceAfter || "0").toFixed(2)}
                       </p>
                     </div>

@@ -71,7 +71,7 @@ function TicketCard({ ticket }: { ticket: TicketItem }) {
   return (
     <Link href={`/account/tickets/${ticket.id}`}>
       <Card
-        className={`bg-[#151922] border-white/10 hover:border-yellow-500/30 transition-all cursor-pointer ${
+        className={`hover:border-primary/30 transition-all cursor-pointer ${
           isExpired ? "opacity-70" : ""
         }`}
         data-testid={`card-ticket-${ticket.id}`}
@@ -84,10 +84,10 @@ function TicketCard({ ticket }: { ticket: TicketItem }) {
                   {statusLabel()}
                 </Badge>
               </div>
-              <h3 className="font-semibold text-white truncate" data-testid="text-event-name">
+              <h3 className="font-semibold text-foreground truncate" data-testid="text-event-name">
                 {ticket.eventName}
               </h3>
-              <div className="flex flex-col gap-1 mt-2 text-sm text-slate-400">
+              <div className="flex flex-col gap-1 mt-2 text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
                   <Calendar className="w-4 h-4" />
                   <span data-testid="text-event-date">
@@ -104,7 +104,7 @@ function TicketCard({ ticket }: { ticket: TicketItem }) {
                 </div>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-slate-500 flex-shrink-0" />
+            <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
           </div>
         </CardContent>
       </Card>
@@ -123,7 +123,7 @@ export default function AccountTickets() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-yellow-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -131,22 +131,22 @@ export default function AccountTickets() {
   return (
     <div className="max-w-3xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white" data-testid="text-page-title">I Miei Biglietti</h1>
-        <p className="text-slate-400 mt-2">Visualizza e gestisci i tuoi biglietti</p>
+        <h1 className="text-3xl font-bold text-foreground" data-testid="text-page-title">I Miei Biglietti</h1>
+        <p className="text-muted-foreground mt-2">Visualizza e gestisci i tuoi biglietti</p>
       </div>
 
       <Tabs defaultValue="upcoming" className="space-y-6">
-        <TabsList className="bg-[#151922] border border-white/10">
+        <TabsList className="bg-card border border-border">
           <TabsTrigger
             value="upcoming"
-            className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
             data-testid="tab-upcoming"
           >
             Prossimi ({upcomingTickets.length})
           </TabsTrigger>
           <TabsTrigger
             value="past"
-            className="data-[state=active]:bg-yellow-500 data-[state=active]:text-black"
+            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"
             data-testid="tab-past"
           >
             Passati ({pastTickets.length})
@@ -155,12 +155,12 @@ export default function AccountTickets() {
 
         <TabsContent value="upcoming" className="space-y-4">
           {upcomingTickets.length === 0 ? (
-            <Card className="bg-[#151922] border-white/10">
+            <Card>
               <CardContent className="py-12 text-center">
-                <TicketX className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-                <p className="text-slate-400 mb-4">Non hai biglietti per eventi futuri</p>
+                <TicketX className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground mb-4">Non hai biglietti per eventi futuri</p>
                 <Link href="/acquista">
-                  <span className="text-yellow-400 hover:text-yellow-300 underline">
+                  <span className="text-primary hover:text-primary/80 underline">
                     Scopri gli eventi disponibili
                   </span>
                 </Link>
@@ -175,10 +175,10 @@ export default function AccountTickets() {
 
         <TabsContent value="past" className="space-y-4">
           {pastTickets.length === 0 ? (
-            <Card className="bg-[#151922] border-white/10">
+            <Card>
               <CardContent className="py-12 text-center">
-                <TicketX className="w-12 h-12 text-slate-600 mx-auto mb-4" />
-                <p className="text-slate-400">Non hai biglietti passati</p>
+                <TicketX className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-muted-foreground">Non hai biglietti passati</p>
               </CardContent>
             </Card>
           ) : (

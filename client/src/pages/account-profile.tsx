@@ -88,7 +88,7 @@ export default function AccountProfile() {
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-yellow-400" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -96,17 +96,17 @@ export default function AccountProfile() {
   return (
     <div className="max-w-2xl mx-auto">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-white" data-testid="text-page-title">Il Mio Profilo</h1>
-        <p className="text-slate-400 mt-2">Gestisci le tue informazioni personali</p>
+        <h1 className="text-3xl font-bold text-foreground" data-testid="text-page-title">Il Mio Profilo</h1>
+        <p className="text-muted-foreground mt-2">Gestisci le tue informazioni personali</p>
       </div>
 
-      <Card className="bg-[#151922] border-white/10">
+      <Card>
         <CardHeader>
-          <CardTitle className="text-white flex items-center gap-2">
-            <User className="w-5 h-5 text-yellow-400" />
+          <CardTitle className="text-foreground flex items-center gap-2">
+            <User className="w-5 h-5 text-primary" />
             Informazioni Personali
           </CardTitle>
-          <CardDescription className="text-slate-400">
+          <CardDescription className="text-muted-foreground">
             Aggiorna i tuoi dati personali
           </CardDescription>
         </CardHeader>
@@ -114,12 +114,12 @@ export default function AccountProfile() {
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
               <div className="space-y-4">
-                <div className="p-4 bg-white/5 rounded-lg border border-white/10">
-                  <div className="flex items-center gap-3 text-slate-400">
+                <div className="p-4 bg-muted rounded-lg border border-border">
+                  <div className="flex items-center gap-3 text-muted-foreground">
                     <Mail className="w-5 h-5" />
                     <div>
-                      <p className="text-xs text-slate-500">Email</p>
-                      <p className="text-white" data-testid="text-email">{customer?.email}</p>
+                      <p className="text-xs text-muted-foreground">Email</p>
+                      <p className="text-foreground" data-testid="text-email">{customer?.email}</p>
                     </div>
                   </div>
                 </div>
@@ -129,11 +129,11 @@ export default function AccountProfile() {
                   name="firstName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-slate-400">Nome</FormLabel>
+                      <FormLabel className="text-muted-foreground">Nome</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
-                          className="bg-white/5 border-white/10 text-white"
+                          className="bg-muted border-border text-foreground"
                           placeholder="Il tuo nome"
                           data-testid="input-firstname"
                         />
@@ -148,11 +148,11 @@ export default function AccountProfile() {
                   name="lastName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-slate-400">Cognome</FormLabel>
+                      <FormLabel className="text-muted-foreground">Cognome</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
-                          className="bg-white/5 border-white/10 text-white"
+                          className="bg-muted border-border text-foreground"
                           placeholder="Il tuo cognome"
                           data-testid="input-lastname"
                         />
@@ -167,13 +167,13 @@ export default function AccountProfile() {
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-slate-400">Telefono</FormLabel>
+                      <FormLabel className="text-muted-foreground">Telefono</FormLabel>
                       <FormControl>
                         <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-500" />
+                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                           <Input
                             {...field}
-                            className="pl-10 bg-white/5 border-white/10 text-white"
+                            className="pl-10 bg-muted border-border text-foreground"
                             placeholder="+39 333 1234567"
                             data-testid="input-phone"
                           />
