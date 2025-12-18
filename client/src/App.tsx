@@ -1,4 +1,4 @@
-import { Switch, Route } from "wouter";
+import { Switch, Route, Redirect } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -175,16 +175,10 @@ function Router() {
         <Route path="/locali/:id" component={PublicVenueDetail} />
         <Route path="/locali" component={PublicVenues} />
         <Route path="/accedi">
-          {() => {
-            window.location.href = '/account/home';
-            return null;
-          }}
+          <Redirect to="/account/home" />
         </Route>
         <Route path="/">
-          {() => {
-            window.location.href = '/account/home';
-            return null;
-          }}
+          <Redirect to="/account/home" />
         </Route>
         <Route component={NotFound} />
       </Switch>
@@ -285,10 +279,7 @@ function Router() {
               <Route path="/cashier/management" component={CashierManagement} />
               <Route path="/cashier/dashboard" component={CashierDashboard} />
               <Route path="/accedi">
-                {() => {
-                  window.location.href = '/';
-                  return null;
-                }}
+                <Redirect to="/" />
               </Route>
               <Route component={NotFound} />
             </Switch>
