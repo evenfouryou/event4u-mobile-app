@@ -210,10 +210,18 @@ function CheckoutContent() {
 
   const createPaymentIntent = useMutation({
     mutationFn: async () => {
+      console.log("[Checkout] Creating payment intent...");
       const res = await apiRequest("POST", "/api/public/checkout/create-payment-intent");
-      return res.json() as Promise<PaymentIntentResponse>;
+      console.log("[Checkout] Response status:", res.status);
+      const data = await res.json();
+      console.log("[Checkout] Response data:", data);
+      return data as PaymentIntentResponse;
+    },
+    onSuccess: (data) => {
+      console.log("[Checkout] Payment intent created successfully:", data);
     },
     onError: (error: any) => {
+      console.log("[Checkout] Payment intent error:", error);
       if (error.message?.includes("autenticato")) {
         navigate("/login?redirect=/checkout");
       } else {
