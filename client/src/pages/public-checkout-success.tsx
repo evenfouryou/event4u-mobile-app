@@ -160,16 +160,16 @@ export default function PublicCheckoutSuccessPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-12">
+      <main className="max-w-4xl mx-auto px-3 sm:px-4 py-6 sm:py-12">
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="text-center mb-12"
+          className="text-center mb-6 sm:mb-12"
         >
-          <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-teal-500/20 flex items-center justify-center">
-            <Check className="w-10 h-10 text-teal-400" />
+          <div className="w-16 h-16 sm:w-20 sm:h-20 mx-auto mb-4 sm:mb-6 rounded-full bg-teal-500/20 flex items-center justify-center">
+            <Check className="w-8 h-8 sm:w-10 sm:h-10 text-teal-400" />
           </div>
-          <h1 className="text-3xl md:text-4xl font-bold text-foreground mb-4" data-testid="text-success-title">
+          <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground mb-3 sm:mb-4" data-testid="text-success-title">
             Acquisto Completato!
           </h1>
           <p className="text-muted-foreground text-lg max-w-xl mx-auto">
@@ -183,29 +183,29 @@ export default function PublicCheckoutSuccessPage() {
           )}
         </motion.div>
 
-        <div className="grid md:grid-cols-2 gap-4 mb-8">
-          <Card className="bg-card border-border p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-teal-500/20 flex items-center justify-center shrink-0">
-              <Mail className="w-6 h-6 text-teal-400" />
+        <div className="grid sm:grid-cols-2 gap-3 sm:gap-4 mb-6 sm:mb-8">
+          <Card className="bg-card border-border p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-teal-500/20 flex items-center justify-center shrink-0">
+              <Mail className="w-5 h-5 sm:w-6 sm:h-6 text-teal-400" />
             </div>
-            <div>
-              <h3 className="font-semibold text-foreground">Email Inviata</h3>
-              <p className="text-sm text-muted-foreground">I biglietti sono stati inviati alla tua email</p>
+            <div className="min-w-0">
+              <h3 className="font-semibold text-foreground text-sm sm:text-base">Email Inviata</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">I biglietti sono stati inviati alla tua email</p>
             </div>
           </Card>
-          <Card className="bg-card border-border p-4 flex items-center gap-4">
-            <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
-              <Download className="w-6 h-6 text-primary" />
+          <Card className="bg-card border-border p-3 sm:p-4 flex items-center gap-3 sm:gap-4">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/20 flex items-center justify-center shrink-0">
+              <Download className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
             </div>
-            <div>
-              <h3 className="font-semibold text-foreground">Scarica PDF</h3>
-              <p className="text-sm text-muted-foreground">Puoi scaricare i biglietti in formato PDF</p>
+            <div className="min-w-0">
+              <h3 className="font-semibold text-foreground text-sm sm:text-base">Scarica PDF</h3>
+              <p className="text-xs sm:text-sm text-muted-foreground truncate">Puoi scaricare i biglietti in formato PDF</p>
             </div>
           </Card>
         </div>
 
-        <h2 className="text-xl font-bold text-foreground mb-4 flex items-center gap-2">
-          <Ticket className="w-5 h-5 text-primary" />
+        <h2 className="text-lg sm:text-xl font-bold text-foreground mb-3 sm:mb-4 flex items-center gap-2">
+          <Ticket className="w-4 h-4 sm:w-5 sm:h-5 text-primary flex-shrink-0" />
           I Tuoi Biglietti
         </h2>
 

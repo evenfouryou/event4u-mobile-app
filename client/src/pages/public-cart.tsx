@@ -221,14 +221,14 @@ export default function PublicCartPage() {
         </div>
       </header>
 
-      <main className="max-w-4xl mx-auto px-4 py-8">
+      <main className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-4 sm:mb-8"
         >
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3" data-testid="text-page-title">
-            <ShoppingCart className="w-8 h-8 text-primary" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2 sm:gap-3" data-testid="text-page-title">
+            <ShoppingCart className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
             Il Tuo Carrello
           </h1>
         </motion.div>
@@ -245,8 +245,8 @@ export default function PublicCartPage() {
             <p className="text-red-400">Errore nel caricamento del carrello.</p>
           </Card>
         ) : cart && cart.items.length > 0 ? (
-          <div className="grid lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 space-y-4">
+          <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
+            <div className="lg:col-span-2 space-y-3 sm:space-y-4">
               <div className="flex items-center justify-between">
                 <p className="text-muted-foreground">
                   {cart.itemsCount} {cart.itemsCount === 1 ? "biglietto" : "biglietti"}

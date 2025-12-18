@@ -192,11 +192,11 @@ export default function Beverage() {
   if (isBartender) {
     if (selectedEventId && selectedEvent) {
       return (
-        <div className="p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
+        <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
           <motion.div 
             initial={{ opacity: 0, x: -20 }}
             animate={{ opacity: 1, x: 0 }}
-            className="flex items-center gap-4 mb-8"
+            className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8"
           >
             <Button 
               variant="ghost" 
@@ -208,8 +208,8 @@ export default function Beverage() {
               <ArrowLeft className="h-5 w-5" />
             </Button>
             <div>
-              <h1 className="text-xl md:text-2xl font-bold">{selectedEvent.name}</h1>
-              <p className="text-muted-foreground text-sm">Seleziona la tua postazione</p>
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold">{selectedEvent.name}</h1>
+              <p className="text-muted-foreground text-xs sm:text-sm">Seleziona la tua postazione</p>
             </div>
           </motion.div>
 
@@ -281,19 +281,19 @@ export default function Beverage() {
 
     // Bartender Event Selection
     return (
-      <div className="p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
+      <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-4 sm:mb-6 md:mb-8"
         >
-          <div className="flex items-center gap-3 mb-2">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-              <Wine className="h-5 w-5 text-white" />
+          <div className="flex items-center gap-2 sm:gap-3 mb-2">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center flex-shrink-0">
+              <Wine className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl md:text-2xl font-bold">Ciao, {user?.firstName || 'Barista'}</h1>
-              <p className="text-muted-foreground text-sm">Seleziona un evento attivo</p>
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold">Ciao, {user?.firstName || 'Barista'}</h1>
+              <p className="text-muted-foreground text-xs sm:text-sm">Seleziona un evento attivo</p>
             </div>
           </div>
         </motion.div>
@@ -353,11 +353,11 @@ export default function Beverage() {
   // Warehouse View
   if (isWarehouse) {
     return (
-      <div className="p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
+      <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex items-center gap-4 mb-8"
+          className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8"
         >
           <Link href="/">
             <Button variant="ghost" size="icon" className="rounded-xl">
@@ -365,12 +365,12 @@ export default function Beverage() {
             </Button>
           </Link>
           <div>
-            <h1 className="text-xl md:text-2xl font-bold">Ciao, {user?.firstName || 'Magazziniere'}</h1>
-            <p className="text-muted-foreground text-sm">Gestisci il magazzino e le scorte</p>
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold">Ciao, {user?.firstName || 'Magazziniere'}</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm">Gestisci il magazzino e le scorte</p>
           </div>
         </motion.div>
 
-        <div className="grid grid-cols-2 gap-4 mb-6">
+        <div className="grid grid-cols-2 gap-2 sm:gap-4 mb-4 sm:mb-6">
           <StatsCard
             title="Prodotti in Magazzino"
             value={products?.length || 0}
@@ -399,25 +399,25 @@ export default function Beverage() {
 
   // Admin/Gestore View
   return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto pb-24 md:pb-8">
+    <div className="p-3 sm:p-4 md:p-8 max-w-6xl mx-auto pb-24 md:pb-8">
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-4 mb-8"
+        className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8"
       >
         <Link href="/">
           <Button variant="ghost" size="icon" className="rounded-xl">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
-        <div className="flex items-center gap-3 flex-1">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center glow-golden">
-            <Wine className="h-6 w-6 text-black" />
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center glow-golden flex-shrink-0">
+            <Wine className="h-5 w-5 sm:h-6 sm:w-6 text-black" />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-bold">Beverage</h1>
-            <p className="text-muted-foreground text-sm">Gestione magazzino e consumi</p>
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold">Beverage</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm hidden sm:block">Gestione magazzino e consumi</p>
           </div>
         </div>
         {user && (user.role === 'admin' || user.role === 'super_admin') && (
@@ -454,7 +454,7 @@ export default function Beverage() {
       </AlertDialog>
 
       {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-3 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-3 gap-2 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
         {productsLoading ? (
           <>
             <Skeleton className="h-28 rounded-2xl" />

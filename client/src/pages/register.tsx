@@ -345,21 +345,21 @@ export default function Register() {
           </div>
         </motion.header>
 
-        <main className="flex-1 flex items-center justify-center p-4 md:p-6 relative z-10">
+        <main className="flex-1 flex items-center justify-center p-3 sm:p-4 md:p-6 relative z-10">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
             className="w-full max-w-2xl"
           >
-            <div className="text-center mb-8">
-              <h1 className="text-3xl md:text-4xl font-bold mb-3">Crea il tuo account</h1>
-              <p className="text-muted-foreground text-lg">
+            <div className="text-center mb-6 sm:mb-8">
+              <h1 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-2 sm:mb-3">Crea il tuo account</h1>
+              <p className="text-muted-foreground text-sm sm:text-base md:text-lg">
                 Scegli il tipo di account che vuoi creare
               </p>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
               <motion.div
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}

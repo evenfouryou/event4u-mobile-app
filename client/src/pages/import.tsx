@@ -270,11 +270,11 @@ export default function ImportPage() {
   const warningCount = previewData.filter(row => row._warnings && row._warnings.length > 0).length;
 
   return (
-    <div className="p-4 sm:p-6 md:p-8">
-      <div className="max-w-6xl mx-auto space-y-6">
+    <div className="p-3 sm:p-4 md:p-8 pb-24 md:pb-8">
+      <div className="max-w-6xl mx-auto space-y-4 sm:space-y-6">
         <div>
-          <h1 className="text-2xl sm:text-3xl font-semibold">Import CSV/Excel</h1>
-          <p className="text-sm text-muted-foreground mt-1">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold">Import CSV/Excel</h1>
+          <p className="text-xs sm:text-sm text-muted-foreground mt-1">
             Importa prodotti o listini prezzi da file CSV
           </p>
         </div>

@@ -96,11 +96,11 @@ export default function Personnel() {
   const pendingPayments = payments.filter(p => p.status === "pending").length;
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
+    <div className="p-3 sm:p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
       <motion.div 
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="flex items-center gap-4 mb-8"
+        className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8"
       >
         <Button 
           variant="ghost" 
@@ -112,16 +112,16 @@ export default function Personnel() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-xl md:text-2xl font-bold" data-testid="text-personnel-title">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold" data-testid="text-personnel-title">
             Personale
           </h1>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-xs sm:text-sm">
             Gestione anagrafica, presenze e pagamenti
           </p>
         </div>
       </motion.div>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
         {staffLoading ? (
           <>
             <Skeleton className="h-32 rounded-2xl" />

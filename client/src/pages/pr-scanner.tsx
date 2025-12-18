@@ -88,16 +88,16 @@ export default function PrScannerPage() {
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-2xl">
+    <div className="container mx-auto p-3 sm:p-4 md:p-6 max-w-2xl pb-24 md:pb-8">
       {/* Header */}
-      <div className="text-center mb-8">
-        <div className="mx-auto w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center mb-4">
-          <ScanLine className="w-8 h-8 text-primary" />
+      <div className="text-center mb-6 sm:mb-8">
+        <div className="mx-auto w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-primary/10 flex items-center justify-center mb-3 sm:mb-4">
+          <ScanLine className="w-6 h-6 sm:w-8 sm:h-8 text-primary" />
         </div>
-        <h1 className="text-3xl font-bold tracking-tight">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight">
           Scanner QR
         </h1>
-        <p className="text-muted-foreground mt-2">
+        <p className="text-muted-foreground text-sm sm:text-base mt-2">
           Scansiona il QR code per effettuare il check-in
         </p>
       </div>

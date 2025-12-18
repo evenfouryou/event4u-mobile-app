@@ -73,8 +73,8 @@ export default function PublicVenueDetail() {
     return (
       <div className="min-h-screen bg-background">
         <Header />
-        <main className="container mx-auto px-4 py-8">
-          <Skeleton className="h-80 w-full rounded-2xl mb-8" />
+        <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+          <Skeleton className="h-60 sm:h-80 w-full rounded-2xl mb-4 sm:mb-8" />
           <Skeleton className="h-8 w-1/3 mb-4" />
           <Skeleton className="h-4 w-1/2 mb-8" />
           <div className="grid md:grid-cols-2 gap-6">
@@ -127,17 +127,17 @@ export default function PublicVenueDetail() {
           )}
           <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
           
-          <div className="absolute bottom-0 left-0 right-0 p-6 md:p-12">
+          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-12">
             <div className="container mx-auto">
               <Link href="/locali">
-                <Button variant="ghost" size="sm" className="text-foreground/70 hover:text-foreground mb-4" data-testid="button-back">
+                <Button variant="ghost" size="sm" className="text-foreground/70 hover:text-foreground mb-3 sm:mb-4 h-10" data-testid="button-back">
                   <ArrowLeft className="w-4 h-4 mr-2" />
                   Tutti i locali
                 </Button>
               </Link>
               
               {venue.city && (
-                <div className="flex flex-wrap gap-2 mb-4">
+                <div className="flex flex-wrap gap-2 mb-3 sm:mb-4">
                   <Badge className="bg-primary text-primary-foreground border-0">
                     <MapPin className="w-3 h-3 mr-1" />
                     {venue.city}
@@ -145,7 +145,7 @@ export default function PublicVenueDetail() {
                 </div>
               )}
               
-              <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-3" data-testid="text-venue-name">
+              <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-foreground mb-2 sm:mb-3" data-testid="text-venue-name">
                 {venue.name}
               </h1>
               
@@ -159,8 +159,8 @@ export default function PublicVenueDetail() {
           </div>
         </div>
 
-        <div className="container mx-auto px-4 py-8 md:py-12">
-          <div className="grid lg:grid-cols-3 gap-8">
+        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 md:py-12">
+          <div className="grid lg:grid-cols-3 gap-4 sm:gap-8">
             <div className="lg:col-span-1">
               <Card className="bg-card border-border sticky top-24">
                 <CardHeader>
@@ -202,8 +202,8 @@ export default function PublicVenueDetail() {
             </div>
 
             <div className="lg:col-span-2">
-              <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-2">
-                <Calendar className="w-6 h-6 text-primary" />
+              <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-4 sm:mb-6 flex items-center gap-2">
+                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
                 Prossimi Eventi
               </h2>
               

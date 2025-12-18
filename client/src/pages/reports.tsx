@@ -370,16 +370,16 @@ export default function Reports() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center gap-4">
+    <div className="container mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+      <div className="flex items-center gap-3 sm:gap-4">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/beverage">
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
         <div>
-          <h1 className="text-3xl font-semibold">Report</h1>
-          <p className="text-muted-foreground">Report fine serata per evento</p>
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold">Report</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">Report fine serata per evento</p>
         </div>
       </div>
 
@@ -464,10 +464,10 @@ export default function Reports() {
         <div className="space-y-6">
           {revenueAnalysis && revenueAnalysis.theoreticalRevenue > 0 ? (
             <>
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
                 <Card>
-                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Ricavo Teorico</CardTitle>
+                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-3 sm:p-4 pb-2">
+                    <CardTitle className="text-xs sm:text-sm font-medium">Ricavo Teorico</CardTitle>
                     <DollarSign className="w-4 h-4 text-muted-foreground" />
                   </CardHeader>
                   <CardContent>

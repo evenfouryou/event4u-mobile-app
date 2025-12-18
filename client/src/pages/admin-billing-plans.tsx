@@ -182,14 +182,14 @@ export default function AdminBillingPlans() {
   }
 
   return (
-    <div className="p-6 space-y-6" data-testid="page-admin-billing-plans">
-      <div className="flex items-center justify-between">
+    <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6" data-testid="page-admin-billing-plans">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <CreditCard className="w-6 h-6 text-yellow-500" />
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2">
+            <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 flex-shrink-0" />
             Piani Abbonamento
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm sm:text-base">
             Gestisci i piani di abbonamento per gli organizzatori
           </p>
         </div>
@@ -319,15 +319,16 @@ export default function AdminBillingPlans() {
           <CardTitle>Piani Disponibili</CardTitle>
           <CardDescription>Elenco di tutti i piani di abbonamento configurati</CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-2 sm:p-6">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
                 <TableHead>Nome</TableHead>
-                <TableHead>Tipo</TableHead>
+                <TableHead className="hidden sm:table-cell">Tipo</TableHead>
                 <TableHead>Prezzo</TableHead>
-                <TableHead>Dettagli</TableHead>
-                <TableHead>Stato</TableHead>
+                <TableHead className="hidden md:table-cell">Dettagli</TableHead>
+                <TableHead className="hidden sm:table-cell">Stato</TableHead>
                 <TableHead className="text-right">Azioni</TableHead>
               </TableRow>
             </TableHeader>
@@ -335,13 +336,13 @@ export default function AdminBillingPlans() {
               {plans?.map((plan) => (
                 <TableRow key={plan.id} data-testid={`row-plan-${plan.id}`}>
                   <TableCell className="font-medium">{plan.name}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     <Badge variant={plan.type === "monthly" ? "default" : "secondary"}>
                       {plan.type === "monthly" ? "Mensile" : "Per Evento"}
                     </Badge>
                   </TableCell>
                   <TableCell>{formatPrice(plan.price)}</TableCell>
-                  <TableCell>
+                  <TableCell className="hidden md:table-cell">
                     {plan.type === "monthly" && plan.durationDays && (
                       <span className="text-muted-foreground">{plan.durationDays} giorni</span>
                     )}
@@ -349,7 +350,7 @@ export default function AdminBillingPlans() {
                       <span className="text-muted-foreground">{plan.eventsIncluded} eventi</span>
                     )}
                   </TableCell>
-                  <TableCell>
+                  <TableCell className="hidden sm:table-cell">
                     {plan.isActive ? (
                       <Badge className="bg-green-500/20 text-green-500 hover:bg-green-500/30">
                         <CheckCircle className="w-3 h-3 mr-1" />
@@ -395,6 +396,7 @@ export default function AdminBillingPlans() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

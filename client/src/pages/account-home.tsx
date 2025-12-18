@@ -84,14 +84,14 @@ export default function AccountHome() {
   };
 
   return (
-    <div className="max-w-4xl mx-auto space-y-6">
-      <div className="bg-gradient-to-r from-primary/20 via-primary/10 to-transparent rounded-2xl p-6 md:p-8 border border-primary/20">
-        <div className="flex items-center gap-4">
-          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-            <Sparkles className="w-8 h-8 text-primary-foreground" />
+    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
+      <div className="bg-gradient-to-r from-primary/20 via-primary/10 to-transparent rounded-2xl p-4 sm:p-6 md:p-8 border border-primary/20">
+        <div className="flex items-center gap-3 sm:gap-4">
+          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center flex-shrink-0">
+            <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-primary-foreground" />
           </div>
           <div>
-            <h1 className="text-2xl md:text-3xl font-bold text-foreground" data-testid="text-greeting">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground" data-testid="text-greeting">
               {getGreeting()}, {customer?.firstName}!
             </h1>
             <p className="text-muted-foreground mt-1">
@@ -101,44 +101,44 @@ export default function AccountHome() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
         <Link href="/acquista">
           <Card className="hover-elevate cursor-pointer h-full">
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center gap-2">
-              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <ShoppingBag className="w-6 h-6 text-primary" />
+            <CardContent className="p-3 sm:p-4 flex flex-col items-center justify-center text-center gap-2">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
               </div>
-              <span className="font-medium text-sm text-foreground">Acquista Biglietti</span>
+              <span className="font-medium text-xs sm:text-sm text-foreground">Acquista Biglietti</span>
             </CardContent>
           </Card>
         </Link>
         <Link href="/account/tickets">
           <Card className="hover-elevate cursor-pointer h-full">
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center gap-2">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center">
-                <QrCode className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+            <CardContent className="p-3 sm:p-4 flex flex-col items-center justify-center text-center gap-2">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center">
+                <QrCode className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600 dark:text-emerald-400" />
               </div>
-              <span className="font-medium text-sm text-foreground">I Miei QR</span>
+              <span className="font-medium text-xs sm:text-sm text-foreground">I Miei QR</span>
             </CardContent>
           </Card>
         </Link>
         <Link href="/account/wallet">
           <Card className="hover-elevate cursor-pointer h-full">
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center gap-2">
-              <div className="w-12 h-12 rounded-full bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center">
-                <CreditCard className="w-6 h-6 text-blue-600 dark:text-blue-400" />
+            <CardContent className="p-3 sm:p-4 flex flex-col items-center justify-center text-center gap-2">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center">
+                <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
               </div>
-              <span className="font-medium text-sm text-foreground">Ricarica Wallet</span>
+              <span className="font-medium text-xs sm:text-sm text-foreground">Ricarica Wallet</span>
             </CardContent>
           </Card>
         </Link>
         <Link href="/account/resales">
           <Card className="hover-elevate cursor-pointer h-full">
-            <CardContent className="p-4 flex flex-col items-center justify-center text-center gap-2">
-              <div className="w-12 h-12 rounded-full bg-purple-500/10 dark:bg-purple-500/20 flex items-center justify-center">
-                <Ticket className="w-6 h-6 text-purple-600 dark:text-purple-400" />
+            <CardContent className="p-3 sm:p-4 flex flex-col items-center justify-center text-center gap-2">
+              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500/10 dark:bg-purple-500/20 flex items-center justify-center">
+                <Ticket className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
               </div>
-              <span className="font-medium text-sm text-foreground">Rivendi Biglietti</span>
+              <span className="font-medium text-xs sm:text-sm text-foreground">Rivendi Biglietti</span>
             </CardContent>
           </Card>
         </Link>
@@ -156,10 +156,10 @@ export default function AccountHome() {
             </Button>
           </Link>
         </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-between">
+        <CardContent className="p-3 sm:p-6">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
             <div>
-              <p className="text-3xl font-bold text-foreground" data-testid="text-wallet-balance">
+              <p className="text-2xl sm:text-3xl font-bold text-foreground" data-testid="text-wallet-balance">
                 {balance.toFixed(2)} €
               </p>
               <p className="text-sm text-muted-foreground">Saldo disponibile</p>
@@ -203,11 +203,11 @@ export default function AccountHome() {
               {upcomingTickets.map((ticket) => (
                 <Link key={ticket.id} href={`/account/tickets/${ticket.id}`}>
                   <div 
-                    className="flex items-center gap-4 p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
+                    className="flex items-center gap-3 sm:gap-4 p-2 sm:p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
                     data-testid={`ticket-preview-${ticket.id}`}
                   >
-                    <div className="w-12 h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Calendar className="w-6 h-6 text-primary" />
+                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                      <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
                       <h4 className="font-medium text-foreground truncate">{ticket.eventName}</h4>

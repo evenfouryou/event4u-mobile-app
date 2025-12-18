@@ -100,8 +100,8 @@ function ResaleCard({
 
   return (
     <Card className="bg-card border-border" data-testid={`resale-${resale.id}`}>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-4">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
               <Badge variant={statusVariant()} className="text-xs">
@@ -203,8 +203,8 @@ function NameChangeCard({ request }: { request: NameChangeRequest }) {
 
   return (
     <Card className="bg-card border-border" data-testid={`name-change-${request.id}`}>
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-4">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2">
               <Badge variant={statusVariant()} className="text-xs flex items-center gap-1">
@@ -297,13 +297,13 @@ export default function AccountResales() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground" data-testid="text-page-title">Gestione Biglietti</h1>
-        <p className="text-muted-foreground mt-2">Rivendite e cambi nominativo</p>
+    <div className="max-w-3xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground" data-testid="text-page-title">Gestione Biglietti</h1>
+        <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Rivendite e cambi nominativo</p>
       </div>
 
-      <Tabs defaultValue="resales" className="space-y-6">
+      <Tabs defaultValue="resales" className="space-y-4 sm:space-y-6">
         <TabsList className="bg-card border border-border">
           <TabsTrigger
             value="resales"

@@ -673,11 +673,11 @@ export default function UsersPage() {
   const effectiveViewMode = (isSuperAdmin && companies && companies.length > 0) ? viewMode : 'role';
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
+    <div className="p-3 sm:p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
       <motion.div 
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="flex items-center gap-4 mb-8"
+        className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8"
       >
         <Link href="/">
           <Button 
@@ -689,14 +689,14 @@ export default function UsersPage() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
-        <div className="flex-1">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-              <UsersIcon className="h-5 w-5 text-white" />
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+              <UsersIcon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
             </div>
             <div>
-              <h1 className="text-xl md:text-2xl font-bold" data-testid="text-page-title">Gestione Utenti</h1>
-              <p className="text-muted-foreground text-sm">Crea e gestisci gli utenti del sistema</p>
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold" data-testid="text-page-title">Gestione Utenti</h1>
+              <p className="text-muted-foreground text-xs sm:text-sm hidden sm:block">Crea e gestisci gli utenti del sistema</p>
             </div>
           </div>
         </div>

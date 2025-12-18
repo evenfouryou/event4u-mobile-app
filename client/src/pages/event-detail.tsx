@@ -621,11 +621,11 @@ export default function EventDetail() {
   const assignedBartendersCount = new Set(allStations.flatMap(s => s.bartenderIds || [])).size;
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
+    <div className="p-3 sm:p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
       <motion.div 
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="flex items-center gap-4 mb-8"
+        className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8"
       >
         <Button 
           variant="ghost" 
@@ -636,8 +636,8 @@ export default function EventDetail() {
         >
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <div className="flex-1">
-          <h1 className="text-xl md:text-2xl font-bold">{event.name}</h1>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold truncate">{event.name}</h1>
           <div className="flex items-center gap-2 mt-1 flex-wrap">
             <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium ${status.bgColor} ${status.color}`}>
               <StatusIcon className="h-3 w-3" />
@@ -698,7 +698,7 @@ export default function EventDetail() {
         </AlertDialogContent>
       </AlertDialog>
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
         <StatsCard
           title="Prodotti in Evento"
           value={totalStockItems}

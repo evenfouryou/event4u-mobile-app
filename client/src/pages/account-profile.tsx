@@ -94,10 +94,10 @@ export default function AccountProfile() {
   }
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground" data-testid="text-page-title">Il Mio Profilo</h1>
-        <p className="text-muted-foreground mt-2">Gestisci le tue informazioni personali</p>
+    <div className="max-w-2xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground" data-testid="text-page-title">Il Mio Profilo</h1>
+        <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Gestisci le tue informazioni personali</p>
       </div>
 
       <Card>

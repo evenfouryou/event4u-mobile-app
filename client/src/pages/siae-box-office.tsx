@@ -290,11 +290,11 @@ export default function SiaeBoxOfficePage() {
   );
 
   return (
-    <div className="p-6 space-y-6" data-testid="page-siae-box-office">
-      <div className="flex flex-wrap items-center justify-between gap-4">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-siae-box-office">
+      <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3" data-testid="page-title">
-            <Store className="w-8 h-8 text-[#FFD700]" />
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2 sm:gap-3" data-testid="page-title">
+            <Store className="w-6 h-6 sm:w-8 sm:h-8 text-[#FFD700] flex-shrink-0" />
             Sessioni Box Office
             {isSuperAdmin && (
               <Badge className="ml-2 bg-purple-500/20 text-purple-400 border-purple-500/30">
@@ -361,9 +361,9 @@ export default function SiaeBoxOfficePage() {
         </Card>
       )}
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4">
         <Card className="glass-card">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="text-xs text-muted-foreground mb-1">Totale Sessioni</div>
             <div className="text-2xl font-bold" data-testid="stat-total">{stats.total}</div>
           </CardContent>

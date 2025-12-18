@@ -136,20 +136,20 @@ function TicketCard({ ticket }: { ticket: TicketItem }) {
         }`}
         data-testid={`card-ticket-${ticket.id}`}
       >
-        <CardContent className="p-4">
-          <div className="flex items-start justify-between gap-4">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex items-start justify-between gap-3 sm:gap-4">
             <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2">
+              <div className="flex items-center gap-2 mb-2 flex-wrap">
                 <Badge variant={statusVariant()} className="text-xs">
                   {statusLabel()}
                 </Badge>
               </div>
-              <h3 className="font-semibold text-foreground truncate" data-testid="text-event-name">
+              <h3 className="font-semibold text-foreground truncate text-sm sm:text-base" data-testid="text-event-name">
                 {ticket.eventName}
               </h3>
-              <div className="flex flex-col gap-1 mt-2 text-sm text-muted-foreground">
+              <div className="flex flex-col gap-1 mt-2 text-xs sm:text-sm text-muted-foreground">
                 <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
+                  <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                   <span data-testid="text-event-date">
                     {format(eventDate, "EEEE d MMMM yyyy, HH:mm", { locale: it })}
                   </span>
@@ -411,14 +411,14 @@ export default function AccountTickets() {
   }
 
   return (
-    <div className="max-w-3xl mx-auto">
-      <div className="mb-8">
-        <h1 className="text-3xl font-bold text-foreground" data-testid="text-page-title">I Miei Biglietti</h1>
-        <p className="text-muted-foreground mt-2">Visualizza e gestisci i tuoi biglietti, liste e prenotazioni</p>
+    <div className="max-w-3xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
+      <div className="mb-6 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground" data-testid="text-page-title">I Miei Biglietti</h1>
+        <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Visualizza e gestisci i tuoi biglietti, liste e prenotazioni</p>
       </div>
 
-      <Tabs defaultValue="upcoming" className="space-y-6">
-        <TabsList className="bg-card border border-border grid w-full grid-cols-4">
+      <Tabs defaultValue="upcoming" className="space-y-4 sm:space-y-6">
+        <TabsList className="bg-card border border-border grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
           <TabsTrigger
             value="upcoming"
             className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground"

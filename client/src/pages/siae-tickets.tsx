@@ -373,18 +373,18 @@ export default function SiaeTicketsPage() {
   };
 
   return (
-    <div className="p-6 space-y-6" data-testid="page-siae-tickets">
-      <div className="flex items-center justify-between">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-siae-tickets">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3" data-testid="page-title">
-            <Ticket className="w-8 h-8 text-[#FFD700]" />
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2 sm:gap-3" data-testid="page-title">
+            <Ticket className="w-6 h-6 sm:w-8 sm:h-8 text-[#FFD700] flex-shrink-0" />
             Gestione Biglietti SIAE
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Emetti, valida e gestisci i biglietti per i tuoi eventi
           </p>
         </div>
-        <div className="flex items-center gap-3">
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 sm:gap-3">
           <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
             cardReadiness.ready 
               ? 'bg-green-500/20 text-green-400 border border-green-500/30' 
@@ -416,8 +416,8 @@ export default function SiaeTicketsPage() {
       )}
 
       <Card className="glass-card" data-testid="card-event-selector">
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-col md:flex-row gap-2 sm:gap-4">
             <div className="flex-1">
               <label className="text-sm font-medium mb-2 block">Seleziona Evento</label>
               <Select value={selectedEventId} onValueChange={setSelectedEventId}>
@@ -470,9 +470,9 @@ export default function SiaeTicketsPage() {
       </Card>
 
       {selectedEventId && (
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
           <Card className="glass-card">
-            <CardContent className="p-4">
+            <CardContent className="p-3 sm:p-4">
               <div className="text-xs text-muted-foreground mb-1">Totale Emessi</div>
               <div className="text-2xl font-bold text-[#FFD700]" data-testid="stat-total">{stats.total}</div>
             </CardContent>

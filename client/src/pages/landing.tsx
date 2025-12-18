@@ -81,12 +81,12 @@ export default function Landing() {
         transition={{ duration: 0.5 }}
         className="glass sticky top-0 z-50"
       >
-        <div className="container mx-auto px-4 md:px-6 py-4 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-black" />
+        <div className="container mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4 flex items-center justify-between gap-2 sm:gap-4">
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center flex-shrink-0">
+              <Sparkles className="h-4 w-4 sm:h-5 sm:w-5 text-black" />
             </div>
-            <span className="text-xl font-bold hidden sm:block">
+            <span className="text-lg sm:text-xl font-bold hidden sm:block">
               Event<span className="text-primary">4</span>U
             </span>
           </div>
@@ -150,14 +150,14 @@ export default function Landing() {
 
       <main className="flex-1 relative z-10">
         {/* Hero Section */}
-        <section className="container mx-auto px-4 md:px-6 pt-12 md:pt-20 pb-16 md:pb-24">
+        <section className="container mx-auto px-3 sm:px-4 md:px-6 pt-8 sm:pt-12 md:pt-20 pb-12 sm:pb-16 md:pb-24">
           <div className="max-w-4xl mx-auto text-center">
             {/* Badge */}
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6 }}
-              className="inline-flex items-center gap-2 px-4 py-2 rounded-full glass border border-primary/30 text-sm font-medium mb-8"
+              className="inline-flex items-center gap-2 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full glass border border-primary/30 text-xs sm:text-sm font-medium mb-6 sm:mb-8"
             >
               <span className="w-2 h-2 rounded-full bg-teal-400 animate-pulse" />
               <span className="text-teal">La piattaforma #1 per i club</span>
@@ -168,7 +168,7 @@ export default function Landing() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.1 }}
-              className="text-4xl sm:text-5xl md:text-7xl font-bold mb-6 leading-tight"
+              className="text-3xl sm:text-4xl md:text-5xl lg:text-7xl font-bold mb-4 sm:mb-6 leading-tight"
             >
               Gestisci i tuoi
               <br />
@@ -180,7 +180,7 @@ export default function Landing() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-lg md:text-xl text-muted-foreground mb-10 max-w-2xl mx-auto"
+              className="text-base sm:text-lg md:text-xl text-muted-foreground mb-6 sm:mb-8 md:mb-10 max-w-2xl mx-auto"
             >
               Inventario, staff, cassa e report in un'unica piattaforma.
               Tutto in tempo reale, ovunque tu sia.
@@ -233,15 +233,15 @@ export default function Landing() {
         </section>
 
         {/* Stats Section */}
-        <section className="container mx-auto px-4 md:px-6 py-12">
+        <section className="container mx-auto px-3 sm:px-4 md:px-6 py-8 sm:py-12">
           <motion.div 
             initial={{ opacity: 0, y: 40 }}
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.6 }}
-            className="glass-card p-6 md:p-8"
+            className="glass-card p-4 sm:p-6 md:p-8"
           >
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4 sm:gap-6 md:gap-8">
               {stats.map((stat, index) => (
                 <motion.div 
                   key={index}

@@ -188,22 +188,22 @@ export default function SiaeAuditLogsPage() {
   }
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3">
-          <ClipboardList className="h-8 w-8 text-amber-400" />
+    <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+      <div className="flex items-center justify-between gap-3 sm:gap-4 flex-wrap">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <ClipboardList className="h-6 w-6 sm:h-8 sm:w-8 text-amber-400 flex-shrink-0" />
           <div>
-            <h1 className="text-2xl font-bold text-white">Log Audit SIAE</h1>
-            <p className="text-sm text-gray-400">Registro delle operazioni fiscali</p>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Log Audit SIAE</h1>
+            <p className="text-xs sm:text-sm text-gray-400">Registro delle operazioni fiscali</p>
           </div>
         </div>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4">
         <Card className="bg-[#151922] border-gray-800">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Activity className="h-8 w-8 text-amber-400" />
+          <CardContent className="p-3 sm:p-4">
+            <div className="flex items-center gap-2 sm:gap-3">
+              <Activity className="h-6 w-6 sm:h-8 sm:w-8 text-amber-400 flex-shrink-0" />
               <div>
                 <p className="text-2xl font-bold text-white">{stats.total}</p>
                 <p className="text-xs text-gray-400">Totale Log</p>
@@ -323,6 +323,7 @@ export default function SiaeAuditLogsPage() {
 
       <Card className="bg-[#151922] border-gray-800">
         <CardContent className="p-0">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow className="border-gray-800 hover:bg-transparent">
@@ -417,6 +418,7 @@ export default function SiaeAuditLogsPage() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

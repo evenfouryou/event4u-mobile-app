@@ -265,19 +265,19 @@ export default function OrganizerBilling() {
   );
 
   return (
-    <div className="p-6 space-y-6" data-testid="page-organizer-billing">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 pb-24 md:pb-8" data-testid="page-organizer-billing">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <CreditCard className="w-6 h-6 text-yellow-500" />
+        <h1 className="text-xl sm:text-2xl font-bold flex items-center gap-2">
+          <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 flex-shrink-0" />
           Il Mio Billing
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-sm sm:text-base">
           Visualizza abbonamento, costi e fatture
         </p>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-5">
+        <TabsList className="grid w-full grid-cols-3 sm:grid-cols-5 h-auto p-1 gap-1">
           <TabsTrigger value="subscription" className="gap-2" data-testid="tab-subscription">
             <CreditCard className="w-4 h-4" />
             Abbonamento

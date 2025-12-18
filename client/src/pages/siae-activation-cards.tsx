@@ -65,11 +65,11 @@ export default function SiaeActivationCardsPage() {
   });
 
   return (
-    <div className="p-4 md:p-6 space-y-6 overflow-auto h-full pb-24 md:pb-8" data-testid="page-siae-activation-cards">
-      <div className="flex items-center justify-between">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-auto h-full pb-24 md:pb-8" data-testid="page-siae-activation-cards">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-2xl md:text-3xl font-semibold mb-2" data-testid="title-page">Lettore Carte SIAE</h1>
-          <p className="text-muted-foreground text-sm md:text-base" data-testid="description-page">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold mb-1 sm:mb-2" data-testid="title-page">Lettore Carte SIAE</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm md:text-base" data-testid="description-page">
             Gestione Smart Card e Carte di Attivazione per biglietteria elettronica
           </p>
         </div>
@@ -84,7 +84,7 @@ export default function SiaeActivationCardsPage() {
         </Button>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2 sm:gap-4">
         <Card className="glass-card" data-testid="card-stats-total">
           <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Carte Totali</CardTitle>

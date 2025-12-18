@@ -294,26 +294,26 @@ export default function Events() {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
+    <div className="p-3 sm:p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
       {/* Header */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row sm:items-center gap-4 mb-6"
+        className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6"
       >
-        <div className="flex items-center gap-3 flex-1">
+        <div className="flex items-center gap-2 sm:gap-3 flex-1">
           <Link href="/beverage">
             <Button variant="ghost" size="icon" className="rounded-xl">
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center">
-              <CalendarIcon className="h-6 w-6 text-white" />
+          <div className="flex items-center gap-2 sm:gap-3">
+            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+              <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl md:text-2xl font-bold">Eventi</h1>
-              <p className="text-sm text-muted-foreground">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold">Eventi</h1>
+              <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
                 {canCreateEvents ? 'Organizza i tuoi eventi' : 'Visualizza gli eventi'}
               </p>
             </div>

@@ -169,22 +169,22 @@ export default function Home() {
   // Super Admin Dashboard
   if (isSuperAdmin) {
     return (
-      <div className="p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
+      <div className="p-3 sm:p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
         {/* Header */}
         <motion.div 
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8"
+          className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8"
         >
           <div>
             <div className="flex items-center gap-2 mb-1">
               <div className="w-2 h-2 rounded-full bg-teal animate-pulse" />
               <span className="text-xs text-teal font-medium">Sistema Attivo</span>
             </div>
-            <h1 className="text-2xl md:text-3xl font-bold">
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
               Ciao, {user?.firstName}
             </h1>
-            <p className="text-muted-foreground">
+            <p className="text-muted-foreground text-sm sm:text-base">
               Panoramica del sistema Event4U
             </p>
           </div>
@@ -197,7 +197,7 @@ export default function Home() {
         </motion.div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
           {companiesLoading ? (
             <>
               <Skeleton className="h-32 rounded-2xl" />
@@ -376,25 +376,25 @@ export default function Home() {
   const disabledModules = modules.filter(m => !m.enabled && m.title !== "Analytics");
 
   return (
-    <div className="p-4 md:p-8 max-w-6xl mx-auto pb-24 md:pb-8">
+    <div className="p-3 sm:p-4 md:p-8 max-w-6xl mx-auto pb-24 md:pb-8">
       {/* Welcome Header */}
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-10"
+        className="text-center mb-6 sm:mb-8 md:mb-10"
       >
         <motion.div
           initial={{ scale: 0 }}
           animate={{ scale: 1 }}
           transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-          className="w-16 h-16 rounded-2xl bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center mx-auto mb-4 glow-golden"
+          className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center mx-auto mb-3 sm:mb-4 glow-golden"
         >
-          <Sparkles className="h-8 w-8 text-black" />
+          <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-black" />
         </motion.div>
-        <h1 className="text-2xl md:text-3xl font-bold mb-2">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">
           Ciao, {user?.firstName || 'Gestore'}
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-sm sm:text-base">
           Seleziona un modulo per iniziare
         </p>
       </motion.div>
@@ -404,7 +404,7 @@ export default function Home() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.1 }}
-        className="glass-card p-4 mb-8 flex items-center justify-around"
+        className="glass-card p-3 sm:p-4 mb-4 sm:mb-6 md:mb-8 flex items-center justify-around flex-wrap gap-2"
       >
         <div className="text-center px-4">
           <div className="flex items-center justify-center gap-1 text-teal mb-1">

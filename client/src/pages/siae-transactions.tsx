@@ -162,26 +162,26 @@ export default function SiaeTransactionsPage() {
   };
 
   return (
-    <div className="p-6 space-y-6" data-testid="page-siae-transactions">
-      <div className="flex items-center justify-between">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-siae-transactions">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3" data-testid="page-title">
-            <Receipt className="w-8 h-8 text-[#FFD700]" />
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2 sm:gap-3" data-testid="page-title">
+            <Receipt className="w-6 h-6 sm:w-8 sm:h-8 text-[#FFD700] flex-shrink-0" />
             Transazioni SIAE
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Monitora le transazioni di acquisto biglietti
           </p>
         </div>
-        <Button variant="outline" data-testid="button-export">
+        <Button variant="outline" className="w-full sm:w-auto" data-testid="button-export">
           <Download className="w-4 h-4 mr-2" />
           Esporta Report
         </Button>
       </div>
 
       <Card className="glass-card" data-testid="card-filters">
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4">
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex flex-col md:flex-row gap-2 sm:gap-4">
             <div className="flex-1">
               <label className="text-sm font-medium mb-2 block">Seleziona Evento</label>
               <Select value={selectedEventId} onValueChange={setSelectedEventId}>

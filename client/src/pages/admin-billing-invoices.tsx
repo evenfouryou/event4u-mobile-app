@@ -129,13 +129,13 @@ export default function AdminBillingInvoices() {
   }
 
   return (
-    <div className="p-6 space-y-6" data-testid="page-admin-billing-invoices">
+    <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6" data-testid="page-admin-billing-invoices">
       <div>
-        <h1 className="text-2xl font-bold flex items-center gap-2">
-          <Receipt className="w-6 h-6 text-yellow-500" />
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2">
+          <Receipt className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 flex-shrink-0" />
           Fatture
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-sm sm:text-base">
           Gestisci tutte le fatture degli organizzatori
         </p>
       </div>
@@ -175,7 +175,8 @@ export default function AdminBillingInvoices() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-2 sm:p-6">
+          <div className="overflow-x-auto">
           <Table>
             <TableHeader>
               <TableRow>
@@ -238,6 +239,7 @@ export default function AdminBillingInvoices() {
               )}
             </TableBody>
           </Table>
+          </div>
         </CardContent>
       </Card>
 

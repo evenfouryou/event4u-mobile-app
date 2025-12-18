@@ -97,13 +97,13 @@ export default function StaffPrHome() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/95 p-6">
-      <div className="max-w-7xl mx-auto space-y-8">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/95 p-3 sm:p-4 md:p-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6 md:space-y-8">
         {/* Header */}
-        <div className="glass-card p-6 rounded-xl">
-          <div className="flex items-center justify-between">
+        <div className="glass-card p-4 sm:p-6 rounded-xl">
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
             <div>
-              <h1 className="text-2xl font-bold text-foreground" data-testid="text-welcome">
+              <h1 className="text-xl sm:text-2xl font-bold text-foreground" data-testid="text-welcome">
                 Ciao, {user?.firstName || user?.email?.split('@')[0] || 'Utente'}!
               </h1>
               <p className="text-muted-foreground">
@@ -121,9 +121,9 @@ export default function StaffPrHome() {
         </div>
 
         {/* Stats Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
           <Card className="glass-card border-white/10">
-            <CardContent className="p-6">
+            <CardContent className="p-4 sm:p-6">
               <div className="flex items-center gap-4">
                 <div className="p-3 rounded-full bg-blue-500/20">
                   <Calendar className="h-6 w-6 text-blue-400" />

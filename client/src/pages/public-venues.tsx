@@ -106,36 +106,36 @@ export default function PublicVenues() {
         </div>
       </header>
 
-      <main className="container mx-auto px-4 py-8">
-        <div className="mb-12 text-center">
-          <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-muted/50 border border-border text-sm font-medium mb-6">
-            <Building2 className="w-4 h-4 text-primary" />
+      <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
+        <div className="mb-6 sm:mb-12 text-center">
+          <div className="inline-flex items-center gap-2 px-3 sm:px-4 py-2 rounded-full bg-muted/50 border border-border text-xs sm:text-sm font-medium mb-4 sm:mb-6">
+            <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-primary" />
             <span className="text-muted-foreground">I Migliori Locali</span>
           </div>
           
-          <h1 className="text-4xl md:text-5xl font-bold text-foreground mb-4" data-testid="text-page-title">
+          <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-foreground mb-3 sm:mb-4" data-testid="text-page-title">
             Scopri i <span className="text-primary">Club</span>
           </h1>
-          <p className="text-muted-foreground max-w-2xl mx-auto text-lg">
+          <p className="text-muted-foreground max-w-2xl mx-auto text-sm sm:text-lg px-2">
             Esplora i migliori locali della tua città e scopri gli eventi in programma
           </p>
         </div>
 
-        <div className="max-w-xl mx-auto mb-12">
+        <div className="max-w-xl mx-auto mb-6 sm:mb-12">
           <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+            <Search className="absolute left-3 sm:left-4 top-1/2 -translate-y-1/2 w-4 h-4 sm:w-5 sm:h-5 text-muted-foreground" />
             <Input
               placeholder="Cerca per città..."
               value={searchCity}
               onChange={(e) => setSearchCity(e.target.value)}
-              className="pl-12 h-14 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground rounded-xl text-lg"
+              className="pl-10 sm:pl-12 h-11 sm:h-14 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground rounded-xl text-base sm:text-lg"
               data-testid="input-search-city"
             />
           </div>
         </div>
 
         {isLoading ? (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {[1, 2, 3, 4, 5, 6].map((i) => (
               <Card key={i} className="bg-card border-border overflow-hidden">
                 <Skeleton className="h-48 w-full" />
@@ -162,7 +162,7 @@ export default function PublicVenues() {
             </p>
           </Card>
         ) : (
-          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {venues?.map((venue) => (
               <VenueCard key={venue.id} venue={venue} />
             ))}

@@ -35,7 +35,7 @@ export default function ForgotPassword() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="container mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4 flex items-center justify-between gap-2">
           <Link href="/">
             <img 
               src="/logo.png" 
@@ -55,11 +55,11 @@ export default function ForgotPassword() {
         </div>
       </header>
 
-      <main className="flex-1 flex items-center justify-center p-6">
+      <main className="flex-1 flex items-center justify-center p-3 sm:p-4 md:p-6">
         <Card className="w-full max-w-md">
           <CardHeader>
-            <CardTitle>Password Dimenticata</CardTitle>
-            <CardDescription>
+            <CardTitle className="text-xl sm:text-2xl">Password Dimenticata</CardTitle>
+            <CardDescription className="text-sm sm:text-base">
               Inserisci la tua email per ricevere un link di reset password
             </CardDescription>
           </CardHeader>

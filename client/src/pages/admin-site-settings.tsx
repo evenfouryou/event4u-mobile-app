@@ -104,14 +104,14 @@ export default function AdminSiteSettings() {
   }
 
   return (
-    <div className="p-6 space-y-6" data-testid="page-admin-site-settings">
-      <div className="flex items-center justify-between">
+    <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6" data-testid="page-admin-site-settings">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Settings className="w-6 h-6 text-primary" />
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2">
+            <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
             Impostazioni Sito
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm sm:text-base">
             Gestisci le impostazioni globali del sito, cookie e testi legali
           </p>
         </div>

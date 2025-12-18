@@ -126,14 +126,14 @@ export default function AdminBillingReports() {
   );
 
   return (
-    <div className="p-6 space-y-6" data-testid="page-admin-billing-reports">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+    <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6" data-testid="page-admin-billing-reports">
+      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <BarChart3 className="w-6 h-6 text-yellow-500" />
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2">
+            <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 flex-shrink-0" />
             Report Vendite
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm sm:text-base">
             Analisi vendite e commissioni per tutti gli organizzatori
           </p>
         </div>
@@ -150,8 +150,8 @@ export default function AdminBillingReports() {
             Filtri
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <CardContent className="p-3 sm:p-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
             <div>
               <Label htmlFor="dateFrom">Da</Label>
               <Input
@@ -211,16 +211,16 @@ export default function AdminBillingReports() {
         renderSkeleton()
       ) : reportData ? (
         <>
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
             <Card data-testid="card-summary-tickets">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-yellow-500/20 rounded-lg">
-                    <Ticket className="w-5 h-5 text-yellow-500" />
+              <CardContent className="p-3 sm:pt-6 sm:p-6">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="p-1.5 sm:p-2 bg-yellow-500/20 rounded-lg flex-shrink-0">
+                    <Ticket className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-500" />
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Biglietti Venduti</p>
-                    <p className="text-2xl font-bold" data-testid="text-tickets-total">
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">Biglietti Venduti</p>
+                    <p className="text-lg sm:text-2xl font-bold" data-testid="text-tickets-total">
                       {reportData.summary.ticketsSoldTotal}
                     </p>
                   </div>
@@ -229,14 +229,14 @@ export default function AdminBillingReports() {
             </Card>
 
             <Card data-testid="card-summary-gross">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-green-500/20 rounded-lg">
-                    <Euro className="w-5 h-5 text-green-500" />
+              <CardContent className="p-3 sm:pt-6 sm:p-6">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="p-1.5 sm:p-2 bg-green-500/20 rounded-lg flex-shrink-0">
+                    <Euro className="w-4 h-4 sm:w-5 sm:h-5 text-green-500" />
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Ricavo Lordo</p>
-                    <p className="text-2xl font-bold" data-testid="text-gross-revenue">
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">Ricavo Lordo</p>
+                    <p className="text-lg sm:text-2xl font-bold" data-testid="text-gross-revenue">
                       {formatCurrency(reportData.summary.grossRevenueTotal)}
                     </p>
                   </div>
@@ -245,14 +245,14 @@ export default function AdminBillingReports() {
             </Card>
 
             <Card data-testid="card-summary-commissions">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-blue-500/20 rounded-lg">
-                    <Percent className="w-5 h-5 text-blue-500" />
+              <CardContent className="p-3 sm:pt-6 sm:p-6">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="p-1.5 sm:p-2 bg-blue-500/20 rounded-lg flex-shrink-0">
+                    <Percent className="w-4 h-4 sm:w-5 sm:h-5 text-blue-500" />
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Commissioni Totali</p>
-                    <p className="text-2xl font-bold" data-testid="text-commissions-total">
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">Commissioni Totali</p>
+                    <p className="text-lg sm:text-2xl font-bold" data-testid="text-commissions-total">
                       {formatCurrency(reportData.summary.commissionTotal)}
                     </p>
                   </div>
@@ -261,14 +261,14 @@ export default function AdminBillingReports() {
             </Card>
 
             <Card data-testid="card-summary-net">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 bg-teal-500/20 rounded-lg">
-                    <Building2 className="w-5 h-5 text-teal-500" />
+              <CardContent className="p-3 sm:pt-6 sm:p-6">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <div className="p-1.5 sm:p-2 bg-teal-500/20 rounded-lg flex-shrink-0">
+                    <Building2 className="w-4 h-4 sm:w-5 sm:h-5 text-teal-500" />
                   </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Netto Organizzatori</p>
-                    <p className="text-2xl font-bold" data-testid="text-net-organizer">
+                  <div className="min-w-0">
+                    <p className="text-xs sm:text-sm text-muted-foreground truncate">Netto Organizzatori</p>
+                    <p className="text-lg sm:text-2xl font-bold" data-testid="text-net-organizer">
                       {formatCurrency(reportData.summary.netToOrganizer)}
                     </p>
                   </div>
@@ -277,55 +277,55 @@ export default function AdminBillingReports() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
             <Card data-testid="card-tickets-online">
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Biglietti Online</p>
-                <p className="text-xl font-semibold" data-testid="text-tickets-online">
+              <CardContent className="p-3 sm:pt-6 sm:p-6">
+                <p className="text-xs sm:text-sm text-muted-foreground">Biglietti Online</p>
+                <p className="text-lg sm:text-xl font-semibold" data-testid="text-tickets-online">
                   {reportData.summary.ticketsSoldOnline}
                 </p>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   Commissioni: {formatCurrency(reportData.summary.commissionOnline)}
                 </p>
               </CardContent>
             </Card>
             <Card data-testid="card-tickets-printed">
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Biglietti Biglietteria</p>
-                <p className="text-xl font-semibold" data-testid="text-tickets-printed">
+              <CardContent className="p-3 sm:pt-6 sm:p-6">
+                <p className="text-xs sm:text-sm text-muted-foreground">Biglietti Biglietteria</p>
+                <p className="text-lg sm:text-xl font-semibold" data-testid="text-tickets-printed">
                   {reportData.summary.ticketsSoldPrinted}
                 </p>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   Commissioni: {formatCurrency(reportData.summary.commissionPrinted)}
                 </p>
               </CardContent>
             </Card>
             <Card data-testid="card-tickets-pr">
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Biglietti PR</p>
-                <p className="text-xl font-semibold" data-testid="text-tickets-pr">
+              <CardContent className="p-3 sm:pt-6 sm:p-6">
+                <p className="text-xs sm:text-sm text-muted-foreground">Biglietti PR</p>
+                <p className="text-lg sm:text-xl font-semibold" data-testid="text-tickets-pr">
                   {reportData.summary.ticketsSoldPr}
                 </p>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   Commissioni: {formatCurrency(reportData.summary.commissionPr)}
                 </p>
               </CardContent>
             </Card>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
             <Card data-testid="card-invoices-stats">
-              <CardContent className="pt-6">
-                <div className="flex items-center gap-6">
+              <CardContent className="p-3 sm:pt-6 sm:p-6">
+                <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
                   <div>
-                    <p className="text-sm text-muted-foreground">Fatture Emesse</p>
-                    <p className="text-xl font-semibold" data-testid="text-invoices-issued">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Fatture Emesse</p>
+                    <p className="text-lg sm:text-xl font-semibold" data-testid="text-invoices-issued">
                       {reportData.summary.invoicesIssued}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Fatture Pagate</p>
-                    <p className="text-xl font-semibold text-green-500" data-testid="text-invoices-paid">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Fatture Pagate</p>
+                    <p className="text-lg sm:text-xl font-semibold text-green-500" data-testid="text-invoices-paid">
                       {reportData.summary.invoicesPaid}
                     </p>
                   </div>
@@ -333,9 +333,9 @@ export default function AdminBillingReports() {
               </CardContent>
             </Card>
             <Card data-testid="card-wallet-debt">
-              <CardContent className="pt-6">
-                <p className="text-sm text-muted-foreground">Debito Wallet Totale</p>
-                <p className={`text-xl font-semibold ${reportData.summary.walletDebt > 0 ? "text-destructive" : ""}`} data-testid="text-wallet-debt">
+              <CardContent className="p-3 sm:pt-6 sm:p-6">
+                <p className="text-xs sm:text-sm text-muted-foreground">Debito Wallet Totale</p>
+                <p className={`text-lg sm:text-xl font-semibold ${reportData.summary.walletDebt > 0 ? "text-destructive" : ""}`} data-testid="text-wallet-debt">
                   {formatCurrency(reportData.summary.walletDebt)}
                 </p>
               </CardContent>
@@ -345,9 +345,10 @@ export default function AdminBillingReports() {
           {reportData.byChannel.length > 0 && (
             <Card data-testid="card-by-channel">
               <CardHeader>
-                <CardTitle>Vendite per Canale</CardTitle>
+                <CardTitle className="text-base sm:text-lg">Vendite per Canale</CardTitle>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-2 sm:p-6">
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -370,6 +371,7 @@ export default function AdminBillingReports() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           )}
@@ -377,15 +379,16 @@ export default function AdminBillingReports() {
           {reportData.byEvent.length > 0 && (
             <Card data-testid="card-by-event">
               <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <Calendar className="w-5 h-5" />
+                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                  <Calendar className="w-4 h-4 sm:w-5 sm:h-5 flex-shrink-0" />
                   Vendite per Evento
                 </CardTitle>
-                <CardDescription>
+                <CardDescription className="text-xs sm:text-sm">
                   Dettaglio vendite e commissioni per ogni evento
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="p-2 sm:p-6">
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -410,6 +413,7 @@ export default function AdminBillingReports() {
                     ))}
                   </TableBody>
                 </Table>
+                </div>
               </CardContent>
             </Card>
           )}

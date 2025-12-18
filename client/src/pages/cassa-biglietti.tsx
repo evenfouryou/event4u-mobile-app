@@ -558,14 +558,14 @@ export default function CassaBigliettiPage() {
   };
 
   return (
-    <div className="p-6 space-y-6" data-testid="page-cassa-biglietti">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-cassa-biglietti">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3" data-testid="page-title">
-            <Store className="w-8 h-8 text-[#FFD700]" />
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2 sm:gap-3" data-testid="page-title">
+            <Store className="w-6 h-6 sm:w-8 sm:h-8 text-[#FFD700] flex-shrink-0" />
             Cassa Biglietti
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Emissione rapida biglietti e gestione vendite
           </p>
         </div>

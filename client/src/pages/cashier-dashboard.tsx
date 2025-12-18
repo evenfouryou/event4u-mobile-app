@@ -47,14 +47,14 @@ export default function CashierDashboardPage() {
   };
 
   return (
-    <div className="p-6 space-y-6" data-testid="page-cashier-dashboard">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-cashier-dashboard">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3" data-testid="page-title">
-            <Store className="w-8 h-8 text-[#FFD700]" />
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2 sm:gap-3" data-testid="page-title">
+            <Store className="w-6 h-6 sm:w-8 sm:h-8 text-[#FFD700] flex-shrink-0" />
             I Miei Eventi
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Eventi con quote biglietti assegnate
           </p>
         </div>
@@ -89,7 +89,7 @@ export default function CashierDashboardPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
           {myEvents.map((eventData) => {
             const percentage = getQuotaPercentage(eventData.quotaUsed, eventData.quotaQuantity);
             const remaining = eventData.quotaRemaining;

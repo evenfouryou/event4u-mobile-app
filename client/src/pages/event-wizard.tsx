@@ -615,11 +615,11 @@ export default function EventWizard() {
   }
 
   return (
-    <div className="flex flex-col gap-6 p-6 max-w-4xl mx-auto">
+    <div className="flex flex-col gap-4 sm:gap-6 p-3 sm:p-4 md:p-6 max-w-4xl mx-auto pb-24 md:pb-8">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-2xl font-semibold">
+          <h1 className="text-xl sm:text-2xl font-semibold">
             {draftId ? 'Modifica Evento' : 'Nuovo Evento'}
           </h1>
         </div>

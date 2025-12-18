@@ -291,13 +291,13 @@ export default function SiaeNumberedSeatsPage() {
   };
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
-      <div className="flex items-center justify-between gap-4 flex-wrap">
-        <div className="flex items-center gap-3">
-          <Grid3X3 className="h-8 w-8 text-amber-400" />
+    <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-2 sm:gap-3">
+          <Grid3X3 className="h-6 w-6 sm:h-8 sm:w-8 text-amber-400 flex-shrink-0" />
           <div>
-            <h1 className="text-2xl font-bold text-white">Posti Numerati</h1>
-            <p className="text-sm text-gray-400">Gestione posti a sedere per eventi</p>
+            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Posti Numerati</h1>
+            <p className="text-xs sm:text-sm text-gray-400">Gestione posti a sedere per eventi</p>
           </div>
         </div>
 
@@ -336,11 +336,11 @@ export default function SiaeNumberedSeatsPage() {
 
       {selectedSectorId && (
         <>
-          <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4">
             <Card className="bg-[#151922] border-gray-800">
-              <CardContent className="p-4">
-                <div className="flex items-center gap-3">
-                  <Armchair className="h-8 w-8 text-amber-400" />
+              <CardContent className="p-3 sm:p-4">
+                <div className="flex items-center gap-2 sm:gap-3">
+                  <Armchair className="h-6 w-6 sm:h-8 sm:w-8 text-amber-400 flex-shrink-0" />
                   <div>
                     <p className="text-2xl font-bold text-white">{stats.total}</p>
                     <p className="text-xs text-gray-400">Totale Posti</p>
@@ -445,6 +445,7 @@ export default function SiaeNumberedSeatsPage() {
 
           <Card className="bg-[#151922] border-gray-800">
             <CardContent className="p-0">
+              <div className="overflow-x-auto">
               {isLoading ? (
                 <div className="p-4 space-y-4">
                   {[1, 2, 3, 4, 5].map((i) => (
@@ -550,6 +551,7 @@ export default function SiaeNumberedSeatsPage() {
                   </TableBody>
                 </Table>
               )}
+              </div>
             </CardContent>
           </Card>
         </>

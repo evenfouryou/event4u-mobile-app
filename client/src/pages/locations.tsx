@@ -116,11 +116,11 @@ export default function Locations() {
   };
 
   return (
-    <div className="p-6 md:p-8 max-w-7xl mx-auto">
-      <div className="flex items-center justify-between mb-8">
+    <div className="p-3 sm:p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
+      <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
         <div>
-          <h1 className="text-2xl font-semibold mb-1">Gestione Location</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl font-semibold mb-1">Gestione Location</h1>
+          <p className="text-muted-foreground text-sm sm:text-base">
             Configura le sedi dove si svolgono gli eventi
           </p>
         </div>

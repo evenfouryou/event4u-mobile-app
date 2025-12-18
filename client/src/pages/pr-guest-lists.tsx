@@ -279,15 +279,15 @@ export default function PrGuestListsPage() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
+    <div className="container mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight flex items-center gap-2">
-            <ListChecks className="w-8 h-8 text-primary" />
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
+            <ListChecks className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
             Liste Ospiti
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm sm:text-base">
             Gestisci le liste ospiti per i tuoi eventi
           </p>
         </div>
@@ -309,8 +309,8 @@ export default function PrGuestListsPage() {
 
       {/* Event and List Selection */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="grid gap-4 md:grid-cols-2">
+        <CardContent className="p-3 sm:p-4 md:pt-6">
+          <div className="grid gap-2 sm:gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <label className="text-sm font-medium">Seleziona Evento</label>
               <Select value={selectedEventId} onValueChange={(val) => {

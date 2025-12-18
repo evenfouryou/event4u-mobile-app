@@ -319,11 +319,11 @@ export default function Suppliers() {
   const inactiveSuppliers = filteredSuppliers.filter(s => !s.active);
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
+    <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-4 mb-8"
+        className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8"
       >
         <Link href="/beverage">
           <Button 
@@ -335,13 +335,13 @@ export default function Suppliers() {
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
-        <div className="flex items-center gap-3 flex-1">
-          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center">
-            <Truck className="h-6 w-6 text-white" />
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+          <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center flex-shrink-0">
+            <Truck className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
           </div>
           <div>
-            <h1 className="text-xl md:text-2xl font-bold">Fornitori</h1>
-            <p className="text-muted-foreground text-sm">Gestisci i tuoi fornitori</p>
+            <h1 className="text-lg sm:text-xl md:text-2xl font-bold">Fornitori</h1>
+            <p className="text-muted-foreground text-xs sm:text-sm hidden sm:block">Gestisci i tuoi fornitori</p>
           </div>
         </div>
         <Button 

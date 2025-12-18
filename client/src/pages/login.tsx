@@ -130,18 +130,18 @@ export default function Login() {
       </motion.header>
 
       {/* Main content */}
-      <main className="flex-1 flex items-center justify-center p-4 md:p-6 relative z-10">
+      <main className="flex-1 flex items-center justify-center p-3 sm:p-4 md:p-6 relative z-10">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
           className="w-full max-w-md"
         >
-          <div className="glass-card p-8">
+          <div className="glass-card p-4 sm:p-6 md:p-8">
             {/* Header */}
-            <div className="text-center mb-8">
-              <h1 className="text-2xl md:text-3xl font-bold mb-2">Bentornato</h1>
-              <p className="text-muted-foreground">
+            <div className="text-center mb-6 sm:mb-8">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">Bentornato</h1>
+              <p className="text-muted-foreground text-sm sm:text-base">
                 Accedi al tuo account per continuare
               </p>
             </div>

@@ -157,16 +157,16 @@ export default function Settings() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
+    <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="mb-8"
+        className="mb-4 sm:mb-6 md:mb-8"
       >
-        <h1 className="text-2xl md:text-3xl font-bold mb-2" data-testid="text-settings-title">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2" data-testid="text-settings-title">
           Impostazioni
         </h1>
-        <p className="text-muted-foreground">
+        <p className="text-muted-foreground text-sm sm:text-base">
           Gestisci le informazioni della tua azienda
         </p>
       </motion.div>

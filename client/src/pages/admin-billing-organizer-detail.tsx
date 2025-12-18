@@ -248,26 +248,26 @@ export default function AdminBillingOrganizerDetail() {
   const balance = parseFloat(wallet.balance);
 
   return (
-    <div className="p-6 space-y-6" data-testid="page-admin-billing-organizer-detail">
-      <div className="flex items-center gap-4">
+    <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6" data-testid="page-admin-billing-organizer-detail">
+      <div className="flex items-center gap-3 sm:gap-4">
         <Link href="/admin/billing/organizers">
-          <Button variant="ghost" size="icon">
+          <Button variant="ghost" size="icon" className="h-10 w-10">
             <ArrowLeft className="w-5 h-5" />
           </Button>
         </Link>
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Building2 className="w-6 h-6 text-yellow-500" />
-            {company.name}
+        <div className="min-w-0">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2">
+            <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 flex-shrink-0" />
+            <span className="truncate">{company.name}</span>
           </h1>
-          <p className="text-muted-foreground">
+          <p className="text-muted-foreground text-sm sm:text-base">
             Gestione billing e abbonamento
           </p>
         </div>
       </div>
 
       <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-4">
+        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
           <TabsTrigger value="subscription" className="gap-2" data-testid="tab-subscription">
             <CreditCard className="w-4 h-4" />
             Abbonamento
@@ -286,23 +286,23 @@ export default function AdminBillingOrganizerDetail() {
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="subscription" className="mt-6 space-y-4">
+        <TabsContent value="subscription" className="mt-4 sm:mt-6 space-y-4">
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
+            <CardHeader className="p-4 sm:p-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
                 <div>
-                  <CardTitle>Abbonamento Attuale</CardTitle>
-                  <CardDescription>Stato e dettagli dell'abbonamento</CardDescription>
+                  <CardTitle className="text-base sm:text-lg">Abbonamento Attuale</CardTitle>
+                  <CardDescription className="text-xs sm:text-sm">Stato e dettagli dell'abbonamento</CardDescription>
                 </div>
-                <Button onClick={() => setIsSubscriptionDialogOpen(true)} data-testid="button-assign-plan">
+                <Button onClick={() => setIsSubscriptionDialogOpen(true)} data-testid="button-assign-plan" className="h-10 w-full sm:w-auto">
                   <Plus className="w-4 h-4 mr-2" />
                   {subscription ? "Cambia Piano" : "Assegna Piano"}
                 </Button>
               </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6">
               {subscription && plan ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground">Piano</p>
                     <p className="font-medium">{plan.name}</p>
@@ -364,19 +364,19 @@ export default function AdminBillingOrganizerDetail() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="commissions" className="mt-6">
+        <TabsContent value="commissions" className="mt-4 sm:mt-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Profilo Commissioni</CardTitle>
-              <CardDescription>Configura le commissioni per canale di vendita</CardDescription>
+            <CardHeader className="p-4 sm:p-6">
+              <CardTitle className="text-base sm:text-lg">Profilo Commissioni</CardTitle>
+              <CardDescription className="text-xs sm:text-sm">Configura le commissioni per canale di vendita</CardDescription>
             </CardHeader>
-            <CardContent>
+            <CardContent className="p-4 sm:p-6">
               <Form {...commissionForm}>
                 <form
                   onSubmit={commissionForm.handleSubmit((data) => updateCommissionsMutation.mutate(data))}
-                  className="space-y-6"
+                  className="space-y-4 sm:space-y-6"
                 >
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
                     <div className="space-y-4 p-4 rounded-lg border">
                       <h4 className="font-medium">Vendite Online</h4>
                       <FormField
@@ -510,14 +510,14 @@ export default function AdminBillingOrganizerDetail() {
           </Card>
         </TabsContent>
 
-        <TabsContent value="wallet" className="mt-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <TabsContent value="wallet" className="mt-4 sm:mt-6 space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
             <Card>
-              <CardHeader>
-                <CardTitle>Saldo Wallet</CardTitle>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">Saldo Wallet</CardTitle>
               </CardHeader>
-              <CardContent>
-                <p className={`text-4xl font-bold ${balance < 0 ? "text-destructive" : "text-green-500"}`}>
+              <CardContent className="p-4 sm:p-6">
+                <p className={`text-2xl sm:text-3xl md:text-4xl font-bold ${balance < 0 ? "text-destructive" : "text-green-500"}`}>
                   {formatCurrency(balance)}
                 </p>
                 <p className="text-sm text-muted-foreground mt-2">
@@ -527,12 +527,12 @@ export default function AdminBillingOrganizerDetail() {
             </Card>
 
             <Card>
-              <CardHeader>
-                <CardTitle>Soglia Fatturazione</CardTitle>
-                <CardDescription>Importo minimo per generare fattura automatica</CardDescription>
+              <CardHeader className="p-4 sm:p-6">
+                <CardTitle className="text-base sm:text-lg">Soglia Fatturazione</CardTitle>
+                <CardDescription className="text-xs sm:text-sm">Importo minimo per generare fattura automatica</CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
-                <div className="flex gap-2">
+              <CardContent className="p-4 sm:p-6 space-y-4">
+                <div className="flex flex-col sm:flex-row gap-2">
                   <Input
                     type="number"
                     step="0.01"

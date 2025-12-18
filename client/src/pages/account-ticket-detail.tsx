@@ -142,10 +142,10 @@ export default function AccountTicketDetail() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto">
-      <div className="mb-6">
+    <div className="max-w-2xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
+      <div className="mb-4 sm:mb-6">
         <Link href="/account/tickets">
-          <Button variant="ghost" className="text-muted-foreground hover:text-foreground -ml-4" data-testid="button-back">
+          <Button variant="ghost" className="text-muted-foreground hover:text-foreground -ml-2 sm:-ml-4 h-10" data-testid="button-back">
             <ChevronLeft className="w-4 h-4 mr-1" />
             I Miei Biglietti
           </Button>
@@ -153,13 +153,13 @@ export default function AccountTicketDetail() {
       </div>
 
       <Card className="bg-card border-border overflow-hidden">
-        <div className="bg-gradient-to-r from-primary/20 to-primary/10 p-6 border-b border-border">
-          <div className="flex items-start justify-between gap-4">
+        <div className="bg-gradient-to-r from-primary/20 to-primary/10 p-4 sm:p-6 border-b border-border">
+          <div className="flex items-start justify-between gap-3 sm:gap-4">
             <div>
-              <Badge variant={statusVariant()} className="mb-3">
+              <Badge variant={statusVariant()} className="mb-2 sm:mb-3">
                 {statusLabel()}
               </Badge>
-              <h1 className="text-2xl font-bold text-foreground" data-testid="text-event-name">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground" data-testid="text-event-name">
                 {ticket.eventName}
               </h1>
               <p className="text-sm text-muted-foreground mt-1">Codice: {ticket.ticketCode}</p>
@@ -167,9 +167,9 @@ export default function AccountTicketDetail() {
           </div>
         </div>
 
-        <CardContent className="p-6 space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
+        <CardContent className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+            <div className="flex items-center gap-3 p-2 sm:p-3 bg-muted/50 rounded-lg">
               <Calendar className="w-5 h-5 text-primary" />
               <div>
                 <p className="text-xs text-muted-foreground">Data Evento</p>
@@ -182,8 +182,8 @@ export default function AccountTicketDetail() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <MapPin className="w-5 h-5 text-primary" />
+            <div className="flex items-center gap-3 p-2 sm:p-3 bg-muted/50 rounded-lg">
+              <MapPin className="w-5 h-5 text-primary flex-shrink-0" />
               <div>
                 <p className="text-xs text-muted-foreground">Luogo</p>
                 <p className="text-foreground" data-testid="text-location">{ticket.locationName}</p>
@@ -193,8 +193,8 @@ export default function AccountTicketDetail() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <Ticket className="w-5 h-5 text-primary" />
+            <div className="flex items-center gap-3 p-2 sm:p-3 bg-muted/50 rounded-lg">
+              <Ticket className="w-5 h-5 text-primary flex-shrink-0" />
               <div>
                 <p className="text-xs text-muted-foreground">Settore</p>
                 <p className="text-foreground" data-testid="text-sector">{ticket.sectorName}</p>
@@ -202,8 +202,8 @@ export default function AccountTicketDetail() {
               </div>
             </div>
 
-            <div className="flex items-center gap-3 p-3 bg-muted/50 rounded-lg">
-              <User className="w-5 h-5 text-primary" />
+            <div className="flex items-center gap-3 p-2 sm:p-3 bg-muted/50 rounded-lg">
+              <User className="w-5 h-5 text-primary flex-shrink-0" />
               <div>
                 <p className="text-xs text-muted-foreground">Intestatario</p>
                 <p className="text-foreground" data-testid="text-holder">{holderName}</p>
@@ -212,7 +212,7 @@ export default function AccountTicketDetail() {
           </div>
 
           {ticket.hoursToEvent > 0 && (
-            <div className="flex items-center gap-2 text-sm text-muted-foreground bg-muted/50 p-3 rounded-lg">
+            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground bg-muted/50 p-2 sm:p-3 rounded-lg">
               <Clock className="w-4 h-4" />
               <span>
                 {ticket.hoursToEvent < 24 
@@ -224,12 +224,12 @@ export default function AccountTicketDetail() {
           )}
 
           {ticket.qrCode && ticket.status === "emitted" && !ticket.isListed && (
-            <div className="flex flex-col items-center py-6 border-y border-border">
-              <div className="bg-white p-4 rounded-xl mb-4">
+            <div className="flex flex-col items-center py-4 sm:py-6 border-y border-border">
+              <div className="bg-white p-3 sm:p-4 rounded-xl mb-3 sm:mb-4">
                 <img
                   src={ticket.qrCode}
                   alt="QR Code biglietto"
-                  className="w-48 h-48"
+                  className="w-36 h-36 sm:w-48 sm:h-48"
                   data-testid="img-qrcode"
                 />
               </div>

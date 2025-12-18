@@ -105,11 +105,11 @@ export default function SiaeResalesPage() {
   };
 
   return (
-    <div className="p-6 space-y-6" data-testid="page-siae-resales">
-      <div className="flex items-center justify-between">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-siae-resales">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3" data-testid="page-title">
-            <RefreshCcw className="w-8 h-8 text-[#FFD700]" />
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2 sm:gap-3" data-testid="page-title">
+            <RefreshCcw className="w-6 h-6 sm:w-8 sm:h-8 text-[#FFD700] flex-shrink-0" />
             Secondary Ticketing
           </h1>
           <p className="text-muted-foreground mt-1">
@@ -118,9 +118,9 @@ export default function SiaeResalesPage() {
         </div>
       </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4">
         <Card className="glass-card">
-          <CardContent className="p-4">
+          <CardContent className="p-3 sm:p-4">
             <div className="text-xs text-muted-foreground mb-1">Totale Inseriti</div>
             <div className="text-2xl font-bold" data-testid="stat-total">{stats.total}</div>
           </CardContent>

@@ -260,20 +260,20 @@ export default function NightFilePage() {
   }
 
   return (
-    <div className="p-4 md:p-8 pb-24 md:pb-8 max-w-7xl mx-auto">
+    <div className="p-3 sm:p-4 md:p-8 pb-24 md:pb-8 max-w-7xl mx-auto">
       <motion.div 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex items-center gap-4 mb-8"
+        className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8"
       >
-        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center glow-golden">
-          <FileText className="h-7 w-7 text-white" />
+        <div className="w-10 h-10 sm:w-14 sm:h-14 rounded-xl sm:rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center glow-golden flex-shrink-0">
+          <FileText className="h-5 w-5 sm:h-7 sm:w-7 text-white" />
         </div>
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold" data-testid="text-night-file-title">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold" data-testid="text-night-file-title">
             File della Serata
           </h1>
-          <p className="text-muted-foreground text-sm">
+          <p className="text-muted-foreground text-xs sm:text-sm hidden sm:block">
             Seleziona un evento per compilare il documento
           </p>
         </div>

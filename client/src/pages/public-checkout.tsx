@@ -349,8 +349,8 @@ function CheckoutContent() {
     : null;
 
   return (
-    <div className="grid lg:grid-cols-5 gap-6">
-      <div className="lg:col-span-3 space-y-6">
+    <div className="grid lg:grid-cols-5 gap-4 sm:gap-6">
+      <div className="lg:col-span-3 space-y-4 sm:space-y-6">
         <Card className="bg-card border-border">
           <CardHeader className="border-b border-border">
             <CardTitle className="text-card-foreground flex items-center gap-2">
@@ -358,23 +358,23 @@ function CheckoutContent() {
               Dati Acquirente
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
-            <div className="grid grid-cols-2 gap-4">
+          <CardContent className="p-4 sm:p-6">
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
               <div>
-                <Label className="text-muted-foreground">Nome</Label>
-                <p className="text-foreground font-medium" data-testid="text-firstname">{customer.firstName}</p>
+                <Label className="text-muted-foreground text-xs sm:text-sm">Nome</Label>
+                <p className="text-foreground font-medium text-sm sm:text-base" data-testid="text-firstname">{customer.firstName}</p>
               </div>
               <div>
-                <Label className="text-muted-foreground">Cognome</Label>
-                <p className="text-foreground font-medium" data-testid="text-lastname">{customer.lastName}</p>
+                <Label className="text-muted-foreground text-xs sm:text-sm">Cognome</Label>
+                <p className="text-foreground font-medium text-sm sm:text-base" data-testid="text-lastname">{customer.lastName}</p>
               </div>
               <div>
-                <Label className="text-muted-foreground">Email</Label>
-                <p className="text-foreground font-medium" data-testid="text-email">{customer.email}</p>
+                <Label className="text-muted-foreground text-xs sm:text-sm">Email</Label>
+                <p className="text-foreground font-medium text-sm sm:text-base truncate" data-testid="text-email">{customer.email}</p>
               </div>
               <div>
-                <Label className="text-muted-foreground">Telefono</Label>
-                <p className="text-foreground font-medium" data-testid="text-phone">{customer.phone}</p>
+                <Label className="text-muted-foreground text-xs sm:text-sm">Telefono</Label>
+                <p className="text-foreground font-medium text-sm sm:text-base" data-testid="text-phone">{customer.phone}</p>
               </div>
             </div>
           </CardContent>
@@ -515,17 +515,17 @@ export default function PublicCheckoutPage() {
         </div>
       </header>
 
-      <main className="max-w-6xl mx-auto px-4 py-8">
+      <main className="max-w-6xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
         <motion.div
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
-          className="mb-8"
+          className="mb-4 sm:mb-8"
         >
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3" data-testid="text-page-title">
-            <CreditCard className="w-8 h-8 text-primary" />
+          <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2 sm:gap-3" data-testid="text-page-title">
+            <CreditCard className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
             Checkout
           </h1>
-          <p className="text-muted-foreground mt-2">Completa il pagamento per ricevere i tuoi biglietti</p>
+          <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Completa il pagamento per ricevere i tuoi biglietti</p>
         </motion.div>
 
         <CheckoutContent />
