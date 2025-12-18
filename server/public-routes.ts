@@ -35,6 +35,7 @@ import { generateTicketHtml } from "./template-routes";
 import { generateTicketPdf } from "./pdf-service";
 import { sendTicketEmail, sendPasswordResetEmail } from "./email-service";
 import { ticketTemplates, ticketTemplateElements } from "@shared/schema";
+import { sendOTP as sendMSG91OTP, verifyOTP as verifyMSG91OTP, resendOTP as resendMSG91OTP, isMSG91Configured } from "./msg91-service";
 
 const router = Router();
 
@@ -459,25 +460,54 @@ router.post("/api/public/customers/register", async (req, res) => {
       .returning();
 
     // Genera e invia OTP
-    const otp = generateOTP();
-    const expiresAt = new Date(Date.now() + 5 * 60 * 1000); // 5 minuti
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000); // 10 minuti
 
-    await db.insert(siaeOtpAttempts).values({
-      customerId: customer.id,
-      phone: customer.phone,
-      otpCode: otp,
-      purpose: "registration",
-      expiresAt,
-      ipAddress: req.ip,
-    });
+    // Use MSG91 if configured, otherwise fallback to local OTP
+    if (isMSG91Configured()) {
+      console.log(`[PUBLIC OTP] Using MSG91 for ${customer.phone}`);
+      const result = await sendMSG91OTP(customer.phone, 10);
+      
+      if (!result.success) {
+        console.error(`[PUBLIC OTP] MSG91 failed: ${result.message}`);
+        return res.status(500).json({ message: "Errore nell'invio OTP. Riprova." });
+      }
+      
+      // Store reference in DB (MSG91 manages the actual OTP)
+      await db.insert(siaeOtpAttempts).values({
+        customerId: customer.id,
+        phone: customer.phone,
+        otpCode: "MSG91", // Placeholder - MSG91 manages the actual code
+        purpose: "registration",
+        expiresAt,
+        ipAddress: req.ip,
+      });
+      
+      res.json({
+        customerId: customer.id,
+        message: "Registrazione avviata. Inserisci il codice OTP ricevuto via SMS.",
+        provider: "msg91"
+      });
+    } else {
+      // Fallback locale per sviluppo
+      const otp = generateOTP();
+      
+      await db.insert(siaeOtpAttempts).values({
+        customerId: customer.id,
+        phone: customer.phone,
+        otpCode: otp,
+        purpose: "registration",
+        expiresAt,
+        ipAddress: req.ip,
+      });
 
-    // TODO: Invia OTP via SMS (per ora log)
-    console.log(`[OTP] Codice per ${customer.phone}: ${otp}`);
+      console.log(`[PUBLIC OTP] Local OTP for ${customer.phone}: ${otp}`);
 
-    res.json({
-      customerId: customer.id,
-      message: "Registrazione avviata. Inserisci il codice OTP ricevuto via SMS.",
-    });
+      res.json({
+        customerId: customer.id,
+        message: "Registrazione avviata. Inserisci il codice OTP ricevuto via SMS.",
+        provider: "local"
+      });
+    }
   } catch (error: any) {
     if (error instanceof z.ZodError) {
       return res.status(400).json({ message: error.errors[0].message });
@@ -496,28 +526,60 @@ router.post("/api/public/customers/verify-otp", async (req, res) => {
       return res.status(400).json({ message: "Dati mancanti" });
     }
 
-    // Trova OTP valido
+    // Get customer first to get their phone number
+    const [customer] = await db
+      .select()
+      .from(siaeCustomers)
+      .where(eq(siaeCustomers.id, customerId));
+
+    if (!customer) {
+      return res.status(400).json({ message: "Cliente non trovato" });
+    }
+
+    // Find pending OTP attempt
     const [otpAttempt] = await db
       .select()
       .from(siaeOtpAttempts)
       .where(
         and(
           eq(siaeOtpAttempts.customerId, customerId),
-          eq(siaeOtpAttempts.otpCode, otpCode),
           eq(siaeOtpAttempts.status, "pending"),
           gt(siaeOtpAttempts.expiresAt, new Date())
         )
-      );
+      )
+      .orderBy(desc(siaeOtpAttempts.createdAt))
+      .limit(1);
 
     if (!otpAttempt) {
-      return res.status(400).json({ message: "Codice OTP non valido o scaduto" });
+      return res.status(400).json({ message: "Nessun OTP pendente. Richiedi un nuovo codice." });
     }
 
-    // Aggiorna OTP come verificato
-    await db
-      .update(siaeOtpAttempts)
-      .set({ status: "verified", verifiedAt: new Date() })
-      .where(eq(siaeOtpAttempts.id, otpAttempt.id));
+    // Use MSG91 verification if configured
+    if (isMSG91Configured() && otpAttempt.otpCode === "MSG91") {
+      console.log(`[PUBLIC OTP] Verifying via MSG91 for ${customer.phone}`);
+      const result = await verifyMSG91OTP(customer.phone, otpCode);
+      
+      if (!result.success) {
+        console.log(`[PUBLIC OTP] MSG91 verification failed: ${result.message}`);
+        return res.status(400).json({ message: "Codice OTP non valido" });
+      }
+      
+      // MSG91 verification succeeded
+      await db
+        .update(siaeOtpAttempts)
+        .set({ status: "verified", verifiedAt: new Date() })
+        .where(eq(siaeOtpAttempts.id, otpAttempt.id));
+    } else {
+      // Local OTP verification
+      if (otpAttempt.otpCode !== otpCode) {
+        return res.status(400).json({ message: "Codice OTP non valido o scaduto" });
+      }
+      
+      await db
+        .update(siaeOtpAttempts)
+        .set({ status: "verified", verifiedAt: new Date() })
+        .where(eq(siaeOtpAttempts.id, otpAttempt.id));
+    }
 
     // Aggiorna cliente come verificato
     await db
@@ -541,7 +603,8 @@ router.post("/api/public/customers/verify-otp", async (req, res) => {
       userAgent: req.headers["user-agent"],
     });
 
-    const [customer] = await db
+    // Refresh customer data after update
+    const [updatedCustomer] = await db
       .select()
       .from(siaeCustomers)
       .where(eq(siaeCustomers.id, customerId));
@@ -549,15 +612,81 @@ router.post("/api/public/customers/verify-otp", async (req, res) => {
     res.json({
       token: sessionToken,
       customer: {
-        id: customer.id,
-        email: customer.email,
-        firstName: customer.firstName,
-        lastName: customer.lastName,
+        id: updatedCustomer.id,
+        email: updatedCustomer.email,
+        firstName: updatedCustomer.firstName,
+        lastName: updatedCustomer.lastName,
       },
     });
   } catch (error: any) {
     console.error("[PUBLIC] OTP verification error:", error);
     res.status(500).json({ message: "Errore durante la verifica" });
+  }
+});
+
+// Resend OTP
+router.post("/api/public/customers/resend-otp", async (req, res) => {
+  try {
+    const { customerId, retryType = "text" } = req.body;
+
+    if (!customerId) {
+      return res.status(400).json({ message: "ID cliente mancante" });
+    }
+
+    const [customer] = await db
+      .select()
+      .from(siaeCustomers)
+      .where(eq(siaeCustomers.id, customerId));
+
+    if (!customer) {
+      return res.status(400).json({ message: "Cliente non trovato" });
+    }
+
+    if (customer.registrationCompleted) {
+      return res.status(400).json({ message: "Registrazione già completata" });
+    }
+
+    const expiresAt = new Date(Date.now() + 10 * 60 * 1000);
+
+    if (isMSG91Configured()) {
+      console.log(`[PUBLIC OTP] Resending via MSG91 to ${customer.phone}`);
+      const result = await resendMSG91OTP(customer.phone, retryType as 'text' | 'voice');
+      
+      if (!result.success) {
+        console.error(`[PUBLIC OTP] MSG91 resend failed: ${result.message}`);
+        return res.status(500).json({ message: "Errore nel reinvio OTP. Riprova." });
+      }
+
+      // Update existing attempt or create new one
+      await db.insert(siaeOtpAttempts).values({
+        customerId: customer.id,
+        phone: customer.phone,
+        otpCode: "MSG91",
+        purpose: "registration",
+        expiresAt,
+        ipAddress: req.ip,
+      });
+
+      res.json({ message: "OTP reinviato con successo", provider: "msg91" });
+    } else {
+      // Local fallback
+      const otp = generateOTP();
+
+      await db.insert(siaeOtpAttempts).values({
+        customerId: customer.id,
+        phone: customer.phone,
+        otpCode: otp,
+        purpose: "registration",
+        expiresAt,
+        ipAddress: req.ip,
+      });
+
+      console.log(`[PUBLIC OTP] Local resend OTP for ${customer.phone}: ${otp}`);
+      res.json({ message: "OTP reinviato con successo", provider: "local" });
+    }
+  } catch (error: any) {
+    console.error("[PUBLIC] Resend OTP error:", error);
+    res.status(500).json({ message: "Errore durante il reinvio OTP" });
   }
 });
 
