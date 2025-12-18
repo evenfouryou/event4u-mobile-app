@@ -4,12 +4,14 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Calendar, MapPin, Clock, Users, Search, Ticket, ChevronRight, Star, Sparkles } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Calendar, MapPin, Clock, Users, Search, Ticket, ChevronRight, Star, Sparkles, User } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { useState } from "react";
+import { useAuth } from "@/hooks/useAuth";
 
 interface PublicEvent {
   id: string;
@@ -151,6 +153,7 @@ function EventCardSkeleton() {
 
 export default function PublicEventsPage() {
   const [searchQuery, setSearchQuery] = useState("");
+  const { user, isAuthenticated } = useAuth();
 
   const { data: events, isLoading, error } = useQuery<PublicEvent[]>({
     queryKey: ["/api/public/events"],
@@ -195,11 +198,21 @@ export default function PublicEventsPage() {
                   Carrello
                 </Button>
               </Link>
-              <Link href="/accedi">
-                <Button size="sm" data-testid="button-login">
-                  Accedi
-                </Button>
-              </Link>
+              {isAuthenticated && user?.role === 'customer' ? (
+                <Link href="/account">
+                  <Avatar className="h-9 w-9 cursor-pointer ring-2 ring-primary/20 hover:ring-primary/50 transition-all" data-testid="avatar-user">
+                    <AvatarFallback className="bg-primary/10 text-primary">
+                      <User className="h-4 w-4" />
+                    </AvatarFallback>
+                  </Avatar>
+                </Link>
+              ) : (
+                <Link href="/accedi">
+                  <Button size="sm" data-testid="button-login">
+                    Accedi
+                  </Button>
+                </Link>
+              )}
             </div>
           </div>
         </div>
