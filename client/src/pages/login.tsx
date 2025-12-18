@@ -4,13 +4,17 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertCircle, Mail, Sparkles, ArrowLeft } from "lucide-react";
-import { Link, useLocation } from "wouter";
+import { Link, useLocation, useSearch } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 
 export default function Login() {
   const [, setLocation] = useLocation();
+  const searchString = useSearch();
+  const params = new URLSearchParams(searchString);
+  const redirectTo = params.get("redirect");
+  
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
@@ -33,11 +37,13 @@ export default function Login() {
         // Unified login - works for both admin/gestore and customers
         const response: any = await apiRequest('POST', '/api/auth/login', { email, password });
         
-        // Redirect based on user role
+        // Redirect based on user role and redirect parameter
         if (response.user?.role === 'cliente') {
-          window.location.href = '/account';
+          // For customers, use redirect param or default to /account
+          window.location.href = redirectTo || '/account';
         } else {
-          window.location.href = '/';
+          // For admin/gestore, use redirect param or default to dashboard
+          window.location.href = redirectTo || '/';
         }
       } else {
         // Cashier login with username - redirect to cashier dashboard
