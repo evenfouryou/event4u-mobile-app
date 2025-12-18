@@ -1,9 +1,13 @@
 import { Button } from "@/components/ui/button";
-import { Calendar, Package, BarChart3, Users, Sparkles, ArrowRight, Zap, Shield, Clock, Ticket } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Calendar, Package, BarChart3, Users, Sparkles, ArrowRight, Zap, Shield, Clock, Ticket, User } from "lucide-react";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
+import { useAuth } from "@/hooks/useAuth";
 
 export default function Landing() {
+  const { user, isAuthenticated } = useAuth();
+  
   const features = [
     {
       icon: Calendar,
@@ -111,23 +115,35 @@ export default function Landing() {
                 Biglietti
               </Link>
             </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              asChild
-              className="text-muted-foreground hover:text-foreground"
-              data-testid="button-login"
-            >
-              <Link href="/login">Accedi</Link>
-            </Button>
-            <Button
-              size="sm"
-              asChild
-              className="gradient-golden text-black font-semibold"
-              data-testid="button-register-header"
-            >
-              <Link href="/register">Inizia Gratis</Link>
-            </Button>
+            {isAuthenticated && user?.role === 'customer' ? (
+              <Link href="/account">
+                <Avatar className="h-9 w-9 cursor-pointer ring-2 ring-primary/20 hover:ring-primary/50 transition-all" data-testid="avatar-user">
+                  <AvatarFallback className="bg-primary/10 text-primary">
+                    <User className="h-4 w-4" />
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
+            ) : (
+              <>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  asChild
+                  className="text-muted-foreground hover:text-foreground"
+                  data-testid="button-login"
+                >
+                  <Link href="/login">Accedi</Link>
+                </Button>
+                <Button
+                  size="sm"
+                  asChild
+                  className="gradient-golden text-black font-semibold"
+                  data-testid="button-register-header"
+                >
+                  <Link href="/register">Inizia Gratis</Link>
+                </Button>
+              </>
+            )}
           </div>
         </div>
       </motion.header>
