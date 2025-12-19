@@ -1776,12 +1776,15 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
     const endOfDay = new Date(reportDate);
     endOfDay.setHours(23, 59, 59, 999);
     
+    // Get system config for fiscal code
+    const systemConfig = await siaeStorage.getSiaeSystemConfig(companyId);
+    
     // Build XML report
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <ComunicazioneDatiTitoli xmlns="urn:siae:biglietteria:2025">
   <Intestazione>
-    <CodiceFiscaleEmittente>${escapeXml(activeCard.fiscalCode)}</CodiceFiscaleEmittente>
-    <NumeroCarta>${escapeXml(activeCard.cardNumber)}</NumeroCarta>
+    <CodiceFiscaleEmittente>${escapeXml(systemConfig?.taxId || '')}</CodiceFiscaleEmittente>
+    <NumeroCarta>${escapeXml(activeCard.cardCode)}</NumeroCarta>
     <DataRiferimento>${formatSiaeDate(reportDate)}</DataRiferimento>
     <DataOraGenerazione>${formatSiaeDateTime(new Date())}</DataOraGenerazione>
     <TipoTrasmissione>ORDINARIA</TipoTrasmissione>
@@ -1816,17 +1819,16 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
       <TipologiaTitolo>${escapeXml(ticket.ticketTypeCode)}</TipologiaTitolo>
       <DataOraEmissione>${formatSiaeDateTime(ticket.emissionDate)}</DataOraEmissione>
       <CodiceCanale>${escapeXml(ticket.emissionChannelCode)}</CodiceCanale>
-      <ImportoLordo>${(ticket.grossPrice / 100).toFixed(2)}</ImportoLordo>
-      <ImportoNetto>${(ticket.netPrice / 100).toFixed(2)}</ImportoNetto>
-      <Diritti>${(ticket.siaeFee / 100).toFixed(2)}</Diritti>
-      <IVA>${(ticket.vatAmount / 100).toFixed(2)}</IVA>
-      <CodiceGenere>${escapeXml(ticketedEvent?.eventGenreCode || '')}</CodiceGenere>
-      <CodicePrestazione>${escapeXml(ticket.serviceCode)}</CodicePrestazione>
-      <DataEvento>${formatSiaeDate(ticketedEvent?.eventDate || null)}</DataEvento>
+      <ImportoLordo>${parseFloat(ticket.grossAmount || '0').toFixed(2)}</ImportoLordo>
+      <ImportoNetto>${parseFloat(ticket.netAmount || '0').toFixed(2)}</ImportoNetto>
+      <Diritti>0.00</Diritti>
+      <IVA>${parseFloat(ticket.vatAmount || '0').toFixed(2)}</IVA>
+      <CodiceGenere>${escapeXml(ticketedEvent?.genreCode || '')}</CodiceGenere>
+      <CodicePrestazione>${escapeXml(ticket.ticketTypeCode || '')}</CodicePrestazione>
+      <DataEvento>${formatSiaeDate(ticketedEvent?.saleStartDate || null)}</DataEvento>
       <NominativoAcquirente>
-        <Nome>${escapeXml(ticket.holderFirstName)}</Nome>
-        <Cognome>${escapeXml(ticket.holderLastName)}</Cognome>
-        <CodiceFiscale>${escapeXml(ticket.holderFiscalCode)}</CodiceFiscale>
+        <Nome>${escapeXml(ticket.participantFirstName || '')}</Nome>
+        <Cognome>${escapeXml(ticket.participantLastName || '')}</Cognome>
       </NominativoAcquirente>
       <Stato>${escapeXml(ticket.status)}</Stato>
     </Titolo>`;
@@ -1836,9 +1838,9 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
   </ElencoTitoli>
   <Riepilogo>
     <TotaleTitoli>${dayTickets.length}</TotaleTitoli>
-    <TotaleImportoLordo>${(dayTickets.reduce((sum, t) => sum + t.grossPrice, 0) / 100).toFixed(2)}</TotaleImportoLordo>
-    <TotaleDiritti>${(dayTickets.reduce((sum, t) => sum + t.siaeFee, 0) / 100).toFixed(2)}</TotaleDiritti>
-    <TotaleIVA>${(dayTickets.reduce((sum, t) => sum + t.vatAmount, 0) / 100).toFixed(2)}</TotaleIVA>
+    <TotaleImportoLordo>${dayTickets.reduce((sum, t) => sum + parseFloat(t.grossAmount || '0'), 0).toFixed(2)}</TotaleImportoLordo>
+    <TotaleDiritti>0.00</TotaleDiritti>
+    <TotaleIVA>${dayTickets.reduce((sum, t) => sum + parseFloat(t.vatAmount || '0'), 0).toFixed(2)}</TotaleIVA>
   </Riepilogo>
 </ComunicazioneDatiTitoli>`;
     
@@ -1851,8 +1853,8 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
       xmlContent: xml,
       status: 'pending',
       totalTickets: dayTickets.length,
-      totalAmount: dayTickets.reduce((sum, t) => sum + t.grossPrice, 0),
-      totalSiaeFee: dayTickets.reduce((sum, t) => sum + t.siaeFee, 0),
+      totalAmount: dayTickets.reduce((sum, t) => sum + parseFloat(t.grossAmount || '0'), 0),
+      totalSiaeFee: 0,
     });
     
     res.set('Content-Type', 'application/xml');
@@ -1892,24 +1894,27 @@ router.get("/api/siae/ticketed-events/:eventId/reports/xml", requireAuth, requir
       allTickets.push(...sectorTickets);
     }
     
+    // Get system config for fiscal code
+    const systemConfig = await siaeStorage.getSiaeSystemConfig(ticketedEvent.companyId);
+    
     // Build XML
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <ReportEvento xmlns="urn:siae:biglietteria:2025">
   <Intestazione>
-    <CodiceFiscaleEmittente>${escapeXml(activeCard.fiscalCode)}</CodiceFiscaleEmittente>
-    <NumeroCarta>${escapeXml(activeCard.cardNumber)}</NumeroCarta>
+    <CodiceFiscaleEmittente>${escapeXml(systemConfig?.taxId || '')}</CodiceFiscaleEmittente>
+    <NumeroCarta>${escapeXml(activeCard.cardCode)}</NumeroCarta>
     <DataOraGenerazione>${formatSiaeDateTime(new Date())}</DataOraGenerazione>
   </Intestazione>
   <DatiEvento>
-    <CodiceEvento>${escapeXml(ticketedEvent.id)}</CodiceEvento>
-    <Denominazione>${escapeXml(ticketedEvent.eventName)}</Denominazione>
-    <CodiceGenere>${escapeXml(ticketedEvent.eventGenreCode)}</CodiceGenere>
-    <DataEvento>${formatSiaeDate(ticketedEvent.eventDate)}</DataEvento>
-    <OraInizio>${escapeXml(ticketedEvent.startTime || '')}</OraInizio>
-    <Luogo>${escapeXml(ticketedEvent.venueName)}</Luogo>
-    <Indirizzo>${escapeXml(ticketedEvent.venueAddress)}</Indirizzo>
-    <Comune>${escapeXml(ticketedEvent.venueCity)}</Comune>
-    <Provincia>${escapeXml(ticketedEvent.venueProvince)}</Provincia>
+    <CodiceEvento>${escapeXml(ticketedEvent.siaeEventCode || ticketedEvent.id)}</CodiceEvento>
+    <Denominazione>${escapeXml(ticketedEvent.siaeEventCode || '')}</Denominazione>
+    <CodiceGenere>${escapeXml(ticketedEvent.genreCode)}</CodiceGenere>
+    <DataEvento>${formatSiaeDate(ticketedEvent.saleStartDate)}</DataEvento>
+    <OraInizio></OraInizio>
+    <Luogo>${escapeXml(ticketedEvent.siaeLocationCode || '')}</Luogo>
+    <Indirizzo></Indirizzo>
+    <Comune></Comune>
+    <Provincia></Provincia>
   </DatiEvento>
   <ElencoSettori>`;
     
@@ -1921,11 +1926,11 @@ router.get("/api/siae/ticketed-events/:eventId/reports/xml", requireAuth, requir
     <Settore>
       <CodiceSettore>${escapeXml(sector.sectorCode)}</CodiceSettore>
       <Denominazione>${escapeXml(sector.name)}</Denominazione>
-      <CapienzaTotale>${sector.totalCapacity}</CapienzaTotale>
+      <CapienzaTotale>${sector.capacity}</CapienzaTotale>
       <PostiNumerati>${sector.isNumbered ? 'SI' : 'NO'}</PostiNumerati>
       <BigliettiEmessi>${sectorTickets.length}</BigliettiEmessi>
       <BigliettiValidi>${soldTickets.length}</BigliettiValidi>
-      <ImportoTotale>${(soldTickets.reduce((sum, t) => sum + t.grossPrice, 0) / 100).toFixed(2)}</ImportoTotale>
+      <ImportoTotale>${soldTickets.reduce((sum, t) => sum + parseFloat(t.grossAmount || '0'), 0).toFixed(2)}</ImportoTotale>
     </Settore>`;
     }
     
@@ -1935,9 +1940,9 @@ router.get("/api/siae/ticketed-events/:eventId/reports/xml", requireAuth, requir
     <TotaleBigliettiEmessi>${allTickets.length}</TotaleBigliettiEmessi>
     <TotaleBigliettiValidi>${allTickets.filter(t => t.status !== 'cancelled').length}</TotaleBigliettiValidi>
     <TotaleBigliettiAnnullati>${allTickets.filter(t => t.status === 'cancelled').length}</TotaleBigliettiAnnullati>
-    <TotaleIncassoLordo>${(allTickets.reduce((sum, t) => sum + t.grossPrice, 0) / 100).toFixed(2)}</TotaleIncassoLordo>
-    <TotaleDiritti>${(allTickets.reduce((sum, t) => sum + t.siaeFee, 0) / 100).toFixed(2)}</TotaleDiritti>
-    <TotaleIVA>${(allTickets.reduce((sum, t) => sum + t.vatAmount, 0) / 100).toFixed(2)}</TotaleIVA>
+    <TotaleIncassoLordo>${allTickets.reduce((sum, t) => sum + parseFloat(t.grossAmount || '0'), 0).toFixed(2)}</TotaleIncassoLordo>
+    <TotaleDiritti>0.00</TotaleDiritti>
+    <TotaleIVA>${allTickets.reduce((sum, t) => sum + parseFloat(t.vatAmount || '0'), 0).toFixed(2)}</TotaleIVA>
   </Riepilogo>
 </ReportEvento>`;
     
@@ -1982,11 +1987,14 @@ router.get("/api/siae/companies/:companyId/reports/xml/cancellations", requireAu
     // Get cancellation reasons
     const reasons = await siaeStorage.getSiaeCancellationReasons();
     
+    // Get system config for fiscal code
+    const systemConfig = await siaeStorage.getSiaeSystemConfig(companyId);
+    
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <ReportAnnullamenti xmlns="urn:siae:biglietteria:2025">
   <Intestazione>
-    <CodiceFiscaleEmittente>${escapeXml(activeCard.fiscalCode)}</CodiceFiscaleEmittente>
-    <NumeroCarta>${escapeXml(activeCard.cardNumber)}</NumeroCarta>
+    <CodiceFiscaleEmittente>${escapeXml(systemConfig?.taxId || '')}</CodiceFiscaleEmittente>
+    <NumeroCarta>${escapeXml(activeCard.cardCode)}</NumeroCarta>
     <PeriodoDa>${formatSiaeDate(startDate)}</PeriodoDa>
     <PeriodoA>${formatSiaeDate(endDate)}</PeriodoA>
     <DataOraGenerazione>${formatSiaeDateTime(new Date())}</DataOraGenerazione>
@@ -2758,7 +2766,7 @@ router.get('/api/siae/ticketed-events/:id/reports/pdf', requireAuth, async (req:
     }> = {};
 
     for (const tx of completedTransactions) {
-      const dateStr = tx.transactionDate ? new Date(tx.transactionDate).toISOString().split('T')[0] : 'N/D';
+      const dateStr = tx.createdAt ? new Date(tx.createdAt).toISOString().split('T')[0] : 'N/D';
       if (!salesByDate[dateStr]) {
         salesByDate[dateStr] = { date: dateStr, ticketsSold: 0, totalAmount: 0 };
       }
@@ -2911,7 +2919,7 @@ router.get("/api/siae/tickets/my", requireAuth, async (req: Request, res: Respon
             ? eq(siaeCustomers.phone, user.phone)
             : eq(siaeCustomers.email, user.email)
       )
-      .orderBy(desc(siaeTicketedEvents.eventDate));
+      .orderBy(desc(siaeTicketedEvents.createdAt));
     
     res.json(tickets);
   } catch (error: any) {
@@ -3272,8 +3280,7 @@ router.post("/api/cashiers/events/:eventId/tickets", requireAuth, async (req: Re
       // Update ticket with fiscal seal if available
       if (fiscalSealData?.sealCode && result.ticket) {
         await siaeStorage.updateSiaeTicket(result.ticket.id, {
-          fiscalSealCode: fiscalSealData.sealCode,
-          fiscalSeal: JSON.stringify(fiscalSealData)
+          fiscalSealCode: fiscalSealData.sealCode
         });
         // Update result.ticket for response
         result.ticket.fiscalSealCode = fiscalSealData.sealCode;
@@ -4320,8 +4327,7 @@ router.post("/api/cashier/events/:eventId/emit-ticket", requireAuth, requireCash
     // Update ticket with fiscal seal if available
     if (fiscalSealCode && result.ticket) {
       await siaeStorage.updateSiaeTicket(result.ticket.id, {
-        fiscalSealCode,
-        fiscalSeal: JSON.stringify(fiscalSeal)
+        fiscalSealCode
       });
     }
     
