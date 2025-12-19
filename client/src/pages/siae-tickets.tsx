@@ -327,10 +327,14 @@ export default function SiaeTicketsPage() {
       setCancelReasonCode("");
       setRefundOnCancel(false);
       
-      if (data.refunded) {
+      // Check for refund - backend returns { ticket, refund } where refund has stripeRefundId/refundedAmount
+      const wasRefunded = data.refund?.stripeRefundId || data.ticket?.refundedAt;
+      const refundAmount = data.refund?.refundedAmount || data.ticket?.refundAmount;
+      
+      if (wasRefunded && refundAmount) {
         toast({
           title: "Biglietto Annullato e Rimborsato",
-          description: `Il biglietto è stato annullato e rimborsato €${data.refundedAmount}`,
+          description: `Il biglietto è stato annullato e rimborsato €${Number(refundAmount).toFixed(2)}`,
         });
       } else {
         toast({
