@@ -168,20 +168,20 @@ function SectorCard({
           )}
         </AnimatePresence>
 
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between gap-3">
-            <div className="flex-1">
+        <CardHeader className="pb-2 sm:pb-3 p-4 sm:p-6">
+          <div className="flex items-start justify-between gap-2 sm:gap-3">
+            <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
-                  <Ticket className="w-4 h-4 text-black" />
+                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shrink-0">
+                  <Ticket className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black" />
                 </div>
-                <CardTitle className="text-xl text-foreground" data-testid={`text-sector-name-${sector.id}`}>
+                <CardTitle className="text-lg sm:text-xl text-foreground truncate" data-testid={`text-sector-name-${sector.id}`}>
                   {sector.name}
                 </CardTitle>
               </div>
             </div>
-            <div className="text-right">
-              <div className="text-3xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent" data-testid={`text-sector-price-${sector.id}`}>
+            <div className="text-right shrink-0">
+              <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent" data-testid={`text-sector-price-${sector.id}`}>
                 €{price.toFixed(2)}
               </div>
               {sector.priceRidotto && Number(sector.priceRidotto) > 0 && (
@@ -190,7 +190,7 @@ function SectorCard({
             </div>
           </div>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0 sm:pt-0">
           {!isAvailable ? (
             <div className="py-6 text-center">
               <Badge variant="destructive" className="text-sm px-4 py-2">
@@ -201,10 +201,10 @@ function SectorCard({
             <>
               {sector.priceRidotto && Number(sector.priceRidotto) > 0 && (
                 <div className="space-y-2">
-                  <Label className="text-sm text-muted-foreground font-medium">Tipo Biglietto</Label>
-                  <RadioGroup value={ticketType} onValueChange={setTicketType} className="flex gap-3">
+                  <Label className="text-xs sm:text-sm text-muted-foreground font-medium">Tipo Biglietto</Label>
+                  <RadioGroup value={ticketType} onValueChange={setTicketType} className="flex gap-2 sm:gap-3">
                     <div 
-                      className={`flex-1 p-3 rounded-xl border cursor-pointer transition-all ${
+                      className={`flex-1 p-2.5 sm:p-3 rounded-xl border cursor-pointer transition-all ${
                         ticketType === "intero" 
                           ? "border-primary bg-primary/10" 
                           : "border-border hover:border-muted"
@@ -213,14 +213,14 @@ function SectorCard({
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="intero" id={`intero-${sector.id}`} className="border-primary" />
-                        <Label htmlFor={`intero-${sector.id}`} className="text-foreground cursor-pointer font-medium">
+                        <Label htmlFor={`intero-${sector.id}`} className="text-foreground cursor-pointer font-medium text-sm sm:text-base">
                           Intero
                         </Label>
                       </div>
-                      <p className="text-primary font-bold mt-1">€{Number(sector.priceIntero).toFixed(2)}</p>
+                      <p className="text-primary font-bold mt-1 text-sm sm:text-base">€{Number(sector.priceIntero).toFixed(2)}</p>
                     </div>
                     <div 
-                      className={`flex-1 p-3 rounded-xl border cursor-pointer transition-all ${
+                      className={`flex-1 p-2.5 sm:p-3 rounded-xl border cursor-pointer transition-all ${
                         ticketType === "ridotto" 
                           ? "border-primary bg-primary/10" 
                           : "border-border hover:border-muted"
@@ -229,11 +229,11 @@ function SectorCard({
                     >
                       <div className="flex items-center space-x-2">
                         <RadioGroupItem value="ridotto" id={`ridotto-${sector.id}`} className="border-primary" />
-                        <Label htmlFor={`ridotto-${sector.id}`} className="text-foreground cursor-pointer font-medium">
+                        <Label htmlFor={`ridotto-${sector.id}`} className="text-foreground cursor-pointer font-medium text-sm sm:text-base">
                           Ridotto
                         </Label>
                       </div>
-                      <p className="text-primary font-bold mt-1">€{Number(sector.priceRidotto).toFixed(2)}</p>
+                      <p className="text-primary font-bold mt-1 text-sm sm:text-base">€{Number(sector.priceRidotto).toFixed(2)}</p>
                     </div>
                   </RadioGroup>
                 </div>
@@ -241,8 +241,8 @@ function SectorCard({
 
               {sector.isNumbered ? (
                 <div className="space-y-2">
-                  <Label className="text-sm text-muted-foreground font-medium">Seleziona Posto</Label>
-                  <div className="grid grid-cols-6 gap-2 max-h-40 overflow-y-auto p-3 bg-background/30 rounded-xl">
+                  <Label className="text-xs sm:text-sm text-muted-foreground font-medium">Seleziona Posto</Label>
+                  <div className="grid grid-cols-5 sm:grid-cols-6 gap-1.5 sm:gap-2 max-h-40 overflow-y-auto p-2 sm:p-3 bg-background/30 rounded-xl">
                     {sector.seats.map((seat) => (
                       <button
                         key={seat.id}
@@ -274,8 +274,8 @@ function SectorCard({
                 </div>
               ) : (
                 <div className="space-y-2">
-                  <Label className="text-sm text-muted-foreground font-medium">Quantità</Label>
-                  <div className="flex items-center gap-4 bg-background/30 rounded-xl p-2">
+                  <Label className="text-xs sm:text-sm text-muted-foreground font-medium">Quantità</Label>
+                  <div className="flex items-center gap-3 sm:gap-4 bg-background/30 rounded-xl p-2">
                     <Button
                       variant="ghost"
                       size="icon"
@@ -285,7 +285,7 @@ function SectorCard({
                     >
                       <Minus className="w-5 h-5" />
                     </Button>
-                    <span className="text-2xl font-bold text-foreground w-12 text-center" data-testid={`text-quantity-${sector.id}`}>
+                    <span className="text-xl sm:text-2xl font-bold text-foreground w-10 sm:w-12 text-center" data-testid={`text-quantity-${sector.id}`}>
                       {quantity}
                     </span>
                     <Button
@@ -302,34 +302,34 @@ function SectorCard({
               )}
 
               {requiresNominative && (
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
                   <div className="space-y-1">
-                    <Label className="text-sm text-muted-foreground font-medium">Nome</Label>
+                    <Label className="text-xs sm:text-sm text-muted-foreground font-medium">Nome</Label>
                     <Input
                       value={firstName}
                       onChange={(e) => setFirstName(e.target.value)}
                       placeholder="Mario"
-                      className="bg-background/30 border-border text-foreground placeholder:text-muted-foreground rounded-xl"
+                      className="bg-background/30 border-border text-foreground placeholder:text-muted-foreground rounded-xl h-11"
                       data-testid={`input-firstname-${sector.id}`}
                     />
                   </div>
                   <div className="space-y-1">
-                    <Label className="text-sm text-muted-foreground font-medium">Cognome</Label>
+                    <Label className="text-xs sm:text-sm text-muted-foreground font-medium">Cognome</Label>
                     <Input
                       value={lastName}
                       onChange={(e) => setLastName(e.target.value)}
                       placeholder="Rossi"
-                      className="bg-background/30 border-border text-foreground placeholder:text-muted-foreground rounded-xl"
+                      className="bg-background/30 border-border text-foreground placeholder:text-muted-foreground rounded-xl h-11"
                       data-testid={`input-lastname-${sector.id}`}
                     />
                   </div>
                 </div>
               )}
 
-              <div className="flex items-center justify-between pt-4 border-t border-border">
+              <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-border gap-3">
                 <div>
                   <p className="text-xs text-muted-foreground uppercase tracking-wider">Totale</p>
-                  <p className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent" data-testid={`text-total-${sector.id}`}>
+                  <p className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent" data-testid={`text-total-${sector.id}`}>
                     €{totalPrice.toFixed(2)}
                   </p>
                 </div>
@@ -340,15 +340,15 @@ function SectorCard({
                     (sector.isNumbered && !selectedSeat) ||
                     (requiresNominative && (!firstName || !lastName))
                   }
-                  className="font-bold px-6 py-3 rounded-xl shadow-lg shadow-primary/25 transition-all"
+                  className="font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl shadow-lg shadow-primary/25 transition-all h-11 sm:h-auto"
                   data-testid={`button-add-${sector.id}`}
                 >
                   {isAdding ? (
                     <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
                   ) : (
                     <>
-                      <ShoppingCart className="w-5 h-5 mr-2" />
-                      Aggiungi
+                      <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
+                      <span className="text-sm sm:text-base">Aggiungi</span>
                     </>
                   )}
                 </Button>
@@ -463,23 +463,23 @@ export default function PublicEventDetailPage() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6">
+      <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
         {isLoading ? (
-          <div className="space-y-6">
-            <Skeleton className="h-80 rounded-3xl" />
-            <div className="grid md:grid-cols-2 gap-6">
-              <Skeleton className="h-64 rounded-2xl" />
-              <Skeleton className="h-64 rounded-2xl" />
+          <div className="space-y-4 sm:space-y-6">
+            <Skeleton className="h-64 sm:h-80 rounded-2xl sm:rounded-3xl" />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
+              <Skeleton className="h-56 sm:h-64 rounded-xl sm:rounded-2xl" />
+              <Skeleton className="h-56 sm:h-64 rounded-xl sm:rounded-2xl" />
             </div>
           </div>
         ) : event ? (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="space-y-8"
+            className="space-y-4 sm:space-y-8"
           >
-            <Card className="relative overflow-hidden rounded-3xl border-0 bg-gradient-to-br from-indigo-900/60 via-purple-900/50 to-pink-900/40">
-              <div className="relative aspect-square md:aspect-[2/1]">
+            <Card className="relative overflow-hidden rounded-2xl sm:rounded-3xl border-0 bg-gradient-to-br from-indigo-900/60 via-purple-900/50 to-pink-900/40">
+              <div className="relative aspect-[4/3] sm:aspect-square md:aspect-[2/1]">
                 {event.eventImageUrl ? (
                   <img
                     src={event.eventImageUrl}
@@ -496,49 +496,50 @@ export default function PublicEventDetailPage() {
                 <div className="absolute inset-0 bg-gradient-to-r from-background/50 to-transparent" />
               </div>
               
-              <CardContent className="absolute bottom-0 left-0 right-0 p-6 md:p-10">
+              <CardContent className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-10">
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
                 >
-                  <div className="flex flex-wrap gap-2 mb-4">
+                  <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-2 sm:mb-4">
                     {event.ticketingStatus === "active" && (
-                      <Badge className="bg-emerald-500/90 text-white border-0 px-3 py-1 shadow-lg shadow-emerald-500/25">
-                        <Zap className="w-3 h-3 mr-1" />
+                      <Badge className="bg-emerald-500/90 text-white border-0 px-2 sm:px-3 py-0.5 sm:py-1 shadow-lg shadow-emerald-500/25 text-xs sm:text-sm">
+                        <Zap className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
                         In Vendita
                       </Badge>
                     )}
                     {event.requiresNominative && (
-                      <Badge className="bg-purple-500/90 text-white border-0 px-3 py-1">
+                      <Badge className="bg-purple-500/90 text-white border-0 px-2 sm:px-3 py-0.5 sm:py-1 text-xs sm:text-sm">
                         Nominativo
                       </Badge>
                     )}
                   </div>
                   
                   <h1
-                    className="text-3xl md:text-5xl font-black text-foreground mb-4 leading-tight"
+                    className="text-xl sm:text-3xl md:text-5xl font-black text-foreground mb-2 sm:mb-4 leading-tight"
                     data-testid="text-event-name"
                   >
                     {event.eventName}
                   </h1>
                   
-                  <div className="flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6 text-foreground/90">
-                    <div className="flex items-center gap-2 bg-muted/50 backdrop-blur-sm rounded-xl px-4 py-2">
-                      <Calendar className="w-5 h-5 text-primary" />
-                      <span className="font-medium" data-testid="text-event-date">
-                        {format(new Date(event.eventStart), "EEEE d MMMM", { locale: it })}
+                  <div className="flex flex-wrap gap-2 sm:gap-4 text-foreground/90">
+                    <div className="flex items-center gap-1.5 sm:gap-2 bg-muted/50 backdrop-blur-sm rounded-lg sm:rounded-xl px-2.5 sm:px-4 py-1.5 sm:py-2">
+                      <Calendar className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-primary" />
+                      <span className="font-medium text-xs sm:text-base" data-testid="text-event-date">
+                        {format(new Date(event.eventStart), "d MMM", { locale: it })}
+                        <span className="hidden sm:inline"> {format(new Date(event.eventStart), "EEEE", { locale: it })}</span>
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 bg-muted/50 backdrop-blur-sm rounded-xl px-4 py-2">
-                      <Clock className="w-5 h-5 text-primary" />
-                      <span className="font-medium" data-testid="text-event-time">
+                    <div className="flex items-center gap-1.5 sm:gap-2 bg-muted/50 backdrop-blur-sm rounded-lg sm:rounded-xl px-2.5 sm:px-4 py-1.5 sm:py-2">
+                      <Clock className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-primary" />
+                      <span className="font-medium text-xs sm:text-base" data-testid="text-event-time">
                         {format(new Date(event.eventStart), "HH:mm")}
                       </span>
                     </div>
-                    <div className="flex items-center gap-2 bg-muted/50 backdrop-blur-sm rounded-xl px-4 py-2">
-                      <MapPin className="w-5 h-5 text-primary" />
-                      <span className="font-medium" data-testid="text-event-location">
+                    <div className="flex items-center gap-1.5 sm:gap-2 bg-muted/50 backdrop-blur-sm rounded-lg sm:rounded-xl px-2.5 sm:px-4 py-1.5 sm:py-2">
+                      <MapPin className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-primary" />
+                      <span className="font-medium text-xs sm:text-base truncate max-w-[120px] sm:max-w-none" data-testid="text-event-location">
                         {event.locationName}
                       </span>
                     </div>
@@ -553,9 +554,9 @@ export default function PublicEventDetailPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 }}
               >
-                <Card className="bg-card/50 border-border p-6 rounded-2xl backdrop-blur-sm">
-                  <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                    <Star className="w-5 h-5 text-primary" />
+                <Card className="bg-card/50 border-border p-4 sm:p-6 rounded-xl sm:rounded-2xl backdrop-blur-sm">
+                  <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2 sm:mb-3 flex items-center gap-2">
+                    <Star className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
                     Descrizione
                   </h3>
                   <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-event-description">

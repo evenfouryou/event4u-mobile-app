@@ -89,21 +89,21 @@ export default function ResetPassword() {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <header className="border-b">
-          <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+          <div className="container mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4 flex items-center justify-between">
             <Link href="/">
               <img 
                 src="/logo.png" 
                 alt="EventFourYou" 
-                className="h-10 w-auto cursor-pointer"
+                className="h-8 sm:h-10 w-auto cursor-pointer"
               />
             </Link>
             <ThemeToggle />
           </div>
         </header>
-        <main className="flex-1 flex items-center justify-center">
+        <main className="flex-1 flex items-center justify-center p-3 sm:p-4 md:p-6">
           <div className="text-center">
             <Loader2 className="h-8 w-8 animate-spin mx-auto text-primary" />
-            <p className="text-muted-foreground mt-4">Verifica del link in corso...</p>
+            <p className="text-muted-foreground mt-4 text-sm sm:text-base">Verifica del link in corso...</p>
           </div>
         </main>
       </div>
@@ -113,30 +113,30 @@ export default function ResetPassword() {
   return (
     <div className="min-h-screen bg-background flex flex-col">
       <header className="border-b">
-        <div className="container mx-auto px-6 py-4 flex items-center justify-between">
+        <div className="container mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4 flex items-center justify-between">
           <Link href="/">
             <img 
               src="/logo.png" 
               alt="EventFourYou" 
-              className="h-10 w-auto cursor-pointer"
+              className="h-8 sm:h-10 w-auto cursor-pointer"
             />
           </Link>
           <ThemeToggle />
         </div>
       </header>
 
-      <main className="flex-1 flex items-center justify-center p-6">
+      <main className="flex-1 flex items-center justify-center p-3 sm:p-4 md:p-6">
         <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle>Reimposta Password</CardTitle>
-            <CardDescription>
+          <CardHeader className="px-4 sm:px-6">
+            <CardTitle className="text-xl sm:text-2xl">Reimposta Password</CardTitle>
+            <CardDescription className="text-sm sm:text-base">
               {isValidToken 
                 ? `Inserisci una nuova password per ${userEmail}`
                 : "Impossibile reimpostare la password"
               }
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="px-4 sm:px-6">
             {!isValidToken ? (
               <div className="space-y-4">
                 <Alert variant="destructive" data-testid="alert-error">
@@ -180,6 +180,7 @@ export default function ResetPassword() {
                       onChange={(e) => setPassword(e.target.value)}
                       required
                       disabled={isLoading || !!success}
+                      className="h-10 sm:h-11"
                       data-testid="input-password"
                     />
                     <Button
@@ -209,6 +210,7 @@ export default function ResetPassword() {
                     onChange={(e) => setConfirmPassword(e.target.value)}
                     required
                     disabled={isLoading || !!success}
+                    className="h-10 sm:h-11"
                     data-testid="input-confirm-password"
                   />
                 </div>

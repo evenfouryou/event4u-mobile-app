@@ -219,8 +219,8 @@ function VenueCard({ venue }: { venue: Venue }) {
         )}
       </div>
 
-      <CardContent className="p-6">
-        <h3 className="text-xl font-bold text-foreground mb-2" data-testid={`text-venue-name-${venue.id}`}>
+      <CardContent className="p-4 sm:p-6">
+        <h3 className="text-lg sm:text-xl font-bold text-foreground mb-2" data-testid={`text-venue-name-${venue.id}`}>
           {venue.name}
         </h3>
         
@@ -245,25 +245,25 @@ function VenueCard({ venue }: { venue: Venue }) {
         )}
 
         {venue.upcomingEvents.length > 0 && (
-          <div className="border-t border-border pt-4 mt-4">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-3">Prossimi Eventi</p>
+          <div className="border-t border-border pt-3 sm:pt-4 mt-3 sm:mt-4">
+            <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2 sm:mb-3">Prossimi Eventi</p>
             <div className="space-y-2">
               {venue.upcomingEvents.slice(0, 2).map((event) => (
                 <Link key={event.id} href={`/acquista/${event.id}`}>
                   <div 
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover:bg-primary/10 transition-colors cursor-pointer"
+                    className="flex items-center justify-between p-2.5 sm:p-3 rounded-lg bg-muted/50 hover:bg-primary/10 transition-colors cursor-pointer min-h-[44px]"
                     data-testid={`link-event-${event.id}`}
                   >
                     <div className="flex-1 min-w-0">
-                      <p className="text-foreground font-medium text-sm truncate">{event.eventName}</p>
+                      <p className="text-foreground font-medium text-xs sm:text-sm truncate">{event.eventName}</p>
                       <p className="text-muted-foreground text-xs flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
                         {format(new Date(event.eventStart), "d MMM yyyy", { locale: it })}
                       </p>
                     </div>
                     {event.minPrice !== null && (
-                      <div className="text-right ml-3">
-                        <p className="text-primary font-semibold text-sm">
+                      <div className="text-right ml-2 sm:ml-3">
+                        <p className="text-primary font-semibold text-xs sm:text-sm">
                           da €{event.minPrice.toFixed(0)}
                         </p>
                       </div>

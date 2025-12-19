@@ -227,11 +227,11 @@ export default function EventDirectStock() {
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
+    <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto pb-24 md:pb-8">
       <motion.div
         initial={{ opacity: 0, x: -20 }}
         animate={{ opacity: 1, x: 0 }}
-        className="flex items-center gap-4 mb-8"
+        className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8"
       >
         <Button
           asChild
@@ -244,11 +244,11 @@ export default function EventDirectStock() {
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
-        <div className="flex-1">
-          <h1 className="text-xl md:text-2xl font-bold" data-testid="text-event-name">
+        <div className="flex-1 min-w-0">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-bold truncate" data-testid="text-event-name">
             Carico/Scarico Diretto
           </h1>
-          <p className="text-sm text-muted-foreground">{event.name}</p>
+          <p className="text-xs sm:text-sm text-muted-foreground truncate">{event.name}</p>
         </div>
       </motion.div>
 
@@ -291,7 +291,7 @@ export default function EventDirectStock() {
         </motion.div>
       )}
 
-      <div className="grid gap-6 md:grid-cols-2 mb-8">
+      <div className="grid gap-4 sm:gap-6 md:grid-cols-2 mb-6 md:mb-8">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

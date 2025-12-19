@@ -129,8 +129,8 @@ export default function Settings() {
 
   if (isLoading) {
     return (
-      <div className="p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
-        <div className="mb-8">
+      <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
+        <div className="mb-6 sm:mb-8">
           <Skeleton className="h-8 w-48 mb-2 rounded-xl" />
           <Skeleton className="h-4 w-72 rounded-lg" />
         </div>
@@ -141,7 +141,7 @@ export default function Settings() {
 
   if (!company) {
     return (
-      <div className="p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
+      <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}

@@ -123,15 +123,15 @@ export default function StaffPrHome() {
         {/* Stats Cards */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
           <Card className="glass-card border-white/10">
-            <CardContent className="p-4 sm:p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-blue-500/20">
-                  <Calendar className="h-6 w-6 text-blue-400" />
+            <CardContent className="p-3 sm:p-4 md:p-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="p-2 sm:p-3 rounded-full bg-blue-500/20">
+                  <Calendar className="h-5 w-5 sm:h-6 sm:w-6 text-blue-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Eventi Attivi</p>
-                  <p className="text-2xl font-bold" data-testid="stat-active-events">
-                    {statsLoading ? <Skeleton className="h-8 w-12" /> : myStats?.activeEvents || 0}
+                  <p className="text-xs sm:text-sm text-muted-foreground">Eventi Attivi</p>
+                  <p className="text-xl sm:text-2xl font-bold" data-testid="stat-active-events">
+                    {statsLoading ? <Skeleton className="h-6 sm:h-8 w-10 sm:w-12" /> : myStats?.activeEvents || 0}
                   </p>
                 </div>
               </div>
@@ -139,15 +139,15 @@ export default function StaffPrHome() {
           </Card>
 
           <Card className="glass-card border-white/10">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-teal-500/20">
-                  <Users className="h-6 w-6 text-teal-400" />
+            <CardContent className="p-3 sm:p-4 md:p-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="p-2 sm:p-3 rounded-full bg-teal-500/20">
+                  <Users className="h-5 w-5 sm:h-6 sm:w-6 text-teal-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Persone Aggiunte</p>
-                  <p className="text-2xl font-bold" data-testid="stat-entries">
-                    {statsLoading ? <Skeleton className="h-8 w-12" /> : myStats?.entriesCreated || 0}
+                  <p className="text-xs sm:text-sm text-muted-foreground">Persone Aggiunte</p>
+                  <p className="text-xl sm:text-2xl font-bold" data-testid="stat-entries">
+                    {statsLoading ? <Skeleton className="h-6 sm:h-8 w-10 sm:w-12" /> : myStats?.entriesCreated || 0}
                   </p>
                 </div>
               </div>
@@ -155,15 +155,15 @@ export default function StaffPrHome() {
           </Card>
 
           <Card className="glass-card border-white/10">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-green-500/20">
-                  <CheckCircle2 className="h-6 w-6 text-green-400" />
+            <CardContent className="p-3 sm:p-4 md:p-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="p-2 sm:p-3 rounded-full bg-green-500/20">
+                  <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-green-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Check-in Effettuati</p>
-                  <p className="text-2xl font-bold" data-testid="stat-checkins">
-                    {statsLoading ? <Skeleton className="h-8 w-12" /> : myStats?.checkIns || 0}
+                  <p className="text-xs sm:text-sm text-muted-foreground">Check-in Effettuati</p>
+                  <p className="text-xl sm:text-2xl font-bold" data-testid="stat-checkins">
+                    {statsLoading ? <Skeleton className="h-6 sm:h-8 w-10 sm:w-12" /> : myStats?.checkIns || 0}
                   </p>
                 </div>
               </div>
@@ -171,15 +171,15 @@ export default function StaffPrHome() {
           </Card>
 
           <Card className="glass-card border-white/10">
-            <CardContent className="p-6">
-              <div className="flex items-center gap-4">
-                <div className="p-3 rounded-full bg-pink-500/20">
-                  <Armchair className="h-6 w-6 text-pink-400" />
+            <CardContent className="p-3 sm:p-4 md:p-6">
+              <div className="flex items-center gap-3 sm:gap-4">
+                <div className="p-2 sm:p-3 rounded-full bg-pink-500/20">
+                  <Armchair className="h-5 w-5 sm:h-6 sm:w-6 text-pink-400" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Tavoli Proposti</p>
-                  <p className="text-2xl font-bold" data-testid="stat-tables">
-                    {statsLoading ? <Skeleton className="h-8 w-12" /> : myStats?.tablesProposed || 0}
+                  <p className="text-xs sm:text-sm text-muted-foreground">Tavoli Proposti</p>
+                  <p className="text-xl sm:text-2xl font-bold" data-testid="stat-tables">
+                    {statsLoading ? <Skeleton className="h-6 sm:h-8 w-10 sm:w-12" /> : myStats?.tablesProposed || 0}
                   </p>
                 </div>
               </div>
@@ -280,16 +280,16 @@ export default function StaffPrHome() {
             Azioni Rapide
           </h2>
           
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
             {(isStaff || isPr) && (
               <Button 
                 variant="outline" 
-                className="h-20 flex-col gap-2"
+                className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 text-xs sm:text-sm"
                 onClick={() => myEvents?.[0] && navigate(`/events/${myEvents[0].id}/panel`)}
                 disabled={!myEvents?.length}
                 data-testid="button-quick-lists"
               >
-                <ListChecks className="h-6 w-6" />
+                <ListChecks className="h-5 w-5 sm:h-6 sm:w-6" />
                 <span>Gestione Liste</span>
               </Button>
             )}
@@ -297,12 +297,12 @@ export default function StaffPrHome() {
             {isPr && (
               <Button 
                 variant="outline" 
-                className="h-20 flex-col gap-2"
+                className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 text-xs sm:text-sm"
                 onClick={() => myEvents?.[0] && navigate(`/events/${myEvents[0].id}/panel?tab=tables`)}
                 disabled={!myEvents?.length}
                 data-testid="button-quick-tables"
               >
-                <Armchair className="h-6 w-6" />
+                <Armchair className="h-5 w-5 sm:h-6 sm:w-6" />
                 <span>Proponi Tavoli</span>
               </Button>
             )}
@@ -310,23 +310,23 @@ export default function StaffPrHome() {
             {isStaff && (
               <Button 
                 variant="outline" 
-                className="h-20 flex-col gap-2"
+                className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 text-xs sm:text-sm"
                 onClick={() => myEvents?.[0] && navigate(`/events/${myEvents[0].id}/panel?tab=pr`)}
                 disabled={!myEvents?.length}
                 data-testid="button-quick-pr"
               >
-                <UserPlus className="h-6 w-6" />
+                <UserPlus className="h-5 w-5 sm:h-6 sm:w-6" />
                 <span>Gestione PR</span>
               </Button>
             )}
 
             <Button 
               variant="outline" 
-              className="h-20 flex-col gap-2"
+              className="h-16 sm:h-20 flex-col gap-1 sm:gap-2 text-xs sm:text-sm"
               onClick={() => navigate('/scanner')}
               data-testid="button-quick-scanner"
             >
-              <QrCode className="h-6 w-6" />
+              <QrCode className="h-5 w-5 sm:h-6 sm:w-6" />
               <span>Scanner QR</span>
             </Button>
           </div>

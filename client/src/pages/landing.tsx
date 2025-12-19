@@ -264,7 +264,7 @@ export default function Landing() {
         </section>
 
         {/* Features Section */}
-        <section className="container mx-auto px-4 md:px-6 py-16 md:py-24">
+        <section className="container mx-auto px-3 sm:px-4 md:px-6 py-8 sm:py-12 md:py-24">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -272,7 +272,7 @@ export default function Landing() {
             transition={{ duration: 0.5 }}
             className="text-center mb-12"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">
               Tutto ciò di cui hai bisogno
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
@@ -305,7 +305,7 @@ export default function Landing() {
         </section>
 
         {/* Modules Preview */}
-        <section className="container mx-auto px-4 md:px-6 py-16 md:py-24">
+        <section className="container mx-auto px-3 sm:px-4 md:px-6 py-8 sm:py-12 md:py-24">
           <motion.div 
             initial={{ opacity: 0, y: 20 }}
             whileInView={{ opacity: 1, y: 0 }}
@@ -313,7 +313,7 @@ export default function Landing() {
             transition={{ duration: 0.5 }}
             className="text-center mb-12"
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">
+            <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">
               Moduli Integrati
             </h2>
             <p className="text-muted-foreground max-w-xl mx-auto">
@@ -349,22 +349,22 @@ export default function Landing() {
         </section>
 
         {/* CTA Section */}
-        <section className="container mx-auto px-4 md:px-6 py-16 md:py-24">
+        <section className="container mx-auto px-3 sm:px-4 md:px-6 py-8 sm:py-12 md:py-24">
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             whileInView={{ opacity: 1, scale: 1 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="glass-card p-8 md:p-12 text-center relative overflow-hidden"
+            className="glass-card p-4 sm:p-6 md:p-12 text-center relative overflow-hidden"
           >
             {/* Background glow */}
             <div className="absolute inset-0 bg-gradient-to-r from-primary/10 via-transparent to-teal-500/10 pointer-events-none" />
             
             <div className="relative z-10">
-              <h2 className="text-3xl md:text-4xl font-bold mb-4">
+              <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold mb-3 sm:mb-4">
                 Pronto per iniziare?
               </h2>
-              <p className="text-muted-foreground mb-8 max-w-lg mx-auto">
+              <p className="text-muted-foreground mb-6 sm:mb-8 max-w-lg mx-auto text-sm sm:text-base">
                 Unisciti a centinaia di club che già utilizzano Event4U per gestire i loro eventi
               </p>
               <div className="flex flex-col sm:flex-row gap-4 justify-center">
@@ -400,9 +400,9 @@ export default function Landing() {
         whileInView={{ opacity: 1 }}
         viewport={{ once: true }}
         transition={{ duration: 0.5 }}
-        className="border-t border-white/10 py-8 mt-auto"
+        className="border-t border-white/10 py-6 sm:py-8 mt-auto"
       >
-        <div className="container mx-auto px-4 md:px-6">
+        <div className="container mx-auto px-3 sm:px-4 md:px-6">
           <div className="flex flex-col md:flex-row items-center justify-between gap-4 text-sm text-muted-foreground">
             <div className="flex items-center gap-2">
               <div className="w-6 h-6 rounded-lg bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center">

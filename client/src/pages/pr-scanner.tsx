@@ -113,21 +113,21 @@ export default function PrScannerPage() {
             Usa il lettore QR o inserisci manualmente il codice
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
+        <CardContent className="p-3 sm:p-4 md:p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Input
               placeholder="Inserisci o scansiona QR code..."
               value={qrInput}
               onChange={(e) => setQrInput(e.target.value)}
               onKeyPress={handleKeyPress}
               autoFocus
-              className="text-lg font-mono"
+              className="h-12 sm:h-14 text-base sm:text-lg font-mono"
               data-testid="input-qr-code"
             />
             <Button
               onClick={handleScan}
               disabled={scanMutation.isPending || !qrInput.trim()}
-              className="min-w-[120px]"
+              className="h-12 sm:h-14 w-full sm:w-auto sm:min-w-[120px]"
               data-testid="button-scan"
             >
               {scanMutation.isPending ? (
@@ -142,7 +142,7 @@ export default function PrScannerPage() {
           </div>
           <Button
             variant="outline"
-            className="w-full"
+            className="w-full h-12 sm:h-10"
             onClick={resetScanner}
             data-testid="button-reset"
           >

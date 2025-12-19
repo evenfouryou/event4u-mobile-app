@@ -143,18 +143,18 @@ export default function StripeAdminPage() {
   }
 
   return (
-    <div className="p-6 space-y-6" data-testid="page-stripe-admin">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-stripe-admin">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col md:flex-row md:items-center justify-between gap-4"
+        className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4"
       >
         <div>
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3" data-testid="page-title">
-            <CreditCard className="w-8 h-8 text-[#FFD700]" />
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2 sm:gap-3" data-testid="page-title">
+            <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 md:w-8 md:h-8 text-[#FFD700] flex-shrink-0" />
             Pagamenti Stripe
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Gestisci le transazioni e monitora i pagamenti
           </p>
         </div>
@@ -218,24 +218,24 @@ export default function StripeAdminPage() {
         </Card>
       </motion.div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
         >
           <Card className="glass-card" data-testid="card-total-revenue">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                  <Euro className="h-5 w-5 text-white" />
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-start justify-between mb-2 sm:mb-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center flex-shrink-0">
+                  <Euro className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                 </div>
-                <TrendingUp className="h-4 w-4 text-emerald-400" />
+                <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-emerald-400" />
               </div>
-              <div className="text-2xl font-bold text-[#FFD700]" data-testid="stat-total-revenue">
+              <div className="text-lg sm:text-2xl font-bold text-[#FFD700]" data-testid="stat-total-revenue">
                 €{stats.totalRevenue.toFixed(2)}
               </div>
-              <div className="text-xs text-muted-foreground">Incasso Totale</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground">Incasso Totale</div>
             </CardContent>
           </Card>
         </motion.div>
@@ -246,16 +246,16 @@ export default function StripeAdminPage() {
           transition={{ delay: 0.25 }}
         >
           <Card className="glass-card" data-testid="card-today-revenue">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                  <Activity className="h-5 w-5 text-white" />
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-start justify-between mb-2 sm:mb-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
+                  <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                 </div>
               </div>
-              <div className="text-2xl font-bold" data-testid="stat-today-revenue">
+              <div className="text-lg sm:text-2xl font-bold" data-testid="stat-today-revenue">
                 €{stats.todayRevenue.toFixed(2)}
               </div>
-              <div className="text-xs text-muted-foreground">Incasso Oggi</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground">Incasso Oggi</div>
             </CardContent>
           </Card>
         </motion.div>
@@ -266,16 +266,16 @@ export default function StripeAdminPage() {
           transition={{ delay: 0.3 }}
         >
           <Card className="glass-card" data-testid="card-successful-transactions">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center">
-                  <CheckCircle2 className="h-5 w-5 text-white" />
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-start justify-between mb-2 sm:mb-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-green-500 to-emerald-600 flex items-center justify-center flex-shrink-0">
+                  <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-emerald-400" data-testid="stat-successful">
+              <div className="text-lg sm:text-2xl font-bold text-emerald-400" data-testid="stat-successful">
                 {stats.successfulTransactions}
               </div>
-              <div className="text-xs text-muted-foreground">Transazioni Riuscite</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground">Transazioni Riuscite</div>
             </CardContent>
           </Card>
         </motion.div>
@@ -286,16 +286,16 @@ export default function StripeAdminPage() {
           transition={{ delay: 0.35 }}
         >
           <Card className="glass-card" data-testid="card-failed-transactions">
-            <CardContent className="p-4">
-              <div className="flex items-start justify-between mb-3">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center">
-                  <XCircle className="h-5 w-5 text-white" />
+            <CardContent className="p-3 sm:p-4">
+              <div className="flex items-start justify-between mb-2 sm:mb-3">
+                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br from-red-500 to-rose-600 flex items-center justify-center flex-shrink-0">
+                  <XCircle className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
                 </div>
               </div>
-              <div className="text-2xl font-bold text-destructive" data-testid="stat-failed">
+              <div className="text-lg sm:text-2xl font-bold text-destructive" data-testid="stat-failed">
                 {stats.failedTransactions}
               </div>
-              <div className="text-xs text-muted-foreground">Transazioni Fallite</div>
+              <div className="text-[10px] sm:text-xs text-muted-foreground">Transazioni Fallite</div>
             </CardContent>
           </Card>
         </motion.div>

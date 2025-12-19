@@ -113,7 +113,7 @@ function EventCard({
         'bg-gradient-to-r from-gray-500 to-slate-500'}`} 
       />
       
-      <div className="p-5">
+      <div className="p-3 sm:p-5">
         {/* Header */}
         <div className="flex items-start justify-between gap-3 mb-4">
           <div className="flex-1 min-w-0">

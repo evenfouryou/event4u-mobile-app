@@ -91,6 +91,7 @@ export default function ForgotPassword() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={isLoading}
+                  className="h-10 sm:h-11"
                   data-testid="input-email"
                 />
               </div>

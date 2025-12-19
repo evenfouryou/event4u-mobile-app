@@ -245,22 +245,22 @@ export function EventCashierAllocations({ eventId, siaeEventId }: EventCashierAl
 
   return (
     <Card className="glass-card" data-testid="card-cashier-allocations">
-      <CardHeader className="flex flex-row items-center justify-between gap-2">
+      <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 md:p-6">
         <div>
-          <CardTitle className="flex items-center gap-2">
-            <Store className="w-5 h-5 text-[#FFD700]" />
+          <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+            <Store className="w-4 h-4 sm:w-5 sm:h-5 text-[#FFD700] flex-shrink-0" />
             Assegnazioni Cassieri
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-sm">
             Gestisci le quote biglietti assegnate ai cassieri
           </CardDescription>
         </div>
-        <Button onClick={() => handleOpenDialog()} data-testid="button-add-allocation">
+        <Button onClick={() => handleOpenDialog()} data-testid="button-add-allocation" size="sm" className="sm:size-default">
           <Plus className="w-4 h-4 mr-2" />
-          Nuova Assegnazione
+          <span className="hidden sm:inline">Nuova </span>Assegnazione
         </Button>
       </CardHeader>
-      <CardContent>
+      <CardContent className="p-3 sm:p-4 md:p-6">
         {allocationsLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
@@ -286,82 +286,89 @@ export function EventCashierAllocations({ eventId, siaeEventId }: EventCashierAl
             </Button>
           </div>
         ) : (
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Cassiere</TableHead>
-                <TableHead>Settore</TableHead>
-                <TableHead>Quota</TableHead>
-                <TableHead>Utilizzo</TableHead>
-                <TableHead className="text-right">Azioni</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {allocations.map((allocation) => {
-                const percentage = getQuotaPercentage(allocation.quotaUsed, allocation.quotaQuantity);
-                const remaining = allocation.quotaQuantity - allocation.quotaUsed;
-                
-                return (
-                  <TableRow key={allocation.id} data-testid={`row-allocation-${allocation.id}`}>
-                    <TableCell className="font-medium">
-                      {allocation.cashierName || getCashierName(allocation.cashierId)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant="outline">
-                        {allocation.sectorName || (allocation.sectorId ? getSectorName(allocation.sectorId) : "Non assegnato")}
-                      </Badge>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Ticket className="w-4 h-4 text-muted-foreground" />
-                        <span className="font-medium">{allocation.quotaQuantity}</span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="space-y-1">
-                        <div className="flex items-center justify-between text-sm">
-                          <span className={remaining <= 5 ? "text-yellow-500" : remaining <= 0 ? "text-red-500" : ""}>
-                            {allocation.quotaUsed} / {allocation.quotaQuantity}
-                          </span>
-                          <span className="text-muted-foreground text-xs">
-                            ({remaining} rimanenti)
-                          </span>
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead>Cassiere</TableHead>
+                  <TableHead className="hidden sm:table-cell">Settore</TableHead>
+                  <TableHead className="hidden md:table-cell">Quota</TableHead>
+                  <TableHead>Utilizzo</TableHead>
+                  <TableHead className="text-right">Azioni</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {allocations.map((allocation) => {
+                  const percentage = getQuotaPercentage(allocation.quotaUsed, allocation.quotaQuantity);
+                  const remaining = allocation.quotaQuantity - allocation.quotaUsed;
+                  
+                  return (
+                    <TableRow key={allocation.id} data-testid={`row-allocation-${allocation.id}`}>
+                      <TableCell className="font-medium">
+                        <div>
+                          {allocation.cashierName || getCashierName(allocation.cashierId)}
+                          <div className="sm:hidden text-xs text-muted-foreground mt-0.5">
+                            {allocation.sectorName || (allocation.sectorId ? getSectorName(allocation.sectorId) : "Non assegnato")}
+                          </div>
                         </div>
-                        <Progress 
-                          value={percentage} 
-                          className={`h-2 ${percentage > 90 ? "[&>div]:bg-red-500" : percentage > 75 ? "[&>div]:bg-yellow-500" : ""}`}
-                        />
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleOpenDialog(allocation)}
-                          data-testid={`button-edit-allocation-${allocation.id}`}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setAllocationToDelete(allocation);
-                            setIsDeleteDialogOpen(true);
-                          }}
-                          className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                          data-testid={`button-delete-allocation-${allocation.id}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                );
-              })}
-            </TableBody>
-          </Table>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <Badge variant="outline">
+                          {allocation.sectorName || (allocation.sectorId ? getSectorName(allocation.sectorId) : "Non assegnato")}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <div className="flex items-center gap-2">
+                          <Ticket className="w-4 h-4 text-muted-foreground" />
+                          <span className="font-medium">{allocation.quotaQuantity}</span>
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <div className="space-y-1 min-w-[100px]">
+                          <div className="flex items-center justify-between text-xs sm:text-sm">
+                            <span className={remaining <= 5 ? "text-yellow-500" : remaining <= 0 ? "text-red-500" : ""}>
+                              {allocation.quotaUsed} / {allocation.quotaQuantity}
+                            </span>
+                            <span className="text-muted-foreground text-xs hidden sm:inline">
+                              ({remaining})
+                            </span>
+                          </div>
+                          <Progress 
+                            value={percentage} 
+                            className={`h-2 ${percentage > 90 ? "[&>div]:bg-red-500" : percentage > 75 ? "[&>div]:bg-yellow-500" : ""}`}
+                          />
+                        </div>
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleOpenDialog(allocation)}
+                            data-testid={`button-edit-allocation-${allocation.id}`}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setAllocationToDelete(allocation);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                            className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                            data-testid={`button-delete-allocation-${allocation.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  );
+                })}
+              </TableBody>
+            </Table>
+          </div>
         )}
       </CardContent>
 

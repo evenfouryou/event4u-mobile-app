@@ -387,7 +387,7 @@ function CheckoutContent() {
               Metodo di Pagamento
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-6">
+          <CardContent className="p-4 sm:p-6">
             {(createPaymentIntent.isPending || (!createPaymentIntent.data && !createPaymentIntent.isError)) ? (
               <div className="flex items-center justify-center py-12">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -422,7 +422,7 @@ function CheckoutContent() {
           <CardHeader className="border-b border-border">
             <CardTitle className="text-card-foreground">Riepilogo Ordine</CardTitle>
           </CardHeader>
-          <CardContent className="p-6 space-y-4">
+          <CardContent className="p-4 sm:p-6 space-y-4">
             {cart.items.map((item) => (
               <div
                 key={item.id}
@@ -509,7 +509,7 @@ export default function PublicCheckoutPage() {
             </Link>
             <div className="flex items-center gap-2 text-sm text-muted-foreground">
               <Lock className="w-4 h-4" />
-              <span>Checkout Sicuro</span>
+              <span className="hidden sm:inline">Checkout Sicuro</span>
             </div>
           </div>
         </div>

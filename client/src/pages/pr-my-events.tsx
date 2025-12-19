@@ -246,65 +246,65 @@ export default function PrMyEventsPage() {
         </div>
       </div>
 
-      <div className="grid gap-4 md:grid-cols-4">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-3 sm:p-4 md:pt-6">
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-sm text-muted-foreground">Totale Eventi</p>
-                <p className="text-2xl font-bold">{myEvents.length}</p>
+                <p className="text-xs sm:text-sm text-muted-foreground">Totale Eventi</p>
+                <p className="text-xl sm:text-2xl font-bold">{myEvents.length}</p>
               </div>
-              <Calendar className="h-8 w-8 text-primary" />
+              <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-primary flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-3 sm:p-4 md:pt-6">
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-sm text-muted-foreground">In Arrivo</p>
-                <p className="text-2xl font-bold text-blue-500">
+                <p className="text-xs sm:text-sm text-muted-foreground">In Arrivo</p>
+                <p className="text-xl sm:text-2xl font-bold text-blue-500">
                   {upcomingEvents.length}
                 </p>
               </div>
-              <CalendarClock className="h-8 w-8 text-blue-500" />
+              <CalendarClock className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-3 sm:p-4 md:pt-6">
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-sm text-muted-foreground">Oggi</p>
-                <p className="text-2xl font-bold text-green-500">
+                <p className="text-xs sm:text-sm text-muted-foreground">Oggi</p>
+                <p className="text-xl sm:text-2xl font-bold text-green-500">
                   {myEvents.filter(e => isToday(new Date(e.startDatetime))).length}
                 </p>
               </div>
-              <CalendarCheck className="h-8 w-8 text-green-500" />
+              <CalendarCheck className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
         
         <Card>
-          <CardContent className="pt-6">
-            <div className="flex items-center justify-between">
+          <CardContent className="p-3 sm:p-4 md:pt-6">
+            <div className="flex items-center justify-between gap-2">
               <div>
-                <p className="text-sm text-muted-foreground">Completati</p>
-                <p className="text-2xl font-bold text-purple-500">
+                <p className="text-xs sm:text-sm text-muted-foreground">Completati</p>
+                <p className="text-xl sm:text-2xl font-bold text-purple-500">
                   {pastEvents.length}
                 </p>
               </div>
-              <CheckCircle2 className="h-8 w-8 text-purple-500" />
+              <CheckCircle2 className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
             </div>
           </CardContent>
         </Card>
       </div>
 
       <Card>
-        <CardContent className="pt-6">
-          <div className="grid gap-4 md:grid-cols-2">
+        <CardContent className="p-3 sm:p-4 md:pt-6">
+          <div className="grid gap-2 sm:gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <label className="text-sm font-medium">Cerca Evento</label>
               <div className="relative">

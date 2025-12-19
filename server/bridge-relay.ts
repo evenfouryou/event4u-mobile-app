@@ -542,8 +542,13 @@ export function isCardReadyForSeals(): { ready: boolean; error: string | null } 
     return { ready: false, error: 'App desktop Event4U non connessa' };
   }
   
-  // Desktop app sends { type: 'status', data: {...} }
-  const status = cachedBridgeStatus?.data || cachedBridgeStatus?.payload || cachedBridgeStatus;
+  // Desktop app sends { type: 'status', data: {...} } or { type: 'status', payload: {...} }
+  // Handle multiple nesting levels
+  const status = cachedBridgeStatus?.data?.payload || 
+                 cachedBridgeStatus?.payload?.data ||
+                 cachedBridgeStatus?.data || 
+                 cachedBridgeStatus?.payload || 
+                 cachedBridgeStatus;
   console.log(`[Bridge] Extracted status: ${JSON.stringify(status)}`);
   
   if (!status) {
@@ -551,13 +556,19 @@ export function isCardReadyForSeals(): { ready: boolean; error: string | null } 
     return { ready: false, error: 'Stato lettore sconosciuto' };
   }
   
-  if (!status.readerConnected && !status.readerDetected) {
-    console.log(`[Bridge] Reader not connected: readerConnected=${status.readerConnected}, readerDetected=${status.readerDetected}`);
+  // Handle different field naming conventions from desktop app
+  const readerConnected = status.readerConnected ?? status.isReaderConnected ?? status.reader_connected ?? status.readerDetected ?? false;
+  const cardInserted = status.cardInserted ?? status.isCardInserted ?? status.card_inserted ?? status.cardPresent ?? false;
+  
+  console.log(`[Bridge] Normalized values: readerConnected=${readerConnected}, cardInserted=${cardInserted}`);
+  
+  if (!readerConnected) {
+    console.log(`[Bridge] Reader not connected`);
     return { ready: false, error: 'Lettore Smart Card non rilevato' };
   }
   
-  if (!status.cardInserted) {
-    console.log(`[Bridge] Card not inserted: cardInserted=${status.cardInserted}`);
+  if (!cardInserted) {
+    console.log(`[Bridge] Card not inserted`);
     return { ready: false, error: 'Smart Card SIAE non inserita' };
   }
   

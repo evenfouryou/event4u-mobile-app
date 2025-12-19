@@ -159,19 +159,19 @@ export default function E4uScannerPage() {
   };
 
   return (
-    <div className="container mx-auto p-4 md:p-6 max-w-2xl pb-24 md:pb-6">
-      <div className="flex items-center gap-4 mb-6">
+    <div className="container mx-auto p-3 sm:p-4 md:p-6 max-w-2xl pb-24 md:pb-6">
+      <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
         <Link href="/events">
           <Button variant="ghost" size="icon" data-testid="button-back">
             <ArrowLeft className="h-5 w-5" />
           </Button>
         </Link>
         <div>
-          <h1 className="text-2xl font-bold tracking-tight" data-testid="text-page-title">
+          <h1 className="text-xl sm:text-2xl font-bold tracking-tight" data-testid="text-page-title">
             Scanner QR
           </h1>
           {selectedEvent && (
-            <p className="text-muted-foreground text-sm" data-testid="text-event-name">
+            <p className="text-muted-foreground text-xs sm:text-sm" data-testid="text-event-name">
               {selectedEvent.name}
             </p>
           )}
@@ -179,14 +179,14 @@ export default function E4uScannerPage() {
       </div>
 
       {!eventId && (
-        <Card className="mb-6">
-          <CardHeader className="pb-3">
-            <CardTitle className="text-lg flex items-center gap-2">
-              <Ticket className="h-5 w-5" />
+        <Card className="mb-4 sm:mb-6">
+          <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 sm:pb-3">
+            <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+              <Ticket className="h-4 w-4 sm:h-5 sm:w-5" />
               Seleziona Evento
             </CardTitle>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
             <Select 
               value={selectedEventId} 
               onValueChange={setSelectedEventId}
@@ -220,32 +220,32 @@ export default function E4uScannerPage() {
         </Card>
       )}
 
-      <Card className="mb-6">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2">
-            <QrCode className="w-5 h-5" />
+      <Card className="mb-4 sm:mb-6">
+        <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 sm:pb-3">
+          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
+            <QrCode className="w-4 h-4 sm:w-5 sm:h-5" />
             Scansione QR Code
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs sm:text-sm">
             Usa il lettore QR o inserisci manualmente il codice
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
-          <div className="flex gap-2">
+        <CardContent className="p-3 sm:p-4 md:p-6 space-y-4">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Input
               placeholder="Inserisci o scansiona QR code..."
               value={qrInput}
               onChange={(e) => setQrInput(e.target.value)}
               onKeyDown={handleKeyPress}
               autoFocus
-              className="text-lg font-mono"
+              className="h-12 sm:h-14 text-base sm:text-lg font-mono"
               disabled={!activeEventId}
               data-testid="input-qr-code"
             />
             <Button
               onClick={handleScan}
               disabled={scanMutation.isPending || !qrInput.trim() || !activeEventId}
-              className="min-w-[120px]"
+              className="h-12 sm:h-14 w-full sm:w-auto sm:min-w-[120px]"
               data-testid="button-scan"
             >
               {scanMutation.isPending ? (
@@ -260,7 +260,7 @@ export default function E4uScannerPage() {
           </div>
           <Button
             variant="outline"
-            className="w-full"
+            className="w-full h-12 sm:h-10"
             onClick={resetScanner}
             data-testid="button-reset"
           >

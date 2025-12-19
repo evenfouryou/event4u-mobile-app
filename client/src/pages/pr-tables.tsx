@@ -328,8 +328,8 @@ export default function PrTablesPage() {
 
       {/* Event Selection */}
       <Card>
-        <CardContent className="pt-6">
-          <div className="grid gap-4 md:grid-cols-3">
+        <CardContent className="p-3 sm:p-4 md:pt-6">
+          <div className="grid gap-2 sm:gap-4 md:grid-cols-3">
             <div className="space-y-2">
               <label className="text-sm font-medium">Seleziona Evento</label>
               <Select value={selectedEventId} onValueChange={setSelectedEventId}>
@@ -382,57 +382,57 @@ export default function PrTablesPage() {
 
       {/* Stats */}
       {selectedEventId && (
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-3 sm:p-4 md:pt-6">
+              <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm text-muted-foreground">Totale Tavoli</p>
-                  <p className="text-2xl font-bold">{tables.length}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Totale Tavoli</p>
+                  <p className="text-xl sm:text-2xl font-bold">{tables.length}</p>
                 </div>
-                <Armchair className="h-8 w-8 text-muted-foreground" />
+                <Armchair className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-3 sm:p-4 md:pt-6">
+              <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm text-muted-foreground">Disponibili</p>
-                  <p className="text-2xl font-bold text-green-500">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Disponibili</p>
+                  <p className="text-xl sm:text-2xl font-bold text-green-500">
                     {tables.filter(t => t.status === 'available').length}
                   </p>
                 </div>
-                <CheckCircle2 className="h-8 w-8 text-green-500" />
+                <CheckCircle2 className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-3 sm:p-4 md:pt-6">
+              <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm text-muted-foreground">Prenotati</p>
-                  <p className="text-2xl font-bold text-blue-500">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Prenotati</p>
+                  <p className="text-xl sm:text-2xl font-bold text-blue-500">
                     {tables.filter(t => t.status === 'reserved').length}
                   </p>
                 </div>
-                <Clock className="h-8 w-8 text-blue-500" />
+                <Clock className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-3 sm:p-4 md:pt-6">
+              <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm text-muted-foreground">Capacità Totale</p>
-                  <p className="text-2xl font-bold text-purple-500">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Capacità Totale</p>
+                  <p className="text-xl sm:text-2xl font-bold text-purple-500">
                     {tables.reduce((sum, t) => sum + t.capacity, 0)}
                   </p>
                 </div>
-                <Users className="h-8 w-8 text-purple-500" />
+                <Users className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>

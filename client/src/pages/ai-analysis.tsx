@@ -83,20 +83,20 @@ export default function AIAnalysis() {
   ];
 
   return (
-    <div className="flex flex-col gap-6 p-6">
+    <div className="flex flex-col gap-4 sm:gap-6 p-3 sm:p-4 md:p-6 pb-24 md:pb-6">
       {/* Header */}
       <div>
-        <h1 className="text-2xl font-semibold flex items-center gap-2">
-          <Sparkles className="h-6 w-6" />
+        <h1 className="text-xl sm:text-2xl font-semibold flex items-center gap-2">
+          <Sparkles className="h-5 w-5 sm:h-6 sm:w-6" />
           Analisi AI
         </h1>
-        <p className="text-sm text-muted-foreground mt-1">
+        <p className="text-xs sm:text-sm text-muted-foreground mt-1">
           Analizza i tuoi dati con l'intelligenza artificiale
         </p>
       </div>
 
       {/* Insights Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-3 sm:gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-3">
         {insightsLoading ? (
           <Card>
             <CardContent className="flex items-center justify-center h-32">

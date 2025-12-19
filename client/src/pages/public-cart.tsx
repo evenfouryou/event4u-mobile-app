@@ -69,25 +69,25 @@ function CartItemCard({
         className={`bg-card border-border overflow-hidden ${isExpired ? "opacity-50" : ""}`}
         data-testid={`card-item-${item.id}`}
       >
-        <CardContent className="p-4">
-          <div className="flex gap-4">
-            <div className="w-24 h-24 rounded-lg bg-gradient-to-br from-indigo-900/50 to-purple-900/50 flex items-center justify-center shrink-0">
-              <Ticket className="w-10 h-10 text-primary" />
+        <CardContent className="p-3 sm:p-4">
+          <div className="flex gap-3 sm:gap-4">
+            <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-lg bg-gradient-to-br from-indigo-900/50 to-purple-900/50 flex items-center justify-center shrink-0">
+              <Ticket className="w-7 h-7 sm:w-10 sm:h-10 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
-                <div>
-                  <h3 className="font-semibold text-foreground truncate" data-testid={`text-event-${item.id}`}>
+                <div className="min-w-0 flex-1">
+                  <h3 className="font-semibold text-foreground text-sm sm:text-base truncate" data-testid={`text-event-${item.id}`}>
                     {item.eventName}
                   </h3>
-                  <p className="text-sm text-muted-foreground">{item.sectorName}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">{item.sectorName}</p>
                 </div>
                 <Button
                   variant="ghost"
                   size="icon"
                   onClick={onRemove}
                   disabled={isRemoving}
-                  className="text-muted-foreground hover:text-red-400 hover:bg-red-400/10 shrink-0"
+                  className="text-muted-foreground hover:text-red-400 hover:bg-red-400/10 shrink-0 h-10 w-10"
                   data-testid={`button-remove-${item.id}`}
                 >
                   <Trash2 className="w-4 h-4" />
@@ -107,22 +107,22 @@ function CartItemCard({
                   {item.locationName}
                 </span>
               </div>
-              <div className="flex items-center justify-between mt-3">
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline" className="border-border text-muted-foreground">
+              <div className="flex items-center justify-between mt-2 sm:mt-3">
+                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
+                  <Badge variant="outline" className="border-border text-muted-foreground text-xs">
                     {item.ticketType === "intero" ? "Intero" : "Ridotto"}
                   </Badge>
-                  <Badge variant="outline" className="border-border text-muted-foreground">
+                  <Badge variant="outline" className="border-border text-muted-foreground text-xs">
                     x{item.quantity}
                   </Badge>
                   {item.participantFirstName && (
-                    <Badge className="bg-teal-500/20 text-teal-400 border-teal-500/30">
+                    <Badge className="bg-teal-500/20 text-teal-400 border-teal-500/30 text-xs hidden sm:inline-flex">
                       {item.participantFirstName} {item.participantLastName}
                     </Badge>
                   )}
                 </div>
                 <div className="text-right">
-                  <p className="text-lg font-bold text-primary" data-testid={`text-price-${item.id}`}>
+                  <p className="text-base sm:text-lg font-bold text-primary" data-testid={`text-price-${item.id}`}>
                     €{(Number(item.unitPrice) * item.quantity).toFixed(2)}
                   </p>
                 </div>
@@ -280,7 +280,7 @@ export default function PublicCartPage() {
                 <CardHeader className="border-b border-border">
                   <CardTitle className="text-card-foreground">Riepilogo</CardTitle>
                 </CardHeader>
-                <CardContent className="p-6 space-y-4">
+                <CardContent className="p-4 sm:p-6 space-y-4">
                   <div className="flex justify-between text-muted-foreground">
                     <span>Subtotale</span>
                     <span>€{cart.total.toFixed(2)}</span>

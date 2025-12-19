@@ -437,35 +437,38 @@ export default function PurchaseOrders() {
   };
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center gap-4">
+    <div className="flex flex-col gap-4 sm:gap-6 p-3 sm:p-4 md:p-6">
+      <div className="flex flex-wrap items-center gap-3 sm:gap-4">
         <Button variant="ghost" size="icon" asChild>
           <Link href="/beverage">
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>
-        <div className="flex items-center gap-3 flex-1">
-          <ShoppingCart className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-semibold">Ordini d'Acquisto</h1>
+        <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+          <ShoppingCart className="h-5 w-5 sm:h-6 sm:w-6 text-primary shrink-0" />
+          <h1 className="text-lg sm:text-xl md:text-2xl font-semibold truncate">Ordini d'Acquisto</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2 w-full sm:w-auto">
           <Button 
             variant="outline" 
             onClick={handleGenerateSuggestions}
             data-testid="button-generate-suggestions"
             disabled={suggestionsLoading}
+            className="flex-1 sm:flex-none text-xs sm:text-sm"
           >
             <Sparkles className="h-4 w-4" />
-            Ordini Suggeriti
+            <span className="hidden sm:inline">Ordini Suggeriti</span>
+            <span className="sm:hidden">Suggeriti</span>
           </Button>
-          <Button onClick={() => handleOpenDialog()} data-testid="button-create-order">
+          <Button onClick={() => handleOpenDialog()} data-testid="button-create-order" className="flex-1 sm:flex-none text-xs sm:text-sm">
             <Plus className="h-4 w-4" />
-            Nuovo Ordine
+            <span className="hidden sm:inline">Nuovo Ordine</span>
+            <span className="sm:hidden">Nuovo</span>
           </Button>
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex flex-wrap gap-2">
         <Button
           variant={statusFilter === 'all' ? 'default' : 'outline'}
           onClick={() => setStatusFilter('all')}
@@ -497,7 +500,7 @@ export default function PurchaseOrders() {
       </div>
 
       <Card>
-        <CardContent className="p-6">
+        <CardContent className="p-3 sm:p-4 md:p-6">
           {ordersLoading ? (
             <div className="space-y-2">
               {[...Array(5)].map((_, i) => (
@@ -505,13 +508,14 @@ export default function PurchaseOrders() {
               ))}
             </div>
           ) : filteredOrders.length === 0 ? (
-            <div className="text-center py-12">
-              <ShoppingCart className="h-12 w-12 mx-auto text-muted-foreground mb-2" />
-              <p className="text-muted-foreground">
+            <div className="text-center py-8 sm:py-12">
+              <ShoppingCart className="h-10 w-10 sm:h-12 sm:w-12 mx-auto text-muted-foreground mb-2" />
+              <p className="text-muted-foreground text-sm sm:text-base">
                 {statusFilter === 'all' ? "Nessun ordine creato" : `Nessun ordine ${statusLabels[statusFilter]?.toLowerCase()}`}
               </p>
             </div>
           ) : (
+            <div className="overflow-x-auto -mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6">
             <Table>
               <TableHeader>
                 <TableRow>
@@ -588,6 +592,7 @@ export default function PurchaseOrders() {
                 ))}
               </TableBody>
             </Table>
+            </div>
           )}
         </CardContent>
       </Card>

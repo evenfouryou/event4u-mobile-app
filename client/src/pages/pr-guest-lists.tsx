@@ -426,15 +426,15 @@ export default function PrGuestListsPage() {
 
       {/* List Stats */}
       {selectedList && (
-        <div className="grid gap-4 md:grid-cols-4">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-3 sm:p-4 md:pt-6">
+              <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm text-muted-foreground">Ospiti Totali</p>
-                  <p className="text-2xl font-bold">{selectedList.currentCount}</p>
+                  <p className="text-xs sm:text-sm text-muted-foreground">Ospiti Totali</p>
+                  <p className="text-xl sm:text-2xl font-bold">{selectedList.currentCount}</p>
                 </div>
-                <Users className="h-8 w-8 text-muted-foreground" />
+                <Users className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground flex-shrink-0" />
               </div>
               {selectedList.maxGuests && (
                 <Progress value={(selectedList.currentCount / selectedList.maxGuests) * 100} className="mt-2" />
@@ -443,43 +443,43 @@ export default function PrGuestListsPage() {
           </Card>
           
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-3 sm:p-4 md:pt-6">
+              <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm text-muted-foreground">Confermati</p>
-                  <p className="text-2xl font-bold text-blue-500">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Confermati</p>
+                  <p className="text-xl sm:text-2xl font-bold text-blue-500">
                     {entries.filter(e => e.status === 'confirmed').length}
                   </p>
                 </div>
-                <CheckCircle2 className="h-8 w-8 text-blue-500" />
+                <CheckCircle2 className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-3 sm:p-4 md:pt-6">
+              <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm text-muted-foreground">Arrivati</p>
-                  <p className="text-2xl font-bold text-green-500">
+                  <p className="text-xs sm:text-sm text-muted-foreground">Arrivati</p>
+                  <p className="text-xl sm:text-2xl font-bold text-green-500">
                     {entries.filter(e => e.status === 'arrived').length}
                   </p>
                 </div>
-                <PartyPopper className="h-8 w-8 text-green-500" />
+                <PartyPopper className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>
           
           <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
+            <CardContent className="p-3 sm:p-4 md:pt-6">
+              <div className="flex items-center justify-between gap-2">
                 <div>
-                  <p className="text-sm text-muted-foreground">+1 Totali</p>
-                  <p className="text-2xl font-bold text-purple-500">
+                  <p className="text-xs sm:text-sm text-muted-foreground">+1 Totali</p>
+                  <p className="text-xl sm:text-2xl font-bold text-purple-500">
                     {entries.reduce((sum, e) => sum + e.plusOnes, 0)}
                   </p>
                 </div>
-                <UserPlus className="h-8 w-8 text-purple-500" />
+                <UserPlus className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
               </div>
             </CardContent>
           </Card>

@@ -259,14 +259,14 @@ export default function CashierManagementPage() {
   }
 
   return (
-    <div className="p-6 space-y-6" data-testid="page-cashier-management">
-      <div className="flex items-center justify-between flex-wrap gap-4">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 pb-24 md:pb-8" data-testid="page-cashier-management">
+      <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-3xl font-bold text-foreground flex items-center gap-3" data-testid="page-title">
-            <Store className="w-8 h-8 text-[#FFD700]" />
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2 sm:gap-3" data-testid="page-title">
+            <Store className="w-6 h-6 sm:w-8 sm:h-8 text-[#FFD700] flex-shrink-0" />
             Gestione Cassieri
           </h1>
-          <p className="text-muted-foreground mt-1">
+          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
             Gestisci i cassieri della tua azienda
           </p>
         </div>
@@ -317,74 +317,79 @@ export default function CashierManagementPage() {
               </Button>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Nome</TableHead>
-                  <TableHead>Username</TableHead>
-                  <TableHead>Stampante</TableHead>
-                  <TableHead>Stato</TableHead>
-                  <TableHead className="text-right">Azioni</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {cashiers.map((cashier) => (
-                  <TableRow key={cashier.id} data-testid={`row-cashier-${cashier.id}`}>
-                    <TableCell className="font-medium">
-                      {cashier.name}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2 text-muted-foreground">
-                        {cashier.username}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <Printer className="w-4 h-4 text-muted-foreground" />
-                        {getPrinterName(cashier.defaultPrinterAgentId)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      {cashier.isActive ? (
-                        <Badge variant="default" className="bg-emerald-500/20 text-emerald-400">
-                          <CheckCircle2 className="w-3 h-3 mr-1" />
-                          Attivo
-                        </Badge>
-                      ) : (
-                        <Badge variant="secondary" className="bg-red-500/20 text-red-400">
-                          <XCircle className="w-3 h-3 mr-1" />
-                          Disattivo
-                        </Badge>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => handleOpenDialog(cashier)}
-                          data-testid={`button-edit-cashier-${cashier.id}`}
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setCashierToDelete(cashier);
-                            setIsDeleteDialogOpen(true);
-                          }}
-                          className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
-                          data-testid={`button-delete-cashier-${cashier.id}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Nome</TableHead>
+                    <TableHead className="hidden sm:table-cell">Username</TableHead>
+                    <TableHead className="hidden md:table-cell">Stampante</TableHead>
+                    <TableHead>Stato</TableHead>
+                    <TableHead className="text-right">Azioni</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {cashiers.map((cashier) => (
+                    <TableRow key={cashier.id} data-testid={`row-cashier-${cashier.id}`}>
+                      <TableCell className="font-medium">
+                        <div>
+                          {cashier.name}
+                          <div className="sm:hidden text-xs text-muted-foreground">{cashier.username}</div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden sm:table-cell">
+                        <div className="flex items-center gap-2 text-muted-foreground">
+                          {cashier.username}
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <div className="flex items-center gap-2">
+                          <Printer className="w-4 h-4 text-muted-foreground" />
+                          {getPrinterName(cashier.defaultPrinterAgentId)}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        {cashier.isActive ? (
+                          <Badge variant="default" className="bg-emerald-500/20 text-emerald-400">
+                            <CheckCircle2 className="w-3 h-3 mr-1" />
+                            Attivo
+                          </Badge>
+                        ) : (
+                          <Badge variant="secondary" className="bg-red-500/20 text-red-400">
+                            <XCircle className="w-3 h-3 mr-1" />
+                            Disattivo
+                          </Badge>
+                        )}
+                      </TableCell>
+                      <TableCell className="text-right">
+                        <div className="flex items-center justify-end gap-1 sm:gap-2">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleOpenDialog(cashier)}
+                            data-testid={`button-edit-cashier-${cashier.id}`}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setCashierToDelete(cashier);
+                              setIsDeleteDialogOpen(true);
+                            }}
+                            className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                            data-testid={`button-delete-cashier-${cashier.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
         </CardContent>
       </Card>

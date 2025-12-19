@@ -129,11 +129,11 @@ export default function ReturnToWarehouse() {
   }
 
   return (
-    <div className="container mx-auto p-6 space-y-6">
-      <div className="flex items-center justify-between">
+    <div className="container mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
+      <div className="flex items-center justify-between gap-4">
         <div>
-          <h1 className="text-3xl font-semibold">Rientro a Magazzino</h1>
-          <p className="text-muted-foreground">
+          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold">Rientro a Magazzino</h1>
+          <p className="text-muted-foreground text-xs sm:text-sm">
             Trasferisci inventario inutilizzato dagli eventi al magazzino generale
           </p>
         </div>
@@ -203,16 +203,17 @@ export default function ReturnToWarehouse() {
               Prodotti disponibili per il rientro al magazzino generale
             </CardDescription>
           </CardHeader>
-          <CardContent>
+          <CardContent className="p-3 sm:p-4 md:p-6">
+            <div className="overflow-x-auto -mx-3 sm:-mx-4 md:-mx-6 px-3 sm:px-4 md:px-6">
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Codice</TableHead>
-                  <TableHead>Prodotto</TableHead>
-                  <TableHead>Unità</TableHead>
-                  <TableHead className="text-right">Disponibile</TableHead>
-                  <TableHead className="text-right">Quantità da Ritornare</TableHead>
-                  <TableHead className="text-right">Azioni</TableHead>
+                  <TableHead className="text-xs sm:text-sm">Codice</TableHead>
+                  <TableHead className="text-xs sm:text-sm">Prodotto</TableHead>
+                  <TableHead className="text-xs sm:text-sm hidden sm:table-cell">Unità</TableHead>
+                  <TableHead className="text-right text-xs sm:text-sm">Disponibile</TableHead>
+                  <TableHead className="text-right text-xs sm:text-sm">Qtà Ritorno</TableHead>
+                  <TableHead className="text-right text-xs sm:text-sm">Azioni</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -220,10 +221,10 @@ export default function ReturnToWarehouse() {
                   .filter((stock) => parseFloat(stock.quantity) > 0)
                   .map((stock) => (
                     <TableRow key={stock.id} data-testid={`row-product-${stock.productId}`}>
-                      <TableCell>{stock.product.code}</TableCell>
-                      <TableCell>{stock.product.name}</TableCell>
-                      <TableCell>{stock.product.unitOfMeasure}</TableCell>
-                      <TableCell className="text-right">
+                      <TableCell className="text-xs sm:text-sm">{stock.product.code}</TableCell>
+                      <TableCell className="text-xs sm:text-sm">{stock.product.name}</TableCell>
+                      <TableCell className="text-xs sm:text-sm hidden sm:table-cell">{stock.product.unitOfMeasure}</TableCell>
+                      <TableCell className="text-right text-xs sm:text-sm">
                         {parseFloat(stock.quantity).toFixed(2)}
                       </TableCell>
                       <TableCell className="text-right">
@@ -250,15 +251,17 @@ export default function ReturnToWarehouse() {
                             returnMutation.isPending
                           }
                           data-testid={`button-return-${stock.productId}`}
+                          className="text-xs sm:text-sm"
                         >
-                          <ArrowLeft className="w-4 h-4 mr-2" />
-                          Rientro
+                          <ArrowLeft className="w-4 h-4 sm:mr-2" />
+                          <span className="hidden sm:inline">Rientro</span>
                         </Button>
                       </TableCell>
                     </TableRow>
                   ))}
               </TableBody>
             </Table>
+            </div>
           </CardContent>
         </Card>
       )}

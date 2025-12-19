@@ -117,10 +117,10 @@ export default function SuperAdminDashboard() {
   const totalRevenue = analytics.companyMetrics.reduce((sum, c) => sum + c.totalRevenue, 0);
 
   return (
-    <div className="p-4 md:p-6 space-y-6 overflow-auto h-full pb-24 md:pb-8">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-auto h-full pb-24 md:pb-8">
       <div>
-        <h1 className="text-2xl md:text-3xl font-semibold mb-2">Dashboard Super Admin</h1>
-        <p className="text-muted-foreground text-sm md:text-base">
+        <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold mb-2">Dashboard Super Admin</h1>
+        <p className="text-muted-foreground text-xs sm:text-sm md:text-base">
           Panoramica completa delle metriche cross-company
         </p>
       </div>

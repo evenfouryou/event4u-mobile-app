@@ -226,23 +226,23 @@ export default function Register() {
 
   if (clienteOtpStep) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div className="min-h-screen bg-background flex items-center justify-center p-3 sm:p-4 md:p-6">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
-          className="w-full max-w-md"
+          className="w-full max-w-md mx-auto"
         >
           <Card className="bg-card border-border">
-            <CardHeader className="text-center">
-              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-primary/20 flex items-center justify-center">
-                <Shield className="w-8 h-8 text-primary" />
+            <CardHeader className="text-center px-4 sm:px-6">
+              <div className="w-14 h-14 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 rounded-full bg-primary/20 flex items-center justify-center">
+                <Shield className="w-7 h-7 sm:w-8 sm:h-8 text-primary" />
               </div>
-              <CardTitle className="text-2xl text-foreground">Verifica OTP</CardTitle>
-              <CardDescription className="text-muted-foreground">
+              <CardTitle className="text-xl sm:text-2xl text-foreground">Verifica OTP</CardTitle>
+              <CardDescription className="text-muted-foreground text-sm sm:text-base">
                 Inserisci il codice a 6 cifre inviato al tuo telefono
               </CardDescription>
             </CardHeader>
-            <CardContent className="space-y-6">
+            <CardContent className="space-y-6 px-4 sm:px-6">
               <div className="flex justify-center">
                 <InputOTP
                   maxLength={6}
@@ -467,50 +467,52 @@ export default function Register() {
     return (
       <div className="min-h-screen bg-background flex flex-col">
         <header className="border-b border-border">
-          <div className="max-w-4xl mx-auto px-4 py-4">
-            <div className="flex items-center justify-between">
+          <div className="max-w-4xl mx-auto px-3 sm:px-4 py-3 sm:py-4">
+            <div className="flex items-center justify-between gap-2">
               <Button 
                 variant="ghost" 
+                size="sm"
                 className="text-foreground" 
                 onClick={() => setAccountType(null)}
                 data-testid="button-back-select"
               >
-                <ArrowLeft className="w-4 h-4 mr-1" /> Indietro
+                <ArrowLeft className="w-4 h-4 mr-1" /> 
+                <span className="hidden sm:inline">Indietro</span>
               </Button>
               <Link href="/">
                 <div className="flex items-center gap-2 cursor-pointer">
                   <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
                     <Sparkles className="w-4 h-4 text-primary-foreground" />
                   </div>
-                  <span className="text-lg font-bold text-foreground">Event4U</span>
+                  <span className="text-lg font-bold text-foreground hidden sm:block">Event4U</span>
                 </div>
               </Link>
-              <div className="w-24" />
+              <div className="w-16 sm:w-24" />
             </div>
           </div>
         </header>
 
-        <main className="flex-1 flex items-center justify-center p-4">
+        <main className="flex-1 flex items-center justify-center p-3 sm:p-4 md:p-6">
           <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="w-full max-w-md"
+            className="w-full max-w-md mx-auto"
           >
             <Card className="bg-card border-border">
-              <CardHeader>
+              <CardHeader className="px-4 sm:px-6">
                 <div className="flex items-center gap-3 mb-2">
-                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                  <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
                     <Ticket className="w-5 h-5 text-primary" />
                   </div>
                   <div>
-                    <CardTitle className="text-xl text-foreground">Registrazione Cliente</CardTitle>
-                    <CardDescription className="text-muted-foreground">
+                    <CardTitle className="text-lg sm:text-xl text-foreground">Registrazione Cliente</CardTitle>
+                    <CardDescription className="text-muted-foreground text-sm">
                       Crea il tuo account per acquistare biglietti
                     </CardDescription>
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="px-4 sm:px-6">
                 <Form {...clienteForm}>
                   <form onSubmit={clienteForm.handleSubmit(handleClienteRegister)} className="space-y-4">
                     <div className="grid grid-cols-2 gap-3">
@@ -526,7 +528,7 @@ export default function Register() {
                                 <Input
                                   {...field}
                                   placeholder="Mario"
-                                  className="pl-10 bg-muted/50 border-border text-foreground"
+                                  className="pl-10 h-10 sm:h-11 bg-muted/50 border-border text-foreground"
                                   data-testid="input-cliente-firstname"
                                 />
                               </div>
@@ -545,7 +547,7 @@ export default function Register() {
                               <Input
                                 {...field}
                                 placeholder="Rossi"
-                                className="bg-muted/50 border-border text-foreground"
+                                className="h-10 sm:h-11 bg-muted/50 border-border text-foreground"
                                 data-testid="input-cliente-lastname"
                               />
                             </FormControl>
@@ -567,7 +569,7 @@ export default function Register() {
                                 {...field}
                                 type="email"
                                 placeholder="mario@esempio.it"
-                                className="pl-10 bg-muted/50 border-border text-foreground"
+                                className="pl-10 h-10 sm:h-11 bg-muted/50 border-border text-foreground"
                                 data-testid="input-cliente-email"
                               />
                             </div>
@@ -589,7 +591,7 @@ export default function Register() {
                                 {...field}
                                 type="tel"
                                 placeholder="+39 333 1234567"
-                                className="pl-10 bg-muted/50 border-border text-foreground"
+                                className="pl-10 h-10 sm:h-11 bg-muted/50 border-border text-foreground"
                                 data-testid="input-cliente-phone"
                               />
                             </div>
@@ -611,7 +613,7 @@ export default function Register() {
                                 {...field}
                                 type="password"
                                 placeholder="Minimo 8 caratteri"
-                                className="pl-10 bg-muted/50 border-border text-foreground"
+                                className="pl-10 h-10 sm:h-11 bg-muted/50 border-border text-foreground"
                                 data-testid="input-cliente-password"
                               />
                             </div>
@@ -633,7 +635,7 @@ export default function Register() {
                                 {...field}
                                 type="password"
                                 placeholder="Ripeti la password"
-                                className="pl-10 bg-muted/50 border-border text-foreground"
+                                className="pl-10 h-10 sm:h-11 bg-muted/50 border-border text-foreground"
                                 data-testid="input-cliente-confirm-password"
                               />
                             </div>
@@ -712,20 +714,20 @@ export default function Register() {
         </div>
       </motion.header>
 
-      <main className="flex-1 flex items-center justify-center p-4 md:p-6 relative z-10">
+      <main className="flex-1 flex items-center justify-center p-3 sm:p-4 md:p-6 relative z-10">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
-          className="w-full max-w-lg"
+          className="w-full max-w-lg mx-auto"
         >
-          <div className="glass-card p-6 md:p-8">
-            <div className="text-center mb-8">
-              <div className="mx-auto mb-4 h-16 w-16 rounded-full bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center">
-                <Building2 className="h-8 w-8 text-black" />
+          <div className="glass-card p-4 sm:p-6 md:p-8">
+            <div className="text-center mb-6 sm:mb-8">
+              <div className="mx-auto mb-3 sm:mb-4 h-14 w-14 sm:h-16 sm:w-16 rounded-full bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center">
+                <Building2 className="h-7 w-7 sm:h-8 sm:w-8 text-black" />
               </div>
-              <h1 className="text-2xl md:text-3xl font-bold mb-2">Registrazione Organizzatore</h1>
-              <p className="text-muted-foreground">
+              <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">Registrazione Organizzatore</h1>
+              <p className="text-muted-foreground text-sm sm:text-base">
                 Inizia a gestire i tuoi eventi come un professionista
               </p>
             </div>
@@ -746,7 +748,7 @@ export default function Register() {
                           <Input 
                             {...field} 
                             placeholder="Mario" 
-                            className="h-12 bg-background/50 border-border focus:border-primary"
+                            className="h-10 sm:h-11 bg-background/50 border-border focus:border-primary"
                             data-testid="input-gestore-first-name" 
                           />
                         </FormControl>
@@ -765,7 +767,7 @@ export default function Register() {
                           <Input 
                             {...field} 
                             placeholder="Rossi" 
-                            className="h-12 bg-background/50 border-border focus:border-primary"
+                            className="h-10 sm:h-11 bg-background/50 border-border focus:border-primary"
                             data-testid="input-gestore-last-name" 
                           />
                         </FormControl>
@@ -789,7 +791,7 @@ export default function Register() {
                           {...field} 
                           type="email" 
                           placeholder="mario.rossi@example.com" 
-                          className="h-12 bg-background/50 border-border focus:border-primary"
+                          className="h-10 sm:h-11 bg-background/50 border-border focus:border-primary"
                           data-testid="input-gestore-email" 
                         />
                       </FormControl>
@@ -812,7 +814,7 @@ export default function Register() {
                           {...field} 
                           type="password" 
                           placeholder="Minimo 8 caratteri" 
-                          className="h-12 bg-background/50 border-border focus:border-primary"
+                          className="h-10 sm:h-11 bg-background/50 border-border focus:border-primary"
                           data-testid="input-gestore-password" 
                         />
                       </FormControl>
@@ -832,7 +834,7 @@ export default function Register() {
                           {...field} 
                           type="password" 
                           placeholder="Ripeti la password" 
-                          className="h-12 bg-background/50 border-border focus:border-primary"
+                          className="h-10 sm:h-11 bg-background/50 border-border focus:border-primary"
                           data-testid="input-gestore-confirm-password" 
                         />
                       </FormControl>
@@ -844,7 +846,7 @@ export default function Register() {
                 <Button 
                   type="submit" 
                   disabled={gestoreMutation.isPending}
-                  className="w-full h-12 gradient-golden text-black font-semibold"
+                  className="w-full h-10 sm:h-11 gradient-golden text-black font-semibold"
                   data-testid="button-gestore-register"
                 >
                   {gestoreMutation.isPending ? (

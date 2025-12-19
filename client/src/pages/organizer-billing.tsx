@@ -441,20 +441,21 @@ export default function OrganizerBilling() {
               </CardHeader>
               <CardContent>
                 {ledgerEntries && ledgerEntries.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Data</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Direzione</TableHead>
-                        <TableHead>Canale</TableHead>
-                        <TableHead className="text-right">Importo</TableHead>
-                        <TableHead className="text-right">Saldo Dopo</TableHead>
-                        <TableHead>Note</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {ledgerEntries.map((entry) => (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Data</TableHead>
+                          <TableHead>Tipo</TableHead>
+                          <TableHead>Direzione</TableHead>
+                          <TableHead>Canale</TableHead>
+                          <TableHead className="text-right">Importo</TableHead>
+                          <TableHead className="text-right">Saldo Dopo</TableHead>
+                          <TableHead>Note</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {ledgerEntries.map((entry) => (
                         <TableRow key={entry.id} data-testid={`row-ledger-${entry.id}`}>
                           <TableCell className="whitespace-nowrap">
                             {formatDateTime(entry.createdAt)}
@@ -485,10 +486,11 @@ export default function OrganizerBilling() {
                           <TableCell className="max-w-[200px] truncate" title={entry.note || ""}>
                             {entry.note || "-"}
                           </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 ) : (
                   <div className="py-12 text-center">
                     <Receipt className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -511,20 +513,21 @@ export default function OrganizerBilling() {
               </CardHeader>
               <CardContent>
                 {invoices && invoices.length > 0 ? (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Numero</TableHead>
-                        <TableHead>Periodo</TableHead>
-                        <TableHead className="text-right">Importo</TableHead>
-                        <TableHead>Stato</TableHead>
-                        <TableHead>Scadenza</TableHead>
-                        <TableHead>Data Emissione</TableHead>
-                        <TableHead></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {invoices.map((invoice) => (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Numero</TableHead>
+                          <TableHead>Periodo</TableHead>
+                          <TableHead className="text-right">Importo</TableHead>
+                          <TableHead>Stato</TableHead>
+                          <TableHead>Scadenza</TableHead>
+                          <TableHead>Data Emissione</TableHead>
+                          <TableHead></TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {invoices.map((invoice) => (
                         <TableRow key={invoice.id} data-testid={`row-invoice-${invoice.id}`}>
                           <TableCell className="font-medium" data-testid={`text-invoice-number-${invoice.id}`}>
                             {invoice.invoiceNumber}
@@ -548,10 +551,11 @@ export default function OrganizerBilling() {
                               <Eye className="w-4 h-4" />
                             </Button>
                           </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                 ) : (
                   <div className="py-12 text-center">
                     <Receipt className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
@@ -827,30 +831,32 @@ export default function OrganizerBilling() {
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <Table>
-                      <TableHeader>
-                        <TableRow>
-                          <TableHead>Evento</TableHead>
-                          <TableHead>Data</TableHead>
-                          <TableHead className="text-right">Biglietti</TableHead>
-                          <TableHead className="text-right">Ricavo Lordo</TableHead>
-                          <TableHead className="text-right">Commissioni</TableHead>
-                          <TableHead className="text-right">Netto</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {reportData.byEvent.map((event) => (
-                          <TableRow key={event.eventId} data-testid={`row-report-event-${event.eventId}`}>
-                            <TableCell className="font-medium">{event.eventName}</TableCell>
-                            <TableCell>{event.eventDate}</TableCell>
-                            <TableCell className="text-right">{event.ticketsSold}</TableCell>
-                            <TableCell className="text-right">{formatCurrency(event.grossRevenue)}</TableCell>
-                            <TableCell className="text-right">{formatCurrency(event.commissions)}</TableCell>
-                            <TableCell className="text-right font-semibold">{formatCurrency(event.netRevenue)}</TableCell>
+                    <div className="overflow-x-auto">
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Evento</TableHead>
+                            <TableHead>Data</TableHead>
+                            <TableHead className="text-right">Biglietti</TableHead>
+                            <TableHead className="text-right">Ricavo Lordo</TableHead>
+                            <TableHead className="text-right">Commissioni</TableHead>
+                            <TableHead className="text-right">Netto</TableHead>
                           </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
+                        </TableHeader>
+                        <TableBody>
+                          {reportData.byEvent.map((event) => (
+                            <TableRow key={event.eventId} data-testid={`row-report-event-${event.eventId}`}>
+                              <TableCell className="font-medium">{event.eventName}</TableCell>
+                              <TableCell>{event.eventDate}</TableCell>
+                              <TableCell className="text-right">{event.ticketsSold}</TableCell>
+                              <TableCell className="text-right">{formatCurrency(event.grossRevenue)}</TableCell>
+                              <TableCell className="text-right">{formatCurrency(event.commissions)}</TableCell>
+                              <TableCell className="text-right font-semibold">{formatCurrency(event.netRevenue)}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    </div>
                   </CardContent>
                 </Card>
               )}

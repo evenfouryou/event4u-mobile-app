@@ -43,7 +43,7 @@ export default function SchoolBadgeError() {
   const IconComponent = errorInfo.icon;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+    <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 md:p-6 bg-background">
       <motion.div
         initial={{ opacity: 0, scale: 0.95 }}
         animate={{ opacity: 1, scale: 1 }}
@@ -51,11 +51,11 @@ export default function SchoolBadgeError() {
       >
         <Card className="text-center" data-testid="card-badge-error">
           <CardHeader>
-            <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto mb-4">
-              <IconComponent className="h-8 w-8 text-destructive" />
+            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto mb-3 sm:mb-4">
+              <IconComponent className="h-7 w-7 sm:h-8 sm:w-8 text-destructive" />
             </div>
-            <CardTitle data-testid="text-error-title">{errorInfo.title}</CardTitle>
-            <CardDescription data-testid="text-error-description">
+            <CardTitle className="text-lg sm:text-xl md:text-2xl" data-testid="text-error-title">{errorInfo.title}</CardTitle>
+            <CardDescription className="text-sm sm:text-base" data-testid="text-error-description">
               {errorInfo.description}
             </CardDescription>
           </CardHeader>
@@ -63,6 +63,7 @@ export default function SchoolBadgeError() {
             <Button 
               variant="outline" 
               onClick={() => setLocation("/")}
+              className="w-full sm:w-auto"
               data-testid="button-go-home"
             >
               <Home className="h-4 w-4 mr-2" />

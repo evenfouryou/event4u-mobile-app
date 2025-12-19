@@ -214,8 +214,8 @@ function GuestEntryCard({ entry }: { entry: GuestEntryItem }) {
       className={`transition-all ${isExpired ? "opacity-70" : ""}`}
       data-testid={`card-guest-entry-${entry.id}`}
     >
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-4">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               <Badge variant={statusVariant()} className="text-xs">
@@ -234,26 +234,26 @@ function GuestEntryCard({ entry }: { entry: GuestEntryItem }) {
                 </Badge>
               )}
             </div>
-            <h3 className="font-semibold text-foreground truncate" data-testid="text-event-name">
+            <h3 className="font-semibold text-foreground truncate text-sm sm:text-base" data-testid="text-event-name">
               {entry.eventName}
             </h3>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               Lista: {entry.listName}
             </p>
-            <div className="flex flex-col gap-1 mt-2 text-sm text-muted-foreground">
+            <div className="flex flex-col gap-1 mt-2 text-xs sm:text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
+                <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                 <span data-testid="text-event-date">
                   {format(eventDate, "EEEE d MMMM yyyy, HH:mm", { locale: it })}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
+                <MapPin className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                 <span>{entry.locationName}</span>
               </div>
               {entry.plusOnes > 0 && (
                 <div className="flex items-center gap-2">
-                  <Users className="w-4 h-4" />
+                  <Users className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                   <span>+{entry.plusOnes} accompagnator{entry.plusOnes > 1 ? 'i' : 'e'}</span>
                 </div>
               )}
@@ -322,8 +322,8 @@ function TableReservationCard({ reservation }: { reservation: TableReservationIt
       className={`transition-all ${isExpired ? "opacity-70" : ""}`}
       data-testid={`card-table-reservation-${reservation.id}`}
     >
-      <CardContent className="p-4">
-        <div className="flex items-start justify-between gap-4">
+      <CardContent className="p-3 sm:p-4">
+        <div className="flex items-start justify-between gap-3 sm:gap-4">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 mb-2 flex-wrap">
               <Badge variant={statusVariant()} className="text-xs">
@@ -347,26 +347,26 @@ function TableReservationCard({ reservation }: { reservation: TableReservationIt
                 </Badge>
               )}
             </div>
-            <h3 className="font-semibold text-foreground truncate" data-testid="text-event-name">
+            <h3 className="font-semibold text-foreground truncate text-sm sm:text-base" data-testid="text-event-name">
               {reservation.eventName}
             </h3>
-            <p className="text-sm text-muted-foreground mt-1">
+            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
               {reservation.tableName} - {reservation.guestsCount} ospiti
             </p>
-            <div className="flex flex-col gap-1 mt-2 text-sm text-muted-foreground">
+            <div className="flex flex-col gap-1 mt-2 text-xs sm:text-sm text-muted-foreground">
               <div className="flex items-center gap-2">
-                <Calendar className="w-4 h-4" />
+                <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                 <span data-testid="text-event-date">
                   {format(eventDate, "EEEE d MMMM yyyy, HH:mm", { locale: it })}
                 </span>
               </div>
               <div className="flex items-center gap-2">
-                <MapPin className="w-4 h-4" />
+                <MapPin className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                 <span>{reservation.locationName}</span>
               </div>
               {reservation.minSpend && (
                 <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4" />
+                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
                   <span>Spesa minima: €{parseFloat(reservation.minSpend).toFixed(2)}</span>
                 </div>
               )}

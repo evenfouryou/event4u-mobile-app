@@ -280,24 +280,25 @@ function EventCard({ event }: { event: VenueEvent }) {
         className="bg-card border-border overflow-hidden hover:border-primary/30 transition-all duration-300 cursor-pointer"
         data-testid={`card-event-${event.id}`}
       >
-        <CardContent className="p-6">
-          <div className="flex flex-col md:flex-row md:items-center gap-4">
-            <div className="flex-shrink-0 w-20 h-20 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex flex-col items-center justify-center">
-              <span className="text-2xl font-bold text-primary">
+        <CardContent className="p-4 sm:p-6">
+          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+            <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex flex-col items-center justify-center">
+              <span className="text-xl sm:text-2xl font-bold text-primary">
                 {format(eventDate, "d")}
               </span>
-              <span className="text-sm text-muted-foreground uppercase">
+              <span className="text-xs sm:text-sm text-muted-foreground uppercase">
                 {format(eventDate, "MMM", { locale: it })}
               </span>
             </div>
             
             <div className="flex-1 min-w-0">
-              <h3 className="text-xl font-bold text-foreground mb-1" data-testid={`text-event-name-${event.id}`}>
+              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-1" data-testid={`text-event-name-${event.id}`}>
                 {event.eventName}
               </h3>
-              <p className="text-muted-foreground text-sm flex items-center gap-2 mb-2">
-                <Clock className="w-4 h-4" />
-                {format(eventDate, "EEEE d MMMM yyyy • HH:mm", { locale: it })}
+              <p className="text-muted-foreground text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 mb-2">
+                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                <span className="hidden sm:inline">{format(eventDate, "EEEE d MMMM yyyy • HH:mm", { locale: it })}</span>
+                <span className="sm:hidden">{format(eventDate, "d MMM yyyy • HH:mm", { locale: it })}</span>
               </p>
               
               {event.requiresNominative && (
@@ -309,16 +310,16 @@ function EventCard({ event }: { event: VenueEvent }) {
               )}
             </div>
             
-            <div className="flex flex-col items-end gap-2">
+            <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 mt-2 sm:mt-0">
               {event.minPrice !== null && (
-                <div className="text-right">
+                <div className="text-left sm:text-right">
                   <p className="text-muted-foreground text-xs">A partire da</p>
-                  <p className="text-2xl font-bold text-primary">
+                  <p className="text-xl sm:text-2xl font-bold text-primary">
                     €{event.minPrice.toFixed(0)}
                   </p>
                 </div>
               )}
-              <Button data-testid={`button-buy-${event.id}`}>
+              <Button className="h-10" data-testid={`button-buy-${event.id}`}>
                 Acquista
                 <ChevronRight className="w-4 h-4 ml-1" />
               </Button>
@@ -326,14 +327,14 @@ function EventCard({ event }: { event: VenueEvent }) {
           </div>
           
           {event.sectors.length > 0 && (
-            <div className="mt-4 pt-4 border-t border-border">
+            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-border">
               <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Settori disponibili</p>
-              <div className="flex flex-wrap gap-2">
+              <div className="flex flex-wrap gap-1.5 sm:gap-2">
                 {event.sectors.map((sector) => (
                   <Badge 
                     key={sector.id}
                     variant="outline" 
-                    className="border-border text-muted-foreground"
+                    className="border-border text-muted-foreground text-xs"
                   >
                     {sector.name} - €{parseFloat(sector.priceIntero || '0').toFixed(0)}
                   </Badge>

@@ -563,74 +563,76 @@ export default function AdminBillingOrganizerDetail() {
               <CardDescription>Ultime transazioni del wallet</CardDescription>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Canale</TableHead>
-                    <TableHead>Importo</TableHead>
-                    <TableHead>Saldo Dopo</TableHead>
-                    <TableHead>Note</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentLedgerEntries?.map((entry) => (
-                    <TableRow key={entry.id} data-testid={`row-ledger-${entry.id}`}>
-                      <TableCell>{formatDate(entry.createdAt)}</TableCell>
-                      <TableCell>
-                        <Badge variant="outline">
-                          {entry.type === "commission"
-                            ? "Commissione"
-                            : entry.type === "subscription"
-                            ? "Abbonamento"
-                            : entry.type === "invoice"
-                            ? "Fattura"
-                            : entry.type === "payment"
-                            ? "Pagamento"
-                            : "Rettifica"}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {entry.channel && (
-                          <Badge variant="secondary">
-                            {entry.channel === "online"
-                              ? "Online"
-                              : entry.channel === "printed"
-                              ? "Biglietteria"
-                              : "PR"}
-                          </Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>
-                        <span
-                          className={`flex items-center gap-1 ${
-                            entry.direction === "debit" ? "text-destructive" : "text-green-500"
-                          }`}
-                        >
-                          {entry.direction === "debit" ? (
-                            <ArrowDownRight className="w-4 h-4" />
-                          ) : (
-                            <ArrowUpRight className="w-4 h-4" />
-                          )}
-                          {formatCurrency(entry.amount)}
-                        </span>
-                      </TableCell>
-                      <TableCell>{formatCurrency(entry.balanceAfter)}</TableCell>
-                      <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
-                        {entry.note || "-"}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {(!recentLedgerEntries || recentLedgerEntries.length === 0) && (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        Nessun movimento registrato
-                      </TableCell>
+                      <TableHead>Data</TableHead>
+                      <TableHead>Tipo</TableHead>
+                      <TableHead>Canale</TableHead>
+                      <TableHead>Importo</TableHead>
+                      <TableHead>Saldo Dopo</TableHead>
+                      <TableHead>Note</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {recentLedgerEntries?.map((entry) => (
+                      <TableRow key={entry.id} data-testid={`row-ledger-${entry.id}`}>
+                        <TableCell>{formatDate(entry.createdAt)}</TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {entry.type === "commission"
+                              ? "Commissione"
+                              : entry.type === "subscription"
+                              ? "Abbonamento"
+                              : entry.type === "invoice"
+                              ? "Fattura"
+                              : entry.type === "payment"
+                              ? "Pagamento"
+                              : "Rettifica"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          {entry.channel && (
+                            <Badge variant="secondary">
+                              {entry.channel === "online"
+                                ? "Online"
+                                : entry.channel === "printed"
+                                ? "Biglietteria"
+                                : "PR"}
+                            </Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>
+                          <span
+                            className={`flex items-center gap-1 ${
+                              entry.direction === "debit" ? "text-destructive" : "text-green-500"
+                            }`}
+                          >
+                            {entry.direction === "debit" ? (
+                              <ArrowDownRight className="w-4 h-4" />
+                            ) : (
+                              <ArrowUpRight className="w-4 h-4" />
+                            )}
+                            {formatCurrency(entry.amount)}
+                          </span>
+                        </TableCell>
+                        <TableCell>{formatCurrency(entry.balanceAfter)}</TableCell>
+                        <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
+                          {entry.note || "-"}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {(!recentLedgerEntries || recentLedgerEntries.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                          Nessun movimento registrato
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>
@@ -650,74 +652,76 @@ export default function AdminBillingOrganizerDetail() {
               </div>
             </CardHeader>
             <CardContent>
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Numero</TableHead>
-                    <TableHead>Periodo</TableHead>
-                    <TableHead>Importo</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead>Scadenza</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {invoices?.map((invoice) => (
-                    <TableRow key={invoice.id} data-testid={`row-invoice-${invoice.id}`}>
-                      <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                      <TableCell>
-                        {formatDate(invoice.periodStart)} - {formatDate(invoice.periodEnd)}
-                      </TableCell>
-                      <TableCell>{formatCurrency(invoice.amount)}</TableCell>
-                      <TableCell>
-                        {invoice.status === "paid" ? (
-                          <Badge className="bg-green-500/20 text-green-500">
-                            <CheckCircle className="w-3 h-3 mr-1" />
-                            Pagata
-                          </Badge>
-                        ) : invoice.status === "issued" ? (
-                          <Badge variant="secondary">
-                            <Clock className="w-3 h-3 mr-1" />
-                            Emessa
-                          </Badge>
-                        ) : invoice.status === "void" ? (
-                          <Badge variant="destructive">Annullata</Badge>
-                        ) : (
-                          <Badge variant="outline">Bozza</Badge>
-                        )}
-                      </TableCell>
-                      <TableCell>{formatDate(invoice.dueDate)}</TableCell>
-                      <TableCell className="text-right">
-                        {invoice.status === "issued" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => markPaidMutation.mutate(invoice.id)}
-                            disabled={markPaidMutation.isPending}
-                            data-testid={`button-mark-paid-${invoice.id}`}
-                          >
-                            {markPaidMutation.isPending ? (
-                              <Loader2 className="w-4 h-4 animate-spin" />
-                            ) : (
-                              <>
-                                <CheckCircle className="w-4 h-4 mr-2" />
-                                Segna Pagata
-                              </>
-                            )}
-                          </Button>
-                        )}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                  {(!invoices || invoices.length === 0) && (
+              <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
                     <TableRow>
-                      <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                        Nessuna fattura generata
-                      </TableCell>
+                      <TableHead>Numero</TableHead>
+                      <TableHead>Periodo</TableHead>
+                      <TableHead>Importo</TableHead>
+                      <TableHead>Stato</TableHead>
+                      <TableHead>Scadenza</TableHead>
+                      <TableHead className="text-right">Azioni</TableHead>
                     </TableRow>
-                  )}
-                </TableBody>
-              </Table>
+                  </TableHeader>
+                  <TableBody>
+                    {invoices?.map((invoice) => (
+                      <TableRow key={invoice.id} data-testid={`row-invoice-${invoice.id}`}>
+                        <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
+                        <TableCell>
+                          {formatDate(invoice.periodStart)} - {formatDate(invoice.periodEnd)}
+                        </TableCell>
+                        <TableCell>{formatCurrency(invoice.amount)}</TableCell>
+                        <TableCell>
+                          {invoice.status === "paid" ? (
+                            <Badge className="bg-green-500/20 text-green-500">
+                              <CheckCircle className="w-3 h-3 mr-1" />
+                              Pagata
+                            </Badge>
+                          ) : invoice.status === "issued" ? (
+                            <Badge variant="secondary">
+                              <Clock className="w-3 h-3 mr-1" />
+                              Emessa
+                            </Badge>
+                          ) : invoice.status === "void" ? (
+                            <Badge variant="destructive">Annullata</Badge>
+                          ) : (
+                            <Badge variant="outline">Bozza</Badge>
+                          )}
+                        </TableCell>
+                        <TableCell>{formatDate(invoice.dueDate)}</TableCell>
+                        <TableCell className="text-right">
+                          {invoice.status === "issued" && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => markPaidMutation.mutate(invoice.id)}
+                              disabled={markPaidMutation.isPending}
+                              data-testid={`button-mark-paid-${invoice.id}`}
+                            >
+                              {markPaidMutation.isPending ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <>
+                                  <CheckCircle className="w-4 h-4 mr-2" />
+                                  Segna Pagata
+                                </>
+                              )}
+                            </Button>
+                          )}
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                    {(!invoices || invoices.length === 0) && (
+                      <TableRow>
+                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
+                          Nessuna fattura generata
+                        </TableCell>
+                      </TableRow>
+                    )}
+                  </TableBody>
+                </Table>
+              </div>
             </CardContent>
           </Card>
         </TabsContent>

@@ -225,13 +225,13 @@ export default function StationDetail() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 pb-24 md:pb-8">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col gap-4 md:flex-row md:items-center md:justify-between"
+        className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-center md:justify-between"
       >
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-3 sm:gap-4">
           <Link href={`/events/${eventId}`}>
             <Button variant="outline" size="icon" data-testid="button-back">
               <ArrowLeft className="h-4 w-4" />
@@ -239,10 +239,10 @@ export default function StationDetail() {
           </Link>
           <div>
             <div className="flex items-center gap-2 mb-1">
-              <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-                <MapPin className="h-5 w-5 text-white" />
+              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+                <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
               </div>
-              <h1 className="text-2xl font-bold" data-testid="text-station-name">{station.name}</h1>
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold" data-testid="text-station-name">{station.name}</h1>
               {(station as any).isGeneral && (
                 <Badge variant="secondary">Fissa</Badge>
               )}
@@ -327,6 +327,7 @@ export default function StationDetail() {
               </div>
             ) : stationStocks && stationStocks.filter(s => parseFloat(s.quantity) > 0).length > 0 ? (
               <Card>
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -385,6 +386,7 @@ export default function StationDetail() {
                     })}
                   </TableBody>
                 </Table>
+                </div>
               </Card>
             ) : (
               <Card className="p-8 text-center border-2 border-dashed">
@@ -400,6 +402,7 @@ export default function StationDetail() {
           <TabsContent value="movements" className="mt-4">
             {stationMovements.length > 0 ? (
               <Card>
+                <div className="overflow-x-auto">
                 <Table>
                   <TableHeader>
                     <TableRow>
@@ -459,6 +462,7 @@ export default function StationDetail() {
                     })}
                   </TableBody>
                 </Table>
+                </div>
               </Card>
             ) : (
               <Card className="p-8 text-center border-2 border-dashed">

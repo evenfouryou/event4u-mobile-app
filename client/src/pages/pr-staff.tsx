@@ -309,12 +309,12 @@ export default function PrStaffPage() {
       </div>
 
       <Card>
-        <CardContent className="pt-6">
-          <div className="grid gap-4 md:grid-cols-2">
+        <CardContent className="p-3 sm:p-4 md:pt-6">
+          <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Seleziona Evento</label>
+              <label className="text-xs sm:text-sm font-medium">Seleziona Evento</label>
               <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-                <SelectTrigger data-testid="select-event">
+                <SelectTrigger className="h-10 sm:h-9" data-testid="select-event">
                   <SelectValue placeholder="Scegli un evento" />
                 </SelectTrigger>
                 <SelectContent>
@@ -328,14 +328,14 @@ export default function PrStaffPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-sm font-medium">Cerca Staff</label>
+              <label className="text-xs sm:text-sm font-medium">Cerca Staff</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
                   placeholder="Cerca per nome o ruolo..."
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
+                  className="pl-9 h-10 sm:h-9"
                   data-testid="input-search"
                 />
               </div>
@@ -346,57 +346,57 @@ export default function PrStaffPage() {
 
       {selectedEventId && (
         <>
-          <div className="grid gap-4 md:grid-cols-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="p-3 sm:p-4 md:pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Totale Staff</p>
-                    <p className="text-2xl font-bold">{staffAssignments.length}</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">Totale Staff</p>
+                    <p className="text-xl sm:text-2xl font-bold">{staffAssignments.length}</p>
                   </div>
-                  <Users className="h-8 w-8 text-primary" />
+                  <Users className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
                 </div>
               </CardContent>
             </Card>
             
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="p-3 sm:p-4 md:pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">PR</p>
-                    <p className="text-2xl font-bold text-green-500">
+                    <p className="text-xs sm:text-sm text-muted-foreground">PR</p>
+                    <p className="text-xl sm:text-2xl font-bold text-green-500">
                       {staffAssignments.filter(a => a.role === 'pr').length}
                     </p>
                   </div>
-                  <UserCog className="h-8 w-8 text-green-500" />
+                  <UserCog className="h-6 w-6 sm:h-8 sm:w-8 text-green-500" />
                 </div>
               </CardContent>
             </Card>
             
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="p-3 sm:p-4 md:pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Capo Staff</p>
-                    <p className="text-2xl font-bold text-blue-500">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Capo Staff</p>
+                    <p className="text-xl sm:text-2xl font-bold text-blue-500">
                       {staffAssignments.filter(a => a.role === 'capo_staff').length}
                     </p>
                   </div>
-                  <Shield className="h-8 w-8 text-blue-500" />
+                  <Shield className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500" />
                 </div>
               </CardContent>
             </Card>
             
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="p-3 sm:p-4 md:pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-sm text-muted-foreground">Attivi</p>
-                    <p className="text-2xl font-bold text-purple-500">
+                    <p className="text-xs sm:text-sm text-muted-foreground">Attivi</p>
+                    <p className="text-xl sm:text-2xl font-bold text-purple-500">
                       {staffAssignments.filter(a => a.isActive).length}
                     </p>
                   </div>
-                  <CheckCircle2 className="h-8 w-8 text-purple-500" />
+                  <CheckCircle2 className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500" />
                 </div>
               </CardContent>
             </Card>

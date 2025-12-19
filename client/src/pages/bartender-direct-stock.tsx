@@ -251,7 +251,7 @@ export default function BartenderDirectStock() {
 
   if (eventLoading || authLoading || stationsLoading) {
     return (
-      <div className="p-4 max-w-lg mx-auto pb-24">
+      <div className="p-3 sm:p-4 max-w-lg mx-auto pb-24">
         <Skeleton className="h-12 w-48 mb-6 rounded-xl" />
         <Skeleton className="h-12 w-full mb-4 rounded-xl" />
         <div className="grid grid-cols-2 gap-3">
@@ -263,7 +263,7 @@ export default function BartenderDirectStock() {
 
   if (!event) {
     return (
-      <div className="p-4 max-w-lg mx-auto pb-24">
+      <div className="p-3 sm:p-4 max-w-lg mx-auto pb-24">
         <div className="glass-card p-12 text-center">
           <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <p className="text-muted-foreground">Evento non trovato</p>
@@ -281,7 +281,7 @@ export default function BartenderDirectStock() {
   return (
     <div className="min-h-screen pb-24">
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
-        <div className="p-4 max-w-lg mx-auto">
+        <div className="p-3 sm:p-4 max-w-lg mx-auto">
           <div className="flex items-center gap-3 mb-3">
             <Button
               asChild
@@ -331,7 +331,7 @@ export default function BartenderDirectStock() {
         </div>
       </div>
 
-      <div className="p-4 max-w-lg mx-auto">
+      <div className="p-3 sm:p-4 max-w-lg mx-auto">
         {!activeStationId && myStations.length === 0 ? (
           <motion.div
             initial={{ opacity: 0, y: 20 }}

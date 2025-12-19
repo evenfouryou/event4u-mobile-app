@@ -421,7 +421,7 @@ export default function ConsumptionTracking() {
 
   if (eventsLoading) {
     return (
-      <div className="p-6 md:p-8 max-w-7xl mx-auto">
+      <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto">
         <Skeleton className="h-96" />
       </div>
     );
@@ -429,7 +429,7 @@ export default function ConsumptionTracking() {
 
   if (!selectedEvent) {
     return (
-      <div className="p-6 md:p-8 max-w-7xl mx-auto">
+      <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto">
         <Card>
           <CardContent className="p-12 text-center">
             <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />

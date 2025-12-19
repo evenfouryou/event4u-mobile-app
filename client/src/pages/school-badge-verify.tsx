@@ -69,18 +69,18 @@ export default function SchoolBadgeVerify() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+      <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 md:p-6 bg-background">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
         >
           <Card className="w-full max-w-md text-center">
             <CardHeader>
-              <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-                <Loader2 className="h-8 w-8 text-primary animate-spin" />
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                <Loader2 className="h-7 w-7 sm:h-8 sm:w-8 text-primary animate-spin" />
               </div>
-              <CardTitle>Verifica in corso...</CardTitle>
-              <CardDescription>
+              <CardTitle className="text-lg sm:text-xl md:text-2xl">Verifica in corso...</CardTitle>
+              <CardDescription className="text-sm sm:text-base">
                 Stiamo verificando il tuo indirizzo email
               </CardDescription>
             </CardHeader>
@@ -92,23 +92,23 @@ export default function SchoolBadgeVerify() {
 
   if (!result?.success) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+      <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 md:p-6 bg-background">
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
         >
           <Card className="w-full max-w-md text-center" data-testid="card-verify-error">
             <CardHeader>
-              <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto mb-4">
-                <XCircle className="h-8 w-8 text-destructive" />
+              <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto mb-3 sm:mb-4">
+                <XCircle className="h-7 w-7 sm:h-8 sm:w-8 text-destructive" />
               </div>
-              <CardTitle>Verifica fallita</CardTitle>
-              <CardDescription data-testid="text-error-message">
+              <CardTitle className="text-lg sm:text-xl md:text-2xl">Verifica fallita</CardTitle>
+              <CardDescription className="text-sm sm:text-base" data-testid="text-error-message">
                 {result?.message || "Il link di verifica non è valido o è scaduto."}
               </CardDescription>
             </CardHeader>
             <CardContent>
-              <Button variant="outline" onClick={() => setLocation("/")}>
+              <Button variant="outline" className="w-full sm:w-auto" onClick={() => setLocation("/")}>
                 Torna alla home
               </Button>
             </CardContent>

@@ -85,8 +85,8 @@ export default function LocationDetail() {
 
   if (isLoading) {
     return (
-      <div className="p-6 md:p-8 max-w-4xl mx-auto">
-        <div className="mb-6">
+      <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto">
+        <div className="mb-4 sm:mb-6">
           <Skeleton className="h-8 w-48 mb-2" />
           <Skeleton className="h-4 w-72" />
         </div>
@@ -97,8 +97,8 @@ export default function LocationDetail() {
 
   if (!location) {
     return (
-      <div className="p-6 md:p-8 max-w-4xl mx-auto">
-        <div className="text-center py-12">
+      <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto">
+        <div className="text-center py-8 sm:py-12">
           <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h2 className="text-xl font-semibold mb-2">Location non trovata</h2>
           <p className="text-muted-foreground mb-4">La location richiesta non esiste</p>
@@ -112,8 +112,8 @@ export default function LocationDetail() {
   }
 
   return (
-    <div className="p-6 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
-      <div className="flex items-center gap-4 mb-6">
+    <div className="p-3 sm:p-4 md:p-8 max-w-4xl mx-auto pb-24 md:pb-8">
+      <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
         <Button 
           variant="ghost" 
           size="icon" 
@@ -123,16 +123,16 @@ export default function LocationDetail() {
           <ArrowLeft className="h-5 w-5" />
         </Button>
         <div>
-          <h1 className="text-2xl font-semibold" data-testid="text-location-title">
+          <h1 className="text-lg sm:text-xl md:text-2xl font-semibold" data-testid="text-location-title">
             Modifica Location
           </h1>
           <p className="text-muted-foreground">{location.name}</p>
         </div>
       </div>
 
-      <div className="glass-card p-6">
+      <div className="glass-card p-4 sm:p-6">
         <Form {...form}>
-          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4 sm:space-y-6">
             <FormField
               control={form.control}
               name="name"

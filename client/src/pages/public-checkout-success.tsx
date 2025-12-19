@@ -58,16 +58,16 @@ function TicketCard({ ticket }: { ticket: TicketData }) {
       <Card className="bg-card border-border overflow-hidden" data-testid={`card-ticket-${ticket.id}`}>
         <div className="relative">
           <div className="absolute inset-0 bg-gradient-to-br from-primary/10 to-purple-500/10" />
-          <CardContent className="relative p-6">
-            <div className="flex gap-4">
-              <div className="w-20 h-20 rounded-xl bg-white flex items-center justify-center shrink-0">
-                <QrCode className="w-12 h-12 text-black" />
+          <CardContent className="relative p-4 sm:p-6">
+            <div className="flex gap-3 sm:gap-4">
+              <div className="w-14 h-14 sm:w-20 sm:h-20 rounded-xl bg-white flex items-center justify-center shrink-0">
+                <QrCode className="w-8 h-8 sm:w-12 sm:h-12 text-black" />
               </div>
               <div className="flex-1 min-w-0">
-                <h3 className="font-bold text-foreground text-lg truncate" data-testid={`text-event-${ticket.id}`}>
+                <h3 className="font-bold text-foreground text-sm sm:text-lg truncate" data-testid={`text-event-${ticket.id}`}>
                   {ticket.eventName}
                 </h3>
-                <p className="text-sm text-muted-foreground mt-1">
+                <p className="text-xs sm:text-sm text-muted-foreground mt-1">
                   {ticket.sectorName} - {ticket.ticketTypeCode === "INT" ? "Intero" : "Ridotto"}
                 </p>
                 <div className="flex flex-wrap gap-3 mt-3 text-xs text-muted-foreground">
@@ -85,7 +85,7 @@ function TicketCard({ ticket }: { ticket: TicketData }) {
                   </span>
                 </div>
               </div>
-              <div className="text-right">
+              <div className="text-right hidden sm:block">
                 <p className="text-xl font-bold text-primary" data-testid={`text-price-${ticket.id}`}>
                   €{Number(ticket.grossAmount).toFixed(2)}
                 </p>
@@ -102,18 +102,32 @@ function TicketCard({ ticket }: { ticket: TicketData }) {
               </div>
             </div>
 
-            <div className="mt-4 pt-4 border-t border-border">
+            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-border">
+              <div className="flex sm:hidden items-center justify-between mb-2">
+                <p className="text-base font-bold text-primary" data-testid={`text-price-mobile-${ticket.id}`}>
+                  €{Number(ticket.grossAmount).toFixed(2)}
+                </p>
+                <Badge
+                  className={
+                    ticket.status === "valid"
+                      ? "bg-teal-500/20 text-teal-400 border-teal-500/30"
+                      : "bg-red-500/20 text-red-400 border-red-500/30"
+                  }
+                >
+                  {ticket.status === "valid" ? "Valido" : ticket.status}
+                </Badge>
+              </div>
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-xs text-muted-foreground">Intestatario</p>
-                  <p className="text-sm text-foreground" data-testid={`text-participant-${ticket.id}`}>
+                  <p className="text-xs sm:text-sm text-foreground" data-testid={`text-participant-${ticket.id}`}>
                     {ticket.participantFirstName} {ticket.participantLastName}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
                   <div className="text-right">
-                    <p className="text-xs text-muted-foreground">Codice Biglietto</p>
-                    <p className="text-sm font-mono text-foreground" data-testid={`text-code-${ticket.id}`}>
+                    <p className="text-xs text-muted-foreground hidden sm:block">Codice Biglietto</p>
+                    <p className="text-xs sm:text-sm font-mono text-foreground" data-testid={`text-code-${ticket.id}`}>
                       {ticket.fiscalSealCode.slice(0, 8)}...
                     </p>
                   </div>
@@ -121,7 +135,7 @@ function TicketCard({ ticket }: { ticket: TicketData }) {
                     variant="ghost"
                     size="icon"
                     onClick={copyCode}
-                    className="text-muted-foreground hover:text-primary"
+                    className="text-muted-foreground hover:text-primary h-10 w-10"
                     data-testid={`button-copy-${ticket.id}`}
                   >
                     <Copy className="w-4 h-4" />
@@ -210,13 +224,13 @@ export default function PublicCheckoutSuccessPage() {
         </h2>
 
         {isLoading ? (
-          <div className="space-y-4">
+          <div className="space-y-3 sm:space-y-4">
             {[...Array(2)].map((_, i) => (
-              <Skeleton key={i} className="h-40" />
+              <Skeleton key={i} className="h-32 sm:h-40" />
             ))}
           </div>
         ) : tickets && tickets.length > 0 ? (
-          <div className="space-y-4" data-testid="list-tickets">
+          <div className="space-y-3 sm:space-y-4" data-testid="list-tickets">
             {tickets.map((ticket) => (
               <TicketCard key={ticket.id} ticket={ticket} />
             ))}

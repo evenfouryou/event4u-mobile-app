@@ -210,11 +210,11 @@ export default function StaffPrEventPanel() {
   const isPr = currentEvent.assignmentType === 'pr';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/95 p-6">
-      <div className="max-w-7xl mx-auto space-y-6">
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-background/95 p-3 sm:p-4 md:p-6 pb-24 md:pb-6">
+      <div className="max-w-7xl mx-auto space-y-4 sm:space-y-6">
         {/* Header */}
-        <div className="glass-card p-6 rounded-xl">
-          <div className="flex items-center gap-4 mb-4">
+        <div className="glass-card p-3 sm:p-4 md:p-6 rounded-xl">
+          <div className="flex items-center gap-3 sm:gap-4 mb-3 sm:mb-4">
             <Button 
               variant="ghost" 
               size="icon"
@@ -223,18 +223,18 @@ export default function StaffPrEventPanel() {
             >
               <ArrowLeft className="h-5 w-5" />
             </Button>
-            <div className="flex-1">
-              <h1 className="text-2xl font-bold text-foreground" data-testid="text-event-name">
+            <div className="flex-1 min-w-0">
+              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground truncate" data-testid="text-event-name">
                 {currentEvent.name}
               </h1>
-              <div className="flex items-center gap-4 mt-1 text-muted-foreground">
+              <div className="flex items-center gap-2 sm:gap-4 mt-1 text-muted-foreground text-xs sm:text-sm">
                 <div className="flex items-center gap-1">
-                  <Clock className="h-4 w-4" />
-                  <span>{format(new Date(currentEvent.startDatetime), "d MMMM yyyy, HH:mm", { locale: it })}</span>
+                  <Clock className="h-3 w-3 sm:h-4 sm:w-4" />
+                  <span>{format(new Date(currentEvent.startDatetime), "d MMM yyyy, HH:mm", { locale: it })}</span>
                 </div>
               </div>
             </div>
-            <Badge className={isStaff ? "bg-teal-500/20 text-teal-400" : "bg-pink-500/20 text-pink-400"}>
+            <Badge className={`text-xs sm:text-sm ${isStaff ? "bg-teal-500/20 text-teal-400" : "bg-pink-500/20 text-pink-400"}`}>
               {isStaff ? "Staff" : isPr ? "PR" : "Scanner"}
             </Badge>
           </div>
@@ -242,39 +242,43 @@ export default function StaffPrEventPanel() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
-          <TabsList className="glass-card p-1">
+          <TabsList className="glass-card p-1 w-full grid grid-cols-2 sm:grid-cols-4 h-auto">
             {(permissions.canManageLists || permissions.canAddToLists) && (
-              <TabsTrigger value="lists" data-testid="tab-lists">
-                <ListChecks className="h-4 w-4 mr-2" />
-                Liste
+              <TabsTrigger value="lists" className="text-xs sm:text-sm py-2 sm:py-1.5" data-testid="tab-lists">
+                <ListChecks className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Liste</span>
+                <span className="sm:hidden">Liste</span>
               </TabsTrigger>
             )}
             {(permissions.canManageTables || permissions.canProposeTables) && (
-              <TabsTrigger value="tables" data-testid="tab-tables">
-                <Armchair className="h-4 w-4 mr-2" />
-                Tavoli
+              <TabsTrigger value="tables" className="text-xs sm:text-sm py-2 sm:py-1.5" data-testid="tab-tables">
+                <Armchair className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">Tavoli</span>
+                <span className="sm:hidden">Tavoli</span>
               </TabsTrigger>
             )}
             {permissions.canCreatePr && (
-              <TabsTrigger value="pr" data-testid="tab-pr">
-                <UserPlus className="h-4 w-4 mr-2" />
-                PR Team
+              <TabsTrigger value="pr" className="text-xs sm:text-sm py-2 sm:py-1.5" data-testid="tab-pr">
+                <UserPlus className="h-4 w-4 mr-1 sm:mr-2" />
+                <span className="hidden sm:inline">PR Team</span>
+                <span className="sm:hidden">PR</span>
               </TabsTrigger>
             )}
-            <TabsTrigger value="stats" data-testid="tab-stats">
-              <TrendingUp className="h-4 w-4 mr-2" />
-              Statistiche
+            <TabsTrigger value="stats" className="text-xs sm:text-sm py-2 sm:py-1.5" data-testid="tab-stats">
+              <TrendingUp className="h-4 w-4 mr-1 sm:mr-2" />
+              <span className="hidden sm:inline">Statistiche</span>
+              <span className="sm:hidden">Stats</span>
             </TabsTrigger>
           </TabsList>
 
           {/* Lists Tab */}
           <TabsContent value="lists" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Liste Evento</h2>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <h2 className="text-lg sm:text-xl font-semibold">Liste Evento</h2>
               {(permissions.canManageLists || permissions.canAddToLists) && (
                 <Dialog open={addDialogOpen} onOpenChange={setAddDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button data-testid="button-add-person">
+                    <Button className="w-full sm:w-auto h-12 sm:h-10" data-testid="button-add-person">
                       <Plus className="h-4 w-4 mr-2" />
                       Aggiungi Persona
                     </Button>
@@ -407,10 +411,10 @@ export default function StaffPrEventPanel() {
 
           {/* Tables Tab */}
           <TabsContent value="tables" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Tavoli Evento</h2>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <h2 className="text-lg sm:text-xl font-semibold">Tavoli Evento</h2>
               {permissions.canProposeTables && (
-                <Button data-testid="button-propose-table">
+                <Button className="w-full sm:w-auto h-12 sm:h-10" data-testid="button-propose-table">
                   <Plus className="h-4 w-4 mr-2" />
                   Proponi Tavolo
                 </Button>
@@ -466,10 +470,10 @@ export default function StaffPrEventPanel() {
 
           {/* PR Tab */}
           <TabsContent value="pr" className="space-y-4">
-            <div className="flex items-center justify-between">
-              <h2 className="text-xl font-semibold">Il Tuo Team PR</h2>
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+              <h2 className="text-lg sm:text-xl font-semibold">Il Tuo Team PR</h2>
               {permissions.canCreatePr && (
-                <Button data-testid="button-add-pr">
+                <Button className="w-full sm:w-auto h-12 sm:h-10" data-testid="button-add-pr">
                   <UserPlus className="h-4 w-4 mr-2" />
                   Aggiungi PR
                 </Button>
@@ -489,46 +493,46 @@ export default function StaffPrEventPanel() {
 
           {/* Stats Tab */}
           <TabsContent value="stats" className="space-y-4">
-            <h2 className="text-xl font-semibold">Le Tue Statistiche</h2>
+            <h2 className="text-lg sm:text-xl font-semibold">Le Tue Statistiche</h2>
             
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
               <Card className="glass-card">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-full bg-teal-500/20">
-                      <Users className="h-6 w-6 text-teal-400" />
+                <CardContent className="p-3 sm:p-4 md:p-6">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="p-2 sm:p-3 rounded-full bg-teal-500/20">
+                      <Users className="h-5 w-5 sm:h-6 sm:w-6 text-teal-400" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Persone Aggiunte</p>
-                      <p className="text-2xl font-bold" data-testid="stat-my-entries">-</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Persone Aggiunte</p>
+                      <p className="text-xl sm:text-2xl font-bold" data-testid="stat-my-entries">-</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="glass-card">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-full bg-green-500/20">
-                      <CheckCircle2 className="h-6 w-6 text-green-400" />
+                <CardContent className="p-3 sm:p-4 md:p-6">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="p-2 sm:p-3 rounded-full bg-green-500/20">
+                      <CheckCircle2 className="h-5 w-5 sm:h-6 sm:w-6 text-green-400" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Check-in</p>
-                      <p className="text-2xl font-bold" data-testid="stat-my-checkins">-</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Check-in</p>
+                      <p className="text-xl sm:text-2xl font-bold" data-testid="stat-my-checkins">-</p>
                     </div>
                   </div>
                 </CardContent>
               </Card>
 
               <Card className="glass-card">
-                <CardContent className="p-6">
-                  <div className="flex items-center gap-4">
-                    <div className="p-3 rounded-full bg-pink-500/20">
-                      <Armchair className="h-6 w-6 text-pink-400" />
+                <CardContent className="p-3 sm:p-4 md:p-6">
+                  <div className="flex items-center gap-3 sm:gap-4">
+                    <div className="p-2 sm:p-3 rounded-full bg-pink-500/20">
+                      <Armchair className="h-5 w-5 sm:h-6 sm:w-6 text-pink-400" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Tavoli</p>
-                      <p className="text-2xl font-bold" data-testid="stat-my-tables">-</p>
+                      <p className="text-xs sm:text-sm text-muted-foreground">Tavoli</p>
+                      <p className="text-xl sm:text-2xl font-bold" data-testid="stat-my-tables">-</p>
                     </div>
                   </div>
                 </CardContent>

@@ -217,7 +217,7 @@ function KPICard({
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className={`glass-card p-4 ${onClick ? 'cursor-pointer' : ''}`}
+      className={`glass-card p-3 sm:p-4 ${onClick ? 'cursor-pointer' : ''}`}
       data-testid={testId}
     >
       <div className="flex items-start justify-between mb-3">
@@ -1317,9 +1317,9 @@ export default function EventHub() {
 
   if (eventLoading) {
     return (
-      <div className="p-4 md:p-6 max-w-7xl mx-auto">
-        <Skeleton className="h-20 w-full mb-6" />
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+      <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto">
+        <Skeleton className="h-20 w-full mb-4 sm:mb-6" />
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
           {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32" />)}
         </div>
         <Skeleton className="h-96" />
@@ -1329,9 +1329,9 @@ export default function EventHub() {
 
   if (!event) {
     return (
-      <div className="p-4 md:p-6 max-w-7xl mx-auto">
+      <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto">
         <Card className="glass-card">
-          <CardContent className="p-12 text-center">
+          <CardContent className="p-8 sm:p-12 text-center">
             <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
             <h2 className="text-xl font-semibold mb-2">Evento non trovato</h2>
             <p className="text-muted-foreground mb-4">L'evento richiesto non esiste o è stato eliminato.</p>
@@ -1364,9 +1364,9 @@ export default function EventHub() {
       </AnimatePresence>
 
       <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b">
-        <div className="p-4 md:p-6 max-w-7xl mx-auto">
-          <div className="flex items-start justify-between gap-4">
-            <div className="flex items-center gap-3">
+        <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto">
+          <div className="flex items-start justify-between gap-3 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-3">
               <Button
                 variant="ghost"
                 size="icon"
@@ -1378,7 +1378,7 @@ export default function EventHub() {
               </Button>
               <div>
                 <div className="flex items-center gap-2 flex-wrap">
-                  <h1 className="text-xl md:text-2xl font-bold" data-testid="event-title">{event.name}</h1>
+                  <h1 className="text-lg sm:text-xl md:text-2xl font-bold" data-testid="event-title">{event.name}</h1>
                   <Badge className={`${status.bgColor} ${status.color}`}>
                     <StatusIcon className="h-3 w-3 mr-1" />
                     {status.label}
@@ -1593,8 +1593,8 @@ export default function EventHub() {
         </div>
       </div>
 
-      <div className="p-4 md:p-6 max-w-7xl mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 mb-6">
+      <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto">
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-3 sm:gap-4 mb-4 sm:mb-6">
           <KPICard
             title="Biglietti"
             value={ticketedEvent?.ticketsSold || 0}

@@ -104,7 +104,7 @@ function StatsCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.3, delay }}
-      className="glass-card p-5"
+      className="glass-card p-3 sm:p-5"
       data-testid={testId}
     >
       <div className="flex items-start justify-between mb-3">
@@ -148,7 +148,7 @@ export default function EventDetail() {
   // Show loading while checking user role to prevent bartenders from seeing manager page
   if (authLoading) {
     return (
-      <div className="p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
+      <div className="p-3 sm:p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
         <Skeleton className="h-12 w-64 mb-8 rounded-xl" />
         <div className="grid gap-4 md:grid-cols-4">
           <Skeleton className="h-24 rounded-2xl" />
@@ -581,7 +581,7 @@ export default function EventDetail() {
 
   if (eventLoading) {
     return (
-      <div className="p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
+      <div className="p-3 sm:p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
         <Skeleton className="h-12 w-32 mb-8 rounded-xl" />
         <Skeleton className="h-48 rounded-2xl mb-6" />
         <Skeleton className="h-64 rounded-2xl" />
@@ -591,7 +591,7 @@ export default function EventDetail() {
 
   if (!event) {
     return (
-      <div className="p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
+      <div className="p-3 sm:p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -959,7 +959,7 @@ export default function EventDetail() {
                     </Select>
                   </div>
 
-                  <div className="border rounded-xl overflow-hidden">
+                  <div className="border rounded-xl overflow-hidden overflow-x-auto">
                     <Table>
                       <TableHeader>
                         <TableRow>

@@ -49,12 +49,12 @@ export default function VerifyEmail() {
 
   const renderIcon = () => {
     if (status === 'loading') {
-      return <Loader2 className="h-16 w-16 text-primary animate-spin" />;
+      return <Loader2 className="h-12 w-12 sm:h-16 sm:w-16 text-primary animate-spin" />;
     }
     if (status === 'success' || status === 'already-verified') {
-      return <CheckCircle2 className="h-16 w-16 text-green-600" />;
+      return <CheckCircle2 className="h-12 w-12 sm:h-16 sm:w-16 text-green-600" />;
     }
-    return <XCircle className="h-16 w-16 text-destructive" />;
+    return <XCircle className="h-12 w-12 sm:h-16 sm:w-16 text-destructive" />;
   };
 
   const renderTitle = () => {
@@ -65,20 +65,20 @@ export default function VerifyEmail() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-6 bg-gradient-to-br from-primary/5 to-background">
-      <Card className="max-w-md w-full">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-4 h-20 w-20 rounded-full bg-background flex items-center justify-center">
+    <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 md:p-6 bg-gradient-to-br from-primary/5 to-background">
+      <Card className="max-w-md w-full mx-auto">
+        <CardHeader className="text-center px-4 sm:px-6">
+          <div className="mx-auto mb-3 sm:mb-4 h-16 w-16 sm:h-20 sm:w-20 rounded-full bg-background flex items-center justify-center">
             {renderIcon()}
           </div>
-          <CardTitle className="text-2xl" data-testid="text-verification-title">
+          <CardTitle className="text-xl sm:text-2xl" data-testid="text-verification-title">
             {renderTitle()}
           </CardTitle>
-          <CardDescription data-testid="text-verification-message">
+          <CardDescription className="text-sm sm:text-base" data-testid="text-verification-message">
             {message}
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-4 px-4 sm:px-6">
           {(status === 'success' || status === 'already-verified') && (
             <div className="text-center">
               <p className="text-sm text-muted-foreground mb-4">

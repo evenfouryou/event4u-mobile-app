@@ -50,7 +50,7 @@ function ModuleCard({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.4, delay }}
-      className={`glass-card p-6 h-full transition-all duration-300 group ${
+      className={`glass-card p-4 sm:p-6 h-full transition-all duration-300 group ${
         available 
           ? 'hover:border-primary/30 cursor-pointer' 
           : 'opacity-60 cursor-not-allowed'
@@ -107,7 +107,7 @@ function StatsCard({
       initial={{ opacity: 0, scale: 0.95 }}
       animate={{ opacity: 1, scale: 1 }}
       transition={{ duration: 0.3, delay }}
-      className="glass-card p-5"
+      className="glass-card p-3 sm:p-5"
     >
       <div className="flex items-start justify-between mb-3">
         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
