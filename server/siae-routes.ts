@@ -2436,16 +2436,30 @@ router.get('/api/siae/ticketed-events/:id/reports/c1', requireAuth, async (req: 
     
     // For daily report, filter by event date; for monthly, include all tickets
     let tickets = allTickets;
+    let cancelledInDay: typeof allTickets = [];
+    
     if (!isMonthly && event.eventDate) {
       const eventDateStr = new Date(event.eventDate).toISOString().split('T')[0];
+      
+      // Filter emitted tickets by emission date
       tickets = allTickets.filter(t => {
         if (!t.emissionDate) return true; // Include tickets without emission date
         const ticketDateStr = new Date(t.emissionDate).toISOString().split('T')[0];
         return ticketDateStr === eventDateStr;
       });
+      
+      // Also get tickets cancelled on event date (regardless of emission date)
+      cancelledInDay = allTickets.filter(t => {
+        if (t.status !== 'cancelled' || !t.cancellationDate) return false;
+        const cancelDateStr = new Date(t.cancellationDate).toISOString().split('T')[0];
+        return cancelDateStr === eventDateStr;
+      });
+    } else {
+      // For monthly, all cancelled tickets count
+      cancelledInDay = allTickets.filter(t => t.status === 'cancelled');
     }
     
-    // Filter only active/emitted tickets
+    // Filter only active/emitted tickets for sales calculations
     const activeTickets = tickets.filter(t => t.status !== 'cancelled');
 
     const salesByDate: Record<string, { 
@@ -2523,11 +2537,11 @@ router.get('/api/siae/ticketed-events/:id/reports/c1', requireAuth, async (req: 
       vatRate,
       vatAmount,
       netRevenue,
-      cancelledTickets: tickets.filter(t => t.status === 'cancelled').length,
+      cancelledTickets: cancelledInDay.length,
       dailySales,
       sectors: sectors.map(s => {
         const sectorActiveTickets = activeTickets.filter(t => t.sectorId === s.id);
-        const sectorCancelledTickets = tickets.filter(t => t.sectorId === s.id && t.status === 'cancelled');
+        const sectorCancelledTickets = cancelledInDay.filter(t => t.sectorId === s.id);
         return {
           id: s.id,
           name: s.name,
