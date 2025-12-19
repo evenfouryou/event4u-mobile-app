@@ -1649,7 +1649,6 @@ export default function EventHub() {
                 { id: 'tables', label: 'Tavoli', shortLabel: 'Tavoli', icon: Armchair },
                 { id: 'staff', label: 'Staff', shortLabel: 'Staff', icon: Users },
                 { id: 'pr', label: 'PR', shortLabel: 'PR', icon: Megaphone },
-                { id: 'links', label: 'Link', shortLabel: 'Link', icon: Link2 },
                 { id: 'access', label: 'Controllo Accessi', shortLabel: 'Accessi', icon: Shield },
                 { id: 'inventory', label: 'Inventario', shortLabel: 'Stock', icon: Package },
                 { id: 'finance', label: 'Incassi', shortLabel: 'Incassi', icon: Euro },
@@ -2805,109 +2804,6 @@ export default function EventHub() {
                       </Button>
                     </div>
                   )}
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
-          <TabsContent value="links">
-            <div className="space-y-6">
-              {/* Event Link Section */}
-              <Card className="glass-card">
-                <CardHeader>
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <CardTitle className="flex items-center gap-2">
-                      <Link2 className="h-5 w-5 text-primary" />
-                      Link Evento
-                    </CardTitle>
-                  </div>
-                  <CardDescription>
-                    Gestisci il link pubblico per l'acquisto biglietti
-                  </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Link Display */}
-                  <div className="space-y-3">
-                    <label className="text-sm font-medium">Link Biglietti</label>
-                    <div className="flex items-center gap-2">
-                      <div className="flex-1 p-3 rounded-lg bg-background/50 border font-mono text-sm break-all">
-                        {`${window.location.origin}/e/${event.id.slice(0, 8)}`}
-                      </div>
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={() => {
-                          navigator.clipboard.writeText(`${window.location.origin}/e/${event.id.slice(0, 8)}`);
-                          toast({ title: "Link copiato!", description: "Il link è stato copiato negli appunti" });
-                        }}
-                        data-testid="btn-copy-event-link"
-                      >
-                        <Copy className="h-4 w-4" />
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        size="icon"
-                        onClick={() => window.open(`/e/${event.id.slice(0, 8)}`, '_blank')}
-                        data-testid="btn-open-event-link"
-                      >
-                        <ExternalLink className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  </div>
-
-                  {/* Link Activation Toggle */}
-                  <div className="flex items-center justify-between p-4 rounded-lg bg-background/50 border">
-                    <div className="space-y-1">
-                      <div className="font-medium flex items-center gap-2">
-                        {event.isPublic ? (
-                          <Unlock className="h-4 w-4 text-emerald-400" />
-                        ) : (
-                          <Lock className="h-4 w-4 text-muted-foreground" />
-                        )}
-                        Link Attivo
-                      </div>
-                      <p className="text-sm text-muted-foreground">
-                        {event.isPublic 
-                          ? "Il link è attivo e gli utenti possono acquistare biglietti" 
-                          : "Il link è disattivato e non accessibile al pubblico"}
-                      </p>
-                    </div>
-                    <Switch
-                      checked={event.isPublic || false}
-                      onCheckedChange={async (checked) => {
-                        try {
-                          await apiRequest('PATCH', `/api/events/${event.id}`, { isPublic: checked });
-                          queryClient.invalidateQueries({ queryKey: ['/api/events', id] });
-                          toast({ 
-                            title: checked ? "Link attivato" : "Link disattivato",
-                            description: checked 
-                              ? "Gli utenti possono ora accedere alla pagina dell'evento" 
-                              : "Il link non è più accessibile al pubblico"
-                          });
-                        } catch (error: any) {
-                          toast({ 
-                            title: "Errore", 
-                            description: error.message || "Impossibile aggiornare lo stato del link",
-                            variant: "destructive"
-                          });
-                        }
-                      }}
-                      data-testid="switch-event-public"
-                    />
-                  </div>
-
-                  {/* Additional Info */}
-                  <div className="p-4 rounded-lg bg-primary/5 border border-primary/20">
-                    <div className="flex items-start gap-3">
-                      <Ticket className="h-5 w-5 text-primary mt-0.5" />
-                      <div className="space-y-1">
-                        <div className="font-medium text-sm">Pagina Biglietti</div>
-                        <p className="text-sm text-muted-foreground">
-                          Quando attivato, questo link porta a una pagina dove gli utenti possono visualizzare le informazioni sull'evento e acquistare biglietti online.
-                        </p>
-                      </div>
-                    </div>
-                  </div>
                 </CardContent>
               </Card>
             </div>

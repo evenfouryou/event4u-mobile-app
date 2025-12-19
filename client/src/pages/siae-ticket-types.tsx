@@ -67,6 +67,14 @@ import {
   Tag,
   Clock,
   AlertCircle,
+  Eye,
+  EyeOff,
+  Settings,
+  CheckCircle2,
+  XCircle,
+  Link2,
+  Copy,
+  ExternalLink,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -235,6 +243,38 @@ export default function SiaeTicketTypes() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/siae/ticketed-events", eventId, "sectors"] });
       toast({ title: "Stato aggiornato" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const toggleEventVisibilityMutation = useMutation({
+    mutationFn: async (isPublic: boolean) => {
+      if (!ticketedEvent?.eventId) {
+        throw new Error("ID evento non disponibile");
+      }
+      return await apiRequest("PATCH", `/api/events/${ticketedEvent.eventId}`, { isPublic });
+    },
+    onSuccess: (_, isPublic) => {
+      queryClient.invalidateQueries({ queryKey: ["/api/events", ticketedEvent?.eventId] });
+      toast({ title: isPublic ? "Evento visibile al pubblico" : "Evento nascosto" });
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const updateTicketingStatusMutation = useMutation({
+    mutationFn: async (status: string) => {
+      if (!eventId) {
+        throw new Error("ID evento biglietteria non disponibile");
+      }
+      return await apiRequest("PATCH", `/api/siae/ticketed-events/${eventId}`, { ticketingStatus: status });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/siae/ticketed-events", eventId] });
+      toast({ title: "Stato biglietteria aggiornato" });
     },
     onError: (error: any) => {
       toast({ title: "Errore", description: error.message, variant: "destructive" });
@@ -540,6 +580,131 @@ export default function SiaeTicketTypes() {
           Nuova Tipologia
         </Button>
       </div>
+
+      {/* Impostazioni Vendita */}
+      <Card className="glass-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5 text-amber-400" />
+            Impostazioni Vendita
+          </CardTitle>
+          <CardDescription>
+            Controlla la visibilità dell'evento e lo stato della biglietteria
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {/* Event visibility toggle */}
+            <div className="flex items-center justify-between p-4 rounded-lg border border-border">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-purple-500/20 flex items-center justify-center">
+                  {parentEvent?.isPublic ? (
+                    <Eye className="h-5 w-5 text-purple-400" />
+                  ) : (
+                    <EyeOff className="h-5 w-5 text-muted-foreground" />
+                  )}
+                </div>
+                <div>
+                  <div className="font-medium">Visibilità Evento</div>
+                  <div className="text-sm text-muted-foreground">
+                    Mostra l'evento nella vetrina pubblica
+                  </div>
+                </div>
+              </div>
+              <Switch
+                checked={parentEvent?.isPublic ?? false}
+                onCheckedChange={(checked) => toggleEventVisibilityMutation.mutate(checked)}
+                disabled={toggleEventVisibilityMutation.isPending || !ticketedEvent?.eventId}
+                data-testid="toggle-event-visibility"
+              />
+            </div>
+
+            {/* Ticketing status control */}
+            <div className="flex items-center justify-between p-4 rounded-lg border border-border">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-500/20 flex items-center justify-center">
+                  <Ticket className="h-5 w-5 text-emerald-400" />
+                </div>
+                <div>
+                  <div className="font-medium">Vendita Biglietti</div>
+                  <div className="text-sm text-muted-foreground">
+                    {ticketedEvent?.ticketingStatus === 'active' ? 'Biglietteria attiva' : 
+                     ticketedEvent?.ticketingStatus === 'suspended' ? 'Biglietteria sospesa' :
+                     ticketedEvent?.ticketingStatus === 'closed' ? 'Biglietteria chiusa' : 'Bozza'}
+                  </div>
+                </div>
+              </div>
+              <Select
+                value={ticketedEvent?.ticketingStatus ?? 'draft'}
+                onValueChange={(value) => updateTicketingStatusMutation.mutate(value)}
+                disabled={updateTicketingStatusMutation.isPending || !eventId}
+              >
+                <SelectTrigger className="w-[140px]" data-testid="select-ticketing-status">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Bozza</SelectItem>
+                  <SelectItem value="active">Attiva</SelectItem>
+                  <SelectItem value="suspended">Sospesa</SelectItem>
+                  <SelectItem value="closed">Chiusa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          {/* Link pubblico */}
+          {parentEvent && (
+            <div className="p-4 rounded-lg border border-border bg-background/50">
+              <div className="flex items-center gap-2 mb-2">
+                <Link2 className="h-4 w-4 text-primary" />
+                <span className="font-medium text-sm">Link Pubblico Biglietti</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="flex-1 p-2 rounded-lg bg-muted/50 font-mono text-xs break-all">
+                  {`${window.location.origin}/e/${parentEvent.id.slice(0, 8)}`}
+                </div>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => {
+                    navigator.clipboard.writeText(`${window.location.origin}/e/${parentEvent.id.slice(0, 8)}`);
+                    toast({ title: "Link copiato!" });
+                  }}
+                  data-testid="btn-copy-event-link"
+                >
+                  <Copy className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="icon"
+                  onClick={() => window.open(`/e/${parentEvent.id.slice(0, 8)}`, '_blank')}
+                  data-testid="btn-open-event-link"
+                >
+                  <ExternalLink className="h-4 w-4" />
+                </Button>
+              </div>
+            </div>
+          )}
+          
+          {/* Status summary badges */}
+          <div className="flex flex-wrap gap-2 pt-2">
+            {parentEvent?.isPublic ? (
+              <Badge className="bg-purple-600"><Eye className="h-3 w-3 mr-1" />Evento Pubblico</Badge>
+            ) : (
+              <Badge variant="outline"><EyeOff className="h-3 w-3 mr-1" />Evento Nascosto</Badge>
+            )}
+            {ticketedEvent?.ticketingStatus === 'active' ? (
+              <Badge className="bg-emerald-600"><CheckCircle2 className="h-3 w-3 mr-1" />Vendita Attiva</Badge>
+            ) : ticketedEvent?.ticketingStatus === 'suspended' ? (
+              <Badge className="bg-amber-600"><AlertCircle className="h-3 w-3 mr-1" />Vendita Sospesa</Badge>
+            ) : ticketedEvent?.ticketingStatus === 'closed' ? (
+              <Badge className="bg-rose-600"><XCircle className="h-3 w-3 mr-1" />Vendita Chiusa</Badge>
+            ) : (
+              <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Bozza</Badge>
+            )}
+          </div>
+        </CardContent>
+      </Card>
 
       <Card className="glass-card">
         <CardHeader>
