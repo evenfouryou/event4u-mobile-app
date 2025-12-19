@@ -38,6 +38,8 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import {
   Select,
   SelectContent,
@@ -120,6 +122,7 @@ export default function SiaeTicketsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [cancelReasonCode, setCancelReasonCode] = useState("");
+  const [refundOnCancel, setRefundOnCancel] = useState(false);
   const [isGeneratingSeal, setIsGeneratingSeal] = useState(false);
 
   const companyId = user?.companyId;
@@ -301,19 +304,32 @@ export default function SiaeTicketsPage() {
   });
 
   const cancelTicketMutation = useMutation({
-    mutationFn: async ({ ticketId, reasonCode }: { ticketId: string; reasonCode: string }) => {
-      const response = await apiRequest("POST", `/api/siae/tickets/${ticketId}/cancel`, { reasonCode });
+    mutationFn: async ({ ticketId, reasonCode, refund }: { ticketId: string; reasonCode: string; refund: boolean }) => {
+      const response = await apiRequest("POST", `/api/siae/tickets/${ticketId}/cancel`, { 
+        reasonCode, 
+        refund,
+        refundReason: refund ? `Annullamento biglietto - Causale: ${reasonCode}` : undefined
+      });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ predicate: (q) => q.queryKey[0] === '/api/siae/ticketed-events' });
       setIsCancelDialogOpen(false);
       setSelectedTicket(null);
       setCancelReasonCode("");
-      toast({
-        title: "Biglietto Annullato",
-        description: "Il biglietto è stato annullato.",
-      });
+      setRefundOnCancel(false);
+      
+      if (data.refunded) {
+        toast({
+          title: "Biglietto Annullato e Rimborsato",
+          description: `Il biglietto è stato annullato e rimborsato €${data.refundedAmount}`,
+        });
+      } else {
+        toast({
+          title: "Biglietto Annullato",
+          description: "Il biglietto è stato annullato.",
+        });
+      }
     },
     onError: (error: Error) => {
       toast({
@@ -954,6 +970,25 @@ export default function SiaeTicketsPage() {
                 </SelectContent>
               </Select>
             </div>
+            
+            {selectedTicket?.transactionId && (
+              <div className="flex items-center space-x-2 p-3 bg-amber-500/10 border border-amber-500/20 rounded-lg">
+                <Checkbox 
+                  id="refund-checkbox" 
+                  checked={refundOnCancel} 
+                  onCheckedChange={(checked) => setRefundOnCancel(checked === true)}
+                  data-testid="checkbox-refund"
+                />
+                <div className="flex flex-col">
+                  <Label htmlFor="refund-checkbox" className="text-sm font-medium cursor-pointer">
+                    Rimborsa automaticamente via Stripe
+                  </Label>
+                  <span className="text-xs text-muted-foreground">
+                    Il cliente riceverà il rimborso dell'importo del biglietto
+                  </span>
+                </div>
+              </div>
+            )}
           </div>
 
           <DialogFooter>
@@ -965,7 +1000,8 @@ export default function SiaeTicketsPage() {
               disabled={!cancelReasonCode || cancelTicketMutation.isPending}
               onClick={() => selectedTicket && cancelTicketMutation.mutate({ 
                 ticketId: selectedTicket.id, 
-                reasonCode: cancelReasonCode 
+                reasonCode: cancelReasonCode,
+                refund: refundOnCancel
               })}
               data-testid="button-confirm-cancel"
             >

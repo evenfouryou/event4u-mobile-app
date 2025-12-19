@@ -1315,6 +1315,12 @@ export const siaeTickets = pgTable("siae_tickets", {
   // Riferimento annullamento (per cambio nominativo/rimessa)
   originalTicketId: varchar("original_ticket_id"), // Se derivato da cambio/rimessa
   replacedByTicketId: varchar("replaced_by_ticket_id"), // Se sostituito
+  // Rimborso
+  refundedAt: timestamp("refunded_at"), // Data/ora rimborso
+  refundAmount: decimal("refund_amount", { precision: 10, scale: 2 }), // Importo rimborsato
+  stripeRefundId: varchar("stripe_refund_id", { length: 100 }), // ID rimborso Stripe
+  refundInitiatorId: varchar("refund_initiator_id"), // ID utente che ha avviato il rimborso
+  refundReason: varchar("refund_reason", { length: 255 }), // Motivo rimborso
   // QR Code
   qrCode: text("qr_code"),
   pdfUrl: varchar("pdf_url", { length: 500 }),

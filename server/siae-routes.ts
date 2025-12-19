@@ -11,6 +11,7 @@ import { requestFiscalSeal, isCardReadyForSeals, isBridgeConnected, getCachedBri
 import { sendPrintJobToAgent, getConnectedAgents } from "./print-relay";
 import { generateTicketHtml } from "./template-routes";
 import { sendOTP as sendMSG91OTP, verifyOTP as verifyMSG91OTP, resendOTP as resendMSG91OTP, isMSG91Configured } from "./msg91-service";
+import { getUncachableStripeClient } from "./stripeClient";
 import { ticketTemplates, ticketTemplateElements } from "@shared/schema";
 import {
   insertSiaeEventGenreSchema,
@@ -1187,15 +1188,91 @@ router.post("/api/siae/tickets", requireAuth, requireOrganizer, async (req: Requ
 
 router.post("/api/siae/tickets/:id/cancel", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
   try {
-    const { reasonCode } = req.body;
+    const { reasonCode, refund, refundReason } = req.body;
     if (!reasonCode) {
       return res.status(400).json({ message: "Causale annullamento richiesta" });
     }
     const user = req.user as any;
+    
+    // Prima ottieni il biglietto per avere il transactionId
+    const existingTicket = await siaeStorage.getSiaeTicket(req.params.id);
+    if (!existingTicket) {
+      return res.status(404).json({ message: "Biglietto non trovato" });
+    }
+    
+    // Processa rimborso se richiesto
+    let stripeRefundId: string | null = null;
+    let refundAmount: string | null = null;
+    
+    if (refund === true && existingTicket.transactionId) {
+      try {
+        // Trova la transazione per ottenere il payment intent ID
+        const transaction = await siaeStorage.getSiaeTransaction(existingTicket.transactionId);
+        
+        if (transaction && transaction.paymentReference) {
+          const stripe = await getUncachableStripeClient();
+          
+          // Calcola l'importo del rimborso (prezzo biglietto)
+          const ticketPrice = Number(existingTicket.ticketPrice || existingTicket.grossAmount) * 100;
+          
+          // Crea rimborso parziale per questo singolo biglietto
+          const stripeRefund = await stripe.refunds.create({
+            payment_intent: transaction.paymentReference,
+            amount: Math.round(ticketPrice),
+            reason: 'requested_by_customer',
+            metadata: {
+              ticketId: existingTicket.id,
+              ticketCode: existingTicket.ticketCode || '',
+              cancelledBy: user.id,
+              reasonCode: reasonCode,
+              refundReason: refundReason || 'Annullamento biglietto'
+            }
+          });
+          
+          stripeRefundId = stripeRefund.id;
+          refundAmount = (ticketPrice / 100).toFixed(2);
+          
+          console.log(`[SIAE] Refund processed for ticket ${existingTicket.id}: ${stripeRefundId}, amount: €${refundAmount}`);
+        } else {
+          console.warn(`[SIAE] Cannot refund ticket ${existingTicket.id}: no payment reference found`);
+        }
+      } catch (refundError: any) {
+        console.error(`[SIAE] Refund failed for ticket ${existingTicket.id}:`, refundError.message);
+        return res.status(500).json({ 
+          message: `Annullamento fallito: errore nel rimborso Stripe - ${refundError.message}` 
+        });
+      }
+    }
+    
+    // Annulla il biglietto
     const ticket = await siaeStorage.cancelSiaeTicket(req.params.id, reasonCode, user.id);
     if (!ticket) {
       return res.status(404).json({ message: "Biglietto non trovato" });
     }
+    
+    // Se rimborso avvenuto, aggiorna i campi rimborso
+    if (stripeRefundId) {
+      await db.update(siaeTickets)
+        .set({
+          refundedAt: new Date(),
+          refundAmount: refundAmount,
+          stripeRefundId: stripeRefundId,
+          refundInitiatorId: user.id,
+          refundReason: refundReason || 'Annullamento con rimborso',
+          updatedAt: new Date()
+        })
+        .where(eq(siaeTickets.id, req.params.id));
+      
+      // Ricarica il biglietto per restituire i dati aggiornati
+      const updatedTicket = await siaeStorage.getSiaeTicket(req.params.id);
+      return res.json({ 
+        ...updatedTicket, 
+        refunded: true, 
+        refundId: stripeRefundId,
+        refundedAmount: refundAmount
+      });
+    }
+    
     res.json(ticket);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
