@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,6 +21,7 @@ import {
   XCircle,
   Loader2,
   Clock,
+  Download,
 } from "lucide-react";
 
 interface TicketDetail {
@@ -74,6 +76,8 @@ export default function AccountTicketDetail() {
     queryKey: ['/api/digital-templates/default'],
   });
 
+  const [isDownloading, setIsDownloading] = useState(false);
+
   const cancelResaleMutation = useMutation({
     mutationFn: async () => {
       if (!ticket?.existingResale?.id) return;
@@ -96,6 +100,44 @@ export default function AccountTicketDetail() {
       });
     },
   });
+
+  const handleDownloadPdf = async () => {
+    if (!id) return;
+    setIsDownloading(true);
+    try {
+      const response = await fetch(`/api/public/account/tickets/${id}/pdf`, {
+        credentials: 'include',
+      });
+      
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Errore nel download');
+      }
+      
+      const blob = await response.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `biglietto-${ticket?.ticketCode || id}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Download completato",
+        description: "Il biglietto è stato scaricato.",
+      });
+    } catch (error: any) {
+      toast({
+        title: "Errore download",
+        description: error.message || "Impossibile scaricare il PDF.",
+        variant: "destructive",
+      });
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -234,8 +276,23 @@ export default function AccountTicketDetail() {
           )}
 
           {(ticket.status === "emitted" || ticket.status === "active") && !ticket.isListed && (
-            <div className="py-4 sm:py-6 border-y border-border">
+            <div className="py-4 sm:py-6 border-y border-border space-y-4">
               <DigitalTicketCard ticket={ticket} template={digitalTemplate} />
+              
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={handleDownloadPdf}
+                disabled={isDownloading}
+                data-testid="button-download-pdf"
+              >
+                {isDownloading ? (
+                  <Loader2 className="w-4 h-4 animate-spin mr-2" />
+                ) : (
+                  <Download className="w-4 h-4 mr-2" />
+                )}
+                Scarica PDF
+              </Button>
             </div>
           )}
 

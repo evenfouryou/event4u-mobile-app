@@ -2518,6 +2518,194 @@ router.get("/api/public/account/tickets/:id", async (req, res) => {
   }
 });
 
+// Download PDF biglietto
+router.get("/api/public/account/tickets/:id/pdf", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const { id } = req.params;
+
+    // Get ticket with all needed info
+    const [ticket] = await db
+      .select({
+        id: siaeTickets.id,
+        ticketCode: siaeTickets.ticketCode,
+        ticketType: siaeTickets.ticketType,
+        ticketPrice: siaeTickets.ticketPrice,
+        grossAmount: siaeTickets.grossAmount,
+        participantFirstName: siaeTickets.participantFirstName,
+        participantLastName: siaeTickets.participantLastName,
+        status: siaeTickets.status,
+        qrCode: siaeTickets.qrCode,
+        fiscalSealCode: siaeTickets.fiscalSealCode,
+        sectorId: siaeTickets.sectorId,
+        sectorCode: siaeTickets.sectorCode,
+        ticketedEventId: siaeTickets.ticketedEventId,
+        eventName: events.name,
+        eventStart: events.startDatetime,
+        locationName: locations.name,
+        sectorName: siaeEventSectors.name,
+      })
+      .from(siaeTickets)
+      .innerJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .innerJoin(locations, eq(events.locationId, locations.id))
+      .where(and(
+        eq(siaeTickets.id, id),
+        eq(siaeTickets.customerId, customer.id)
+      ));
+
+    if (!ticket) {
+      return res.status(404).json({ message: "Biglietto non trovato" });
+    }
+
+    if (ticket.status !== 'active' && ticket.status !== 'emitted') {
+      return res.status(400).json({ message: "Biglietto non scaricabile" });
+    }
+
+    // Get default template
+    let [defaultTemplate] = await db
+      .select()
+      .from(ticketTemplates)
+      .where(
+        and(
+          eq(ticketTemplates.isDefault, true),
+          eq(ticketTemplates.isActive, true)
+        )
+      )
+      .limit(1);
+
+    if (!defaultTemplate) {
+      // Fallback template
+      defaultTemplate = {
+        id: 'hardcoded-basic',
+        companyId: null,
+        name: 'Template Base Sistema',
+        paperWidthMm: 80,
+        paperHeightMm: 120,
+        dpi: 203,
+        isDefault: true,
+        isActive: true,
+        backgroundImageUrl: null,
+        printOrientation: 'portrait',
+        version: 1,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      } as typeof defaultTemplate;
+    }
+
+    // Get template elements
+    let elements = await db
+      .select()
+      .from(ticketTemplateElements)
+      .where(eq(ticketTemplateElements.templateId, defaultTemplate.id))
+      .orderBy(ticketTemplateElements.zIndex);
+
+    // Parse elements
+    let parsedElements: Array<{
+      type: string;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+      content: string | null;
+      fontSize: number | null;
+      fontFamily: string | null;
+      fontWeight: string | null;
+      fontColor: string | null;
+      textAlign: string | null;
+      rotation: number | null;
+    }>;
+
+    if (elements.length === 0) {
+      // Default basic ticket layout
+      parsedElements = [
+        { type: 'dynamic', x: 5, y: 5, width: 70, height: 8, content: '{{event_name}}', fontSize: 14, fontFamily: 'Arial', fontWeight: 'bold', fontColor: '#000000', textAlign: 'center', rotation: 0 },
+        { type: 'dynamic', x: 5, y: 15, width: 35, height: 6, content: '{{event_date}}', fontSize: 10, fontFamily: 'Arial', fontWeight: 'normal', fontColor: '#333333', textAlign: 'left', rotation: 0 },
+        { type: 'dynamic', x: 40, y: 15, width: 35, height: 6, content: '{{event_time}}', fontSize: 10, fontFamily: 'Arial', fontWeight: 'normal', fontColor: '#333333', textAlign: 'right', rotation: 0 },
+        { type: 'dynamic', x: 5, y: 23, width: 70, height: 6, content: '{{venue_name}}', fontSize: 9, fontFamily: 'Arial', fontWeight: 'normal', fontColor: '#666666', textAlign: 'center', rotation: 0 },
+        { type: 'dynamic', x: 5, y: 35, width: 35, height: 6, content: '{{sector}}', fontSize: 10, fontFamily: 'Arial', fontWeight: 'bold', fontColor: '#000000', textAlign: 'left', rotation: 0 },
+        { type: 'dynamic', x: 40, y: 35, width: 35, height: 6, content: '{{price}}', fontSize: 10, fontFamily: 'Arial', fontWeight: 'bold', fontColor: '#000000', textAlign: 'right', rotation: 0 },
+        { type: 'dynamic', x: 5, y: 43, width: 70, height: 6, content: '{{buyer_name}}', fontSize: 9, fontFamily: 'Arial', fontWeight: 'normal', fontColor: '#333333', textAlign: 'center', rotation: 0 },
+        { type: 'qr_code', x: 20, y: 55, width: 40, height: 40, content: null, fontSize: null, fontFamily: null, fontWeight: null, fontColor: null, textAlign: null, rotation: 0 },
+        { type: 'dynamic', x: 5, y: 100, width: 70, height: 5, content: '{{ticket_number}}', fontSize: 8, fontFamily: 'Courier New', fontWeight: 'normal', fontColor: '#666666', textAlign: 'center', rotation: 0 },
+        { type: 'dynamic', x: 5, y: 108, width: 70, height: 5, content: '{{fiscal_seal}}', fontSize: 6, fontFamily: 'Courier New', fontWeight: 'normal', fontColor: '#999999', textAlign: 'center', rotation: 0 },
+      ];
+    } else {
+      parsedElements = elements.map(e => ({
+        type: e.type,
+        x: parseFloat(e.x) || 0,
+        y: parseFloat(e.y) || 0,
+        width: parseFloat(e.width) || 20,
+        height: parseFloat(e.height) || 5,
+        content: e.fieldKey ? `{{${e.fieldKey}}}` : e.staticValue,
+        fontSize: e.fontSize,
+        fontFamily: e.fontFamily,
+        fontWeight: e.fontWeight,
+        fontColor: e.color,
+        textAlign: e.textAlign,
+        rotation: e.rotation,
+      }));
+    }
+
+    const eventStartDate = ticket.eventStart ? new Date(ticket.eventStart) : new Date();
+
+    // Build ticket data
+    const ticketData: Record<string, string> = {
+      event_name: ticket.eventName || '',
+      event_date: eventStartDate.toLocaleDateString('it-IT', { day: '2-digit', month: '2-digit', year: 'numeric' }),
+      event_time: eventStartDate.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }),
+      venue_name: ticket.locationName || '',
+      price: `€ ${parseFloat(ticket.grossAmount || ticket.ticketPrice || '0').toFixed(2)}`,
+      ticket_number: ticket.id.slice(-12).toUpperCase(),
+      sector: ticket.sectorName || ticket.sectorCode || '',
+      row: '-',
+      seat: '-',
+      buyer_name: `${ticket.participantFirstName || ''} ${ticket.participantLastName || ''}`.trim(),
+      organizer_company: '',
+      ticketing_manager: 'Event4U',
+      emission_datetime: new Date().toLocaleString('it-IT'),
+      fiscal_seal: ticket.fiscalSealCode || '',
+      qr_code: ticket.qrCode || '',
+    };
+
+    // Generate HTML
+    const ticketHtml = generateTicketHtml(
+      {
+        paperWidthMm: defaultTemplate.paperWidthMm,
+        paperHeightMm: defaultTemplate.paperHeightMm,
+        backgroundImageUrl: defaultTemplate.backgroundImageUrl,
+        dpi: defaultTemplate.dpi || 96,
+        printOrientation: defaultTemplate.printOrientation || 'auto',
+      },
+      parsedElements,
+      ticketData,
+      false
+    );
+
+    // Generate PDF
+    const pdfBuffer = await generateTicketPdf(
+      ticketHtml,
+      defaultTemplate.paperWidthMm,
+      defaultTemplate.paperHeightMm
+    );
+
+    // Send PDF
+    res.setHeader('Content-Type', 'application/pdf');
+    res.setHeader('Content-Disposition', `attachment; filename="biglietto-${ticket.ticketCode}.pdf"`);
+    res.setHeader('Content-Length', pdfBuffer.length);
+    res.send(pdfBuffer);
+
+  } catch (error: any) {
+    console.error("[PUBLIC] Download ticket PDF error:", error);
+    res.status(500).json({ message: "Errore nella generazione del PDF" });
+  }
+});
+
 // Ottieni wallet e saldo
 router.get("/api/public/account/wallet", async (req, res) => {
   try {
