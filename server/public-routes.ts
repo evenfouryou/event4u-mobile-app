@@ -2479,11 +2479,11 @@ router.get("/api/public/account/tickets/:id", async (req, res) => {
     const hoursToEvent = (eventStart.getTime() - now.getTime()) / (1000 * 60 * 60);
 
     const canNameChange = ticket.allowsChangeName && 
-                          ticket.status === 'emitted' && 
+                          (ticket.status === 'emitted' || ticket.status === 'active') && 
                           hoursToEvent >= 24;
     
     const canResale = ticket.allowsResale && 
-                      ticket.status === 'emitted' && 
+                      (ticket.status === 'emitted' || ticket.status === 'active') && 
                       hoursToEvent >= 48;
 
     // Verifica se già in rivendita
