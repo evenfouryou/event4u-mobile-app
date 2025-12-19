@@ -202,6 +202,12 @@ export function AppSidebar() {
         group: "Sistema",
       },
       {
+        title: "Template Digitali",
+        icon: QrCode,
+        url: "/digital-template-builder",
+        group: "Sistema",
+      },
+      {
         title: "Pagamenti Stripe",
         icon: CreditCard,
         url: "/stripe-admin",
@@ -342,6 +348,12 @@ export function AppSidebar() {
         title: "Stampante",
         icon: Printer,
         url: "/printer-settings",
+        group: "Gestione",
+      },
+      {
+        title: "Template Digitali",
+        icon: QrCode,
+        url: "/digital-template-builder",
         group: "Gestione",
       }
     );
