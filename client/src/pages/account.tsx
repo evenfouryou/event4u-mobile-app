@@ -6,6 +6,7 @@ import AccountHome from "@/pages/account-home";
 import AccountProfile from "@/pages/account-profile";
 import AccountTickets from "@/pages/account-tickets";
 import AccountTicketDetail from "@/pages/account-ticket-detail";
+import AccountNameChange from "@/pages/account-name-change";
 import AccountWallet from "@/pages/account-wallet";
 import AccountResales from "@/pages/account-resales";
 import { Loader2 } from "lucide-react";
@@ -50,6 +51,7 @@ export default function AccountPage() {
       <Switch>
         <Route path="/account/home" component={AccountHome} />
         <Route path="/account/profile" component={AccountProfile} />
+        <Route path="/account/tickets/:id/name-change" component={AccountNameChange} />
         <Route path="/account/tickets/:id" component={AccountTicketDetail} />
         <Route path="/account/tickets" component={AccountTickets} />
         <Route path="/account/wallet" component={AccountWallet} />

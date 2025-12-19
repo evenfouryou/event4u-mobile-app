@@ -2821,6 +2821,126 @@ router.get("/api/public/account/resales", async (req, res) => {
   }
 });
 
+// ==================== PUBLIC TICKET VERIFICATION ====================
+
+// Verify ticket by QR code - public endpoint (no auth required)
+router.get("/api/public/tickets/verify/:code", async (req, res) => {
+  try {
+    const { code } = req.params;
+    
+    if (!code) {
+      return res.status(400).json({ 
+        valid: false, 
+        status: "invalid",
+        message: "Codice biglietto mancante" 
+      });
+    }
+
+    // Look up ticket by qr_code
+    const [ticket] = await db
+      .select({
+        id: siaeTickets.id,
+        ticketCode: siaeTickets.ticketCode,
+        qrCode: siaeTickets.qrCode,
+        status: siaeTickets.status,
+        ticketType: siaeTickets.ticketType,
+        ticketTypeCode: siaeTickets.ticketTypeCode,
+        ticketPrice: siaeTickets.ticketPrice,
+        participantFirstName: siaeTickets.participantFirstName,
+        participantLastName: siaeTickets.participantLastName,
+        emissionDate: siaeTickets.emissionDate,
+        usedAt: siaeTickets.usedAt,
+        sectorName: siaeEventSectors.name,
+        eventId: events.id,
+        eventName: events.name,
+        eventStart: events.startDatetime,
+        eventEnd: events.endDatetime,
+        locationName: locations.name,
+        locationAddress: locations.address,
+        locationCity: locations.city,
+      })
+      .from(siaeTickets)
+      .innerJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .innerJoin(locations, eq(events.locationId, locations.id))
+      .where(eq(siaeTickets.qrCode, code));
+
+    if (!ticket) {
+      return res.status(404).json({ 
+        valid: false, 
+        status: "not_found",
+        message: "Biglietto non trovato" 
+      });
+    }
+
+    // Determine status
+    let valid = false;
+    let statusMessage = "";
+    let ticketStatus = ticket.status;
+
+    switch (ticket.status) {
+      case "emitted":
+      case "valid":
+      case "active":
+        valid = true;
+        statusMessage = "Biglietto valido";
+        ticketStatus = "valid";
+        break;
+      case "validated":
+      case "used":
+        valid = false;
+        statusMessage = "Biglietto già utilizzato";
+        ticketStatus = "used";
+        break;
+      case "cancelled":
+        valid = false;
+        statusMessage = "Biglietto annullato";
+        ticketStatus = "cancelled";
+        break;
+      default:
+        valid = false;
+        statusMessage = "Stato biglietto non riconosciuto";
+        ticketStatus = "invalid";
+    }
+
+    res.json({
+      valid,
+      status: ticketStatus,
+      message: statusMessage,
+      ticket: {
+        ticketCode: ticket.ticketCode,
+        ticketType: ticket.ticketType || ticket.ticketTypeCode,
+        participantName: [ticket.participantFirstName, ticket.participantLastName]
+          .filter(Boolean)
+          .join(" ") || null,
+        sector: ticket.sectorName,
+        price: ticket.ticketPrice,
+        emissionDate: ticket.emissionDate,
+        usedAt: ticket.usedAt,
+      },
+      event: {
+        id: ticket.eventId,
+        name: ticket.eventName,
+        startDate: ticket.eventStart,
+        endDate: ticket.eventEnd,
+        location: {
+          name: ticket.locationName,
+          address: ticket.locationAddress,
+          city: ticket.locationCity,
+        },
+      },
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Ticket verification error:", error);
+    res.status(500).json({ 
+      valid: false, 
+      status: "error",
+      message: "Errore nella verifica del biglietto" 
+    });
+  }
+});
+
 // Ottieni richieste cambio nominativo del cliente
 router.get("/api/public/account/name-changes", async (req, res) => {
   try {

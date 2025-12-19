@@ -90,6 +90,7 @@ import SchoolBadgeVerify from "@/pages/school-badge-verify";
 import SchoolBadgeView from "@/pages/school-badge-view";
 import SchoolBadgeError from "@/pages/school-badge-error";
 import SchoolBadgeScanner from "@/pages/school-badge-scanner";
+import TicketVerify from "@/pages/ticket-verify";
 import PrinterSettings from "@/pages/printer-settings";
 import TemplateBuilder from "@/pages/template-builder";
 import DigitalTemplateBuilder from "@/pages/digital-template-builder";
@@ -157,6 +158,7 @@ function Router() {
         <Route path="/badge/verify" component={SchoolBadgeVerify} />
         <Route path="/badge/view/:code" component={SchoolBadgeView} />
         <Route path="/badge/:slug" component={SchoolBadgeLanding} />
+        <Route path="/ticket/:code" component={TicketVerify} />
         <Route component={NotFound} />
       </Switch>
     );
@@ -176,6 +178,7 @@ function Router() {
         <Route path="/e/:shortId" component={EventShortLink} />
         <Route path="/locali/:id" component={PublicVenueDetail} />
         <Route path="/locali" component={PublicVenues} />
+        <Route path="/ticket/:code" component={TicketVerify} />
         <Route path="/accedi">
           <Redirect to="/account/home" />
         </Route>
