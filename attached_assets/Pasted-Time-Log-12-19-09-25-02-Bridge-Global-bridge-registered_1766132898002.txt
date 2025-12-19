@@ -1,0 +1,90 @@
+Time
+Log
+12-19 09:25:02
+[Bridge] Global bridge registered successfully
+12-19 09:25:40
+[Bridge] cachedBridgeStatus: {"type":"status","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":"4130313238343837","cardCounter":233,"cardBalance":421261,"cardKeyId":129,"cardAtr":null,"demoMode":false,"canEmitTickets":true,"relayConnected":true,"pinLocked":false,"pinRequired":false}}
+12-19 09:25:40
+[PUBLIC] Found ticketed event: fe9793b6-c270-4d3f-97d3-fef3957f00b3, companyId: 4186e56b-d6bd-4d1d-b7d6-f0b22ec12b91
+12-19 09:25:40
+[PUBLIC] Processing cart item: sectorId=e10a4573-8ad2-42d7-a459-d3be3bb33c40, quantity=1
+12-19 09:25:40
+[Bridge] requestFiscalSeal called with priceInCents=50
+12-19 09:25:40
+[Bridge] globalBridge exists: true
+12-19 09:25:40
+[Bridge] isCardReadyForSeals called
+12-19 09:25:40
+[Bridge] Card ready for seals!
+12-19 09:25:40
+[Bridge] Sending seal request to bridge: {"type":"REQUEST_FISCAL_SEAL","requestId":"seal_1766132740434_c4o7au8ty","payload":{"price":0.5,"timestamp":"2025-12-19T08:25:40.434Z"}}
+12-19 09:25:40
+[PUBLIC] Requesting fiscal seal for ticket 1/1, price: 50 cents
+12-19 09:25:40
+[Bridge] Extracted status: {"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":"4130313238343837","cardCounter":233,"cardBalance":421261,"cardKeyId":129,"cardAtr":null,"demoMode":false,"canEmitTickets":true,"relayConnected":true,"pinLocked":false,"pinRequired":false}
+12-19 09:25:40
+[Bridge] globalBridge exists: true
+12-19 09:25:40
+[Bridge] cachedBridgeStatus: {"type":"status","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":"4130313238343837","cardCounter":233,"cardBalance":421261,"cardKeyId":129,"cardAtr":null,"demoMode":false,"canEmitTickets":true,"relayConnected":true,"pinLocked":false,"pinRequired":false}}
+12-19 09:25:40
+[Bridge] globalBridge.ws.readyState: 1 (OPEN=1)
+12-19 09:25:40
+[PUBLIC] No active activation card found for company 4186e56b-d6bd-4d1d-b7d6-f0b22ec12b91, will use bridge card
+12-19 09:25:40
+[Bridge] Card ready check: {"ready":true,"error":null}
+12-19 09:25:40
+[Bridge] Requesting fiscal seal: requestId=seal_1766132740434_c4o7au8ty, price=0.5, sending to bridge...
+12-19 09:25:40
+[Bridge] Normalized values: readerConnected=true, cardInserted=true
+12-19 09:25:40
+[Bridge] Seal request sent successfully, waiting for response...
+12-19 09:25:41
+[Bridge] Message received: type=SEAL_RESPONSE
+12-19 09:25:41
+[Bridge] Seal response received: requestId=seal_1766132740434_c4o7au8ty
+12-19 09:25:41
+[PUBLIC] Seal received: 1945D39268A97C58, counter: 234
+12-19 09:25:41
+[PUBLIC] Looking up card by serialNumber: 0000000000000000
+12-19 09:25:41
+[Bridge] Seal request completed: requestId=seal_1766132740434_c4o7au8ty, counter=234
+12-19 09:25:41
+[PUBLIC] Card not found, creating new card for serialNumber: 0000000000000000
+12-19 09:25:41
+where: undefined,
+12-19 09:25:41
+position: undefined,
+12-19 09:25:41
+severity: 'ERROR',
+12-19 09:25:41
+dataType: undefined,
+12-19 09:25:41
+[Stripe] Publishable key prefix: pk_live_51PkTcs083fD...
+12-19 09:25:41
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+12-19 09:25:41
+detail: undefined,
+12-19 09:25:41
+[PUBLIC] Attempting auto-refund for unexpected error: value too long for type character varying(8)
+12-19 09:25:41
+routine: 'varchar'
+12-19 09:25:41
+length: 97,
+12-19 09:25:41
+at async NeonPreparedQuery.execute (file:///home/runner/workspace/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+12-19 09:25:41
+file: 'varchar.c',
+12-19 09:25:41
+schema: undefined,
+12-19 09:25:41
+column: undefined,
+12-19 09:25:41
+internalPosition: undefined,
+12-19 09:25:41
+at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+12-19 09:25:41
+[Stripe] Secret key prefix: sk_live_51PkTcs...
+12-19 09:25:41
+code: '22001',
+12-19 09:25:41
+table: undefined,

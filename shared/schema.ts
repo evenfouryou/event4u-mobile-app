@@ -973,7 +973,7 @@ export const siaeCancellationReasons = pgTable("siae_cancellation_reasons", {
 // Carte di Attivazione SIAE (Activation Cards) - Decreto Art. 3-5
 export const siaeActivationCards = pgTable("siae_activation_cards", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  cardCode: varchar("card_code", { length: 8 }).notNull().unique(), // Codice univoco carta 8 caratteri
+  cardCode: varchar("card_code", { length: 20 }).notNull().unique(), // Codice univoco carta (seriale smart card fino a 16+ caratteri)
   systemCode: varchar("system_code", { length: 8 }).notNull(), // Codice sistema emissione associato
   companyId: varchar("company_id").notNull().references(() => companies.id),
   status: varchar("status", { length: 20 }).notNull().default('active'), // active, expired, revoked, maintenance
@@ -1275,7 +1275,7 @@ export const siaeTickets = pgTable("siae_tickets", {
   fiscalSealCode: varchar("fiscal_seal_code", { length: 16 }), // Copia per query rapide
   progressiveNumber: integer("progressive_number").notNull(), // Numero progressivo sistema
   // Carta e Canale
-  cardCode: varchar("card_code", { length: 8 }), // Codice carta attivazione
+  cardCode: varchar("card_code", { length: 20 }), // Codice carta attivazione (seriale smart card)
   emissionChannelCode: varchar("emission_channel_code", { length: 8 }), // Codice C1
   // Date emissione
   emissionDate: timestamp("emission_date").notNull().defaultNow(),
@@ -1654,7 +1654,7 @@ export const siaeAuditLogs = pgTable("siae_audit_logs", {
   userAgent: text("user_agent"),
   // Riferimenti fiscali
   fiscalSealCode: varchar("fiscal_seal_code", { length: 16 }),
-  cardCode: varchar("card_code", { length: 8 }),
+  cardCode: varchar("card_code", { length: 20 }), // Seriale smart card
   // Timestamp
   createdAt: timestamp("created_at").defaultNow(),
 });

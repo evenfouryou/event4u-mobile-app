@@ -810,10 +810,33 @@ export function handleSealResponse(requestId: string, success: boolean, seal?: a
   
   if (success && seal) {
     console.log(`[Bridge] Seal request completed: requestId=${requestId}, counter=${seal.counter}`);
+    
+    // Get serialNumber from seal response, with fallback to cached cardSerial
+    // The C# bridge may return "0000000000000000" instead of actual serial
+    let serialNumber = seal.serialNumber;
+    const isInvalidSerial = !serialNumber || serialNumber === '0000000000000000' || serialNumber.match(/^0+$/);
+    
+    if (isInvalidSerial) {
+      // Try to get cardSerial from cached bridge status
+      const status = cachedBridgeStatus?.data?.payload || 
+                     cachedBridgeStatus?.payload?.data ||
+                     cachedBridgeStatus?.data || 
+                     cachedBridgeStatus?.payload || 
+                     cachedBridgeStatus;
+      const cachedSerial = status?.cardSerial;
+      
+      if (cachedSerial && cachedSerial !== '0000000000000000') {
+        console.log(`[Bridge] Using cached cardSerial as fallback: ${cachedSerial} (original was: ${serialNumber})`);
+        serialNumber = cachedSerial;
+      } else {
+        console.log(`[Bridge] WARNING: Invalid serialNumber and no valid cached cardSerial available`);
+      }
+    }
+    
     pending.resolve({
       sealCode: seal.sealCode || seal.mac,
-      sealNumber: seal.sealNumber || `${seal.serialNumber}-${seal.counter}`,
-      serialNumber: seal.serialNumber,
+      sealNumber: seal.sealNumber || `${serialNumber}-${seal.counter}`,
+      serialNumber: serialNumber,
       counter: seal.counter,
       mac: seal.mac,
       dateTime: seal.dateTime
