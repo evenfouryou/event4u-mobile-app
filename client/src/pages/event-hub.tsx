@@ -1918,11 +1918,20 @@ export default function EventHub() {
 
                 {/* Elenco Biglietti (Sectors) */}
                 <Card className="glass-card">
-                  <CardHeader>
+                  <CardHeader className="flex flex-row items-center justify-between gap-2">
                     <CardTitle className="flex items-center gap-2">
                       <FileText className="h-5 w-5 text-cyan-400" />
                       Tipologie Biglietti
                     </CardTitle>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => navigate(`/siae/ticket-types/${ticketedEvent?.id}`)}
+                      data-testid="btn-manage-ticket-types"
+                    >
+                      <Settings className="h-4 w-4 mr-2" />
+                      Gestisci
+                    </Button>
                   </CardHeader>
                   <CardContent>
                     {ticketedEvent.sectors && ticketedEvent.sectors.length > 0 ? (
