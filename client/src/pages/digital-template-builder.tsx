@@ -291,14 +291,12 @@ function DigitalTicketPreview({ config }: { config: TemplateFormData }) {
 }
 
 export default function DigitalTemplateBuilder() {
-  console.log('[DigitalTemplateBuilder] Component rendering');
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
   const isEditing = !!id;
   const isSuperAdmin = user?.role === 'super_admin';
-  console.log('[DigitalTemplateBuilder] User:', user, 'isEditing:', isEditing, 'isSuperAdmin:', isSuperAdmin);
 
   const form = useForm<TemplateFormData>({
     resolver: zodResolver(templateFormSchema),
@@ -515,14 +513,17 @@ export default function DigitalTemplateBuilder() {
                       render={({ field }) => (
                         <FormItem>
                           <FormLabel>Azienda</FormLabel>
-                          <Select onValueChange={field.onChange} value={field.value || ''}>
+                          <Select 
+                            onValueChange={(val) => field.onChange(val === '__global__' ? undefined : val)} 
+                            value={field.value || '__global__'}
+                          >
                             <FormControl>
                               <SelectTrigger data-testid="select-company">
                                 <SelectValue placeholder="Seleziona azienda (globale se vuoto)" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
-                              <SelectItem value="">Template Globale</SelectItem>
+                              <SelectItem value="__global__">Template Globale</SelectItem>
                               {companies.map((c) => (
                                 <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>
                               ))}
