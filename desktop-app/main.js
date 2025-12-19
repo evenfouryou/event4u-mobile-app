@@ -1119,6 +1119,7 @@ async function handleRelayCommand(msg) {
             type: 'STATUS_RESPONSE',
             requestId: statusRequestId,
             payload: {
+              success: true,
               bridgeConnected: !!bridgeProcess,
               readerConnected: currentStatus.readerConnected,
               cardInserted: currentStatus.cardInserted,
@@ -1136,11 +1137,14 @@ async function handleRelayCommand(msg) {
             type: 'STATUS_RESPONSE',
             requestId: msg.requestId,
             payload: {
+              success: false,
               bridgeConnected: !!bridgeProcess,
               readerConnected: false,
               cardInserted: false,
               pinVerified: false,
-              error: err.message
+              demoMode: false,
+              error: err.message,
+              timestamp: Date.now()
             }
           }));
         }

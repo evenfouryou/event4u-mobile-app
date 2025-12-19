@@ -204,26 +204,47 @@ export function setupBridgeRelay(server: Server): void {
             console.log(`[Bridge] STATUS_RESPONSE received: requestId=${message.requestId}`);
             console.log(`[Bridge] STATUS_RESPONSE payload:`, JSON.stringify(message.payload, null, 2));
             
-            // Update cached status with fresh data
-            if (message.payload) {
+            const payload = message.payload || {};
+            const isSuccess = payload.success === true;
+            const hasError = !!payload.error || !isSuccess;
+            
+            // Only update cached status with fresh data if response is successful
+            // This prevents transient errors from corrupting known-good state
+            if (isSuccess) {
               cachedBridgeStatus = {
                 type: 'status',
-                data: message.payload,
-                payload: message.payload
+                data: {
+                  bridgeConnected: payload.bridgeConnected ?? false,
+                  readerConnected: payload.readerConnected ?? false,
+                  cardInserted: payload.cardInserted ?? false,
+                  pinVerified: payload.pinVerified ?? false,
+                  demoMode: payload.demoMode ?? false,
+                  timestamp: payload.timestamp || Date.now()
+                },
+                payload: payload
               };
               cachedBridgeStatusTimestamp = new Date();
+              console.log(`[Bridge] Cached status updated from successful STATUS_RESPONSE`);
+            } else {
+              console.log(`[Bridge] STATUS_RESPONSE indicates failure, preserving previous cached status`);
             }
             
-            // Resolve any pending status request
+            // Handle pending status request - reject on failure, resolve on success
             if (pendingStatusRequest) {
               clearTimeout(pendingStatusRequest.timeout);
-              pendingStatusRequest.resolve({
-                type: 'status',
-                data: message.payload,
-                payload: message.payload
-              });
+              if (hasError) {
+                const errorMsg = payload.error || 'Status request failed';
+                console.log(`[Bridge] Rejecting pending status request: ${errorMsg}`);
+                pendingStatusRequest.reject(new Error(errorMsg));
+              } else {
+                pendingStatusRequest.resolve({
+                  type: 'status',
+                  data: cachedBridgeStatus?.data || payload,
+                  payload: payload
+                });
+                console.log(`[Bridge] Resolved pending status request from STATUS_RESPONSE`);
+              }
               pendingStatusRequest = null;
-              console.log(`[Bridge] Resolved pending status request from STATUS_RESPONSE`);
             }
           } else if (message.type === 'SEAL_RESPONSE') {
             // Handle seal response from desktop app (for server-side seal requests)
@@ -646,11 +667,19 @@ export async function ensureCardReadyForSeals(): Promise<{ ready: boolean; error
     try {
       await requestFreshStatus();
       console.log(`[Bridge] Got fresh status`);
-    } catch (error) {
-      console.log(`[Bridge] Failed to get fresh status: ${error}`);
-      // Continue with stale status if we have one, otherwise fail
-      if (!cachedBridgeStatus) {
-        return { ready: false, error: 'Impossibile ottenere stato Smart Card' };
+    } catch (error: any) {
+      // Distinguish between transport errors and reader/card errors
+      const errorMessage = error?.message || String(error);
+      console.log(`[Bridge] Failed to get fresh status: ${errorMessage}`);
+      
+      // If this is a timeout, we can try with cached status as a fallback
+      // But for definitive reader/card errors, we must fail fast
+      if (errorMessage.includes('timeout') && cachedBridgeStatus) {
+        console.log(`[Bridge] Timeout getting fresh status, using cached status as fallback`);
+        // Continue to check cached status
+      } else {
+        // This is a definitive error from the desktop app - propagate it
+        return { ready: false, error: errorMessage || 'Impossibile verificare stato Smart Card' };
       }
     }
   }
