@@ -1212,6 +1212,10 @@ export const siaeEventSectors = pgTable("siae_event_sectors", {
   active: boolean("active").notNull().default(true),
   salesSuspended: boolean("sales_suspended").notNull().default(false), // Vendite sospese per questa tipologia
   ticketsSold: integer("tickets_sold").notNull().default(0), // Numero biglietti emessi per questa tipologia
+  statusLabel: varchar("status_label", { length: 50 }).default('available'), // available, sold_out, coming_soon, limited, custom
+  availabilityStart: timestamp("availability_start"), // Inizio disponibilità vendita online
+  availabilityEnd: timestamp("availability_end"), // Fine disponibilità vendita online
+  customStatusText: varchar("custom_status_text", { length: 100 }), // Testo personalizzato per lo stato
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
