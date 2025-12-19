@@ -19,7 +19,8 @@ import { Separator } from '@/components/ui/separator';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { 
-  ArrowLeft, Save, Loader2, Palette, Image, QrCode, Layout, Type, Calendar, MapPin, Ticket, User, Upload, X, Check 
+  ArrowLeft, Save, Loader2, Palette, Image, QrCode, Layout, Type, Calendar, MapPin, Ticket, User, Upload, X, Check,
+  RotateCcw, Building2, FileText
 } from 'lucide-react';
 import type { DigitalTicketTemplate } from '@shared/schema';
 
@@ -77,7 +78,9 @@ const SAMPLE_DATA = {
   seat: "Fila 12, Posto 45",
   buyerName: "Mario Rossi",
   fiscalSeal: "SIAE-2024-A1B2C3D4",
-  ticketCode: "TKT-2024-001234"
+  ticketCode: "TKT-2024-001234",
+  organizerCompany: "Eventi Italia S.r.l.",
+  emissionDate: "15 Dicembre 2024 14:30"
 };
 
 const FONT_OPTIONS = [
@@ -91,6 +94,8 @@ const FONT_OPTIONS = [
 ];
 
 function DigitalTicketPreview({ config }: { config: TemplateFormData }) {
+  const [isFlipped, setIsFlipped] = useState(false);
+  
   const getBackgroundStyle = () => {
     if (config.backgroundStyle === 'solid') {
       return { backgroundColor: config.backgroundColor };
@@ -145,153 +150,269 @@ function DigitalTicketPreview({ config }: { config: TemplateFormData }) {
   };
 
   return (
-    <div 
-      className="w-full max-w-md mx-auto rounded-2xl shadow-2xl overflow-hidden"
-      style={{ fontFamily: config.fontFamily }}
-      data-testid="preview-container"
-    >
+    <div className="flex flex-col items-center">
       <div 
-        className="relative"
-        style={getBackgroundStyle()}
+        className="w-full max-w-md mx-auto rounded-2xl shadow-2xl overflow-hidden"
+        style={{ 
+          fontFamily: config.fontFamily,
+          perspective: '1000px'
+        }}
+        data-testid="preview-container"
       >
-        {config.logoUrl && (
-          <div className={`flex ${getLogoPosition()} p-4`}>
-            <img 
-              src={config.logoUrl} 
-              alt="Logo" 
-              className={`${getLogoSize()} object-contain`}
-            />
-          </div>
-        )}
-
-        <div className="p-5" style={{ color: config.textColor }}>
+        <div 
+          className="relative transition-transform duration-500"
+          style={{
+            transformStyle: 'preserve-3d',
+            transform: isFlipped ? 'rotateY(180deg)' : 'rotateY(0deg)',
+          }}
+        >
           <div 
-            className="text-center p-4 rounded-xl mb-4"
-            style={{ backgroundColor: `${config.primaryColor}20` }}
+            className="relative"
+            style={{
+              ...getBackgroundStyle(),
+              backfaceVisibility: 'hidden',
+            }}
+          >
+            {config.logoUrl && (
+              <div className={`flex ${getLogoPosition()} p-4`}>
+                <img 
+                  src={config.logoUrl} 
+                  alt="Logo" 
+                  className={`${getLogoSize()} object-contain`}
+                  style={{ 
+                    mixBlendMode: 'normal',
+                    background: 'transparent'
+                  }}
+                />
+              </div>
+            )}
+
+            <div className="p-5" style={{ color: config.textColor }}>
+              <div 
+                className="text-center p-4 rounded-xl mb-4"
+                style={{ backgroundColor: `${config.primaryColor}20` }}
+              >
+                <p 
+                  className="text-xs font-medium uppercase tracking-wider mb-1"
+                  style={{ color: config.accentColor }}
+                >
+                  Biglietto Evento
+                </p>
+                {config.showEventName && (
+                  <h2 
+                    className="font-bold"
+                    style={{ fontSize: config.titleFontSize }}
+                    data-testid="preview-event-name"
+                  >
+                    {SAMPLE_DATA.eventName}
+                  </h2>
+                )}
+              </div>
+
+              <div className="space-y-3" style={{ fontSize: config.bodyFontSize }}>
+                {(config.showEventDate || config.showEventTime) && (
+                  <div className="flex items-center gap-3">
+                    <Calendar className="w-5 h-5 flex-shrink-0" style={{ color: config.accentColor }} />
+                    <div>
+                      {config.showEventDate && <span>{SAMPLE_DATA.eventDate}</span>}
+                      {config.showEventDate && config.showEventTime && <span> - </span>}
+                      {config.showEventTime && <span>{SAMPLE_DATA.eventTime}</span>}
+                    </div>
+                  </div>
+                )}
+
+                {config.showVenue && (
+                  <div className="flex items-center gap-3">
+                    <MapPin className="w-5 h-5 flex-shrink-0" style={{ color: config.accentColor }} />
+                    <span>{SAMPLE_DATA.venue}</span>
+                  </div>
+                )}
+
+                {(config.showTicketType || config.showSector) && (
+                  <div className="flex items-center gap-3">
+                    <Ticket className="w-5 h-5 flex-shrink-0" style={{ color: config.accentColor }} />
+                    <div>
+                      {config.showTicketType && <span>{SAMPLE_DATA.ticketType}</span>}
+                      {config.showTicketType && config.showSector && <span> - </span>}
+                      {config.showSector && <span>{SAMPLE_DATA.sector}</span>}
+                      {config.showSeat && <span> ({SAMPLE_DATA.seat})</span>}
+                    </div>
+                  </div>
+                )}
+
+                {config.showBuyerName && (
+                  <div className="flex items-center gap-3">
+                    <User className="w-5 h-5 flex-shrink-0" style={{ color: config.accentColor }} />
+                    <span>{SAMPLE_DATA.buyerName}</span>
+                  </div>
+                )}
+
+                {config.showPrice && (
+                  <div 
+                    className="text-center py-2 rounded-lg font-bold"
+                    style={{ 
+                      backgroundColor: config.accentColor,
+                      color: config.backgroundColor,
+                      fontSize: config.titleFontSize * 0.8
+                    }}
+                  >
+                    {SAMPLE_DATA.price}
+                  </div>
+                )}
+              </div>
+
+              {config.showPerforatedEdge && (
+                <div className="flex items-center gap-1 my-4">
+                  {[...Array(20)].map((_, i) => (
+                    <div 
+                      key={i} 
+                      className="flex-1 h-0.5 rounded-full"
+                      style={{ backgroundColor: config.textColor, opacity: 0.3 }}
+                    />
+                  ))}
+                </div>
+              )}
+
+              <div className={`flex flex-col ${getQrContainerPosition()} py-4`}>
+                <div 
+                  className={`p-3 ${getQrStyle()}`}
+                  style={{ backgroundColor: config.qrBackgroundColor === 'transparent' ? 'white' : config.qrBackgroundColor }}
+                >
+                  <div 
+                    style={{ 
+                      ...getQrSize(),
+                      backgroundColor: config.qrForegroundColor === '#ffffff' ? '#333' : config.qrForegroundColor,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center'
+                    }}
+                    className={getQrStyle()}
+                  >
+                    <QrCode 
+                      style={{ 
+                        width: '80%', 
+                        height: '80%',
+                        color: config.qrBackgroundColor === 'transparent' ? 'white' : config.qrBackgroundColor
+                      }} 
+                    />
+                  </div>
+                </div>
+                <p 
+                  className="text-xs mt-2 opacity-70"
+                  style={{ fontSize: config.bodyFontSize * 0.8 }}
+                >
+                  {SAMPLE_DATA.ticketCode}
+                </p>
+              </div>
+
+              {config.showFiscalSeal && (
+                <div 
+                  className="text-center text-xs opacity-60 pt-2 border-t"
+                  style={{ borderColor: `${config.textColor}30` }}
+                >
+                  Sigillo: {SAMPLE_DATA.fiscalSeal}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <div 
+            className="absolute inset-0 rounded-2xl p-6 flex flex-col"
+            style={{
+              ...getBackgroundStyle(),
+              backfaceVisibility: 'hidden',
+              transform: 'rotateY(180deg)',
+              color: config.textColor,
+            }}
           >
             <p 
-              className="text-xs font-medium uppercase tracking-wider mb-1"
+              className="text-sm font-medium uppercase tracking-wider mb-6 text-center"
               style={{ color: config.accentColor }}
             >
-              Biglietto Evento
+              Dettagli Biglietto
             </p>
-            {config.showEventName && (
-              <h2 
-                className="font-bold"
-                style={{ fontSize: config.titleFontSize }}
-                data-testid="preview-event-name"
-              >
-                {SAMPLE_DATA.eventName}
-              </h2>
-            )}
-          </div>
-
-          <div className="space-y-3" style={{ fontSize: config.bodyFontSize }}>
-            {(config.showEventDate || config.showEventTime) && (
-              <div className="flex items-center gap-3">
-                <Calendar className="w-5 h-5 flex-shrink-0" style={{ color: config.accentColor }} />
+            
+            <div className="flex-1 space-y-4" style={{ fontSize: config.bodyFontSize }}>
+              <div className="flex items-start gap-3">
+                <Building2 className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: config.accentColor }} />
                 <div>
-                  {config.showEventDate && <span>{SAMPLE_DATA.eventDate}</span>}
-                  {config.showEventDate && config.showEventTime && <span> - </span>}
-                  {config.showEventTime && <span>{SAMPLE_DATA.eventTime}</span>}
+                  <p className="text-xs opacity-60 uppercase">Organizzatore</p>
+                  <p className="font-medium" data-testid="preview-organizer">
+                    {SAMPLE_DATA.organizerCompany}
+                  </p>
                 </div>
               </div>
-            )}
 
-            {config.showVenue && (
-              <div className="flex items-center gap-3">
-                <MapPin className="w-5 h-5 flex-shrink-0" style={{ color: config.accentColor }} />
-                <span>{SAMPLE_DATA.venue}</span>
-              </div>
-            )}
-
-            {(config.showTicketType || config.showSector) && (
-              <div className="flex items-center gap-3">
-                <Ticket className="w-5 h-5 flex-shrink-0" style={{ color: config.accentColor }} />
+              <div className="flex items-start gap-3">
+                <Calendar className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: config.accentColor }} />
                 <div>
-                  {config.showTicketType && <span>{SAMPLE_DATA.ticketType}</span>}
-                  {config.showTicketType && config.showSector && <span> - </span>}
-                  {config.showSector && <span>{SAMPLE_DATA.sector}</span>}
-                  {config.showSeat && <span> ({SAMPLE_DATA.seat})</span>}
+                  <p className="text-xs opacity-60 uppercase">Data Emissione</p>
+                  <p className="font-medium" data-testid="preview-emission-date">
+                    {SAMPLE_DATA.emissionDate}
+                  </p>
                 </div>
               </div>
-            )}
 
-            {config.showBuyerName && (
-              <div className="flex items-center gap-3">
-                <User className="w-5 h-5 flex-shrink-0" style={{ color: config.accentColor }} />
-                <span>{SAMPLE_DATA.buyerName}</span>
-              </div>
-            )}
+              {config.showFiscalSeal && (
+                <div className="flex items-start gap-3">
+                  <FileText className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: config.accentColor }} />
+                  <div>
+                    <p className="text-xs opacity-60 uppercase">Sigillo Fiscale</p>
+                    <p className="font-mono text-sm break-all" data-testid="preview-fiscal-seal-back">
+                      {SAMPLE_DATA.fiscalSeal}
+                    </p>
+                  </div>
+                </div>
+              )}
 
-            {config.showPrice && (
-              <div 
-                className="text-center py-2 rounded-lg font-bold"
-                style={{ 
-                  backgroundColor: config.accentColor,
-                  color: config.backgroundColor,
-                  fontSize: config.titleFontSize * 0.8
-                }}
-              >
-                {SAMPLE_DATA.price}
+              <div className="flex items-start gap-3">
+                <Ticket className="w-5 h-5 flex-shrink-0 mt-0.5" style={{ color: config.accentColor }} />
+                <div>
+                  <p className="text-xs opacity-60 uppercase">Codice Biglietto</p>
+                  <p className="font-mono text-sm" data-testid="preview-ticket-code-back">
+                    {SAMPLE_DATA.ticketCode}
+                  </p>
+                </div>
               </div>
-            )}
+            </div>
+
+            <Button
+              variant="outline"
+              size="sm"
+              className="mt-4 w-full"
+              onClick={() => setIsFlipped(false)}
+              data-testid="button-flip-to-front"
+              style={{
+                borderColor: `${config.textColor}40`,
+                color: config.textColor,
+              }}
+            >
+              <RotateCcw className="w-4 h-4 mr-2" />
+              Mostra Fronte
+            </Button>
           </div>
-
-          {config.showPerforatedEdge && (
-            <div className="flex items-center gap-1 my-4">
-              {[...Array(20)].map((_, i) => (
-                <div 
-                  key={i} 
-                  className="flex-1 h-0.5 rounded-full"
-                  style={{ backgroundColor: config.textColor, opacity: 0.3 }}
-                />
-              ))}
-            </div>
-          )}
-
-          <div className={`flex flex-col ${getQrContainerPosition()} py-4`}>
-            <div 
-              className={`p-3 ${getQrStyle()}`}
-              style={{ backgroundColor: config.qrBackgroundColor === 'transparent' ? 'white' : config.qrBackgroundColor }}
-            >
-              <div 
-                style={{ 
-                  ...getQrSize(),
-                  backgroundColor: config.qrForegroundColor === '#ffffff' ? '#333' : config.qrForegroundColor,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center'
-                }}
-                className={getQrStyle()}
-              >
-                <QrCode 
-                  style={{ 
-                    width: '80%', 
-                    height: '80%',
-                    color: config.qrBackgroundColor === 'transparent' ? 'white' : config.qrBackgroundColor
-                  }} 
-                />
-              </div>
-            </div>
-            <p 
-              className="text-xs mt-2 opacity-70"
-              style={{ fontSize: config.bodyFontSize * 0.8 }}
-            >
-              {SAMPLE_DATA.ticketCode}
-            </p>
-          </div>
-
-          {config.showFiscalSeal && (
-            <div 
-              className="text-center text-xs opacity-60 pt-2 border-t"
-              style={{ borderColor: `${config.textColor}30` }}
-            >
-              Sigillo: {SAMPLE_DATA.fiscalSeal}
-            </div>
-          )}
         </div>
       </div>
+
+      <Button
+        variant="ghost"
+        size="sm"
+        className="mt-4"
+        onClick={() => setIsFlipped(!isFlipped)}
+        data-testid="button-toggle-preview-flip"
+      >
+        {isFlipped ? (
+          <>
+            <QrCode className="w-4 h-4 mr-2" />
+            Mostra Fronte
+          </>
+        ) : (
+          <>
+            <FileText className="w-4 h-4 mr-2" />
+            Mostra Dettagli
+          </>
+        )}
+      </Button>
     </div>
   );
 }

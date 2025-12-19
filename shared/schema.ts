@@ -3707,7 +3707,7 @@ export const digitalTicketTemplates = pgTable("digital_ticket_templates", {
   qrPosition: varchar("qr_position", { length: 20 }).default("center"), // center, bottom-center, bottom-left
   qrStyle: varchar("qr_style", { length: 20 }).default("square"), // square, rounded, dots
   qrForegroundColor: varchar("qr_foreground_color", { length: 7 }).default("#ffffff"),
-  qrBackgroundColor: varchar("qr_background_color", { length: 7 }).default("transparent"),
+  qrBackgroundColor: varchar("qr_background_color", { length: 20 }).default("transparent"),
   
   // Background Style
   backgroundStyle: varchar("background_style", { length: 20 }).default("gradient"), // solid, gradient, pattern
