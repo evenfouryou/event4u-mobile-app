@@ -65,7 +65,10 @@ let relayConfig = {
 };
 const RELAY_RECONNECT_DELAY = 5000;
 const RELAY_HEARTBEAT_INTERVAL = 30000;
+const RELAY_HEARTBEAT_TIMEOUT = 10000; // If no pong received within 10 seconds, consider connection dead
 let relayHeartbeatTimer = null;
+let lastPongReceived = Date.now();
+let heartbeatTimeoutTimer = null;
 
 // Periodic status check timer
 const STATUS_CHECK_INTERVAL = 1000; // Check every 1 second (reduced from 500ms to prevent race conditions)
@@ -674,6 +677,12 @@ function connectToRelay() {
           relayWs.send(JSON.stringify({ type: 'pong' }));
         } else if (msg.type === 'pong') {
           // Heartbeat response, connection is alive
+          lastPongReceived = Date.now();
+          if (heartbeatTimeoutTimer) {
+            clearTimeout(heartbeatTimeoutTimer);
+            heartbeatTimeoutTimer = null;
+          }
+          log.debug('Received pong, connection alive');
         } else {
           // Handle commands from web clients via relay
           await handleRelayCommand(msg);
@@ -718,15 +727,51 @@ function scheduleRelayReconnect() {
 
 function startRelayHeartbeat() {
   stopRelayHeartbeat();
+  lastPongReceived = Date.now();
+  
   relayHeartbeatTimer = setInterval(() => {
     if (relayWs && relayWs.readyState === WebSocket.OPEN) {
       try {
+        // Check if last pong is too old (connection may be dead)
+        const timeSinceLastPong = Date.now() - lastPongReceived;
+        if (timeSinceLastPong > RELAY_HEARTBEAT_INTERVAL + RELAY_HEARTBEAT_TIMEOUT) {
+          log.warn(`No pong received for ${timeSinceLastPong}ms, connection may be dead - forcing reconnection`);
+          forceReconnect();
+          return;
+        }
+        
         relayWs.send(JSON.stringify({ type: 'ping' }));
+        
+        // Set a timeout for pong response
+        if (heartbeatTimeoutTimer) {
+          clearTimeout(heartbeatTimeoutTimer);
+        }
+        heartbeatTimeoutTimer = setTimeout(() => {
+          log.warn('Pong timeout - server may be unresponsive, forcing reconnection');
+          forceReconnect();
+        }, RELAY_HEARTBEAT_TIMEOUT);
+        
       } catch (e) {
         log.error('Relay heartbeat error:', e.message);
+        forceReconnect();
       }
     }
   }, RELAY_HEARTBEAT_INTERVAL);
+}
+
+function forceReconnect() {
+  log.info('Force reconnecting to relay...');
+  stopRelayHeartbeat();
+  if (relayWs) {
+    try {
+      relayWs.terminate(); // Force close without waiting
+    } catch (e) {
+      // Ignore errors
+    }
+    relayWs = null;
+  }
+  updateStatus({ relayConnected: false });
+  scheduleRelayReconnect();
 }
 
 // ============================================
@@ -852,6 +897,10 @@ function stopRelayHeartbeat() {
   if (relayHeartbeatTimer) {
     clearInterval(relayHeartbeatTimer);
     relayHeartbeatTimer = null;
+  }
+  if (heartbeatTimeoutTimer) {
+    clearTimeout(heartbeatTimeoutTimer);
+    heartbeatTimeoutTimer = null;
   }
 }
 
