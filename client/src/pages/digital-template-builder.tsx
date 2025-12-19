@@ -291,12 +291,14 @@ function DigitalTicketPreview({ config }: { config: TemplateFormData }) {
 }
 
 export default function DigitalTemplateBuilder() {
+  console.log('[DigitalTemplateBuilder] Component rendering');
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
   const isEditing = !!id;
   const isSuperAdmin = user?.role === 'super_admin';
+  console.log('[DigitalTemplateBuilder] User:', user, 'isEditing:', isEditing, 'isSuperAdmin:', isSuperAdmin);
 
   const form = useForm<TemplateFormData>({
     resolver: zodResolver(templateFormSchema),
