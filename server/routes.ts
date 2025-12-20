@@ -63,7 +63,7 @@ import bcrypt from "bcryptjs";
 import { z } from "zod";
 import nodemailer from "nodemailer";
 import { db } from "./db";
-import { eq, and, or, inArray, desc, isNull, like } from "drizzle-orm";
+import { eq, and, or, inArray, desc, isNull, like, sql } from "drizzle-orm";
 import { events } from "@shared/schema";
 import crypto from "crypto";
 import QRCode from "qrcode";
@@ -89,6 +89,13 @@ import {
   updateSiaeServiceCodeSchema,
   insertSiaeCancellationReasonSchema,
   updateSiaeCancellationReasonSchema,
+  venueFloorPlans,
+  floorPlanZones,
+  floorPlanSeats,
+  eventZoneMappings,
+  insertVenueFloorPlanSchema,
+  insertFloorPlanZoneSchema,
+  insertEventZoneMappingSchema,
 } from "@shared/schema";
 import { setupBridgeRelay, isBridgeConnected, getCachedBridgeStatus } from "./bridge-relay";
 import { setupPrintRelay } from "./print-relay";
@@ -1336,6 +1343,273 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error updating location:", error);
       res.status(500).json({ message: "Failed to update location" });
+    }
+  });
+
+  // ===== VENUE FLOOR PLANS (Planimetrie) =====
+  
+  // Get all floor plans for a location
+  app.get('/api/locations/:locationId/floor-plans', isAuthenticated, async (req: any, res) => {
+    try {
+      const { locationId } = req.params;
+      const floorPlans = await db.select()
+        .from(venueFloorPlans)
+        .where(eq(venueFloorPlans.locationId, locationId))
+        .orderBy(venueFloorPlans.sortOrder);
+      res.json(floorPlans);
+    } catch (error) {
+      console.error("Error fetching floor plans:", error);
+      res.status(500).json({ message: "Impossibile recuperare le planimetrie" });
+    }
+  });
+
+  // Create a new floor plan
+  app.post('/api/locations/:locationId/floor-plans', isAuthenticated, async (req: any, res) => {
+    try {
+      const { locationId } = req.params;
+      const location = await storage.getLocation(locationId);
+      if (!location) {
+        return res.status(404).json({ message: "Location non trovata" });
+      }
+      
+      const validated = insertVenueFloorPlanSchema.parse({ ...req.body, locationId });
+      
+      // If this is set as default, unset others
+      if (validated.isDefault) {
+        await db.update(venueFloorPlans)
+          .set({ isDefault: false })
+          .where(eq(venueFloorPlans.locationId, locationId));
+      }
+      
+      const [floorPlan] = await db.insert(venueFloorPlans).values(validated).returning();
+      res.json(floorPlan);
+    } catch (error: any) {
+      console.error("Error creating floor plan:", error);
+      res.status(400).json({ message: error.message || "Impossibile creare la planimetria" });
+    }
+  });
+
+  // Get a specific floor plan with zones
+  app.get('/api/floor-plans/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const [floorPlan] = await db.select()
+        .from(venueFloorPlans)
+        .where(eq(venueFloorPlans.id, id));
+      
+      if (!floorPlan) {
+        return res.status(404).json({ message: "Planimetria non trovata" });
+      }
+      
+      const zones = await db.select()
+        .from(floorPlanZones)
+        .where(eq(floorPlanZones.floorPlanId, id))
+        .orderBy(floorPlanZones.sortOrder);
+      
+      res.json({ ...floorPlan, zones });
+    } catch (error) {
+      console.error("Error fetching floor plan:", error);
+      res.status(500).json({ message: "Impossibile recuperare la planimetria" });
+    }
+  });
+
+  // Update a floor plan
+  app.patch('/api/floor-plans/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const [existing] = await db.select()
+        .from(venueFloorPlans)
+        .where(eq(venueFloorPlans.id, id));
+      
+      if (!existing) {
+        return res.status(404).json({ message: "Planimetria non trovata" });
+      }
+      
+      // If setting as default, unset others
+      if (req.body.isDefault) {
+        await db.update(venueFloorPlans)
+          .set({ isDefault: false })
+          .where(and(
+            eq(venueFloorPlans.locationId, existing.locationId),
+            sql`${venueFloorPlans.id} != ${id}`
+          ));
+      }
+      
+      const [updated] = await db.update(venueFloorPlans)
+        .set({ ...req.body, updatedAt: new Date() })
+        .where(eq(venueFloorPlans.id, id))
+        .returning();
+      
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating floor plan:", error);
+      res.status(500).json({ message: "Impossibile aggiornare la planimetria" });
+    }
+  });
+
+  // Delete a floor plan
+  app.delete('/api/floor-plans/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await db.delete(venueFloorPlans).where(eq(venueFloorPlans.id, id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting floor plan:", error);
+      res.status(500).json({ message: "Impossibile eliminare la planimetria" });
+    }
+  });
+
+  // ===== FLOOR PLAN ZONES =====
+  
+  // Get all zones for a floor plan
+  app.get('/api/floor-plans/:floorPlanId/zones', isAuthenticated, async (req: any, res) => {
+    try {
+      const { floorPlanId } = req.params;
+      const zones = await db.select()
+        .from(floorPlanZones)
+        .where(eq(floorPlanZones.floorPlanId, floorPlanId))
+        .orderBy(floorPlanZones.sortOrder);
+      res.json(zones);
+    } catch (error) {
+      console.error("Error fetching zones:", error);
+      res.status(500).json({ message: "Impossibile recuperare le zone" });
+    }
+  });
+
+  // Create a new zone
+  app.post('/api/floor-plans/:floorPlanId/zones', isAuthenticated, async (req: any, res) => {
+    try {
+      const { floorPlanId } = req.params;
+      const validated = insertFloorPlanZoneSchema.parse({ ...req.body, floorPlanId });
+      const [zone] = await db.insert(floorPlanZones).values(validated).returning();
+      res.json(zone);
+    } catch (error: any) {
+      console.error("Error creating zone:", error);
+      res.status(400).json({ message: error.message || "Impossibile creare la zona" });
+    }
+  });
+
+  // Update a zone
+  app.patch('/api/zones/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const [updated] = await db.update(floorPlanZones)
+        .set({ ...req.body, updatedAt: new Date() })
+        .where(eq(floorPlanZones.id, id))
+        .returning();
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Zona non trovata" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating zone:", error);
+      res.status(500).json({ message: "Impossibile aggiornare la zona" });
+    }
+  });
+
+  // Delete a zone
+  app.delete('/api/zones/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await db.delete(floorPlanZones).where(eq(floorPlanZones.id, id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting zone:", error);
+      res.status(500).json({ message: "Impossibile eliminare la zona" });
+    }
+  });
+
+  // ===== FLOOR PLAN SEATS =====
+  
+  // Get all seats for a zone
+  app.get('/api/zones/:zoneId/seats', isAuthenticated, async (req: any, res) => {
+    try {
+      const { zoneId } = req.params;
+      const seats = await db.select()
+        .from(floorPlanSeats)
+        .where(eq(floorPlanSeats.zoneId, zoneId))
+        .orderBy(floorPlanSeats.sortOrder);
+      res.json(seats);
+    } catch (error) {
+      console.error("Error fetching seats:", error);
+      res.status(500).json({ message: "Impossibile recuperare i posti" });
+    }
+  });
+
+  // Create seats in bulk
+  app.post('/api/zones/:zoneId/seats/bulk', isAuthenticated, async (req: any, res) => {
+    try {
+      const { zoneId } = req.params;
+      const { seats } = req.body;
+      
+      if (!Array.isArray(seats) || seats.length === 0) {
+        return res.status(400).json({ message: "Fornire un array di posti" });
+      }
+      
+      const seatsToInsert = seats.map((seat: any) => ({
+        ...seat,
+        zoneId,
+      }));
+      
+      const inserted = await db.insert(floorPlanSeats).values(seatsToInsert).returning();
+      res.json(inserted);
+    } catch (error: any) {
+      console.error("Error creating seats:", error);
+      res.status(400).json({ message: error.message || "Impossibile creare i posti" });
+    }
+  });
+
+  // Delete all seats in a zone
+  app.delete('/api/zones/:zoneId/seats', isAuthenticated, async (req: any, res) => {
+    try {
+      const { zoneId } = req.params;
+      await db.delete(floorPlanSeats).where(eq(floorPlanSeats.zoneId, zoneId));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting seats:", error);
+      res.status(500).json({ message: "Impossibile eliminare i posti" });
+    }
+  });
+
+  // ===== EVENT ZONE MAPPINGS =====
+  
+  // Get zone mappings for an event
+  app.get('/api/siae/ticketed-events/:eventId/zone-mappings', isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      const mappings = await db.select()
+        .from(eventZoneMappings)
+        .where(eq(eventZoneMappings.ticketedEventId, eventId));
+      res.json(mappings);
+    } catch (error) {
+      console.error("Error fetching zone mappings:", error);
+      res.status(500).json({ message: "Impossibile recuperare le mappature zone" });
+    }
+  });
+
+  // Create zone mapping
+  app.post('/api/siae/ticketed-events/:eventId/zone-mappings', isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId } = req.params;
+      const validated = insertEventZoneMappingSchema.parse({ ...req.body, ticketedEventId: eventId });
+      const [mapping] = await db.insert(eventZoneMappings).values(validated).returning();
+      res.json(mapping);
+    } catch (error: any) {
+      console.error("Error creating zone mapping:", error);
+      res.status(400).json({ message: error.message || "Impossibile creare la mappatura" });
+    }
+  });
+
+  // Delete zone mapping
+  app.delete('/api/zone-mappings/:id', isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      await db.delete(eventZoneMappings).where(eq(eventZoneMappings.id, id));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting zone mapping:", error);
+      res.status(500).json({ message: "Impossibile eliminare la mappatura" });
     }
   });
 

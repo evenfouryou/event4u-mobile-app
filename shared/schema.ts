@@ -4509,3 +4509,168 @@ export type UpdateOrganizerInvoice = z.infer<typeof updateOrganizerInvoiceSchema
 
 export type OrganizerInvoiceItem = typeof organizerInvoiceItems.$inferSelect;
 export type InsertOrganizerInvoiceItem = z.infer<typeof insertOrganizerInvoiceItemSchema>;
+
+// ==================== VENUE FLOOR PLANS (Planimetrie) ====================
+
+// Planimetrie Venue - Immagini di layout per location
+export const venueFloorPlans = pgTable("venue_floor_plans", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  locationId: varchar("location_id").notNull().references(() => locations.id, { onDelete: 'cascade' }),
+  name: varchar("name", { length: 255 }).notNull(),
+  description: text("description"),
+  imageUrl: text("image_url").notNull(), // URL dell'immagine planimetria
+  imageWidth: integer("image_width").notNull(), // Larghezza originale immagine
+  imageHeight: integer("image_height").notNull(), // Altezza originale immagine
+  isDefault: boolean("is_default").notNull().default(false), // Planimetria principale
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const venueFloorPlansRelations = relations(venueFloorPlans, ({ one, many }) => ({
+  location: one(locations, {
+    fields: [venueFloorPlans.locationId],
+    references: [locations.id],
+  }),
+  zones: many(floorPlanZones),
+}));
+
+// Zone Cliccabili sulla Planimetria
+export const floorPlanZones = pgTable("floor_plan_zones", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  floorPlanId: varchar("floor_plan_id").notNull().references(() => venueFloorPlans.id, { onDelete: 'cascade' }),
+  name: varchar("name", { length: 255 }).notNull(),
+  zoneType: varchar("zone_type", { length: 50 }).notNull(), // 'sector' | 'table' | 'seat' | 'area' | 'stage' | 'bar' | 'entrance'
+  // Coordinate per forma poligonale (array di punti x,y in percentuale dell'immagine)
+  coordinates: jsonb("coordinates").notNull(), // [{x: 10, y: 20}, {x: 30, y: 20}, ...]
+  // Oppure coordinate rettangolo semplice (per retrocompatibilità)
+  rectX: decimal("rect_x", { precision: 10, scale: 4 }), // X in percentuale (0-100)
+  rectY: decimal("rect_y", { precision: 10, scale: 4 }), // Y in percentuale (0-100)
+  rectWidth: decimal("rect_width", { precision: 10, scale: 4 }), // Larghezza in percentuale
+  rectHeight: decimal("rect_height", { precision: 10, scale: 4 }), // Altezza in percentuale
+  // Stile visuale
+  fillColor: varchar("fill_color", { length: 20 }).default('#3b82f6'), // Colore riempimento
+  strokeColor: varchar("stroke_color", { length: 20 }).default('#1d4ed8'), // Colore bordo
+  opacity: decimal("opacity", { precision: 3, scale: 2 }).default('0.3'), // Opacità (0-1)
+  // Capacità e configurazione
+  capacity: integer("capacity"), // Capacità zona (posti/persone)
+  tableNumber: varchar("table_number", { length: 20 }), // Numero tavolo (se zoneType = 'table')
+  seatsPerTable: integer("seats_per_table"), // Posti per tavolo
+  // Collegamento opzionale a settore SIAE (per eventi)
+  defaultSectorCode: varchar("default_sector_code", { length: 2 }), // Codice settore TAB.2 predefinito
+  isSelectable: boolean("is_selectable").notNull().default(true), // Può essere selezionata per acquisto
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").default(0),
+  metadata: jsonb("metadata"), // Dati aggiuntivi (es. etichetta posti, note)
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const floorPlanZonesRelations = relations(floorPlanZones, ({ one, many }) => ({
+  floorPlan: one(venueFloorPlans, {
+    fields: [floorPlanZones.floorPlanId],
+    references: [venueFloorPlans.id],
+  }),
+  seats: many(floorPlanSeats),
+}));
+
+// Posti singoli all'interno di una zona (per zone con posti numerati)
+export const floorPlanSeats = pgTable("floor_plan_seats", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  zoneId: varchar("zone_id").notNull().references(() => floorPlanZones.id, { onDelete: 'cascade' }),
+  seatLabel: varchar("seat_label", { length: 20 }).notNull(), // Es: "A1", "B5", "T1-S3"
+  row: varchar("row", { length: 10 }), // Fila (opzionale)
+  seatNumber: integer("seat_number"), // Numero posto nella fila
+  // Posizione relativa nella zona (percentuale della zona)
+  posX: decimal("pos_x", { precision: 10, scale: 4 }).notNull(), // X in percentuale
+  posY: decimal("pos_y", { precision: 10, scale: 4 }).notNull(), // Y in percentuale
+  // Stato predefinito (può essere sovrascritto per evento)
+  isAccessible: boolean("is_accessible").notNull().default(false), // Posto accessibile disabili
+  isBlocked: boolean("is_blocked").notNull().default(false), // Posto bloccato (non vendibile)
+  isActive: boolean("is_active").notNull().default(true),
+  sortOrder: integer("sort_order").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const floorPlanSeatsRelations = relations(floorPlanSeats, ({ one }) => ({
+  zone: one(floorPlanZones, {
+    fields: [floorPlanSeats.zoneId],
+    references: [floorPlanZones.id],
+  }),
+}));
+
+// Mappatura zona planimetria -> settore evento (per collegare planimetria a eventi specifici)
+export const eventZoneMappings = pgTable("event_zone_mappings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketedEventId: varchar("ticketed_event_id").notNull().references(() => siaeTicketedEvents.id, { onDelete: 'cascade' }),
+  zoneId: varchar("zone_id").notNull().references(() => floorPlanZones.id, { onDelete: 'cascade' }),
+  sectorId: varchar("sector_id").notNull().references(() => siaeEventSectors.id, { onDelete: 'cascade' }),
+  // Override prezzi per questa zona/evento (opzionale)
+  priceOverride: decimal("price_override", { precision: 10, scale: 2 }),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const eventZoneMappingsRelations = relations(eventZoneMappings, ({ one }) => ({
+  ticketedEvent: one(siaeTicketedEvents, {
+    fields: [eventZoneMappings.ticketedEventId],
+    references: [siaeTicketedEvents.id],
+  }),
+  zone: one(floorPlanZones, {
+    fields: [eventZoneMappings.zoneId],
+    references: [floorPlanZones.id],
+  }),
+  sector: one(siaeEventSectors, {
+    fields: [eventZoneMappings.sectorId],
+    references: [siaeEventSectors.id],
+  }),
+}));
+
+// Schemas per validazione
+export const insertVenueFloorPlanSchema = createInsertSchema(venueFloorPlans).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateVenueFloorPlanSchema = insertVenueFloorPlanSchema.partial().omit({ locationId: true });
+
+export const insertFloorPlanZoneSchema = createInsertSchema(floorPlanZones).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateFloorPlanZoneSchema = insertFloorPlanZoneSchema.partial().omit({ floorPlanId: true });
+
+export const insertFloorPlanSeatSchema = createInsertSchema(floorPlanSeats).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateFloorPlanSeatSchema = insertFloorPlanSeatSchema.partial().omit({ zoneId: true });
+
+export const insertEventZoneMappingSchema = createInsertSchema(eventZoneMappings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateEventZoneMappingSchema = insertEventZoneMappingSchema.partial();
+
+// Types
+export type VenueFloorPlan = typeof venueFloorPlans.$inferSelect;
+export type InsertVenueFloorPlan = z.infer<typeof insertVenueFloorPlanSchema>;
+export type UpdateVenueFloorPlan = z.infer<typeof updateVenueFloorPlanSchema>;
+
+export type FloorPlanZone = typeof floorPlanZones.$inferSelect;
+export type InsertFloorPlanZone = z.infer<typeof insertFloorPlanZoneSchema>;
+export type UpdateFloorPlanZone = z.infer<typeof updateFloorPlanZoneSchema>;
+
+export type FloorPlanSeat = typeof floorPlanSeats.$inferSelect;
+export type InsertFloorPlanSeat = z.infer<typeof insertFloorPlanSeatSchema>;
+export type UpdateFloorPlanSeat = z.infer<typeof updateFloorPlanSeatSchema>;
+
+export type EventZoneMapping = typeof eventZoneMappings.$inferSelect;
+export type InsertEventZoneMapping = z.infer<typeof insertEventZoneMappingSchema>;
+export type UpdateEventZoneMapping = z.infer<typeof updateEventZoneMappingSchema>;
