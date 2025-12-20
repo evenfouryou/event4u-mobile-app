@@ -4671,9 +4671,27 @@ router.get("/api/siae/events/:eventId/report-c1", requireAuth, async (req: Reque
         continue;
       }
       
-      const price = Number(ticket.ticketPrice) || 0;
+      const price = Number(ticket.ticketPrice) || Number(ticket.grossAmount) || 0;
       
-      switch (ticket.ticketType) {
+      // Usa ticketType se disponibile, altrimenti deriva da ticketTypeCode
+      let effectiveTicketType = ticket.ticketType;
+      if (!effectiveTicketType && ticket.ticketTypeCode) {
+        switch (ticket.ticketTypeCode) {
+          case 'INT':
+            effectiveTicketType = 'intero';
+            break;
+          case 'RID':
+            effectiveTicketType = 'ridotto';
+            break;
+          case 'OMG':
+            effectiveTicketType = 'omaggio';
+            break;
+          default:
+            effectiveTicketType = 'intero'; // Default fallback
+        }
+      }
+      
+      switch (effectiveTicketType) {
         case 'intero':
           stats.interoCount++;
           stats.interoAmount += price;
@@ -4685,11 +4703,15 @@ router.get("/api/siae/events/:eventId/report-c1", requireAuth, async (req: Reque
         case 'omaggio':
           stats.omaggioCount++;
           break;
+        default:
+          // Fallback: conta come intero se non riconosciuto
+          stats.interoCount++;
+          stats.interoAmount += price;
       }
     }
     
     const activeTickets = tickets.filter(t => t.status !== 'cancelled');
-    const totalRevenue = activeTickets.reduce((sum, t) => sum + (Number(t.ticketPrice) || 0), 0);
+    const totalRevenue = activeTickets.reduce((sum, t) => sum + (Number(t.ticketPrice) || Number(t.grossAmount) || 0), 0);
     const vatRate = event.vatRate || 10;
     const vatAmount = totalRevenue * vatRate / (100 + vatRate);
     const netRevenue = totalRevenue - vatAmount;
@@ -4715,15 +4737,30 @@ router.get("/api/siae/events/:eventId/report-c1", requireAuth, async (req: Reque
       sectors: Array.from(sectorStats.values()),
       ticketTypes: {
         intero: {
-          count: activeTickets.filter(t => t.ticketType === 'intero').length,
-          amount: activeTickets.filter(t => t.ticketType === 'intero').reduce((s, t) => s + (Number(t.ticketPrice) || 0), 0)
+          count: activeTickets.filter(t => {
+            const tt = t.ticketType || (t.ticketTypeCode === 'INT' ? 'intero' : (t.ticketTypeCode === 'RID' ? 'ridotto' : (t.ticketTypeCode === 'OMG' ? 'omaggio' : 'intero')));
+            return tt === 'intero';
+          }).length,
+          amount: activeTickets.filter(t => {
+            const tt = t.ticketType || (t.ticketTypeCode === 'INT' ? 'intero' : (t.ticketTypeCode === 'RID' ? 'ridotto' : (t.ticketTypeCode === 'OMG' ? 'omaggio' : 'intero')));
+            return tt === 'intero';
+          }).reduce((s, t) => s + (Number(t.ticketPrice) || Number(t.grossAmount) || 0), 0)
         },
         ridotto: {
-          count: activeTickets.filter(t => t.ticketType === 'ridotto').length,
-          amount: activeTickets.filter(t => t.ticketType === 'ridotto').reduce((s, t) => s + (Number(t.ticketPrice) || 0), 0)
+          count: activeTickets.filter(t => {
+            const tt = t.ticketType || (t.ticketTypeCode === 'INT' ? 'intero' : (t.ticketTypeCode === 'RID' ? 'ridotto' : (t.ticketTypeCode === 'OMG' ? 'omaggio' : 'intero')));
+            return tt === 'ridotto';
+          }).length,
+          amount: activeTickets.filter(t => {
+            const tt = t.ticketType || (t.ticketTypeCode === 'INT' ? 'intero' : (t.ticketTypeCode === 'RID' ? 'ridotto' : (t.ticketTypeCode === 'OMG' ? 'omaggio' : 'intero')));
+            return tt === 'ridotto';
+          }).reduce((s, t) => s + (Number(t.ticketPrice) || Number(t.grossAmount) || 0), 0)
         },
         omaggio: {
-          count: activeTickets.filter(t => t.ticketType === 'omaggio').length,
+          count: activeTickets.filter(t => {
+            const tt = t.ticketType || (t.ticketTypeCode === 'INT' ? 'intero' : (t.ticketTypeCode === 'RID' ? 'ridotto' : (t.ticketTypeCode === 'OMG' ? 'omaggio' : 'intero')));
+            return tt === 'omaggio';
+          }).length,
           amount: 0
         }
       }

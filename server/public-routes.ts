@@ -1578,6 +1578,10 @@ router.post("/api/public/checkout/confirm", async (req, res) => {
         });
 
         // Crea biglietto con sigillo fiscale REALE
+        // Determina ticketType corretto per report C1
+        const ticketType = item.ticketType || "intero";
+        const ticketTypeCode = ticketType === "intero" ? "INT" : (ticketType === "ridotto" ? "RID" : "OMG");
+        
         const [ticket] = await db
           .insert(siaeTickets)
           .values({
@@ -1592,10 +1596,12 @@ router.post("/api/public/checkout/confirm", async (req, res) => {
             emissionChannelCode: emissionChannel?.channelCode || "WEB",
             emissionDateStr,
             emissionTimeStr,
-            ticketTypeCode: item.ticketType === "intero" ? "INT" : "RID",
+            ticketTypeCode: ticketTypeCode,
+            ticketType: ticketType, // IMPORTANTE: per report C1
             sectorCode: sector.sectorCode,
             seatId: item.seatId,
             grossAmount: item.unitPrice,
+            ticketPrice: item.unitPrice, // Prezzo biglietto per report
             participantFirstName: item.participantFirstName || customer.firstName,
             participantLastName: item.participantLastName || customer.lastName,
             status: "active",
