@@ -288,6 +288,116 @@ router.patch("/api/siae/cancellation-reasons/:code", requireAuth, requireSuperAd
   }
 });
 
+// ==================== Export CSV Tabelle Codificate SIAE ====================
+
+// Helper function to convert data to CSV format
+function toCSV(data: any[], columns: { key: string; header: string }[]): string {
+  const headers = columns.map(c => c.header).join(';');
+  const rows = data.map(item => 
+    columns.map(c => {
+      const value = item[c.key];
+      if (value === null || value === undefined) return '';
+      const strValue = String(value);
+      if (strValue.includes(';') || strValue.includes('"') || strValue.includes('\n')) {
+        return `"${strValue.replace(/"/g, '""')}"`;
+      }
+      return strValue;
+    }).join(';')
+  );
+  return [headers, ...rows].join('\n');
+}
+
+// Export Event Genres (TAB.1) as CSV
+router.get("/api/siae/event-genres/export/csv", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const genres = await siaeStorage.getSiaeEventGenres();
+    const csv = toCSV(genres, [
+      { key: 'code', header: 'Codice' },
+      { key: 'name', header: 'Nome' },
+      { key: 'description', header: 'Descrizione' },
+      { key: 'taxType', header: 'Tipo Imposta' },
+    ]);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="siae_generi_evento.csv"');
+    res.send('\uFEFF' + csv);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Export Sector Codes (TAB.2) as CSV
+router.get("/api/siae/sector-codes/export/csv", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const sectors = await siaeStorage.getSiaeSectorCodes();
+    const csv = toCSV(sectors, [
+      { key: 'code', header: 'Codice' },
+      { key: 'name', header: 'Nome' },
+      { key: 'description', header: 'Descrizione' },
+    ]);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="siae_codici_settore.csv"');
+    res.send('\uFEFF' + csv);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Export Ticket Types (TAB.3) as CSV
+router.get("/api/siae/ticket-types/export/csv", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const types = await siaeStorage.getSiaeTicketTypes();
+    const csv = toCSV(types, [
+      { key: 'code', header: 'Codice' },
+      { key: 'name', header: 'Nome' },
+      { key: 'category', header: 'Categoria' },
+      { key: 'description', header: 'Descrizione' },
+    ]);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="siae_tipi_biglietto.csv"');
+    res.send('\uFEFF' + csv);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Export Service Codes (TAB.4) as CSV
+router.get("/api/siae/service-codes/export/csv", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const services = await siaeStorage.getSiaeServiceCodes();
+    const csv = toCSV(services, [
+      { key: 'code', header: 'Codice' },
+      { key: 'name', header: 'Nome' },
+      { key: 'description', header: 'Descrizione' },
+    ]);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="siae_codici_servizio.csv"');
+    res.send('\uFEFF' + csv);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Export Cancellation Reasons (TAB.5) as CSV
+router.get("/api/siae/cancellation-reasons/export/csv", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const reasons = await siaeStorage.getSiaeCancellationReasons();
+    const csv = toCSV(reasons, [
+      { key: 'code', header: 'Codice' },
+      { key: 'name', header: 'Nome' },
+      { key: 'description', header: 'Descrizione' },
+      { key: 'refundRequired', header: 'Rimborso Richiesto' },
+    ]);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', 'attachment; filename="siae_causali_annullamento.csv"');
+    res.send('\uFEFF' + csv);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Export all reference tables as a single ZIP (optional future enhancement)
+// For now, each table has its own export endpoint
+
 // ==================== Activation Cards (Super Admin) ====================
 
 router.get("/api/siae/activation-cards", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
@@ -1046,6 +1156,19 @@ router.patch("/api/siae/event-sectors/:id", requireAuth, requireOrganizer, async
 
 router.delete("/api/siae/event-sectors/:id", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
   try {
+    // SIAE Compliance: Check if sector has tickets (cannot delete sectors with issued tickets)
+    const [ticketCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(siaeTickets)
+      .where(eq(siaeTickets.sectorId, req.params.id));
+    
+    if (ticketCount && ticketCount.count > 0) {
+      return res.status(400).json({ 
+        message: "Eliminazione non consentita: sono stati emessi biglietti per questo settore. Per conformità SIAE, i dati dei titoli devono essere conservati.",
+        code: "SIAE_RETENTION_REQUIRED"
+      });
+    }
+    
     const deleted = await siaeStorage.deleteSiaeEventSector(req.params.id);
     if (!deleted) {
       return res.status(404).json({ message: "Settore non trovato" });
@@ -1181,6 +1304,19 @@ router.delete("/api/siae/sectors/:sectorId/seats", requireAuth, requireOrganizer
     const sector = await siaeStorage.getSiaeEventSector(sectorId);
     if (!sector) {
       return res.status(404).json({ message: "Settore non trovato" });
+    }
+    
+    // SIAE Compliance: Check if any tickets exist for this sector (cannot delete seats with ticket history)
+    const [ticketCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(siaeTickets)
+      .where(eq(siaeTickets.sectorId, sectorId));
+    
+    if (ticketCount && ticketCount.count > 0) {
+      return res.status(400).json({ 
+        message: "Eliminazione non consentita: sono stati emessi biglietti per questo settore. Per conformità SIAE, i dati dei posti devono essere conservati per almeno 60 giorni.",
+        code: "SIAE_RETENTION_REQUIRED"
+      });
     }
     
     // Verifica che non ci siano biglietti venduti per i posti
@@ -1828,6 +1964,19 @@ router.patch("/api/siae/numbered-seats/:id", requireAuth, requireOrganizer, asyn
 
 router.delete("/api/siae/numbered-seats/:id", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
   try {
+    // SIAE Compliance: Check if any tickets reference this seat
+    const [ticketCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(siaeTickets)
+      .where(eq(siaeTickets.seatId, req.params.id));
+    
+    if (ticketCount && ticketCount.count > 0) {
+      return res.status(400).json({ 
+        message: "Eliminazione non consentita: questo posto ha biglietti associati. Per conformità SIAE, i dati devono essere conservati per almeno 60 giorni.",
+        code: "SIAE_RETENTION_REQUIRED"
+      });
+    }
+    
     const deleted = await siaeStorage.deleteSiaeNumberedSeat(req.params.id);
     if (!deleted) {
       return res.status(404).json({ message: "Posto non trovato" });
@@ -4928,6 +5077,27 @@ router.post("/api/siae/tickets/:id/print", requireAuth, async (req: Request, res
     }
     console.log('[TicketPrint] Ticket found, ticketedEventId:', ticket.ticketedEventId);
     
+    // SIAE Compliance: Check if ticket has already been printed (no reprints allowed)
+    // First, check if non-admin is trying to force reprint - reject immediately with 403
+    if (req.body.forceReprint === true && user.role !== 'super_admin') {
+      console.log('[TicketPrint] REPRINT OVERRIDE DENIED - user is not super_admin');
+      return res.status(403).json({ 
+        message: "Solo i Super Admin possono forzare la ristampa.",
+        errorCode: "REPRINT_OVERRIDE_DENIED"
+      });
+    }
+    
+    // Then check if already printed (unless super_admin with forceReprint)
+    const forceReprint = req.body.forceReprint === true && user.role === 'super_admin';
+    if ((ticket as any).printedAt && !forceReprint) {
+      console.log('[TicketPrint] REPRINT BLOCKED - ticket already printed at:', (ticket as any).printedAt);
+      return res.status(409).json({ 
+        message: "Biglietto già stampato. La ristampa non è consentita per conformità SIAE.",
+        errorCode: "ALREADY_PRINTED",
+        printedAt: (ticket as any).printedAt
+      });
+    }
+    
     // Get event details
     const event = await siaeStorage.getSiaeTicketedEvent(ticket.ticketedEventId);
     if (!event) {
@@ -5144,6 +5314,12 @@ router.post("/api/siae/tickets/:id/print", requireAuth, async (req: Request, res
     }
     
     console.log(`[TicketPrint] Sent ticket ${ticketId} to print agent ${printerAgentId}`);
+    
+    // SIAE Compliance: Mark ticket as printed to prevent reprints (ISO string for consistency)
+    await siaeStorage.updateSiaeTicket(ticketId, { 
+      printedAt: new Date().toISOString() 
+    } as any);
+    console.log(`[TicketPrint] Marked ticket ${ticketId} as printed`);
     
     res.json({ success: true, message: "Stampa inviata", agentId: printerAgentId });
   } catch (error: any) {
