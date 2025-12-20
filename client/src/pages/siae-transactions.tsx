@@ -1,12 +1,15 @@
 import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute, useLocation } from "wouter";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
+import { useToast } from "@/hooks/use-toast";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import {
   type SiaeTransaction,
   type SiaeTicketedEvent,
+  type SiaeTicket,
   type Event,
 } from "@shared/schema";
 import { Button } from "@/components/ui/button";
@@ -18,8 +21,21 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
+  DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import {
   Select,
   SelectContent,
@@ -54,11 +70,14 @@ import {
   AlertCircle,
   RefreshCcw,
   ArrowLeft,
+  Loader2,
+  Ban,
 } from "lucide-react";
 import { motion } from "framer-motion";
 
 export default function SiaeTransactionsPage() {
   const { user } = useAuth();
+  const { toast } = useToast();
   const [, navigate] = useLocation();
   const [, params] = useRoute("/siae/transactions/:eventId");
   const eventId = params?.eventId || "";
@@ -68,6 +87,13 @@ export default function SiaeTransactionsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<string>("all");
+  
+  const [cancelTicketDialogOpen, setCancelTicketDialogOpen] = useState(false);
+  const [ticketToCancel, setTicketToCancel] = useState<SiaeTicket | null>(null);
+  const [cancelReason, setCancelReason] = useState("01");
+  const [cancelNote, setCancelNote] = useState("");
+  const [ticketsDialogOpen, setTicketsDialogOpen] = useState(false);
+  const [transactionForTickets, setTransactionForTickets] = useState<SiaeTransaction | null>(null);
 
   const { data: ticketedEvent } = useQuery<SiaeTicketedEvent>({
     queryKey: ['/api/siae/ticketed-events', eventId],
@@ -79,10 +105,73 @@ export default function SiaeTransactionsPage() {
     enabled: !!ticketedEvent?.eventId,
   });
 
-  const { data: transactions, isLoading: transactionsLoading } = useQuery<SiaeTransaction[]>({
+  const { data: transactions, isLoading: transactionsLoading, refetch: refetchTransactions } = useQuery<SiaeTransaction[]>({
     queryKey: ['/api/siae/ticketed-events', eventId, 'transactions'],
     enabled: !!eventId,
   });
+
+  const { data: allTickets = [] } = useQuery<SiaeTicket[]>({
+    queryKey: ['/api/siae/ticketed-events', eventId, 'tickets'],
+    enabled: !!eventId,
+  });
+
+  const cancelTicketMutation = useMutation({
+    mutationFn: async ({ ticketId, reason }: { ticketId: string; reason: string }) => {
+      return apiRequest('POST', `/api/siae/tickets/${ticketId}/cancel`, { reasonCode: reason });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/ticketed-events', eventId, 'tickets'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/ticketed-events', eventId, 'transactions'] });
+      setCancelTicketDialogOpen(false);
+      setTicketToCancel(null);
+      setCancelReason("01");
+      setCancelNote("");
+      toast({ title: "Biglietto Annullato", description: "Il biglietto è stato annullato con successo." });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Errore Annullamento", 
+        description: error?.message || "Impossibile annullare il biglietto", 
+        variant: "destructive" 
+      });
+    },
+  });
+
+  const handleCancelTicket = (ticket: SiaeTicket) => {
+    setTicketToCancel(ticket);
+    setCancelTicketDialogOpen(true);
+  };
+
+  const confirmCancelTicket = () => {
+    if (!ticketToCancel) return;
+    cancelTicketMutation.mutate({ 
+      ticketId: ticketToCancel.id, 
+      reason: cancelReason
+    });
+  };
+
+  const handleViewTickets = (transaction: SiaeTransaction) => {
+    setTransactionForTickets(transaction);
+    setTicketsDialogOpen(true);
+  };
+
+  const getTransactionTickets = (transactionId: string) => {
+    return allTickets.filter(t => t.transactionId === transactionId);
+  };
+
+  const getTicketStatusBadge = (status: string) => {
+    switch (status) {
+      case 'valid':
+      case 'active':
+        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Valido</Badge>;
+      case 'used':
+        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Usato</Badge>;
+      case 'cancelled':
+        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Annullato</Badge>;
+      default:
+        return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
 
   const getStatusBadge = (status: string) => {
     switch (status) {
@@ -377,17 +466,29 @@ export default function SiaeTransactionsPage() {
                         </div>
                       </TableCell>
                       <TableCell className="text-right">
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            setSelectedTransaction(transaction);
-                            setIsDetailDialogOpen(true);
-                          }}
-                          data-testid={`button-view-${transaction.id}`}
-                        >
-                          <Eye className="w-4 h-4" />
-                        </Button>
+                        <div className="flex items-center justify-end gap-1">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              setSelectedTransaction(transaction);
+                              setIsDetailDialogOpen(true);
+                            }}
+                            title="Dettagli Transazione"
+                            data-testid={`button-view-${transaction.id}`}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleViewTickets(transaction)}
+                            title="Gestisci Biglietti"
+                            data-testid={`button-tickets-${transaction.id}`}
+                          >
+                            <Ticket className="w-4 h-4" />
+                          </Button>
+                        </div>
                       </TableCell>
                     </TableRow>
                   ))}
@@ -504,6 +605,130 @@ export default function SiaeTransactionsPage() {
           )}
         </DialogContent>
       </Dialog>
+
+      {/* Dialog Biglietti della Transazione */}
+      <Dialog open={ticketsDialogOpen} onOpenChange={setTicketsDialogOpen}>
+        <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto" data-testid="dialog-tickets">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Ticket className="w-5 h-5 text-emerald-400" />
+              Biglietti della Transazione
+            </DialogTitle>
+            <DialogDescription>
+              {transactionForTickets && (
+                <>Codice: {transactionForTickets.transactionCode} - {transactionForTickets.ticketsCount} bigliett{transactionForTickets.ticketsCount === 1 ? 'o' : 'i'}</>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+
+          {transactionForTickets && (
+            <div className="space-y-3">
+              {getTransactionTickets(transactionForTickets.id).length === 0 ? (
+                <div className="p-4 text-center text-muted-foreground">
+                  Nessun biglietto trovato per questa transazione
+                </div>
+              ) : (
+                getTransactionTickets(transactionForTickets.id).map((ticket) => (
+                  <div 
+                    key={ticket.id}
+                    className="flex items-center justify-between p-3 rounded-lg bg-background/50 border border-border/50"
+                    data-testid={`ticket-item-${ticket.id}`}
+                  >
+                    <div className="flex-1">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-mono text-sm">
+                          {ticket.fiscalSealCode || ticket.progressiveNumber || ticket.id.slice(0, 8)}
+                        </span>
+                        {getTicketStatusBadge(ticket.status)}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">
+                        {ticket.ticketType || ticket.ticketTypeCode || 'N/D'} - €{Number(ticket.ticketPrice || ticket.grossAmount || 0).toFixed(2)}
+                      </div>
+                    </div>
+                    {(ticket.status === 'valid' || ticket.status === 'active') && (
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => handleCancelTicket(ticket)}
+                        className="text-red-400 hover:text-red-300 hover:bg-red-500/10"
+                        data-testid={`button-cancel-ticket-${ticket.id}`}
+                      >
+                        <Ban className="w-4 h-4 mr-1" />
+                        Annulla
+                      </Button>
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setTicketsDialogOpen(false)}>
+              Chiudi
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Alert Dialog Conferma Annullamento Biglietto */}
+      <AlertDialog open={cancelTicketDialogOpen} onOpenChange={setCancelTicketDialogOpen}>
+        <AlertDialogContent className="max-w-md" data-testid="dialog-cancel-ticket">
+          <AlertDialogHeader>
+            <AlertDialogTitle>Annulla Biglietto</AlertDialogTitle>
+            <AlertDialogDescription>
+              Stai per annullare il biglietto{' '}
+              <span className="font-mono font-semibold">
+                {ticketToCancel?.fiscalSealCode || ticketToCancel?.progressiveNumber || ticketToCancel?.id.slice(0, 8)}
+              </span>.
+              Questa azione non può essere annullata.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="cancel-reason">Causale Annullamento</Label>
+              <Select value={cancelReason} onValueChange={setCancelReason}>
+                <SelectTrigger data-testid="select-cancel-reason">
+                  <SelectValue placeholder="Seleziona causale" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="01">01 - Richiesta cliente</SelectItem>
+                  <SelectItem value="02">02 - Errore emissione</SelectItem>
+                  <SelectItem value="03">03 - Evento annullato</SelectItem>
+                  <SelectItem value="04">04 - Duplicato</SelectItem>
+                  <SelectItem value="99">99 - Altro</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="cancel-note">Note aggiuntive (opzionale)</Label>
+              <Textarea
+                id="cancel-note"
+                value={cancelNote}
+                onChange={(e) => setCancelNote(e.target.value)}
+                placeholder="Descrivi il motivo dell'annullamento..."
+                className="resize-none min-h-[80px]"
+                data-testid="input-cancel-note"
+              />
+            </div>
+          </div>
+          <AlertDialogFooter>
+            <AlertDialogCancel data-testid="button-cancel-dialog-close">Annulla</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={confirmCancelTicket}
+              className="bg-red-600 hover:bg-red-700"
+              disabled={cancelTicketMutation.isPending}
+              data-testid="button-confirm-cancel-ticket"
+            >
+              {cancelTicketMutation.isPending ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Annullamento...</>
+              ) : (
+                'Conferma Annullamento'
+              )}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
