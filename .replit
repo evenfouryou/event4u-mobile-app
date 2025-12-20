@@ -56,3 +56,6 @@ PUPPETEER_EXECUTABLE_PATH = "/nix/store/zi4f80l169xlmivz8vja8wlphq74qqk0-chromiu
 
 [userenv.production]
 PUBLIC_URL = "https://eventmanage.replit.app"
+
+[userenv.development]
+SIAE_TEST_MODE = "true"
