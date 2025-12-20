@@ -1,9 +1,10 @@
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
-import { ArrowLeft, Printer, RefreshCw } from "lucide-react";
-import { queryClient } from "@/lib/queryClient";
+import { ArrowLeft, Printer, RefreshCw, Send, CheckCircle, Loader2 } from "lucide-react";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 
 interface C1ReportData {
   reportType: string;
