@@ -173,6 +173,56 @@ export async function registerRoutes(app: Express): Promise<Server> {
     },
   });
 
+  // Floor plan image upload endpoint - keeps original dimensions, converts to WebP
+  app.post('/api/floor-plans/upload-image', eventImageUpload.single('image'), async (req, res) => {
+    try {
+      if (!req.file) {
+        return res.status(400).json({ error: 'No image file provided' });
+      }
+
+      // Get image metadata for dimensions
+      const metadata = await sharp(req.file.buffer).metadata();
+      
+      // Convert to WebP without resizing (keep original dimensions for floor plans)
+      const processedBuffer = await sharp(req.file.buffer)
+        .webp({ quality: 90 })
+        .toBuffer();
+
+      // Generate unique filename
+      const timestamp = Date.now();
+      const randomId = crypto.randomBytes(8).toString('hex');
+      const fileName = `floor-plans/${timestamp}-${randomId}.webp`;
+
+      // Upload to object storage public directory
+      const objectStorageService = new ObjectStorageService();
+      const publicUrl = await objectStorageService.uploadToPublicDirectory(
+        processedBuffer,
+        fileName,
+        'image/webp'
+      );
+
+      res.json({
+        success: true,
+        url: publicUrl,
+        width: metadata.width,
+        height: metadata.height,
+        message: 'Floor plan image uploaded successfully',
+      });
+    } catch (error) {
+      console.error('Error uploading floor plan image:', error);
+      if (error instanceof multer.MulterError) {
+        if (error.code === 'LIMIT_FILE_SIZE') {
+          return res.status(400).json({ error: 'File size exceeds 5MB limit' });
+        }
+        return res.status(400).json({ error: error.message });
+      }
+      if (error instanceof Error) {
+        return res.status(400).json({ error: error.message });
+      }
+      return res.status(500).json({ error: 'Failed to upload floor plan image' });
+    }
+  });
+
   // Event image upload endpoint - resizes to 1080x1080 square and converts to WebP
   app.post('/api/events/upload-image', eventImageUpload.single('image'), async (req, res) => {
     try {
@@ -935,7 +985,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           const { passwordHash, ...cashierData } = cashier;
           return res.json({
             id: cashier.id,
-            email: cashier.email || `${cashier.username}@cashier.local`,
+            email: `${cashier.username}@cashier.local`,
             name: cashier.name,
             username: cashier.username,
             role: 'cassiere',

@@ -82,7 +82,9 @@ export default function LocationDetail() {
   const [editingZone, setEditingZone] = useState<FloorPlanZone | null>(null);
   const [isDrawing, setIsDrawing] = useState(false);
   const [drawingPoints, setDrawingPoints] = useState<{x: number, y: number}[]>([]);
+  const [isUploadingFloorPlan, setIsUploadingFloorPlan] = useState(false);
   const imageRef = useRef<HTMLDivElement>(null);
+  const floorPlanFileRef = useRef<HTMLInputElement>(null);
 
   const { data: location, isLoading } = useQuery<Location>({
     queryKey: ['/api/locations', locationId],
@@ -265,6 +267,50 @@ export default function LocationDetail() {
 
   const handleFloorPlanSubmit = (data: any) => {
     createFloorPlanMutation.mutate(data);
+  };
+
+  const handleFloorPlanFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setIsUploadingFloorPlan(true);
+    try {
+      const formData = new FormData();
+      formData.append('image', file);
+
+      const response = await fetch('/api/floor-plans/upload-image', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Upload failed');
+      }
+
+      const result = await response.json();
+      floorPlanForm.setValue('imageUrl', result.url);
+      if (result.width) {
+        floorPlanForm.setValue('imageWidth', result.width);
+      }
+      if (result.height) {
+        floorPlanForm.setValue('imageHeight', result.height);
+      }
+
+      toast({
+        title: "Immagine caricata",
+        description: "Planimetria caricata con successo",
+      });
+    } catch (error) {
+      toast({
+        title: "Errore upload",
+        description: error instanceof Error ? error.message : "Impossibile caricare l'immagine",
+        variant: "destructive",
+      });
+    } finally {
+      setIsUploadingFloorPlan(false);
+    }
   };
 
   const handleImageClick = (e: React.MouseEvent<HTMLDivElement>) => {
@@ -925,10 +971,52 @@ export default function LocationDetail() {
                 name="imageUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>URL Immagine Planimetria *</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="https://..." data-testid="input-floorplan-image" />
-                    </FormControl>
+                    <FormLabel>Immagine Planimetria *</FormLabel>
+                    <div className="space-y-3">
+                      <input
+                        ref={floorPlanFileRef}
+                        type="file"
+                        accept="image/jpeg,image/png,image/webp"
+                        onChange={handleFloorPlanFileChange}
+                        className="hidden"
+                        data-testid="input-floorplan-file"
+                      />
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => floorPlanFileRef.current?.click()}
+                        disabled={isUploadingFloorPlan}
+                        className="w-full"
+                        data-testid="button-upload-floorplan"
+                      >
+                        {isUploadingFloorPlan ? (
+                          <>
+                            <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                            Caricamento...
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-4 h-4 mr-2" />
+                            Carica Immagine
+                          </>
+                        )}
+                      </Button>
+                      {field.value && (
+                        <div className="relative rounded-lg overflow-hidden border">
+                          <img 
+                            src={field.value} 
+                            alt="Anteprima planimetria" 
+                            className="w-full h-40 object-contain bg-muted"
+                          />
+                          <Badge className="absolute top-2 right-2 bg-green-500/80">
+                            Caricata
+                          </Badge>
+                        </div>
+                      )}
+                      <FormControl>
+                        <Input {...field} type="hidden" />
+                      </FormControl>
+                    </div>
                     <FormMessage />
                   </FormItem>
                 )}
