@@ -2496,6 +2496,15 @@ export const insertSiaeEventSectorSchema = createInsertSchema(siaeEventSectors).
   priceRidotto: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
     val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
   ).optional(),
+  priceOmaggio: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
+  prevendita: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
+  ivaRate: z.union([z.string(), z.coerce.number(), z.null(), z.undefined()]).transform(val => 
+    val === null || val === undefined ? null : typeof val === 'number' ? val.toString() : val
+  ).optional(),
 });
 export const updateSiaeEventSectorSchema = insertSiaeEventSectorSchema.partial().omit({ ticketedEventId: true });
 
