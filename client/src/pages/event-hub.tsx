@@ -218,12 +218,12 @@ function KPICard({
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
       onClick={onClick}
-      className={`glass-card p-2.5 sm:p-4 ${onClick ? 'cursor-pointer' : ''}`}
+      className={`glass-card p-2.5 sm:p-3 md:p-4 ${onClick ? 'cursor-pointer' : ''}`}
       data-testid={testId}
     >
-      <div className="flex items-start justify-between mb-2 sm:mb-3">
-        <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center`}>
-          <Icon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
+      <div className="flex items-start justify-between mb-1.5 sm:mb-2 md:mb-3">
+        <div className={`w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center`}>
+          <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-white" />
         </div>
         {trend && (
           <div className={`hidden sm:flex items-center gap-1 text-xs ${trend.isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
@@ -232,10 +232,11 @@ function KPICard({
           </div>
         )}
       </div>
-      <div className="text-xl sm:text-2xl font-bold mb-0.5 sm:mb-1">{value}</div>
-      {subValue && <div className="text-[10px] sm:text-xs text-muted-foreground">{subValue}</div>}
+      <div className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">{title}</div>
+      <div className="text-lg sm:text-xl md:text-2xl font-bold mb-0.5 sm:mb-1">{value}</div>
+      {subValue && <div className="text-[9px] sm:text-xs text-muted-foreground">{subValue}</div>}
       {progress !== undefined && (
-        <Progress value={progress} className="h-1 sm:h-1.5 mt-2 sm:mt-3" />
+        <Progress value={progress} className="h-1 sm:h-1.5 mt-1.5 sm:mt-2 md:mt-3" />
       )}
     </motion.div>
   );
@@ -1366,38 +1367,110 @@ export default function EventHub() {
 
       <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b">
         <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto">
-          <div className="flex items-start justify-between gap-2 sm:gap-4">
-            <div className="flex items-start gap-2 sm:gap-3 min-w-0 flex-1">
+          {/* Mobile Header */}
+          <div className="md:hidden">
+            <div className="flex items-center gap-2 mb-2">
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => navigate('/events')} 
+                className="h-8 w-8 flex-shrink-0"
+                data-testid="button-back"
+              >
+                <ArrowLeft className="h-4 w-4" />
+              </Button>
+              <div className="flex-1 min-w-0">
+                <h1 className="text-lg font-bold truncate" data-testid="event-title">{event.name}</h1>
+                <div className="flex items-center gap-2 mt-1">
+                  <Badge className={`${status.bgColor} ${status.color} text-[10px] px-1.5 py-0.5`}>
+                    <StatusIcon className="h-2.5 w-2.5 mr-0.5" />
+                    {status.label}
+                  </Badge>
+                  {isLive && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
+                </div>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-more-options-mobile">
+                    <MoreHorizontal className="h-4 w-4" />
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem onClick={() => navigate(`/events/wizard/${id}`)}>
+                    <Edit className="h-4 w-4 mr-2" />
+                    Modifica Evento
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate(`/reports?eventId=${id}`)}>
+                    <BarChart3 className="h-4 w-4 mr-2" />
+                    Visualizza Report
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => navigate(`/night-file?eventId=${id}`)}>
+                    <FileText className="h-4 w-4 mr-2" />
+                    File della Serata
+                  </DropdownMenuItem>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => {
+                    queryClient.invalidateQueries({ queryKey: ['/api/events', id] });
+                    toast({ title: "Dati aggiornati" });
+                  }}>
+                    <RefreshCw className="h-4 w-4 mr-2" />
+                    Aggiorna Dati
+                  </DropdownMenuItem>
+                  {(user?.role === 'super_admin' || user?.role === 'gestore') && (
+                    <>
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem 
+                        onClick={() => setDeleteDialogOpen(true)}
+                        className="text-destructive"
+                      >
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Elimina Evento
+                      </DropdownMenuItem>
+                    </>
+                  )}
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
+            <div className="flex items-center gap-3 text-xs text-muted-foreground px-1">
+              <span className="flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {format(new Date(event.startDatetime), "d MMM", { locale: it })}
+              </span>
+              <span className="flex items-center gap-1">
+                <Clock className="h-3 w-3" />
+                {format(new Date(event.startDatetime), "HH:mm")}
+              </span>
+              {location && (
+                <span className="flex items-center gap-1 truncate flex-1 min-w-0">
+                  <MapPin className="h-3 w-3 flex-shrink-0" />
+                  <span className="truncate">{location.name}</span>
+                </span>
+              )}
+            </div>
+          </div>
+
+          {/* Desktop Header */}
+          <div className="hidden md:flex items-start justify-between gap-4">
+            <div className="flex items-start gap-3 min-w-0 flex-1">
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => navigate('/events')}
                 className="rounded-xl flex-shrink-0"
-                data-testid="button-back"
+                data-testid="button-back-desktop"
               >
                 <ArrowLeft className="h-5 w-5" />
               </Button>
               <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-1.5 sm:gap-2">
-                  <h1 className="text-base sm:text-xl md:text-2xl font-bold truncate" data-testid="event-title">{event.name}</h1>
-                  <div className="flex-shrink-0 sm:hidden">
-                    {isLive && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
-                  </div>
-                  <div className="hidden sm:flex items-center gap-2">
-                    <Badge className={`${status.bgColor} ${status.color}`}>
-                      <StatusIcon className="h-3 w-3 mr-1" />
-                      {status.label}
-                    </Badge>
-                    <LiveIndicator isLive={isLive} />
-                  </div>
-                </div>
-                <div className="flex items-center gap-1.5 mt-1 sm:hidden">
-                  <Badge className={`${status.bgColor} ${status.color} text-xs px-1.5 py-0.5`}>
-                    <StatusIcon className="h-2.5 w-2.5 mr-0.5" />
+                <div className="flex items-center gap-2">
+                  <h1 className="text-xl md:text-2xl font-bold truncate" data-testid="event-title-desktop">{event.name}</h1>
+                  <Badge className={`${status.bgColor} ${status.color}`}>
+                    <StatusIcon className="h-3 w-3 mr-1" />
                     {status.label}
                   </Badge>
+                  <LiveIndicator isLive={isLive} />
                 </div>
-                <div className="hidden sm:flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
+                <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
                   <span className="flex items-center gap-1">
                     <Calendar className="h-3.5 w-3.5" />
                     {format(new Date(event.startDatetime), "EEEE d MMMM", { locale: it })}
@@ -1414,179 +1487,42 @@ export default function EventHub() {
                     </span>
                   )}
                 </div>
-                <div className="flex sm:hidden items-center gap-2 mt-1 text-xs text-muted-foreground">
-                  <span className="flex items-center gap-0.5">
-                    <Calendar className="h-3 w-3" />
-                    {format(new Date(event.startDatetime), "d/MM", { locale: it })}
-                  </span>
-                  <span className="flex items-center gap-0.5">
-                    <Clock className="h-3 w-3" />
-                    {format(new Date(event.startDatetime), "HH:mm", { locale: it })}
-                  </span>
-                  {location && (
-                    <span className="flex items-center gap-0.5 truncate max-w-[80px]">
-                      <MapPin className="h-3 w-3 flex-shrink-0" />
-                      <span className="truncate">{location.name}</span>
-                    </span>
-                  )}
-                </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-1 sm:gap-2 flex-shrink-0">
+            <div className="flex items-center gap-2 flex-shrink-0">
               {(user?.role === 'super_admin' || user?.role === 'gestore') && (
                 <Button
                   variant="destructive"
                   size="icon"
                   onClick={() => setDeleteDialogOpen(true)}
-                  className="h-8 w-8 sm:h-9 sm:w-9"
+                  className="h-9 w-9"
                   data-testid="button-delete-event"
                 >
-                  <Trash2 className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
+                  <Trash2 className="h-4 w-4" />
                 </Button>
               )}
               
               {currentTransition && (
                 <Button
                   onClick={() => setStatusChangeDialogOpen(true)}
-                  className={`bg-gradient-to-r ${status.gradient} text-white h-8 sm:h-9 px-2 sm:px-3`}
+                  className={`bg-gradient-to-r ${status.gradient} text-white h-9 px-3`}
                   data-testid="button-change-status"
                 >
-                  <currentTransition.icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 sm:mr-2" />
-                  <span className="hidden sm:inline">{currentTransition.label}</span>
+                  <currentTransition.icon className="h-4 w-4 mr-2" />
+                  {currentTransition.label}
                 </Button>
               )}
 
-              <Sheet open={quickActionsOpen} onOpenChange={setQuickActionsOpen}>
-                <SheetTrigger asChild>
-                  <Button variant="outline" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" data-testid="button-quick-actions">
-                    <Zap className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </Button>
-                </SheetTrigger>
-                <SheetContent className="p-4 sm:p-6">
-                  <SheetHeader className="pb-3 sm:pb-4">
-                    <SheetTitle className="text-base sm:text-lg">Azioni Rapide</SheetTitle>
-                    <SheetDescription className="text-xs sm:text-sm">
-                      Operazioni veloci per gestire l'evento
-                    </SheetDescription>
-                  </SheetHeader>
-                  <div className="grid grid-cols-3 gap-3 mt-6">
-                    <QuickActionButton
-                      icon={QrCode}
-                      label="Scansiona QR"
-                      onClick={() => {
-                        setQuickActionsOpen(false);
-                        navigate('/pr/scanner');
-                      }}
-                      testId="quick-action-scan"
-                    />
-                    <QuickActionButton
-                      icon={UserPlus}
-                      label="Aggiungi Ospite"
-                      onClick={() => {
-                        setQuickActionsOpen(false);
-                        navigate(`/pr/guest-lists?eventId=${id}`);
-                      }}
-                      testId="quick-action-add-guest"
-                    />
-                    <QuickActionButton
-                      icon={Armchair}
-                      label="Prenota Tavolo"
-                      onClick={() => {
-                        setQuickActionsOpen(false);
-                        navigate(`/pr/tables?eventId=${id}`);
-                      }}
-                      testId="quick-action-book-table"
-                    />
-                    <QuickActionButton
-                      icon={Package}
-                      label="Trasferisci Stock"
-                      onClick={() => {
-                        setQuickActionsOpen(false);
-                        navigate(`/events/${id}`);
-                      }}
-                      testId="quick-action-transfer"
-                    />
-                    <QuickActionButton
-                      icon={BarChart3}
-                      label="Report Live"
-                      onClick={() => {
-                        setQuickActionsOpen(false);
-                        navigate(`/reports?eventId=${id}`);
-                      }}
-                      testId="quick-action-report"
-                    />
-                    <QuickActionButton
-                      icon={FileText}
-                      label="File Serata"
-                      onClick={() => {
-                        setQuickActionsOpen(false);
-                        navigate(`/night-file?eventId=${id}`);
-                      }}
-                      testId="quick-action-night-file"
-                    />
-                  </div>
-
-                  <Separator className="my-6" />
-
-                  <h4 className="font-medium mb-3 text-sm">Azioni di Emergenza</h4>
-                  <div className="grid grid-cols-2 gap-3">
-                    <QuickActionButton
-                      icon={Pause}
-                      label="Pausa Vendite"
-                      onClick={() => {
-                        setPauseTicketingDialogOpen(true);
-                      }}
-                      variant="warning"
-                      disabled={event.status !== 'ongoing'}
-                      testId="quick-action-pause"
-                    />
-                    <QuickActionButton
-                      icon={ShieldAlert}
-                      label="SOS Sicurezza"
-                      onClick={() => {
-                        toast({
-                          title: "SOS Sicurezza",
-                          description: "Alert inviato al team sicurezza",
-                          variant: "destructive",
-                        });
-                        addAlert({
-                          type: 'error',
-                          title: 'SOS Sicurezza Attivato',
-                          message: 'Il team sicurezza è stato allertato',
-                        });
-                      }}
-                      variant="danger"
-                      testId="quick-action-sos"
-                    />
-                    <QuickActionButton
-                      icon={Megaphone}
-                      label="Annuncio Staff"
-                      onClick={() => {
-                        toast({
-                          title: "Annuncio Staff",
-                          description: "Funzione in arrivo",
-                        });
-                      }}
-                      testId="quick-action-announce"
-                    />
-                    <QuickActionButton
-                      icon={Lock}
-                      label="Blocca Ingressi"
-                      onClick={() => {
-                        toast({
-                          title: "Ingressi Bloccati",
-                          description: "Nessun nuovo ingresso consentito",
-                          variant: "destructive",
-                        });
-                      }}
-                      variant="danger"
-                      disabled={event.status !== 'ongoing'}
-                      testId="quick-action-lock"
-                    />
-                  </div>
-                </SheetContent>
-              </Sheet>
+              <Button 
+                variant="outline" 
+                size="icon" 
+                className="h-9 w-9" 
+                onClick={() => setQuickActionsOpen(true)}
+                data-testid="button-quick-actions"
+              >
+                <Zap className="h-4 w-4" />
+              </Button>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -1622,8 +1558,146 @@ export default function EventHub() {
         </div>
       </div>
 
+      {/* Quick Actions Sheet - Standalone per funzionare su mobile e desktop */}
+      <Sheet open={quickActionsOpen} onOpenChange={setQuickActionsOpen}>
+        <SheetContent className="p-4 sm:p-6">
+          <div className="flex items-start justify-between">
+            <SheetHeader className="pb-3 sm:pb-4 flex-1">
+              <SheetTitle className="text-base sm:text-lg">Azioni Rapide</SheetTitle>
+              <SheetDescription className="text-xs sm:text-sm">
+                Operazioni veloci per gestire l'evento
+              </SheetDescription>
+            </SheetHeader>
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => setQuickActionsOpen(false)}
+              className="h-8 w-8 rounded-full -mt-1 -mr-2"
+              data-testid="button-close-quick-actions"
+            >
+              <X className="h-4 w-4" />
+            </Button>
+          </div>
+          <div className="grid grid-cols-3 gap-3 mt-6">
+            <QuickActionButton
+              icon={QrCode}
+              label="Scansiona QR"
+              onClick={() => {
+                setQuickActionsOpen(false);
+                navigate('/pr/scanner');
+              }}
+              testId="quick-action-scan"
+            />
+            <QuickActionButton
+              icon={UserPlus}
+              label="Aggiungi Ospite"
+              onClick={() => {
+                setQuickActionsOpen(false);
+                navigate(`/pr/guest-lists?eventId=${id}`);
+              }}
+              testId="quick-action-add-guest"
+            />
+            <QuickActionButton
+              icon={Armchair}
+              label="Prenota Tavolo"
+              onClick={() => {
+                setQuickActionsOpen(false);
+                navigate(`/pr/tables?eventId=${id}`);
+              }}
+              testId="quick-action-book-table"
+            />
+            <QuickActionButton
+              icon={Package}
+              label="Trasferisci Stock"
+              onClick={() => {
+                setQuickActionsOpen(false);
+                navigate(`/events/${id}`);
+              }}
+              testId="quick-action-transfer"
+            />
+            <QuickActionButton
+              icon={BarChart3}
+              label="Report Live"
+              onClick={() => {
+                setQuickActionsOpen(false);
+                navigate(`/reports?eventId=${id}`);
+              }}
+              testId="quick-action-report"
+            />
+            <QuickActionButton
+              icon={FileText}
+              label="File Serata"
+              onClick={() => {
+                setQuickActionsOpen(false);
+                navigate(`/night-file?eventId=${id}`);
+              }}
+              testId="quick-action-night-file"
+            />
+          </div>
+
+          <Separator className="my-6" />
+
+          <h4 className="font-medium mb-3 text-sm">Azioni di Emergenza</h4>
+          <div className="grid grid-cols-2 gap-3">
+            <QuickActionButton
+              icon={Pause}
+              label="Pausa Vendite"
+              onClick={() => {
+                setPauseTicketingDialogOpen(true);
+              }}
+              variant="warning"
+              disabled={event.status !== 'ongoing'}
+              testId="quick-action-pause"
+            />
+            <QuickActionButton
+              icon={ShieldAlert}
+              label="SOS Sicurezza"
+              onClick={() => {
+                toast({
+                  title: "SOS Sicurezza",
+                  description: "Alert inviato al team sicurezza",
+                  variant: "destructive",
+                });
+                addAlert({
+                  type: 'error',
+                  title: 'SOS Sicurezza Attivato',
+                  message: 'Il team sicurezza è stato allertato',
+                });
+              }}
+              variant="danger"
+              testId="quick-action-sos"
+            />
+            <QuickActionButton
+              icon={Megaphone}
+              label="Annuncio Staff"
+              onClick={() => {
+                toast({
+                  title: "Annuncio Staff",
+                  description: "Funzione in arrivo",
+                });
+              }}
+              testId="quick-action-announce"
+            />
+            <QuickActionButton
+              icon={Lock}
+              label="Blocca Ingressi"
+              onClick={() => {
+                toast({
+                  title: "Ingressi Bloccati",
+                  description: "Nessun nuovo ingresso consentito",
+                  variant: "destructive",
+                });
+              }}
+              variant="danger"
+              disabled={event.status !== 'ongoing'}
+              testId="quick-action-lock"
+            />
+          </div>
+        </SheetContent>
+      </Sheet>
+
       <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
           <KPICard
             title="Biglietti"
             value={ticketedEvent?.ticketsSold || 0}
@@ -1668,32 +1742,31 @@ export default function EventHub() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
           <div className="relative" data-testid="tabs-scroll-wrapper">
-            <div className="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-background to-transparent pointer-events-none z-10 sm:hidden" />
-            <div className="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-background to-transparent pointer-events-none z-10 sm:hidden" />
-            <div className="overflow-x-auto scrollbar-hide -mx-3 px-3 sm:-mx-4 sm:px-4 md:mx-0 md:px-0 pb-1" data-testid="tabs-scroll-container">
-              <TabsList className="inline-flex justify-start bg-transparent gap-0.5 sm:gap-1 p-0 min-w-max">
+            <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent pointer-events-none z-10 md:hidden" />
+            <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent pointer-events-none z-10 md:hidden" />
+            <div className="overflow-x-auto scrollbar-hide -mx-3 px-3 md:mx-0 md:px-0 pb-1" data-testid="tabs-scroll-container">
+              <TabsList className="inline-flex justify-start w-full h-auto p-1 bg-muted/50 rounded-xl gap-0.5 md:gap-1 min-w-max">
                 {[
-                  { id: 'overview', label: 'Panoramica', shortLabel: 'Home', icon: LayoutDashboard },
-                  { id: 'ticketing', label: 'Biglietteria', shortLabel: 'Ticket', icon: Ticket },
-                  { id: 'cashiers', label: 'Cassieri', shortLabel: 'Casse', icon: Banknote },
-                  { id: 'guests', label: 'Liste', shortLabel: 'Liste', icon: Users },
-                  { id: 'tables', label: 'Tavoli', shortLabel: 'Tavoli', icon: Armchair },
-                  { id: 'staff', label: 'Staff', shortLabel: 'Staff', icon: Users },
-                  { id: 'pr', label: 'PR', shortLabel: 'PR', icon: Megaphone },
-                  { id: 'access', label: 'Controllo Accessi', shortLabel: 'Acc.', icon: Shield },
-                  { id: 'inventory', label: 'Inventario', shortLabel: 'Stock', icon: Package },
-                  { id: 'finance', label: 'Incassi', shortLabel: '€', icon: Euro },
-                  { id: 'report', label: 'Report', shortLabel: 'Rep.', icon: BarChart3 },
+                  { id: 'overview', label: 'Panoramica', icon: LayoutDashboard },
+                  { id: 'ticketing', label: 'Biglietti', icon: Ticket },
+                  { id: 'cashiers', label: 'Cassieri', icon: Banknote },
+                  { id: 'guests', label: 'Ospiti', icon: Users },
+                  { id: 'tables', label: 'Tavoli', icon: Armchair },
+                  { id: 'staff', label: 'Staff', icon: Shield },
+                  { id: 'pr', label: 'PR', icon: Megaphone },
+                  { id: 'access', label: 'Accessi', icon: QrCode },
+                  { id: 'inventory', label: 'Stock', icon: Package },
+                  { id: 'finance', label: 'Finanza', icon: Euro },
+                  { id: 'report', label: 'Report', icon: BarChart3 },
                 ].map(tab => (
                   <TabsTrigger
                     key={tab.id}
                     value={tab.id}
-                    className="flex items-center gap-1 sm:gap-1.5 px-2 py-1.5 sm:px-2.5 sm:py-2 min-h-8 sm:min-h-9 rounded-lg shrink-0 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap text-[10px] sm:text-sm sm:px-3 sm:min-h-10"
+                    className="flex-shrink-0 flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1.5 md:py-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap text-[10px] md:text-xs"
                     data-testid={`tab-${tab.id}`}
                   >
-                    <tab.icon className="h-3 w-3 sm:h-3.5 sm:w-3.5 shrink-0" />
-                    <span className="sm:hidden">{tab.shortLabel}</span>
-                    <span className="hidden sm:inline">{tab.label}</span>
+                    <tab.icon className="h-3.5 w-3.5 md:h-4 md:w-4 shrink-0" />
+                    <span className="hidden md:inline">{tab.label}</span>
                   </TabsTrigger>
                 ))}
               </TabsList>
@@ -4270,6 +4343,29 @@ export default function EventHub() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* FAB Mobile Actions */}
+      <div className="fixed bottom-20 right-4 z-50 flex flex-col gap-2 md:hidden">
+        {currentTransition && (
+          <Button
+            onClick={() => setStatusChangeDialogOpen(true)}
+            size="icon"
+            className={`h-12 w-12 rounded-full shadow-lg bg-gradient-to-r ${status.gradient} text-white`}
+            data-testid="fab-status-change"
+          >
+            <currentTransition.icon className="h-5 w-5" />
+          </Button>
+        )}
+        <Button
+          variant="outline"
+          size="icon"
+          onClick={() => setQuickActionsOpen(true)}
+          className="h-12 w-12 rounded-full shadow-lg bg-background"
+          data-testid="fab-quick-actions"
+        >
+          <Zap className="h-5 w-5" />
+        </Button>
+      </div>
     </div>
   );
 }
