@@ -85,7 +85,7 @@ export function DigitalTicketCard({ ticket, template }: DigitalTicketCardProps) 
     .filter(Boolean)
     .join(" ") || "Non nominativo";
   const price = parseFloat(ticket.ticketPrice || "0");
-  const showQrCode = (ticket.status === "emitted" || ticket.status === "active") && !ticket.isListed && ticket.qrCode;
+  const showQrCode = (ticket.status === "emitted" || ticket.status === "active" || ticket.status === "valid") && !ticket.isListed && ticket.qrCode;
 
   useEffect(() => {
     if (showQrCode && ticket.qrCode) {

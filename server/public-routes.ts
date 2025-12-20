@@ -1598,7 +1598,7 @@ router.post("/api/public/checkout/confirm", async (req, res) => {
             grossAmount: item.unitPrice,
             participantFirstName: item.participantFirstName || customer.firstName,
             participantLastName: item.participantLastName || customer.lastName,
-            status: "valid",
+            status: "active",
             qrCode: qrData,
           })
           .returning();
