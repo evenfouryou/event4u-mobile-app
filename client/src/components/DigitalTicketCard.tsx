@@ -87,15 +87,19 @@ export function DigitalTicketCard({ ticket, template }: DigitalTicketCardProps) 
   const price = parseFloat(ticket.ticketPrice || "0");
   const showQrCode = (ticket.status === "emitted" || ticket.status === "active" || ticket.status === "valid") && !ticket.isListed && ticket.qrCode;
 
+  const qrSizeValue = t.qrSize || 192;
+  const qrDarkColor = t.primaryColor || '#000000';
+  const qrLightColor = t.backgroundColor || '#FFFFFF';
+
   useEffect(() => {
     if (showQrCode && ticket.qrCode) {
       setQrLoading(true);
       QRCodeLib.toDataURL(ticket.qrCode, {
-        width: 256,
+        width: qrSizeValue,
         margin: 2,
         color: {
-          dark: '#000000',
-          light: '#FFFFFF',
+          dark: qrDarkColor,
+          light: qrLightColor,
         },
       })
         .then((url: string) => {
@@ -107,7 +111,7 @@ export function DigitalTicketCard({ ticket, template }: DigitalTicketCardProps) 
           setQrLoading(false);
         });
     }
-  }, [showQrCode, ticket.qrCode]);
+  }, [showQrCode, ticket.qrCode, qrSizeValue, qrDarkColor, qrLightColor]);
 
   const containerStyle: React.CSSProperties = template ? {
     fontFamily: t.fontFamily || undefined,
@@ -128,8 +132,6 @@ export function DigitalTicketCard({ ticket, template }: DigitalTicketCardProps) 
   const accentStyle: React.CSSProperties = template && t.accentColor ? {
     color: t.accentColor,
   } : {};
-
-  const qrSize = t.qrSize || 192;
 
   return (
     <div 
@@ -286,8 +288,8 @@ export function DigitalTicketCard({ ticket, template }: DigitalTicketCardProps) 
                   className="relative"
                   style={{ 
                     perspective: '1000px',
-                    width: qrSize + 32,
-                    height: qrSize + 32,
+                    width: qrSizeValue + 32,
+                    height: qrSizeValue + 32,
                   }}
                   data-testid="qr-flip-container"
                 >
@@ -305,7 +307,7 @@ export function DigitalTicketCard({ ticket, template }: DigitalTicketCardProps) 
                       {qrLoading ? (
                         <div 
                           className="flex items-center justify-center"
-                          style={{ width: qrSize, height: qrSize }}
+                          style={{ width: qrSizeValue, height: qrSizeValue }}
                         >
                           <Loader2 className="w-8 h-8 animate-spin text-gray-400" />
                         </div>
@@ -313,14 +315,14 @@ export function DigitalTicketCard({ ticket, template }: DigitalTicketCardProps) 
                         <img
                           src={qrCodeImage}
                           alt="QR Code biglietto"
-                          style={{ width: qrSize, height: qrSize }}
+                          style={{ width: qrSizeValue, height: qrSizeValue }}
                           className="w-40 h-40 sm:w-48 sm:h-48"
                           data-testid="ticket-qrcode"
                         />
                       ) : (
                         <div 
                           className="flex items-center justify-center bg-gray-100 text-gray-400"
-                          style={{ width: qrSize, height: qrSize }}
+                          style={{ width: qrSizeValue, height: qrSizeValue }}
                         >
                           <QrCode className="w-12 h-12" />
                         </div>
