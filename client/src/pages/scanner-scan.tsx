@@ -178,9 +178,20 @@ export default function ScannerScanPage() {
     try {
       setCameraError(null);
       
+      // First show the container so it has dimensions
+      setCameraActive(true);
+      
       if (scannerRef.current) {
-        await scannerRef.current.stop();
+        try {
+          await scannerRef.current.stop();
+        } catch (e) {
+          // Ignore stop errors
+        }
+        scannerRef.current = null;
       }
+      
+      // Wait for DOM to update with visible container
+      await new Promise(resolve => setTimeout(resolve, 100));
       
       const html5QrCode = new Html5Qrcode(scannerContainerId);
       scannerRef.current = html5QrCode;
@@ -197,8 +208,6 @@ export default function ScannerScanPage() {
         },
         () => {}
       );
-      
-      setCameraActive(true);
     } catch (err: any) {
       console.error("Camera error:", err);
       setCameraError(err.message || "Impossibile accedere alla fotocamera");
