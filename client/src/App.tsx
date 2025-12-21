@@ -168,6 +168,12 @@ function Router() {
         <Route path="/badge/view/:code" component={SchoolBadgeView} />
         <Route path="/badge/:slug" component={SchoolBadgeLanding} />
         <Route path="/ticket/:code" component={TicketVerify} />
+        <Route path="/scanner/:rest*">
+          <Redirect to="/login" />
+        </Route>
+        <Route path="/scanner">
+          <Redirect to="/login" />
+        </Route>
         <Route component={NotFound} />
       </Switch>
     );

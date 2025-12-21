@@ -8,6 +8,7 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
+import { motion } from "framer-motion";
 import {
   ArrowLeft,
   History,
@@ -18,6 +19,7 @@ import {
   Users,
   Ticket,
   Armchair,
+  Clock,
 } from "lucide-react";
 
 interface Event {
@@ -48,20 +50,20 @@ export default function ScannerHistoryPage() {
   ) || [];
 
   return (
-    <div className="min-h-screen bg-background pb-24">
-      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-lg border-b border-white/10">
+    <div className="min-h-screen bg-gradient-to-b from-background to-background/95 pb-24">
+      <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-xl border-b border-white/5">
         <div className="flex items-center gap-3 p-4">
           <Link href="/scanner">
-            <Button variant="ghost" size="icon" data-testid="button-back">
+            <Button variant="ghost" size="icon" className="rounded-full" data-testid="button-back">
               <ArrowLeft className="h-5 w-5" />
             </Button>
           </Link>
           <div>
-            <h1 className="text-xl font-bold flex items-center gap-2" data-testid="text-title">
-              <History className="h-5 w-5 text-purple-500" />
+            <h1 className="text-lg font-bold flex items-center gap-2" data-testid="text-title">
+              <History className="h-5 w-5 text-purple-400" />
               Eventi Passati
             </h1>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-xs text-muted-foreground">
               Storico degli eventi scansionati
             </p>
           </div>
@@ -72,10 +74,10 @@ export default function ScannerHistoryPage() {
         {isLoading ? (
           <div className="space-y-3">
             {[1, 2, 3, 4, 5].map(i => (
-              <Card key={i}>
+              <Card key={i} className="border-0 bg-muted/30">
                 <CardContent className="p-4">
                   <div className="flex items-center gap-3">
-                    <Skeleton className="h-10 w-10 rounded-full" />
+                    <Skeleton className="h-12 w-12 rounded-2xl" />
                     <div className="flex-1 space-y-2">
                       <Skeleton className="h-4 w-32" />
                       <Skeleton className="h-3 w-48" />
@@ -88,44 +90,60 @@ export default function ScannerHistoryPage() {
         ) : pastEvents.length > 0 ? (
           <ScrollArea className="h-[calc(100vh-150px)]">
             <div className="space-y-3 pr-2">
-              {pastEvents.map(event => (
-                <Link key={event.id} href={`/scanner/stats/${event.id}`}>
-                  <Card className="hover-elevate cursor-pointer" data-testid={`card-event-${event.id}`}>
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between gap-3">
-                        <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 mb-1">
-                            <Badge variant="secondary" className="text-xs">
-                              <CheckCircle2 className="h-3 w-3 mr-1" />
-                              Concluso
-                            </Badge>
+              {pastEvents.map((event, index) => (
+                <motion.div
+                  key={event.id}
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={{ delay: index * 0.05 }}
+                >
+                  <Link href={`/scanner/stats/${event.id}`}>
+                    <Card className="hover-elevate cursor-pointer border-0 bg-muted/30" data-testid={`card-event-${event.id}`}>
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="flex items-center gap-3 flex-1 min-w-0">
+                            <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center shrink-0">
+                              <Calendar className="h-5 w-5 text-purple-400" />
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2 mb-1">
+                                <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs px-2 py-0.5">
+                                  <CheckCircle2 className="h-3 w-3 mr-1" />
+                                  Concluso
+                                </Badge>
+                              </div>
+                              <h3 className="font-semibold truncate" data-testid="text-event-name">
+                                {event.name}
+                              </h3>
+                              <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                <span className="flex items-center gap-1">
+                                  <Clock className="h-3 w-3" />
+                                  {format(parseISO(event.startDatetime), "d MMM yyyy", { locale: it })}
+                                </span>
+                                {event.location && (
+                                  <span className="flex items-center gap-1 truncate">
+                                    <MapPin className="h-3 w-3" />
+                                    {event.location.name}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                          <h3 className="font-semibold truncate" data-testid="text-event-name">
-                            {event.name}
-                          </h3>
-                          <p className="text-sm text-muted-foreground flex items-center gap-1">
-                            <Calendar className="h-3 w-3" />
-                            {format(parseISO(event.startDatetime), "d MMMM yyyy", { locale: it })}
-                          </p>
-                          {event.location && (
-                            <p className="text-sm text-muted-foreground flex items-center gap-1">
-                              <MapPin className="h-3 w-3" />
-                              {event.location.name}
-                            </p>
-                          )}
+                          <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
                         </div>
-                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
-                      </div>
-                    </CardContent>
-                  </Card>
-                </Link>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                </motion.div>
               ))}
             </div>
           </ScrollArea>
         ) : (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <History className="h-12 w-12 mx-auto text-muted-foreground/30 mb-4" />
+          <Card className="border-0 bg-muted/30">
+            <CardContent className="py-12 text-center">
+              <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                <History className="h-8 w-8 text-muted-foreground/30" />
+              </div>
               <p className="text-muted-foreground">
                 Nessun evento passato trovato
               </p>

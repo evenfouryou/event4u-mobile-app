@@ -1187,6 +1187,21 @@ router.get("/api/e4u/events/:eventId/scan-stats", requireAuth, async (req: Reque
 router.get("/api/e4u/events/:eventId/checked-in", requireAuth, async (req: Request, res: Response) => {
   try {
     const { eventId } = req.params;
+    const user = req.user as any;
+    
+    // SECURITY: Verify user has access to this event
+    const isGestore = await isGestoreForEvent(user, eventId);
+    if (!isGestore) {
+      // Check if user is an assigned scanner for this event
+      const [scannerAssignment] = await db.select()
+        .from(eventScanners)
+        .where(and(eq(eventScanners.userId, user.id), eq(eventScanners.eventId, eventId)));
+      
+      if (!scannerAssignment) {
+        return res.status(403).json({ message: "Non hai accesso a questo evento" });
+      }
+    }
+    
     const checkedInPeople: any[] = [];
     
     // Get list entries that are checked in
