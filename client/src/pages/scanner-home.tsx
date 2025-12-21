@@ -59,9 +59,30 @@ export default function ScannerHomePage() {
 
   const now = new Date();
   
+  // Filter events that are either:
+  // 1. Starting today or in the future
+  // 2. Currently ongoing (end date is in the future or today)
+  // 3. Status is 'scheduled' or 'ongoing'
   const upcomingEvents = events?.filter(event => {
-    const eventDate = parseISO(event.startDatetime);
-    return isAfter(eventDate, now) || isToday(eventDate);
+    const startDate = parseISO(event.startDatetime);
+    const endDate = event.endDatetime ? parseISO(event.endDatetime) : null;
+    
+    // Include future events
+    if (isAfter(startDate, now) || isToday(startDate)) {
+      return true;
+    }
+    
+    // Include ongoing events (end date hasn't passed)
+    if (endDate && (isAfter(endDate, now) || isToday(endDate))) {
+      return true;
+    }
+    
+    // Include events with 'ongoing' or 'scheduled' status
+    if (event.status === 'ongoing' || event.status === 'scheduled') {
+      return true;
+    }
+    
+    return false;
   }).sort((a, b) => 
     new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime()
   ) || [];

@@ -47,6 +47,17 @@ const patchEventPrAssignmentSchema = makePatchSchema(insertEventPrAssignmentSche
 
 const router = Router();
 
+// Helper to extract user ID from session object
+// Handles both OAuth format ({ claims: { sub: id } }) and direct format ({ id: id })
+function getUserId(user: any): string {
+  if (!user) return '';
+  // OAuth/Replit auth format
+  if (user.claims?.sub) return user.claims.sub;
+  // Direct format (some legacy endpoints)
+  if (user.id) return user.id;
+  return '';
+}
+
 // Generate QR code in format: E4U-{type}-{id}-{random}
 function generateQrCode(type: 'LST' | 'TBL', id: string): string {
   const random = crypto.randomBytes(4).toString('hex').toUpperCase();
@@ -284,17 +295,17 @@ async function checkEventAccess(user: any, eventId: string): Promise<boolean> {
   // Check if user has any assignment to this event
   const [staffAssignment] = await db.select()
     .from(e4uStaffAssignments)
-    .where(and(eq(e4uStaffAssignments.eventId, eventId), eq(e4uStaffAssignments.userId, user.id)));
+    .where(and(eq(e4uStaffAssignments.eventId, eventId), eq(e4uStaffAssignments.userId, getUserId(user))));
   if (staffAssignment) return true;
   
   const [prAssignment] = await db.select()
     .from(eventPrAssignments)
-    .where(and(eq(eventPrAssignments.eventId, eventId), eq(eventPrAssignments.userId, user.id)));
+    .where(and(eq(eventPrAssignments.eventId, eventId), eq(eventPrAssignments.userId, getUserId(user))));
   if (prAssignment) return true;
   
   const [scannerAssignment] = await db.select()
     .from(eventScanners)
-    .where(and(eq(eventScanners.eventId, eventId), eq(eventScanners.userId, user.id)));
+    .where(and(eq(eventScanners.eventId, eventId), eq(eventScanners.userId, getUserId(user))));
   if (scannerAssignment) return true;
   
   return false;
@@ -339,7 +350,7 @@ router.post("/api/e4u/events/:eventId/lists", requireAuth, async (req: Request, 
     
     // Check permissions: gestore/super_admin OR staff with canManageLists
     const isGestore = await isGestoreForEvent(user, eventId);
-    const hasListPermission = await checkListPermission(user.id, eventId, 'manage');
+    const hasListPermission = await checkListPermission(getUserId(user), eventId, 'manage');
     
     if (!isGestore && !hasListPermission) {
       return res.status(403).json({ message: "Non hai i permessi per creare liste per questo evento" });
@@ -428,7 +439,7 @@ router.post("/api/e4u/lists/:listId/entries", requireAuth, async (req: Request, 
     // Check permissions: gestore/super_admin OR user with list add permission
     const isGestore = await isGestoreForEvent(user, list.eventId);
     if (!isGestore) {
-      const hasPermission = await checkListPermission(user.id, list.eventId, 'add');
+      const hasPermission = await checkListPermission(getUserId(user), list.eventId, 'add');
       if (!hasPermission) {
         return res.status(403).json({ message: "Non hai i permessi per aggiungere persone a questa lista" });
       }
@@ -443,7 +454,7 @@ router.post("/api/e4u/lists/:listId/entries", requireAuth, async (req: Request, 
       eventId: list.eventId,
       companyId: list.companyId,
       qrCode,
-      createdBy: user.id,
+      createdBy: getUserId(user),
       createdByRole: user.role,
       status: 'confirmed',
     });
@@ -470,7 +481,7 @@ router.patch("/api/e4u/entries/:id", requireAuth, async (req: Request, res: Resp
     // Check permissions: gestore/super_admin OR user with list manage permission
     const isGestore = await isGestoreForEvent(user, entry.eventId);
     if (!isGestore) {
-      const hasPermission = await checkListPermission(user.id, entry.eventId, 'manage');
+      const hasPermission = await checkListPermission(getUserId(user), entry.eventId, 'manage');
       if (!hasPermission) {
         return res.status(403).json({ message: "Non hai i permessi per modificare questa voce" });
       }
@@ -504,7 +515,7 @@ router.delete("/api/e4u/entries/:id", requireAuth, async (req: Request, res: Res
     // Check permissions: gestore/super_admin OR user with list manage permission
     const isGestore = await isGestoreForEvent(user, entry.eventId);
     if (!isGestore) {
-      const hasPermission = await checkListPermission(user.id, entry.eventId, 'manage');
+      const hasPermission = await checkListPermission(getUserId(user), entry.eventId, 'manage');
       if (!hasPermission) {
         return res.status(403).json({ message: "Non hai i permessi per eliminare questa voce" });
       }
@@ -535,7 +546,7 @@ router.post("/api/e4u/entries/:id/check-in", requireAuth, async (req: Request, r
     // Check permissions: gestore/super_admin OR scanner with canScanLists
     const isGestore = await isGestoreForEvent(user, entry.eventId);
     if (!isGestore) {
-      const canScan = await checkScannerPermission(user.id, entry.eventId, 'lists');
+      const canScan = await checkScannerPermission(getUserId(user), entry.eventId, 'lists');
       if (!canScan) {
         return res.status(403).json({ message: "Non hai i permessi per fare check-in su questa lista" });
       }
@@ -545,7 +556,7 @@ router.post("/api/e4u/entries/:id/check-in", requireAuth, async (req: Request, r
       .set({
         status: 'checked_in',
         checkedInAt: new Date(),
-        checkedInBy: user.id,
+        checkedInBy: getUserId(user),
       })
       .where(eq(listEntries.id, id))
       .returning();
@@ -586,7 +597,7 @@ router.post("/api/e4u/events/:eventId/table-types", requireAuth, async (req: Req
     // Check permissions: gestore/super_admin OR staff with canManageTables
     const isGestore = await isGestoreForEvent(user, eventId);
     if (!isGestore) {
-      const hasPermission = await checkTablePermission(user.id, eventId, 'manage');
+      const hasPermission = await checkTablePermission(getUserId(user), eventId, 'manage');
       if (!hasPermission) {
         return res.status(403).json({ message: "Non hai i permessi per gestire i tipi di tavolo" });
       }
@@ -620,7 +631,7 @@ router.patch("/api/e4u/table-types/:id", requireAuth, async (req: Request, res: 
     // Check permissions: gestore/super_admin OR staff with canManageTables
     const isGestore = await isGestoreForEvent(user, tableType.eventId);
     if (!isGestore) {
-      const hasPermission = await checkTablePermission(user.id, tableType.eventId, 'manage');
+      const hasPermission = await checkTablePermission(getUserId(user), tableType.eventId, 'manage');
       if (!hasPermission) {
         return res.status(403).json({ message: "Non hai i permessi per modificare i tipi di tavolo" });
       }
@@ -654,7 +665,7 @@ router.delete("/api/e4u/table-types/:id", requireAuth, async (req: Request, res:
     // Check permissions: gestore/super_admin OR staff with canManageTables
     const isGestore = await isGestoreForEvent(user, tableType.eventId);
     if (!isGestore) {
-      const hasPermission = await checkTablePermission(user.id, tableType.eventId, 'manage');
+      const hasPermission = await checkTablePermission(getUserId(user), tableType.eventId, 'manage');
       if (!hasPermission) {
         return res.status(403).json({ message: "Non hai i permessi per eliminare i tipi di tavolo" });
       }
@@ -707,8 +718,8 @@ router.post("/api/e4u/events/:eventId/reservations", requireAuth, async (req: Re
     // Check permissions: gestore, staff with canManageTables, or PR with canProposeTables
     const isGestore = await isGestoreForEvent(user, eventId);
     if (!isGestore) {
-      const canManage = await checkTablePermission(user.id, eventId, 'manage');
-      const canPropose = await checkTablePermission(user.id, eventId, 'propose');
+      const canManage = await checkTablePermission(getUserId(user), eventId, 'manage');
+      const canPropose = await checkTablePermission(getUserId(user), eventId, 'propose');
       if (!canManage && !canPropose) {
         return res.status(403).json({ message: "Non hai i permessi per creare prenotazioni tavoli" });
       }
@@ -718,7 +729,7 @@ router.post("/api/e4u/events/:eventId/reservations", requireAuth, async (req: Re
       ...req.body,
       eventId,
       companyId: event.companyId,
-      createdBy: user.id,
+      createdBy: getUserId(user),
       createdByRole: user.role,
       status: 'pending',
     });
@@ -765,7 +776,7 @@ router.post("/api/e4u/reservations/:id/approve", requireAuth, async (req: Reques
     // Check permissions: gestore/super_admin OR staff with canApproveTables (NOT PR)
     const isGestore = await isGestoreForEvent(user, reservation.eventId);
     if (!isGestore) {
-      const canApprove = await checkTablePermission(user.id, reservation.eventId, 'approve');
+      const canApprove = await checkTablePermission(getUserId(user), reservation.eventId, 'approve');
       if (!canApprove) {
         return res.status(403).json({ message: "Non hai i permessi per approvare prenotazioni" });
       }
@@ -775,7 +786,7 @@ router.post("/api/e4u/reservations/:id/approve", requireAuth, async (req: Reques
       .set({
         status: 'approved',
         approvedAt: new Date(),
-        approvedBy: user.id,
+        approvedBy: getUserId(user),
         updatedAt: new Date(),
       })
       .where(eq(tableReservations.id, id))
@@ -803,7 +814,7 @@ router.post("/api/e4u/reservations/:id/reject", requireAuth, async (req: Request
     // Check permissions: gestore/super_admin OR staff with canApproveTables (NOT PR)
     const isGestore = await isGestoreForEvent(user, reservation.eventId);
     if (!isGestore) {
-      const canApprove = await checkTablePermission(user.id, reservation.eventId, 'approve');
+      const canApprove = await checkTablePermission(getUserId(user), reservation.eventId, 'approve');
       if (!canApprove) {
         return res.status(403).json({ message: "Non hai i permessi per rifiutare prenotazioni" });
       }
@@ -920,7 +931,7 @@ router.post("/api/e4u/guests/:id/check-in", requireAuth, async (req: Request, re
       .set({
         status: 'checked_in',
         checkedInAt: new Date(),
-        checkedInBy: user.id,
+        checkedInBy: getUserId(user),
       })
       .where(eq(tableGuests.id, id))
       .returning();
@@ -1048,7 +1059,7 @@ router.post("/api/e4u/events/:eventId/pr", requireAuth, requireStaffOrHigher, as
       ...req.body,
       eventId,
       companyId: event.companyId,
-      staffUserId: user.role === 'capo_staff' ? user.id : req.body.staffUserId,
+      staffUserId: user.role === 'capo_staff' ? getUserId(user) : req.body.staffUserId,
     });
     
     const [assignment] = await db.insert(eventPrAssignments).values(data).returning();
@@ -1214,7 +1225,7 @@ router.get("/api/e4u/events/:eventId/scan-stats", requireAuth, async (req: Reque
       // Check if user is an assigned scanner for this event
       const [scannerAssignment] = await db.select()
         .from(eventScanners)
-        .where(and(eq(eventScanners.userId, user.id), eq(eventScanners.eventId, eventId)));
+        .where(and(eq(eventScanners.userId, getUserId(user)), eq(eventScanners.eventId, eventId)));
       
       if (!scannerAssignment) {
         return res.status(403).json({ message: "Non hai accesso a questo evento" });
@@ -1294,7 +1305,7 @@ router.get("/api/e4u/events/:eventId/checked-in", requireAuth, async (req: Reque
       // Check if user is an assigned scanner for this event
       const [scannerAssignment] = await db.select()
         .from(eventScanners)
-        .where(and(eq(eventScanners.userId, user.id), eq(eventScanners.eventId, eventId)));
+        .where(and(eq(eventScanners.userId, getUserId(user)), eq(eventScanners.eventId, eventId)));
       
       if (!scannerAssignment) {
         return res.status(403).json({ message: "Non hai accesso a questo evento" });
@@ -1388,7 +1399,7 @@ router.get("/api/e4u/scanner/total-stats", requireAuth, async (req: Request, res
     // Get all events the scanner has access to
     const scannerAssignments = await db.select()
       .from(eventScanners)
-      .where(eq(eventScanners.userId, user.id));
+      .where(eq(eventScanners.userId, getUserId(user)));
     
     let totalLists = 0;
     let checkedInLists = 0;
@@ -1543,7 +1554,7 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
       // SECURITY: Verifica permessi scanner per questo evento (con verifica settore)
       const isGestore = await isGestoreForEvent(user, ticketedEvent.eventId);
       if (!isGestore) {
-        const permResult = await checkScannerPermissionGranular(user.id, ticketedEvent.eventId, 'tickets', ticket.sectorId);
+        const permResult = await checkScannerPermissionGranular(getUserId(user), ticketedEvent.eventId, 'tickets', ticket.sectorId);
         if (!permResult.allowed) {
           return res.status(403).json({ 
             message: permResult.reason || "Non hai i permessi di scansione biglietti per questo evento. Contatta l'organizzatore.",
@@ -1585,7 +1596,7 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
         .set({
           status: 'used',
           usedAt: new Date(),
-          usedByScannerId: user.id,
+          usedByScannerId: getUserId(user),
           updatedAt: new Date(),
         })
         .where(eq(siaeTickets.id, ticket.id))
@@ -1632,7 +1643,7 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
       // PR semplice NON può accedere senza permesso esplicito di scansione
       const isGestore = await isGestoreForEvent(user, entry.eventId);
       if (!isGestore) {
-        const permResult = await checkScannerPermissionGranular(user.id, entry.eventId, 'lists', entry.listId);
+        const permResult = await checkScannerPermissionGranular(getUserId(user), entry.eventId, 'lists', entry.listId);
         if (!permResult.allowed) {
           return res.status(403).json({ 
             message: permResult.reason || "Non hai i permessi di scansione per questo evento. Contatta l'organizzatore.",
@@ -1654,7 +1665,7 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
         .set({
           status: 'checked_in',
           checkedInAt: new Date(),
-          checkedInBy: user.id,
+          checkedInBy: getUserId(user),
         })
         .where(eq(listEntries.id, entry.id))
         .returning();
@@ -1691,7 +1702,7 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
       // PR semplice NON può accedere senza permesso esplicito di scansione
       const isGestore = await isGestoreForEvent(user, guest.eventId);
       if (!isGestore) {
-        const permResult = await checkScannerPermissionGranular(user.id, guest.eventId, 'tables', tableTypeId);
+        const permResult = await checkScannerPermissionGranular(getUserId(user), guest.eventId, 'tables', tableTypeId);
         if (!permResult.allowed) {
           return res.status(403).json({ 
             message: permResult.reason || "Non hai i permessi di scansione per questo evento. Contatta l'organizzatore.",
@@ -1713,7 +1724,7 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
         .set({
           status: 'checked_in',
           checkedInAt: new Date(),
-          checkedInBy: user.id,
+          checkedInBy: getUserId(user),
         })
         .where(eq(tableGuests.id, guest.id))
         .returning();
@@ -2081,7 +2092,7 @@ router.get("/api/e4u/my-events", requireAuth, async (req: Request, res: Response
     })
     .from(e4uStaffAssignments)
     .where(and(
-      eq(e4uStaffAssignments.userId, user.id),
+      eq(e4uStaffAssignments.userId, getUserId(user)),
       eq(e4uStaffAssignments.isActive, true)
     ));
     
@@ -2114,7 +2125,7 @@ router.get("/api/e4u/my-events", requireAuth, async (req: Request, res: Response
     })
     .from(eventPrAssignments)
     .where(and(
-      eq(eventPrAssignments.userId, user.id),
+      eq(eventPrAssignments.userId, getUserId(user)),
       eq(eventPrAssignments.isActive, true)
     ));
     
@@ -2151,7 +2162,7 @@ router.get("/api/e4u/my-events", requireAuth, async (req: Request, res: Response
     })
     .from(eventScanners)
     .where(and(
-      eq(eventScanners.userId, user.id),
+      eq(eventScanners.userId, getUserId(user)),
       eq(eventScanners.isActive, true)
     ));
     
@@ -2191,29 +2202,29 @@ router.get("/api/e4u/my-stats", requireAuth, async (req: Request, res: Response)
     // Count entries created by this user
     const entriesCreated = await db.select({ count: sql<number>`count(*)::int` })
       .from(listEntries)
-      .where(eq(listEntries.createdBy, user.id));
+      .where(eq(listEntries.createdBy, getUserId(user)));
     
     // Count check-ins (entries where user scanned)
     const checkIns = await db.select({ count: sql<number>`count(*)::int` })
       .from(listEntries)
       .where(and(
-        eq(listEntries.checkedInBy, user.id),
+        eq(listEntries.checkedInBy, getUserId(user)),
         eq(listEntries.status, 'checked_in')
       ));
     
     // Count tables proposed
     const tablesProposed = await db.select({ count: sql<number>`count(*)::int` })
       .from(tableReservations)
-      .where(eq(tableReservations.createdBy, user.id));
+      .where(eq(tableReservations.createdBy, getUserId(user)));
     
     // Count active events assigned
     const staffEvents = await db.select({ count: sql<number>`count(*)::int` })
       .from(e4uStaffAssignments)
-      .where(and(eq(e4uStaffAssignments.userId, user.id), eq(e4uStaffAssignments.isActive, true)));
+      .where(and(eq(e4uStaffAssignments.userId, getUserId(user)), eq(e4uStaffAssignments.isActive, true)));
     
     const prEvents = await db.select({ count: sql<number>`count(*)::int` })
       .from(eventPrAssignments)
-      .where(and(eq(eventPrAssignments.userId, user.id), eq(eventPrAssignments.isActive, true)));
+      .where(and(eq(eventPrAssignments.userId, getUserId(user)), eq(eventPrAssignments.isActive, true)));
     
     res.json({
       entriesCreated: entriesCreated[0]?.count || 0,
@@ -2244,8 +2255,8 @@ router.get("/api/e4u/wallet/my", requireAuth, async (req: Request, res: Response
       .innerJoin(events, eq(listEntries.eventId, events.id))
       .where(
         user.phone
-          ? sql`(${listEntries.clientUserId} = ${user.id} OR ${listEntries.phone} = ${user.phone})`
-          : eq(listEntries.clientUserId, user.id)
+          ? sql`(${listEntries.clientUserId} = ${getUserId(user)} OR ${listEntries.phone} = ${user.phone})`
+          : eq(listEntries.clientUserId, getUserId(user))
       )
       .orderBy(desc(events.startDatetime));
     
@@ -2262,8 +2273,8 @@ router.get("/api/e4u/wallet/my", requireAuth, async (req: Request, res: Response
       .innerJoin(events, eq(tableGuests.eventId, events.id))
       .where(
         user.phone
-          ? sql`(${tableGuests.clientUserId} = ${user.id} OR ${tableGuests.phone} = ${user.phone})`
-          : eq(tableGuests.clientUserId, user.id)
+          ? sql`(${tableGuests.clientUserId} = ${getUserId(user)} OR ${tableGuests.phone} = ${user.phone})`
+          : eq(tableGuests.clientUserId, getUserId(user))
       )
       .orderBy(desc(events.startDatetime));
     
