@@ -63,7 +63,7 @@ import type { User as UserType, Event, EventScanner } from "@shared/schema";
 const createScannerSchema = z.object({
   firstName: z.string().min(1, "Nome richiesto"),
   lastName: z.string().min(1, "Cognome richiesto"),
-  email: z.string().email("Email non valida"),
+  username: z.string().min(3, "Username minimo 3 caratteri").regex(/^[a-zA-Z0-9_]+$/, "Solo lettere, numeri e underscore"),
   password: z.string().min(8, "Password minimo 8 caratteri"),
 });
 
@@ -98,7 +98,7 @@ export default function ScannerManagement() {
     defaultValues: {
       firstName: "",
       lastName: "",
-      email: "",
+      username: "",
       password: "",
     },
   });
@@ -138,7 +138,10 @@ export default function ScannerManagement() {
   const createScannerMutation = useMutation({
     mutationFn: async (data: CreateScannerData) => {
       const response = await apiRequest("POST", "/api/users", {
-        ...data,
+        firstName: data.firstName,
+        lastName: data.lastName,
+        email: data.username, // Username viene salvato nel campo email
+        password: data.password,
         role: "scanner",
       });
       return response.json();
@@ -551,16 +554,16 @@ export default function ScannerManagement() {
 
               <FormField
                 control={form.control}
-                name="email"
+                name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email (Username)</FormLabel>
+                    <FormLabel>Nome Utente</FormLabel>
                     <FormControl>
                       <Input 
-                        type="email" 
-                        placeholder="scanner@example.com" 
+                        type="text" 
+                        placeholder="scanner1" 
                         {...field} 
-                        data-testid="input-scanner-email" 
+                        data-testid="input-scanner-username" 
                       />
                     </FormControl>
                     <FormMessage />
