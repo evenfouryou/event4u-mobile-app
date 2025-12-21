@@ -88,6 +88,9 @@ export default function ScannerScanPage() {
   const [cameraActive, setCameraActive] = useState(false);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [searchQuery, setSearchQuery] = useState("");
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
 
   const { data: event, isLoading: eventLoading } = useQuery<Event>({
     queryKey: ['/api/events', eventId],
@@ -172,6 +175,35 @@ export default function ScannerScanPage() {
     setScanResult(null);
     setIsProcessing(false);
     inputRef.current?.focus();
+  };
+
+  const handleSearch = async (query: string) => {
+    setSearchQuery(query);
+    if (query.trim().length < 2) {
+      setSearchResults([]);
+      return;
+    }
+    
+    setIsSearching(true);
+    try {
+      const response = await fetch(`/api/e4u/scanner/search/${eventId}?q=${encodeURIComponent(query)}`);
+      const data = await response.json();
+      setSearchResults(data);
+    } catch (error) {
+      console.error('Search error:', error);
+      setSearchResults([]);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
+  const handleSearchResultClick = (result: any) => {
+    if (result.qrCode) {
+      setQrInput(result.qrCode);
+      handleScan(result.qrCode);
+      setSearchQuery("");
+      setSearchResults([]);
+    }
   };
 
   const startCamera = async () => {
@@ -420,6 +452,88 @@ export default function ScannerScanPage() {
                     <RefreshCw className="w-5 h-5 mr-2" />
                     Reset
                   </Button>
+                </div>
+
+                <div className="pt-4 border-t border-white/5">
+                  <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
+                    <User className="w-4 h-4" />
+                    Cerca per nome o telefono:
+                  </p>
+                  <div className="relative">
+                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                    <Input
+                      placeholder="Nome, cognome o telefono..."
+                      value={searchQuery}
+                      onChange={(e) => handleSearch(e.target.value)}
+                      className="h-12 text-base pl-12 pr-4 rounded-xl bg-muted/30 border-white/10"
+                      data-testid="input-search-guest"
+                    />
+                    {isSearching && (
+                      <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin text-muted-foreground" />
+                    )}
+                  </div>
+                  
+                  {searchResults.length > 0 && (
+                    <div className="mt-3 space-y-2 max-h-60 overflow-y-auto">
+                      {searchResults.map((result) => (
+                        <motion.div
+                          key={`${result.type}-${result.id}`}
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`p-3 rounded-xl cursor-pointer transition-all ${
+                            result.status === 'checked_in' 
+                              ? 'bg-amber-500/10 border border-amber-500/20' 
+                              : 'bg-muted/30 border border-white/5 hover:bg-muted/50'
+                          }`}
+                          onClick={() => handleSearchResultClick(result)}
+                          data-testid={`search-result-${result.id}`}
+                        >
+                          <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                                result.type === 'lista' 
+                                  ? 'bg-blue-500/20' 
+                                  : 'bg-purple-500/20'
+                              }`}>
+                                {result.type === 'lista' ? (
+                                  <Users className="w-5 h-5 text-blue-400" />
+                                ) : (
+                                  <Armchair className="w-5 h-5 text-purple-400" />
+                                )}
+                              </div>
+                              <div>
+                                <p className="font-medium">
+                                  {result.firstName} {result.lastName}
+                                </p>
+                                <p className="text-xs text-muted-foreground">
+                                  {result.type === 'lista' ? result.listName : result.tableName}
+                                  {result.phone && ` • ${result.phone}`}
+                                </p>
+                              </div>
+                            </div>
+                            {result.status === 'checked_in' ? (
+                              <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">
+                                <CheckCircle2 className="w-3 h-3 mr-1" />
+                                Entrato
+                              </Badge>
+                            ) : (
+                              <Badge variant="outline" className="border-emerald-500/30 text-emerald-400">
+                                Check-in
+                              </Badge>
+                            )}
+                          </div>
+                        </motion.div>
+                      ))}
+                    </div>
+                  )}
+                  
+                  {searchQuery.length >= 2 && !isSearching && searchResults.length === 0 && (
+                    <div className="mt-3 p-4 rounded-xl bg-muted/20 text-center">
+                      <p className="text-sm text-muted-foreground">
+                        Nessun risultato trovato
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>

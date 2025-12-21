@@ -1460,6 +1460,95 @@ router.get("/api/e4u/scanner/total-stats", requireAuth, async (req: Request, res
   }
 });
 
+// GET /api/e4u/scanner/search/:eventId - Search guests in lists and tables by phone or name
+router.get("/api/e4u/scanner/search/:eventId", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const { eventId } = req.params;
+    const { q } = req.query;
+    
+    if (!q || typeof q !== 'string' || q.trim().length < 2) {
+      return res.json([]);
+    }
+    
+    const searchTerm = q.trim().toLowerCase();
+    const results: any[] = [];
+    
+    // Search in list entries
+    const listEntriesData = await db.select({
+      entry: listEntries,
+      list: eventLists,
+    })
+    .from(listEntries)
+    .innerJoin(eventLists, eq(listEntries.listId, eventLists.id))
+    .where(eq(listEntries.eventId, eventId));
+    
+    for (const { entry, list } of listEntriesData) {
+      const firstName = (entry.firstName || '').toLowerCase();
+      const lastName = (entry.lastName || '').toLowerCase();
+      const phone = (entry.phone || '').replace(/\s/g, '');
+      const searchPhone = searchTerm.replace(/\s/g, '');
+      
+      if (firstName.includes(searchTerm) || 
+          lastName.includes(searchTerm) ||
+          `${firstName} ${lastName}`.includes(searchTerm) ||
+          (phone && phone.includes(searchPhone))) {
+        results.push({
+          id: entry.id,
+          type: 'lista',
+          firstName: entry.firstName,
+          lastName: entry.lastName,
+          phone: entry.phone,
+          listName: list.name,
+          status: entry.status,
+          checkedInAt: entry.checkedInAt,
+          qrCode: entry.qrCode,
+        });
+      }
+    }
+    
+    // Search in table guests
+    const tableGuestsData = await db.select({
+      guest: tableGuests,
+      reservation: tableReservations,
+      tableType: tableTypes,
+    })
+    .from(tableGuests)
+    .innerJoin(tableReservations, eq(tableGuests.reservationId, tableReservations.id))
+    .innerJoin(tableTypes, eq(tableReservations.tableTypeId, tableTypes.id))
+    .where(eq(tableGuests.eventId, eventId));
+    
+    for (const { guest, reservation, tableType } of tableGuestsData) {
+      const firstName = (guest.firstName || '').toLowerCase();
+      const lastName = (guest.lastName || '').toLowerCase();
+      const phone = (guest.phone || '').replace(/\s/g, '');
+      const searchPhone = searchTerm.replace(/\s/g, '');
+      
+      if (firstName.includes(searchTerm) || 
+          lastName.includes(searchTerm) ||
+          `${firstName} ${lastName}`.includes(searchTerm) ||
+          (phone && phone.includes(searchPhone))) {
+        results.push({
+          id: guest.id,
+          type: 'tavolo',
+          firstName: guest.firstName,
+          lastName: guest.lastName,
+          phone: guest.phone,
+          tableName: `${tableType.name} - ${reservation.reservationName}`,
+          status: guest.status,
+          checkedInAt: guest.checkedInAt,
+          qrCode: guest.qrCode,
+        });
+      }
+    }
+    
+    // Limit results
+    res.json(results.slice(0, 20));
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // GET /api/e4u/scanners/assignments - Get all scanner assignments for company
 router.get("/api/e4u/scanners/assignments", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
