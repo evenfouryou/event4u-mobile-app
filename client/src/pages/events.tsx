@@ -1,33 +1,31 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { Link, useLocation } from "wouter";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
+import { useLocation } from "wouter";
 import { Skeleton } from "@/components/ui/skeleton";
 import { 
   Plus, 
   Calendar as CalendarIcon, 
   Users, 
-  Eye, 
-  Search, 
-  Warehouse, 
   Repeat, 
-  FileEdit, 
   Clock, 
   CalendarCheck, 
   FilePenLine, 
   CheckCircle2, 
-  ArrowLeft,
   MapPin,
-  ArrowRight,
+  ChevronRight,
   Sparkles,
+  ListFilter,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
+import { 
+  HapticButton, 
+  FloatingActionButton,
+  triggerHaptic,
+} from "@/components/mobile-primitives";
 import type { Event, Station, EventFormat, Location } from "@shared/schema";
 
-type TabType = 'ongoing' | 'scheduled' | 'draft' | 'closed';
+type FilterType = 'all' | 'active' | 'past';
 
 const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: React.ElementType }> = {
   draft: { label: 'Bozza', color: 'text-muted-foreground', bgColor: 'bg-muted/50', icon: FilePenLine },
@@ -36,44 +34,45 @@ const statusConfig: Record<string, { label: string; color: string; bgColor: stri
   closed: { label: 'Chiuso', color: 'text-rose-400', bgColor: 'bg-rose-500/20', icon: CheckCircle2 },
 };
 
-function TabPill({ 
+function FilterChip({ 
   active, 
   label, 
   count, 
-  icon: Icon, 
   onClick,
   testId,
 }: { 
   active: boolean; 
   label: string; 
   count: number; 
-  icon: React.ElementType;
   onClick: () => void;
   testId: string;
 }) {
   return (
-    <button
-      onClick={onClick}
+    <motion.button
+      whileTap={{ scale: 0.95 }}
+      onClick={() => {
+        triggerHaptic('light');
+        onClick();
+      }}
       data-testid={testId}
       className={`
-        flex items-center gap-2 px-4 py-2.5 rounded-full text-sm font-medium transition-all
+        flex items-center gap-2 px-5 py-3 rounded-full text-base font-medium transition-all min-h-[48px]
         ${active 
-          ? 'bg-primary text-black shadow-lg' 
-          : 'bg-white/5 text-muted-foreground hover:bg-white/10 hover:text-foreground'
+          ? 'bg-primary text-black shadow-lg shadow-primary/25' 
+          : 'bg-white/5 text-muted-foreground active:bg-white/10'
         }
       `}
     >
-      <Icon className="h-4 w-4" />
-      <span className="hidden sm:inline">{label}</span>
+      <span>{label}</span>
       {count > 0 && (
         <span className={`
-          px-2 py-0.5 rounded-full text-xs font-bold
+          px-2.5 py-0.5 rounded-full text-sm font-bold
           ${active ? 'bg-black/20 text-black' : 'bg-white/10 text-foreground'}
         `}>
           {count}
         </span>
       )}
-    </button>
+    </motion.button>
   );
 }
 
@@ -99,64 +98,77 @@ function EventCard({
 
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      exit={{ opacity: 0, y: -20 }}
-      transition={{ duration: 0.3, delay }}
-      className="glass-card overflow-hidden group"
+      initial={{ opacity: 0, y: 30, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -20, scale: 0.95 }}
+      transition={{ 
+        type: "spring", 
+        stiffness: 300, 
+        damping: 30,
+        delay 
+      }}
+      whileTap={{ scale: 0.98 }}
+      onClick={() => {
+        triggerHaptic('medium');
+        onNavigate(isDraft ? `/events/wizard/${event.id}` : `/events/${event.id}/hub`);
+      }}
+      className="relative overflow-hidden rounded-2xl bg-card border border-border active:bg-card/80 cursor-pointer"
       data-testid={`event-card-${event.id}`}
     >
-      {/* Status bar */}
-      <div className={`h-1 ${event.status === 'ongoing' ? 'bg-gradient-to-r from-teal-500 to-cyan-500' : 
+      <div className={`absolute top-0 left-0 right-0 h-1.5 ${
+        event.status === 'ongoing' ? 'bg-gradient-to-r from-teal-500 to-cyan-500' : 
         event.status === 'scheduled' ? 'bg-gradient-to-r from-blue-500 to-indigo-500' :
         event.status === 'closed' ? 'bg-gradient-to-r from-rose-500 to-pink-500' :
-        'bg-gradient-to-r from-gray-500 to-slate-500'}`} 
-      />
+        'bg-gradient-to-r from-gray-500 to-slate-500'
+      }`} />
       
-      <div className="p-3 sm:p-5">
-        {/* Header */}
-        <div className="flex items-start justify-between gap-3 mb-4">
+      <div className="p-5 pt-6">
+        <div className="flex items-start justify-between gap-4 mb-4">
           <div className="flex-1 min-w-0">
-            <h3 className="text-lg font-semibold truncate mb-1">{event.name}</h3>
+            <h3 className="text-xl font-bold truncate mb-2">{event.name}</h3>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className={`inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full text-xs font-medium ${status.bgColor} ${status.color}`}>
-                <StatusIcon className="h-3 w-3" />
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${status.bgColor} ${status.color}`}>
+                <StatusIcon className="h-3.5 w-3.5" />
                 {status.label}
               </span>
               {format && (
                 <span 
-                  className="px-2 py-0.5 rounded-full text-xs font-medium text-white"
+                  className="px-3 py-1 rounded-full text-sm font-medium text-white"
                   style={{ backgroundColor: format.color ?? '#3b82f6' }}
                 >
                   {format.name}
                 </span>
               )}
               {event.seriesId && (
-                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium bg-violet-500/20 text-violet-400">
-                  <Repeat className="h-3 w-3" />
-                  Serie
+                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-violet-500/20 text-violet-400">
+                  <Repeat className="h-3.5 w-3.5" />
                 </span>
               )}
             </div>
           </div>
+          
+          <motion.div 
+            className="w-11 h-11 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0"
+            whileHover={{ scale: 1.1 }}
+          >
+            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+          </motion.div>
         </div>
 
-        {/* Event Details */}
-        <div className="space-y-3 mb-4">
-          <div className="flex items-center gap-3 text-sm">
-            <div className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <CalendarIcon className="h-4 w-4 text-primary" />
+        <div className="space-y-3">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <CalendarIcon className="h-5 w-5 text-primary" />
             </div>
-            <div>
-              <p className="font-medium">
+            <div className="flex-1 min-w-0">
+              <p className="font-semibold text-base">
                 {new Date(event.startDatetime).toLocaleDateString('it-IT', {
-                  weekday: 'short',
+                  weekday: 'long',
                   day: 'numeric',
-                  month: 'short',
-                  year: 'numeric'
+                  month: 'long',
                 })}
               </p>
-              <p className="text-muted-foreground text-xs">
+              <p className="text-muted-foreground text-sm">
                 {new Date(event.startDatetime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
                 {' - '}
                 {new Date(event.endDatetime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
@@ -165,63 +177,126 @@ function EventCard({
           </div>
 
           {locationName && (
-            <div className="flex items-center gap-3 text-sm">
-              <div className="w-8 h-8 rounded-lg bg-teal-500/10 flex items-center justify-center flex-shrink-0">
-                <MapPin className="h-4 w-4 text-teal-500" />
+            <div className="flex items-center gap-4">
+              <div className="w-12 h-12 rounded-xl bg-teal-500/10 flex items-center justify-center flex-shrink-0">
+                <MapPin className="h-5 w-5 text-teal-500" />
               </div>
-              <div>
-                <p className="font-medium">{locationName}</p>
+              <div className="flex-1 min-w-0">
+                <p className="font-medium text-base truncate">{locationName}</p>
               </div>
             </div>
           )}
 
-          <div className="flex items-center gap-4 text-sm text-muted-foreground">
+          <div className="flex items-center gap-5 pt-3 border-t border-border/50">
             {event.capacity && (
-              <div className="flex items-center gap-1.5">
+              <div className="flex items-center gap-2 text-muted-foreground">
                 <Users className="h-4 w-4" />
-                <span>{event.capacity}</span>
+                <span className="text-sm font-medium">{event.capacity} posti</span>
               </div>
             )}
             {stationCount > 0 && (
-              <div className="flex items-center gap-1.5">
-                <Warehouse className="h-4 w-4" />
-                <span>{stationCount} postazioni</span>
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <ListFilter className="h-4 w-4" />
+                <span className="text-sm font-medium">{stationCount} postazioni</span>
               </div>
             )}
           </div>
         </div>
 
-        {/* Action Button */}
-        <Button 
-          onClick={() => onNavigate(isDraft ? `/events/wizard/${event.id}` : `/events/${event.id}/hub`)} 
-          className={`w-full group-hover:shadow-lg transition-all ${
-            isDraft ? 'gradient-golden text-black' : ''
-          }`}
-          variant={isDraft ? 'default' : 'outline'}
-          data-testid={isDraft ? `button-continue-draft-${event.id}` : `button-view-event-${event.id}`}
-        >
-          {isDraft ? (
-            <>
-              <FileEdit className="h-4 w-4 mr-2" />
-              Continua Bozza
-            </>
-          ) : (
-            <>
-              <Eye className="h-4 w-4 mr-2" />
-              Dettagli
-            </>
-          )}
-          <ArrowRight className="h-4 w-4 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" />
-        </Button>
+        {isDraft && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="mt-4 pt-4 border-t border-border/50"
+          >
+            <div className="flex items-center gap-2 text-primary">
+              <FilePenLine className="h-4 w-4" />
+              <span className="text-sm font-medium">Tocca per continuare la configurazione</span>
+            </div>
+          </motion.div>
+        )}
       </div>
+    </motion.div>
+  );
+}
+
+function EmptyState({ 
+  filter, 
+  searchQuery, 
+  canCreate, 
+  onCreateClick 
+}: { 
+  filter: FilterType;
+  searchQuery: string;
+  canCreate: boolean;
+  onCreateClick: () => void;
+}) {
+  const messages: Record<FilterType, { title: string; subtitle: string }> = {
+    all: { 
+      title: "Nessun evento", 
+      subtitle: "Crea il tuo primo evento per iniziare" 
+    },
+    active: { 
+      title: "Nessun evento attivo", 
+      subtitle: "Gli eventi in corso e programmati appariranno qui" 
+    },
+    past: { 
+      title: "Nessun evento passato", 
+      subtitle: "Gli eventi conclusi appariranno qui" 
+    },
+  };
+
+  const { title, subtitle } = messages[filter];
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      exit={{ opacity: 0, scale: 0.9 }}
+      transition={{ type: "spring", stiffness: 300, damping: 30 }}
+      className="flex flex-col items-center justify-center py-16 px-6 text-center"
+    >
+      <motion.div 
+        className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center mb-6"
+        animate={{ 
+          scale: [1, 1.05, 1],
+          rotate: [0, 2, -2, 0],
+        }}
+        transition={{ 
+          duration: 3, 
+          repeat: Infinity,
+          ease: "easeInOut" 
+        }}
+      >
+        <CalendarIcon className="h-10 w-10 text-primary" />
+      </motion.div>
+      
+      <h3 className="text-xl font-bold mb-2">
+        {searchQuery ? `Nessun risultato per "${searchQuery}"` : title}
+      </h3>
+      <p className="text-muted-foreground mb-6 max-w-[280px]">
+        {searchQuery ? "Prova con un termine di ricerca diverso" : subtitle}
+      </p>
+      
+      {canCreate && !searchQuery && filter === 'all' && (
+        <HapticButton 
+          onClick={onCreateClick}
+          className="gradient-golden text-black font-semibold min-h-[52px] px-6"
+          hapticType="success"
+          data-testid="button-create-event-empty"
+        >
+          <Sparkles className="h-5 w-5 mr-2" />
+          Crea Evento
+        </HapticButton>
+      )}
     </motion.div>
   );
 }
 
 export default function Events() {
   const [, navigate] = useLocation();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [activeTab, setActiveTab] = useState<TabType>('ongoing');
+  const [searchQuery] = useState("");
+  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const { user } = useAuth();
   
   const canCreateEvents = user?.role === 'super_admin' || user?.role === 'gestore';
@@ -262,199 +337,164 @@ export default function Events() {
     return fixedStations.length + eventSpecific;
   };
 
-  const filterEvents = (status: string) => {
+  const filteredEvents = useMemo(() => {
     if (!events) return [];
-    return events.filter(e => 
-      e.status === status && 
-      (searchQuery === "" || e.name.toLowerCase().includes(searchQuery.toLowerCase()))
-    );
-  };
+    
+    let filtered = events;
+    
+    if (searchQuery) {
+      filtered = filtered.filter(e => 
+        e.name.toLowerCase().includes(searchQuery.toLowerCase())
+      );
+    }
+    
+    switch (activeFilter) {
+      case 'active':
+        filtered = filtered.filter(e => e.status === 'ongoing' || e.status === 'scheduled' || e.status === 'draft');
+        break;
+      case 'past':
+        filtered = filtered.filter(e => e.status === 'closed');
+        break;
+    }
+    
+    return filtered.sort((a, b) => {
+      const statusOrder = { ongoing: 0, scheduled: 1, draft: 2, closed: 3 };
+      const statusDiff = (statusOrder[a.status as keyof typeof statusOrder] || 4) - 
+                        (statusOrder[b.status as keyof typeof statusOrder] || 4);
+      if (statusDiff !== 0) return statusDiff;
+      return new Date(b.startDatetime).getTime() - new Date(a.startDatetime).getTime();
+    });
+  }, [events, activeFilter, searchQuery]);
 
-  const ongoingEvents = filterEvents('ongoing');
-  const scheduledEvents = filterEvents('scheduled');
-  const draftEvents = filterEvents('draft');
-  const closedEvents = filterEvents('closed');
-
-  const tabCounts = useMemo(() => ({
-    ongoing: events?.filter(e => e.status === 'ongoing').length || 0,
-    scheduled: events?.filter(e => e.status === 'scheduled').length || 0,
-    draft: events?.filter(e => e.status === 'draft').length || 0,
-    closed: events?.filter(e => e.status === 'closed').length || 0,
+  const filterCounts = useMemo(() => ({
+    all: events?.length || 0,
+    active: events?.filter(e => e.status === 'ongoing' || e.status === 'scheduled' || e.status === 'draft').length || 0,
+    past: events?.filter(e => e.status === 'closed').length || 0,
   }), [events]);
 
-  const currentEvents = activeTab === 'ongoing' ? ongoingEvents :
-    activeTab === 'scheduled' ? scheduledEvents :
-    activeTab === 'draft' ? draftEvents : closedEvents;
-
-  const emptyMessages: Record<TabType, string> = {
-    ongoing: "Nessun evento in corso",
-    scheduled: "Nessun evento programmato",
-    draft: "Nessuna bozza in sospeso",
-    closed: "Nessun evento chiuso",
+  const handleCreateEvent = () => {
+    triggerHaptic('success');
+    navigate('/events/wizard');
   };
 
   return (
-    <div className="p-3 sm:p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
-      {/* Header */}
-      <motion.div 
+    <div 
+      className="min-h-screen bg-background pb-24"
+      style={{ 
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
+      }}
+    >
+      <motion.header 
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6"
+        transition={{ type: "spring", stiffness: 300, damping: 30 }}
+        className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border/50 px-5 py-4"
       >
-        <div className="flex items-center gap-2 sm:gap-3 flex-1">
-          <Link href="/beverage">
-            <Button variant="ghost" size="icon" className="rounded-xl">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-xl sm:rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-              <CalendarIcon className="h-5 w-5 sm:h-6 sm:w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg sm:text-xl md:text-2xl font-bold">Eventi</h1>
-              <p className="text-xs sm:text-sm text-muted-foreground hidden sm:block">
-                {canCreateEvents ? 'Organizza i tuoi eventi' : 'Visualizza gli eventi'}
-              </p>
-            </div>
+        <div className="flex items-center gap-4">
+          <motion.div 
+            className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0"
+            whileTap={{ scale: 0.95 }}
+          >
+            <CalendarIcon className="h-6 w-6 text-white" />
+          </motion.div>
+          <div>
+            <h1 className="text-2xl font-bold">I Miei Eventi</h1>
+            <p className="text-sm text-muted-foreground">
+              {filterCounts.all} {filterCounts.all === 1 ? 'evento' : 'eventi'} totali
+            </p>
           </div>
         </div>
-        {canCreateEvents && (
-          <Button 
-            onClick={() => navigate('/events/wizard')}
-            className="gradient-golden text-black font-semibold"
-            data-testid="button-create-event"
-          >
-            <Plus className="h-4 w-4 mr-2" />
-            Nuovo Evento
-          </Button>
-        )}
-      </motion.div>
+      </motion.header>
 
-      {/* Search Bar */}
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="mb-6"
+        transition={{ delay: 0.1, type: "spring", stiffness: 300, damping: 30 }}
+        className="flex gap-3 overflow-x-auto px-5 py-4 scrollbar-hide"
+        style={{ WebkitOverflowScrolling: 'touch' }}
       >
-        <div className="relative">
-          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-          <Input
-            placeholder="Cerca eventi..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="pl-12 h-12 bg-white/5 border-white/10 rounded-xl"
-            data-testid="input-search-events"
-          />
-        </div>
-      </motion.div>
-
-      {/* Filter Tabs */}
-      <motion.div 
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.15 }}
-        className="flex gap-2 overflow-x-auto pb-2 mb-6 scrollbar-hide"
-      >
-        <TabPill
-          active={activeTab === 'ongoing'}
-          label="In Corso"
-          count={tabCounts.ongoing}
-          icon={Clock}
-          onClick={() => setActiveTab('ongoing')}
-          testId="tab-ongoing"
+        <FilterChip
+          active={activeFilter === 'all'}
+          label="Tutti"
+          count={filterCounts.all}
+          onClick={() => setActiveFilter('all')}
+          testId="filter-all"
         />
-        <TabPill
-          active={activeTab === 'scheduled'}
-          label="Programmati"
-          count={tabCounts.scheduled}
-          icon={CalendarCheck}
-          onClick={() => setActiveTab('scheduled')}
-          testId="tab-scheduled"
+        <FilterChip
+          active={activeFilter === 'active'}
+          label="Attivi"
+          count={filterCounts.active}
+          onClick={() => setActiveFilter('active')}
+          testId="filter-active"
         />
-        {canCreateEvents && (
-          <TabPill
-            active={activeTab === 'draft'}
-            label="Bozze"
-            count={tabCounts.draft}
-            icon={FilePenLine}
-            onClick={() => setActiveTab('draft')}
-            testId="tab-draft"
-          />
-        )}
-        <TabPill
-          active={activeTab === 'closed'}
-          label="Chiusi"
-          count={tabCounts.closed}
-          icon={CheckCircle2}
-          onClick={() => setActiveTab('closed')}
-          testId="tab-closed"
+        <FilterChip
+          active={activeFilter === 'past'}
+          label="Passati"
+          count={filterCounts.past}
+          onClick={() => setActiveFilter('past')}
+          testId="filter-past"
         />
       </motion.div>
 
-      {/* Events Grid */}
-      <AnimatePresence mode="wait">
-        {eventsLoading ? (
-          <motion.div
-            key="loading"
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-          >
-            <Skeleton className="h-64 rounded-2xl" />
-            <Skeleton className="h-64 rounded-2xl" />
-            <Skeleton className="h-64 rounded-2xl" />
-          </motion.div>
-        ) : currentEvents.length === 0 ? (
-          <motion.div
-            key="empty"
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            exit={{ opacity: 0, scale: 0.95 }}
-            className="glass-card p-12 text-center"
-          >
-            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
-              <CalendarIcon className="h-8 w-8 text-primary" />
-            </div>
-            <p className="text-muted-foreground mb-4">
-              {searchQuery ? `Nessun risultato per "${searchQuery}"` : emptyMessages[activeTab]}
-            </p>
-            {canCreateEvents && searchQuery === '' && activeTab !== 'closed' && (
-              <Button 
-                onClick={() => navigate('/events/wizard')} 
-                className="gradient-golden text-black"
-                data-testid="button-create-event-empty"
-              >
-                <Sparkles className="h-4 w-4 mr-2" />
-                Crea il tuo primo evento
-              </Button>
-            )}
-          </motion.div>
-        ) : (
-          <motion.div
-            key={activeTab}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"
-          >
-            {currentEvents.map((event, index) => (
-              <EventCard
-                key={event.id}
-                event={event}
-                format={event.formatId ? formatsMap.get(event.formatId) : undefined}
-                stationCount={getEventStationCount(event.id)}
-                isDraft={activeTab === 'draft'}
-                onNavigate={navigate}
-                delay={index * 0.05}
-                locationName={event.locationId ? locationsMap.get(event.locationId)?.name : undefined}
-              />
-            ))}
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div className="px-5">
+        <AnimatePresence mode="wait">
+          {eventsLoading ? (
+            <motion.div
+              key="loading"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="space-y-4"
+            >
+              {[1, 2, 3].map((i) => (
+                <Skeleton key={i} className="h-52 rounded-2xl" />
+              ))}
+            </motion.div>
+          ) : filteredEvents.length === 0 ? (
+            <EmptyState 
+              key="empty"
+              filter={activeFilter}
+              searchQuery={searchQuery}
+              canCreate={canCreateEvents}
+              onCreateClick={handleCreateEvent}
+            />
+          ) : (
+            <motion.div
+              key={activeFilter}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="space-y-4"
+            >
+              {filteredEvents.map((event, index) => (
+                <EventCard
+                  key={event.id}
+                  event={event}
+                  format={event.formatId ? formatsMap.get(event.formatId) : undefined}
+                  stationCount={getEventStationCount(event.id)}
+                  isDraft={event.status === 'draft'}
+                  onNavigate={navigate}
+                  delay={index * 0.05}
+                  locationName={event.locationId ? locationsMap.get(event.locationId)?.name : undefined}
+                />
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      {canCreateEvents && (
+        <FloatingActionButton
+          onClick={handleCreateEvent}
+          position="bottom-right"
+          data-testid="fab-create-event"
+          className="gradient-golden shadow-xl shadow-primary/30"
+        >
+          <Plus className="h-6 w-6 text-black" />
+        </FloatingActionButton>
+      )}
     </div>
   );
 }

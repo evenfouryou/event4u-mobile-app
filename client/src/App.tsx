@@ -16,6 +16,7 @@ import NotFound from "@/pages/not-found";
 import Landing from "@/pages/landing";
 import Home from "@/pages/home";
 import Beverage from "@/pages/beverage";
+import Inventory from "@/pages/inventory";
 import Companies from "@/pages/companies";
 import Users from "@/pages/users";
 import Locations from "@/pages/locations";
@@ -48,6 +49,7 @@ import ForgotPassword from "@/pages/forgot-password";
 import ResetPassword from "@/pages/reset-password";
 import Accounting from "@/pages/accounting";
 import Personnel from "@/pages/personnel";
+import Staff from "@/pages/staff";
 import NightFilePage from "@/pages/night-file";
 import SiaeTables from "@/pages/siae-tables";
 import SiaeActivationCards from "@/pages/siae-activation-cards";
@@ -250,6 +252,7 @@ function Router() {
             <Switch>
               <Route path="/" component={Home} />
               <Route path="/beverage" component={Beverage} />
+              <Route path="/inventory" component={Inventory} />
               <Route path="/companies" component={Companies} />
               <Route path="/users" component={Users} />
               <Route path="/locations/:id" component={LocationDetail} />
@@ -279,6 +282,7 @@ function Router() {
               <Route path="/ai-analysis" component={AIAnalysis} />
               <Route path="/accounting" component={Accounting} />
               <Route path="/personnel" component={Personnel} />
+              <Route path="/staff" component={Staff} />
               <Route path="/night-file" component={NightFilePage} />
               <Route path="/siae/tables" component={SiaeTables} />
               <Route path="/siae/activation-cards" component={SiaeActivationCards} />

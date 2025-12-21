@@ -1,22 +1,25 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { motion } from "framer-motion";
 import {
   Wallet,
   Ticket,
   Calendar,
-  ArrowRight,
+  ChevronRight,
   ShoppingBag,
   QrCode,
   CreditCard,
-  Sparkles,
   Loader2,
   MapPin,
+  Plus,
+  RefreshCw,
 } from "lucide-react";
+import { triggerHaptic } from "@/components/mobile-primitives";
 
 interface Customer {
   id: number;
@@ -49,6 +52,40 @@ interface TicketsResponse {
   total: number;
 }
 
+const springTransition = {
+  type: "spring",
+  stiffness: 400,
+  damping: 30,
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+    },
+  },
+};
+
+const fadeInUp = {
+  hidden: { opacity: 0, y: 20 },
+  show: { 
+    opacity: 1, 
+    y: 0,
+    transition: springTransition,
+  },
+};
+
+const scaleIn = {
+  hidden: { opacity: 0, scale: 0.9 },
+  show: { 
+    opacity: 1, 
+    scale: 1,
+    transition: springTransition,
+  },
+};
+
 export default function AccountHome() {
   const { data: customer, isLoading: customerLoading } = useQuery<Customer>({
     queryKey: ["/api/public/customers/me"],
@@ -66,8 +103,17 @@ export default function AccountHome() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div 
+        className="flex items-center justify-center min-h-screen bg-background"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={springTransition}
+        >
+          <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        </motion.div>
       </div>
     );
   }
@@ -83,150 +129,221 @@ export default function AccountHome() {
     return "Buonasera";
   };
 
+  const getInitials = () => {
+    if (!customer) return "U";
+    return `${customer.firstName?.[0] || ''}${customer.lastName?.[0] || ''}`.toUpperCase();
+  };
+
   return (
-    <div className="max-w-4xl mx-auto space-y-4 sm:space-y-6 px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
-      <div className="bg-gradient-to-r from-primary/20 via-primary/10 to-transparent rounded-2xl p-4 sm:p-6 md:p-8 border border-primary/20">
-        <div className="flex items-center gap-3 sm:gap-4">
-          <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-full bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center flex-shrink-0">
-            <Sparkles className="w-6 h-6 sm:w-8 sm:h-8 text-primary-foreground" />
-          </div>
-          <div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground" data-testid="text-greeting">
-              {getGreeting()}, {customer?.firstName}!
+    <motion.div 
+      className="min-h-screen bg-background pb-24"
+      style={{ 
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
+      }}
+      variants={staggerContainer}
+      initial="hidden"
+      animate="show"
+    >
+      <div className="px-4 py-6 space-y-6">
+        <motion.div 
+          className="flex items-center gap-4"
+          variants={fadeInUp}
+        >
+          <Avatar className="w-16 h-16 border-2 border-primary/30">
+            <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-xl font-bold">
+              {getInitials()}
+            </AvatarFallback>
+          </Avatar>
+          <div className="flex-1">
+            <h1 className="text-2xl font-bold text-foreground" data-testid="text-greeting">
+              {getGreeting()},
             </h1>
-            <p className="text-muted-foreground mt-1">
-              Benvenuto nel tuo portale Event4U
+            <p className="text-xl font-semibold text-foreground">
+              {customer?.firstName}!
             </p>
           </div>
-        </div>
-      </div>
+        </motion.div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
-        <Link href="/acquista">
-          <Card className="hover-elevate cursor-pointer h-full">
-            <CardContent className="p-3 sm:p-4 flex flex-col items-center justify-center text-center gap-2">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-primary/10 flex items-center justify-center">
-                <ShoppingBag className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+        <motion.div 
+          className="grid grid-cols-2 gap-4"
+          variants={fadeInUp}
+        >
+          <Link href="/acquista">
+            <motion.div 
+              className="bg-card rounded-2xl p-5 min-h-[120px] flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform"
+              whileTap={{ scale: 0.95 }}
+              onClick={() => triggerHaptic('light')}
+              data-testid="button-buy-tickets"
+            >
+              <div className="w-14 h-14 rounded-full bg-primary/15 flex items-center justify-center">
+                <ShoppingBag className="w-7 h-7 text-primary" />
               </div>
-              <span className="font-medium text-xs sm:text-sm text-foreground">Acquista Biglietti</span>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/account/tickets">
-          <Card className="hover-elevate cursor-pointer h-full">
-            <CardContent className="p-3 sm:p-4 flex flex-col items-center justify-center text-center gap-2">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-emerald-500/10 dark:bg-emerald-500/20 flex items-center justify-center">
-                <QrCode className="w-5 h-5 sm:w-6 sm:h-6 text-emerald-600 dark:text-emerald-400" />
-              </div>
-              <span className="font-medium text-xs sm:text-sm text-foreground">I Miei QR</span>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/account/wallet">
-          <Card className="hover-elevate cursor-pointer h-full">
-            <CardContent className="p-3 sm:p-4 flex flex-col items-center justify-center text-center gap-2">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-blue-500/10 dark:bg-blue-500/20 flex items-center justify-center">
-                <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-blue-600 dark:text-blue-400" />
-              </div>
-              <span className="font-medium text-xs sm:text-sm text-foreground">Ricarica Wallet</span>
-            </CardContent>
-          </Card>
-        </Link>
-        <Link href="/account/resales">
-          <Card className="hover-elevate cursor-pointer h-full">
-            <CardContent className="p-3 sm:p-4 flex flex-col items-center justify-center text-center gap-2">
-              <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-full bg-purple-500/10 dark:bg-purple-500/20 flex items-center justify-center">
-                <Ticket className="w-5 h-5 sm:w-6 sm:h-6 text-purple-600 dark:text-purple-400" />
-              </div>
-              <span className="font-medium text-xs sm:text-sm text-foreground">Rivendi Biglietti</span>
-            </CardContent>
-          </Card>
-        </Link>
-      </div>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-2">
-          <CardTitle className="flex items-center gap-2 text-foreground">
-            <Wallet className="w-5 h-5 text-primary" />
-            Il Mio Wallet
-          </CardTitle>
-          <Link href="/account/wallet">
-            <Button variant="ghost" size="sm" className="gap-1" data-testid="button-view-wallet">
-              Dettagli <ArrowRight className="w-4 h-4" />
-            </Button>
+              <span className="font-semibold text-base text-foreground text-center">Acquista Biglietti</span>
+            </motion.div>
           </Link>
-        </CardHeader>
-        <CardContent className="p-3 sm:p-6">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 sm:gap-4">
-            <div>
-              <p className="text-2xl sm:text-3xl font-bold text-foreground" data-testid="text-wallet-balance">
-                {balance.toFixed(2)} €
-              </p>
-              <p className="text-sm text-muted-foreground">Saldo disponibile</p>
-            </div>
-            <Link href="/account/wallet">
-              <Button className="gap-2" data-testid="button-topup">
-                <CreditCard className="w-4 h-4" />
-                Ricarica
+          
+          <Link href="/account/tickets">
+            <motion.div 
+              className="bg-card rounded-2xl p-5 min-h-[120px] flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform"
+              whileTap={{ scale: 0.95 }}
+              onClick={() => triggerHaptic('light')}
+              data-testid="button-my-qr"
+            >
+              <div className="w-14 h-14 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                <QrCode className="w-7 h-7 text-emerald-500" />
+              </div>
+              <span className="font-semibold text-base text-foreground text-center">I Miei QR</span>
+            </motion.div>
+          </Link>
+          
+          <Link href="/account/wallet">
+            <motion.div 
+              className="bg-card rounded-2xl p-5 min-h-[120px] flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform"
+              whileTap={{ scale: 0.95 }}
+              onClick={() => triggerHaptic('light')}
+              data-testid="button-topup-wallet"
+            >
+              <div className="w-14 h-14 rounded-full bg-blue-500/15 flex items-center justify-center">
+                <CreditCard className="w-7 h-7 text-blue-500" />
+              </div>
+              <span className="font-semibold text-base text-foreground text-center">Ricarica Wallet</span>
+            </motion.div>
+          </Link>
+          
+          <Link href="/account/resales">
+            <motion.div 
+              className="bg-card rounded-2xl p-5 min-h-[120px] flex flex-col items-center justify-center gap-3 active:scale-95 transition-transform"
+              whileTap={{ scale: 0.95 }}
+              onClick={() => triggerHaptic('light')}
+              data-testid="button-resell"
+            >
+              <div className="w-14 h-14 rounded-full bg-purple-500/15 flex items-center justify-center">
+                <RefreshCw className="w-7 h-7 text-purple-500" />
+              </div>
+              <span className="font-semibold text-base text-foreground text-center">Rivendi Biglietti</span>
+            </motion.div>
+          </Link>
+        </motion.div>
+
+        <motion.div variants={scaleIn}>
+          <Link href="/account/wallet">
+            <motion.div 
+              className="bg-gradient-to-br from-primary/20 via-primary/10 to-card rounded-2xl p-6 border border-primary/20 active:scale-98 transition-transform"
+              whileTap={{ scale: 0.98 }}
+              onClick={() => triggerHaptic('light')}
+            >
+              <div className="flex items-center justify-between gap-4 mb-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-full bg-primary/20 flex items-center justify-center">
+                    <Wallet className="w-6 h-6 text-primary" />
+                  </div>
+                  <span className="text-lg font-semibold text-foreground">Il Mio Wallet</span>
+                </div>
+                <ChevronRight className="w-6 h-6 text-muted-foreground" />
+              </div>
+              
+              <div className="flex items-end justify-between gap-4">
+                <div>
+                  <p className="text-4xl font-bold text-foreground tabular-nums" data-testid="text-wallet-balance">
+                    {balance.toFixed(2)} €
+                  </p>
+                  <p className="text-base text-muted-foreground mt-1">Saldo disponibile</p>
+                </div>
+                <Button 
+                  className="min-h-[44px] gap-2 rounded-xl"
+                  onClick={(e) => {
+                    e.preventDefault();
+                    triggerHaptic('medium');
+                  }}
+                  data-testid="button-topup"
+                >
+                  <Plus className="w-5 h-5" />
+                  Ricarica
+                </Button>
+              </div>
+            </motion.div>
+          </Link>
+        </motion.div>
+
+        <motion.div variants={fadeInUp}>
+          <div className="flex items-center justify-between gap-4 mb-4">
+            <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+              <Ticket className="w-6 h-6 text-primary" />
+              Prossimi Eventi
+            </h2>
+            <Link href="/account/tickets">
+              <Button 
+                variant="ghost" 
+                className="min-h-[44px] gap-1 text-base"
+                onClick={() => triggerHaptic('light')}
+                data-testid="button-view-tickets"
+              >
+                Tutti ({totalTickets})
+                <ChevronRight className="w-5 h-5" />
               </Button>
             </Link>
           </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between gap-2">
-          <CardTitle className="flex items-center gap-2 text-foreground">
-            <Ticket className="w-5 h-5 text-primary" />
-            Prossimi Eventi
-          </CardTitle>
-          <Link href="/account/tickets">
-            <Button variant="ghost" size="sm" className="gap-1" data-testid="button-view-tickets">
-              Tutti ({totalTickets}) <ArrowRight className="w-4 h-4" />
-            </Button>
-          </Link>
-        </CardHeader>
-        <CardContent>
+          
           {upcomingTickets.length === 0 ? (
-            <div className="text-center py-8">
-              <Ticket className="w-12 h-12 text-muted-foreground/50 mx-auto mb-3" />
-              <p className="text-muted-foreground mb-4">Nessun biglietto in programma</p>
+            <motion.div 
+              className="bg-card rounded-2xl p-8 text-center"
+              variants={scaleIn}
+            >
+              <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                <Ticket className="w-8 h-8 text-muted-foreground" />
+              </div>
+              <p className="text-lg text-muted-foreground mb-5">Nessun biglietto in programma</p>
               <Link href="/acquista">
-                <Button className="gap-2">
-                  <ShoppingBag className="w-4 h-4" />
+                <Button 
+                  className="min-h-[48px] gap-2 text-base rounded-xl px-6"
+                  onClick={() => triggerHaptic('medium')}
+                >
+                  <ShoppingBag className="w-5 h-5" />
                   Esplora Eventi
                 </Button>
               </Link>
-            </div>
+            </motion.div>
           ) : (
             <div className="space-y-3">
-              {upcomingTickets.map((ticket) => (
+              {upcomingTickets.map((ticket, index) => (
                 <Link key={ticket.id} href={`/account/tickets/${ticket.id}`}>
-                  <div 
-                    className="flex items-center gap-3 sm:gap-4 p-2 sm:p-3 rounded-lg bg-muted/50 hover:bg-muted transition-colors cursor-pointer"
+                  <motion.div 
+                    className="bg-card rounded-2xl p-4 flex items-center gap-4 active:scale-98 transition-transform"
+                    variants={fadeInUp}
+                    custom={index}
+                    whileTap={{ scale: 0.98 }}
+                    onClick={() => triggerHaptic('light')}
                     data-testid={`ticket-preview-${ticket.id}`}
                   >
-                    <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
-                      <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-primary" />
+                    <div className="w-14 h-14 rounded-xl bg-primary/15 flex items-center justify-center flex-shrink-0">
+                      <Calendar className="w-7 h-7 text-primary" />
                     </div>
                     <div className="flex-1 min-w-0">
-                      <h4 className="font-medium text-foreground truncate">{ticket.eventName}</h4>
-                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                        <span>{format(new Date(ticket.eventStart), "d MMM", { locale: it })}</span>
-                        <span>•</span>
+                      <h4 className="font-semibold text-lg text-foreground truncate">{ticket.eventName}</h4>
+                      <div className="flex items-center gap-2 text-base text-muted-foreground mt-1">
+                        <Calendar className="w-4 h-4" />
+                        <span>{format(new Date(ticket.eventStart), "d MMM yyyy", { locale: it })}</span>
+                      </div>
+                      <div className="flex items-center gap-2 text-base text-muted-foreground">
+                        <MapPin className="w-4 h-4" />
                         <span className="truncate">{ticket.locationName}</span>
                       </div>
                     </div>
-                    <Badge variant="outline" className="flex-shrink-0">
-                      {ticket.sectorName}
-                    </Badge>
-                  </div>
+                    <div className="flex flex-col items-end gap-2 flex-shrink-0">
+                      <Badge variant="outline" className="text-sm">
+                        {ticket.sectorName}
+                      </Badge>
+                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                  </motion.div>
                 </Link>
               ))}
             </div>
           )}
-        </CardContent>
-      </Card>
-    </div>
+        </motion.div>
+      </div>
+    </motion.div>
   );
 }

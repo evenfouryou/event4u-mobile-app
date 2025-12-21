@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link, useLocation } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { triggerHaptic } from "@/components/mobile-primitives";
 import {
   Calendar,
   MapPin,
@@ -17,19 +18,18 @@ import {
   ChevronLeft,
   Plus,
   Minus,
-  Sparkles,
   Check,
   AlertCircle,
   ShoppingCart,
   Music,
-  Star,
   Zap,
   Map,
+  Info,
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState } from "react";
+import { useState, useRef } from "react";
 
 interface Seat {
   id: string;
@@ -105,6 +105,18 @@ interface EventDetail {
   sectors: Sector[];
 }
 
+const springTransition = {
+  type: "spring",
+  stiffness: 400,
+  damping: 30,
+};
+
+const fadeInUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: springTransition,
+};
+
 function FloorPlanViewer({
   floorPlan,
   sectors,
@@ -120,20 +132,18 @@ function FloorPlanViewer({
   onZoneClick: (zoneId: string, sectorCode: string | null) => void;
   onSeatClick: (seatId: string, seat: Seat) => void;
 }) {
-  // Colori per stato posto
   const getSeatColor = (status: string, isSelected: boolean, isAccessible?: boolean) => {
-    if (isSelected) return '#22c55e'; // verde - selezionato
-    if (isAccessible) return '#3b82f6'; // blu - accessibile
+    if (isSelected) return '#22c55e';
+    if (isAccessible) return '#3b82f6';
     switch (status) {
-      case 'available': return '#10b981'; // verde chiaro - disponibile
-      case 'sold': return '#ef4444'; // rosso - venduto
-      case 'reserved': return '#f59e0b'; // arancione - riservato
-      case 'blocked': return '#6b7280'; // grigio - bloccato
+      case 'available': return '#10b981';
+      case 'sold': return '#ef4444';
+      case 'reserved': return '#f59e0b';
+      case 'blocked': return '#6b7280';
       default: return '#9ca3af';
     }
   };
 
-  // Render singolo posto
   const renderSeat = (seat: Seat, sectorCode: string) => {
     if (!seat.posX || !seat.posY) return null;
     
@@ -147,16 +157,15 @@ function FloorPlanViewer({
         <circle
           cx={x}
           cy={y}
-          r={0.8}
+          r={1.2}
           fill={getSeatColor(seat.status, isSelected, seat.isAccessible)}
           stroke={isSelected ? '#16a34a' : 'rgba(0,0,0,0.3)'}
-          strokeWidth={isSelected ? 0.3 : 0.1}
-          className={`transition-all duration-150 ${
-            isAvailable ? 'cursor-pointer hover:r-1' : 'cursor-not-allowed'
-          }`}
+          strokeWidth={isSelected ? 0.4 : 0.15}
+          className={`transition-all duration-150 ${isAvailable ? 'cursor-pointer' : 'cursor-not-allowed'}`}
           onClick={(e) => {
             e.stopPropagation();
             if (isAvailable) {
+              triggerHaptic('medium');
               onSeatClick(seat.id, seat);
             }
           }}
@@ -166,10 +175,10 @@ function FloorPlanViewer({
           <circle
             cx={x}
             cy={y}
-            r={1.2}
+            r={1.8}
             fill="none"
             stroke="#22c55e"
-            strokeWidth={0.15}
+            strokeWidth={0.2}
             className="pointer-events-none animate-pulse"
           />
         )}
@@ -184,14 +193,12 @@ function FloorPlanViewer({
     const points = coords.map(p => `${p.x},${p.y}`).join(' ');
     const isSelected = selectedZoneId === zone.id;
     
-    // Use eventMapping.sectorId if available, otherwise fall back to defaultSectorCode
     const sectorId = zone.eventMapping?.sectorId;
     const linkedSector = sectorId 
       ? sectors.find(s => s.id === sectorId)
       : sectors.find(s => s.sectorCode === zone.defaultSectorCode);
     const isAvailable = linkedSector ? linkedSector.availableSeats > 0 : false;
     
-    // Use custom price from eventMapping if available
     const displayPrice = zone.eventMapping?.customPrice 
       ? Number(zone.eventMapping.customPrice) 
       : (linkedSector ? Number(linkedSector.priceIntero) : null);
@@ -206,11 +213,12 @@ function FloorPlanViewer({
           opacity={isSelected ? 0.7 : (Number(zone.opacity) || 0.4)}
           className={`transition-all duration-200 ${
             zone.isSelectable && isAvailable 
-              ? 'cursor-pointer hover:opacity-60' 
+              ? 'cursor-pointer' 
               : isAvailable ? 'cursor-default' : 'cursor-not-allowed opacity-20'
           }`}
           onClick={() => {
             if (zone.isSelectable && isAvailable && linkedSector) {
+              triggerHaptic('medium');
               onZoneClick(zone.id, linkedSector.sectorCode);
             }
           }}
@@ -247,21 +255,17 @@ function FloorPlanViewer({
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: 0.35 }}
-    >
-      <Card className="bg-card/50 border-border p-4 sm:p-6 rounded-xl sm:rounded-2xl backdrop-blur-sm overflow-hidden">
-        <div className="flex items-center gap-2 mb-4">
+    <motion.div {...fadeInUp} transition={{ ...springTransition, delay: 0.35 }}>
+      <div className="bg-card/50 border border-border p-4 rounded-2xl backdrop-blur-sm">
+        <div className="flex items-center gap-2 mb-3">
           <Map className="w-5 h-5 text-primary" />
-          <h3 className="text-base sm:text-lg font-semibold text-foreground">Mappa della Venue</h3>
+          <h3 className="text-base font-semibold text-foreground">Mappa della Venue</h3>
         </div>
         <p className="text-sm text-muted-foreground mb-4">
-          Clicca su una zona per selezionarla e vedere i dettagli del biglietto
+          Tocca una zona per selezionarla
         </p>
         
-        <div className="relative w-full aspect-video bg-muted/30 rounded-lg overflow-hidden">
+        <div className="relative w-full aspect-video bg-muted/30 rounded-xl overflow-hidden">
           {floorPlan.imageUrl ? (
             <img 
               src={floorPlan.imageUrl} 
@@ -281,10 +285,7 @@ function FloorPlanViewer({
             preserveAspectRatio="none"
             style={{ zIndex: 10 }}
           >
-            {/* Render zone polygons */}
             {floorPlan.zones.map(zone => renderZonePolygon(zone))}
-            
-            {/* Render individual seats for numbered sectors */}
             {sectors.filter(s => s.isNumbered && s.seats?.length > 0).map(sector => 
               sector.seats.map(seat => renderSeat(seat, sector.sectorCode))
             )}
@@ -304,319 +305,227 @@ function FloorPlanViewer({
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ef4444' }} />
             <span>Venduto</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#f59e0b' }} />
-            <span>Riservato</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#3b82f6' }} />
-            <span>Accessibile</span>
-          </div>
         </div>
-      </Card>
+      </div>
     </motion.div>
   );
 }
 
-function SectorCard({
+function TicketTypeCard({
   sector,
-  ticketedEventId,
+  quantity,
+  setQuantity,
+  ticketType,
+  setTicketType,
+  firstName,
+  setFirstName,
+  lastName,
+  setLastName,
   requiresNominative,
-  onAddToCart,
-  isAdding,
-  justAdded,
-  isHighlighted,
+  selectedSeat,
+  onSeatClick,
   mapSelectedSeatIds,
-  onSeatSelectFromCard,
 }: {
   sector: Sector;
-  ticketedEventId: string;
+  quantity: number;
+  setQuantity: (q: number) => void;
+  ticketType: string;
+  setTicketType: (t: string) => void;
+  firstName: string;
+  setFirstName: (n: string) => void;
+  lastName: string;
+  setLastName: (n: string) => void;
   requiresNominative: boolean;
-  onAddToCart: (data: any) => Promise<void>;
-  isAdding: boolean;
-  justAdded: string | null;
-  isHighlighted?: boolean;
+  selectedSeat: Seat | null;
+  onSeatClick: (seat: Seat) => void;
   mapSelectedSeatIds?: string[];
-  onSeatSelectFromCard?: (seatId: string, seat: Seat) => void;
 }) {
-  const [quantity, setQuantity] = useState(1);
-  const [ticketType, setTicketType] = useState("intero");
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  
-  // Find the selected seat for this sector from map selection
-  const selectedSeat = sector.seats.find(s => mapSelectedSeatIds?.includes(s.id)) || null;
-  
-  const handleSeatClick = (seat: Seat) => {
-    if (onSeatSelectFromCard) {
-      onSeatSelectFromCard(seat.id, seat);
-    }
-  };
-
   const price = ticketType === "ridotto" && sector.priceRidotto
     ? Number(sector.priceRidotto)
     : Number(sector.priceIntero);
 
-  const totalPrice = price * (sector.isNumbered ? 1 : quantity);
   const isAvailable = sector.availableSeats > 0;
-  const wasJustAdded = justAdded === sector.id;
 
-  const handleAdd = async () => {
-    if (!isAvailable) return;
-
-    if (sector.isNumbered && !selectedSeat) {
-      return;
-    }
-
-    if (requiresNominative && (!firstName || !lastName)) {
-      return;
-    }
-
-    await onAddToCart({
-      ticketedEventId,
-      sectorId: sector.id,
-      seatId: selectedSeat?.id,
-      quantity: sector.isNumbered ? 1 : quantity,
-      ticketType,
-      participantFirstName: firstName,
-      participantLastName: lastName,
-    });
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4 }}
-    >
-      <Card 
-        className={`relative overflow-hidden transition-all duration-500 ${
-          wasJustAdded 
-            ? "bg-gradient-to-br from-emerald-900/40 to-teal-900/30 border-emerald-500/50 shadow-lg shadow-emerald-500/20" 
-            : isHighlighted
-            ? "bg-gradient-to-br from-primary/20 to-blue-900/30 border-primary ring-2 ring-primary/50 shadow-lg shadow-primary/20"
-            : "bg-gradient-to-br from-card/80 to-card/60 border-border hover:border-primary/30"
-        }`}
-        data-testid={`card-sector-${sector.id}`}
-      >
-        <AnimatePresence>
-          {wasJustAdded && (
-            <motion.div
-              initial={{ opacity: 0, scale: 0.8 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.8 }}
-              className="absolute inset-0 flex items-center justify-center bg-emerald-900/80 backdrop-blur-sm z-10"
-            >
-              <div className="text-center">
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={{ type: "spring", damping: 10 }}
-                  className="w-16 h-16 mx-auto mb-3 rounded-full bg-emerald-500 flex items-center justify-center"
-                >
-                  <Check className="w-8 h-8 text-white" />
-                </motion.div>
-                <p className="text-lg font-semibold text-foreground mb-3">Aggiunto al carrello!</p>
-                <Link href="/carrello">
-                  <Button size="sm" className="bg-white text-black hover:bg-gray-100" data-testid="button-go-to-cart">
-                    <ShoppingCart className="w-4 h-4 mr-2" />
-                    Vai al carrello
-                  </Button>
-                </Link>
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        <CardHeader className="pb-2 sm:pb-3 p-4 sm:p-6">
-          <div className="flex items-start justify-between gap-2 sm:gap-3">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-1">
-                <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shrink-0">
-                  <Ticket className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-black" />
-                </div>
-                <CardTitle className="text-lg sm:text-xl text-foreground truncate" data-testid={`text-sector-name-${sector.id}`}>
-                  {sector.name}
-                </CardTitle>
-              </div>
+  if (!isAvailable) {
+    return (
+      <motion.div {...fadeInUp} className="bg-card/50 border border-border rounded-2xl p-4">
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
+              <Ticket className="w-5 h-5 text-black" />
             </div>
-            <div className="text-right shrink-0">
-              <div className="text-2xl sm:text-3xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent" data-testid={`text-sector-price-${sector.id}`}>
-                €{price.toFixed(2)}
-              </div>
-              {sector.priceRidotto && Number(sector.priceRidotto) > 0 && (
-                <p className="text-xs text-muted-foreground">Ridotto: €{Number(sector.priceRidotto).toFixed(2)}</p>
-              )}
+            <div>
+              <h3 className="font-semibold text-foreground">{sector.name}</h3>
+              <p className="text-xs text-muted-foreground">{sector.availableSeats} disponibili</p>
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-3 sm:space-y-4 p-4 sm:p-6 pt-0 sm:pt-0">
-          {!isAvailable ? (
-            <div className="py-6 text-center">
-              <Badge variant="destructive" className="text-sm px-4 py-2">
-                Esaurito
-              </Badge>
-            </div>
-          ) : (
-            <>
-              {sector.priceRidotto && Number(sector.priceRidotto) > 0 && (
-                <div className="space-y-2">
-                  <Label className="text-xs sm:text-sm text-muted-foreground font-medium">Tipo Biglietto</Label>
-                  <RadioGroup value={ticketType} onValueChange={setTicketType} className="flex gap-2 sm:gap-3">
-                    <div 
-                      className={`flex-1 p-2.5 sm:p-3 rounded-xl border cursor-pointer transition-all ${
-                        ticketType === "intero" 
-                          ? "border-primary bg-primary/10" 
-                          : "border-border hover:border-muted"
-                      }`}
-                      onClick={() => setTicketType("intero")}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="intero" id={`intero-${sector.id}`} className="border-primary" />
-                        <Label htmlFor={`intero-${sector.id}`} className="text-foreground cursor-pointer font-medium text-sm sm:text-base">
-                          Intero
-                        </Label>
-                      </div>
-                      <p className="text-primary font-bold mt-1 text-sm sm:text-base">€{Number(sector.priceIntero).toFixed(2)}</p>
-                    </div>
-                    <div 
-                      className={`flex-1 p-2.5 sm:p-3 rounded-xl border cursor-pointer transition-all ${
-                        ticketType === "ridotto" 
-                          ? "border-primary bg-primary/10" 
-                          : "border-border hover:border-muted"
-                      }`}
-                      onClick={() => setTicketType("ridotto")}
-                    >
-                      <div className="flex items-center space-x-2">
-                        <RadioGroupItem value="ridotto" id={`ridotto-${sector.id}`} className="border-primary" />
-                        <Label htmlFor={`ridotto-${sector.id}`} className="text-foreground cursor-pointer font-medium text-sm sm:text-base">
-                          Ridotto
-                        </Label>
-                      </div>
-                      <p className="text-primary font-bold mt-1 text-sm sm:text-base">€{Number(sector.priceRidotto).toFixed(2)}</p>
-                    </div>
-                  </RadioGroup>
-                </div>
-              )}
+          <Badge variant="destructive" className="text-sm">Esaurito</Badge>
+        </div>
+      </motion.div>
+    );
+  }
 
-              {sector.isNumbered ? (
-                <div className="space-y-2">
-                  <Label className="text-xs sm:text-sm text-muted-foreground font-medium">Seleziona Posto</Label>
-                  <div className="grid grid-cols-5 sm:grid-cols-6 gap-1.5 sm:gap-2 max-h-40 overflow-y-auto p-2 sm:p-3 bg-background/30 rounded-xl">
-                    {sector.seats.map((seat) => (
-                      <button
-                        key={seat.id}
-                        onClick={() => handleSeatClick(seat)}
-                        disabled={seat.status !== "available"}
-                        className={`p-2 text-xs rounded-lg font-medium transition-all ${
-                          seat.status !== "available"
-                            ? "bg-red-500/20 text-red-400 cursor-not-allowed"
-                            : selectedSeat?.id === seat.id
-                            ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
-                            : "bg-muted/50 text-foreground hover:bg-muted"
-                        }`}
-                        data-testid={`seat-${seat.id}`}
-                      >
-                        {seat.row}{seat.seatNumber}
-                      </button>
-                    ))}
-                  </div>
-                  {selectedSeat && (
-                    <motion.p 
-                      initial={{ opacity: 0, y: -10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="text-sm text-emerald-400 flex items-center gap-1"
-                    >
-                      <Check className="w-4 h-4" />
-                      Posto selezionato: Fila {selectedSeat.row}, Posto {selectedSeat.seatNumber}
-                    </motion.p>
-                  )}
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  <Label className="text-xs sm:text-sm text-muted-foreground font-medium">Quantità</Label>
-                  <div className="flex items-center gap-3 sm:gap-4 bg-background/30 rounded-xl p-2">
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                      className="text-foreground h-10 w-10 rounded-lg"
-                      data-testid={`button-minus-${sector.id}`}
-                    >
-                      <Minus className="w-5 h-5" />
-                    </Button>
-                    <span className="text-xl sm:text-2xl font-bold text-foreground w-10 sm:w-12 text-center" data-testid={`text-quantity-${sector.id}`}>
-                      {quantity}
-                    </span>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      onClick={() => setQuantity(Math.min(10, quantity + 1))}
-                      className="text-foreground h-10 w-10 rounded-lg"
-                      data-testid={`button-plus-${sector.id}`}
-                    >
-                      <Plus className="w-5 h-5" />
-                    </Button>
-                  </div>
-                </div>
-              )}
-
-              {requiresNominative && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-xs sm:text-sm text-muted-foreground font-medium">Nome</Label>
-                    <Input
-                      value={firstName}
-                      onChange={(e) => setFirstName(e.target.value)}
-                      placeholder="Mario"
-                      className="bg-background/30 border-border text-foreground placeholder:text-muted-foreground rounded-xl h-11"
-                      data-testid={`input-firstname-${sector.id}`}
-                    />
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-xs sm:text-sm text-muted-foreground font-medium">Cognome</Label>
-                    <Input
-                      value={lastName}
-                      onChange={(e) => setLastName(e.target.value)}
-                      placeholder="Rossi"
-                      className="bg-background/30 border-border text-foreground placeholder:text-muted-foreground rounded-xl h-11"
-                      data-testid={`input-lastname-${sector.id}`}
-                    />
-                  </div>
-                </div>
-              )}
-
-              <div className="flex items-center justify-between pt-3 sm:pt-4 border-t border-border gap-3">
-                <div>
-                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Totale</p>
-                  <p className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent" data-testid={`text-total-${sector.id}`}>
-                    €{totalPrice.toFixed(2)}
-                  </p>
-                </div>
-                <Button
-                  onClick={handleAdd}
-                  disabled={
-                    isAdding ||
-                    (sector.isNumbered && !selectedSeat) ||
-                    (requiresNominative && (!firstName || !lastName))
-                  }
-                  className="font-bold px-4 sm:px-6 py-2.5 sm:py-3 rounded-xl shadow-lg shadow-primary/25 transition-all h-11 sm:h-auto"
-                  data-testid={`button-add-${sector.id}`}
-                >
-                  {isAdding ? (
-                    <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
-                  ) : (
-                    <>
-                      <ShoppingCart className="w-4 h-4 sm:w-5 sm:h-5 mr-1.5 sm:mr-2" />
-                      <span className="text-sm sm:text-base">Aggiungi</span>
-                    </>
-                  )}
-                </Button>
-              </div>
-            </>
+  return (
+    <motion.div 
+      {...fadeInUp} 
+      className="bg-card/50 border border-border rounded-2xl p-4 space-y-4"
+      data-testid={`card-sector-${sector.id}`}
+      data-sector-code={sector.sectorCode}
+    >
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
+            <Ticket className="w-5 h-5 text-black" />
+          </div>
+          <div>
+            <h3 className="font-semibold text-foreground" data-testid={`text-sector-name-${sector.id}`}>
+              {sector.name}
+            </h3>
+            <p className="text-xs text-muted-foreground">{sector.availableSeats} disponibili</p>
+          </div>
+        </div>
+        <div className="text-right">
+          <div className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent" data-testid={`text-sector-price-${sector.id}`}>
+            €{price.toFixed(2)}
+          </div>
+          {sector.priceRidotto && Number(sector.priceRidotto) > 0 && (
+            <p className="text-xs text-muted-foreground">Ridotto: €{Number(sector.priceRidotto).toFixed(2)}</p>
           )}
-        </CardContent>
-      </Card>
+        </div>
+      </div>
+
+      {sector.priceRidotto && Number(sector.priceRidotto) > 0 && (
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground font-medium">Tipo Biglietto</Label>
+          <RadioGroup value={ticketType} onValueChange={setTicketType} className="flex gap-2">
+            <button
+              type="button"
+              onClick={() => { triggerHaptic('light'); setTicketType("intero"); }}
+              className={`flex-1 p-3 rounded-xl border min-h-[56px] transition-all ${
+                ticketType === "intero" 
+                  ? "border-primary bg-primary/10" 
+                  : "border-border"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="intero" id={`intero-${sector.id}`} className="border-primary" />
+                <Label htmlFor={`intero-${sector.id}`} className="text-foreground cursor-pointer font-medium">
+                  Intero
+                </Label>
+              </div>
+              <p className="text-primary font-bold mt-1">€{Number(sector.priceIntero).toFixed(2)}</p>
+            </button>
+            <button
+              type="button"
+              onClick={() => { triggerHaptic('light'); setTicketType("ridotto"); }}
+              className={`flex-1 p-3 rounded-xl border min-h-[56px] transition-all ${
+                ticketType === "ridotto" 
+                  ? "border-primary bg-primary/10" 
+                  : "border-border"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <RadioGroupItem value="ridotto" id={`ridotto-${sector.id}`} className="border-primary" />
+                <Label htmlFor={`ridotto-${sector.id}`} className="text-foreground cursor-pointer font-medium">
+                  Ridotto
+                </Label>
+              </div>
+              <p className="text-primary font-bold mt-1">€{Number(sector.priceRidotto).toFixed(2)}</p>
+            </button>
+          </RadioGroup>
+        </div>
+      )}
+
+      {sector.isNumbered ? (
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground font-medium">Seleziona Posto</Label>
+          <div className="grid grid-cols-5 gap-2 max-h-32 overflow-y-auto p-3 bg-background/30 rounded-xl">
+            {sector.seats.map((seat) => {
+              const isMapSelected = mapSelectedSeatIds?.includes(seat.id);
+              return (
+                <button
+                  key={seat.id}
+                  onClick={() => { triggerHaptic('light'); onSeatClick(seat); }}
+                  disabled={seat.status !== "available"}
+                  className={`p-2 min-h-[44px] text-xs rounded-lg font-medium transition-all ${
+                    seat.status !== "available"
+                      ? "bg-red-500/20 text-red-400 cursor-not-allowed"
+                      : isMapSelected || selectedSeat?.id === seat.id
+                      ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30"
+                      : "bg-muted/50 text-foreground"
+                  }`}
+                  data-testid={`seat-btn-${seat.id}`}
+                >
+                  {seat.row}{seat.seatNumber}
+                </button>
+              );
+            })}
+          </div>
+          {selectedSeat && (
+            <motion.p 
+              initial={{ opacity: 0, y: -10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={springTransition}
+              className="text-sm text-emerald-400 flex items-center gap-1"
+            >
+              <Check className="w-4 h-4" />
+              Posto: Fila {selectedSeat.row}, Posto {selectedSeat.seatNumber}
+            </motion.p>
+          )}
+        </div>
+      ) : (
+        <div className="space-y-2">
+          <Label className="text-xs text-muted-foreground font-medium">Quantità</Label>
+          <div className="flex items-center justify-center gap-6 bg-background/30 rounded-xl p-3">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => { triggerHaptic('light'); setQuantity(Math.max(1, quantity - 1)); }}
+              className="h-14 w-14 rounded-full text-foreground"
+              data-testid={`button-minus-${sector.id}`}
+            >
+              <Minus className="w-6 h-6" />
+            </Button>
+            <span className="text-3xl font-bold text-foreground w-12 text-center" data-testid={`text-quantity-${sector.id}`}>
+              {quantity}
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => { triggerHaptic('light'); setQuantity(Math.min(10, quantity + 1)); }}
+              className="h-14 w-14 rounded-full text-foreground"
+              data-testid={`button-plus-${sector.id}`}
+            >
+              <Plus className="w-6 h-6" />
+            </Button>
+          </div>
+        </div>
+      )}
+
+      {requiresNominative && (
+        <div className="space-y-3">
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground font-medium">Nome</Label>
+            <Input
+              value={firstName}
+              onChange={(e) => setFirstName(e.target.value)}
+              placeholder="Mario"
+              className="bg-background/30 border-border text-foreground placeholder:text-muted-foreground rounded-xl h-12"
+              data-testid={`input-firstname-${sector.id}`}
+            />
+          </div>
+          <div className="space-y-1">
+            <Label className="text-xs text-muted-foreground font-medium">Cognome</Label>
+            <Input
+              value={lastName}
+              onChange={(e) => setLastName(e.target.value)}
+              placeholder="Rossi"
+              className="bg-background/30 border-border text-foreground placeholder:text-muted-foreground rounded-xl h-12"
+              data-testid={`input-lastname-${sector.id}`}
+            />
+          </div>
+        </div>
+      )}
     </motion.div>
   );
 }
@@ -626,11 +535,18 @@ export default function PublicEventDetailPage() {
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [isAdding, setIsAdding] = useState(false);
-  const [justAddedSector, setJustAddedSector] = useState<string | null>(null);
   const [cartCount, setCartCount] = useState(0);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [highlightedSectorCode, setHighlightedSectorCode] = useState<string | null>(null);
   const [selectedSeatIds, setSelectedSeatIds] = useState<string[]>([]);
+  
+  const [selectedSectorId, setSelectedSectorId] = useState<string | null>(null);
+  const [quantity, setQuantity] = useState(1);
+  const [ticketType, setTicketType] = useState("intero");
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+
+  const contentRef = useRef<HTMLDivElement>(null);
 
   const { data: event, isLoading, error } = useQuery<EventDetail>({
     queryKey: ["/api/public/events", params.id],
@@ -652,7 +568,6 @@ export default function PublicEventDetailPage() {
           const json = JSON.parse(text);
           message = json.message || text;
         } catch {
-          // Not JSON
         }
         throw new Error(message);
       }
@@ -662,11 +577,18 @@ export default function PublicEventDetailPage() {
     retry: false,
   });
 
+  const selectedSector = event?.sectors.find(s => s.id === selectedSectorId) || event?.sectors[0];
+  const selectedSeat = selectedSector?.seats.find(s => selectedSeatIds.includes(s.id)) || null;
+
   const handleZoneClick = (zoneId: string, sectorCode: string | null) => {
     setSelectedZoneId(zoneId);
     setHighlightedSectorCode(sectorCode);
     
-    if (sectorCode) {
+    if (sectorCode && event) {
+      const sector = event.sectors.find(s => s.sectorCode === sectorCode);
+      if (sector) {
+        setSelectedSectorId(sector.id);
+      }
       setTimeout(() => {
         const sectorElement = document.querySelector(`[data-sector-code="${sectorCode}"]`);
         if (sectorElement) {
@@ -681,40 +603,64 @@ export default function PublicEventDetailPage() {
       if (prev.includes(seatId)) {
         return prev.filter(id => id !== seatId);
       } else {
-        return [...prev, seatId];
+        return [seatId];
       }
     });
     
-    // Find the sector for this seat and highlight it
     const sector = event?.sectors.find(s => s.seats.some(st => st.id === seatId));
     if (sector) {
+      setSelectedSectorId(sector.id);
       setHighlightedSectorCode(sector.sectorCode);
-      
-      toast({
-        title: selectedSeatIds.includes(seatId) ? "Posto deselezionato" : "Posto selezionato",
-        description: `${seat.seatLabel || `${seat.row}${seat.seatNumber}`}`,
-      });
     }
   };
 
-  const handleAddToCart = async (data: any) => {
+  const handleSeatClickFromCard = (seat: Seat) => {
+    if (selectedSector) {
+      handleSeatClick(seat.id, seat);
+    }
+  };
+
+  const price = selectedSector && (ticketType === "ridotto" && selectedSector.priceRidotto
+    ? Number(selectedSector.priceRidotto)
+    : Number(selectedSector.priceIntero));
+
+  const totalPrice = price ? price * (selectedSector?.isNumbered ? 1 : quantity) : 0;
+
+  const canPurchase = selectedSector && 
+    selectedSector.availableSeats > 0 &&
+    (!selectedSector.isNumbered || selectedSeat) &&
+    (!event?.requiresNominative || (firstName && lastName));
+
+  const handlePurchase = async () => {
+    if (!canPurchase || !selectedSector || !event) return;
+
+    triggerHaptic('medium');
     setIsAdding(true);
+    
     try {
-      await apiRequest("POST", "/api/public/cart/add", data);
-      setJustAddedSector(data.sectorId);
-      setCartCount(prev => prev + (data.quantity || 1));
+      await apiRequest("POST", "/api/public/cart/add", {
+        ticketedEventId: event.id,
+        sectorId: selectedSector.id,
+        seatId: selectedSeat?.id,
+        quantity: selectedSector.isNumbered ? 1 : quantity,
+        ticketType,
+        participantFirstName: firstName,
+        participantLastName: lastName,
+      });
+      
+      setCartCount(prev => prev + (selectedSector.isNumbered ? 1 : quantity));
+      triggerHaptic('success');
       
       toast({
         title: "Aggiunto al carrello!",
-        description: `${data.quantity || 1} biglietto/i aggiunto/i con successo`,
+        description: `${selectedSector.isNumbered ? 1 : quantity} biglietto/i aggiunto/i`,
       });
       
       queryClient.invalidateQueries({ queryKey: ["/api/public/cart"] });
       
-      setTimeout(() => {
-        setJustAddedSector(null);
-      }, 2000);
+      navigate("/carrello");
     } catch (error: any) {
+      triggerHaptic('error');
       toast({
         title: "Errore",
         description: error.message || "Impossibile aggiungere al carrello.",
@@ -727,18 +673,22 @@ export default function PublicEventDetailPage() {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+      <div 
+        className="fixed inset-0 bg-background flex items-center justify-center p-4"
+        style={{ paddingTop: 'env(safe-area-inset-top)', paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
+          transition={springTransition}
         >
-          <Card className="p-8 text-center bg-red-500/10 border-red-500/20 max-w-md backdrop-blur-xl">
+          <Card className="p-8 text-center bg-red-500/10 border-red-500/20 backdrop-blur-xl rounded-2xl">
             <AlertCircle className="w-16 h-16 mx-auto mb-4 text-red-400" />
             <h2 className="text-xl font-bold text-foreground mb-2">Evento non trovato</h2>
-            <p className="text-muted-foreground mb-6">L'evento richiesto non è disponibile o non esiste.</p>
+            <p className="text-muted-foreground mb-6">L'evento richiesto non è disponibile.</p>
             <Link href="/acquista">
-              <Button variant="ghost" className="text-foreground">
-                <ChevronLeft className="w-4 h-4 mr-1" /> Torna agli eventi
+              <Button variant="ghost" className="text-foreground min-h-[44px]">
+                <ChevronLeft className="w-5 h-5 mr-1" /> Torna agli eventi
               </Button>
             </Link>
           </Card>
@@ -748,229 +698,269 @@ export default function PublicEventDetailPage() {
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <div className="flex items-center justify-between gap-4">
-            <Link href="/acquista">
-              <Button variant="ghost" className="text-muted-foreground" data-testid="button-back">
-                <ChevronLeft className="w-4 h-4 mr-1" /> Eventi
-              </Button>
-            </Link>
-            <Link href="/">
-              <div className="flex items-center gap-2 cursor-pointer group">
-                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center shadow-lg shadow-yellow-500/25">
-                  <Sparkles className="w-5 h-5 text-primary-foreground" />
-                </div>
-                <span className="text-xl font-bold text-foreground hidden sm:block">Event4U</span>
-              </div>
-            </Link>
-            <Link href="/carrello">
-              <Button className="relative rounded-xl shadow-lg shadow-primary/25" data-testid="button-cart">
-                <ShoppingCart className="w-5 h-5" />
-                <span className="hidden sm:inline ml-2">Carrello</span>
-                <AnimatePresence>
-                  {cartCount > 0 && (
-                    <motion.span
-                      initial={{ scale: 0 }}
-                      animate={{ scale: 1 }}
-                      exit={{ scale: 0 }}
-                      className="absolute -top-2 -right-2 w-6 h-6 bg-red-500 text-white text-xs font-bold rounded-full flex items-center justify-center shadow-lg"
-                    >
-                      {cartCount}
-                    </motion.span>
-                  )}
-                </AnimatePresence>
-              </Button>
-            </Link>
-          </div>
-        </div>
-      </header>
-
-      <main className="max-w-7xl mx-auto px-3 sm:px-4 py-4 sm:py-6">
+    <div className="fixed inset-0 bg-background flex flex-col">
+      <div 
+        ref={contentRef}
+        className="flex-1 overflow-y-auto overscroll-contain"
+        style={{ paddingBottom: 'calc(80px + env(safe-area-inset-bottom))' }}
+      >
         {isLoading ? (
-          <div className="space-y-4 sm:space-y-6">
-            <Skeleton className="h-64 sm:h-80 rounded-2xl sm:rounded-3xl" />
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-6">
-              <Skeleton className="h-56 sm:h-64 rounded-xl sm:rounded-2xl" />
-              <Skeleton className="h-56 sm:h-64 rounded-xl sm:rounded-2xl" />
-            </div>
+          <div className="space-y-4 p-4">
+            <Skeleton className="h-72 rounded-2xl" />
+            <Skeleton className="h-32 rounded-2xl" />
+            <Skeleton className="h-48 rounded-2xl" />
           </div>
         ) : event ? (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="space-y-4 sm:space-y-8"
-          >
-            <Card className="relative overflow-hidden rounded-2xl sm:rounded-3xl border-0 bg-gradient-to-br from-indigo-900/60 via-purple-900/50 to-pink-900/40">
-              <div className="relative aspect-[4/3] sm:aspect-square md:aspect-[2/1]">
-                {event.eventImageUrl ? (
-                  <img
-                    src={event.eventImageUrl}
-                    alt={event.eventName}
-                    className="absolute inset-0 w-full h-full object-cover"
-                    data-testid="img-event-cover"
-                  />
-                ) : (
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <Music className="w-32 h-32 text-white/10" />
-                  </div>
-                )}
-                <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
-                <div className="absolute inset-0 bg-gradient-to-r from-background/50 to-transparent" />
-              </div>
+          <>
+            <div className="relative w-full aspect-[3/4]">
+              {event.eventImageUrl ? (
+                <img
+                  src={event.eventImageUrl}
+                  alt={event.eventName}
+                  className="absolute inset-0 w-full h-full object-cover"
+                  data-testid="img-event-cover"
+                />
+              ) : (
+                <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/60 via-purple-900/50 to-pink-900/40 flex items-center justify-center">
+                  <Music className="w-24 h-24 text-white/20" />
+                </div>
+              )}
               
-              <CardContent className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-10">
-                <motion.div
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
+              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+              
+              <Link href="/acquista">
+                <motion.button
+                  initial={{ opacity: 0, x: -20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={springTransition}
+                  className="absolute top-0 left-4 w-11 h-11 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center z-10"
+                  style={{ marginTop: 'calc(12px + env(safe-area-inset-top))' }}
+                  data-testid="button-back"
+                  onClick={() => triggerHaptic('light')}
                 >
-                  <div className="flex flex-wrap gap-1.5 sm:gap-2 mb-2 sm:mb-4">
-                    {event.ticketingStatus === "active" && (
-                      <Badge className="bg-emerald-500/90 text-white border-0 px-2 sm:px-3 py-0.5 sm:py-1 shadow-lg shadow-emerald-500/25 text-xs sm:text-sm">
-                        <Zap className="w-2.5 h-2.5 sm:w-3 sm:h-3 mr-1" />
-                        In Vendita
-                      </Badge>
+                  <ChevronLeft className="w-6 h-6 text-white" />
+                </motion.button>
+              </Link>
+              
+              <Link href="/carrello">
+                <motion.button
+                  initial={{ opacity: 0, x: 20 }}
+                  animate={{ opacity: 1, x: 0 }}
+                  transition={springTransition}
+                  className="absolute top-0 right-4 w-11 h-11 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center z-10"
+                  style={{ marginTop: 'calc(12px + env(safe-area-inset-top))' }}
+                  data-testid="button-cart"
+                  onClick={() => triggerHaptic('light')}
+                >
+                  <ShoppingCart className="w-5 h-5 text-white" />
+                  <AnimatePresence>
+                    {cartCount > 0 && (
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        exit={{ scale: 0 }}
+                        transition={springTransition}
+                        className="absolute -top-1 -right-1 w-5 h-5 bg-primary text-primary-foreground text-xs font-bold rounded-full flex items-center justify-center"
+                      >
+                        {cartCount}
+                      </motion.span>
                     )}
-                    {event.requiresNominative && (
-                      <Badge className="bg-purple-500/90 text-white border-0 px-2 sm:px-3 py-0.5 sm:py-1 text-xs sm:text-sm">
-                        Nominativo
-                      </Badge>
-                    )}
-                  </div>
-                  
-                  <h1
-                    className="text-xl sm:text-3xl md:text-5xl font-black text-foreground mb-2 sm:mb-4 leading-tight"
-                    data-testid="text-event-name"
-                  >
-                    {event.eventName}
-                  </h1>
-                  
-                  <div className="flex flex-wrap gap-2 sm:gap-4 text-foreground/90">
-                    <div className="flex items-center gap-1.5 sm:gap-2 bg-muted/50 backdrop-blur-sm rounded-lg sm:rounded-xl px-2.5 sm:px-4 py-1.5 sm:py-2">
-                      <Calendar className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-primary" />
-                      <span className="font-medium text-xs sm:text-base" data-testid="text-event-date">
-                        {format(new Date(event.eventStart), "d MMM", { locale: it })}
-                        <span className="hidden sm:inline"> {format(new Date(event.eventStart), "EEEE", { locale: it })}</span>
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 bg-muted/50 backdrop-blur-sm rounded-lg sm:rounded-xl px-2.5 sm:px-4 py-1.5 sm:py-2">
-                      <Clock className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-primary" />
-                      <span className="font-medium text-xs sm:text-base" data-testid="text-event-time">
-                        {format(new Date(event.eventStart), "HH:mm")}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-1.5 sm:gap-2 bg-muted/50 backdrop-blur-sm rounded-lg sm:rounded-xl px-2.5 sm:px-4 py-1.5 sm:py-2">
-                      <MapPin className="w-3.5 h-3.5 sm:w-5 sm:h-5 text-primary" />
-                      <span className="font-medium text-xs sm:text-base truncate max-w-[120px] sm:max-w-none" data-testid="text-event-location">
-                        {event.locationName}
-                      </span>
-                    </div>
-                  </div>
-                </motion.div>
-              </CardContent>
-            </Card>
-
-            {event.eventDescription && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
+                  </AnimatePresence>
+                </motion.button>
+              </Link>
+              
+              <motion.div 
+                className="absolute bottom-0 left-0 right-0 p-4"
+                initial={{ opacity: 0, y: 30 }}
                 animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
+                transition={{ ...springTransition, delay: 0.1 }}
               >
-                <Card className="bg-card/50 border-border p-4 sm:p-6 rounded-xl sm:rounded-2xl backdrop-blur-sm">
-                  <h3 className="text-base sm:text-lg font-semibold text-foreground mb-2 sm:mb-3 flex items-center gap-2">
-                    <Star className="w-4 h-4 sm:w-5 sm:h-5 text-primary" />
-                    Descrizione
-                  </h3>
-                  <p className="text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-event-description">
+                <div className="flex flex-wrap gap-2 mb-3">
+                  {event.ticketingStatus === "active" && (
+                    <Badge className="bg-emerald-500/90 text-white border-0 px-3 py-1 shadow-lg">
+                      <Zap className="w-3 h-3 mr-1" />
+                      In Vendita
+                    </Badge>
+                  )}
+                  {event.requiresNominative && (
+                    <Badge className="bg-purple-500/90 text-white border-0 px-3 py-1">
+                      Nominativo
+                    </Badge>
+                  )}
+                </div>
+                
+                <h1 
+                  className="text-2xl font-black text-white mb-3 leading-tight"
+                  data-testid="text-event-name"
+                >
+                  {event.eventName}
+                </h1>
+                
+                <div className="flex flex-wrap gap-2">
+                  <div className="flex items-center gap-2 bg-black/40 backdrop-blur-xl rounded-xl px-3 py-2">
+                    <Calendar className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-white" data-testid="text-event-date">
+                      {format(new Date(event.eventStart), "d MMMM", { locale: it })}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-black/40 backdrop-blur-xl rounded-xl px-3 py-2">
+                    <Clock className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-white" data-testid="text-event-time">
+                      {format(new Date(event.eventStart), "HH:mm")}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2 bg-black/40 backdrop-blur-xl rounded-xl px-3 py-2">
+                    <MapPin className="w-4 h-4 text-primary" />
+                    <span className="text-sm font-medium text-white truncate max-w-[150px]" data-testid="text-event-location">
+                      {event.locationName}
+                    </span>
+                  </div>
+                </div>
+              </motion.div>
+            </div>
+
+            <div className="px-4 py-6 space-y-5 -mt-4 relative z-10">
+              {event.eventDescription && (
+                <motion.div
+                  {...fadeInUp}
+                  transition={{ ...springTransition, delay: 0.2 }}
+                  className="bg-card/50 border border-border p-4 rounded-2xl backdrop-blur-sm"
+                >
+                  <div className="flex items-center gap-2 mb-2">
+                    <Info className="w-4 h-4 text-primary" />
+                    <h3 className="text-base font-semibold text-foreground">Descrizione</h3>
+                  </div>
+                  <p className="text-sm text-muted-foreground whitespace-pre-line leading-relaxed" data-testid="text-event-description">
                     {event.eventDescription}
                   </p>
-                </Card>
-              </motion.div>
-            )}
+                </motion.div>
+              )}
 
-            {event.requiresNominative && (
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.35 }}
-              >
-                <Card className="bg-purple-500/10 border-purple-500/20 p-4 rounded-2xl flex items-start gap-3">
+              {event.requiresNominative && (
+                <motion.div
+                  {...fadeInUp}
+                  transition={{ ...springTransition, delay: 0.25 }}
+                  className="bg-purple-500/10 border border-purple-500/20 p-4 rounded-2xl flex items-start gap-3"
+                >
                   <AlertCircle className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
                   <div>
-                    <h4 className="font-semibold text-purple-300">Biglietti Nominativi</h4>
-                    <p className="text-sm text-purple-200/70">
-                      Questo evento richiede biglietti nominativi. Inserisci nome e cognome per ogni partecipante.
+                    <h4 className="font-semibold text-purple-300 text-sm">Biglietti Nominativi</h4>
+                    <p className="text-xs text-purple-200/70">
+                      Inserisci nome e cognome per ogni partecipante.
                       {event.allowsChangeName && " Il cambio nominativo è consentito."}
                     </p>
                   </div>
-                </Card>
-              </motion.div>
-            )}
+                </motion.div>
+              )}
 
-            {floorPlan && floorPlan.zones && floorPlan.zones.length > 0 && (
-              <FloorPlanViewer
-                floorPlan={floorPlan}
-                sectors={event.sectors}
-                selectedZoneId={selectedZoneId}
-                selectedSeatIds={selectedSeatIds}
-                onZoneClick={handleZoneClick}
-                onSeatClick={handleSeatClick}
-              />
-            )}
+              {floorPlan && floorPlan.zones && floorPlan.zones.length > 0 && (
+                <FloorPlanViewer
+                  floorPlan={floorPlan}
+                  sectors={event.sectors}
+                  selectedZoneId={selectedZoneId}
+                  selectedSeatIds={selectedSeatIds}
+                  onZoneClick={handleZoneClick}
+                  onSeatClick={handleSeatClick}
+                />
+              )}
 
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.4 }}
-            >
-              <h2 className="text-2xl font-bold text-foreground mb-6 flex items-center gap-3">
-                <Ticket className="w-7 h-7 text-primary" />
-                Scegli il tuo biglietto
-              </h2>
-              <div className="grid md:grid-cols-2 gap-6" data-testid="grid-sectors">
-                {event.sectors.map((sector, index) => (
-                  <motion.div
-                    key={sector.id}
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.5 + index * 0.1 }}
-                    data-sector-code={sector.sectorCode}
-                  >
-                    <SectorCard
-                      sector={sector}
-                      ticketedEventId={event.id}
-                      requiresNominative={event.requiresNominative}
-                      onAddToCart={handleAddToCart}
-                      isAdding={isAdding}
-                      justAdded={justAddedSector}
-                      isHighlighted={highlightedSectorCode === sector.sectorCode}
-                      mapSelectedSeatIds={selectedSeatIds}
-                      onSeatSelectFromCard={handleSeatClick}
-                    />
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-
-            {event.sectors.length === 0 && (
               <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
+                {...fadeInUp}
+                transition={{ ...springTransition, delay: 0.3 }}
               >
-                <Card className="p-12 text-center bg-card/50 border-border rounded-2xl">
-                  <Ticket className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-xl font-semibold text-foreground mb-2">Nessun biglietto disponibile</h3>
-                  <p className="text-muted-foreground">
-                    I biglietti per questo evento non sono ancora disponibili.
-                  </p>
-                </Card>
+                <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
+                  <Ticket className="w-5 h-5 text-primary" />
+                  Scegli il tuo biglietto
+                </h2>
+                
+                <div className="space-y-4" data-testid="grid-sectors">
+                  {event.sectors.map((sector, index) => (
+                    <motion.div
+                      key={sector.id}
+                      initial={{ opacity: 0, y: 20 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ ...springTransition, delay: 0.35 + index * 0.05 }}
+                      onClick={() => {
+                        if (sector.availableSeats > 0) {
+                          triggerHaptic('light');
+                          setSelectedSectorId(sector.id);
+                        }
+                      }}
+                      className={`transition-all duration-300 rounded-2xl ${
+                        selectedSectorId === sector.id || highlightedSectorCode === sector.sectorCode
+                          ? "ring-2 ring-primary shadow-lg shadow-primary/20"
+                          : ""
+                      }`}
+                    >
+                      <TicketTypeCard
+                        sector={sector}
+                        quantity={quantity}
+                        setQuantity={setQuantity}
+                        ticketType={ticketType}
+                        setTicketType={setTicketType}
+                        firstName={firstName}
+                        setFirstName={setFirstName}
+                        lastName={lastName}
+                        setLastName={setLastName}
+                        requiresNominative={event.requiresNominative}
+                        selectedSeat={selectedSectorId === sector.id ? selectedSeat : null}
+                        onSeatClick={handleSeatClickFromCard}
+                        mapSelectedSeatIds={selectedSectorId === sector.id ? selectedSeatIds : []}
+                      />
+                    </motion.div>
+                  ))}
+                </div>
               </motion.div>
-            )}
-          </motion.div>
+
+              {event.sectors.length === 0 && (
+                <motion.div {...fadeInUp}>
+                  <div className="p-8 text-center bg-card/50 border border-border rounded-2xl">
+                    <Ticket className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                    <h3 className="text-lg font-semibold text-foreground mb-2">Nessun biglietto</h3>
+                    <p className="text-sm text-muted-foreground">
+                      I biglietti non sono ancora disponibili.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+            </div>
+          </>
         ) : null}
-      </main>
+      </div>
+
+      {event && event.sectors.length > 0 && (
+        <motion.div 
+          initial={{ y: 100 }}
+          animate={{ y: 0 }}
+          transition={springTransition}
+          className="fixed bottom-0 left-0 right-0 bg-card/95 backdrop-blur-xl border-t border-border z-50"
+          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+        >
+          <div className="flex items-center justify-between gap-4 p-4">
+            <div>
+              <p className="text-xs text-muted-foreground uppercase tracking-wider">Totale</p>
+              <p className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent">
+                €{totalPrice.toFixed(2)}
+              </p>
+            </div>
+            <Button
+              onClick={handlePurchase}
+              disabled={!canPurchase || isAdding}
+              className="h-14 px-8 rounded-xl text-lg font-bold shadow-lg shadow-primary/25 flex-1 max-w-[200px]"
+              data-testid="button-purchase"
+            >
+              {isAdding ? (
+                <div className="w-6 h-6 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+              ) : (
+                <>
+                  <ShoppingCart className="w-5 h-5 mr-2" />
+                  Acquista
+                </>
+              )}
+            </Button>
+          </div>
+        </motion.div>
+      )}
     </div>
   );
 }

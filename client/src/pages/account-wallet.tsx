@@ -1,19 +1,23 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import {
   Wallet,
   ArrowUpRight,
   ArrowDownLeft,
-  ShoppingCart,
   RefreshCw,
-  Gift,
   CreditCard,
   Loader2,
   Lock,
   Unlock,
+  Plus,
+  ChevronRight,
 } from "lucide-react";
+import { HapticButton, triggerHaptic } from "@/components/mobile-primitives";
+import { Input } from "@/components/ui/input";
+import { cn } from "@/lib/utils";
 
 interface WalletData {
   id: string;
@@ -59,7 +63,37 @@ const transactionLabels: Record<string, string> = {
   refund: "Rimborso",
 };
 
+const quickAmounts = [10, 20, 50, 100];
+
+const springTransition = {
+  type: "spring",
+  stiffness: 400,
+  damping: 30,
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+    },
+  },
+};
+
+const fadeInUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: springTransition,
+  },
+};
+
 export default function AccountWallet() {
+  const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
+  const [customAmount, setCustomAmount] = useState("");
+
   const { data: wallet, isLoading: walletLoading } = useQuery<WalletData>({
     queryKey: ["/api/public/account/wallet"],
   });
@@ -70,10 +104,35 @@ export default function AccountWallet() {
 
   const isLoading = walletLoading || transactionsLoading;
 
+  const handleQuickAmountSelect = (amount: number) => {
+    triggerHaptic('medium');
+    setSelectedAmount(amount);
+    setCustomAmount("");
+  };
+
+  const handleCustomAmountChange = (value: string) => {
+    const numValue = value.replace(/[^0-9]/g, '');
+    setCustomAmount(numValue);
+    setSelectedAmount(null);
+  };
+
+  const currentAmount = selectedAmount || (customAmount ? parseInt(customAmount) : 0);
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div 
+        className="fixed inset-0 flex items-center justify-center bg-background"
+        style={{ 
+          paddingTop: 'env(safe-area-inset-top)',
+          paddingBottom: 'env(safe-area-inset-bottom)',
+        }}
+      >
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        >
+          <Loader2 className="w-10 h-10 text-primary" />
+        </motion.div>
       </div>
     );
   }
@@ -82,102 +141,206 @@ export default function AccountWallet() {
   const transactions = transactionsData?.transactions || [];
 
   return (
-    <div className="max-w-3xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground" data-testid="text-page-title">Wallet</h1>
-        <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Gestisci il tuo saldo e le transazioni</p>
-      </div>
-
-      <Card className="bg-gradient-to-br from-primary/20 to-primary/10 border-primary/30 mb-6 sm:mb-8">
-        <CardContent className="p-4 sm:p-6 md:p-8">
-          <div className="flex items-center gap-3 sm:gap-4 mb-4">
-            <div className="w-12 h-12 sm:w-14 sm:h-14 rounded-full bg-primary/20 flex items-center justify-center flex-shrink-0">
-              <Wallet className="w-6 h-6 sm:w-7 sm:h-7 text-primary" />
-            </div>
-            <div>
-              <p className="text-xs sm:text-sm text-muted-foreground">Saldo Disponibile</p>
-              <p className="text-2xl sm:text-3xl md:text-4xl font-bold text-foreground" data-testid="text-balance">
-                €{balance.toFixed(2)}
-              </p>
-              {wallet?.currency && wallet.currency !== "EUR" && (
-                <p className="text-sm text-muted-foreground">{wallet.currency}</p>
-              )}
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-foreground flex items-center gap-2">
-            <CreditCard className="w-5 h-5 text-primary" />
-            Storico Transazioni
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {transactions.length === 0 ? (
-            <div className="text-center py-12 text-muted-foreground">
-              <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
-                <Wallet className="w-8 h-8 text-muted-foreground" />
+    <div 
+      className="min-h-screen bg-background pb-24"
+      style={{ 
+        paddingTop: 'env(safe-area-inset-top)',
+      }}
+    >
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="visible"
+        className="px-4 py-6"
+      >
+        <motion.div variants={fadeInUp} className="mb-8">
+          <motion.div
+            className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-primary via-primary/90 to-primary/70 p-6"
+            whileTap={{ scale: 0.98 }}
+            transition={springTransition}
+          >
+            <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,255,255,0.15),transparent_50%)]" />
+            <div className="absolute -right-8 -top-8 w-32 h-32 rounded-full bg-white/10 blur-2xl" />
+            <div className="absolute -left-8 -bottom-8 w-24 h-24 rounded-full bg-white/5 blur-xl" />
+            
+            <div className="relative z-10">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-14 h-14 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center">
+                  <Wallet className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <p className="text-white/70 text-base font-medium">Saldo Disponibile</p>
+                  {wallet?.currency && wallet.currency !== "EUR" && (
+                    <p className="text-white/50 text-sm">{wallet.currency}</p>
+                  )}
+                </div>
               </div>
-              <p>Nessuna transazione</p>
-              <p className="text-sm mt-2">Le tue transazioni appariranno qui</p>
+              
+              <motion.p 
+                className="text-5xl font-bold text-white tracking-tight"
+                data-testid="text-balance"
+                initial={{ scale: 0.9, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={{ ...springTransition, delay: 0.2 }}
+              >
+                €{balance.toFixed(2)}
+              </motion.p>
             </div>
-          ) : (
-            <div className="space-y-3">
-              {transactions.map((tx) => {
-                const Icon = transactionIcons[tx.type] || Wallet;
-                const amount = parseFloat(tx.amount || "0");
-                const isPositive = tx.type === "credit" || tx.type === "release" || tx.type === "refund";
-                const transactionDate = new Date(tx.createdAt);
+          </motion.div>
+        </motion.div>
 
-                return (
-                  <div
-                    key={tx.id}
-                    className="flex items-center justify-between p-3 sm:p-4 bg-muted rounded-lg gap-3"
-                    data-testid={`transaction-${tx.id}`}
-                  >
-                    <div className="flex items-center gap-3 sm:gap-4 min-w-0">
-                      <div
-                        className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full flex items-center justify-center flex-shrink-0 ${
-                          isPositive ? "bg-green-500/20" : "bg-red-500/20"
-                        }`}
-                      >
-                        <Icon
-                          className={`w-4 h-4 sm:w-5 sm:h-5 ${
-                            isPositive ? "text-green-400" : "text-red-400"
-                          }`}
-                        />
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground" data-testid="text-description">
-                          {tx.description || transactionLabels[tx.type] || tx.type}
-                        </p>
-                        <p className="text-sm text-muted-foreground" data-testid="text-date">
-                          {format(transactionDate, "d MMM yyyy, HH:mm", { locale: it })}
-                        </p>
-                      </div>
-                    </div>
-                    <div className="text-right">
-                      <p
-                        className={`font-semibold ${
-                          isPositive ? "text-green-400" : "text-red-400"
-                        }`}
-                        data-testid="text-amount"
-                      >
-                        {isPositive ? "+" : "-"}€{Math.abs(amount).toFixed(2)}
-                      </p>
-                      <p className="text-xs text-muted-foreground">
-                        Saldo: €{parseFloat(tx.balanceAfter || "0").toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })}
+        <motion.div variants={fadeInUp} className="mb-6">
+          <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+            <Plus className="w-5 h-5 text-primary" />
+            Ricarica Wallet
+          </h2>
+          
+          <div className="grid grid-cols-4 gap-3 mb-4">
+            {quickAmounts.map((amount) => (
+              <motion.div
+                key={amount}
+                whileTap={{ scale: 0.95 }}
+                transition={springTransition}
+              >
+                <HapticButton
+                  variant={selectedAmount === amount ? "default" : "outline"}
+                  className={cn(
+                    "w-full h-14 text-lg font-semibold rounded-2xl",
+                    selectedAmount === amount 
+                      ? "bg-primary text-primary-foreground" 
+                      : "border-2 border-border"
+                  )}
+                  onClick={() => handleQuickAmountSelect(amount)}
+                  data-testid={`button-amount-${amount}`}
+                >
+                  €{amount}
+                </HapticButton>
+              </motion.div>
+            ))}
+          </div>
+
+          <div className="relative mb-4">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-semibold text-muted-foreground">
+              €
             </div>
+            <Input
+              type="text"
+              inputMode="numeric"
+              placeholder="Altro importo"
+              value={customAmount}
+              onChange={(e) => handleCustomAmountChange(e.target.value)}
+              className="h-14 pl-10 text-xl font-semibold rounded-2xl border-2 bg-background"
+              data-testid="input-custom-amount"
+            />
+          </div>
+
+          <motion.div
+            whileTap={{ scale: 0.98 }}
+            transition={springTransition}
+          >
+            <HapticButton
+              className="w-full h-14 text-lg font-semibold rounded-2xl bg-gradient-to-r from-primary to-primary/80"
+              disabled={currentAmount <= 0}
+              hapticType="success"
+              data-testid="button-recharge"
+            >
+              <CreditCard className="w-5 h-5 mr-2" />
+              Ricarica €{currentAmount > 0 ? currentAmount : "0"}
+            </HapticButton>
+          </motion.div>
+        </motion.div>
+
+        <motion.div variants={fadeInUp}>
+          <h2 className="text-xl font-semibold text-foreground mb-4 flex items-center gap-2">
+            <RefreshCw className="w-5 h-5 text-primary" />
+            Storico Transazioni
+          </h2>
+
+          {transactions.length === 0 ? (
+            <motion.div 
+              className="text-center py-16 px-6 bg-muted/30 rounded-3xl"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={springTransition}
+            >
+              <div className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                <Wallet className="w-10 h-10 text-muted-foreground" />
+              </div>
+              <p className="text-lg font-medium text-foreground">Nessuna transazione</p>
+              <p className="text-base text-muted-foreground mt-2">Le tue transazioni appariranno qui</p>
+            </motion.div>
+          ) : (
+            <motion.div 
+              className="space-y-3"
+              variants={staggerContainer}
+              initial="hidden"
+              animate="visible"
+            >
+              <AnimatePresence>
+                {transactions.map((tx) => {
+                  const Icon = transactionIcons[tx.type] || Wallet;
+                  const amount = parseFloat(tx.amount || "0");
+                  const isPositive = tx.type === "credit" || tx.type === "release" || tx.type === "refund";
+                  const transactionDate = new Date(tx.createdAt);
+
+                  return (
+                    <motion.div
+                      key={tx.id}
+                      variants={fadeInUp}
+                      layout
+                      whileTap={{ scale: 0.98 }}
+                      className="flex items-center justify-between p-4 bg-card rounded-2xl border border-border min-h-[80px] active:bg-muted/50 transition-colors cursor-pointer"
+                      data-testid={`transaction-${tx.id}`}
+                      onClick={() => triggerHaptic('light')}
+                    >
+                      <div className="flex items-center gap-4 flex-1 min-w-0">
+                        <div
+                          className={cn(
+                            "w-12 h-12 rounded-2xl flex items-center justify-center flex-shrink-0",
+                            isPositive ? "bg-green-500/20" : "bg-red-500/20"
+                          )}
+                        >
+                          <Icon
+                            className={cn(
+                              "w-6 h-6",
+                              isPositive ? "text-green-500" : "text-red-500"
+                            )}
+                          />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="font-semibold text-base text-foreground truncate" data-testid="text-description">
+                            {tx.description || transactionLabels[tx.type] || tx.type}
+                          </p>
+                          <p className="text-sm text-muted-foreground" data-testid="text-date">
+                            {format(transactionDate, "d MMM yyyy, HH:mm", { locale: it })}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right flex items-center gap-2">
+                        <div>
+                          <p
+                            className={cn(
+                              "font-bold text-lg",
+                              isPositive ? "text-green-500" : "text-red-500"
+                            )}
+                            data-testid="text-amount"
+                          >
+                            {isPositive ? "+" : "-"}€{Math.abs(amount).toFixed(2)}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            €{parseFloat(tx.balanceAfter || "0").toFixed(2)}
+                          </p>
+                        </div>
+                        <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                      </div>
+                    </motion.div>
+                  );
+                })}
+              </AnimatePresence>
+            </motion.div>
           )}
-        </CardContent>
-      </Card>
+        </motion.div>
+      </motion.div>
     </div>
   );
 }

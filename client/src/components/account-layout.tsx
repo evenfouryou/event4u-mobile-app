@@ -1,20 +1,17 @@
-import { useState } from "react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { MobileBottomBar, MobileNavItem } from "@/components/mobile-primitives";
 import {
   User,
   Ticket,
   Wallet,
   RefreshCw,
   LogOut,
-  Menu,
-  ChevronLeft,
   Sparkles,
   Home,
 } from "lucide-react";
@@ -29,10 +26,10 @@ interface Customer {
 
 const navItems = [
   { href: "/account/home", label: "Home", icon: Home },
-  { href: "/account/profile", label: "Profilo", icon: User },
-  { href: "/account/tickets", label: "I Miei Biglietti", icon: Ticket },
+  { href: "/account/tickets", label: "Biglietti", icon: Ticket },
   { href: "/account/wallet", label: "Wallet", icon: Wallet },
   { href: "/account/resales", label: "Rivendita", icon: RefreshCw },
+  { href: "/account/profile", label: "Profilo", icon: User },
 ];
 
 function SidebarContent({ customer, onLogout }: { customer: Customer | null; onLogout: () => void }) {
@@ -115,9 +112,8 @@ interface AccountLayoutProps {
 }
 
 export function AccountLayout({ children }: AccountLayoutProps) {
-  const [, navigate] = useLocation();
+  const [location, navigate] = useLocation();
   const isMobile = useIsMobile();
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
   const { data: customer } = useQuery<Customer>({
     queryKey: ["/api/public/customers/me"],
@@ -138,33 +134,53 @@ export function AccountLayout({ children }: AccountLayoutProps) {
 
   if (isMobile) {
     return (
-      <div className="min-h-screen bg-background">
-        <header className="sticky top-0 z-50 flex items-center justify-between p-4 bg-sidebar border-b border-border">
-          <Sheet open={mobileMenuOpen} onOpenChange={setMobileMenuOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" data-testid="button-mobile-menu">
-                <Menu className="w-6 h-6" />
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="left" className="w-72 p-0 bg-sidebar border-border">
-              <SidebarContent customer={customer || null} onLogout={handleLogout} />
-            </SheetContent>
-          </Sheet>
+      <div 
+        className="fixed inset-0 flex flex-col bg-background"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
+        <header className="shrink-0 flex items-center justify-between px-4 py-3 bg-card/95 backdrop-blur-xl border-b border-border z-30">
           <Link href="/acquista">
-            <div className="flex items-center gap-2 cursor-pointer">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+            <div className="flex items-center gap-2 cursor-pointer" data-testid="link-logo">
+              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
                 <Sparkles className="w-4 h-4 text-primary-foreground" />
               </div>
               <span className="text-lg font-bold text-foreground">Event4U</span>
             </div>
           </Link>
-          <Link href="/acquista">
-            <Button variant="ghost" size="icon" data-testid="button-back-events">
-              <ChevronLeft className="w-6 h-6" />
-            </Button>
-          </Link>
+          
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            {customer && (
+              <Link href="/account/profile">
+                <Avatar className="w-9 h-9 bg-primary/20 border-2 border-primary/30 cursor-pointer" data-testid="button-avatar">
+                  <AvatarFallback className="bg-transparent text-primary font-semibold text-sm">
+                    {customer.firstName?.[0]}{customer.lastName?.[0]}
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
+            )}
+          </div>
         </header>
-        <main className="p-4">{children}</main>
+
+        <main className="flex-1 overflow-y-auto overscroll-contain px-4 py-4">
+          {children}
+        </main>
+
+        <MobileBottomBar className="shrink-0 z-30">
+          {navItems.map((item) => {
+            const isActive = location === item.href || 
+              (item.href !== "/account/home" && location.startsWith(item.href));
+            return (
+              <MobileNavItem
+                key={item.href}
+                icon={item.icon}
+                label={item.label}
+                active={isActive}
+                onClick={() => navigate(item.href)}
+              />
+            );
+          })}
+        </MobileBottomBar>
       </div>
     );
   }

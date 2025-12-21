@@ -1,15 +1,16 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useParams, Link } from "wouter";
-import { Card, CardContent } from "@/components/ui/card";
+import { useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { DigitalTicketCard } from "@/components/DigitalTicketCard";
+import { motion, AnimatePresence } from "framer-motion";
+import { MobileAppLayout, MobileHeader, HapticButton, triggerHaptic } from "@/components/mobile-primitives";
 import type { DigitalTicketTemplate } from '@shared/schema';
+import QRCodeLib from "qrcode";
 import {
   ChevronLeft,
   Calendar,
@@ -17,12 +18,14 @@ import {
   Ticket,
   User,
   RefreshCw,
-  Tag,
   XCircle,
   Loader2,
   Clock,
   Download,
-  Smartphone,
+  Share2,
+  Tag,
+  RotateCcw,
+  QrCode,
 } from "lucide-react";
 import { SiApple, SiGoogle } from "react-icons/si";
 
@@ -65,9 +68,47 @@ interface TicketDetail {
   emissionDateTime: string | null;
 }
 
+const springConfig = {
+  type: "spring" as const,
+  stiffness: 300,
+  damping: 30,
+};
+
+const staggerChildren = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+    },
+  },
+};
+
+const fadeInUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: springConfig,
+  },
+};
+
+const scaleIn = {
+  hidden: { opacity: 0, scale: 0.8 },
+  visible: { 
+    opacity: 1, 
+    scale: 1,
+    transition: springConfig,
+  },
+};
+
 export default function AccountTicketDetail() {
   const { id } = useParams<{ id: string }>();
+  const [, navigate] = useLocation();
   const { toast } = useToast();
+  const [qrCodeImage, setQrCodeImage] = useState<string | null>(null);
+  const [qrLoading, setQrLoading] = useState(false);
+  const [isDownloading, setIsDownloading] = useState(false);
 
   const { data: ticket, isLoading, isError } = useQuery<TicketDetail>({
     queryKey: [`/api/public/account/tickets/${id}`],
@@ -78,7 +119,37 @@ export default function AccountTicketDetail() {
     queryKey: ['/api/digital-templates/default'],
   });
 
-  const [isDownloading, setIsDownloading] = useState(false);
+  const showQrCode = ticket && 
+    (ticket.status === "emitted" || ticket.status === "active" || ticket.status === "valid") && 
+    !ticket.isListed && 
+    ticket.qrCode;
+
+  useEffect(() => {
+    if (showQrCode && ticket?.qrCode) {
+      setQrLoading(true);
+      const qrSize = 280;
+      const primaryColor = digitalTemplate?.primaryColor || '#000000';
+      const bgColor = '#FFFFFF';
+      
+      QRCodeLib.toDataURL(ticket.qrCode, {
+        width: qrSize,
+        margin: 2,
+        color: {
+          dark: primaryColor,
+          light: bgColor,
+        },
+        errorCorrectionLevel: 'H',
+      })
+        .then((url: string) => {
+          setQrCodeImage(url);
+          setQrLoading(false);
+        })
+        .catch((err: Error) => {
+          console.error('Error generating QR code:', err);
+          setQrLoading(false);
+        });
+    }
+  }, [showQrCode, ticket?.qrCode, digitalTemplate]);
 
   const cancelResaleMutation = useMutation({
     mutationFn: async () => {
@@ -89,12 +160,14 @@ export default function AccountTicketDetail() {
       queryClient.invalidateQueries({ queryKey: [`/api/public/account/tickets/${id}`] });
       queryClient.invalidateQueries({ queryKey: ["/api/public/account/tickets"] });
       queryClient.invalidateQueries({ queryKey: ["/api/public/account/resales"] });
+      triggerHaptic('success');
       toast({
         title: "Rivendita annullata",
         description: "Il biglietto è stato rimosso dalla vendita.",
       });
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       toast({
         title: "Errore",
         description: error.message || "Impossibile annullare la rivendita.",
@@ -106,6 +179,7 @@ export default function AccountTicketDetail() {
   const handleDownloadPdf = async () => {
     if (!id) return;
     setIsDownloading(true);
+    triggerHaptic('medium');
     try {
       const response = await fetch(`/api/public/account/tickets/${id}/pdf`, {
         credentials: 'include',
@@ -126,11 +200,13 @@ export default function AccountTicketDetail() {
       window.URL.revokeObjectURL(url);
       document.body.removeChild(a);
       
+      triggerHaptic('success');
       toast({
         title: "Download completato",
         description: "Il biglietto è stato scaricato.",
       });
     } catch (error: any) {
+      triggerHaptic('error');
       toast({
         title: "Errore download",
         description: error.message || "Impossibile scaricare il PDF.",
@@ -141,29 +217,90 @@ export default function AccountTicketDetail() {
     }
   };
 
+  const handleShare = async () => {
+    triggerHaptic('light');
+    if (navigator.share && ticket) {
+      try {
+        await navigator.share({
+          title: `Biglietto - ${ticket.eventName}`,
+          text: `Il mio biglietto per ${ticket.eventName} - ${format(new Date(ticket.eventStart), "d MMMM yyyy", { locale: it })}`,
+          url: window.location.href,
+        });
+      } catch (err) {
+        console.log('Share cancelled');
+      }
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
-      </div>
+      <MobileAppLayout
+        header={
+          <MobileHeader
+            leftAction={
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => navigate("/account/tickets")}
+                className="min-h-[44px] min-w-[44px]"
+                data-testid="button-back"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </Button>
+            }
+            title="Caricamento..."
+          />
+        }
+      >
+        <div className="flex items-center justify-center h-full">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          >
+            <Loader2 className="w-10 h-10 text-primary" />
+          </motion.div>
+        </div>
+      </MobileAppLayout>
     );
   }
 
   if (isError || !ticket) {
     return (
-      <div className="text-center py-16">
-        <p className="text-muted-foreground">Biglietto non trovato</p>
-        <Link href="/account/tickets">
-          <Button variant="ghost" className="mt-4 text-primary">
+      <MobileAppLayout
+        header={
+          <MobileHeader
+            leftAction={
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => navigate("/account/tickets")}
+                className="min-h-[44px] min-w-[44px]"
+                data-testid="button-back"
+              >
+                <ChevronLeft className="w-6 h-6" />
+              </Button>
+            }
+            title="Errore"
+          />
+        }
+      >
+        <div className="flex flex-col items-center justify-center h-full gap-4 px-6">
+          <Ticket className="w-16 h-16 text-muted-foreground/50" />
+          <p className="text-lg text-muted-foreground text-center">Biglietto non trovato</p>
+          <HapticButton
+            variant="default"
+            onClick={() => navigate("/account/tickets")}
+            className="min-h-[48px] px-8 text-base"
+            data-testid="button-go-back"
+          >
             Torna ai biglietti
-          </Button>
-        </Link>
-      </div>
+          </HapticButton>
+        </div>
+      </MobileAppLayout>
     );
   }
 
   const eventDate = new Date(ticket.eventStart);
-  const emittedDate = ticket.emittedAt ? new Date(ticket.emittedAt) : null;
   const holderName = [ticket.participantFirstName, ticket.participantLastName].filter(Boolean).join(" ") || "Non nominativo";
   const price = parseFloat(ticket.ticketPrice || "0");
 
@@ -196,213 +333,339 @@ export default function AccountTicketDetail() {
   };
 
   return (
-    <div className="max-w-2xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
-      <div className="mb-4 sm:mb-6">
-        <Link href="/account/tickets">
-          <Button variant="ghost" className="text-muted-foreground hover:text-foreground -ml-2 sm:-ml-4 h-10" data-testid="button-back">
-            <ChevronLeft className="w-4 h-4 mr-1" />
-            I Miei Biglietti
-          </Button>
-        </Link>
-      </div>
+    <MobileAppLayout
+      header={
+        <MobileHeader
+          leftAction={
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              onClick={() => {
+                triggerHaptic('light');
+                navigate("/account/tickets");
+              }}
+              className="min-h-[44px] min-w-[44px]"
+              data-testid="button-back"
+            >
+              <ChevronLeft className="w-6 h-6" />
+            </Button>
+          }
+          title={ticket.eventName}
+          rightAction={
+            typeof navigator !== 'undefined' && 'share' in navigator ? (
+              <Button 
+                variant="ghost" 
+                size="icon" 
+                onClick={handleShare}
+                className="min-h-[44px] min-w-[44px]"
+                data-testid="button-share"
+              >
+                <Share2 className="w-5 h-5" />
+              </Button>
+            ) : undefined
+          }
+        />
+      }
+      noPadding
+    >
+      <motion.div
+        className="flex flex-col pb-24"
+        initial="hidden"
+        animate="visible"
+        variants={staggerChildren}
+      >
+        <motion.div 
+          className="flex justify-center pt-4 pb-2"
+          variants={fadeInUp}
+        >
+          <Badge 
+            variant={statusVariant()} 
+            className="text-sm px-4 py-1.5"
+            data-testid="badge-status"
+          >
+            {statusLabel()}
+          </Badge>
+        </motion.div>
 
-      <Card className="bg-card border-border overflow-hidden">
-        <div className="bg-gradient-to-r from-primary/20 to-primary/10 p-4 sm:p-6 border-b border-border">
-          <div className="flex items-start justify-between gap-3 sm:gap-4">
-            <div>
-              <Badge variant={statusVariant()} className="mb-2 sm:mb-3">
-                {statusLabel()}
-              </Badge>
-              <h1 className="text-lg sm:text-xl md:text-2xl font-bold text-foreground" data-testid="text-event-name">
-                {ticket.eventName}
-              </h1>
-              <p className="text-sm text-muted-foreground mt-1">Codice: {ticket.ticketCode}</p>
+        {ticket.hoursToEvent > 0 && (
+          <motion.div 
+            className="flex items-center justify-center gap-2 text-base text-muted-foreground py-2"
+            variants={fadeInUp}
+          >
+            <Clock className="w-5 h-5" />
+            <span>
+              {ticket.hoursToEvent < 24 
+                ? `Mancano ${ticket.hoursToEvent} ore`
+                : `Mancano ${Math.floor(ticket.hoursToEvent / 24)} giorni`
+              }
+            </span>
+          </motion.div>
+        )}
+
+        {showQrCode && (
+          <motion.div 
+            className="flex flex-col items-center px-4 py-6"
+            variants={scaleIn}
+          >
+            <div className="bg-white p-4 rounded-2xl shadow-xl">
+              {qrLoading ? (
+                <div className="w-[280px] h-[280px] flex items-center justify-center">
+                  <Loader2 className="w-12 h-12 animate-spin text-gray-400" />
+                </div>
+              ) : qrCodeImage ? (
+                <motion.img
+                  src={qrCodeImage}
+                  alt="QR Code biglietto"
+                  className="w-[280px] h-[280px]"
+                  data-testid="ticket-qrcode"
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ duration: 0.3 }}
+                />
+              ) : (
+                <div className="w-[280px] h-[280px] flex items-center justify-center bg-gray-100 rounded-lg">
+                  <QrCode className="w-16 h-16 text-gray-400" />
+                </div>
+              )}
             </div>
-          </div>
-        </div>
+            <p className="text-sm text-muted-foreground mt-3 font-mono" data-testid="text-ticket-code">
+              {ticket.ticketCode}
+            </p>
+          </motion.div>
+        )}
 
-        <CardContent className="p-4 sm:p-6 space-y-4 sm:space-y-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
-            <div className="flex items-center gap-3 p-2 sm:p-3 bg-muted/50 rounded-lg">
-              <Calendar className="w-5 h-5 text-primary" />
-              <div>
-                <p className="text-xs text-muted-foreground">Data Evento</p>
-                <p className="text-foreground" data-testid="text-event-date">
-                  {format(eventDate, "EEEE d MMMM yyyy", { locale: it })}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {format(eventDate, "HH:mm", { locale: it })}
-                </p>
+        <motion.div 
+          className="px-4 space-y-3"
+          variants={staggerChildren}
+        >
+          <motion.div 
+            className="bg-card rounded-2xl p-4 space-y-4"
+            variants={fadeInUp}
+          >
+            <h3 className="text-lg font-semibold text-foreground">Informazioni Biglietto</h3>
+            
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Ticket className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Tipo</p>
+                  <p className="text-base font-medium text-foreground" data-testid="text-ticket-type">
+                    {ticket.ticketType}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Settore</p>
+                  <p className="text-base font-medium text-foreground" data-testid="text-sector">
+                    {ticket.sectorName}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Tag className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Prezzo</p>
+                  <p className="text-xl font-bold text-primary" data-testid="text-price">
+                    €{price.toFixed(2)}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <User className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Intestatario</p>
+                  <p className="text-base font-medium text-foreground" data-testid="text-holder">
+                    {holderName}
+                  </p>
+                </div>
               </div>
             </div>
+          </motion.div>
 
-            <div className="flex items-center gap-3 p-2 sm:p-3 bg-muted/50 rounded-lg">
-              <MapPin className="w-5 h-5 text-primary flex-shrink-0" />
-              <div>
-                <p className="text-xs text-muted-foreground">Luogo</p>
-                <p className="text-foreground" data-testid="text-location">{ticket.locationName}</p>
-                {ticket.locationAddress && (
-                  <p className="text-sm text-muted-foreground">{ticket.locationAddress}</p>
-                )}
+          <motion.div 
+            className="bg-card rounded-2xl p-4 space-y-4"
+            variants={fadeInUp}
+          >
+            <h3 className="text-lg font-semibold text-foreground">Informazioni Evento</h3>
+            
+            <div className="space-y-4">
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <Calendar className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Data e Ora</p>
+                  <p className="text-base font-medium text-foreground" data-testid="text-event-date">
+                    {format(eventDate, "EEEE d MMMM yyyy", { locale: it })}
+                  </p>
+                  <p className="text-base text-muted-foreground">
+                    ore {format(eventDate, "HH:mm", { locale: it })}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-start gap-3">
+                <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+                  <MapPin className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <p className="text-sm text-muted-foreground">Luogo</p>
+                  <p className="text-base font-medium text-foreground" data-testid="text-location">
+                    {ticket.locationName}
+                  </p>
+                  {ticket.locationAddress && (
+                    <p className="text-sm text-muted-foreground">
+                      {ticket.locationAddress}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
-
-            <div className="flex items-center gap-3 p-2 sm:p-3 bg-muted/50 rounded-lg">
-              <Ticket className="w-5 h-5 text-primary flex-shrink-0" />
-              <div>
-                <p className="text-xs text-muted-foreground">Settore</p>
-                <p className="text-foreground" data-testid="text-sector">{ticket.sectorName}</p>
-                <p className="text-sm text-muted-foreground">{ticket.ticketType}</p>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-3 p-2 sm:p-3 bg-muted/50 rounded-lg">
-              <User className="w-5 h-5 text-primary flex-shrink-0" />
-              <div>
-                <p className="text-xs text-muted-foreground">Intestatario</p>
-                <p className="text-foreground" data-testid="text-holder">{holderName}</p>
-              </div>
-            </div>
-          </div>
-
-          {ticket.hoursToEvent > 0 && (
-            <div className="flex items-center gap-2 text-xs sm:text-sm text-muted-foreground bg-muted/50 p-2 sm:p-3 rounded-lg">
-              <Clock className="w-4 h-4" />
-              <span>
-                {ticket.hoursToEvent < 24 
-                  ? `Mancano ${ticket.hoursToEvent} ore all'evento`
-                  : `Mancano ${Math.floor(ticket.hoursToEvent / 24)} giorni all'evento`
-                }
-              </span>
-            </div>
-          )}
+          </motion.div>
 
           {(ticket.status === "emitted" || ticket.status === "active" || ticket.status === "valid") && !ticket.isListed && (
-            <div className="py-4 sm:py-6 border-y border-border space-y-4">
-              <DigitalTicketCard ticket={ticket} template={digitalTemplate} />
+            <motion.div 
+              className="space-y-3 pt-2"
+              variants={fadeInUp}
+            >
+              <h3 className="text-lg font-semibold text-foreground px-1">Aggiungi al Wallet</h3>
               
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <Button
+              <div className="grid grid-cols-2 gap-3">
+                <HapticButton
                   variant="outline"
-                  className="w-full"
-                  onClick={handleDownloadPdf}
-                  disabled={isDownloading}
-                  data-testid="button-download-pdf"
-                >
-                  {isDownloading ? (
-                    <Loader2 className="w-4 h-4 animate-spin mr-2" />
-                  ) : (
-                    <Download className="w-4 h-4 mr-2" />
-                  )}
-                  Scarica PDF
-                </Button>
-                
-                <Button
-                  variant="outline"
-                  className="w-full bg-black text-white hover:bg-black/90 border-black"
+                  className="min-h-[52px] bg-black text-white border-black rounded-xl text-base font-medium"
                   onClick={() => {
                     window.open(`/api/public/account/tickets/${id}/wallet/apple`, '_blank');
                   }}
                   data-testid="button-add-apple-wallet"
+                  hapticType="medium"
                 >
-                  <SiApple className="w-4 h-4 mr-2" />
-                  Apple Wallet
-                </Button>
+                  <SiApple className="w-5 h-5 mr-2" />
+                  Apple
+                </HapticButton>
+                
+                <HapticButton
+                  variant="outline"
+                  className="min-h-[52px] bg-gradient-to-r from-blue-500 to-green-500 text-white border-0 rounded-xl text-base font-medium"
+                  onClick={() => {
+                    window.open(`/api/public/account/tickets/${id}/wallet/google`, '_blank');
+                  }}
+                  data-testid="button-add-google-wallet"
+                  hapticType="medium"
+                >
+                  <SiGoogle className="w-5 h-5 mr-2" />
+                  Google
+                </HapticButton>
               </div>
-              
-              <Button
+
+              <HapticButton
                 variant="outline"
-                className="w-full bg-gradient-to-r from-blue-500 to-green-500 text-white hover:from-blue-600 hover:to-green-600 border-0"
-                onClick={() => {
-                  window.open(`/api/public/account/tickets/${id}/wallet/google`, '_blank');
-                }}
-                data-testid="button-add-google-wallet"
+                className="w-full min-h-[52px] rounded-xl text-base font-medium"
+                onClick={handleDownloadPdf}
+                disabled={isDownloading}
+                data-testid="button-download-pdf"
+                hapticType="medium"
               >
-                <SiGoogle className="w-4 h-4 mr-2" />
-                Aggiungi a Google Wallet
-              </Button>
-            </div>
+                {isDownloading ? (
+                  <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                ) : (
+                  <Download className="w-5 h-5 mr-2" />
+                )}
+                Scarica PDF
+              </HapticButton>
+            </motion.div>
           )}
 
-          <div className="text-sm text-muted-foreground space-y-1">
-            <p>
-              <Tag className="w-4 h-4 inline mr-2" />
-              Prezzo: €{price.toFixed(2)}
-            </p>
-            {emittedDate && (
-              <p>
-                Emesso il: {format(emittedDate, "d MMMM yyyy 'alle' HH:mm", { locale: it })}
-              </p>
-            )}
-            {ticket.fiscalSealCode && (
-              <p className="font-mono text-xs">
-                Sigillo fiscale: {ticket.fiscalSealCode}
-              </p>
-            )}
-          </div>
-
           {(ticket.status === "emitted" || ticket.status === "active" || ticket.status === "valid") && (
-            <div className="space-y-3 pt-4 border-t border-border">
+            <motion.div 
+              className="space-y-3 pt-4"
+              variants={fadeInUp}
+            >
               {ticket.isListed && ticket.existingResale ? (
                 <div className="space-y-3">
-                  <div className="p-3 bg-primary/10 border border-primary/20 rounded-lg">
-                    <p className="text-sm text-primary">
-                      Biglietto in vendita a €{parseFloat(ticket.existingResale.resalePrice).toFixed(2)}
+                  <div className="p-4 bg-primary/10 border border-primary/20 rounded-xl">
+                    <p className="text-base font-medium text-primary text-center">
+                      In vendita a €{parseFloat(ticket.existingResale.resalePrice).toFixed(2)}
                     </p>
                   </div>
-                  <Button
+                  <HapticButton
                     variant="outline"
-                    className="w-full text-red-400 border-red-400/30 hover:bg-red-500/10"
+                    className="w-full min-h-[52px] text-destructive border-destructive/30 rounded-xl text-base font-medium"
                     onClick={() => cancelResaleMutation.mutate()}
                     disabled={cancelResaleMutation.isPending}
                     data-testid="button-cancel-resale"
+                    hapticType="medium"
                   >
                     {cancelResaleMutation.isPending ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-5 h-5 animate-spin" />
                     ) : (
                       <>
-                        <XCircle className="w-4 h-4 mr-2" />
+                        <XCircle className="w-5 h-5 mr-2" />
                         Rimuovi dalla Vendita
                       </>
                     )}
-                  </Button>
+                  </HapticButton>
                 </div>
               ) : (
                 <>
                   {ticket.canNameChange && (
-                    <Link href={`/account/tickets/${id}/name-change`}>
-                      <Button
-                        variant="outline"
-                        className="w-full"
-                        data-testid="button-name-change"
-                      >
-                        <User className="w-4 h-4 mr-2" />
-                        Cambia Nominativo
-                      </Button>
-                    </Link>
+                    <HapticButton
+                      variant="outline"
+                      className="w-full min-h-[52px] rounded-xl text-base font-medium"
+                      onClick={() => navigate(`/account/tickets/${id}/name-change`)}
+                      data-testid="button-name-change"
+                      hapticType="light"
+                    >
+                      <User className="w-5 h-5 mr-2" />
+                      Cambia Nominativo
+                    </HapticButton>
                   )}
                   {ticket.canResale && (
-                    <Link href={`/account/tickets/${id}/resale`}>
-                      <Button
-                        className="w-full"
-                        data-testid="button-resale"
-                      >
-                        <RefreshCw className="w-4 h-4 mr-2" />
-                        Metti in Vendita
-                      </Button>
-                    </Link>
+                    <HapticButton
+                      className="w-full min-h-[52px] rounded-xl text-base font-medium"
+                      onClick={() => navigate(`/account/tickets/${id}/resale`)}
+                      data-testid="button-resale"
+                      hapticType="medium"
+                    >
+                      <RefreshCw className="w-5 h-5 mr-2" />
+                      Metti in Vendita
+                    </HapticButton>
                   )}
                   {!ticket.canNameChange && !ticket.canResale && ticket.hoursToEvent > 0 && (
-                    <p className="text-center text-sm text-muted-foreground">
-                      Cambio nominativo e rivendita non disponibili per questo biglietto
+                    <p className="text-center text-base text-muted-foreground py-4">
+                      Cambio nominativo e rivendita non disponibili
                     </p>
                   )}
                 </>
               )}
-            </div>
+            </motion.div>
           )}
-        </CardContent>
-      </Card>
-    </div>
+
+          {ticket.fiscalSealCode && (
+            <motion.div 
+              className="pt-4 pb-8"
+              variants={fadeInUp}
+            >
+              <p className="text-xs text-muted-foreground text-center font-mono break-all px-4">
+                Sigillo fiscale: {ticket.fiscalSealCode}
+              </p>
+            </motion.div>
+          )}
+        </motion.div>
+      </motion.div>
+    </MobileAppLayout>
   );
 }

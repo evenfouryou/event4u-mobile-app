@@ -1,22 +1,27 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import {
+  MobileAppLayout,
+  MobileHeader,
+  HapticButton,
+  triggerHaptic,
+} from "@/components/mobile-primitives";
 import {
   Ticket,
   ChevronLeft,
   Trash2,
   ShoppingCart,
   ArrowRight,
-  Sparkles,
   AlertCircle,
   Calendar,
   MapPin,
-  Clock,
+  Minus,
+  Plus,
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -45,103 +50,265 @@ interface CartData {
   itemsCount: number;
 }
 
-function CartItemCard({
+const springConfig = {
+  type: "spring" as const,
+  stiffness: 400,
+  damping: 30,
+};
+
+function TicketCard({
   item,
   onRemove,
-  isRemoving,
+  onUpdateQuantity,
+  isUpdating,
 }: {
   item: CartItem;
   onRemove: () => void;
-  isRemoving: boolean;
+  onUpdateQuantity: (newQuantity: number) => void;
+  isUpdating: boolean;
 }) {
   const reservedUntil = new Date(item.reservedUntil);
   const isExpired = reservedUntil < new Date();
   const minutesLeft = Math.max(0, Math.floor((reservedUntil.getTime() - Date.now()) / 60000));
 
+  const handleIncrement = () => {
+    triggerHaptic('light');
+    onUpdateQuantity(item.quantity + 1);
+  };
+
+  const handleDecrement = () => {
+    triggerHaptic('light');
+    if (item.quantity > 1) {
+      onUpdateQuantity(item.quantity - 1);
+    }
+  };
+
   return (
     <motion.div
       layout
-      initial={{ opacity: 0, x: -20 }}
-      animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 20 }}
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, x: -100, scale: 0.9 }}
+      transition={springConfig}
     >
       <Card
         className={`bg-card border-border overflow-hidden ${isExpired ? "opacity-50" : ""}`}
         data-testid={`card-item-${item.id}`}
       >
-        <CardContent className="p-3 sm:p-4">
-          <div className="flex gap-3 sm:gap-4">
-            <div className="w-16 h-16 sm:w-24 sm:h-24 rounded-lg bg-gradient-to-br from-indigo-900/50 to-purple-900/50 flex items-center justify-center shrink-0">
-              <Ticket className="w-7 h-7 sm:w-10 sm:h-10 text-primary" />
-            </div>
+        <CardContent className="p-4">
+          <div className="flex gap-4">
+            <motion.div 
+              className="w-20 h-20 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0"
+              whileTap={{ scale: 0.95 }}
+            >
+              <Ticket className="w-8 h-8 text-primary" />
+            </motion.div>
+            
             <div className="flex-1 min-w-0">
               <div className="flex items-start justify-between gap-2">
                 <div className="min-w-0 flex-1">
-                  <h3 className="font-semibold text-foreground text-sm sm:text-base truncate" data-testid={`text-event-${item.id}`}>
+                  <h3 
+                    className="font-semibold text-foreground text-base leading-tight line-clamp-2" 
+                    data-testid={`text-event-${item.id}`}
+                  >
                     {item.eventName}
                   </h3>
-                  <p className="text-xs sm:text-sm text-muted-foreground">{item.sectorName}</p>
+                  <p className="text-sm text-muted-foreground mt-0.5">{item.sectorName}</p>
                 </div>
-                <Button
+                
+                <HapticButton
                   variant="ghost"
                   size="icon"
                   onClick={onRemove}
-                  disabled={isRemoving}
-                  className="text-muted-foreground hover:text-red-400 hover:bg-red-400/10 shrink-0 h-10 w-10"
+                  disabled={isUpdating}
+                  className="text-muted-foreground hover:text-red-400 hover:bg-red-400/10 shrink-0 h-11 w-11"
+                  hapticType="medium"
                   data-testid={`button-remove-${item.id}`}
                 >
-                  <Trash2 className="w-4 h-4" />
-                </Button>
+                  <Trash2 className="w-5 h-5" />
+                </HapticButton>
               </div>
-              <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
+              
+              <div className="flex items-center gap-4 mt-2 text-xs text-muted-foreground">
                 <span className="flex items-center gap-1">
-                  <Calendar className="w-3 h-3" />
-                  {format(new Date(item.eventStart), "d MMM", { locale: it })}
+                  <Calendar className="w-3.5 h-3.5" />
+                  {format(new Date(item.eventStart), "d MMM HH:mm", { locale: it })}
                 </span>
                 <span className="flex items-center gap-1">
-                  <Clock className="w-3 h-3" />
-                  {format(new Date(item.eventStart), "HH:mm")}
-                </span>
-                <span className="flex items-center gap-1">
-                  <MapPin className="w-3 h-3" />
-                  {item.locationName}
+                  <MapPin className="w-3.5 h-3.5" />
+                  <span className="truncate max-w-[100px]">{item.locationName}</span>
                 </span>
               </div>
-              <div className="flex items-center justify-between mt-2 sm:mt-3">
-                <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
-                  <Badge variant="outline" className="border-border text-muted-foreground text-xs">
-                    {item.ticketType === "intero" ? "Intero" : "Ridotto"}
+              
+              <div className="flex items-center gap-2 mt-2">
+                <Badge variant="outline" className="border-border text-muted-foreground text-xs">
+                  {item.ticketType === "intero" ? "Intero" : "Ridotto"}
+                </Badge>
+                {item.participantFirstName && (
+                  <Badge className="bg-teal-500/20 text-teal-400 border-teal-500/30 text-xs">
+                    {item.participantFirstName} {item.participantLastName}
                   </Badge>
-                  <Badge variant="outline" className="border-border text-muted-foreground text-xs">
-                    x{item.quantity}
-                  </Badge>
-                  {item.participantFirstName && (
-                    <Badge className="bg-teal-500/20 text-teal-400 border-teal-500/30 text-xs hidden sm:inline-flex">
-                      {item.participantFirstName} {item.participantLastName}
-                    </Badge>
-                  )}
-                </div>
-                <div className="text-right">
-                  <p className="text-base sm:text-lg font-bold text-primary" data-testid={`text-price-${item.id}`}>
-                    €{(Number(item.unitPrice) * item.quantity).toFixed(2)}
-                  </p>
-                </div>
+                )}
               </div>
-              {!isExpired && minutesLeft <= 5 && (
-                <p className="text-xs text-amber-400 mt-2">
-                  Riserva scade tra {minutesLeft} minuti
-                </p>
-              )}
-              {isExpired && (
-                <p className="text-xs text-red-400 mt-2">
-                  Riserva scaduta - Rimuovi e riprova
-                </p>
-              )}
             </div>
           </div>
+          
+          <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+            <div className="flex items-center gap-3">
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                transition={springConfig}
+                onClick={handleDecrement}
+                disabled={item.quantity <= 1 || isUpdating}
+                className="h-12 w-12 rounded-xl bg-muted flex items-center justify-center disabled:opacity-40"
+                data-testid={`button-decrement-${item.id}`}
+              >
+                <Minus className="w-5 h-5 text-foreground" />
+              </motion.button>
+              
+              <motion.span 
+                key={item.quantity}
+                initial={{ scale: 1.2 }}
+                animate={{ scale: 1 }}
+                transition={springConfig}
+                className="text-xl font-bold text-foreground w-8 text-center tabular-nums"
+              >
+                {item.quantity}
+              </motion.span>
+              
+              <motion.button
+                whileTap={{ scale: 0.9 }}
+                transition={springConfig}
+                onClick={handleIncrement}
+                disabled={isUpdating}
+                className="h-12 w-12 rounded-xl bg-primary flex items-center justify-center disabled:opacity-40"
+                data-testid={`button-increment-${item.id}`}
+              >
+                <Plus className="w-5 h-5 text-primary-foreground" />
+              </motion.button>
+            </div>
+            
+            <motion.div 
+              key={Number(item.unitPrice) * item.quantity}
+              initial={{ scale: 1.1 }}
+              animate={{ scale: 1 }}
+              transition={springConfig}
+              className="text-right"
+            >
+              <p className="text-xl font-bold text-primary tabular-nums" data-testid={`text-price-${item.id}`}>
+                €{(Number(item.unitPrice) * item.quantity).toFixed(2)}
+              </p>
+              <p className="text-xs text-muted-foreground">
+                €{Number(item.unitPrice).toFixed(2)} cad.
+              </p>
+            </motion.div>
+          </div>
+          
+          {!isExpired && minutesLeft <= 5 && (
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-xs text-amber-400 mt-3 flex items-center gap-1"
+            >
+              <AlertCircle className="w-3.5 h-3.5" />
+              Riserva scade tra {minutesLeft} minuti
+            </motion.p>
+          )}
+          
+          {isExpired && (
+            <motion.p 
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              className="text-xs text-red-400 mt-3 flex items-center gap-1"
+            >
+              <AlertCircle className="w-3.5 h-3.5" />
+              Riserva scaduta - Rimuovi e riprova
+            </motion.p>
+          )}
         </CardContent>
       </Card>
     </motion.div>
+  );
+}
+
+function EmptyCart() {
+  return (
+    <motion.div
+      initial={{ opacity: 0, scale: 0.9 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={springConfig}
+      className="flex-1 flex flex-col items-center justify-center px-6 py-12"
+    >
+      <motion.div
+        initial={{ y: 20 }}
+        animate={{ y: 0 }}
+        transition={{ ...springConfig, delay: 0.1 }}
+      >
+        <div className="w-24 h-24 rounded-full bg-muted/50 flex items-center justify-center mb-6">
+          <ShoppingCart className="w-12 h-12 text-muted-foreground" />
+        </div>
+      </motion.div>
+      
+      <motion.h3 
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ ...springConfig, delay: 0.2 }}
+        className="text-xl font-semibold text-foreground mb-2 text-center"
+      >
+        Carrello vuoto
+      </motion.h3>
+      
+      <motion.p 
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ ...springConfig, delay: 0.3 }}
+        className="text-muted-foreground text-center mb-8 max-w-xs"
+      >
+        Non hai ancora aggiunto biglietti al carrello. Scopri gli eventi disponibili!
+      </motion.p>
+      
+      <motion.div
+        initial={{ y: 20, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ ...springConfig, delay: 0.4 }}
+      >
+        <Link href="/acquista">
+          <HapticButton hapticType="medium" data-testid="button-browse">
+            <Ticket className="w-5 h-5 mr-2" />
+            Sfoglia Eventi
+          </HapticButton>
+        </Link>
+      </motion.div>
+    </motion.div>
+  );
+}
+
+function LoadingSkeleton() {
+  return (
+    <div className="space-y-4 px-4 py-4">
+      {[...Array(3)].map((_, i) => (
+        <Card key={i} className="bg-card border-border">
+          <CardContent className="p-4">
+            <div className="flex gap-4">
+              <Skeleton className="w-20 h-20 rounded-xl" />
+              <div className="flex-1 space-y-2">
+                <Skeleton className="h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+                <Skeleton className="h-4 w-2/3" />
+              </div>
+            </div>
+            <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+              <div className="flex gap-3">
+                <Skeleton className="h-12 w-12 rounded-xl" />
+                <Skeleton className="h-12 w-8" />
+                <Skeleton className="h-12 w-12 rounded-xl" />
+              </div>
+              <Skeleton className="h-8 w-20" />
+            </div>
+          </CardContent>
+        </Card>
+      ))}
+    </div>
   );
 }
 
@@ -151,7 +318,7 @@ export default function PublicCartPage() {
 
   const { data: cart, isLoading, error } = useQuery<CartData>({
     queryKey: ["/api/public/cart"],
-    refetchInterval: 30000, // Refresh ogni 30 secondi per aggiornare lo stato delle riserve
+    refetchInterval: 30000,
   });
 
   const removeMutation = useMutation({
@@ -160,12 +327,14 @@ export default function PublicCartPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/public/cart"] });
+      triggerHaptic('success');
       toast({
         title: "Rimosso",
         description: "Articolo rimosso dal carrello.",
       });
     },
     onError: (error: any) => {
+      triggerHaptic('error');
       toast({
         title: "Errore",
         description: error.message || "Impossibile rimuovere l'articolo.",
@@ -174,167 +343,142 @@ export default function PublicCartPage() {
     },
   });
 
-  const clearMutation = useMutation({
-    mutationFn: async () => {
-      await apiRequest("DELETE", "/api/public/cart");
+  const updateQuantityMutation = useMutation({
+    mutationFn: async ({ itemId, quantity }: { itemId: string; quantity: number }) => {
+      await apiRequest("PATCH", `/api/public/cart/${itemId}`, { quantity });
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/public/cart"] });
-      toast({
-        title: "Carrello svuotato",
-        description: "Tutti gli articoli sono stati rimossi.",
-      });
     },
     onError: (error: any) => {
+      triggerHaptic('error');
       toast({
         title: "Errore",
-        description: error.message || "Impossibile svuotare il carrello.",
+        description: error.message || "Impossibile aggiornare la quantità.",
         variant: "destructive",
       });
     },
   });
 
   const handleCheckout = () => {
+    triggerHaptic('medium');
     navigate("/checkout");
   };
 
-  return (
-    <div className="min-h-screen bg-background">
-      <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/80 border-b border-border">
-        <div className="max-w-4xl mx-auto px-4 py-4">
-          <div className="flex items-center justify-between">
-            <Link href="/acquista">
-              <Button variant="ghost" className="text-foreground" data-testid="button-back">
-                <ChevronLeft className="w-4 h-4 mr-1" /> Continua Acquisti
-              </Button>
-            </Link>
-            <Link href="/">
-              <div className="flex items-center gap-2 cursor-pointer">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-primary-foreground" />
-                </div>
-                <span className="text-lg font-bold text-foreground">Event4U</span>
-              </div>
-            </Link>
-            <div className="w-32" /> {/* Spacer per bilanciare */}
-          </div>
-        </div>
-      </header>
+  const hasItems = cart && cart.items.length > 0;
 
-      <main className="max-w-4xl mx-auto px-3 sm:px-4 py-4 sm:py-8">
-        <motion.div
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mb-4 sm:mb-8"
-        >
-          <h1 className="text-2xl sm:text-3xl font-bold text-foreground flex items-center gap-2 sm:gap-3" data-testid="text-page-title">
-            <ShoppingCart className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
-            Il Tuo Carrello
-          </h1>
-        </motion.div>
-
-        {isLoading ? (
-          <div className="space-y-4">
-            {[...Array(3)].map((_, i) => (
-              <Skeleton key={i} className="h-36" />
-            ))}
-          </div>
-        ) : error ? (
-          <Card className="p-8 text-center bg-red-500/10 border-red-500/20">
-            <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-400" />
-            <p className="text-red-400">Errore nel caricamento del carrello.</p>
-          </Card>
-        ) : cart && cart.items.length > 0 ? (
-          <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
-            <div className="lg:col-span-2 space-y-3 sm:space-y-4">
-              <div className="flex items-center justify-between">
-                <p className="text-muted-foreground">
-                  {cart.itemsCount} {cart.itemsCount === 1 ? "biglietto" : "biglietti"}
-                </p>
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={() => clearMutation.mutate()}
-                  disabled={clearMutation.isPending}
-                  className="text-red-400 hover:text-red-300 hover:bg-red-400/10"
-                  data-testid="button-clear"
-                >
-                  <Trash2 className="w-4 h-4 mr-1" />
-                  Svuota
-                </Button>
-              </div>
-              <AnimatePresence mode="popLayout">
-                {cart.items.map((item) => (
-                  <CartItemCard
-                    key={item.id}
-                    item={item}
-                    onRemove={() => removeMutation.mutate(item.id)}
-                    isRemoving={removeMutation.isPending}
-                  />
-                ))}
-              </AnimatePresence>
-            </div>
-
-            <div className="lg:col-span-1">
-              <Card className="bg-card border-border sticky top-24">
-                <CardHeader className="border-b border-border">
-                  <CardTitle className="text-card-foreground">Riepilogo</CardTitle>
-                </CardHeader>
-                <CardContent className="p-4 sm:p-6 space-y-4">
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Subtotale</span>
-                    <span>€{cart.total.toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between text-muted-foreground">
-                    <span>Commissioni</span>
-                    <span className="text-teal-400">Gratuite</span>
-                  </div>
-                  <div className="border-t border-border pt-4">
-                    <div className="flex justify-between items-center">
-                      <span className="text-lg font-semibold text-foreground">Totale</span>
-                      <span className="text-2xl font-bold text-primary" data-testid="text-total">
-                        €{cart.total.toFixed(2)}
-                      </span>
-                    </div>
-                    <p className="text-xs text-muted-foreground mt-1">IVA inclusa</p>
-                  </div>
-                  <Button
-                    onClick={handleCheckout}
-                    className="w-full h-12"
-                    data-testid="button-checkout"
-                  >
-                    Procedi al Pagamento
-                    <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                  <p className="text-xs text-center text-muted-foreground">
-                    Pagamenti sicuri con Stripe
-                  </p>
-                </CardContent>
-              </Card>
-            </div>
-          </div>
-        ) : (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
+  const header = (
+    <MobileHeader
+      title="Carrello"
+      leftAction={
+        <Link href="/acquista">
+          <HapticButton 
+            variant="ghost" 
+            size="icon" 
+            hapticType="light"
+            data-testid="button-back"
           >
-            <Card className="p-12 text-center bg-muted/50 border-border">
-              <ShoppingCart className="w-20 h-20 mx-auto mb-6 text-muted-foreground" />
-              <h3 className="text-2xl font-semibold text-foreground mb-3">Carrello vuoto</h3>
-              <p className="text-muted-foreground mb-6 max-w-md mx-auto">
-                Non hai ancora aggiunto biglietti al carrello.
-                Scopri gli eventi disponibili e scegli i tuoi biglietti.
-              </p>
-              <Link href="/acquista">
-                <Button data-testid="button-browse">
-                  <Ticket className="w-4 h-4 mr-2" />
-                  Sfoglia Eventi
-                </Button>
-              </Link>
-            </Card>
-          </motion.div>
-        )}
-      </main>
+            <ChevronLeft className="w-6 h-6" />
+          </HapticButton>
+        </Link>
+      }
+      rightAction={
+        hasItems ? (
+          <HapticButton
+            variant="ghost"
+            size="icon"
+            onClick={() => {
+              if (cart?.items.length) {
+                cart.items.forEach(item => removeMutation.mutate(item.id));
+              }
+            }}
+            disabled={removeMutation.isPending}
+            className="text-red-400"
+            hapticType="medium"
+            data-testid="button-clear"
+          >
+            <Trash2 className="w-5 h-5" />
+          </HapticButton>
+        ) : undefined
+      }
+    />
+  );
+
+  const footer = hasItems ? (
+    <div className="bg-card/95 backdrop-blur-xl border-t border-border px-4 py-3">
+      <div className="flex items-center justify-between mb-3">
+        <div>
+          <p className="text-sm text-muted-foreground">
+            {cart.itemsCount} {cart.itemsCount === 1 ? "biglietto" : "biglietti"}
+          </p>
+          <p className="text-xs text-muted-foreground">Commissioni gratuite</p>
+        </div>
+        <motion.div
+          key={cart.total}
+          initial={{ scale: 1.1 }}
+          animate={{ scale: 1 }}
+          transition={springConfig}
+        >
+          <p className="text-2xl font-bold text-primary tabular-nums" data-testid="text-total">
+            €{cart.total.toFixed(2)}
+          </p>
+        </motion.div>
+      </div>
+      
+      <HapticButton
+        onClick={handleCheckout}
+        className="w-full h-14 text-base font-semibold"
+        hapticType="medium"
+        data-testid="button-checkout"
+      >
+        Vai al Checkout
+        <ArrowRight className="w-5 h-5 ml-2" />
+      </HapticButton>
     </div>
+  ) : null;
+
+  return (
+    <MobileAppLayout
+      header={header}
+      footer={footer}
+      noPadding
+    >
+      {isLoading ? (
+        <LoadingSkeleton />
+      ) : error ? (
+        <div className="flex-1 flex flex-col items-center justify-center px-6">
+          <div className="w-20 h-20 rounded-full bg-red-500/10 flex items-center justify-center mb-4">
+            <AlertCircle className="w-10 h-10 text-red-400" />
+          </div>
+          <p className="text-red-400 text-center">Errore nel caricamento del carrello.</p>
+          <HapticButton 
+            variant="outline" 
+            className="mt-4"
+            onClick={() => window.location.reload()}
+            hapticType="light"
+          >
+            Riprova
+          </HapticButton>
+        </div>
+      ) : hasItems ? (
+        <div className="px-4 py-4 space-y-4 pb-8">
+          <AnimatePresence mode="popLayout">
+            {cart.items.map((item) => (
+              <TicketCard
+                key={item.id}
+                item={item}
+                onRemove={() => removeMutation.mutate(item.id)}
+                onUpdateQuantity={(newQuantity) => 
+                  updateQuantityMutation.mutate({ itemId: item.id, quantity: newQuantity })
+                }
+                isUpdating={removeMutation.isPending || updateQuantityMutation.isPending}
+              />
+            ))}
+          </AnimatePresence>
+        </div>
+      ) : (
+        <EmptyCart />
+      )}
+    </MobileAppLayout>
   );
 }

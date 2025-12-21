@@ -1,28 +1,30 @@
 import { useQuery } from "@tanstack/react-query";
-import { Link, useParams } from "wouter";
+import { Link, useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { motion, AnimatePresence } from "framer-motion";
 import { 
   MapPin, 
-  Users, 
   Clock, 
   Calendar, 
   Ticket, 
   ArrowLeft,
-  Sparkles,
   Building2,
-  ChevronRight
+  ChevronRight,
+  Phone,
+  Globe,
+  Navigation
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { triggerHaptic } from "@/components/mobile-primitives";
 
 interface Sector {
   id: string;
   name: string;
   price: string;
+  priceIntero?: string;
   capacity: number;
   soldCount: number;
 }
@@ -54,8 +56,44 @@ interface VenueDetail {
   upcomingEvents: VenueEvent[];
 }
 
+const springTransition = {
+  type: "spring",
+  stiffness: 400,
+  damping: 30
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+      delayChildren: 0.1
+    }
+  }
+};
+
+const fadeInUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: springTransition
+  }
+};
+
+const scaleIn = {
+  hidden: { opacity: 0, scale: 0.9 },
+  visible: { 
+    opacity: 1, 
+    scale: 1,
+    transition: springTransition
+  }
+};
+
 export default function PublicVenueDetail() {
   const params = useParams<{ id: string }>();
+  const [, setLocation] = useLocation();
 
   const { data: venue, isLoading, error } = useQuery<VenueDetail>({
     queryKey: ["/api/public/venues", params.id],
@@ -69,281 +107,342 @@ export default function PublicVenueDetail() {
     },
   });
 
+  const handleBack = () => {
+    triggerHaptic('light');
+    setLocation('/locali');
+  };
+
+  const handleOpenMaps = () => {
+    if (venue?.address && venue?.city) {
+      triggerHaptic('medium');
+      const query = encodeURIComponent(`${venue.address}, ${venue.city}`);
+      window.open(`https://maps.google.com/maps?q=${query}`, '_blank');
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-3 sm:px-4 py-4 sm:py-8">
-          <Skeleton className="h-60 sm:h-80 w-full rounded-2xl mb-4 sm:mb-8" />
-          <Skeleton className="h-8 w-1/3 mb-4" />
-          <Skeleton className="h-4 w-1/2 mb-8" />
-          <div className="grid md:grid-cols-2 gap-6">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-48" />
-            ))}
-          </div>
-        </main>
+      <div className="fixed inset-0 bg-background flex flex-col">
+        <div className="relative h-[45vh] w-full">
+          <Skeleton className="w-full h-full" />
+          <motion.button
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="absolute top-4 left-4 z-20 w-11 h-11 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center"
+            style={{ marginTop: 'env(safe-area-inset-top)' }}
+          >
+            <ArrowLeft className="w-5 h-5 text-white" />
+          </motion.button>
+        </div>
+        <div className="flex-1 px-4 py-6 space-y-4">
+          <Skeleton className="h-8 w-3/4" />
+          <Skeleton className="h-5 w-1/2" />
+          <Skeleton className="h-20 w-full rounded-2xl" />
+          <Skeleton className="h-6 w-1/3 mt-6" />
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-32 w-full rounded-2xl" />
+          ))}
+        </div>
       </div>
     );
   }
 
   if (error || !venue) {
     return (
-      <div className="min-h-screen bg-background">
-        <Header />
-        <main className="container mx-auto px-4 py-8">
-          <Card className="p-12 text-center bg-red-500/10 border-red-500/20">
-            <Building2 className="w-16 h-16 mx-auto mb-4 text-red-400" />
-            <h3 className="text-xl font-semibold text-foreground mb-2">Locale non trovato</h3>
-            <p className="text-muted-foreground mb-6">Il locale richiesto non è disponibile.</p>
-            <Link href="/locali">
-              <Button data-testid="button-back-venues">
-                <ArrowLeft className="w-4 h-4 mr-2" />
-                Torna ai locali
-              </Button>
-            </Link>
-          </Card>
-        </main>
+      <div className="fixed inset-0 bg-background flex flex-col">
+        <div 
+          className="shrink-0 px-4 py-3 flex items-center"
+          style={{ paddingTop: 'calc(env(safe-area-inset-top) + 12px)' }}
+        >
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={handleBack}
+            className="h-11 w-11 rounded-full"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="w-5 h-5" />
+          </Button>
+        </div>
+        
+        <div className="flex-1 flex items-center justify-center px-6">
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={springTransition}
+            className="text-center"
+          >
+            <div className="w-20 h-20 rounded-full bg-destructive/10 flex items-center justify-center mx-auto mb-6">
+              <Building2 className="w-10 h-10 text-destructive" />
+            </div>
+            <h2 className="text-xl font-bold text-foreground mb-2">Locale non trovato</h2>
+            <p className="text-muted-foreground mb-8">Il locale richiesto non è disponibile.</p>
+            <Button 
+              onClick={handleBack}
+              className="min-h-[48px] px-8 rounded-full"
+              data-testid="button-back-venues"
+            >
+              <ArrowLeft className="w-4 h-4 mr-2" />
+              Torna ai locali
+            </Button>
+          </motion.div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background">
-      <Header />
-      
-      <main>
-        <div className="relative h-80 md:h-96 overflow-hidden">
-          {venue.heroImageUrl ? (
-            <img 
-              src={venue.heroImageUrl} 
-              alt={venue.name}
-              className="w-full h-full object-cover"
-            />
-          ) : (
-            <div className="w-full h-full bg-gradient-to-br from-primary/20 via-primary/10 to-primary/20 flex items-center justify-center">
-              <Building2 className="w-32 h-32 text-primary/30" />
-            </div>
+    <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
+      <motion.div 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        className="relative h-[45vh] w-full shrink-0"
+      >
+        {venue.heroImageUrl ? (
+          <motion.img 
+            initial={{ scale: 1.1 }}
+            animate={{ scale: 1 }}
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            src={venue.heroImageUrl} 
+            alt={venue.name}
+            className="w-full h-full object-cover"
+          />
+        ) : (
+          <div className="w-full h-full bg-gradient-to-br from-primary/30 via-primary/20 to-primary/10 flex items-center justify-center">
+            <Building2 className="w-24 h-24 text-primary/40" />
+          </div>
+        )}
+        
+        <div className="absolute inset-0 bg-gradient-to-t from-background via-background/60 to-transparent" />
+        
+        <motion.button
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ ...springTransition, delay: 0.2 }}
+          onClick={handleBack}
+          className="absolute top-4 left-4 z-20 w-11 h-11 rounded-full bg-black/40 backdrop-blur-xl flex items-center justify-center active:scale-95 transition-transform"
+          style={{ marginTop: 'env(safe-area-inset-top)' }}
+          data-testid="button-back"
+          aria-label="Torna indietro"
+        >
+          <ArrowLeft className="w-5 h-5 text-white" />
+        </motion.button>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springTransition, delay: 0.3 }}
+          className="absolute bottom-0 left-0 right-0 px-4 pb-4"
+        >
+          {venue.city && (
+            <Badge className="bg-primary/90 text-primary-foreground border-0 mb-3">
+              <MapPin className="w-3 h-3 mr-1" />
+              {venue.city}
+            </Badge>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
           
-          <div className="absolute bottom-0 left-0 right-0 p-4 sm:p-6 md:p-12">
-            <div className="container mx-auto">
-              <Link href="/locali">
-                <Button variant="ghost" size="sm" className="text-foreground/70 hover:text-foreground mb-3 sm:mb-4 h-10" data-testid="button-back">
-                  <ArrowLeft className="w-4 h-4 mr-2" />
-                  Tutti i locali
-                </Button>
-              </Link>
-              
-              {venue.city && (
-                <div className="flex flex-wrap gap-2 mb-3 sm:mb-4">
-                  <Badge className="bg-primary text-primary-foreground border-0">
-                    <MapPin className="w-3 h-3 mr-1" />
-                    {venue.city}
-                  </Badge>
-                </div>
-              )}
-              
-              <h1 className="text-2xl sm:text-4xl md:text-5xl font-bold text-foreground mb-2 sm:mb-3" data-testid="text-venue-name">
-                {venue.name}
-              </h1>
-              
-              {venue.address && (
-                <p className="text-muted-foreground text-lg flex items-center gap-2" data-testid="text-venue-address">
-                  <MapPin className="w-5 h-5" />
-                  {venue.address}
-                </p>
-              )}
-            </div>
-          </div>
-        </div>
+          <h1 className="text-3xl font-bold text-foreground leading-tight" data-testid="text-venue-name">
+            {venue.name}
+          </h1>
+        </motion.div>
+      </motion.div>
 
-        <div className="container mx-auto px-3 sm:px-4 py-4 sm:py-8 md:py-12">
-          <div className="grid lg:grid-cols-3 gap-4 sm:gap-8">
-            <div className="lg:col-span-1">
-              <Card className="bg-card border-border sticky top-24">
-                <CardHeader>
-                  <CardTitle className="text-foreground flex items-center gap-2">
-                    <Building2 className="w-5 h-5 text-primary" />
-                    Informazioni
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {venue.shortDescription && (
-                    <p className="text-muted-foreground" data-testid="text-description">
-                      {venue.shortDescription}
-                    </p>
-                  )}
-                  
-                  {venue.openingHours && (
-                    <div className="flex items-start gap-3 p-4 rounded-lg bg-muted/50">
-                      <Clock className="w-5 h-5 text-primary mt-0.5" />
-                      <div>
-                        <p className="text-muted-foreground text-sm">Orari</p>
-                        <p className="text-foreground font-medium" data-testid="text-hours">{venue.openingHours}</p>
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="pt-4 border-t border-border">
-                    <p className="text-muted-foreground text-sm mb-3">
-                      {venue.upcomingEvents.length} eventi in programma
-                    </p>
-                    <Link href="/acquista">
-                      <Button className="w-full" data-testid="button-all-events">
-                        <Ticket className="w-4 h-4 mr-2" />
-                        Tutti gli Eventi
-                      </Button>
-                    </Link>
-                  </div>
-                </CardContent>
-              </Card>
-            </div>
+      <div 
+        className="flex-1 overflow-y-auto overscroll-contain"
+        style={{ paddingBottom: 'calc(env(safe-area-inset-bottom) + 16px)' }}
+      >
+        <motion.div
+          variants={staggerContainer}
+          initial="hidden"
+          animate="visible"
+          className="px-4 py-5 space-y-6"
+        >
+          {venue.address && (
+            <motion.button
+              variants={fadeInUp}
+              onClick={handleOpenMaps}
+              className="w-full flex items-center gap-4 p-4 rounded-2xl bg-card/80 backdrop-blur-sm border border-border active:scale-[0.98] transition-transform"
+              data-testid="button-open-maps"
+            >
+              <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Navigation className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1 text-left">
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Indirizzo</p>
+                <p className="text-foreground font-medium" data-testid="text-venue-address">{venue.address}</p>
+                {venue.city && (
+                  <p className="text-muted-foreground text-sm">{venue.city}</p>
+                )}
+              </div>
+              <ChevronRight className="w-5 h-5 text-muted-foreground" />
+            </motion.button>
+          )}
 
-            <div className="lg:col-span-2">
-              <h2 className="text-xl sm:text-2xl font-bold text-foreground mb-4 sm:mb-6 flex items-center gap-2">
-                <Calendar className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
-                Prossimi Eventi
-              </h2>
-              
+          {venue.shortDescription && (
+            <motion.div variants={fadeInUp}>
+              <p className="text-muted-foreground leading-relaxed" data-testid="text-description">
+                {venue.shortDescription}
+              </p>
+            </motion.div>
+          )}
+
+          {venue.openingHours && (
+            <motion.div 
+              variants={fadeInUp}
+              className="flex items-start gap-4 p-4 rounded-2xl bg-card/50 border border-border"
+            >
+              <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                <Clock className="w-5 h-5 text-primary" />
+              </div>
+              <div>
+                <p className="text-xs text-muted-foreground uppercase tracking-wide mb-1">Orari</p>
+                <p className="text-foreground font-medium" data-testid="text-hours">{venue.openingHours}</p>
+              </div>
+            </motion.div>
+          )}
+
+          <motion.div variants={fadeInUp}>
+            <div className="flex items-center gap-3 mb-4">
+              <Calendar className="w-5 h-5 text-primary" />
+              <h2 className="text-lg font-semibold text-foreground">Prossimi Eventi</h2>
+              <Badge variant="secondary" className="ml-auto">
+                {venue.upcomingEvents.length}
+              </Badge>
+            </div>
+            
+            <AnimatePresence mode="wait">
               {venue.upcomingEvents.length === 0 ? (
-                <Card className="p-12 text-center bg-muted/50 border-border">
-                  <Calendar className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
-                  <h3 className="text-xl font-semibold text-foreground mb-2">Nessun evento in programma</h3>
-                  <p className="text-muted-foreground">
-                    Al momento non ci sono eventi disponibili per questo locale.
+                <motion.div
+                  key="empty"
+                  variants={scaleIn}
+                  initial="hidden"
+                  animate="visible"
+                  exit="hidden"
+                  className="py-12 text-center"
+                >
+                  <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                    <Calendar className="w-8 h-8 text-muted-foreground" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-foreground mb-2">Nessun evento</h3>
+                  <p className="text-muted-foreground text-sm">
+                    Non ci sono eventi in programma.
                   </p>
-                </Card>
+                </motion.div>
               ) : (
-                <div className="space-y-4">
-                  {venue.upcomingEvents.map((event) => (
-                    <EventCard key={event.id} event={event} />
+                <motion.div 
+                  key="list"
+                  className="space-y-3"
+                >
+                  {venue.upcomingEvents.map((event, index) => (
+                    <EventCard key={event.id} event={event} index={index} />
                   ))}
-                </div>
+                </motion.div>
               )}
-            </div>
-          </div>
-        </div>
-      </main>
+            </AnimatePresence>
+          </motion.div>
 
-      <footer className="border-t border-border py-8 mt-16">
-        <div className="container mx-auto px-4 text-center text-muted-foreground text-sm">
-          <p>&copy; {new Date().getFullYear()} Event4U - Tutti i diritti riservati</p>
-        </div>
-      </footer>
+          <motion.div variants={fadeInUp}>
+            <Link href="/acquista">
+              <Button 
+                className="w-full min-h-[52px] rounded-2xl text-base font-semibold"
+                data-testid="button-all-events"
+              >
+                <Ticket className="w-5 h-5 mr-2" />
+                Scopri tutti gli eventi
+              </Button>
+            </Link>
+          </motion.div>
+        </motion.div>
+      </div>
     </div>
   );
 }
 
-function Header() {
-  return (
-    <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-md border-b border-border">
-      <div className="container mx-auto px-4 py-4 flex items-center justify-between gap-4">
-        <Link href="/">
-          <div className="flex items-center gap-3 cursor-pointer">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-              <Sparkles className="h-5 w-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold text-foreground hidden sm:block">
-              Event<span className="text-primary">4</span>U
-            </span>
-          </div>
-        </Link>
-        
-        <div className="flex items-center gap-3">
-          <Link href="/locali">
-            <Button variant="outline" size="sm" className="border-primary/50 text-primary hover:bg-primary/10" data-testid="button-venues">
-              <Building2 className="w-4 h-4 mr-1" />
-              Locali
-            </Button>
-          </Link>
-          <Link href="/acquista">
-            <Button variant="ghost" size="sm" className="text-muted-foreground hover:text-foreground" data-testid="button-events">
-              <Ticket className="w-4 h-4 mr-1" />
-              Eventi
-            </Button>
-          </Link>
-          <ThemeToggle />
-        </div>
-      </div>
-    </header>
-  );
-}
-
-function EventCard({ event }: { event: VenueEvent }) {
+function EventCard({ event, index }: { event: VenueEvent; index: number }) {
   const eventDate = new Date(event.eventStart);
 
   return (
-    <Link href={`/acquista/${event.id}`}>
-      <Card 
-        className="bg-card border-border overflow-hidden hover:border-primary/30 transition-all duration-300 cursor-pointer"
-        data-testid={`card-event-${event.id}`}
-      >
-        <CardContent className="p-4 sm:p-6">
-          <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
-            <div className="flex-shrink-0 w-16 h-16 sm:w-20 sm:h-20 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex flex-col items-center justify-center">
-              <span className="text-xl sm:text-2xl font-bold text-primary">
-                {format(eventDate, "d")}
-              </span>
-              <span className="text-xs sm:text-sm text-muted-foreground uppercase">
-                {format(eventDate, "MMM", { locale: it })}
-              </span>
-            </div>
-            
-            <div className="flex-1 min-w-0">
-              <h3 className="text-lg sm:text-xl font-bold text-foreground mb-1" data-testid={`text-event-name-${event.id}`}>
-                {event.eventName}
-              </h3>
-              <p className="text-muted-foreground text-xs sm:text-sm flex items-center gap-1.5 sm:gap-2 mb-2">
-                <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden sm:inline">{format(eventDate, "EEEE d MMMM yyyy • HH:mm", { locale: it })}</span>
-                <span className="sm:hidden">{format(eventDate, "d MMM yyyy • HH:mm", { locale: it })}</span>
-              </p>
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ ...springTransition, delay: index * 0.05 }}
+    >
+      <Link href={`/acquista/${event.id}`}>
+        <motion.div 
+          whileTap={{ scale: 0.98 }}
+          className="bg-card border border-border rounded-2xl overflow-hidden active:bg-card/80 transition-colors"
+          data-testid={`card-event-${event.id}`}
+        >
+          <div className="p-4">
+            <div className="flex items-start gap-4">
+              <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 flex flex-col items-center justify-center shrink-0">
+                <span className="text-xl font-bold text-primary leading-none">
+                  {format(eventDate, "d")}
+                </span>
+                <span className="text-[10px] text-muted-foreground uppercase font-medium">
+                  {format(eventDate, "MMM", { locale: it })}
+                </span>
+              </div>
               
-              {event.requiresNominative && (
-                <div className="flex flex-wrap gap-2">
-                  <Badge className="bg-purple-500/20 text-purple-400 border-0">
+              <div className="flex-1 min-w-0">
+                <h3 className="text-base font-semibold text-foreground truncate mb-1" data-testid={`text-event-name-${event.id}`}>
+                  {event.eventName}
+                </h3>
+                <p className="text-muted-foreground text-sm flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 shrink-0" />
+                  {format(eventDate, "EEEE • HH:mm", { locale: it })}
+                </p>
+                
+                {event.requiresNominative && (
+                  <Badge className="bg-purple-500/20 text-purple-400 border-0 mt-2 text-xs">
                     Nominativo
                   </Badge>
-                </div>
-              )}
-            </div>
-            
-            <div className="flex flex-row sm:flex-col items-center sm:items-end justify-between sm:justify-start gap-2 mt-2 sm:mt-0">
-              {event.minPrice !== null && (
-                <div className="text-left sm:text-right">
-                  <p className="text-muted-foreground text-xs">A partire da</p>
-                  <p className="text-xl sm:text-2xl font-bold text-primary">
-                    €{event.minPrice.toFixed(0)}
-                  </p>
-                </div>
-              )}
-              <Button className="h-10" data-testid={`button-buy-${event.id}`}>
-                Acquista
-                <ChevronRight className="w-4 h-4 ml-1" />
-              </Button>
-            </div>
-          </div>
-          
-          {event.sectors.length > 0 && (
-            <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-border">
-              <p className="text-xs text-muted-foreground uppercase tracking-wide mb-2">Settori disponibili</p>
-              <div className="flex flex-wrap gap-1.5 sm:gap-2">
-                {event.sectors.map((sector) => (
-                  <Badge 
-                    key={sector.id}
-                    variant="outline" 
-                    className="border-border text-muted-foreground text-xs"
-                  >
-                    {sector.name} - €{parseFloat(sector.priceIntero || '0').toFixed(0)}
-                  </Badge>
-                ))}
+                )}
+              </div>
+              
+              <div className="text-right shrink-0">
+                {event.minPrice !== null && (
+                  <>
+                    <p className="text-[10px] text-muted-foreground uppercase">Da</p>
+                    <p className="text-xl font-bold text-primary">
+                      €{event.minPrice.toFixed(0)}
+                    </p>
+                  </>
+                )}
               </div>
             </div>
-          )}
-        </CardContent>
-      </Card>
-    </Link>
+            
+            {event.sectors.length > 0 && (
+              <div className="mt-3 pt-3 border-t border-border">
+                <div className="flex flex-wrap gap-1.5">
+                  {event.sectors.slice(0, 3).map((sector) => (
+                    <Badge 
+                      key={sector.id}
+                      variant="outline" 
+                      className="border-border text-muted-foreground text-[10px] px-2 py-0.5"
+                    >
+                      {sector.name}
+                    </Badge>
+                  ))}
+                  {event.sectors.length > 3 && (
+                    <Badge 
+                      variant="outline" 
+                      className="border-border text-muted-foreground text-[10px] px-2 py-0.5"
+                    >
+                      +{event.sectors.length - 3}
+                    </Badge>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+          
+          <div className="px-4 py-3 bg-primary/5 border-t border-border flex items-center justify-between">
+            <span className="text-sm font-medium text-primary">Acquista biglietti</span>
+            <ChevronRight className="w-4 h-4 text-primary" />
+          </div>
+        </motion.div>
+      </Link>
+    </motion.div>
   );
 }

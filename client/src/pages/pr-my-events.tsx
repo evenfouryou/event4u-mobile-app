@@ -1,30 +1,18 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-  CardFooter,
-} from "@/components/ui/card";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { 
+  HapticButton, 
+  MobileAppLayout, 
+  MobileHeader,
+  triggerHaptic 
+} from "@/components/mobile-primitives";
 import {
   Calendar,
-  Search,
   MapPin,
   Clock,
   Users,
@@ -37,17 +25,42 @@ import {
   CalendarCheck,
   CalendarClock,
   CheckCircle2,
+  Sparkles,
 } from "lucide-react";
 import { format, isAfter, isBefore, isToday } from "date-fns";
 import { it } from "date-fns/locale";
 import type { EventStaffAssignment, Event } from "@shared/schema";
 
+const springTransition = {
+  type: "spring",
+  stiffness: 400,
+  damping: 30,
+};
+
+const staggerChildren = {
+  animate: {
+    transition: {
+      staggerChildren: 0.08,
+    },
+  },
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    transition: springTransition,
+  },
+  tap: { scale: 0.98 },
+};
+
 export default function PrMyEventsPage() {
   const { user } = useAuth();
-  const [searchQuery, setSearchQuery] = useState("");
-  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [activeFilter, setActiveFilter] = useState<"upcoming" | "past">("upcoming");
 
-  const { data: assignments = [], isLoading: loadingAssignments, refetch } = useQuery<EventStaffAssignment[]>({
+  const { data: assignments = [], isLoading: loadingAssignments, refetch, isRefetching } = useQuery<EventStaffAssignment[]>({
     queryKey: ["/api/pr/my-assignments"],
   });
 
@@ -60,34 +73,23 @@ export default function PrMyEventsPage() {
     return allEvents.filter(e => assignedEventIds.has(e.id));
   }, [allEvents, assignments]);
 
-  const filteredEvents = useMemo(() => {
-    let filtered = myEvents;
-    
-    if (searchQuery) {
-      const query = searchQuery.toLowerCase();
-      filtered = filtered.filter(e =>
-        e.name.toLowerCase().includes(query) ||
-        e.locationId?.toLowerCase().includes(query)
-      );
-    }
-
-    if (statusFilter !== "all") {
-      filtered = filtered.filter(e => e.status === statusFilter);
-    }
-
-    return filtered.sort((a, b) => 
-      new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime()
-    );
-  }, [myEvents, searchQuery, statusFilter]);
-
   const upcomingEvents = useMemo(() =>
-    filteredEvents.filter(e => isAfter(new Date(e.startDatetime), new Date()) || isToday(new Date(e.startDatetime))),
-    [filteredEvents]
+    myEvents
+      .filter(e => isAfter(new Date(e.startDatetime), new Date()) || isToday(new Date(e.startDatetime)))
+      .sort((a, b) => new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime()),
+    [myEvents]
   );
 
   const pastEvents = useMemo(() =>
-    filteredEvents.filter(e => isBefore(new Date(e.startDatetime), new Date()) && !isToday(new Date(e.startDatetime))),
-    [filteredEvents]
+    myEvents
+      .filter(e => isBefore(new Date(e.startDatetime), new Date()) && !isToday(new Date(e.startDatetime)))
+      .sort((a, b) => new Date(b.startDatetime).getTime() - new Date(a.startDatetime).getTime()),
+    [myEvents]
+  );
+
+  const todayEvents = useMemo(() =>
+    myEvents.filter(e => isToday(new Date(e.startDatetime))),
+    [myEvents]
   );
 
   const getAssignmentForEvent = (eventId: string) =>
@@ -96,314 +98,331 @@ export default function PrMyEventsPage() {
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'draft':
-        return <Badge variant="outline">Bozza</Badge>;
+        return <Badge variant="outline" className="text-sm">Bozza</Badge>;
       case 'scheduled':
-        return <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">Programmato</Badge>;
+        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-sm">Programmato</Badge>;
       case 'ongoing':
-        return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">In Corso</Badge>;
+        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-sm">In Corso</Badge>;
       case 'closed':
-        return <Badge className="bg-gray-500/10 text-gray-500 border-gray-500/20">Concluso</Badge>;
+        return <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30 text-sm">Concluso</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline" className="text-sm">{status}</Badge>;
     }
   };
 
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'gestore_covisione':
-        return <Badge className="bg-purple-500/10 text-purple-500 border-purple-500/20">Co-Visione</Badge>;
+        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-sm font-semibold">Co-Visione</Badge>;
       case 'capo_staff':
-        return <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">Capo Staff</Badge>;
+        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-sm font-semibold">Capo Staff</Badge>;
       case 'pr':
-        return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">PR</Badge>;
+        return <Badge className="bg-primary/20 text-primary border-primary/30 text-sm font-semibold">PR</Badge>;
       default:
-        return <Badge variant="outline">{role}</Badge>;
+        return <Badge variant="outline" className="text-sm">{role}</Badge>;
     }
   };
 
   const isLoading = loadingAssignments || loadingEvents;
 
-  if (isLoading) {
-    return (
-      <div className="container mx-auto p-6 space-y-6">
-        <Skeleton className="h-10 w-64" />
-        <div className="grid gap-4 md:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-48" />
-          ))}
-        </div>
-      </div>
-    );
-  }
+  const displayedEvents = activeFilter === "upcoming" ? upcomingEvents : pastEvents;
 
-  const EventCard = ({ event }: { event: Event }) => {
+  const handleRefresh = () => {
+    triggerHaptic('medium');
+    refetch();
+  };
+
+  const EventCard = ({ event, index }: { event: Event; index: number }) => {
     const assignment = getAssignmentForEvent(event.id);
     const eventDate = new Date(event.startDatetime);
     const isEventToday = isToday(eventDate);
-    const isEventUpcoming = isAfter(eventDate, new Date());
 
     return (
-      <Card 
-        className={`hover-elevate transition-all ${isEventToday ? 'ring-2 ring-primary' : ''}`}
-        data-testid={`card-event-${event.id}`}
+      <motion.div
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+        whileTap="tap"
+        custom={index}
+        className="w-full"
       >
-        <CardHeader className="pb-2">
-          <div className="flex items-start justify-between gap-2">
-            <div className="flex-1 min-w-0">
-              <CardTitle className="text-lg truncate">{event.name}</CardTitle>
-              <CardDescription className="flex items-center gap-1 mt-1">
-                <Calendar className="w-3 h-3" />
-                {format(eventDate, "EEEE d MMMM yyyy", { locale: it })}
-              </CardDescription>
-            </div>
-            <div className="flex flex-col gap-1 items-end">
-              {getStatusBadge(event.status)}
-              {isEventToday && (
-                <Badge className="bg-primary/10 text-primary">Oggi</Badge>
+        <Link href={`/pr/staff?event=${event.id}`}>
+          <div 
+            className={`
+              relative min-h-[160px] rounded-2xl overflow-hidden
+              bg-card/80 backdrop-blur-sm border border-border/50
+              active:scale-[0.98] transition-transform
+              ${isEventToday ? 'ring-2 ring-primary shadow-lg shadow-primary/20' : ''}
+            `}
+            data-testid={`card-event-${event.id}`}
+            onClick={() => triggerHaptic('light')}
+          >
+            {isEventToday && (
+              <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-primary via-primary to-transparent" />
+            )}
+
+            <div className="p-5 space-y-4">
+              <div className="flex items-start justify-between gap-3">
+                <div className="flex-1 min-w-0">
+                  <h3 className="text-xl font-bold text-foreground truncate">{event.name}</h3>
+                  <div className="flex items-center gap-2 mt-2 text-muted-foreground">
+                    <Calendar className="w-4 h-4 text-primary shrink-0" />
+                    <span className="text-base font-medium">
+                      {format(eventDate, "EEE d MMM", { locale: it })}
+                    </span>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2 items-end shrink-0">
+                  {getStatusBadge(event.status)}
+                  {isEventToday && (
+                    <Badge className="bg-primary/20 text-primary border-primary/30 text-sm font-bold animate-pulse">
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      OGGI
+                    </Badge>
+                  )}
+                </div>
+              </div>
+
+              <div className="flex items-center gap-4">
+                <div className="flex items-center gap-2 text-muted-foreground">
+                  <Clock className="w-4 h-4 shrink-0" />
+                  <span className="text-base">
+                    {format(eventDate, "HH:mm", { locale: it })}
+                  </span>
+                </div>
+                {event.locationId && (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <MapPin className="w-4 h-4 shrink-0" />
+                    <span className="text-base truncate">{event.locationId}</span>
+                  </div>
+                )}
+              </div>
+
+              {assignment && (
+                <div className="flex items-center justify-between gap-3 pt-2 border-t border-border/50">
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Ruolo:</span>
+                    {getRoleBadge(assignment.role)}
+                  </div>
+                  <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                </div>
+              )}
+
+              {assignment?.permissions && assignment.permissions.length > 0 && (
+                <div className="flex flex-wrap gap-2">
+                  {assignment.permissions.includes('gestione_liste') && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400">
+                      <ListChecks className="w-4 h-4" />
+                      <span className="text-sm font-medium">Liste</span>
+                    </div>
+                  )}
+                  {assignment.permissions.includes('gestione_tavoli') && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-400">
+                      <Armchair className="w-4 h-4" />
+                      <span className="text-sm font-medium">Tavoli</span>
+                    </div>
+                  )}
+                  {assignment.permissions.includes('check_in') && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/10 text-purple-400">
+                      <QrCode className="w-4 h-4" />
+                      <span className="text-sm font-medium">Check-in</span>
+                    </div>
+                  )}
+                </div>
               )}
             </div>
           </div>
-        </CardHeader>
-        <CardContent className="space-y-3">
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Clock className="w-3 h-3" />
-            {format(eventDate, "HH:mm", { locale: it })}
-            {event.endDatetime && ` - ${format(new Date(event.endDatetime), "HH:mm", { locale: it })}`}
-          </div>
-          
-          {assignment && (
-            <div className="flex items-center gap-2">
-              <span className="text-sm text-muted-foreground">Il tuo ruolo:</span>
-              {getRoleBadge(assignment.role)}
-            </div>
-          )}
-
-          {assignment?.permissions && assignment.permissions.length > 0 && (
-            <div className="flex flex-wrap gap-1">
-              {assignment.permissions.map((perm) => (
-                <Badge key={perm} variant="outline" className="text-xs">
-                  {perm === 'gestione_liste' && 'Liste'}
-                  {perm === 'gestione_tavoli' && 'Tavoli'}
-                  {perm === 'check_in' && 'Check-in'}
-                  {perm === 'visualizza_stats' && 'Stats'}
-                </Badge>
-              ))}
-            </div>
-          )}
-        </CardContent>
-        <CardFooter className="flex flex-wrap gap-2 pt-2 border-t">
-          {(assignment?.permissions?.includes('gestione_liste') || assignment?.role === 'pr') && (
-            <Button variant="outline" size="sm" asChild data-testid={`button-lists-${event.id}`}>
-              <Link href="/pr/guest-lists">
-                <ListChecks className="w-4 h-4 mr-1" />
-                Liste
-              </Link>
-            </Button>
-          )}
-          {(assignment?.permissions?.includes('gestione_tavoli') || assignment?.role === 'gestore_covisione') && (
-            <Button variant="outline" size="sm" asChild data-testid={`button-tables-${event.id}`}>
-              <Link href="/pr/tables">
-                <Armchair className="w-4 h-4 mr-1" />
-                Tavoli
-              </Link>
-            </Button>
-          )}
-          {(assignment?.permissions?.includes('check_in') || assignment?.role === 'capo_staff') && (
-            <Button variant="outline" size="sm" asChild data-testid={`button-scanner-${event.id}`}>
-              <Link href="/pr/scanner">
-                <QrCode className="w-4 h-4 mr-1" />
-                Scanner
-              </Link>
-            </Button>
-          )}
-        </CardFooter>
-      </Card>
+        </Link>
+      </motion.div>
     );
   };
 
-  return (
-    <div className="container mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 pb-24 md:pb-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
-            <PartyPopper className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
-            I Miei Eventi
-          </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Eventi a cui sei stato assegnato
-          </p>
-        </div>
-        
-        <div className="flex gap-2">
-          <Button
-            variant="outline"
-            size="icon"
-            onClick={() => refetch()}
-            data-testid="button-refresh"
-          >
-            <RefreshCw className="h-4 w-4" />
-          </Button>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4">
-        <Card>
-          <CardContent className="p-3 sm:p-4 md:pt-6">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">Totale Eventi</p>
-                <p className="text-xl sm:text-2xl font-bold">{myEvents.length}</p>
-              </div>
-              <Calendar className="h-6 w-6 sm:h-8 sm:w-8 text-primary flex-shrink-0" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-3 sm:p-4 md:pt-6">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">In Arrivo</p>
-                <p className="text-xl sm:text-2xl font-bold text-blue-500">
-                  {upcomingEvents.length}
-                </p>
-              </div>
-              <CalendarClock className="h-6 w-6 sm:h-8 sm:w-8 text-blue-500 flex-shrink-0" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-3 sm:p-4 md:pt-6">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">Oggi</p>
-                <p className="text-xl sm:text-2xl font-bold text-green-500">
-                  {myEvents.filter(e => isToday(new Date(e.startDatetime))).length}
-                </p>
-              </div>
-              <CalendarCheck className="h-6 w-6 sm:h-8 sm:w-8 text-green-500 flex-shrink-0" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-3 sm:p-4 md:pt-6">
-            <div className="flex items-center justify-between gap-2">
-              <div>
-                <p className="text-xs sm:text-sm text-muted-foreground">Completati</p>
-                <p className="text-xl sm:text-2xl font-bold text-purple-500">
-                  {pastEvents.length}
-                </p>
-              </div>
-              <CheckCircle2 className="h-6 w-6 sm:h-8 sm:w-8 text-purple-500 flex-shrink-0" />
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card>
-        <CardContent className="p-3 sm:p-4 md:pt-6">
-          <div className="grid gap-2 sm:gap-4 md:grid-cols-2">
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Cerca Evento</label>
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Cerca per nome..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                  data-testid="input-search"
-                />
-              </div>
-            </div>
-
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Filtra per Stato</label>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger data-testid="select-status">
-                  <SelectValue placeholder="Tutti gli stati" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tutti gli stati</SelectItem>
-                  <SelectItem value="draft">Bozza</SelectItem>
-                  <SelectItem value="scheduled">Programmato</SelectItem>
-                  <SelectItem value="ongoing">In Corso</SelectItem>
-                  <SelectItem value="closed">Concluso</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      <Tabs defaultValue="upcoming" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
-          <TabsTrigger value="upcoming" className="flex items-center gap-2">
-            <CalendarClock className="w-4 h-4" />
-            In Arrivo ({upcomingEvents.length})
-          </TabsTrigger>
-          <TabsTrigger value="past" className="flex items-center gap-2">
-            <CheckCircle2 className="w-4 h-4" />
-            Passati ({pastEvents.length})
-          </TabsTrigger>
-        </TabsList>
-        
-        <TabsContent value="upcoming" className="mt-6">
-          {upcomingEvents.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <CalendarClock className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold">Nessun evento in arrivo</h3>
-                <p className="text-muted-foreground">
-                  Non hai eventi programmati per il futuro
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {upcomingEvents.map((event) => (
-                <EventCard key={event.id} event={event} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-        
-        <TabsContent value="past" className="mt-6">
-          {pastEvents.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <CheckCircle2 className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold">Nessun evento passato</h3>
-                <p className="text-muted-foreground">
-                  Non hai ancora completato nessun evento
-                </p>
-              </CardContent>
-            </Card>
-          ) : (
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-              {pastEvents.map((event) => (
-                <EventCard key={event.id} event={event} />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
-
-      {myEvents.length === 0 && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold">Nessun evento assegnato</h3>
-            <p className="text-muted-foreground">
-              Non sei stato ancora assegnato a nessun evento.
-              <br />
-              Contatta il tuo responsabile per essere assegnato.
-            </p>
-          </CardContent>
-        </Card>
-      )}
+  const LoadingSkeleton = () => (
+    <div className="space-y-4 px-4 pt-4">
+      {[1, 2, 3].map((i) => (
+        <Skeleton key={i} className="h-[160px] w-full rounded-2xl" />
+      ))}
     </div>
+  );
+
+  const EmptyState = ({ type }: { type: "upcoming" | "past" | "none" }) => (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={springTransition}
+      className="flex flex-col items-center justify-center py-16 px-6 text-center"
+    >
+      {type === "upcoming" && (
+        <>
+          <div className="w-20 h-20 rounded-full bg-blue-500/10 flex items-center justify-center mb-6">
+            <CalendarClock className="w-10 h-10 text-blue-400" />
+          </div>
+          <h3 className="text-xl font-bold text-foreground mb-2">Nessun evento in arrivo</h3>
+          <p className="text-base text-muted-foreground">
+            Non hai eventi programmati per il futuro
+          </p>
+        </>
+      )}
+      {type === "past" && (
+        <>
+          <div className="w-20 h-20 rounded-full bg-purple-500/10 flex items-center justify-center mb-6">
+            <CheckCircle2 className="w-10 h-10 text-purple-400" />
+          </div>
+          <h3 className="text-xl font-bold text-foreground mb-2">Nessun evento passato</h3>
+          <p className="text-base text-muted-foreground">
+            Non hai ancora completato nessun evento
+          </p>
+        </>
+      )}
+      {type === "none" && (
+        <>
+          <div className="w-20 h-20 rounded-full bg-muted/20 flex items-center justify-center mb-6">
+            <Users className="w-10 h-10 text-muted-foreground" />
+          </div>
+          <h3 className="text-xl font-bold text-foreground mb-2">Nessun evento assegnato</h3>
+          <p className="text-base text-muted-foreground">
+            Non sei stato ancora assegnato a nessun evento.
+            Contatta il tuo responsabile.
+          </p>
+        </>
+      )}
+    </motion.div>
+  );
+
+  const header = (
+    <MobileHeader
+      title="I Miei Eventi"
+      leftAction={
+        <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+          <PartyPopper className="w-5 h-5 text-primary" />
+        </div>
+      }
+      rightAction={
+        <HapticButton
+          variant="ghost"
+          size="icon"
+          onClick={handleRefresh}
+          disabled={isRefetching}
+          data-testid="button-refresh"
+          className="w-11 h-11"
+        >
+          <RefreshCw className={`w-5 h-5 ${isRefetching ? 'animate-spin' : ''}`} />
+        </HapticButton>
+      }
+      className="border-b-0"
+    />
+  );
+
+  if (isLoading) {
+    return (
+      <MobileAppLayout header={header} noPadding>
+        <LoadingSkeleton />
+      </MobileAppLayout>
+    );
+  }
+
+  return (
+    <MobileAppLayout header={header} noPadding>
+      <div className="flex flex-col min-h-full pb-24">
+        <motion.div 
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={springTransition}
+          className="px-4 py-4 space-y-4"
+        >
+          <div className="grid grid-cols-3 gap-3">
+            <motion.div 
+              whileTap={{ scale: 0.95 }}
+              className="bg-card/60 backdrop-blur-sm rounded-2xl p-4 border border-border/30"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center mb-2">
+                  <Calendar className="w-6 h-6 text-primary" />
+                </div>
+                <span className="text-2xl font-bold text-foreground">{myEvents.length}</span>
+                <span className="text-xs text-muted-foreground">Totali</span>
+              </div>
+            </motion.div>
+
+            <motion.div 
+              whileTap={{ scale: 0.95 }}
+              className="bg-card/60 backdrop-blur-sm rounded-2xl p-4 border border-border/30"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-12 h-12 rounded-full bg-emerald-500/10 flex items-center justify-center mb-2">
+                  <CalendarCheck className="w-6 h-6 text-emerald-400" />
+                </div>
+                <span className="text-2xl font-bold text-emerald-400">{todayEvents.length}</span>
+                <span className="text-xs text-muted-foreground">Oggi</span>
+              </div>
+            </motion.div>
+
+            <motion.div 
+              whileTap={{ scale: 0.95 }}
+              className="bg-card/60 backdrop-blur-sm rounded-2xl p-4 border border-border/30"
+            >
+              <div className="flex flex-col items-center text-center">
+                <div className="w-12 h-12 rounded-full bg-blue-500/10 flex items-center justify-center mb-2">
+                  <CalendarClock className="w-6 h-6 text-blue-400" />
+                </div>
+                <span className="text-2xl font-bold text-blue-400">{upcomingEvents.length}</span>
+                <span className="text-xs text-muted-foreground">In arrivo</span>
+              </div>
+            </motion.div>
+          </div>
+
+          <div className="flex gap-2 p-1 bg-card/40 rounded-2xl border border-border/30">
+            <HapticButton
+              variant={activeFilter === "upcoming" ? "default" : "ghost"}
+              className={`flex-1 h-12 rounded-xl text-base font-semibold ${
+                activeFilter === "upcoming" 
+                  ? "bg-primary text-primary-foreground shadow-lg" 
+                  : "text-muted-foreground"
+              }`}
+              onClick={() => setActiveFilter("upcoming")}
+              data-testid="filter-upcoming"
+            >
+              <CalendarClock className="w-5 h-5 mr-2" />
+              In Arrivo ({upcomingEvents.length})
+            </HapticButton>
+            <HapticButton
+              variant={activeFilter === "past" ? "default" : "ghost"}
+              className={`flex-1 h-12 rounded-xl text-base font-semibold ${
+                activeFilter === "past" 
+                  ? "bg-primary text-primary-foreground shadow-lg" 
+                  : "text-muted-foreground"
+              }`}
+              onClick={() => setActiveFilter("past")}
+              data-testid="filter-past"
+            >
+              <CheckCircle2 className="w-5 h-5 mr-2" />
+              Passati ({pastEvents.length})
+            </HapticButton>
+          </div>
+        </motion.div>
+
+        <div className="flex-1 px-4">
+          <AnimatePresence mode="wait">
+            {myEvents.length === 0 ? (
+              <EmptyState type="none" />
+            ) : displayedEvents.length === 0 ? (
+              <EmptyState type={activeFilter} />
+            ) : (
+              <motion.div
+                key={activeFilter}
+                initial="hidden"
+                animate="animate"
+                variants={staggerChildren}
+                className="space-y-4"
+              >
+                {displayedEvents.map((event, index) => (
+                  <EventCard key={event.id} event={event} index={index} />
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+      </div>
+    </MobileAppLayout>
   );
 }

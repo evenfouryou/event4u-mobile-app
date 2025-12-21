@@ -1,13 +1,11 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle2, ArrowLeft } from "lucide-react";
+import { Mail, ArrowLeft, CheckCircle2, AlertCircle, Loader2 } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
-import { ThemeToggle } from "@/components/theme-toggle";
+import { triggerHaptic } from "@/components/mobile-primitives";
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState("");
@@ -20,69 +18,111 @@ export default function ForgotPassword() {
     setError("");
     setSuccess("");
     setIsLoading(true);
+    triggerHaptic('medium');
 
     try {
       const response: any = await apiRequest('POST', '/api/forgot-password', { email });
       setSuccess(response.message || "Se l'email è registrata, riceverai un link per reimpostare la password.");
       setEmail("");
+      triggerHaptic('success');
     } catch (err: any) {
       setError(err.message || "Si è verificato un errore. Riprova più tardi.");
+      triggerHaptic('error');
     } finally {
       setIsLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="border-b">
-        <div className="container mx-auto px-3 sm:px-4 md:px-6 py-3 sm:py-4 flex items-center justify-between gap-2">
-          <Link href="/">
-            <img 
-              src="/logo.png" 
-              alt="EventFourYou" 
-              className="h-10 w-auto cursor-pointer"
-            />
-          </Link>
-          <div className="flex items-center gap-3">
-            <ThemeToggle />
-            <Button variant="outline" asChild data-testid="button-back-login">
-              <Link href="/login">
-                <ArrowLeft className="h-4 w-4 mr-2" />
-                Torna al Login
-              </Link>
-            </Button>
-          </div>
-        </div>
-      </header>
+    <div 
+      className="fixed inset-0 bg-background flex flex-col"
+      style={{
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingBottom: 'env(safe-area-inset-bottom)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
+      }}
+    >
+      <motion.main 
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.3 }}
+        className="flex-1 flex flex-col items-center justify-center px-6 py-8"
+      >
+        <div className="w-full max-w-sm flex flex-col items-center">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ delay: 0.1, type: "spring", stiffness: 300, damping: 25 }}
+            className="mb-8"
+          >
+            <Link href="/">
+              <img 
+                src="/logo.png" 
+                alt="EventFourYou" 
+                className="h-16 w-auto cursor-pointer"
+                data-testid="img-logo"
+              />
+            </Link>
+          </motion.div>
 
-      <main className="flex-1 flex items-center justify-center p-3 sm:p-4 md:p-6">
-        <Card className="w-full max-w-md">
-          <CardHeader>
-            <CardTitle className="text-xl sm:text-2xl">Password Dimenticata</CardTitle>
-            <CardDescription className="text-sm sm:text-base">
-              Inserisci la tua email per ricevere un link di reset password
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              {error && (
-                <Alert variant="destructive" data-testid="alert-error">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              )}
+          <motion.div
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.2 }}
+            className="w-full text-center mb-8"
+          >
+            <h1 className="text-2xl font-bold text-foreground mb-2">
+              Password dimenticata
+            </h1>
+            <p className="text-muted-foreground text-base">
+              Inserisci la tua email per ricevere il link di reset
+            </p>
+          </motion.div>
 
-              {success && (
-                <Alert data-testid="alert-success" className="border-green-500 bg-green-50 dark:bg-green-950">
-                  <CheckCircle2 className="h-4 w-4 text-green-600" />
-                  <AlertDescription className="text-green-700 dark:text-green-300">
-                    {success}
-                  </AlertDescription>
-                </Alert>
-              )}
+          <AnimatePresence mode="wait">
+            {error && (
+              <motion.div
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className="w-full mb-6 p-4 rounded-xl bg-destructive/10 border border-destructive/20 flex items-start gap-3"
+                data-testid="alert-error"
+              >
+                <AlertCircle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                <p className="text-destructive text-sm">{error}</p>
+              </motion.div>
+            )}
 
-              <div className="space-y-2">
-                <Label htmlFor="email">Email</Label>
+            {success && (
+              <motion.div
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                transition={{ duration: 0.2 }}
+                className="w-full mb-6 p-4 rounded-xl bg-green-500/10 border border-green-500/20 flex items-start gap-3"
+                data-testid="alert-success"
+              >
+                <CheckCircle2 className="h-5 w-5 text-green-500 shrink-0 mt-0.5" />
+                <p className="text-green-600 dark:text-green-400 text-sm">{success}</p>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <motion.form 
+            initial={{ y: 20, opacity: 0 }}
+            animate={{ y: 0, opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            onSubmit={handleSubmit} 
+            className="w-full space-y-6"
+          >
+            <div className="space-y-3">
+              <Label htmlFor="email" className="text-base font-medium">
+                Email
+              </Label>
+              <div className="relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
                 <Input
                   id="email"
                   type="email"
@@ -91,30 +131,49 @@ export default function ForgotPassword() {
                   onChange={(e) => setEmail(e.target.value)}
                   required
                   disabled={isLoading}
-                  className="h-10 sm:h-11"
+                  className="h-14 pl-12 text-base rounded-xl"
                   data-testid="input-email"
                 />
               </div>
+            </div>
 
-              <Button 
-                type="submit" 
-                className="w-full" 
-                disabled={isLoading}
-                data-testid="button-submit"
-              >
-                {isLoading ? "Invio in corso..." : "Invia Link di Reset"}
-              </Button>
+            <motion.button
+              type="submit"
+              disabled={isLoading}
+              whileTap={{ scale: 0.98 }}
+              onClick={() => triggerHaptic('light')}
+              className="w-full h-14 bg-primary text-primary-foreground font-semibold text-base rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+              data-testid="button-submit"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="h-5 w-5 animate-spin" />
+                  <span>Invio in corso...</span>
+                </>
+              ) : (
+                <span>Invia link</span>
+              )}
+            </motion.button>
+          </motion.form>
 
-              <div className="text-center text-sm text-muted-foreground">
-                Ricordi la password?{" "}
-                <Link href="/login" className="text-primary hover:underline" data-testid="link-login">
-                  Accedi
-                </Link>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      </main>
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="mt-8"
+          >
+            <Link 
+              href="/login" 
+              onClick={() => triggerHaptic('light')}
+              className="flex items-center justify-center gap-2 text-muted-foreground min-h-[44px] min-w-[44px] px-4"
+              data-testid="link-login"
+            >
+              <ArrowLeft className="h-5 w-5" />
+              <span className="text-base">Torna al login</span>
+            </Link>
+          </motion.div>
+        </div>
+      </motion.main>
     </div>
   );
 }

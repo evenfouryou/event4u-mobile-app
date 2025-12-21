@@ -6,15 +6,6 @@ import { isUnauthorizedError } from "@/lib/authUtils";
 import { useAuth } from "@/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -42,12 +33,20 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Boxes, Edit, Trash2, ArrowLeft, MapPin, Calendar, Users } from "lucide-react";
+import { Plus, Boxes, Edit, Trash2, ArrowLeft, MapPin, Calendar, Users, X } from "lucide-react";
 import { Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import {
+  MobileAppLayout,
+  MobileHeader,
+  FloatingActionButton,
+  HapticButton,
+  BottomSheet,
+  triggerHaptic,
+} from "@/components/mobile-primitives";
 import type { Station, User, Event } from "@shared/schema";
 
 const stationFormSchema = z.object({
@@ -58,6 +57,18 @@ const stationFormSchema = z.object({
 });
 
 type StationFormData = z.infer<typeof stationFormSchema>;
+
+const springTransition = {
+  type: "spring" as const,
+  stiffness: 400,
+  damping: 30,
+};
+
+const cardSpring = {
+  type: "spring" as const,
+  stiffness: 300,
+  damping: 25,
+};
 
 function StationCard({
   station,
@@ -78,65 +89,92 @@ function StationCard({
 }) {
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay }}
-      className="glass-card p-5 group"
+      initial={{ opacity: 0, y: 30, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ ...cardSpring, delay }}
+      whileTap={{ scale: 0.98 }}
+      className="glass-card p-6 active:bg-white/5 transition-colors"
       data-testid={`station-card-${station.id}`}
     >
       <div className="flex items-start gap-4">
-        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${eventName ? 'from-amber-500 to-orange-600' : 'from-violet-500 to-purple-600'} flex items-center justify-center flex-shrink-0`}>
-          <MapPin className="h-6 w-6 text-white" />
-        </div>
+        <motion.div 
+          className={`w-16 h-16 rounded-2xl bg-gradient-to-br ${eventName ? 'from-amber-500 to-orange-600' : 'from-violet-500 to-purple-600'} flex items-center justify-center flex-shrink-0 shadow-lg`}
+          whileHover={{ scale: 1.05 }}
+          whileTap={{ scale: 0.95 }}
+        >
+          <MapPin className="h-7 w-7 text-white" />
+        </motion.div>
         <div className="flex-1 min-w-0">
-          <h3 className="font-semibold text-lg mb-1 truncate">{station.name}</h3>
-          <div className="flex flex-wrap gap-2 mb-2">
+          <h3 className="font-bold text-xl mb-2 truncate">{station.name}</h3>
+          <div className="flex flex-wrap gap-2 mb-3">
             {eventName ? (
-              <Badge variant="secondary" className="text-xs" data-testid={`badge-station-type-${station.id}`}>
-                <Calendar className="h-3 w-3 mr-1" />
+              <Badge variant="secondary" className="text-sm py-1 px-3" data-testid={`badge-station-type-${station.id}`}>
+                <Calendar className="h-4 w-4 mr-1.5" />
                 {eventName}
               </Badge>
             ) : (
-              <Badge variant="outline" className="text-xs text-teal border-teal/30" data-testid={`badge-station-type-${station.id}`}>
-                <MapPin className="h-3 w-3 mr-1" />
+              <Badge variant="outline" className="text-sm py-1 px-3 text-teal border-teal/30" data-testid={`badge-station-type-${station.id}`}>
+                <MapPin className="h-4 w-4 mr-1.5" />
                 Generale
               </Badge>
             )}
           </div>
-          <div className="flex items-center gap-1 text-sm text-muted-foreground">
-            <Users className="h-3.5 w-3.5" />
+          <div className="flex items-center gap-2 text-base text-muted-foreground">
+            <Users className="h-5 w-5 flex-shrink-0" />
             <span className="truncate">{bartenderNames}</span>
           </div>
         </div>
-        {canEdit && (
-          <div className="flex flex-col gap-1 md:opacity-0 group-hover:opacity-100 transition-opacity">
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onEdit}
-              className="min-h-[48px] min-w-[48px] md:h-8 md:w-8 md:min-h-0 md:min-w-0"
-              data-testid={`button-edit-station-${station.id}`}
-            >
-              <Edit className="h-4 w-4" />
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon"
-              onClick={onDelete}
-              className="min-h-[48px] min-w-[48px] md:h-8 md:w-8 md:min-h-0 md:min-w-0 text-destructive hover:text-destructive"
-              data-testid={`button-delete-station-${station.id}`}
-            >
-              <Trash2 className="h-4 w-4" />
-            </Button>
-          </div>
-        )}
       </div>
+      
+      {canEdit && (
+        <motion.div 
+          className="flex gap-3 mt-5 pt-5 border-t border-white/10"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          transition={{ delay: delay + 0.2 }}
+        >
+          <HapticButton
+            variant="outline"
+            onClick={onEdit}
+            className="flex-1 h-12 text-base gap-2"
+            hapticType="light"
+            data-testid={`button-edit-station-${station.id}`}
+          >
+            <Edit className="h-5 w-5" />
+            Modifica
+          </HapticButton>
+          <HapticButton
+            variant="outline"
+            onClick={onDelete}
+            className="h-12 w-12 text-destructive border-destructive/30 hover:bg-destructive/10"
+            hapticType="medium"
+            data-testid={`button-delete-station-${station.id}`}
+          >
+            <Trash2 className="h-5 w-5" />
+          </HapticButton>
+        </motion.div>
+      )}
     </motion.div>
   );
 }
 
+function StationCardSkeleton() {
+  return (
+    <div className="glass-card p-6">
+      <div className="flex items-start gap-4">
+        <Skeleton className="w-16 h-16 rounded-2xl" />
+        <div className="flex-1">
+          <Skeleton className="h-7 w-3/4 mb-3" />
+          <Skeleton className="h-6 w-24 mb-3" />
+          <Skeleton className="h-5 w-1/2" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function StationsPage() {
-  const [dialogOpen, setDialogOpen] = useState(false);
+  const [sheetOpen, setSheetOpen] = useState(false);
   const [editingStation, setEditingStation] = useState<Station | null>(null);
   const [stationType, setStationType] = useState<'general' | 'event'>('general');
   const [deleteStationId, setDeleteStationId] = useState<string | null>(null);
@@ -183,14 +221,16 @@ export default function StationsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/stations'] });
-      setDialogOpen(false);
+      setSheetOpen(false);
       form.reset();
+      triggerHaptic('success');
       toast({
         title: "Successo",
         description: "Postazione creata con successo",
       });
     },
     onError: (error: any) => {
+      triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
           title: "Non autorizzato",
@@ -222,15 +262,17 @@ export default function StationsPage() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/stations'] });
-      setDialogOpen(false);
+      setSheetOpen(false);
       setEditingStation(null);
       form.reset();
+      triggerHaptic('success');
       toast({
         title: "Successo",
         description: "Postazione aggiornata con successo",
       });
     },
     onError: (error: any) => {
+      triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
           title: "Non autorizzato",
@@ -255,12 +297,14 @@ export default function StationsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/stations'] });
       setDeleteStationId(null);
+      triggerHaptic('success');
       toast({
         title: "Successo",
-        description: "Postazione eliminata con successo. I dati degli eventi sono stati conservati.",
+        description: "Postazione eliminata con successo.",
       });
     },
     onError: (error: any) => {
+      triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
           title: "Non autorizzato",
@@ -299,21 +343,34 @@ export default function StationsPage() {
       stationType: isEventStation ? 'event' : 'general',
       eventId: station.eventId,
     });
-    setDialogOpen(true);
+    triggerHaptic('light');
+    setSheetOpen(true);
   };
 
-  const handleDialogOpenChange = (open: boolean) => {
-    setDialogOpen(open);
-    if (!open) {
-      setEditingStation(null);
-      setStationType('general');
-      form.reset({
-        name: '',
-        bartenderId: null,
-        stationType: 'general',
-        eventId: null,
+  const handleOpenSheet = () => {
+    if (!canCreateStations) {
+      triggerHaptic('error');
+      toast({
+        title: "Accesso limitato",
+        description: "Solo gli admin possono creare postazioni",
+        variant: "destructive",
       });
+      return;
     }
+    triggerHaptic('medium');
+    setSheetOpen(true);
+  };
+
+  const handleCloseSheet = () => {
+    setSheetOpen(false);
+    setEditingStation(null);
+    setStationType('general');
+    form.reset({
+      name: '',
+      bartenderId: null,
+      stationType: 'general',
+      eventId: null,
+    });
   };
 
   const getEventName = (eventId: string | null) => {
@@ -332,152 +389,211 @@ export default function StationsPage() {
     return names.join(', ');
   };
 
-  return (
-    <div className="p-3 sm:p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
-      <motion.div 
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8"
-      >
-        <Button 
+  const headerContent = (
+    <MobileHeader
+      title="Postazioni"
+      leftAction={
+        <HapticButton 
           variant="ghost" 
           size="icon" 
           asChild
-          className="rounded-xl"
+          className="h-11 w-11 rounded-xl"
+          hapticType="light"
           data-testid="button-back-beverage"
         >
           <Link href="/beverage">
-            <ArrowLeft className="h-5 w-5" />
+            <ArrowLeft className="h-6 w-6" />
           </Link>
-        </Button>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 sm:gap-3 mb-1">
-            <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center glow-golden flex-shrink-0">
-              <Boxes className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-            </div>
-            <h1 className="text-lg sm:text-xl md:text-2xl font-bold">Gestione Postazioni</h1>
-          </div>
-          <p className="text-muted-foreground text-xs sm:text-sm hidden sm:block">
-            Crea e gestisci le postazioni generali dell'azienda
-          </p>
+        </HapticButton>
+      }
+      rightAction={
+        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
+          <Boxes className="h-6 w-6 text-white" />
         </div>
-      </motion.div>
+      }
+    />
+  );
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="flex justify-end mb-6"
-      >
-        <Dialog open={dialogOpen} onOpenChange={(open) => {
-          if (!canCreateStations && open) {
-            toast({
-              title: "Accesso limitato",
-              description: "Solo gli admin possono creare postazioni",
-              variant: "destructive",
-            });
-            return;
-          }
-          handleDialogOpenChange(open);
-        }}>
-          <DialogTrigger asChild>
-            <Button 
-              className="gradient-golden text-black font-semibold glow-golden"
-              data-testid="button-create-station"
-              disabled={!canCreateStations}
-              title={!canCreateStations ? "Solo gli admin possono creare postazioni" : ""}
+  return (
+    <MobileAppLayout
+      header={headerContent}
+      contentClassName="pb-24"
+    >
+      <div className="py-4 space-y-4">
+        {stationsLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <StationCardSkeleton key={i} />
+            ))}
+          </div>
+        ) : stations && stations.length > 0 ? (
+          <AnimatePresence mode="popLayout">
+            <motion.div 
+              className="space-y-4"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={springTransition}
             >
-              <Plus className="h-4 w-4 mr-2" />
-              Nuova Postazione
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto glass-card border-white/10">
-            <DialogHeader>
-              <DialogTitle className="text-lg font-semibold">
-                {editingStation ? 'Modifica Postazione' : 'Nuova Postazione'}
-              </DialogTitle>
-              <DialogDescription className="text-muted-foreground">
-                {editingStation 
-                  ? 'Modifica i dettagli della postazione.' 
-                  : 'Inserisci i dettagli della nuova postazione.'}
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="name"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome Postazione</FormLabel>
+              {stations.map((station, index) => (
+                <StationCard
+                  key={station.id}
+                  station={station}
+                  eventName={getEventName(station.eventId)}
+                  bartenderNames={getBartenderNames(station.bartenderIds)}
+                  canEdit={canCreateStations}
+                  onEdit={() => handleEdit(station)}
+                  onDelete={() => {
+                    triggerHaptic('medium');
+                    setDeleteStationId(station.id);
+                  }}
+                  delay={index * 0.08}
+                />
+              ))}
+            </motion.div>
+          </AnimatePresence>
+        ) : (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={springTransition}
+            className="glass-card p-8 text-center"
+          >
+            <motion.div 
+              className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mx-auto mb-6"
+              animate={{ 
+                scale: [1, 1.05, 1],
+                rotate: [0, 5, -5, 0]
+              }}
+              transition={{ 
+                duration: 3, 
+                repeat: Infinity,
+                repeatType: "reverse" 
+              }}
+            >
+              <Boxes className="h-10 w-10 text-white" />
+            </motion.div>
+            <h3 className="text-xl font-semibold mb-2">Nessuna postazione</h3>
+            <p className="text-muted-foreground text-base mb-6">
+              Crea la tua prima postazione per iniziare
+            </p>
+            {canCreateStations && (
+              <HapticButton 
+                onClick={handleOpenSheet}
+                className="gradient-golden text-black font-semibold h-14 px-8 text-lg"
+                hapticType="medium"
+                data-testid="button-create-first-station"
+              >
+                <Plus className="h-6 w-6 mr-2" />
+                Crea Postazione
+              </HapticButton>
+            )}
+          </motion.div>
+        )}
+      </div>
+
+      {canCreateStations && (
+        <FloatingActionButton
+          onClick={handleOpenSheet}
+          className="gradient-golden"
+          data-testid="button-create-station"
+        >
+          <Plus className="h-7 w-7 text-black" />
+        </FloatingActionButton>
+      )}
+
+      <BottomSheet
+        open={sheetOpen}
+        onClose={handleCloseSheet}
+        title={editingStation ? 'Modifica Postazione' : 'Nuova Postazione'}
+      >
+        <div className="p-4">
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-5">
+              <FormField
+                control={form.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base">Nome Postazione</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        placeholder="Es. Bar Centrale, Privé 1" 
+                        className="h-14 text-lg"
+                        data-testid="input-station-name" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="stationType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base">Tipo Postazione</FormLabel>
+                    <Select
+                      onValueChange={(value) => {
+                        field.onChange(value);
+                        setStationType(value as 'general' | 'event');
+                        if (value === 'general') {
+                          form.setValue('eventId', null);
+                        }
+                      }}
+                      value={field.value}
+                    >
                       <FormControl>
-                        <Input {...field} placeholder="Es. Bar Centrale, Privé 1" data-testid="input-station-name" />
+                        <SelectTrigger className="h-14 text-base" data-testid="select-station-type">
+                          <SelectValue placeholder="Seleziona tipo" />
+                        </SelectTrigger>
                       </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                      <SelectContent>
+                        <SelectItem value="general" className="h-14">
+                          <div className="flex items-center gap-3">
+                            <MapPin className="h-5 w-5 text-violet-500" />
+                            <span>Postazione Generale (Fissa)</span>
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="event" className="h-14">
+                          <div className="flex items-center gap-3">
+                            <Calendar className="h-5 w-5 text-amber-500" />
+                            <span>Postazione per Evento</span>
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="stationType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo Postazione</FormLabel>
-                      <Select
-                        onValueChange={(value) => {
-                          field.onChange(value);
-                          setStationType(value as 'general' | 'event');
-                          if (value === 'general') {
-                            form.setValue('eventId', null);
-                          }
-                        }}
-                        value={field.value}
-                      >
-                        <FormControl>
-                          <SelectTrigger data-testid="select-station-type">
-                            <SelectValue placeholder="Seleziona tipo" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="general">
-                            <div className="flex items-center gap-2">
-                              <MapPin className="h-4 w-4 text-violet-500" />
-                              Postazione Generale (Fissa)
-                            </div>
-                          </SelectItem>
-                          <SelectItem value="event">
-                            <div className="flex items-center gap-2">
-                              <Calendar className="h-4 w-4 text-amber-500" />
-                              Postazione per Evento
-                            </div>
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                {stationType === 'event' && (
+              {stationType === 'event' && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: 'auto' }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={springTransition}
+                >
                   <FormField
                     control={form.control}
                     name="eventId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Evento</FormLabel>
+                        <FormLabel className="text-base">Evento</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value || undefined}
                         >
                           <FormControl>
-                            <SelectTrigger data-testid="select-station-event">
+                            <SelectTrigger className="h-14 text-base" data-testid="select-station-event">
                               <SelectValue placeholder="Seleziona evento" />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
                             {events?.map((event) => (
-                              <SelectItem key={event.id} value={event.id}>
+                              <SelectItem key={event.id} value={event.id} className="h-12">
                                 {event.name}
                               </SelectItem>
                             ))}
@@ -487,128 +603,97 @@ export default function StationsPage() {
                       </FormItem>
                     )}
                   />
+                </motion.div>
+              )}
+
+              <FormField
+                control={form.control}
+                name="bartenderId"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base">Barista Assegnato (opzionale)</FormLabel>
+                    <Select
+                      onValueChange={field.onChange}
+                      value={field.value || undefined}
+                    >
+                      <FormControl>
+                        <SelectTrigger className="h-14 text-base" data-testid="select-station-bartender">
+                          <SelectValue placeholder="Seleziona bartender (opzionale)" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="null" className="h-12">Nessuno</SelectItem>
+                        {bartenders.map((bartender) => (
+                          <SelectItem key={bartender.id} value={bartender.id} className="h-12">
+                            {bartender.firstName} {bartender.lastName}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
                 )}
+              />
 
-                <FormField
-                  control={form.control}
-                  name="bartenderId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Barista Assegnato (opzionale)</FormLabel>
-                      <Select
-                        onValueChange={field.onChange}
-                        value={field.value || undefined}
-                      >
-                        <FormControl>
-                          <SelectTrigger data-testid="select-station-bartender">
-                            <SelectValue placeholder="Seleziona bartender (opzionale)" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="null">Nessuno</SelectItem>
-                          {bartenders.map((bartender) => (
-                            <SelectItem key={bartender.id} value={bartender.id}>
-                              {bartender.firstName} {bartender.lastName}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
+              <div className="flex gap-3 pt-4">
+                <HapticButton
+                  type="button"
+                  variant="outline"
+                  className="flex-1 h-14 text-base"
+                  onClick={handleCloseSheet}
+                  hapticType="light"
+                  data-testid="button-cancel-station"
+                >
+                  Annulla
+                </HapticButton>
+                <HapticButton
+                  type="submit"
+                  className="flex-1 h-14 text-base gradient-golden text-black font-semibold"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  hapticType="medium"
+                  data-testid="button-save-station"
+                >
+                  {createMutation.isPending || updateMutation.isPending ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                      className="w-6 h-6 border-2 border-black/30 border-t-black rounded-full"
+                    />
+                  ) : (
+                    editingStation ? 'Aggiorna' : 'Crea'
                   )}
-                />
-                <DialogFooter className="flex-col sm:flex-row gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className="min-h-[48px]"
-                    onClick={() => handleDialogOpenChange(false)}
-                    data-testid="button-cancel-station"
-                  >
-                    Annulla
-                  </Button>
-                  <Button
-                    type="submit"
-                    className="gradient-golden text-black font-semibold min-h-[48px]"
-                    disabled={createMutation.isPending || updateMutation.isPending}
-                    data-testid="button-save-station"
-                  >
-                    {editingStation ? 'Aggiorna' : 'Crea'}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-      </motion.div>
-
-      {stationsLoading ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-32 rounded-2xl" />
-          ))}
+                </HapticButton>
+              </div>
+            </form>
+          </Form>
         </div>
-      ) : stations && stations.length > 0 ? (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {stations.map((station, index) => (
-            <StationCard
-              key={station.id}
-              station={station}
-              eventName={getEventName(station.eventId)}
-              bartenderNames={getBartenderNames(station.bartenderIds)}
-              canEdit={canCreateStations}
-              onEdit={() => handleEdit(station)}
-              onDelete={() => setDeleteStationId(station.id)}
-              delay={index * 0.05}
-            />
-          ))}
-        </div>
-      ) : (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="glass-card p-12 text-center"
-        >
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
-            <Boxes className="h-8 w-8 text-white" />
-          </div>
-          <p className="text-muted-foreground mb-4">Nessuna postazione configurata</p>
-          {canCreateStations && (
-            <Button 
-              onClick={() => setDialogOpen(true)} 
-              className="gradient-golden text-black font-semibold"
-              data-testid="button-create-first-station"
-            >
-              <Plus className="h-4 w-4 mr-2" />
-              Crea Prima Postazione
-            </Button>
-          )}
-        </motion.div>
-      )}
+      </BottomSheet>
 
       <AlertDialog open={!!deleteStationId} onOpenChange={(open) => !open && setDeleteStationId(null)}>
-        <AlertDialogContent className="glass-card border-white/10 max-h-[90vh] overflow-y-auto">
+        <AlertDialogContent className="glass-card border-white/10 mx-4 rounded-3xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Conferma Eliminazione</AlertDialogTitle>
-            <AlertDialogDescription>
-              Sei sicuro di voler eliminare questa postazione? I dati storici degli eventi associati saranno conservati.
-              Questa azione non può essere annullata.
+            <AlertDialogTitle className="text-xl">Conferma Eliminazione</AlertDialogTitle>
+            <AlertDialogDescription className="text-base">
+              Sei sicuro di voler eliminare questa postazione? I dati storici degli eventi saranno conservati.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col sm:flex-row gap-2">
-            <AlertDialogCancel className="min-h-[48px]" data-testid="button-cancel-delete-station">
-              Annulla
-            </AlertDialogCancel>
+          <AlertDialogFooter className="flex-col gap-3">
             <AlertDialogAction
               onClick={() => deleteStationId && deleteMutation.mutate(deleteStationId)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 min-h-[48px]"
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 h-14 text-base w-full"
               data-testid="button-confirm-delete-station"
             >
-              Elimina
+              Elimina Postazione
             </AlertDialogAction>
+            <AlertDialogCancel 
+              className="h-14 text-base w-full mt-0" 
+              data-testid="button-cancel-delete-station"
+            >
+              Annulla
+            </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </MobileAppLayout>
   );
 }

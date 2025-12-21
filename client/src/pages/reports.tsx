@@ -1,20 +1,19 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Download, FileSpreadsheet, TrendingUp, TrendingDown, DollarSign, Calendar, ArrowLeft, Pencil } from "lucide-react";
+import { FileText, Download, FileSpreadsheet, TrendingUp, TrendingDown, DollarSign, Calendar, ArrowLeft, Pencil, ChevronDown, ChevronUp, X } from "lucide-react";
 import { Link, useSearch } from "wouter";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useAuth } from "@/hooks/useAuth";
+import { MobileAppLayout, MobileHeader, HapticButton, BottomSheet, triggerHaptic } from "@/components/mobile-primitives";
+import { Button } from "@/components/ui/button";
 import jsPDF from "jspdf";
 import ExcelJS from "exceljs";
 
@@ -57,6 +56,31 @@ type RevenueAnalysis = {
   variancePercent: number;
 };
 
+const springTransition = {
+  type: "spring",
+  stiffness: 400,
+  damping: 30,
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+    },
+  },
+};
+
+const staggerItem = {
+  hidden: { opacity: 0, y: 20 },
+  show: { 
+    opacity: 1, 
+    y: 0,
+    transition: springTransition,
+  },
+};
+
 export default function Reports() {
   const searchString = useSearch();
   const urlParams = new URLSearchParams(searchString);
@@ -67,9 +91,10 @@ export default function Reports() {
   const [selectedEventId, setSelectedEventId] = useState<string>(urlEventId || "");
   const [startDate, setStartDate] = useState<string>("");
   const [endDate, setEndDate] = useState<string>("");
+  const [showDateFilter, setShowDateFilter] = useState(false);
+  const [expandedStations, setExpandedStations] = useState<Set<number>>(new Set());
 
-  // State for correction dialog
-  const [correctionDialogOpen, setCorrectionDialogOpen] = useState(false);
+  const [correctionSheetOpen, setCorrectionSheetOpen] = useState(false);
   const [correctingProduct, setCorrectingProduct] = useState<{
     productId: string;
     productName: string;
@@ -79,7 +104,6 @@ export default function Reports() {
   const [newQuantity, setNewQuantity] = useState("");
   const [correctionReason, setCorrectionReason] = useState("");
 
-  // Check if user can correct (must be authenticated and gestore, organizer or super_admin)
   const canCorrect = !!user && (user.role === 'gestore' || user.role === 'organizer' || user.role === 'super_admin');
 
   const { data: events = [], isLoading: eventsLoading } = useQuery<Event[]>({
@@ -117,7 +141,6 @@ export default function Reports() {
     enabled: !!selectedEventId,
   });
 
-  // Mutation for correcting consumption
   const correctConsumptionMutation = useMutation({
     mutationFn: async (data: { 
       eventId: string; 
@@ -129,13 +152,12 @@ export default function Reports() {
       await apiRequest('POST', '/api/reports/correct-consumption', data);
     },
     onSuccess: async (_, variables) => {
-      // Close dialog first
-      setCorrectionDialogOpen(false);
+      setCorrectionSheetOpen(false);
       setCorrectingProduct(null);
       setNewQuantity("");
       setCorrectionReason("");
+      triggerHaptic('success');
       
-      // Force invalidate all related queries (report, revenue, stocks)
       await queryClient.invalidateQueries({ 
         queryKey: ['/api/reports/end-of-night', variables.eventId]
       });
@@ -149,7 +171,6 @@ export default function Reports() {
         queryKey: ['/api/stock/general']
       });
       
-      // Force immediate refetch
       await queryClient.refetchQueries({ 
         queryKey: ['/api/reports/end-of-night', variables.eventId]
       });
@@ -163,6 +184,7 @@ export default function Reports() {
       });
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
           title: "Non autorizzato",
@@ -179,11 +201,12 @@ export default function Reports() {
     },
   });
 
-  const openCorrectionDialog = (productId: string, productName: string, currentQuantity: number, stationId?: string | null) => {
+  const openCorrectionSheet = (productId: string, productName: string, currentQuantity: number, stationId?: string | null) => {
+    triggerHaptic('medium');
     setCorrectingProduct({ productId, productName, currentQuantity, stationId });
     setNewQuantity(currentQuantity.toString());
     setCorrectionReason("");
-    setCorrectionDialogOpen(true);
+    setCorrectionSheetOpen(true);
   };
 
   const handleCorrectConsumption = () => {
@@ -191,6 +214,7 @@ export default function Reports() {
     
     const qty = parseFloat(newQuantity);
     if (isNaN(qty) || qty < 0) {
+      triggerHaptic('error');
       toast({
         title: "Errore",
         description: "Inserisci una quantità valida",
@@ -208,8 +232,22 @@ export default function Reports() {
     });
   };
 
+  const toggleStation = (stationId: number) => {
+    triggerHaptic('light');
+    setExpandedStations(prev => {
+      const next = new Set(prev);
+      if (next.has(stationId)) {
+        next.delete(stationId);
+      } else {
+        next.add(stationId);
+      }
+      return next;
+    });
+  };
+
   const handleExportPDF = () => {
     if (!reportData) return;
+    triggerHaptic('medium');
 
     const event = events.find(e => e.id === selectedEventId);
     if (!event) return;
@@ -217,7 +255,6 @@ export default function Reports() {
     const pdf = new jsPDF();
     const pageWidth = pdf.internal.pageSize.getWidth();
     
-    // Header
     pdf.setFontSize(20);
     pdf.text("Event Four You - Report Fine Serata", pageWidth / 2, 20, { align: "center" });
     
@@ -230,7 +267,6 @@ export default function Reports() {
 
     let yPosition = 70;
 
-    // Riepilogo Totale Consumo Beverage
     if (reportData.consumedProducts && reportData.consumedProducts.length > 0) {
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
@@ -257,7 +293,6 @@ export default function Reports() {
       yPosition += 15;
     }
 
-    // Station reports
     reportData.stations.forEach((station) => {
       if (yPosition > 250) {
         pdf.addPage();
@@ -292,18 +327,21 @@ export default function Reports() {
     });
 
     pdf.save(`report-${event.name.replace(/\s+/g, '-')}-${Date.now()}.pdf`);
+    toast({
+      title: "PDF Esportato",
+      description: "Il report è stato scaricato",
+    });
   };
 
   const handleExportExcel = async () => {
     if (!reportData) return;
+    triggerHaptic('medium');
 
     const event = events.find(e => e.id === selectedEventId);
     if (!event) return;
 
-    // Create workbook
     const wb = new ExcelJS.Workbook();
 
-    // Summary sheet
     const summaryWs = wb.addWorksheet("Riepilogo");
     summaryWs.addRow(["Event Four You - Report Fine Serata"]);
     summaryWs.addRow([]);
@@ -312,7 +350,6 @@ export default function Reports() {
     summaryWs.addRow(["Costo Totale", `€${reportData.totalCost.toFixed(2)}`]);
     summaryWs.addRow([]);
 
-    // Detailed breakdown sheet
     const detailedWs = wb.addWorksheet("Dettaglio");
     detailedWs.addRow(["Postazione", "Prodotto", "Quantità", "Prezzo Unitario", "Costo Totale"]);
 
@@ -328,7 +365,6 @@ export default function Reports() {
       });
     });
 
-    // Consumo Beverage sheet
     if (reportData.consumedProducts && reportData.consumedProducts.length > 0) {
       const beverageWs = wb.addWorksheet("Consumo Beverage");
       beverageWs.addRow(["Riepilogo Consumo Beverage"]);
@@ -347,7 +383,6 @@ export default function Reports() {
       beverageWs.addRow(["", "", "TOTALE", `€${reportData.totalCost.toFixed(2)}`]);
     }
 
-    // Download
     const buffer = await wb.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
     const url = URL.createObjectURL(blob);
@@ -356,472 +391,580 @@ export default function Reports() {
     a.download = `report-${event.name.replace(/\s+/g, '-')}-${Date.now()}.xlsx`;
     a.click();
     URL.revokeObjectURL(url);
+    toast({
+      title: "Excel Esportato",
+      description: "Il report è stato scaricato",
+    });
   };
+
+  const selectedEvent = events.find(e => e.id === selectedEventId);
 
   if (eventsLoading) {
     return (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground mt-4">Caricamento...</p>
+      <MobileAppLayout
+        header={
+          <MobileHeader
+            title="Report"
+            leftAction={
+              <HapticButton variant="ghost" size="icon" asChild>
+                <Link href="/beverage">
+                  <ArrowLeft className="h-5 w-5" />
+                </Link>
+              </HapticButton>
+            }
+          />
+        }
+      >
+        <div className="flex items-center justify-center h-full">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={springTransition}
+            className="text-center"
+          >
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
+            <p className="text-muted-foreground mt-4">Caricamento...</p>
+          </motion.div>
         </div>
-      </div>
+      </MobileAppLayout>
     );
   }
 
   return (
-    <div className="container mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6">
-      <div className="flex items-center gap-3 sm:gap-4">
-        <Button variant="ghost" size="icon" asChild>
-          <Link href="/beverage">
-            <ArrowLeft className="h-5 w-5" />
-          </Link>
-        </Button>
-        <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold">Report</h1>
-          <p className="text-muted-foreground text-sm sm:text-base">Report fine serata per evento</p>
-        </div>
-      </div>
-
-      <Card className="mb-6">
-        <CardHeader>
-          <CardTitle>Filtra per Data</CardTitle>
-          <CardDescription>Filtra gli eventi per intervallo di date</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Data Inizio
-              </label>
-              <Input
-                type="date"
-                value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
-                data-testid="input-start-date"
-              />
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium flex items-center gap-2">
-                <Calendar className="h-4 w-4" />
-                Data Fine
-              </label>
-              <Input
-                type="date"
-                value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
-                data-testid="input-end-date"
-              />
-            </div>
-          </div>
-          {(startDate || endDate) && (
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                setStartDate("");
-                setEndDate("");
-              }}
-              className="mt-4"
-              data-testid="button-clear-dates"
+    <MobileAppLayout
+      header={
+        <MobileHeader
+          title="Report"
+          subtitle={selectedEvent ? selectedEvent.name : "Seleziona evento"}
+          leftAction={
+            <HapticButton variant="ghost" size="icon" asChild>
+              <Link href="/beverage">
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </HapticButton>
+          }
+          rightAction={
+            <HapticButton
+              variant="ghost"
+              size="icon"
+              onClick={() => setShowDateFilter(!showDateFilter)}
             >
-              Cancella Filtri Date
-            </Button>
-          )}
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle>Seleziona Evento</CardTitle>
-          <CardDescription>Scegli un evento per visualizzare il report</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-            <SelectTrigger data-testid="select-event">
-              <SelectValue placeholder="Seleziona un evento" />
-            </SelectTrigger>
-            <SelectContent>
-              {filteredEvents.map((event) => (
-                <SelectItem key={event.id} value={event.id}>
-                  {event.name} - {new Date((event as any).startDatetime || (event as any).eventDate).toLocaleDateString('it-IT')}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        </CardContent>
-      </Card>
-
-      {reportLoading && (
-        <div className="text-center py-8">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
-          <p className="text-muted-foreground mt-4">Caricamento report...</p>
-        </div>
-      )}
-
-      {reportData && !reportLoading && (
-        <div className="space-y-6">
-          {revenueAnalysis && revenueAnalysis.theoreticalRevenue > 0 ? (
-            <>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 p-3 sm:p-4 pb-2">
-                    <CardTitle className="text-xs sm:text-sm font-medium">Ricavo Teorico</CardTitle>
-                    <DollarSign className="w-4 h-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-semibold" data-testid="text-theoretical-revenue">
-                      €{revenueAnalysis.theoreticalRevenue.toFixed(2)}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Basato sui consumi e listino
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Ricavo Effettivo</CardTitle>
-                    <DollarSign className="w-4 h-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-semibold" data-testid="text-actual-revenue">
-                      €{revenueAnalysis.actualRevenue.toFixed(2)}
-                    </div>
-                    <p className="text-xs text-muted-foreground">
-                      Incasso reale dell'evento
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Varianza</CardTitle>
-                    {revenueAnalysis.variance >= 0 ? (
-                      <TrendingUp className="w-4 h-4 text-green-600" />
-                    ) : (
-                      <TrendingDown className="w-4 h-4 text-red-600" />
+              <Calendar className="h-5 w-5" />
+            </HapticButton>
+          }
+        />
+      }
+    >
+      <motion.div
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+        className="space-y-4 pb-24"
+      >
+        <AnimatePresence>
+          {showDateFilter && (
+            <motion.div
+              initial={{ opacity: 0, height: 0 }}
+              animate={{ opacity: 1, height: "auto" }}
+              exit={{ opacity: 0, height: 0 }}
+              transition={springTransition}
+            >
+              <Card className="overflow-hidden">
+                <CardContent className="p-4 space-y-4">
+                  <div className="flex items-center justify-between">
+                    <span className="font-semibold">Filtra per Data</span>
+                    {(startDate || endDate) && (
+                      <HapticButton
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => {
+                          setStartDate("");
+                          setEndDate("");
+                        }}
+                        data-testid="button-clear-dates"
+                      >
+                        Azzera
+                      </HapticButton>
                     )}
-                  </CardHeader>
-                  <CardContent>
-                    <div className={`text-2xl font-semibold ${revenueAnalysis.variance >= 0 ? 'text-green-600' : 'text-red-600'}`} data-testid="text-variance">
-                      €{revenueAnalysis.variance.toFixed(2)}
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="space-y-2">
+                      <label className="text-sm text-muted-foreground">Inizio</label>
+                      <Input
+                        type="date"
+                        value={startDate}
+                        onChange={(e) => setStartDate(e.target.value)}
+                        className="min-h-[44px]"
+                        data-testid="input-start-date"
+                      />
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Differenza tra effettivo e teorico
-                    </p>
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-                    <CardTitle className="text-sm font-medium">Varianza %</CardTitle>
-                    {revenueAnalysis.variancePercent >= 0 ? (
-                      <TrendingUp className="w-4 h-4 text-green-600" />
-                    ) : (
-                      <TrendingDown className="w-4 h-4 text-red-600" />
-                    )}
-                  </CardHeader>
-                  <CardContent>
-                    <div className={`text-2xl font-semibold ${revenueAnalysis.variancePercent >= 0 ? 'text-green-600' : 'text-red-600'}`} data-testid="text-variance-percent">
-                      {revenueAnalysis.variancePercent.toFixed(1)}%
+                    <div className="space-y-2">
+                      <label className="text-sm text-muted-foreground">Fine</label>
+                      <Input
+                        type="date"
+                        value={endDate}
+                        onChange={(e) => setEndDate(e.target.value)}
+                        className="min-h-[44px]"
+                        data-testid="input-end-date"
+                      />
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Percentuale di variazione
-                    </p>
-                  </CardContent>
-                </Card>
-              </div>
-
-              <Card>
-                <CardHeader>
-                  <CardTitle>Analisi Ricavi</CardTitle>
-                  <CardDescription>Confronto tra ricavo teorico e effettivo</CardDescription>
-                </CardHeader>
-                <CardContent>
-                  <ResponsiveContainer width="100%" height={300}>
-                    <BarChart
-                      data={[
-                        {
-                          name: 'Ricavi',
-                          Teorico: revenueAnalysis.theoreticalRevenue,
-                          Effettivo: revenueAnalysis.actualRevenue,
-                        },
-                      ]}
-                      margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
-                    >
-                      <CartesianGrid strokeDasharray="3 3" />
-                      <XAxis dataKey="name" />
-                      <YAxis />
-                      <Tooltip />
-                      <Legend />
-                      <Bar dataKey="Teorico" fill="hsl(var(--primary))" />
-                      <Bar dataKey="Effettivo" fill="hsl(var(--accent))" />
-                    </BarChart>
-                  </ResponsiveContainer>
+                  </div>
                 </CardContent>
               </Card>
-            </>
-          ) : revenueAnalysis && revenueAnalysis.theoreticalRevenue === 0 ? (
-            <Card>
-              <CardContent className="p-6 text-center">
-                <p className="text-muted-foreground">
-                  Nessun dato ricavi disponibile. Assicurati di aver assegnato un listino prezzi all'evento e di aver registrato dei consumi.
-                </p>
-              </CardContent>
-            </Card>
-          ) : null}
+            </motion.div>
+          )}
+        </AnimatePresence>
 
+        <motion.div variants={staggerItem}>
           <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Riepilogo</CardTitle>
-                  <CardDescription>Costo totale consumi</CardDescription>
-                </div>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    onClick={handleExportPDF}
-                    disabled={!reportData || reportLoading}
-                    data-testid="button-export-pdf"
-                  >
-                    <FileText className="w-4 h-4 mr-2" />
-                    Esporta PDF
-                  </Button>
-                  <Button
-                    variant="outline"
-                    onClick={handleExportExcel}
-                    disabled={!reportData || reportLoading}
-                    data-testid="button-export-excel"
-                  >
-                    <FileSpreadsheet className="w-4 h-4 mr-2" />
-                    Esporta Excel
-                  </Button>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="flex items-center gap-4">
-                <div className="text-4xl font-semibold" data-testid="text-total-cost">
-                  €{reportData.totalCost.toFixed(2)}
-                </div>
-                <div className="text-sm text-muted-foreground">
-                  {reportData.stations.length} postazioni
-                </div>
-              </div>
+            <CardContent className="p-4">
+              <label className="text-sm text-muted-foreground block mb-2">Evento</label>
+              <Select value={selectedEventId} onValueChange={(v) => {
+                triggerHaptic('light');
+                setSelectedEventId(v);
+              }}>
+                <SelectTrigger className="min-h-[48px] text-base" data-testid="select-event">
+                  <SelectValue placeholder="Seleziona un evento" />
+                </SelectTrigger>
+                <SelectContent>
+                  {filteredEvents.map((event) => (
+                    <SelectItem key={event.id} value={event.id} className="min-h-[44px]">
+                      {event.name} - {new Date((event as any).startDatetime || (event as any).eventDate).toLocaleDateString('it-IT')}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </CardContent>
           </Card>
+        </motion.div>
 
-          {reportData.consumedProducts && reportData.consumedProducts.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Riepilogo Consumo Beverage</CardTitle>
-                <CardDescription>Totale prodotti consumati nell'evento</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Prodotto</TableHead>
-                      <TableHead className="text-right">Quantità Totale</TableHead>
-                      <TableHead className="text-right">Prezzo Unitario</TableHead>
-                      <TableHead className="text-right">Costo Totale</TableHead>
-                      {canCorrect && <TableHead className="w-16">Azioni</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {reportData.consumedProducts.map((product) => (
-                      <TableRow key={product.productId} data-testid={`row-consumed-product-${product.productId}`}>
-                        <TableCell className="font-medium" data-testid={`text-consumed-product-name-${product.productId}`}>
-                          {product.productName}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          {product.totalQuantity.toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          €{parseFloat(product.costPrice).toFixed(2)}
-                        </TableCell>
-                        <TableCell className="text-right font-semibold">
-                          €{product.totalCost.toFixed(2)}
-                        </TableCell>
-                        {canCorrect && (
-                          <TableCell>
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              disabled={correctConsumptionMutation.isPending}
-                              onClick={() => openCorrectionDialog(
-                                product.productId, 
-                                product.productName, 
-                                product.totalQuantity
-                              )}
-                              data-testid={`button-correct-${product.productId}`}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                    <TableRow className="border-t-2 border-primary">
-                      <TableCell colSpan={canCorrect ? 4 : 3} className="text-right font-bold">
-                        TOTALE BEVERAGE
-                      </TableCell>
-                      <TableCell className="text-right font-bold text-lg" data-testid="text-total-beverage-cost">
+        {reportLoading && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="text-center py-12"
+          >
+            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto" />
+            <p className="text-muted-foreground mt-4">Caricamento report...</p>
+          </motion.div>
+        )}
+
+        {reportData && !reportLoading && (
+          <motion.div
+            variants={staggerContainer}
+            initial="hidden"
+            animate="show"
+            className="space-y-4"
+          >
+            {revenueAnalysis && revenueAnalysis.theoreticalRevenue > 0 && (
+              <>
+                <div className="grid grid-cols-2 gap-3">
+                  <motion.div variants={staggerItem}>
+                    <Card className="h-full">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-muted-foreground">Ricavo Teorico</span>
+                          <DollarSign className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                        <div className="text-xl font-bold" data-testid="text-theoretical-revenue">
+                          €{revenueAnalysis.theoreticalRevenue.toFixed(2)}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Basato sui consumi
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+
+                  <motion.div variants={staggerItem}>
+                    <Card className="h-full">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-muted-foreground">Ricavo Effettivo</span>
+                          <DollarSign className="w-4 h-4 text-muted-foreground" />
+                        </div>
+                        <div className="text-xl font-bold" data-testid="text-actual-revenue">
+                          €{revenueAnalysis.actualRevenue.toFixed(2)}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Incasso reale
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+
+                  <motion.div variants={staggerItem}>
+                    <Card className="h-full">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-muted-foreground">Varianza</span>
+                          {revenueAnalysis.variance >= 0 ? (
+                            <TrendingUp className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <TrendingDown className="w-4 h-4 text-red-500" />
+                          )}
+                        </div>
+                        <div className={`text-xl font-bold ${revenueAnalysis.variance >= 0 ? 'text-green-500' : 'text-red-500'}`} data-testid="text-variance">
+                          €{revenueAnalysis.variance.toFixed(2)}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Differenza
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+
+                  <motion.div variants={staggerItem}>
+                    <Card className="h-full">
+                      <CardContent className="p-4">
+                        <div className="flex items-center justify-between mb-2">
+                          <span className="text-xs text-muted-foreground">Varianza %</span>
+                          {revenueAnalysis.variancePercent >= 0 ? (
+                            <TrendingUp className="w-4 h-4 text-green-500" />
+                          ) : (
+                            <TrendingDown className="w-4 h-4 text-red-500" />
+                          )}
+                        </div>
+                        <div className={`text-xl font-bold ${revenueAnalysis.variancePercent >= 0 ? 'text-green-500' : 'text-red-500'}`} data-testid="text-variance-percent">
+                          {revenueAnalysis.variancePercent.toFixed(1)}%
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Percentuale
+                        </p>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                </div>
+
+                <motion.div variants={staggerItem}>
+                  <Card>
+                    <CardHeader className="p-4 pb-2">
+                      <CardTitle className="text-base">Analisi Ricavi</CardTitle>
+                    </CardHeader>
+                    <CardContent className="p-4 pt-0">
+                      <ResponsiveContainer width="100%" height={200}>
+                        <BarChart
+                          data={[
+                            {
+                              name: 'Ricavi',
+                              Teorico: revenueAnalysis.theoreticalRevenue,
+                              Effettivo: revenueAnalysis.actualRevenue,
+                            },
+                          ]}
+                          margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                        >
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
+                          <XAxis dataKey="name" fontSize={12} />
+                          <YAxis fontSize={12} />
+                          <Tooltip />
+                          <Legend />
+                          <Bar dataKey="Teorico" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
+                          <Bar dataKey="Effettivo" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
+                        </BarChart>
+                      </ResponsiveContainer>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              </>
+            )}
+
+            {revenueAnalysis && revenueAnalysis.theoreticalRevenue === 0 && (
+              <motion.div variants={staggerItem}>
+                <Card>
+                  <CardContent className="p-6 text-center">
+                    <p className="text-muted-foreground text-sm">
+                      Nessun dato ricavi disponibile. Assicurati di aver assegnato un listino prezzi e registrato dei consumi.
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            <motion.div variants={staggerItem}>
+              <Card className="bg-gradient-to-br from-primary/10 to-primary/5">
+                <CardContent className="p-5">
+                  <div className="flex items-center justify-between mb-4">
+                    <div>
+                      <p className="text-sm text-muted-foreground">Costo Totale</p>
+                      <div className="text-3xl font-bold" data-testid="text-total-cost">
                         €{reportData.totalCost.toFixed(2)}
-                      </TableCell>
-                    </TableRow>
-                  </TableBody>
-                </Table>
-              </CardContent>
-            </Card>
-          )}
+                      </div>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {reportData.stations.length} postazioni
+                      </p>
+                    </div>
+                    <div className="flex flex-col gap-2">
+                      <HapticButton
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExportPDF}
+                        disabled={!reportData || reportLoading}
+                        className="min-h-[44px] min-w-[44px]"
+                        data-testid="button-export-pdf"
+                      >
+                        <FileText className="w-4 h-4 mr-2" />
+                        PDF
+                      </HapticButton>
+                      <HapticButton
+                        variant="outline"
+                        size="sm"
+                        onClick={handleExportExcel}
+                        disabled={!reportData || reportLoading}
+                        className="min-h-[44px] min-w-[44px]"
+                        data-testid="button-export-excel"
+                      >
+                        <FileSpreadsheet className="w-4 h-4 mr-2" />
+                        Excel
+                      </HapticButton>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Dettaglio per Postazione</CardTitle>
-              <CardDescription>Consumi suddivisi per postazione</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <Accordion type="single" collapsible className="w-full">
-                {reportData.stations.map((station) => (
-                  <AccordionItem key={station.stationId} value={station.stationId.toString()}>
-                    <AccordionTrigger data-testid={`accordion-station-${station.stationId}`}>
-                      <div className="flex items-center justify-between w-full pr-4">
-                        <span className="font-medium">{station.stationName}</span>
-                        <span className="text-sm text-muted-foreground">
-                          €{station.totalCost.toFixed(2)}
+            {reportData.consumedProducts && reportData.consumedProducts.length > 0 && (
+              <motion.div variants={staggerItem}>
+                <Card>
+                  <CardHeader className="p-4 pb-2">
+                    <CardTitle className="text-base">Consumo Beverage</CardTitle>
+                    <CardDescription className="text-xs">Prodotti consumati</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0">
+                    <div className="space-y-3">
+                      {reportData.consumedProducts.map((product, index) => (
+                        <motion.div
+                          key={product.productId}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ ...springTransition, delay: index * 0.05 }}
+                          className="flex items-center justify-between p-3 bg-muted/50 rounded-xl"
+                          data-testid={`row-consumed-product-${product.productId}`}
+                        >
+                          <div className="flex-1 min-w-0">
+                            <p className="font-medium text-sm truncate" data-testid={`text-consumed-product-name-${product.productId}`}>
+                              {product.productName}
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                              {product.totalQuantity.toFixed(2)} × €{parseFloat(product.costPrice).toFixed(2)}
+                            </p>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-semibold text-sm">
+                              €{product.totalCost.toFixed(2)}
+                            </span>
+                            {canCorrect && (
+                              <HapticButton
+                                variant="ghost"
+                                size="icon"
+                                disabled={correctConsumptionMutation.isPending}
+                                onClick={() => openCorrectionSheet(
+                                  product.productId, 
+                                  product.productName, 
+                                  product.totalQuantity
+                                )}
+                                data-testid={`button-correct-${product.productId}`}
+                              >
+                                <Pencil className="h-4 w-4" />
+                              </HapticButton>
+                            )}
+                          </div>
+                        </motion.div>
+                      ))}
+                      <div className="flex items-center justify-between p-3 bg-primary/10 rounded-xl border-2 border-primary/20">
+                        <span className="font-bold">TOTALE BEVERAGE</span>
+                        <span className="font-bold text-lg" data-testid="text-total-beverage-cost">
+                          €{reportData.totalCost.toFixed(2)}
                         </span>
                       </div>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Prodotto</TableHead>
-                            <TableHead className="text-right">Quantità</TableHead>
-                            <TableHead className="text-right">Prezzo Unitario</TableHead>
-                            <TableHead className="text-right">Totale</TableHead>
-                            {canCorrect && <TableHead className="w-16">Azioni</TableHead>}
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {station.items.map((item, idx) => (
-                            <TableRow key={idx} data-testid={`row-product-${item.productId}`}>
-                              <TableCell data-testid={`text-product-name-${item.productId}`}>
-                                {item.productName}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                {item.quantity.toFixed(2)}
-                              </TableCell>
-                              <TableCell className="text-right">
-                                €{parseFloat(item.costPrice).toFixed(2)}
-                              </TableCell>
-                              <TableCell className="text-right font-medium">
-                                €{item.totalCost.toFixed(2)}
-                              </TableCell>
-                              {canCorrect && (
-                                <TableCell>
-                                  <Button
-                                    variant="ghost"
-                                    size="icon"
-                                    disabled={correctConsumptionMutation.isPending}
-                                    onClick={() => openCorrectionDialog(
-                                      item.productId.toString(), 
-                                      item.productName, 
-                                      item.quantity,
-                                      station.stationId.toString()
-                                    )}
-                                    data-testid={`button-correct-station-${station.stationId}-${item.productId}`}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            <motion.div variants={staggerItem}>
+              <Card>
+                <CardHeader className="p-4 pb-2">
+                  <CardTitle className="text-base">Dettaglio Postazioni</CardTitle>
+                  <CardDescription className="text-xs">Consumi per postazione</CardDescription>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <div className="space-y-3">
+                    {reportData.stations.map((station) => (
+                      <motion.div
+                        key={station.stationId}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={springTransition}
+                        className="rounded-xl border border-border overflow-hidden"
+                      >
+                        <button
+                          onClick={() => toggleStation(station.stationId)}
+                          className="w-full flex items-center justify-between p-4 bg-muted/30 min-h-[56px] active:bg-muted/50 transition-colors"
+                          data-testid={`accordion-station-${station.stationId}`}
+                        >
+                          <span className="font-medium">{station.stationName}</span>
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm text-muted-foreground">
+                              €{station.totalCost.toFixed(2)}
+                            </span>
+                            {expandedStations.has(station.stationId) ? (
+                              <ChevronUp className="h-5 w-5 text-muted-foreground" />
+                            ) : (
+                              <ChevronDown className="h-5 w-5 text-muted-foreground" />
+                            )}
+                          </div>
+                        </button>
+                        
+                        <AnimatePresence>
+                          {expandedStations.has(station.stationId) && (
+                            <motion.div
+                              initial={{ height: 0, opacity: 0 }}
+                              animate={{ height: "auto", opacity: 1 }}
+                              exit={{ height: 0, opacity: 0 }}
+                              transition={springTransition}
+                              className="overflow-hidden"
+                            >
+                              <div className="p-3 space-y-2 bg-background">
+                                {station.items.map((item, idx) => (
+                                  <div
+                                    key={idx}
+                                    className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                                    data-testid={`row-product-${item.productId}`}
                                   >
-                                    <Pencil className="h-4 w-4" />
-                                  </Button>
-                                </TableCell>
-                              )}
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            </CardContent>
-          </Card>
-        </div>
-      )}
+                                    <div className="flex-1 min-w-0">
+                                      <p className="text-sm font-medium truncate" data-testid={`text-product-name-${item.productId}`}>
+                                        {item.productName}
+                                      </p>
+                                      <p className="text-xs text-muted-foreground">
+                                        {item.quantity.toFixed(2)} × €{parseFloat(item.costPrice).toFixed(2)}
+                                      </p>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-sm">
+                                        €{item.totalCost.toFixed(2)}
+                                      </span>
+                                      {canCorrect && (
+                                        <HapticButton
+                                          variant="ghost"
+                                          size="icon"
+                                          disabled={correctConsumptionMutation.isPending}
+                                          onClick={() => openCorrectionSheet(
+                                            item.productId.toString(), 
+                                            item.productName, 
+                                            item.quantity,
+                                            station.stationId.toString()
+                                          )}
+                                          data-testid={`button-correct-station-${station.stationId}-${item.productId}`}
+                                        >
+                                          <Pencil className="h-4 w-4" />
+                                        </HapticButton>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))}
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
+                    ))}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          </motion.div>
+        )}
 
-      {!selectedEventId && !reportLoading && (
-        <Card>
-          <CardContent className="py-12 text-center">
-            <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
-            <p className="text-muted-foreground">
-              Seleziona un evento per visualizzare il report
-            </p>
-          </CardContent>
-        </Card>
-      )}
+        {!selectedEventId && !reportLoading && (
+          <motion.div
+            variants={staggerItem}
+            initial="hidden"
+            animate="show"
+          >
+            <Card>
+              <CardContent className="py-16 text-center">
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={springTransition}
+                >
+                  <FileText className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
+                  <p className="text-muted-foreground">
+                    Seleziona un evento per visualizzare il report
+                  </p>
+                </motion.div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </motion.div>
 
-      {/* Dialog per correzione consumo */}
-      <Dialog open={correctionDialogOpen} onOpenChange={setCorrectionDialogOpen}>
-        <DialogContent className="sm:max-w-[425px]">
-          <DialogHeader>
-            <DialogTitle>Correggi Consumo</DialogTitle>
-          </DialogHeader>
-          <div className="space-y-4 py-4">
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">Prodotto</p>
-              <p className="font-medium">{correctingProduct?.productName}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-2">Quantità attuale consumata</p>
-              <p className="font-medium">{correctingProduct?.currentQuantity.toFixed(2)}</p>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Nuova Quantità Consumata</label>
-              <Input
-                type="number"
-                min="0"
-                step="0.01"
-                value={newQuantity}
-                onChange={(e) => setNewQuantity(e.target.value)}
-                placeholder="Inserisci nuova quantità"
-                data-testid="input-correct-quantity"
-              />
-              <p className="text-xs text-muted-foreground">
-                La giacenza verrà aggiornata automaticamente in base alla differenza
-              </p>
-            </div>
-            <div className="space-y-2">
-              <label className="text-sm font-medium">Motivo (opzionale)</label>
-              <Textarea
-                value={correctionReason}
-                onChange={(e) => setCorrectionReason(e.target.value)}
-                placeholder="Es: Errore di conteggio, correzione inventario..."
-                data-testid="input-correct-reason"
-              />
-            </div>
+      <BottomSheet
+        open={correctionSheetOpen}
+        onClose={() => setCorrectionSheetOpen(false)}
+        title="Correggi Consumo"
+      >
+        <div className="p-4 space-y-5">
+          <div className="p-4 bg-muted/50 rounded-xl">
+            <p className="text-xs text-muted-foreground mb-1">Prodotto</p>
+            <p className="font-semibold">{correctingProduct?.productName}</p>
           </div>
-          <DialogFooter>
-            <Button
+          
+          <div className="p-4 bg-muted/50 rounded-xl">
+            <p className="text-xs text-muted-foreground mb-1">Quantità attuale</p>
+            <p className="font-semibold text-lg">{correctingProduct?.currentQuantity.toFixed(2)}</p>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Nuova Quantità</label>
+            <Input
+              type="number"
+              min="0"
+              step="0.01"
+              value={newQuantity}
+              onChange={(e) => setNewQuantity(e.target.value)}
+              placeholder="Inserisci nuova quantità"
+              className="min-h-[48px] text-lg"
+              data-testid="input-correct-quantity"
+            />
+            <p className="text-xs text-muted-foreground">
+              La giacenza verrà aggiornata automaticamente
+            </p>
+          </div>
+          
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Motivo (opzionale)</label>
+            <Textarea
+              value={correctionReason}
+              onChange={(e) => setCorrectionReason(e.target.value)}
+              placeholder="Es: Errore di conteggio..."
+              className="min-h-[100px]"
+              data-testid="input-correct-reason"
+            />
+          </div>
+          
+          <div className="flex gap-3 pt-2">
+            <HapticButton
               variant="outline"
-              onClick={() => setCorrectionDialogOpen(false)}
+              className="flex-1 min-h-[48px]"
+              onClick={() => setCorrectionSheetOpen(false)}
               data-testid="button-cancel-correct"
             >
               Annulla
-            </Button>
-            <Button
+            </HapticButton>
+            <HapticButton
+              className="flex-1 min-h-[48px]"
               onClick={handleCorrectConsumption}
               disabled={correctConsumptionMutation.isPending}
+              hapticType="success"
               data-testid="button-confirm-correct"
             >
               {correctConsumptionMutation.isPending ? 'Salvataggio...' : 'Salva'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+            </HapticButton>
+          </div>
+        </div>
+      </BottomSheet>
+    </MobileAppLayout>
   );
 }

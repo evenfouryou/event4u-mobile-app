@@ -3,9 +3,10 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import {
   Form,
   FormControl,
@@ -33,6 +34,31 @@ interface Customer {
   email: string;
   phone: string;
 }
+
+const springTransition = {
+  type: "spring",
+  stiffness: 300,
+  damping: 30,
+};
+
+const staggerChildren = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const fadeInUp = {
+  hidden: { opacity: 0, y: 20 },
+  visible: { 
+    opacity: 1, 
+    y: 0,
+    transition: springTransition,
+  },
+};
 
 export default function AccountProfile() {
   const { toast } = useToast();
@@ -85,125 +111,189 @@ export default function AccountProfile() {
     updateMutation.mutate(data);
   };
 
+  const getInitials = () => {
+    if (!customer) return "?";
+    const first = customer.firstName?.[0] || "";
+    const last = customer.lastName?.[0] || "";
+    return (first + last).toUpperCase() || "?";
+  };
+
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div className="fixed inset-0 flex items-center justify-center bg-background">
+        <motion.div
+          initial={{ opacity: 0, scale: 0.8 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={springTransition}
+        >
+          <Loader2 className="w-10 h-10 animate-spin text-primary" />
+        </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-2xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground" data-testid="text-page-title">Il Mio Profilo</h1>
-        <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Gestisci le tue informazioni personali</p>
-      </div>
+    <div 
+      className="min-h-screen bg-background flex flex-col"
+      style={{ 
+        paddingTop: 'env(safe-area-inset-top)',
+        paddingLeft: 'env(safe-area-inset-left)',
+        paddingRight: 'env(safe-area-inset-right)',
+      }}
+    >
+      <motion.div
+        className="flex-1 px-5 pt-6 pb-24"
+        variants={staggerChildren}
+        initial="hidden"
+        animate="visible"
+      >
+        <motion.div 
+          className="flex flex-col items-center mb-8"
+          variants={fadeInUp}
+        >
+          <Avatar className="w-24 h-24 mb-4 border-4 border-primary/20">
+            <AvatarFallback className="text-2xl font-bold bg-primary/10 text-primary">
+              {getInitials()}
+            </AvatarFallback>
+          </Avatar>
+          <h1 
+            className="text-2xl font-bold text-foreground text-center" 
+            data-testid="text-page-title"
+          >
+            {customer?.firstName} {customer?.lastName}
+          </h1>
+          <p className="text-muted-foreground text-base mt-1">Il Mio Profilo</p>
+        </motion.div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-foreground flex items-center gap-2">
-            <User className="w-5 h-5 text-primary" />
-            Informazioni Personali
-          </CardTitle>
-          <CardDescription className="text-muted-foreground">
-            Aggiorna i tuoi dati personali
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              <div className="space-y-4">
-                <div className="p-4 bg-muted rounded-lg border border-border">
-                  <div className="flex items-center gap-3 text-muted-foreground">
-                    <Mail className="w-5 h-5" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Email</p>
-                      <p className="text-foreground" data-testid="text-email">{customer?.email}</p>
-                    </div>
-                  </div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <motion.div 
+              className="space-y-5"
+              variants={fadeInUp}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <User className="w-5 h-5 text-primary" />
                 </div>
-
-                <FormField
-                  control={form.control}
-                  name="firstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-muted-foreground">Nome</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          className="bg-muted border-border text-foreground"
-                          placeholder="Il tuo nome"
-                          data-testid="input-firstname"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-muted-foreground">Cognome</FormLabel>
-                      <FormControl>
-                        <Input
-                          {...field}
-                          className="bg-muted border-border text-foreground"
-                          placeholder="Il tuo cognome"
-                          data-testid="input-lastname"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel className="text-muted-foreground">Telefono</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                          <Input
-                            {...field}
-                            className="pl-10 bg-muted border-border text-foreground"
-                            placeholder="+39 333 1234567"
-                            data-testid="input-phone"
-                          />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                <h2 className="text-lg font-semibold text-foreground">Dati Personali</h2>
               </div>
 
-              <Button
-                type="submit"
-                disabled={updateMutation.isPending}
-                className="w-full bg-yellow-500 hover:bg-yellow-400 text-black font-semibold"
-                data-testid="button-save"
-              >
-                {updateMutation.isPending ? (
-                  <Loader2 className="w-4 h-4 animate-spin" />
-                ) : (
-                  <>
-                    <Save className="w-4 h-4 mr-2" />
-                    Salva Modifiche
-                  </>
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground text-base">Nome</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        className="h-14 text-base bg-muted border-border text-foreground rounded-xl px-4"
+                        placeholder="Il tuo nome"
+                        data-testid="input-firstname"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
                 )}
-              </Button>
-            </form>
-          </Form>
-        </CardContent>
-      </Card>
+              />
+
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground text-base">Cognome</FormLabel>
+                    <FormControl>
+                      <Input
+                        {...field}
+                        className="h-14 text-base bg-muted border-border text-foreground rounded-xl px-4"
+                        placeholder="Il tuo cognome"
+                        data-testid="input-lastname"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </motion.div>
+
+            <motion.div 
+              className="space-y-5"
+              variants={fadeInUp}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-10 h-10 rounded-full bg-teal-500/10 flex items-center justify-center">
+                  <Mail className="w-5 h-5 text-teal-500" />
+                </div>
+                <h2 className="text-lg font-semibold text-foreground">Contatti</h2>
+              </div>
+
+              <div className="p-4 bg-muted/50 rounded-xl border border-border">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+                    <Mail className="w-5 h-5 text-muted-foreground" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm text-muted-foreground">Email</p>
+                    <p className="text-base text-foreground truncate" data-testid="text-email">
+                      {customer?.email}
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <FormField
+                control={form.control}
+                name="phone"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-muted-foreground text-base">Telefono</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <div className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 rounded-full bg-muted flex items-center justify-center">
+                          <Phone className="w-5 h-5 text-muted-foreground" />
+                        </div>
+                        <Input
+                          {...field}
+                          className="h-14 text-base pl-16 bg-muted border-border text-foreground rounded-xl"
+                          placeholder="+39 333 1234567"
+                          data-testid="input-phone"
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </motion.div>
+          </form>
+        </Form>
+      </motion.div>
+
+      <motion.div 
+        className="fixed bottom-0 left-0 right-0 p-5 bg-background/95 backdrop-blur-xl border-t border-border"
+        style={{ paddingBottom: 'calc(1.25rem + env(safe-area-inset-bottom))' }}
+        initial={{ y: 100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ ...springTransition, delay: 0.3 }}
+      >
+        <Button
+          type="submit"
+          disabled={updateMutation.isPending}
+          onClick={form.handleSubmit(onSubmit)}
+          className="w-full h-14 text-base font-semibold bg-yellow-500 hover:bg-yellow-400 text-black rounded-xl"
+          data-testid="button-save"
+        >
+          {updateMutation.isPending ? (
+            <Loader2 className="w-5 h-5 animate-spin" />
+          ) : (
+            <>
+              <Save className="w-5 h-5 mr-2" />
+              Salva Modifiche
+            </>
+          )}
+        </Button>
+      </motion.div>
     </div>
   );
 }

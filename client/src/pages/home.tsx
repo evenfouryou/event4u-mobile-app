@@ -1,127 +1,140 @@
 import { useEffect } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Link, useLocation } from "wouter";
 import {
   Wine,
-  Calculator,
-  Users,
-  Database,
-  ArrowRight,
   Calendar,
   Plus,
   Building2,
-  FileText,
-  Receipt,
   TrendingUp,
+  Ticket,
+  Euro,
+  QrCode,
+  ChevronRight,
   Sparkles,
   Clock,
-  CheckCircle2,
-  Printer,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import type { Company, UserFeatures, PrinterAgent } from "@shared/schema";
+import { HapticButton, triggerHaptic } from "@/components/mobile-primitives";
+import type { Company, UserFeatures, Event } from "@shared/schema";
 
-interface ModuleCardProps {
-  title: string;
-  description: string;
-  icon: React.ElementType;
-  href: string;
-  gradient: string;
-  iconBg: string;
-  available?: boolean;
-  delay?: number;
-}
+const springConfig = { type: "spring", stiffness: 400, damping: 30 };
 
-function ModuleCard({
-  title,
-  description,
-  icon: Icon,
-  href,
-  gradient,
-  iconBg,
-  available = true,
-  delay = 0,
-}: ModuleCardProps) {
-  const content = (
-    <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.4, delay }}
-      className={`glass-card p-4 sm:p-6 h-full transition-all duration-300 group ${
-        available 
-          ? 'hover:border-primary/30 cursor-pointer' 
-          : 'opacity-60 cursor-not-allowed'
-      }`}
-    >
-      <div className="flex items-start gap-4">
-        <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform duration-300`}>
-          <Icon className="h-7 w-7 text-white" />
-        </div>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 mb-1">
-            <h3 className="text-lg font-semibold truncate">{title}</h3>
-            {!available && (
-              <span className="text-[10px] uppercase tracking-wider px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-400 font-medium">
-                Soon
-              </span>
-            )}
-          </div>
-          <p className="text-sm text-muted-foreground line-clamp-2">{description}</p>
-        </div>
-        {available && (
-          <ArrowRight className="h-5 w-5 text-muted-foreground group-hover:text-primary group-hover:translate-x-1 transition-all flex-shrink-0 mt-1" />
-        )}
-      </div>
-    </motion.div>
-  );
-
-  if (!available) {
-    return content;
-  }
-
-  return (
-    <Link href={href} data-testid={`module-${title.toLowerCase().replace(/\s+/g, '-')}`}>
-      {content}
-    </Link>
-  );
-}
-
-function StatsCard({ 
+function MobileStatsCard({ 
   icon: Icon, 
   label, 
   value, 
   trend,
+  gradient,
   delay = 0 
 }: { 
   icon: React.ElementType; 
   label: string; 
   value: string | number; 
   trend?: string;
+  gradient: string;
   delay?: number;
 }) {
   return (
     <motion.div 
-      initial={{ opacity: 0, scale: 0.95 }}
+      initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
-      transition={{ duration: 0.3, delay }}
-      className="glass-card p-3 sm:p-5"
+      transition={{ ...springConfig, delay }}
+      className="glass-card p-4 min-h-[120px] flex flex-col justify-between"
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
-          <Icon className="h-5 w-5 text-primary" />
+      <div className="flex items-start justify-between">
+        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center`}>
+          <Icon className="h-6 w-6 text-white" />
         </div>
         {trend && (
-          <span className="text-xs text-teal flex items-center gap-1">
+          <span className="text-xs text-teal flex items-center gap-1 bg-teal/10 px-2 py-1 rounded-full">
             <TrendingUp className="h-3 w-3" />
             {trend}
           </span>
         )}
       </div>
-      <p className="text-2xl font-bold mb-1">{value}</p>
-      <p className="text-xs text-muted-foreground">{label}</p>
+      <div className="mt-3">
+        <p className="text-3xl font-bold tabular-nums">{value}</p>
+        <p className="text-xs text-muted-foreground mt-1">{label}</p>
+      </div>
+    </motion.div>
+  );
+}
+
+function QuickActionButton({
+  icon: Icon,
+  label,
+  href,
+  gradient,
+  delay = 0,
+}: {
+  icon: React.ElementType;
+  label: string;
+  href: string;
+  gradient: string;
+  delay?: number;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ ...springConfig, delay }}
+    >
+      <Link href={href}>
+        <HapticButton
+          variant="ghost"
+          className={`w-full h-auto flex flex-col items-center gap-2 py-4 px-3 bg-gradient-to-br ${gradient} border-0 rounded-2xl`}
+          hapticType="medium"
+          data-testid={`quick-action-${label.toLowerCase().replace(/\s+/g, '-')}`}
+        >
+          <div className="w-14 h-14 rounded-2xl bg-white/20 flex items-center justify-center">
+            <Icon className="h-7 w-7 text-white" />
+          </div>
+          <span className="text-sm font-medium text-white">{label}</span>
+        </HapticButton>
+      </Link>
+    </motion.div>
+  );
+}
+
+function RecentEventCard({
+  event,
+  delay = 0,
+}: {
+  event: Event;
+  delay?: number;
+}) {
+  const eventDate = new Date(event.startDatetime);
+  const formattedDate = eventDate.toLocaleDateString('it-IT', {
+    day: 'numeric',
+    month: 'short',
+  });
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, x: -20 }}
+      animate={{ opacity: 1, x: 0 }}
+      transition={{ ...springConfig, delay }}
+    >
+      <Link href={`/events/${event.id}`}>
+        <div 
+          className="glass-card p-4 flex items-center gap-4 active:scale-[0.98] transition-transform min-h-[72px]"
+          onClick={() => triggerHaptic('light')}
+          data-testid={`event-card-${event.id}`}
+        >
+          <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0">
+            <Calendar className="h-6 w-6 text-primary" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <p className="font-semibold truncate">{event.name}</p>
+            <p className="text-sm text-muted-foreground">{formattedDate}</p>
+          </div>
+          <ChevronRight className="h-5 w-5 text-muted-foreground shrink-0" />
+        </div>
+      </Link>
     </motion.div>
   );
 }
@@ -145,13 +158,12 @@ export default function Home() {
     enabled: !isSuperAdmin && !isBartender && !isWarehouse && !isCassiere,
   });
 
-  const { data: printerAgents = [] } = useQuery<PrinterAgent[]>({
-    queryKey: ['/api/printers/agents'],
+  const { data: events = [], isLoading: eventsLoading } = useQuery<Event[]>({
+    queryKey: ['/api/events'],
     enabled: !isSuperAdmin && !isBartender && !isWarehouse && !isCassiere,
-    refetchInterval: 30000,
   });
-  
-  const onlineAgents = printerAgents.filter(a => a.status === 'online');
+
+  const recentEvents = events.slice(0, 3);
 
   useEffect(() => {
     if (isBartender || isWarehouse) {
@@ -166,90 +178,122 @@ export default function Home() {
     return null;
   }
 
-  // Super Admin Dashboard
+  const getInitials = (firstName?: string, lastName?: string) => {
+    const first = firstName?.charAt(0) || '';
+    const last = lastName?.charAt(0) || '';
+    return (first + last).toUpperCase() || 'U';
+  };
+
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Buongiorno';
+    if (hour < 18) return 'Buon pomeriggio';
+    return 'Buonasera';
+  };
+
   if (isSuperAdmin) {
     return (
-      <div className="p-3 sm:p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
-        {/* Header */}
+      <div 
+        className="min-h-screen px-4 pt-2 pb-24"
+        style={{ paddingTop: 'max(env(safe-area-inset-top), 8px)' }}
+      >
         <motion.div 
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
-          className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8"
+          transition={springConfig}
+          className="flex items-center justify-between mb-6"
         >
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-2 h-2 rounded-full bg-teal animate-pulse" />
-              <span className="text-xs text-teal font-medium">Sistema Attivo</span>
+          <div className="flex items-center gap-3">
+            <Avatar className="h-12 w-12 border-2 border-primary/20">
+              <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground font-semibold">
+                {getInitials(user?.firstName ?? undefined, user?.lastName ?? undefined)}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <p className="text-sm text-muted-foreground">{getGreeting()}</p>
+              <h1 className="text-xl font-bold">{user?.firstName || 'Admin'}</h1>
             </div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold">
-              Ciao, {user?.firstName}
-            </h1>
-            <p className="text-muted-foreground text-sm sm:text-base">
-              Panoramica del sistema Event4U
-            </p>
           </div>
-          <Button asChild className="gradient-golden text-black font-semibold" data-testid="button-create-company">
-            <Link href="/companies">
-              <Plus className="h-4 w-4 mr-2" />
-              Nuova Azienda
-            </Link>
-          </Button>
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-teal animate-pulse" />
+            <span className="text-xs text-teal font-medium">Online</span>
+          </div>
         </motion.div>
 
-        {/* Stats Grid */}
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6 md:mb-8">
+        <div className="grid grid-cols-2 gap-3 mb-6">
           {companiesLoading ? (
             <>
-              <Skeleton className="h-32 rounded-2xl" />
-              <Skeleton className="h-32 rounded-2xl" />
-              <Skeleton className="h-32 rounded-2xl" />
-              <Skeleton className="h-32 rounded-2xl" />
+              <Skeleton className="h-[120px] rounded-2xl" />
+              <Skeleton className="h-[120px] rounded-2xl" />
+              <Skeleton className="h-[120px] rounded-2xl" />
+              <Skeleton className="h-[120px] rounded-2xl" />
             </>
           ) : (
             <>
-              <StatsCard 
+              <MobileStatsCard 
                 icon={Building2} 
                 label="Aziende Totali" 
                 value={companies?.length || 0}
+                gradient="from-indigo-500 to-purple-600"
                 delay={0.1}
               />
-              <StatsCard 
-                icon={CheckCircle2} 
+              <MobileStatsCard 
+                icon={Sparkles} 
                 label="Aziende Attive" 
                 value={companies?.filter(c => c.active).length || 0}
+                gradient="from-teal-500 to-emerald-600"
                 trend="+12%"
+                delay={0.15}
+              />
+              <MobileStatsCard 
+                icon={Calendar} 
+                label="Eventi Mese" 
+                value="--"
+                gradient="from-amber-500 to-orange-600"
                 delay={0.2}
               />
-              <StatsCard 
-                icon={Users} 
-                label="Utenti Totali" 
+              <MobileStatsCard 
+                icon={Euro} 
+                label="Incasso Totale" 
                 value="--"
-                delay={0.3}
-              />
-              <StatsCard 
-                icon={Calendar} 
-                label="Eventi Questo Mese" 
-                value="--"
-                delay={0.4}
+                gradient="from-rose-500 to-pink-600"
+                delay={0.25}
               />
             </>
           )}
         </div>
 
-        {/* Companies List */}
         <motion.div 
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3 }}
+          transition={{ ...springConfig, delay: 0.3 }}
+          className="mb-6"
+        >
+          <Link href="/companies">
+            <HapticButton
+              className="w-full h-14 gradient-golden text-black font-semibold text-base rounded-2xl"
+              hapticType="medium"
+              data-testid="button-create-company"
+            >
+              <Plus className="h-5 w-5 mr-2" />
+              Nuova Azienda
+            </HapticButton>
+          </Link>
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springConfig, delay: 0.35 }}
           className="glass-card overflow-hidden"
         >
-          <div className="p-6 border-b border-white/5">
+          <div className="p-4 border-b border-white/5">
             <h2 className="text-lg font-semibold flex items-center gap-2">
               <Building2 className="h-5 w-5 text-primary" />
               Aziende Recenti
             </h2>
           </div>
-          <div className="p-4">
+          <div className="p-3">
             {companiesLoading ? (
               <div className="space-y-3">
                 <Skeleton className="h-16 rounded-xl" />
@@ -262,12 +306,13 @@ export default function Home() {
                     key={company.id}
                     initial={{ opacity: 0, x: -20 }}
                     animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: 0.1 * index }}
-                    className="flex items-center justify-between p-4 rounded-xl bg-background/50 hover:bg-background/80 transition-colors"
+                    transition={{ ...springConfig, delay: 0.4 + index * 0.05 }}
+                    className="flex items-center justify-between p-4 rounded-xl bg-background/50 active:bg-background/80 transition-colors min-h-[64px]"
+                    onClick={() => triggerHaptic('light')}
                     data-testid={`company-item-${company.id}`}
                   >
-                    <div className="flex items-center gap-4">
-                      <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                    <div className="flex items-center gap-3">
+                      <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
                         <Building2 className="h-5 w-5 text-primary" />
                       </div>
                       <div>
@@ -275,9 +320,9 @@ export default function Home() {
                         <p className="text-sm text-muted-foreground">{company.taxId || 'P.IVA non specificata'}</p>
                       </div>
                     </div>
-                    <div className={`px-3 py-1 rounded-full text-xs font-medium ${
+                    <div className={`px-3 py-1.5 rounded-full text-xs font-medium ${
                       company.active 
-                        ? 'bg-teal-500/20 text-teal' 
+                        ? 'bg-teal/20 text-teal' 
                         : 'bg-muted text-muted-foreground'
                     }`}>
                       {company.active ? 'Attiva' : 'Inattiva'}
@@ -291,12 +336,16 @@ export default function Home() {
                   <Building2 className="h-8 w-8 text-primary" />
                 </div>
                 <p className="text-muted-foreground mb-4">Nessuna azienda presente</p>
-                <Button asChild className="gradient-golden text-black" data-testid="button-create-first-company">
-                  <Link href="/companies">
+                <Link href="/companies">
+                  <HapticButton 
+                    className="gradient-golden text-black min-h-[48px]" 
+                    hapticType="medium"
+                    data-testid="button-create-first-company"
+                  >
                     <Plus className="h-4 w-4 mr-2" />
                     Crea Prima Azienda
-                  </Link>
-                </Button>
+                  </HapticButton>
+                </Link>
               </div>
             )}
           </div>
@@ -305,190 +354,160 @@ export default function Home() {
     );
   }
 
-  // Gestore/Organizer Dashboard
-  const modules = [
-    {
-      title: "Eventi",
-      description: "Crea e gestisci i tuoi eventi. Pianifica date, location e ogni dettaglio.",
-      icon: Calendar,
-      href: "/events",
-      gradient: "from-indigo-500 to-purple-600",
-      iconBg: "bg-indigo-500",
-      enabled: true,
-    },
-    {
-      title: "Beverage",
-      description: "Magazzino, postazioni e consumi. Monitora scorte e inventario.",
-      icon: Wine,
-      href: "/beverage",
-      gradient: "from-amber-500 to-orange-600",
-      iconBg: "bg-amber-500",
-      enabled: userFeatures?.beverageEnabled !== false,
-    },
-    {
-      title: "Contabilità",
-      description: "Costi fissi, extra, manutenzioni e documenti contabili.",
-      icon: Calculator,
-      href: "/accounting",
-      gradient: "from-emerald-500 to-teal-600",
-      iconBg: "bg-emerald-500",
-      enabled: userFeatures?.contabilitaEnabled === true,
-    },
-    {
-      title: "Personale",
-      description: "Anagrafica staff, assegnazioni eventi e gestione pagamenti.",
-      icon: Users,
-      href: "/personnel",
-      gradient: "from-blue-500 to-indigo-600",
-      iconBg: "bg-blue-500",
-      enabled: userFeatures?.personaleEnabled === true,
-    },
-    {
-      title: "Cassa",
-      description: "Settori, postazioni e fondi cassa. Monitora entrate e riconciliazioni.",
-      icon: Receipt,
-      href: "/cash-register",
-      gradient: "from-violet-500 to-purple-600",
-      iconBg: "bg-violet-500",
-      enabled: userFeatures?.cassaEnabled === true,
-    },
-    {
-      title: "File della Serata",
-      description: "Documento completo dell'evento con tutti i dati della serata.",
-      icon: FileText,
-      href: "/night-file",
-      gradient: "from-rose-500 to-pink-600",
-      iconBg: "bg-rose-500",
-      enabled: userFeatures?.nightFileEnabled === true,
-    },
-    {
-      title: "Analytics",
-      description: "Report avanzati, statistiche e insights per il tuo business.",
-      icon: Database,
-      href: "/analytics",
-      gradient: "from-slate-500 to-gray-600",
-      iconBg: "bg-slate-500",
-      enabled: false,
-    },
-  ];
-
-  const enabledModules = modules.filter(m => m.enabled);
-  const disabledModules = modules.filter(m => !m.enabled && m.title !== "Analytics");
-
   return (
-    <div className="p-3 sm:p-4 md:p-8 max-w-6xl mx-auto pb-24 md:pb-8">
-      {/* Welcome Header */}
+    <div 
+      className="min-h-screen px-4 pt-2 pb-24"
+      style={{ paddingTop: 'max(env(safe-area-inset-top), 8px)' }}
+    >
       <motion.div 
-        initial={{ opacity: 0, y: -20 }}
+        initial={{ opacity: 0, y: -10 }}
         animate={{ opacity: 1, y: 0 }}
-        className="text-center mb-6 sm:mb-8 md:mb-10"
+        transition={springConfig}
+        className="flex items-center justify-between mb-6"
       >
-        <motion.div
-          initial={{ scale: 0 }}
-          animate={{ scale: 1 }}
-          transition={{ delay: 0.2, type: "spring", stiffness: 200 }}
-          className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl sm:rounded-2xl bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center mx-auto mb-3 sm:mb-4 glow-golden"
-        >
-          <Sparkles className="h-6 w-6 sm:h-8 sm:w-8 text-black" />
-        </motion.div>
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold mb-2">
-          Ciao, {user?.firstName || 'Gestore'}
-        </h1>
-        <p className="text-muted-foreground text-sm sm:text-base">
-          Seleziona un modulo per iniziare
-        </p>
+        <div className="flex items-center gap-3">
+          <Avatar className="h-12 w-12 border-2 border-primary/20">
+            <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground font-semibold">
+              {getInitials(user?.firstName ?? undefined, user?.lastName ?? undefined)}
+            </AvatarFallback>
+          </Avatar>
+          <div>
+            <p className="text-sm text-muted-foreground">{getGreeting()}</p>
+            <h1 className="text-xl font-bold">{user?.firstName || 'Gestore'}</h1>
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <div className="w-2 h-2 rounded-full bg-teal animate-pulse" />
+          <span className="text-xs text-teal font-medium">Online</span>
+        </div>
       </motion.div>
 
-      {/* Quick Stats */}
+      <div className="grid grid-cols-2 gap-3 mb-6">
+        <MobileStatsCard 
+          icon={Calendar} 
+          label="Eventi Attivi" 
+          value={events.filter(e => new Date(e.startDatetime) >= new Date()).length}
+          gradient="from-indigo-500 to-purple-600"
+          delay={0.1}
+        />
+        <MobileStatsCard 
+          icon={Ticket} 
+          label="Biglietti Venduti" 
+          value="--"
+          gradient="from-amber-500 to-orange-600"
+          delay={0.15}
+        />
+        <MobileStatsCard 
+          icon={Euro} 
+          label="Incasso Oggi" 
+          value="€0"
+          gradient="from-teal-500 to-emerald-600"
+          trend="+0%"
+          delay={0.2}
+        />
+        <MobileStatsCard 
+          icon={Clock} 
+          label="Prossimo Evento" 
+          value={recentEvents[0] ? new Date(recentEvents[0].startDatetime).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }) : '--'}
+          gradient="from-rose-500 to-pink-600"
+          delay={0.25}
+        />
+      </div>
+
       <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="glass-card p-3 sm:p-4 mb-4 sm:mb-6 md:mb-8 flex items-center justify-around flex-wrap gap-2"
+        transition={{ ...springConfig, delay: 0.3 }}
+        className="mb-6"
       >
-        <div className="text-center px-4">
-          <div className="flex items-center justify-center gap-1 text-teal mb-1">
-            <Clock className="h-4 w-4" />
-            <span className="text-lg font-bold">0</span>
-          </div>
-          <p className="text-xs text-muted-foreground">Eventi Oggi</p>
+        <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+          Azioni Rapide
+        </h2>
+        <div className="grid grid-cols-3 gap-3">
+          <QuickActionButton
+            icon={Plus}
+            label="Nuovo Evento"
+            href="/event-wizard"
+            gradient="from-indigo-500 to-purple-600"
+            delay={0.35}
+          />
+          <QuickActionButton
+            icon={QrCode}
+            label="Scanner"
+            href="/e4u-scanner"
+            gradient="from-teal-500 to-emerald-600"
+            delay={0.4}
+          />
+          <QuickActionButton
+            icon={Wine}
+            label="Beverage"
+            href="/beverage"
+            gradient="from-amber-500 to-orange-600"
+            delay={0.45}
+          />
         </div>
-        <div className="w-px h-10 bg-white/10" />
-        <div className="text-center px-4">
-          <div className="flex items-center justify-center gap-1 text-primary mb-1">
-            <Calendar className="h-4 w-4" />
-            <span className="text-lg font-bold">0</span>
-          </div>
-          <p className="text-xs text-muted-foreground">Questa Settimana</p>
-        </div>
-        <div className="w-px h-10 bg-white/10" />
-        <div className="text-center px-4">
-          <div className="flex items-center justify-center gap-1 text-amber-400 mb-1">
-            <Wine className="h-4 w-4" />
-            <span className="text-lg font-bold">0</span>
-          </div>
-          <p className="text-xs text-muted-foreground">Prodotti</p>
-        </div>
-        {printerAgents.length > 0 && (
-          <>
-            <div className="w-px h-10 bg-white/10" />
-            <Link href="/printer-settings" className="text-center px-4 cursor-pointer hover:opacity-80 transition-opacity" data-testid="link-printer-status">
-              <div className={`flex items-center justify-center gap-1 mb-1 ${onlineAgents.length > 0 ? 'text-teal' : 'text-red-400'}`}>
-                <Printer className="h-4 w-4" />
-                <span className="text-lg font-bold">{onlineAgents.length}/{printerAgents.length}</span>
-              </div>
-              <p className="text-xs text-muted-foreground">Stampanti</p>
-            </Link>
-          </>
-        )}
       </motion.div>
 
-      {/* Modules Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-8">
-        {enabledModules.map((module, index) => (
-          <ModuleCard
-            key={module.title}
-            {...module}
-            available={true}
-            delay={0.1 + index * 0.1}
-          />
-        ))}
-      </div>
-
-      {/* Coming Soon Section */}
-      {disabledModules.length > 0 && (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-        >
-          <p className="text-sm text-muted-foreground mb-4 flex items-center gap-2">
-            <span className="w-8 h-px bg-white/10" />
-            Altri moduli disponibili
-            <span className="flex-1 h-px bg-white/10" />
-          </p>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {disabledModules.map((module, index) => (
-              <ModuleCard
-                key={module.title}
-                {...module}
-                available={false}
-                delay={0.6 + index * 0.1}
+      <motion.div 
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ ...springConfig, delay: 0.5 }}
+      >
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+            Eventi Recenti
+          </h2>
+          <Link href="/events">
+            <span 
+              className="text-sm text-primary font-medium flex items-center gap-1"
+              onClick={() => triggerHaptic('light')}
+            >
+              Vedi tutti
+              <ChevronRight className="h-4 w-4" />
+            </span>
+          </Link>
+        </div>
+        
+        {eventsLoading ? (
+          <div className="space-y-3">
+            <Skeleton className="h-[72px] rounded-2xl" />
+            <Skeleton className="h-[72px] rounded-2xl" />
+            <Skeleton className="h-[72px] rounded-2xl" />
+          </div>
+        ) : recentEvents.length > 0 ? (
+          <div className="space-y-3">
+            {recentEvents.map((event, index) => (
+              <RecentEventCard
+                key={event.id}
+                event={event}
+                delay={0.55 + index * 0.05}
               />
             ))}
-            <ModuleCard
-              title="Analytics"
-              description="Report avanzati, statistiche e insights per il tuo business."
-              icon={Database}
-              href="/analytics"
-              gradient="from-slate-500 to-gray-600"
-              iconBg="bg-slate-500"
-              available={false}
-              delay={0.7}
-            />
           </div>
-        </motion.div>
-      )}
+        ) : (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ ...springConfig, delay: 0.55 }}
+            className="glass-card p-8 text-center"
+          >
+            <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mx-auto mb-4">
+              <Calendar className="h-8 w-8 text-primary" />
+            </div>
+            <p className="text-muted-foreground mb-4">Nessun evento creato</p>
+            <Link href="/event-wizard">
+              <HapticButton 
+                className="gradient-golden text-black min-h-[48px]" 
+                hapticType="medium"
+                data-testid="button-create-first-event"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Crea Primo Evento
+              </HapticButton>
+            </Link>
+          </motion.div>
+        )}
+      </motion.div>
     </div>
   );
 }

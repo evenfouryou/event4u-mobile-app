@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -10,7 +10,6 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogFooter,
   DialogDescription,
 } from "@/components/ui/dialog";
@@ -62,7 +61,9 @@ import {
   Shield,
   UserCheck,
   UserX,
-  Ticket
+  Ticket,
+  Search,
+  X
 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
@@ -70,7 +71,15 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { Link } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { 
+  MobileAppLayout, 
+  MobileHeader, 
+  HapticButton, 
+  FloatingActionButton,
+  triggerHaptic
+} from "@/components/mobile-primitives";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import type { User, Company, UserFeatures } from "@shared/schema";
 
 const userFormSchema = z.object({
@@ -141,7 +150,7 @@ const warehouseFeaturesList: FeatureConfig[] = [
   { key: 'canCreateProducts', label: 'Crea Prodotti', description: 'Permesso di creare nuovi prodotti', icon: <Plus className="h-4 w-4" /> },
 ];
 
-interface UserCardProps {
+interface MobileUserCardProps {
   user: User;
   index: number;
   isSuperAdmin: boolean;
@@ -155,7 +164,7 @@ interface UserCardProps {
   impersonateMutation: any;
 }
 
-function UserCard({ 
+function MobileUserCard({ 
   user, 
   index, 
   isSuperAdmin, 
@@ -167,132 +176,140 @@ function UserCard({
   handleDeleteClick,
   toggleActiveMutation,
   impersonateMutation
-}: UserCardProps) {
+}: MobileUserCardProps) {
+  const initials = `${user.firstName?.[0] || ''}${user.lastName?.[0] || ''}`.toUpperCase();
+  
   return (
     <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ delay: index * 0.03 }}
-      className="glass-card p-5 hover:border-primary/30 transition-all"
+      initial={{ opacity: 0, y: 20, scale: 0.95 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      transition={{ 
+        type: "spring", 
+        stiffness: 300, 
+        damping: 25,
+        delay: index * 0.05 
+      }}
+      className="glass-card p-4 active:scale-[0.98] transition-transform"
       data-testid={`card-user-${user.id}`}
     >
-      <div className="flex items-start gap-4 mb-4">
-        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${roleGradients[user.role] || 'from-gray-500 to-gray-600'} flex items-center justify-center shrink-0`}>
-          <Shield className="h-6 w-6 text-white" />
-        </div>
+      <div className="flex items-center gap-4 mb-4">
+        <Avatar className="h-16 w-16 shrink-0">
+          <AvatarFallback 
+            className={`bg-gradient-to-br ${roleGradients[user.role] || 'from-gray-500 to-gray-600'} text-white text-lg font-semibold`}
+          >
+            {initials}
+          </AvatarFallback>
+        </Avatar>
         <div className="flex-1 min-w-0">
           <h3 className="font-semibold text-lg truncate" data-testid={`text-user-name-${user.id}`}>
             {user.firstName} {user.lastName}
           </h3>
-          <p className="text-sm text-muted-foreground truncate flex items-center gap-1">
-            <Mail className="h-3 w-3" />
+          <p className="text-sm text-muted-foreground truncate flex items-center gap-1.5">
+            <Mail className="h-3.5 w-3.5 shrink-0" />
             {user.email}
           </p>
+          {isSuperAdmin && user.companyId && (
+            <p className="text-xs text-muted-foreground truncate flex items-center gap-1.5 mt-0.5">
+              <Building2 className="h-3 w-3 shrink-0" />
+              <span data-testid={`text-company-${user.id}`}>{getCompanyName(user.companyId)}</span>
+            </p>
+          )}
         </div>
       </div>
 
-      <div className="space-y-3">
-        <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="outline" className="shrink-0" data-testid={`badge-role-${user.id}`}>
-            {roleLabels[user.role]}
+      <div className="flex items-center gap-2 flex-wrap mb-4">
+        <Badge variant="outline" className="shrink-0 text-sm py-1" data-testid={`badge-role-${user.id}`}>
+          {roleLabels[user.role]}
+        </Badge>
+        {user.isActive ? (
+          <Badge variant="outline" className="text-teal border-teal/30 text-sm py-1" data-testid={`badge-active-${user.id}`}>
+            <CheckCircle className="h-3.5 w-3.5 mr-1" />
+            Attivo
           </Badge>
-          {user.isActive ? (
-            <Badge variant="outline" className="text-teal border-teal/30" data-testid={`badge-active-${user.id}`}>
-              <CheckCircle className="h-3 w-3 mr-1" />
-              Attivo
-            </Badge>
-          ) : (
-            <Badge variant="destructive" className="text-xs" data-testid={`badge-inactive-${user.id}`}>
-              <UserX className="h-3 w-3 mr-1" />
-              Disattivato
-            </Badge>
-          )}
-          {user.emailVerified && (
-            <Badge variant="secondary" className="text-xs" data-testid={`badge-verified-${user.id}`}>
-              Verificato
-            </Badge>
-          )}
-        </div>
-
-        {isSuperAdmin && (
-          <div className="flex items-center gap-2 text-sm text-muted-foreground">
-            <Building2 className="h-3 w-3" />
-            <span className="truncate" data-testid={`text-company-${user.id}`}>{getCompanyName(user.companyId)}</span>
-          </div>
+        ) : (
+          <Badge variant="destructive" className="text-sm py-1" data-testid={`badge-inactive-${user.id}`}>
+            <UserX className="h-3.5 w-3.5 mr-1" />
+            Disattivato
+          </Badge>
         )}
+        {user.emailVerified && (
+          <Badge variant="secondary" className="text-sm py-1" data-testid={`badge-verified-${user.id}`}>
+            Verificato
+          </Badge>
+        )}
+      </div>
 
-        <div className="flex gap-1 pt-2 border-t border-white/5 flex-wrap">
-          {isSuperAdmin && user.role === 'gestore' && (
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => handleOpenFeaturesDialog(user)}
-              data-testid={`button-features-user-${user.id}`}
-              title="Gestisci Moduli"
-              className="rounded-xl min-w-[44px] min-h-[44px]"
-            >
-              <Settings2 className="h-4 w-4" />
-            </Button>
-          )}
-          {isAdmin && user.role === 'warehouse' && (
-            <Button
-              size="icon"
-              variant="ghost"
-              onClick={() => handleOpenFeaturesDialog(user)}
-              data-testid={`button-permissions-user-${user.id}`}
-              title="Gestisci Permessi"
-              className="rounded-xl min-w-[44px] min-h-[44px]"
-            >
-              <Settings2 className="h-4 w-4" />
-            </Button>
-          )}
-          <Button
+      <div className="flex gap-2 pt-3 border-t border-white/5 overflow-x-auto">
+        {isSuperAdmin && user.role === 'gestore' && (
+          <HapticButton
             size="icon"
             variant="ghost"
-            onClick={() => handleEdit(user)}
-            data-testid={`button-edit-user-${user.id}`}
-            title="Modifica utente"
-            className="rounded-xl min-w-[44px] min-h-[44px]"
+            onClick={() => handleOpenFeaturesDialog(user)}
+            data-testid={`button-features-user-${user.id}`}
+            className="rounded-xl h-11 w-11 shrink-0"
+            hapticType="light"
           >
-            <Edit className="h-4 w-4" />
-          </Button>
-          {user.id !== currentUser?.id && (
-            <>
-              <Button
+            <Settings2 className="h-5 w-5" />
+          </HapticButton>
+        )}
+        {isAdmin && user.role === 'warehouse' && (
+          <HapticButton
+            size="icon"
+            variant="ghost"
+            onClick={() => handleOpenFeaturesDialog(user)}
+            data-testid={`button-permissions-user-${user.id}`}
+            className="rounded-xl h-11 w-11 shrink-0"
+            hapticType="light"
+          >
+            <Settings2 className="h-5 w-5" />
+          </HapticButton>
+        )}
+        <HapticButton
+          size="icon"
+          variant="ghost"
+          onClick={() => handleEdit(user)}
+          data-testid={`button-edit-user-${user.id}`}
+          className="rounded-xl h-11 w-11 shrink-0"
+          hapticType="light"
+        >
+          <Edit className="h-5 w-5" />
+        </HapticButton>
+        {user.id !== currentUser?.id && (
+          <>
+            <HapticButton
+              size="icon"
+              variant="ghost"
+              onClick={() => toggleActiveMutation.mutate({ id: user.id, isActive: !user.isActive })}
+              data-testid={`button-toggle-active-user-${user.id}`}
+              className="rounded-xl h-11 w-11 shrink-0"
+              hapticType="medium"
+            >
+              {user.isActive ? <Ban className="h-5 w-5" /> : <CheckCircle className="h-5 w-5" />}
+            </HapticButton>
+            {(isSuperAdmin || (isAdmin && user.role !== 'super_admin' && user.role !== 'gestore' && currentUser && user.companyId === currentUser.companyId)) && (
+              <HapticButton
                 size="icon"
                 variant="ghost"
-                onClick={() => toggleActiveMutation.mutate({ id: user.id, isActive: !user.isActive })}
-                data-testid={`button-toggle-active-user-${user.id}`}
-                title={user.isActive ? "Disattiva utente" : "Riattiva utente"}
-                className="rounded-xl min-w-[44px] min-h-[44px]"
+                onClick={() => impersonateMutation.mutate(user.id)}
+                data-testid={`button-impersonate-user-${user.id}`}
+                className="rounded-xl h-11 w-11 shrink-0"
+                hapticType="medium"
               >
-                {user.isActive ? <Ban className="h-4 w-4" /> : <CheckCircle className="h-4 w-4" />}
-              </Button>
-              {(isSuperAdmin || (isAdmin && user.role !== 'super_admin' && user.role !== 'gestore' && currentUser && user.companyId === currentUser.companyId)) && (
-                <Button
-                  size="icon"
-                  variant="ghost"
-                  onClick={() => impersonateMutation.mutate(user.id)}
-                  data-testid={`button-impersonate-user-${user.id}`}
-                  title="Impersonifica utente"
-                  className="rounded-xl min-w-[44px] min-h-[44px]"
-                >
-                  <LogIn className="h-4 w-4" />
-                </Button>
-              )}
-              <Button
-                size="icon"
-                variant="ghost"
-                onClick={() => handleDeleteClick(user.id)}
-                data-testid={`button-delete-user-${user.id}`}
-                title="Elimina utente"
-                className="rounded-xl text-destructive hover:text-destructive min-w-[44px] min-h-[44px]"
-              >
-                <Trash2 className="h-4 w-4" />
-              </Button>
-            </>
-          )}
-        </div>
+                <LogIn className="h-5 w-5" />
+              </HapticButton>
+            )}
+            <HapticButton
+              size="icon"
+              variant="ghost"
+              onClick={() => handleDeleteClick(user.id)}
+              data-testid={`button-delete-user-${user.id}`}
+              className="rounded-xl h-11 w-11 shrink-0 text-destructive hover:text-destructive"
+              hapticType="heavy"
+            >
+              <Trash2 className="h-5 w-5" />
+            </HapticButton>
+          </>
+        )}
       </div>
     </motion.div>
   );
@@ -305,6 +322,8 @@ export default function UsersPage() {
   const [featuresDialogOpen, setFeaturesDialogOpen] = useState(false);
   const [selectedUserForFeatures, setSelectedUserForFeatures] = useState<User | null>(null);
   const [localFeatures, setLocalFeatures] = useState<Partial<UserFeatures>>({});
+  const [searchQuery, setSearchQuery] = useState("");
+  const [selectedRole, setSelectedRole] = useState<string | null>(null);
   const { toast } = useToast();
   const { user: currentUser } = useAuth();
 
@@ -362,6 +381,34 @@ export default function UsersPage() {
 
   const watchRole = form.watch('role');
 
+  const filteredUsers = useMemo(() => {
+    if (!users) return [];
+    
+    let result = [...users];
+    
+    if (searchQuery.trim()) {
+      const query = searchQuery.toLowerCase();
+      result = result.filter(user => 
+        user.firstName?.toLowerCase().includes(query) ||
+        user.lastName?.toLowerCase().includes(query) ||
+        user.email?.toLowerCase().includes(query)
+      );
+    }
+    
+    if (selectedRole) {
+      result = result.filter(user => user.role === selectedRole);
+    }
+    
+    return result;
+  }, [users, searchQuery, selectedRole]);
+
+  const availableRoles = useMemo(() => {
+    if (!users) return [];
+    const roles = new Set(users.map(u => u.role));
+    const roleOrder = ['super_admin', 'gestore', 'gestore_covisione', 'capo_staff', 'pr', 'warehouse', 'bartender', 'cassiere', 'scanner'];
+    return roleOrder.filter(role => roles.has(role));
+  }, [users]);
+
   const createMutation = useMutation({
     mutationFn: async (data: UserFormData) => {
       await apiRequest('POST', '/api/users', data);
@@ -370,12 +417,14 @@ export default function UsersPage() {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
       setDialogOpen(false);
       form.reset();
+      triggerHaptic('success');
       toast({
         title: "Successo",
         description: "Utente creato con successo",
       });
     },
     onError: (error: any) => {
+      triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
           title: "Non autorizzato",
@@ -402,12 +451,14 @@ export default function UsersPage() {
       setDialogOpen(false);
       setEditingUser(null);
       form.reset();
+      triggerHaptic('success');
       toast({
         title: "Successo",
         description: "Utente aggiornato con successo",
       });
     },
     onError: (error: any) => {
+      triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
           title: "Non autorizzato",
@@ -432,12 +483,14 @@ export default function UsersPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
       setDeleteUserId(null);
+      triggerHaptic('success');
       toast({
         title: "Successo",
         description: "Utente eliminato con successo",
       });
     },
     onError: (error: any) => {
+      triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
           title: "Non autorizzato",
@@ -461,12 +514,14 @@ export default function UsersPage() {
     },
     onSuccess: (_, variables) => {
       queryClient.invalidateQueries({ queryKey: ['/api/users'] });
+      triggerHaptic('success');
       toast({
         title: "Successo",
         description: variables.isActive ? "Utente riattivato con successo" : "Utente disattivato con successo",
       });
     },
     onError: (error: any) => {
+      triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
           title: "Non autorizzato",
@@ -489,6 +544,7 @@ export default function UsersPage() {
       await apiRequest('POST', `/api/users/${userId}/impersonate`, {});
     },
     onSuccess: () => {
+      triggerHaptic('success');
       toast({
         title: "Impersonificazione attivata",
         description: "Accesso come utente effettuato",
@@ -496,6 +552,7 @@ export default function UsersPage() {
       setTimeout(() => window.location.href = '/', 500);
     },
     onError: (error: any) => {
+      triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
           title: "Non autorizzato",
@@ -523,12 +580,14 @@ export default function UsersPage() {
         queryClient.invalidateQueries({ queryKey: [`/api/user-features/${selectedUserForFeatures.id}`] });
       }
       setFeaturesDialogOpen(false);
+      triggerHaptic('success');
       toast({
         title: "Successo",
         description: "Moduli aggiornati con successo",
       });
     },
     onError: () => {
+      triggerHaptic('error');
       toast({
         title: "Errore",
         description: "Impossibile aggiornare i moduli",
@@ -640,453 +699,414 @@ export default function UsersPage() {
 
   const totalUsers = users?.length || 0;
   const activeUsers = users?.filter(u => u.isActive).length || 0;
-  const verifiedUsers = users?.filter(u => u.emailVerified).length || 0;
 
-  // Group users by role
-  const usersByRole = users?.reduce((acc, user) => {
-    const role = user.role || 'unknown';
-    if (!acc[role]) acc[role] = [];
-    acc[role].push(user);
-    return acc;
-  }, {} as Record<string, User[]>) || {};
-
-  // For super_admin: also group by company/gestore
-  const usersByCompany = users?.reduce((acc, user) => {
-    const companyId = user.companyId || 'no_company';
-    if (!acc[companyId]) acc[companyId] = [];
-    acc[companyId].push(user);
-    return acc;
-  }, {} as Record<string, User[]>) || {};
-
-  // Order roles for display
-  const roleOrder = ['super_admin', 'gestore', 'gestore_covisione', 'capo_staff', 'pr', 'warehouse', 'bartender', 'cassiere', 'scanner'];
-  const sortedRoles = Object.keys(usersByRole).sort((a, b) => {
-    const indexA = roleOrder.indexOf(a);
-    const indexB = roleOrder.indexOf(b);
-    return (indexA === -1 ? 999 : indexA) - (indexB === -1 ? 999 : indexB);
-  });
-
-  // State for view mode - default to 'role', only super_admin with companies can use 'company'
-  const [viewMode, setViewMode] = useState<'role' | 'company'>('role');
-  
-  // Ensure viewMode is 'role' if user doesn't have access to company view
-  const effectiveViewMode = (isSuperAdmin && companies && companies.length > 0) ? viewMode : 'role';
-
-  return (
-    <div className="p-3 sm:p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
-      <motion.div 
-        initial={{ opacity: 0, x: -20 }}
-        animate={{ opacity: 1, x: 0 }}
-        className="flex flex-wrap items-center gap-3 sm:gap-4 mb-4 sm:mb-6 md:mb-8"
-      >
+  const header = (
+    <MobileHeader
+      title="Utenti"
+      subtitle={`${filteredUsers.length} ${filteredUsers.length === 1 ? 'utente' : 'utenti'}`}
+      leftAction={
         <Link href="/">
-          <Button 
+          <HapticButton 
             variant="ghost" 
             size="icon" 
-            className="rounded-xl"
+            className="rounded-xl h-11 w-11"
             data-testid="button-back-home"
           >
             <ArrowLeft className="h-5 w-5" />
-          </Button>
+          </HapticButton>
         </Link>
-        <div className="flex-1 min-w-0">
-          <div className="flex items-center gap-2 sm:gap-3">
-            <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center flex-shrink-0">
-              <UsersIcon className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-            </div>
-            <div>
-              <h1 className="text-lg sm:text-xl md:text-2xl font-bold" data-testid="text-page-title">Gestione Utenti</h1>
-              <p className="text-muted-foreground text-xs sm:text-sm hidden sm:block">Crea e gestisci gli utenti del sistema</p>
+      }
+      rightAction={
+        <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+          <UsersIcon className="h-5 w-5 text-white" />
+        </div>
+      }
+    />
+  );
+
+  return (
+    <MobileAppLayout header={header} noPadding>
+      <div className="px-4 pb-24">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          className="relative mt-4 mb-4"
+        >
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            type="text"
+            placeholder="Cerca utenti..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="h-14 pl-12 pr-12 text-base rounded-2xl bg-card border-border"
+            data-testid="input-search-users"
+          />
+          {searchQuery && (
+            <button
+              onClick={() => setSearchQuery("")}
+              className="absolute right-4 top-1/2 -translate-y-1/2 h-8 w-8 flex items-center justify-center rounded-full bg-muted"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </motion.div>
+
+        {availableRoles.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25, delay: 0.05 }}
+            className="flex gap-2 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide"
+          >
+            <button
+              onClick={() => {
+                triggerHaptic('light');
+                setSelectedRole(null);
+              }}
+              className={`shrink-0 px-4 py-2.5 rounded-full text-sm font-medium transition-all min-h-[44px] ${
+                selectedRole === null
+                  ? 'bg-primary text-primary-foreground'
+                  : 'bg-card border border-border text-foreground'
+              }`}
+              data-testid="button-filter-all"
+            >
+              Tutti ({totalUsers})
+            </button>
+            {availableRoles.map((role) => {
+              const count = users?.filter(u => u.role === role).length || 0;
+              return (
+                <button
+                  key={role}
+                  onClick={() => {
+                    triggerHaptic('light');
+                    setSelectedRole(selectedRole === role ? null : role);
+                  }}
+                  className={`shrink-0 px-4 py-2.5 rounded-full text-sm font-medium transition-all min-h-[44px] ${
+                    selectedRole === role
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-card border border-border text-foreground'
+                  }`}
+                  data-testid={`button-filter-${role}`}
+                >
+                  {roleLabels[role]} ({count})
+                </button>
+              );
+            })}
+          </motion.div>
+        )}
+
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", stiffness: 300, damping: 25, delay: 0.1 }}
+          className="grid grid-cols-2 gap-3 mb-6"
+        >
+          <div className="glass-card p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                <UsersIcon className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold" data-testid="text-total-users">{totalUsers}</p>
+                <p className="text-xs text-muted-foreground">Totale</p>
+              </div>
             </div>
           </div>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
-          <DialogTrigger asChild>
-            <Button className="gradient-golden text-black font-semibold min-h-[48px] md:min-h-9" data-testid="button-create-user">
-              <Plus className="h-4 w-4 md:mr-2" />
-              <span className="hidden md:inline">Nuovo Utente</span>
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
-            <DialogHeader>
-              <DialogTitle>
-                {editingUser ? 'Modifica Utente' : 'Nuovo Utente'}
-              </DialogTitle>
-              <DialogDescription>
-                {editingUser 
-                  ? 'Modifica i dettagli dell\'utente. Lascia la password vuota per non modificarla.' 
-                  : 'Inserisci i dettagli del nuovo utente.'}
-              </DialogDescription>
-            </DialogHeader>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+          <div className="glass-card p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center">
+                <UserCheck className="h-6 w-6 text-white" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-teal" data-testid="text-active-users">{activeUsers}</p>
+                <p className="text-xs text-muted-foreground">Attivi</p>
+              </div>
+            </div>
+          </div>
+        </motion.div>
+
+        {usersLoading ? (
+          <div className="space-y-4">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="glass-card p-4">
+                <div className="flex items-center gap-4">
+                  <Skeleton className="h-16 w-16 rounded-full" />
+                  <div className="flex-1">
+                    <Skeleton className="h-5 w-32 mb-2" />
+                    <Skeleton className="h-4 w-48" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        ) : filteredUsers.length > 0 ? (
+          <div className="space-y-4">
+            <AnimatePresence mode="popLayout">
+              {filteredUsers.map((user, index) => (
+                <MobileUserCard 
+                  key={user.id} 
+                  user={user} 
+                  index={index}
+                  isSuperAdmin={isSuperAdmin}
+                  isAdmin={isAdmin}
+                  currentUser={currentUser}
+                  getCompanyName={getCompanyName}
+                  handleEdit={handleEdit}
+                  handleOpenFeaturesDialog={handleOpenFeaturesDialog}
+                  handleDeleteClick={handleDeleteClick}
+                  toggleActiveMutation={toggleActiveMutation}
+                  impersonateMutation={impersonateMutation}
+                />
+              ))}
+            </AnimatePresence>
+          </div>
+        ) : (
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            className="glass-card p-8 text-center"
+          >
+            <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+              <UsersIcon className="h-8 w-8 text-muted-foreground" />
+            </div>
+            <p className="text-muted-foreground mb-2" data-testid="text-no-users">
+              {searchQuery || selectedRole ? 'Nessun utente trovato.' : 'Nessun utente presente.'}
+            </p>
+            <p className="text-sm text-muted-foreground">
+              {searchQuery || selectedRole 
+                ? 'Prova a modificare i filtri di ricerca' 
+                : 'Tocca + per aggiungere il primo utente'}
+            </p>
+          </motion.div>
+        )}
+      </div>
+
+      <FloatingActionButton
+        position="bottom-right"
+        onClick={() => {
+          form.reset({
+            email: '',
+            password: '',
+            firstName: '',
+            lastName: '',
+            role: getDefaultRole(),
+            companyId: null,
+            phone: '',
+            isEditing: false,
+          });
+          setEditingUser(null);
+          setDialogOpen(true);
+        }}
+        data-testid="button-create-user"
+        className="mb-20"
+      >
+        <Plus className="h-6 w-6" />
+      </FloatingActionButton>
+
+      <Dialog open={dialogOpen} onOpenChange={handleDialogOpenChange}>
+        <DialogContent className="max-w-[95vw] rounded-2xl max-h-[90vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle>
+              {editingUser ? 'Modifica Utente' : 'Nuovo Utente'}
+            </DialogTitle>
+            <DialogDescription>
+              {editingUser 
+                ? 'Modifica i dettagli dell\'utente. Lascia la password vuota per non modificarla.' 
+                : 'Inserisci i dettagli del nuovo utente.'}
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome</FormLabel>
+                    <FormControl>
+                      <Input className="h-12" {...field} data-testid="input-user-firstname" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Cognome</FormLabel>
+                    <FormControl>
+                      <Input className="h-12" {...field} data-testid="input-user-lastname" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Email</FormLabel>
+                    <FormControl>
+                      <Input type="email" className="h-12" {...field} data-testid="input-user-email" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="password"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>
+                      Password {editingUser && '(lascia vuoto per non modificare)'}
+                    </FormLabel>
+                    <FormControl>
+                      <Input
+                        type="password"
+                        className="h-12"
+                        {...field}
+                        placeholder={editingUser ? '' : 'Minimo 8 caratteri'}
+                        data-testid="input-user-password"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={form.control}
+                name="role"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Ruolo</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger className="h-12" data-testid="select-user-role">
+                          <SelectValue placeholder="Seleziona ruolo" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        {isSuperAdmin && (
+                          <>
+                            <SelectItem value="super_admin">Super Admin</SelectItem>
+                            <SelectItem value="gestore">Gestore</SelectItem>
+                            <SelectItem value="gestore_covisione">Gestore Covisione</SelectItem>
+                            <SelectItem value="capo_staff">Capo Staff</SelectItem>
+                            <SelectItem value="pr">PR</SelectItem>
+                            <SelectItem value="warehouse">Magazzino</SelectItem>
+                            <SelectItem value="bartender">Bartender</SelectItem>
+                            <SelectItem value="cassiere">Cassiere</SelectItem>
+                          </>
+                        )}
+                        {isAdmin && (
+                          <>
+                            <SelectItem value="gestore_covisione">Gestore Covisione</SelectItem>
+                            <SelectItem value="capo_staff">Capo Staff</SelectItem>
+                            <SelectItem value="pr">PR</SelectItem>
+                            <SelectItem value="warehouse">Magazzino</SelectItem>
+                            <SelectItem value="bartender">Bartender</SelectItem>
+                            <SelectItem value="cassiere">Cassiere</SelectItem>
+                          </>
+                        )}
+                        {isCapoStaff && (
+                          <SelectItem value="pr">PR</SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              {watchRole === 'pr' && (
                 <FormField
                   control={form.control}
-                  name="firstName"
+                  name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nome</FormLabel>
+                      <FormLabel>Telefono</FormLabel>
                       <FormControl>
-                        <Input {...field} data-testid="input-user-firstname" />
+                        <Input className="h-12" placeholder="+39..." {...field} data-testid="input-user-phone" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+              )}
+              {isSuperAdmin && (
                 <FormField
                   control={form.control}
-                  name="lastName"
+                  name="companyId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Cognome</FormLabel>
-                      <FormControl>
-                        <Input {...field} data-testid="input-user-lastname" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <Input type="email" {...field} data-testid="input-user-email" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="password"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>
-                        Password {editingUser && '(lascia vuoto per non modificare)'}
-                      </FormLabel>
-                      <FormControl>
-                        <Input
-                          type="password"
-                          {...field}
-                          placeholder={editingUser ? '' : 'Minimo 8 caratteri'}
-                          data-testid="input-user-password"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="role"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Ruolo</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
+                      <FormLabel>Azienda</FormLabel>
+                      <Select
+                        onValueChange={field.onChange}
+                        value={field.value || undefined}
+                      >
                         <FormControl>
-                          <SelectTrigger data-testid="select-user-role">
-                            <SelectValue placeholder="Seleziona ruolo" />
+                          <SelectTrigger className="h-12" data-testid="select-user-company">
+                            <SelectValue placeholder="Seleziona azienda (opzionale)" />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          {isSuperAdmin && (
-                            <>
-                              <SelectItem value="super_admin">Super Admin</SelectItem>
-                              <SelectItem value="gestore">Gestore</SelectItem>
-                              <SelectItem value="gestore_covisione">Gestore Covisione</SelectItem>
-                              <SelectItem value="capo_staff">Capo Staff</SelectItem>
-                              <SelectItem value="pr">PR</SelectItem>
-                              <SelectItem value="warehouse">Magazzino</SelectItem>
-                              <SelectItem value="bartender">Bartender</SelectItem>
-                              <SelectItem value="cassiere">Cassiere</SelectItem>
-                            </>
-                          )}
-                          {isAdmin && (
-                            <>
-                              <SelectItem value="gestore_covisione">Gestore Covisione</SelectItem>
-                              <SelectItem value="capo_staff">Capo Staff</SelectItem>
-                              <SelectItem value="pr">PR</SelectItem>
-                              <SelectItem value="warehouse">Magazzino</SelectItem>
-                              <SelectItem value="bartender">Bartender</SelectItem>
-                              <SelectItem value="cassiere">Cassiere</SelectItem>
-                            </>
-                          )}
-                          {isCapoStaff && (
-                            <SelectItem value="pr">PR</SelectItem>
-                          )}
+                          <SelectItem value="null">Nessuna azienda</SelectItem>
+                          {companies?.map((company) => (
+                            <SelectItem key={company.id} value={company.id}>
+                              {company.name}
+                            </SelectItem>
+                          ))}
                         </SelectContent>
                       </Select>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-                {watchRole === 'pr' && (
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Telefono</FormLabel>
-                        <FormControl>
-                          <Input placeholder="+39..." {...field} data-testid="input-user-phone" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-                {isSuperAdmin && (
-                  <FormField
-                    control={form.control}
-                    name="companyId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Azienda</FormLabel>
-                        <Select
-                          onValueChange={field.onChange}
-                          value={field.value || undefined}
-                        >
-                          <FormControl>
-                            <SelectTrigger data-testid="select-user-company">
-                              <SelectValue placeholder="Seleziona azienda (opzionale)" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="null">Nessuna azienda</SelectItem>
-                            {companies?.map((company) => (
-                              <SelectItem key={company.id} value={company.id}>
-                                {company.name}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
-                <DialogFooter>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => handleDialogOpenChange(false)}
-                    data-testid="button-cancel-user"
-                  >
-                    Annulla
-                  </Button>
-                  <Button
-                    type="submit"
-                    disabled={createMutation.isPending || updateMutation.isPending}
-                    className="gradient-golden text-black font-semibold"
-                    data-testid="button-save-user"
-                  >
-                    {editingUser ? 'Aggiorna' : 'Crea'}
-                  </Button>
-                </DialogFooter>
-              </form>
-            </Form>
-          </DialogContent>
-        </Dialog>
-      </motion.div>
-
-      <motion.div 
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="grid grid-cols-2 sm:grid-cols-3 gap-3 md:gap-4 mb-6"
-      >
-        <div className="glass-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-              <UsersIcon className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold" data-testid="text-total-users">{totalUsers}</p>
-              <p className="text-xs text-muted-foreground">Totale</p>
-            </div>
-          </div>
-        </div>
-        <div className="glass-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center">
-              <UserCheck className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold text-teal" data-testid="text-active-users">{activeUsers}</p>
-              <p className="text-xs text-muted-foreground">Attivi</p>
-            </div>
-          </div>
-        </div>
-        <div className="glass-card p-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-              <Mail className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <p className="text-2xl font-bold" data-testid="text-verified-users">{verifiedUsers}</p>
-              <p className="text-xs text-muted-foreground">Verificati</p>
-            </div>
-          </div>
-        </div>
-      </motion.div>
-
-      {/* View Mode Toggle for Super Admin - only show if companies data is available */}
-      {isSuperAdmin && users && users.length > 0 && companies && companies.length > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.15 }}
-          className="flex gap-2 mb-6"
-        >
-          <Button
-            variant={viewMode === 'role' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('role')}
-            data-testid="button-view-by-role"
-          >
-            <Shield className="h-4 w-4 mr-2" />
-            Per Tipologia
-          </Button>
-          <Button
-            variant={viewMode === 'company' ? 'default' : 'outline'}
-            size="sm"
-            onClick={() => setViewMode('company')}
-            data-testid="button-view-by-company"
-          >
-            <Building2 className="h-4 w-4 mr-2" />
-            Per Gestore
-          </Button>
-        </motion.div>
-      )}
-
-      {usersLoading ? (
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="glass-card p-5">
-              <div className="flex items-start gap-4">
-                <Skeleton className="h-12 w-12 rounded-2xl" />
-                <div className="flex-1">
-                  <Skeleton className="h-4 w-32 mb-2" />
-                  <Skeleton className="h-3 w-24" />
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-      ) : users && users.length > 0 ? (
-        <div className="space-y-8">
-          {/* View by Role */}
-          {effectiveViewMode === 'role' && sortedRoles.map((role) => (
-            <motion.div
-              key={role}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-xl bg-gradient-to-br ${roleGradients[role] || 'from-gray-500 to-gray-600'} flex items-center justify-center`}>
-                  <Shield className="h-4 w-4 text-white" />
-                </div>
-                <h2 className="text-lg font-semibold" data-testid={`text-role-section-${role}`}>
-                  {roleLabels[role] || role}
-                </h2>
-                <Badge variant="secondary" className="text-xs">
-                  {usersByRole[role]?.length || 0}
-                </Badge>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {usersByRole[role]?.map((user, index) => (
-                  <UserCard 
-                    key={user.id} 
-                    user={user} 
-                    index={index}
-                    isSuperAdmin={isSuperAdmin}
-                    isAdmin={isAdmin}
-                    currentUser={currentUser}
-                    getCompanyName={getCompanyName}
-                    handleEdit={handleEdit}
-                    handleOpenFeaturesDialog={handleOpenFeaturesDialog}
-                    handleDeleteClick={handleDeleteClick}
-                    toggleActiveMutation={toggleActiveMutation}
-                    impersonateMutation={impersonateMutation}
-                  />
-                ))}
-              </div>
-            </motion.div>
-          ))}
-
-          {/* View by Company (Super Admin only) */}
-          {effectiveViewMode === 'company' && isSuperAdmin && Object.keys(usersByCompany).map((companyId) => (
-            <motion.div
-              key={companyId}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              className="space-y-4"
-            >
-              <div className="flex items-center gap-3">
-                <div className="w-8 h-8 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-                  <Building2 className="h-4 w-4 text-white" />
-                </div>
-                <h2 className="text-lg font-semibold" data-testid={`text-company-section-${companyId}`}>
-                  {companyId === 'no_company' ? 'Senza Azienda' : getCompanyName(companyId)}
-                </h2>
-                <Badge variant="secondary" className="text-xs">
-                  {usersByCompany[companyId]?.length || 0}
-                </Badge>
-              </div>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                {usersByCompany[companyId]?.map((user, index) => (
-                  <UserCard 
-                    key={user.id} 
-                    user={user} 
-                    index={index}
-                    isSuperAdmin={isSuperAdmin}
-                    isAdmin={isAdmin}
-                    currentUser={currentUser}
-                    getCompanyName={getCompanyName}
-                    handleEdit={handleEdit}
-                    handleOpenFeaturesDialog={handleOpenFeaturesDialog}
-                    handleDeleteClick={handleDeleteClick}
-                    toggleActiveMutation={toggleActiveMutation}
-                    impersonateMutation={impersonateMutation}
-                  />
-                ))}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      ) : (
-        <motion.div 
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="glass-card p-12 text-center"
-        >
-          <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
-            <UsersIcon className="h-8 w-8 text-muted-foreground" />
-          </div>
-          <p className="text-muted-foreground mb-2" data-testid="text-no-users">Nessun utente trovato.</p>
-          <p className="text-sm text-muted-foreground">Clicca su "Nuovo Utente" per aggiungere il primo utente</p>
-        </motion.div>
-      )}
+              )}
+              <DialogFooter className="gap-2 pt-4">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => handleDialogOpenChange(false)}
+                  className="flex-1 h-12"
+                  data-testid="button-cancel-user"
+                >
+                  Annulla
+                </Button>
+                <Button
+                  type="submit"
+                  disabled={createMutation.isPending || updateMutation.isPending}
+                  className="flex-1 h-12 gradient-golden text-black font-semibold"
+                  data-testid="button-save-user"
+                >
+                  {editingUser ? 'Aggiorna' : 'Crea'}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
 
       <AlertDialog open={!!deleteUserId} onOpenChange={() => setDeleteUserId(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="max-w-[95vw] rounded-2xl">
           <AlertDialogHeader>
             <AlertDialogTitle>Conferma eliminazione</AlertDialogTitle>
             <AlertDialogDescription>
               Sei sicuro di voler eliminare questo utente? Questa azione non può essere annullata.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete">
+          <AlertDialogFooter className="gap-2">
+            <AlertDialogCancel className="flex-1 h-12" data-testid="button-cancel-delete">
               Annulla
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={handleDeleteConfirm}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              className="flex-1 h-12 bg-destructive text-destructive-foreground hover:bg-destructive/90"
               data-testid="button-confirm-delete"
             >
               Elimina
@@ -1096,7 +1116,7 @@ export default function UsersPage() {
       </AlertDialog>
 
       <Dialog open={featuresDialogOpen} onOpenChange={setFeaturesDialogOpen}>
-        <DialogContent className="sm:max-w-md max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-[95vw] rounded-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <Settings2 className="h-5 w-5" />
@@ -1107,16 +1127,15 @@ export default function UsersPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-3 py-4">
-            {/* Show warehouse permissions for warehouse users */}
             {selectedUserForFeatures?.role === 'warehouse' && warehouseFeaturesList.map((feature) => (
               <div
                 key={feature.key}
-                className="glass-card p-4 flex items-center justify-between cursor-pointer hover:border-primary/30 transition-all"
+                className="glass-card p-4 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform"
                 onClick={() => handleToggleFeature(feature.key)}
                 data-testid={`toggle-feature-${feature.key}`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-600 flex items-center justify-center">
                     {feature.icon}
                   </div>
                   <div>
@@ -1131,16 +1150,15 @@ export default function UsersPage() {
                 />
               </div>
             ))}
-            {/* Show module features for gestori */}
             {selectedUserForFeatures?.role === 'gestore' && featuresList.map((feature) => (
               <div
                 key={feature.key}
-                className="glass-card p-4 flex items-center justify-between cursor-pointer hover:border-primary/30 transition-all"
+                className="glass-card p-4 flex items-center justify-between cursor-pointer active:scale-[0.98] transition-transform"
                 onClick={() => handleToggleFeature(feature.key)}
                 data-testid={`toggle-feature-${feature.key}`}
               >
                 <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
                     {feature.icon}
                   </div>
                   <div>
@@ -1156,11 +1174,12 @@ export default function UsersPage() {
               </div>
             ))}
           </div>
-          <DialogFooter>
+          <DialogFooter className="gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => setFeaturesDialogOpen(false)}
+              className="flex-1 h-12"
               data-testid="button-cancel-features"
             >
               Annulla
@@ -1168,7 +1187,7 @@ export default function UsersPage() {
             <Button
               onClick={handleSaveFeatures}
               disabled={updateFeaturesMutation.isPending}
-              className="gradient-golden text-black font-semibold"
+              className="flex-1 h-12 gradient-golden text-black font-semibold"
               data-testid="button-save-features"
             >
               {updateFeaturesMutation.isPending ? 'Salvataggio...' : 'Salva'}
@@ -1176,6 +1195,6 @@ export default function UsersPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+    </MobileAppLayout>
   );
 }

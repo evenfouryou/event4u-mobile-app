@@ -1,8 +1,8 @@
+import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
-import { Card, CardContent } from "@/components/ui/card";
+import { motion, AnimatePresence } from "framer-motion";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { format, isPast } from "date-fns";
 import { it } from "date-fns/locale";
 import {
@@ -12,11 +12,9 @@ import {
   Loader2,
   TicketX,
   MapPin,
-  Users,
   QrCode,
-  CheckCircle2,
-  Clock,
 } from "lucide-react";
+import { triggerHaptic } from "@/components/mobile-primitives";
 
 interface TicketItem {
   id: string;
@@ -36,50 +34,6 @@ interface TicketItem {
   ticketedEventId: string;
 }
 
-interface GuestEntryItem {
-  id: string;
-  firstName: string;
-  lastName: string;
-  plusOnes: number;
-  qrCode: string | null;
-  qrScannedAt: string | null;
-  status: string;
-  arrivedAt: string | null;
-  createdAt: string;
-  listName: string;
-  listType: string;
-  eventId: string;
-  eventName: string;
-  eventStart: string;
-  eventEnd: string;
-  locationName: string;
-  locationAddress: string | null;
-}
-
-interface TableReservationItem {
-  id: string;
-  customerName: string | null;
-  guestsCount: number;
-  qrCode: string | null;
-  qrScannedAt: string | null;
-  status: string;
-  arrivedAt: string | null;
-  confirmedAt: string | null;
-  depositAmount: string | null;
-  depositPaid: boolean;
-  createdAt: string;
-  tableName: string;
-  tableType: string;
-  tableCapacity: number;
-  minSpend: string | null;
-  eventId: string;
-  eventName: string;
-  eventStart: string;
-  eventEnd: string;
-  locationName: string;
-  locationAddress: string | null;
-}
-
 interface TicketsResponse {
   upcoming: TicketItem[];
   past: TicketItem[];
@@ -87,19 +41,20 @@ interface TicketsResponse {
   total: number;
 }
 
-interface GuestEntriesResponse {
-  upcoming: GuestEntryItem[];
-  past: GuestEntryItem[];
-  total: number;
-}
+const springTransition = {
+  type: "spring",
+  stiffness: 400,
+  damping: 30,
+};
 
-interface TableReservationsResponse {
-  upcoming: TableReservationItem[];
-  past: TableReservationItem[];
-  total: number;
-}
+const cardVariants = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  exit: { opacity: 0, y: -20 },
+  tap: { scale: 0.98 },
+};
 
-function TicketCard({ ticket }: { ticket: TicketItem }) {
+function MobileTicketCard({ ticket, index }: { ticket: TicketItem; index: number }) {
   const eventDate = new Date(ticket.eventStart);
   const isExpired = isPast(eventDate);
 
@@ -131,451 +86,228 @@ function TicketCard({ ticket }: { ticket: TicketItem }) {
 
   return (
     <Link href={`/account/tickets/${ticket.id}`}>
-      <Card
-        className={`hover:border-primary/30 transition-all cursor-pointer ${
-          isExpired ? "opacity-70" : ""
+      <motion.div
+        variants={cardVariants}
+        initial="initial"
+        animate="animate"
+        exit="exit"
+        whileTap="tap"
+        transition={{ ...springTransition, delay: index * 0.05 }}
+        onClick={() => triggerHaptic('light')}
+        className={`min-h-[120px] bg-card border border-border rounded-2xl p-4 active:bg-card/80 ${
+          isExpired ? "opacity-60" : ""
         }`}
         data-testid={`card-ticket-${ticket.id}`}
       >
-        <CardContent className="p-3 sm:p-4">
-          <div className="flex items-start justify-between gap-3 sm:gap-4">
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-2 mb-2 flex-wrap">
-                <Badge variant={statusVariant()} className="text-xs">
-                  {statusLabel()}
-                </Badge>
+        <div className="flex items-start justify-between gap-4">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-3 flex-wrap">
+              <Badge variant={statusVariant()} className="text-sm">
+                {statusLabel()}
+              </Badge>
+              {ticket.qrCode && (
+                <div className="flex items-center gap-1 text-primary">
+                  <QrCode className="w-4 h-4" />
+                </div>
+              )}
+            </div>
+            
+            <h3 className="font-semibold text-foreground text-lg leading-tight mb-3" data-testid="text-event-name">
+              {ticket.eventName}
+            </h3>
+            
+            <div className="flex flex-col gap-2 text-base text-muted-foreground">
+              <div className="flex items-center gap-3">
+                <Calendar className="w-5 h-5 flex-shrink-0" />
+                <span data-testid="text-event-date">
+                  {format(eventDate, "EEE d MMM, HH:mm", { locale: it })}
+                </span>
               </div>
-              <h3 className="font-semibold text-foreground truncate text-sm sm:text-base" data-testid="text-event-name">
-                {ticket.eventName}
-              </h3>
-              <div className="flex flex-col gap-1 mt-2 text-xs sm:text-sm text-muted-foreground">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                  <span data-testid="text-event-date">
-                    {format(eventDate, "EEEE d MMMM yyyy, HH:mm", { locale: it })}
-                  </span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Ticket className="w-4 h-4" />
-                  <span data-testid="text-sector">{ticket.sectorName}</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4" />
-                  <span>{ticket.locationName}</span>
-                </div>
+              <div className="flex items-center gap-3">
+                <Ticket className="w-5 h-5 flex-shrink-0" />
+                <span data-testid="text-sector" className="truncate">{ticket.sectorName}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <MapPin className="w-5 h-5 flex-shrink-0" />
+                <span className="truncate">{ticket.locationName}</span>
               </div>
             </div>
-            <ChevronRight className="w-5 h-5 text-muted-foreground flex-shrink-0" />
           </div>
-        </CardContent>
-      </Card>
+          
+          <div className="flex items-center justify-center w-11 h-11 rounded-full bg-muted/50">
+            <ChevronRight className="w-6 h-6 text-muted-foreground" />
+          </div>
+        </div>
+      </motion.div>
     </Link>
   );
 }
 
-function GuestEntryCard({ entry }: { entry: GuestEntryItem }) {
-  const eventDate = new Date(entry.eventStart);
-  const isExpired = isPast(eventDate);
-  const isCheckedIn = !!entry.qrScannedAt || entry.status === 'arrived';
-
-  const statusVariant = () => {
-    switch (entry.status) {
-      case "confirmed":
-        return "default";
-      case "arrived":
-        return "secondary";
-      case "cancelled":
-        return "destructive";
-      case "pending":
-        return "outline";
-      default:
-        return "outline";
-    }
-  };
-
-  const statusLabel = () => {
-    switch (entry.status) {
-      case "confirmed":
-        return "Confermato";
-      case "arrived":
-        return "Entrato";
-      case "cancelled":
-        return "Annullato";
-      case "pending":
-        return "In attesa";
-      case "no_show":
-        return "Non presentato";
-      default:
-        return entry.status;
-    }
-  };
-
+function EmptyState({ type }: { type: 'upcoming' | 'past' }) {
   return (
-    <Card
-      className={`transition-all ${isExpired ? "opacity-70" : ""}`}
-      data-testid={`card-guest-entry-${entry.id}`}
+    <motion.div
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={springTransition}
+      className="flex flex-col items-center justify-center py-16 px-6"
     >
-      <CardContent className="p-3 sm:p-4">
-        <div className="flex items-start justify-between gap-3 sm:gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <Badge variant={statusVariant()} className="text-xs">
-                {statusLabel()}
-              </Badge>
-              {isCheckedIn && (
-                <Badge variant="secondary" className="text-xs">
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                  Check-in effettuato
-                </Badge>
-              )}
-              {entry.qrCode && !isCheckedIn && (
-                <Badge variant="outline" className="text-xs">
-                  <QrCode className="w-3 h-3 mr-1" />
-                  QR disponibile
-                </Badge>
-              )}
-            </div>
-            <h3 className="font-semibold text-foreground truncate text-sm sm:text-base" data-testid="text-event-name">
-              {entry.eventName}
-            </h3>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              Lista: {entry.listName}
-            </p>
-            <div className="flex flex-col gap-1 mt-2 text-xs sm:text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                <span data-testid="text-event-date">
-                  {format(eventDate, "EEEE d MMMM yyyy, HH:mm", { locale: it })}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                <span>{entry.locationName}</span>
-              </div>
-              {entry.plusOnes > 0 && (
-                <div className="flex items-center gap-2">
-                  <Users className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                  <span>+{entry.plusOnes} accompagnator{entry.plusOnes > 1 ? 'i' : 'e'}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      <motion.div
+        initial={{ scale: 0 }}
+        animate={{ scale: 1 }}
+        transition={{ ...springTransition, delay: 0.1 }}
+        className="w-24 h-24 rounded-full bg-muted/30 flex items-center justify-center mb-6"
+      >
+        <TicketX className="w-12 h-12 text-muted-foreground" />
+      </motion.div>
+      
+      <h3 className="text-xl font-semibold text-foreground mb-2 text-center">
+        {type === 'upcoming' ? 'Nessun biglietto' : 'Nessun evento passato'}
+      </h3>
+      <p className="text-base text-muted-foreground text-center mb-6">
+        {type === 'upcoming' 
+          ? 'Non hai biglietti per eventi futuri'
+          : 'Non hai ancora partecipato a nessun evento'
+        }
+      </p>
+      
+      {type === 'upcoming' && (
+        <Link href="/acquista">
+          <motion.button
+            whileTap={{ scale: 0.95 }}
+            onClick={() => triggerHaptic('medium')}
+            className="min-h-[48px] px-6 bg-primary text-primary-foreground rounded-xl font-semibold text-base"
+          >
+            Scopri gli eventi
+          </motion.button>
+        </Link>
+      )}
+    </motion.div>
   );
 }
 
-function TableReservationCard({ reservation }: { reservation: TableReservationItem }) {
-  const eventDate = new Date(reservation.eventStart);
-  const isExpired = isPast(eventDate);
-  const isCheckedIn = !!reservation.qrScannedAt || reservation.status === 'arrived';
-
-  const statusVariant = () => {
-    switch (reservation.status) {
-      case "confirmed":
-        return "default";
-      case "arrived":
-        return "secondary";
-      case "completed":
-        return "secondary";
-      case "cancelled":
-        return "destructive";
-      case "pending":
-        return "outline";
-      default:
-        return "outline";
-    }
-  };
-
-  const statusLabel = () => {
-    switch (reservation.status) {
-      case "confirmed":
-        return "Confermato";
-      case "arrived":
-        return "Arrivato";
-      case "completed":
-        return "Completato";
-      case "cancelled":
-        return "Annullato";
-      case "pending":
-        return "In attesa";
-      case "no_show":
-        return "Non presentato";
-      default:
-        return reservation.status;
-    }
-  };
-
-  const tableTypeLabel = () => {
-    switch (reservation.tableType) {
-      case "vip":
-        return "VIP";
-      case "prive":
-        return "Privé";
-      default:
-        return "Standard";
-    }
-  };
-
+function TabButton({ 
+  active, 
+  onClick, 
+  children,
+  count,
+  testId,
+}: { 
+  active: boolean; 
+  onClick: () => void; 
+  children: React.ReactNode;
+  count: number;
+  testId: string;
+}) {
   return (
-    <Card
-      className={`transition-all ${isExpired ? "opacity-70" : ""}`}
-      data-testid={`card-table-reservation-${reservation.id}`}
+    <motion.button
+      whileTap={{ scale: 0.95 }}
+      onClick={() => {
+        triggerHaptic('light');
+        onClick();
+      }}
+      className={`flex-1 min-h-[52px] rounded-xl font-semibold text-lg transition-colors ${
+        active 
+          ? 'bg-primary text-primary-foreground' 
+          : 'bg-muted/50 text-muted-foreground'
+      }`}
+      data-testid={testId}
     >
-      <CardContent className="p-3 sm:p-4">
-        <div className="flex items-start justify-between gap-3 sm:gap-4">
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2 flex-wrap">
-              <Badge variant={statusVariant()} className="text-xs">
-                {statusLabel()}
-              </Badge>
-              {reservation.tableType !== 'standard' && (
-                <Badge variant="outline" className="text-xs">
-                  {tableTypeLabel()}
-                </Badge>
-              )}
-              {isCheckedIn && (
-                <Badge variant="secondary" className="text-xs">
-                  <CheckCircle2 className="w-3 h-3 mr-1" />
-                  Check-in effettuato
-                </Badge>
-              )}
-              {reservation.qrCode && !isCheckedIn && (
-                <Badge variant="outline" className="text-xs">
-                  <QrCode className="w-3 h-3 mr-1" />
-                  QR disponibile
-                </Badge>
-              )}
-            </div>
-            <h3 className="font-semibold text-foreground truncate text-sm sm:text-base" data-testid="text-event-name">
-              {reservation.eventName}
-            </h3>
-            <p className="text-xs sm:text-sm text-muted-foreground mt-1">
-              {reservation.tableName} - {reservation.guestsCount} ospiti
-            </p>
-            <div className="flex flex-col gap-1 mt-2 text-xs sm:text-sm text-muted-foreground">
-              <div className="flex items-center gap-2">
-                <Calendar className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                <span data-testid="text-event-date">
-                  {format(eventDate, "EEEE d MMMM yyyy, HH:mm", { locale: it })}
-                </span>
-              </div>
-              <div className="flex items-center gap-2">
-                <MapPin className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                <span>{reservation.locationName}</span>
-              </div>
-              {reservation.minSpend && (
-                <div className="flex items-center gap-2">
-                  <Clock className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
-                  <span>Spesa minima: €{parseFloat(reservation.minSpend).toFixed(2)}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </CardContent>
-    </Card>
+      {children} ({count})
+    </motion.button>
   );
 }
 
 export default function AccountTickets() {
-  const { data: ticketsData, isLoading: ticketsLoading } = useQuery<TicketsResponse>({
+  const [activeTab, setActiveTab] = useState<'upcoming' | 'past'>('upcoming');
+  
+  const { data: ticketsData, isLoading } = useQuery<TicketsResponse>({
     queryKey: ["/api/public/account/tickets"],
-  });
-
-  const { data: guestEntriesData, isLoading: guestEntriesLoading } = useQuery<GuestEntriesResponse>({
-    queryKey: ["/api/public/account/guest-entries"],
-  });
-
-  const { data: tableReservationsData, isLoading: tableReservationsLoading } = useQuery<TableReservationsResponse>({
-    queryKey: ["/api/public/account/table-reservations"],
   });
 
   const upcomingTickets = ticketsData?.upcoming || [];
   const pastTickets = ticketsData?.past || [];
-  const cancelledTickets = ticketsData?.cancelled || [];
-  const upcomingGuestEntries = guestEntriesData?.upcoming || [];
-  const pastGuestEntries = guestEntriesData?.past || [];
-  const allGuestEntries = [...upcomingGuestEntries, ...pastGuestEntries];
-  const upcomingTableReservations = tableReservationsData?.upcoming || [];
-  const pastTableReservations = tableReservationsData?.past || [];
-  const allTableReservations = [...upcomingTableReservations, ...pastTableReservations];
-
-  const isLoading = ticketsLoading || guestEntriesLoading || tableReservationsLoading;
+  
+  const displayedTickets = activeTab === 'upcoming' ? upcomingTickets : pastTickets;
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center min-h-[50vh]">
-        <Loader2 className="w-8 h-8 animate-spin text-primary" />
+      <div 
+        className="fixed inset-0 flex flex-col bg-background"
+        style={{ paddingTop: 'env(safe-area-inset-top)' }}
+      >
+        <div className="flex-1 flex items-center justify-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+          >
+            <Loader2 className="w-10 h-10 text-primary" />
+          </motion.div>
+        </div>
       </div>
     );
   }
 
   return (
-    <div className="max-w-3xl mx-auto px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8">
-      <div className="mb-6 sm:mb-8">
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground" data-testid="text-page-title">I Miei Biglietti</h1>
-        <p className="text-muted-foreground mt-1 sm:mt-2 text-sm sm:text-base">Visualizza e gestisci i tuoi biglietti, liste e prenotazioni</p>
+    <div 
+      className="min-h-screen bg-background pb-24"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+    >
+      <motion.header 
+        initial={{ opacity: 0, y: -20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={springTransition}
+        className="px-4 pt-4 pb-2"
+      >
+        <h1 className="text-2xl font-bold text-foreground" data-testid="text-page-title">
+          I Miei Biglietti
+        </h1>
+      </motion.header>
+
+      <motion.div 
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ ...springTransition, delay: 0.1 }}
+        className="px-4 py-4"
+      >
+        <div className="flex gap-3 p-1.5 bg-muted/30 rounded-2xl">
+          <TabButton 
+            active={activeTab === 'upcoming'} 
+            onClick={() => setActiveTab('upcoming')}
+            count={upcomingTickets.length}
+            testId="tab-upcoming"
+          >
+            Prossimi
+          </TabButton>
+          <TabButton 
+            active={activeTab === 'past'} 
+            onClick={() => setActiveTab('past')}
+            count={pastTickets.length}
+            testId="tab-past"
+          >
+            Passati
+          </TabButton>
+        </div>
+      </motion.div>
+
+      <div className="px-4">
+        <AnimatePresence mode="wait">
+          {displayedTickets.length === 0 ? (
+            <EmptyState key={activeTab} type={activeTab} />
+          ) : (
+            <motion.div 
+              key={activeTab}
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              className="flex flex-col gap-4"
+            >
+              {displayedTickets.map((ticket, index) => (
+                <MobileTicketCard key={ticket.id} ticket={ticket} index={index} />
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-
-      <Tabs defaultValue="upcoming" className="space-y-4 sm:space-y-6">
-        <TabsList className="bg-card border border-border grid w-full grid-cols-3 sm:grid-cols-5 h-auto">
-          <TabsTrigger
-            value="upcoming"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
-            data-testid="tab-upcoming"
-          >
-            Prossimi ({upcomingTickets.length})
-          </TabsTrigger>
-          <TabsTrigger
-            value="past"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
-            data-testid="tab-past"
-          >
-            Passati ({pastTickets.length})
-          </TabsTrigger>
-          <TabsTrigger
-            value="cancelled"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
-            data-testid="tab-cancelled"
-          >
-            Annullati ({cancelledTickets.length})
-          </TabsTrigger>
-          <TabsTrigger
-            value="lists"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
-            data-testid="tab-lists"
-          >
-            Liste ({allGuestEntries.length})
-          </TabsTrigger>
-          <TabsTrigger
-            value="tables"
-            className="data-[state=active]:bg-primary data-[state=active]:text-primary-foreground text-xs sm:text-sm"
-            data-testid="tab-tables"
-          >
-            Tavoli ({allTableReservations.length})
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="upcoming" className="space-y-4">
-          {upcomingTickets.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <TicketX className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground mb-4">Non hai biglietti per eventi futuri</p>
-                <Link href="/acquista">
-                  <span className="text-primary hover:text-primary/80 underline">
-                    Scopri gli eventi disponibili
-                  </span>
-                </Link>
-              </CardContent>
-            </Card>
-          ) : (
-            upcomingTickets.map((ticket) => (
-              <TicketCard key={ticket.id} ticket={ticket} />
-            ))
-          )}
-        </TabsContent>
-
-        <TabsContent value="past" className="space-y-4">
-          {pastTickets.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <TicketX className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Non hai biglietti passati</p>
-              </CardContent>
-            </Card>
-          ) : (
-            pastTickets.map((ticket) => (
-              <TicketCard key={ticket.id} ticket={ticket} />
-            ))
-          )}
-        </TabsContent>
-
-        <TabsContent value="cancelled" className="space-y-4">
-          {cancelledTickets.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <TicketX className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Non hai biglietti annullati</p>
-              </CardContent>
-            </Card>
-          ) : (
-            cancelledTickets.map((ticket) => (
-              <TicketCard key={ticket.id} ticket={ticket} />
-            ))
-          )}
-        </TabsContent>
-
-        <TabsContent value="lists" className="space-y-4">
-          {allGuestEntries.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Users className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Non sei in nessuna lista ospiti</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              {upcomingGuestEntries.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                    Prossimi eventi
-                  </h3>
-                  {upcomingGuestEntries.map((entry) => (
-                    <GuestEntryCard key={entry.id} entry={entry} />
-                  ))}
-                </div>
-              )}
-              {pastGuestEntries.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                    Eventi passati
-                  </h3>
-                  {pastGuestEntries.map((entry) => (
-                    <GuestEntryCard key={entry.id} entry={entry} />
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </TabsContent>
-
-        <TabsContent value="tables" className="space-y-4">
-          {allTableReservations.length === 0 ? (
-            <Card>
-              <CardContent className="py-12 text-center">
-                <Ticket className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground">Non hai prenotazioni tavoli</p>
-              </CardContent>
-            </Card>
-          ) : (
-            <>
-              {upcomingTableReservations.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                    Prossimi eventi
-                  </h3>
-                  {upcomingTableReservations.map((reservation) => (
-                    <TableReservationCard key={reservation.id} reservation={reservation} />
-                  ))}
-                </div>
-              )}
-              {pastTableReservations.length > 0 && (
-                <div className="space-y-4">
-                  <h3 className="text-sm font-medium text-muted-foreground uppercase tracking-wide">
-                    Eventi passati
-                  </h3>
-                  {pastTableReservations.map((reservation) => (
-                    <TableReservationCard key={reservation.id} reservation={reservation} />
-                  ))}
-                </div>
-              )}
-            </>
-          )}
-        </TabsContent>
-      </Tabs>
     </div>
   );
 }
