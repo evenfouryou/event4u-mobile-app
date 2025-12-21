@@ -26,6 +26,7 @@ import {
   AlertTriangle,
   Loader2,
   ScanLine,
+  LogOut,
 } from "lucide-react";
 
 interface ScanResult {
@@ -158,24 +159,55 @@ export default function E4uScannerPage() {
     setRecentScans([]);
   };
 
+  const isStandaloneScanner = (user as any)?.role === 'scanner';
+
+  const handleLogout = async () => {
+    try {
+      await apiRequest('POST', '/api/auth/logout');
+      window.location.href = '/login';
+    } catch (error) {
+      console.error('Logout error:', error);
+    }
+  };
+
   return (
     <div className="container mx-auto p-3 sm:p-4 md:p-6 max-w-2xl pb-24 md:pb-6">
-      <div className="flex items-center gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <Link href="/events">
-          <Button variant="ghost" size="icon" data-testid="button-back">
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
-        </Link>
-        <div>
-          <h1 className="text-xl sm:text-2xl font-bold tracking-tight" data-testid="text-page-title">
-            Scanner QR
-          </h1>
-          {selectedEvent && (
-            <p className="text-muted-foreground text-xs sm:text-sm" data-testid="text-event-name">
-              {selectedEvent.name}
-            </p>
+      <div className="flex items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
+        <div className="flex items-center gap-3 sm:gap-4">
+          {!isStandaloneScanner && (
+            <Link href="/events">
+              <Button variant="ghost" size="icon" data-testid="button-back">
+                <ArrowLeft className="h-5 w-5" />
+              </Button>
+            </Link>
           )}
+          <div>
+            <h1 className="text-xl sm:text-2xl font-bold tracking-tight" data-testid="text-page-title">
+              Scanner QR
+            </h1>
+            {selectedEvent && (
+              <p className="text-muted-foreground text-xs sm:text-sm" data-testid="text-event-name">
+                {selectedEvent.name}
+              </p>
+            )}
+            {isStandaloneScanner && user && (
+              <p className="text-muted-foreground text-xs" data-testid="text-scanner-user">
+                {(user as any).firstName} {(user as any).lastName}
+              </p>
+            )}
+          </div>
         </div>
+        {isStandaloneScanner && (
+          <Button 
+            variant="outline" 
+            size="sm" 
+            onClick={handleLogout}
+            data-testid="button-logout"
+          >
+            <LogOut className="h-4 w-4 mr-2" />
+            Esci
+          </Button>
+        )}
       </div>
 
       {!eventId && (

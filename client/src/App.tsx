@@ -168,6 +168,21 @@ function Router() {
     );
   }
 
+  // Scanner dedicated routes (role: scanner)
+  if ((user as any)?.role === 'scanner') {
+    return (
+      <div className="min-h-screen bg-background">
+        <Switch>
+          <Route path="/scanner/:eventId?" component={E4uScanner} />
+          <Route path="/">
+            <Redirect to="/scanner" />
+          </Route>
+          <Route component={NotFound} />
+        </Switch>
+      </div>
+    );
+  }
+
   // Customer portal routes (role: cliente)
   if ((user as any)?.role === 'cliente') {
     // Wrapper component to provide AccountLayout for standalone pages
