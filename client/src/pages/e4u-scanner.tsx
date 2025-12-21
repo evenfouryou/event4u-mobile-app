@@ -238,7 +238,7 @@ export default function E4uScannerPage() {
                       value={event.id.toString()}
                       data-testid={`select-event-option-${event.id}`}
                     >
-                      {event.name} - {format(new Date(event.date), "d MMM yyyy", { locale: it })}
+                      {event.name} - {format(new Date(event.startDatetime), "d MMM yyyy", { locale: it })}
                     </SelectItem>
                   ))
                 ) : (
