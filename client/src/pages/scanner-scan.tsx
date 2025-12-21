@@ -8,33 +8,27 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Html5Qrcode } from "html5-qrcode";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
   QrCode,
   CheckCircle2,
   XCircle,
-  Clock,
-  User,
   Users,
   Armchair,
   Ticket,
-  RefreshCw,
   AlertTriangle,
   Loader2,
-  ScanLine,
   Camera,
   CameraOff,
   Search,
-  BarChart3,
   History,
-  Zap,
-  Shield,
+  X,
+  ChevronUp,
+  Flashlight,
 } from "lucide-react";
 
 interface ScanResult {
@@ -83,15 +77,16 @@ export default function ScannerScanPage() {
   
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
-  const [activeTab, setActiveTab] = useState("scan");
-  const [cameraActive, setCameraActive] = useState(false);
+  const [cameraActive, setCameraActive] = useState(true);
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [showHistory, setShowHistory] = useState(false);
+  const [showSearch, setShowSearch] = useState(false);
 
-  const { data: event, isLoading: eventLoading } = useQuery<Event>({
+  const { data: event } = useQuery<Event>({
     queryKey: ['/api/events', eventId],
     enabled: !!eventId,
   });
@@ -114,32 +109,38 @@ export default function ScannerScanPage() {
       setRecentScans(prev => [newScan, ...prev.slice(0, 99)]);
       setSearchQuery("");
       setSearchResults([]);
+      setShowSearch(false);
       setIsProcessing(false);
+      
+      if ('vibrate' in navigator) {
+        navigator.vibrate(data.success ? [50] : [100, 50, 100]);
+      }
       
       if (data.success && data.person) {
         toast({ 
-          title: "Check-in effettuato!", 
+          title: "Check-in OK", 
           description: `${data.person.firstName} ${data.person.lastName}` 
         });
       } else if (data.alreadyCheckedIn) {
         toast({ 
-          title: "Già registrato", 
-          description: data.message || "Questo QR è già stato utilizzato",
+          title: "Già entrato", 
+          description: data.message || "QR già utilizzato",
           variant: "destructive"
         });
       }
-      
-      inputRef.current?.focus();
     },
     onError: (error: any) => {
       const errorResult: ScanResult = { 
         success: false, 
-        error: error.message || "Errore durante la scansione" 
+        error: error.message || "Errore scansione" 
       };
       setScanResult(errorResult);
       setIsProcessing(false);
+      if ('vibrate' in navigator) {
+        navigator.vibrate([100, 50, 100]);
+      }
       toast({ 
-        title: "Errore scansione", 
+        title: "Errore", 
         description: error.message, 
         variant: "destructive" 
       });
@@ -152,18 +153,13 @@ export default function ScannerScanPage() {
     scanMutation.mutate(code.trim());
   }, [isProcessing, scanMutation]);
 
-  const resetScanner = () => {
-    setSearchQuery("");
-    setSearchResults([]);
-    setScanResult(null);
-    setIsProcessing(false);
-    inputRef.current?.focus();
-  };
-
   const handleSearch = async (query: string) => {
-    setSearchQuery(query);
     if (query.trim().length < 2) {
       setSearchResults([]);
+      return;
+    }
+    
+    if (query.startsWith('E4U-')) {
       return;
     }
     
@@ -189,66 +185,48 @@ export default function ScannerScanPage() {
   const startCamera = async () => {
     try {
       setCameraError(null);
+      const scanner = new Html5Qrcode(scannerContainerId);
+      scannerRef.current = scanner;
       
-      // First show the container so it has dimensions
-      setCameraActive(true);
-      
-      if (scannerRef.current) {
-        try {
-          await scannerRef.current.stop();
-        } catch (e) {
-          // Ignore stop errors
-        }
-        scannerRef.current = null;
-      }
-      
-      // Wait for DOM to update with visible container
-      await new Promise(resolve => setTimeout(resolve, 100));
-      
-      const html5QrCode = new Html5Qrcode(scannerContainerId);
-      scannerRef.current = html5QrCode;
-      
-      await html5QrCode.start(
+      await scanner.start(
         { facingMode: "environment" },
         {
           fps: 10,
-          qrbox: { width: 250, height: 250 },
+          qrbox: { width: 280, height: 280 },
           aspectRatio: 1,
         },
         (decodedText) => {
-          handleScan(decodedText);
+          if (!isProcessing) {
+            handleScan(decodedText);
+          }
         },
         () => {}
       );
-    } catch (err: any) {
-      console.error("Camera error:", err);
-      setCameraError(err.message || "Impossibile accedere alla fotocamera");
+      
+      setCameraActive(true);
+    } catch (error: any) {
+      setCameraError("Fotocamera non disponibile");
       setCameraActive(false);
     }
   };
 
   const stopCamera = async () => {
-    try {
-      if (scannerRef.current) {
+    if (scannerRef.current) {
+      try {
         await scannerRef.current.stop();
         scannerRef.current = null;
-      }
-      setCameraActive(false);
-    } catch (err) {
-      console.error("Error stopping camera:", err);
+      } catch (error) {}
     }
-  };
-
-  const toggleCamera = () => {
-    if (cameraActive) {
-      stopCamera();
-    } else {
-      startCamera();
-    }
+    setCameraActive(false);
   };
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+      startCamera();
+    }, 300);
+    
     return () => {
+      clearTimeout(timer);
       if (scannerRef.current) {
         scannerRef.current.stop().catch(() => {});
       }
@@ -256,502 +234,489 @@ export default function ScannerScanPage() {
   }, []);
 
   useEffect(() => {
-    if (!cameraActive) {
-      inputRef.current?.focus();
+    if (scanResult) {
+      const timer = setTimeout(() => {
+        setScanResult(null);
+      }, 3000);
+      return () => clearTimeout(timer);
     }
-  }, [cameraActive]);
+  }, [scanResult]);
 
   const successCount = recentScans.filter(s => s.success).length;
-  const alreadyCount = recentScans.filter(s => s.alreadyCheckedIn).length;
-  const errorCount = recentScans.filter(s => !s.success && !s.alreadyCheckedIn).length;
+  const errorCount = recentScans.filter(s => !s.success).length;
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-background/95 pb-24">
-      <div className="sticky top-0 z-20 bg-background/90 backdrop-blur-xl border-b border-white/5">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <Link href="/scanner">
-              <Button variant="ghost" size="icon" className="rounded-full" data-testid="button-back">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-lg font-bold truncate max-w-[180px] flex items-center gap-2" data-testid="text-event-name">
-                <Zap className="h-4 w-4 text-emerald-400" />
-                {event?.name || "Caricamento..."}
-              </h1>
-              {event && (
-                <p className="text-xs text-muted-foreground">
-                  {format(new Date(event.startDatetime), "EEEE d MMM, HH:mm", { locale: it })}
-                </p>
-              )}
-            </div>
-          </div>
-          <Link href={`/scanner/stats/${eventId}`}>
-            <Button variant="outline" size="sm" className="rounded-full" data-testid="button-stats">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Stats
+    <div className="fixed inset-0 bg-black flex flex-col">
+      {/* Header compatto con safe area */}
+      <div className="absolute top-0 left-0 right-0 z-30 pt-[env(safe-area-inset-top)]">
+        <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-b from-black/80 to-transparent">
+          <Link href="/scanner">
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="h-11 w-11 rounded-full bg-white/10 backdrop-blur-sm"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="h-5 w-5 text-white" />
             </Button>
           </Link>
-        </div>
-
-        <div className="px-4 pb-3">
-          <div className="flex items-center gap-2 justify-center">
-            <motion.div
-              initial={{ scale: 0.9 }}
-              animate={{ scale: 1 }}
-              className="flex items-center gap-2"
-            >
-              <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 px-3 py-1">
-                <CheckCircle2 className="h-3.5 w-3.5 mr-1.5" />
-                {successCount} OK
-              </Badge>
-              <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 px-3 py-1">
-                <AlertTriangle className="h-3.5 w-3.5 mr-1.5" />
-                {alreadyCount} Duplicati
-              </Badge>
-              <Badge className="bg-rose-500/20 text-rose-400 border-rose-500/30 px-3 py-1">
-                <XCircle className="h-3.5 w-3.5 mr-1.5" />
-                {errorCount} Errori
-              </Badge>
-            </motion.div>
+          
+          <div className="text-center flex-1 px-3">
+            <h1 className="text-white font-semibold text-base truncate" data-testid="text-event-name">
+              {event?.name || "..."}
+            </h1>
+            {event && (
+              <p className="text-white/60 text-xs">
+                {format(new Date(event.startDatetime), "d MMM HH:mm", { locale: it })}
+              </p>
+            )}
           </div>
+
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            className="h-11 w-11 rounded-full bg-white/10 backdrop-blur-sm"
+            onClick={() => setShowHistory(!showHistory)}
+            data-testid="button-history"
+          >
+            <History className="h-5 w-5 text-white" />
+            {recentScans.length > 0 && (
+              <span className="absolute -top-1 -right-1 bg-emerald-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
+                {recentScans.length}
+              </span>
+            )}
+          </Button>
         </div>
       </div>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <div className="sticky top-[140px] z-10 bg-background/80 backdrop-blur-xl px-4 pb-3 pt-2">
-          <TabsList className="w-full grid grid-cols-2 h-12 rounded-full bg-muted/50">
-            <TabsTrigger value="scan" className="rounded-full data-[state=active]:bg-emerald-500 data-[state=active]:text-white" data-testid="tab-scan">
-              <Camera className="h-4 w-4 mr-2" />
-              Scansione
-            </TabsTrigger>
-            <TabsTrigger value="scanned" className="rounded-full data-[state=active]:bg-primary" data-testid="tab-scanned">
-              <History className="h-4 w-4 mr-2" />
-              Cronologia ({recentScans.length})
-            </TabsTrigger>
-          </TabsList>
-        </div>
-
-        <TabsContent value="scan" className="px-3 pb-4 space-y-3 mt-0">
-          {/* Barra ricerca PRIMA della fotocamera - ottimizzata per mobile */}
-          <Card className="border-0 bg-card/50 backdrop-blur-sm">
-            <CardContent className="p-3">
-              <div className="relative">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                <Input
-                  ref={inputRef}
-                  placeholder="QR code, nome o telefono..."
-                  value={searchQuery}
-                  onChange={(e) => {
-                    setSearchQuery(e.target.value);
-                    handleSearch(e.target.value);
-                  }}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && searchQuery.trim()) {
-                      if (searchQuery.startsWith('E4U-')) {
-                        handleScan(searchQuery.trim());
-                      }
-                    }
-                  }}
-                  className="h-12 text-base pl-10 pr-12 rounded-xl bg-muted/30 border-white/10"
-                  data-testid="input-search"
-                />
-                {isSearching && (
-                  <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin text-muted-foreground" />
-                )}
-                {searchQuery && !isSearching && (
-                  <Button
-                    variant="ghost"
-                    size="icon"
-                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
-                    onClick={() => {
-                      setSearchQuery("");
-                      setSearchResults([]);
-                      setScanResult(null);
-                    }}
-                  >
-                    <XCircle className="h-4 w-4" />
-                  </Button>
-                )}
-              </div>
-              
-              {searchQuery.startsWith('E4U-') && (
-                <Button
-                  onClick={() => handleScan(searchQuery.trim())}
-                  disabled={scanMutation.isPending || !searchQuery.trim() || isProcessing}
-                  className="w-full h-11 mt-2 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 rounded-xl"
-                  data-testid="button-scan"
-                >
-                  {scanMutation.isPending || isProcessing ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                  ) : (
-                    <>
-                      <ScanLine className="w-5 h-5 mr-2" />
-                      Verifica QR
-                    </>
-                  )}
-                </Button>
-              )}
-              
-              {searchResults.length > 0 && (
-                <div className="space-y-2 mt-3 max-h-[40vh] overflow-y-auto">
-                  {searchResults.map((result) => (
-                    <motion.div
-                      key={`${result.type}-${result.id}`}
-                      initial={{ opacity: 0, y: 5 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className={`p-2.5 rounded-lg cursor-pointer transition-all active:scale-[0.98] ${
-                        result.status === 'checked_in' 
-                          ? 'bg-amber-500/10 border border-amber-500/20' 
-                          : 'bg-muted/30 border border-white/5'
-                      }`}
-                      onClick={() => handleSearchResultClick(result)}
-                      data-testid={`search-result-${result.id}`}
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <div className="flex items-center gap-2 min-w-0">
-                          <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
-                            result.type === 'lista' 
-                              ? 'bg-blue-500/20' 
-                              : 'bg-purple-500/20'
-                          }`}>
-                            {result.type === 'lista' ? (
-                              <Users className="w-4 h-4 text-blue-400" />
-                            ) : (
-                              <Armchair className="w-4 h-4 text-purple-400" />
-                            )}
-                          </div>
-                          <div className="min-w-0">
-                            <p className="font-medium text-sm truncate">
-                              {result.firstName} {result.lastName}
-                            </p>
-                            <p className="text-xs text-muted-foreground truncate">
-                              {result.type === 'lista' ? result.listName : result.tableName}
-                            </p>
-                          </div>
-                        </div>
-                        {result.status === 'checked_in' ? (
-                          <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 shrink-0 text-xs px-2">
-                            Entrato
-                          </Badge>
-                        ) : (
-                          <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shrink-0 text-xs px-2">
-                            Check-in
-                          </Badge>
-                        )}
-                      </div>
-                    </motion.div>
-                  ))}
-                </div>
-              )}
-              
-              {searchQuery.length >= 2 && !searchQuery.startsWith('E4U-') && !isSearching && searchResults.length === 0 && (
-                <div className="p-3 mt-2 rounded-lg bg-muted/20 text-center">
-                  <p className="text-sm text-muted-foreground">
-                    Nessun risultato
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Fotocamera - compatta quando c'è la tastiera */}
-          <Card className="overflow-hidden border-0 bg-gradient-to-br from-card to-card/80 shadow-xl">
-            <CardContent className="p-0">
-              <div className="relative">
-                <div 
-                  id={scannerContainerId} 
-                  className={`w-full aspect-[4/3] bg-black/90 ${cameraActive ? '' : 'hidden'}`}
-                />
+      {/* Area camera full-screen */}
+      <div className="flex-1 relative">
+        <div 
+          id={scannerContainerId} 
+          className={`absolute inset-0 ${cameraActive ? '' : 'hidden'}`}
+          style={{ 
+            width: '100%', 
+            height: '100%',
+          }}
+        />
+        
+        {/* Overlay con mirino */}
+        {cameraActive && (
+          <div className="absolute inset-0 pointer-events-none">
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-72 h-72 relative">
+                {/* Angoli del mirino */}
+                <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-emerald-400 rounded-tl-lg" />
+                <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-emerald-400 rounded-tr-lg" />
+                <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-emerald-400 rounded-bl-lg" />
+                <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-emerald-400 rounded-br-lg" />
                 
-                {!cameraActive && (
-                  <div className="w-full aspect-[4/3] bg-gradient-to-br from-slate-900 to-slate-800 flex flex-col items-center justify-center">
-                    <motion.div
-                      initial={{ opacity: 0, y: 20 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="text-center p-4"
-                    >
-                      <div className="w-16 h-16 rounded-full bg-emerald-500/10 flex items-center justify-center mx-auto mb-3 border-2 border-dashed border-emerald-500/30">
-                        <QrCode className="w-8 h-8 text-emerald-400" />
-                      </div>
-                      <p className="text-sm text-muted-foreground mb-3">
-                        Tocca per attivare la fotocamera
-                      </p>
-                      <Button
-                        onClick={startCamera}
-                        className="bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 rounded-full px-6"
-                        data-testid="button-start-camera"
-                      >
-                        <Camera className="w-4 h-4 mr-2" />
-                        Attiva Fotocamera
-                      </Button>
-                    </motion.div>
-                  </div>
-                )}
-
-                {cameraActive && (
-                  <div className="absolute bottom-3 left-1/2 -translate-x-1/2">
-                    <Button
-                      onClick={stopCamera}
-                      variant="secondary"
-                      size="sm"
-                      className="rounded-full bg-black/50 backdrop-blur-sm border border-white/10"
-                      data-testid="button-stop-camera"
-                    >
-                      <CameraOff className="w-4 h-4 mr-2" />
-                      Chiudi
-                    </Button>
-                  </div>
-                )}
+                {/* Linea di scansione animata */}
+                <motion.div
+                  className="absolute left-4 right-4 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent"
+                  animate={{ top: ["10%", "90%", "10%"] }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+                />
               </div>
+            </div>
+            
+            {/* Oscuramento bordi */}
+            <div className="absolute inset-0 bg-black/40" style={{
+              maskImage: 'radial-gradient(circle at center, transparent 140px, black 180px)',
+              WebkitMaskImage: 'radial-gradient(circle at center, transparent 140px, black 180px)',
+            }} />
+          </div>
+        )}
 
-              {cameraError && (
-                <div className="p-3 bg-rose-500/10 border-t border-rose-500/20">
-                  <p className="text-sm text-rose-400 text-center flex items-center justify-center gap-2">
-                    <Shield className="w-4 h-4" />
-                    {cameraError}
-                  </p>
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        {!cameraActive && !cameraError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900">
+            <div className="w-24 h-24 rounded-full bg-emerald-500/20 flex items-center justify-center mb-4">
+              <QrCode className="w-12 h-12 text-emerald-400" />
+            </div>
+            <p className="text-white/60 mb-4">Fotocamera in avvio...</p>
+            <Loader2 className="w-8 h-8 text-emerald-400 animate-spin" />
+          </div>
+        )}
 
-          <AnimatePresence mode="wait">
-            {scanResult && scanResult.success && scanResult.person && (
+        {cameraError && (
+          <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-900 px-8">
+            <div className="w-20 h-20 rounded-full bg-rose-500/20 flex items-center justify-center mb-4">
+              <CameraOff className="w-10 h-10 text-rose-400" />
+            </div>
+            <p className="text-white/80 text-center mb-2">{cameraError}</p>
+            <p className="text-white/40 text-sm text-center mb-6">
+              Usa la ricerca manuale qui sotto
+            </p>
+            <Button onClick={startCamera} className="bg-emerald-500 hover:bg-emerald-600">
+              <Camera className="w-4 h-4 mr-2" />
+              Riprova
+            </Button>
+          </div>
+        )}
+      </div>
+
+      {/* Feedback scansione - overlay centrale */}
+      <AnimatePresence>
+        {scanResult && (
+          <motion.div
+            initial={{ opacity: 0, scale: 0.8 }}
+            animate={{ opacity: 1, scale: 1 }}
+            exit={{ opacity: 0, scale: 0.8 }}
+            className="absolute inset-0 z-40 flex items-center justify-center pointer-events-none"
+          >
+            <div className={`p-8 rounded-3xl backdrop-blur-xl ${
+              scanResult.success 
+                ? 'bg-emerald-500/90' 
+                : scanResult.alreadyCheckedIn 
+                  ? 'bg-amber-500/90' 
+                  : 'bg-rose-500/90'
+            }`}>
               <motion.div
-                key="success"
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                transition={{ duration: 0.3 }}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", stiffness: 300 }}
+                className="text-center"
               >
-                <Card className="border-0 bg-gradient-to-br from-emerald-500/20 to-green-500/10 shadow-xl shadow-emerald-500/10" data-testid="card-success">
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <motion.div 
-                        className="w-16 h-16 rounded-2xl bg-emerald-500/30 flex items-center justify-center shrink-0"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 300 }}
-                      >
-                        <CheckCircle2 className="w-8 h-8 text-emerald-400" />
-                      </motion.div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-emerald-400 font-medium text-sm mb-1">CHECK-IN COMPLETATO</p>
-                        <h3 className="text-xl font-bold mb-2 truncate" data-testid="text-person-name">
-                          {scanResult.person.firstName} {scanResult.person.lastName}
-                        </h3>
-                        <div className="flex flex-wrap gap-2">
-                          <Badge variant="outline" className="capitalize bg-white/5" data-testid="badge-type">
-                            {scanResult.person.type === 'lista' && <><Users className="w-3 h-3 mr-1" /> Lista</>}
-                            {scanResult.person.type === 'biglietto' && <><Ticket className="w-3 h-3 mr-1" /> Biglietto</>}
-                            {scanResult.person.type === 'tavolo' && <><Armchair className="w-3 h-3 mr-1" /> Tavolo</>}
-                          </Badge>
-                          {scanResult.person.plusOnes !== undefined && scanResult.person.plusOnes > 0 && (
-                            <Badge variant="outline" className="bg-white/5">
-                              +{scanResult.person.plusOnes} ospiti
-                            </Badge>
+                {scanResult.success ? (
+                  <CheckCircle2 className="w-20 h-20 text-white mx-auto mb-3" />
+                ) : scanResult.alreadyCheckedIn ? (
+                  <AlertTriangle className="w-20 h-20 text-white mx-auto mb-3" />
+                ) : (
+                  <XCircle className="w-20 h-20 text-white mx-auto mb-3" />
+                )}
+                
+                {scanResult.person && (
+                  <div>
+                    <p className="text-white text-2xl font-bold">
+                      {scanResult.person.firstName}
+                    </p>
+                    <p className="text-white text-xl">
+                      {scanResult.person.lastName}
+                    </p>
+                    <div className="flex items-center justify-center gap-2 mt-2">
+                      {scanResult.person.type === 'lista' && (
+                        <Badge className="bg-white/20 text-white border-0">
+                          <Users className="w-3 h-3 mr-1" /> {scanResult.person.listName}
+                        </Badge>
+                      )}
+                      {scanResult.person.type === 'tavolo' && (
+                        <Badge className="bg-white/20 text-white border-0">
+                          <Armchair className="w-3 h-3 mr-1" /> {scanResult.person.tableName}
+                        </Badge>
+                      )}
+                      {scanResult.person.plusOnes !== undefined && scanResult.person.plusOnes > 0 && (
+                        <Badge className="bg-white/20 text-white border-0">
+                          +{scanResult.person.plusOnes}
+                        </Badge>
+                      )}
+                    </div>
+                  </div>
+                )}
+                
+                {scanResult.alreadyCheckedIn && (
+                  <p className="text-white text-xl font-semibold">Già entrato</p>
+                )}
+                
+                {scanResult.error && (
+                  <p className="text-white text-lg">{scanResult.error}</p>
+                )}
+              </motion.div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Bottom bar con ricerca e stats */}
+      <div className="absolute bottom-0 left-0 right-0 z-30 pb-[env(safe-area-inset-bottom)]">
+        <div className="bg-gradient-to-t from-black via-black/95 to-transparent pt-8 px-4 pb-4">
+          {/* Stats compatti */}
+          <div className="flex items-center justify-center gap-3 mb-4">
+            <div className="flex items-center gap-1.5 bg-emerald-500/20 px-3 py-1.5 rounded-full">
+              <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+              <span className="text-emerald-400 font-semibold">{successCount}</span>
+            </div>
+            <div className="flex items-center gap-1.5 bg-rose-500/20 px-3 py-1.5 rounded-full">
+              <XCircle className="w-4 h-4 text-rose-400" />
+              <span className="text-rose-400 font-semibold">{errorCount}</span>
+            </div>
+          </div>
+
+          {/* Barra di ricerca */}
+          <div className="relative">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-white/40" />
+            <Input
+              ref={inputRef}
+              placeholder="Cerca nome, telefono o codice QR..."
+              value={searchQuery}
+              onChange={(e) => {
+                setSearchQuery(e.target.value);
+                handleSearch(e.target.value);
+                if (e.target.value) setShowSearch(true);
+              }}
+              onFocus={() => setShowSearch(true)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter' && searchQuery.trim()) {
+                  if (searchQuery.startsWith('E4U-')) {
+                    handleScan(searchQuery.trim());
+                  }
+                }
+              }}
+              className="h-14 text-base pl-12 pr-12 rounded-2xl bg-white/10 border-white/20 text-white placeholder:text-white/40 focus:bg-white/15 focus:border-emerald-500/50"
+              data-testid="input-search"
+            />
+            {searchQuery && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="absolute right-2 top-1/2 -translate-y-1/2 h-10 w-10 text-white/60"
+                onClick={() => {
+                  setSearchQuery("");
+                  setSearchResults([]);
+                  setShowSearch(false);
+                }}
+              >
+                <X className="h-5 w-5" />
+              </Button>
+            )}
+            {isSearching && (
+              <Loader2 className="absolute right-14 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin text-white/40" />
+            )}
+          </div>
+
+          {/* Pulsante verifica QR */}
+          {searchQuery.startsWith('E4U-') && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="mt-3"
+            >
+              <Button
+                onClick={() => handleScan(searchQuery.trim())}
+                disabled={scanMutation.isPending || isProcessing}
+                className="w-full h-14 text-lg bg-emerald-500 hover:bg-emerald-600 rounded-2xl"
+                data-testid="button-scan"
+              >
+                {scanMutation.isPending || isProcessing ? (
+                  <Loader2 className="w-6 h-6 animate-spin" />
+                ) : (
+                  <>
+                    <QrCode className="w-6 h-6 mr-2" />
+                    Verifica QR
+                  </>
+                )}
+              </Button>
+            </motion.div>
+          )}
+        </div>
+      </div>
+
+      {/* Sheet risultati ricerca */}
+      <AnimatePresence>
+        {showSearch && searchResults.length > 0 && (
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="absolute bottom-0 left-0 right-0 z-40 bg-slate-900 rounded-t-3xl max-h-[60vh] pb-[env(safe-area-inset-bottom)]"
+          >
+            <div className="flex items-center justify-center py-3">
+              <div className="w-10 h-1 bg-white/20 rounded-full" />
+            </div>
+            
+            <div className="px-4 pb-2">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-white font-semibold">
+                  {searchResults.length} risultati
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowSearch(false)}
+                  className="text-white/60"
+                >
+                  <X className="w-4 h-4" />
+                </Button>
+              </div>
+            </div>
+            
+            <div className="overflow-y-auto max-h-[45vh] px-4 pb-4">
+              <div className="space-y-2">
+                {searchResults.map((result) => (
+                  <motion.div
+                    key={`${result.type}-${result.id}`}
+                    initial={{ opacity: 0, x: -20 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    className={`p-4 rounded-2xl active:scale-[0.98] transition-transform ${
+                      result.status === 'checked_in' 
+                        ? 'bg-amber-500/20 border border-amber-500/30' 
+                        : 'bg-white/5 border border-white/10'
+                    }`}
+                    onClick={() => handleSearchResultClick(result)}
+                    data-testid={`search-result-${result.id}`}
+                  >
+                    <div className="flex items-center justify-between gap-3">
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+                          result.type === 'lista' 
+                            ? 'bg-blue-500/20' 
+                            : 'bg-purple-500/20'
+                        }`}>
+                          {result.type === 'lista' ? (
+                            <Users className="w-6 h-6 text-blue-400" />
+                          ) : (
+                            <Armchair className="w-6 h-6 text-purple-400" />
+                          )}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="font-semibold text-white truncate">
+                            {result.firstName} {result.lastName}
+                          </p>
+                          <p className="text-sm text-white/60 truncate">
+                            {result.type === 'lista' ? result.listName : result.tableName}
+                            {result.phone && ` • ${result.phone}`}
+                          </p>
+                        </div>
+                      </div>
+                      {result.status === 'checked_in' ? (
+                        <Badge className="bg-amber-500 text-white border-0 shrink-0">
+                          Entrato
+                        </Badge>
+                      ) : (
+                        <ChevronUp className="w-5 h-5 text-emerald-400 rotate-90 shrink-0" />
+                      )}
+                    </div>
+                  </motion.div>
+                ))}
+              </div>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Sheet cronologia */}
+      <AnimatePresence>
+        {showHistory && (
+          <motion.div
+            initial={{ y: "100%" }}
+            animate={{ y: 0 }}
+            exit={{ y: "100%" }}
+            transition={{ type: "spring", damping: 25, stiffness: 300 }}
+            className="absolute bottom-0 left-0 right-0 z-50 bg-slate-900 rounded-t-3xl max-h-[70vh] pb-[env(safe-area-inset-bottom)]"
+          >
+            <div className="flex items-center justify-center py-3">
+              <div className="w-10 h-1 bg-white/20 rounded-full" />
+            </div>
+            
+            <div className="px-4 pb-2">
+              <div className="flex items-center justify-between mb-3">
+                <h3 className="text-white font-semibold text-lg">
+                  Cronologia ({recentScans.length})
+                </h3>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setShowHistory(false)}
+                  className="text-white/60 h-10 w-10"
+                >
+                  <X className="w-5 h-5" />
+                </Button>
+              </div>
+              
+              <div className="flex gap-3 mb-4">
+                <div className="flex-1 bg-emerald-500/20 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold text-emerald-400">{successCount}</p>
+                  <p className="text-xs text-emerald-400/70">Check-in</p>
+                </div>
+                <div className="flex-1 bg-rose-500/20 rounded-xl p-3 text-center">
+                  <p className="text-2xl font-bold text-rose-400">{errorCount}</p>
+                  <p className="text-xs text-rose-400/70">Errori</p>
+                </div>
+              </div>
+            </div>
+            
+            <div className="overflow-y-auto max-h-[45vh] px-4 pb-4">
+              {recentScans.length === 0 ? (
+                <div className="text-center py-8">
+                  <QrCode className="w-12 h-12 text-white/20 mx-auto mb-3" />
+                  <p className="text-white/40">Nessuna scansione</p>
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {recentScans.map((scan, index) => (
+                    <div
+                      key={index}
+                      className={`p-3 rounded-xl ${
+                        scan.success 
+                          ? 'bg-emerald-500/10 border border-emerald-500/20' 
+                          : scan.alreadyCheckedIn
+                            ? 'bg-amber-500/10 border border-amber-500/20'
+                            : 'bg-rose-500/10 border border-rose-500/20'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center shrink-0 ${
+                          scan.success 
+                            ? 'bg-emerald-500/20' 
+                            : scan.alreadyCheckedIn 
+                              ? 'bg-amber-500/20' 
+                              : 'bg-rose-500/20'
+                        }`}>
+                          {scan.success ? (
+                            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                          ) : scan.alreadyCheckedIn ? (
+                            <AlertTriangle className="w-5 h-5 text-amber-400" />
+                          ) : (
+                            <XCircle className="w-5 h-5 text-rose-400" />
+                          )}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          {scan.person ? (
+                            <>
+                              <p className="font-medium text-white truncate">
+                                {scan.person.firstName} {scan.person.lastName}
+                              </p>
+                              <p className="text-xs text-white/50">
+                                {format(scan.scannedAt, "HH:mm:ss")}
+                              </p>
+                            </>
+                          ) : (
+                            <>
+                              <p className="text-white/70 text-sm truncate">
+                                {scan.error || scan.message || "Errore"}
+                              </p>
+                              <p className="text-xs text-white/50">
+                                {format(scan.scannedAt, "HH:mm:ss")}
+                              </p>
+                            </>
                           )}
                         </div>
                       </div>
                     </div>
-                    
-                    {(scanResult.person.listName || scanResult.person.tableName || scanResult.person.ticketType) && (
-                      <div className="mt-4 pt-4 border-t border-white/10 grid grid-cols-2 gap-3 text-sm">
-                        {scanResult.person.listName && (
-                          <div>
-                            <span className="text-muted-foreground">Lista:</span>
-                            <span className="ml-2 font-medium">{scanResult.person.listName}</span>
-                          </div>
-                        )}
-                        {scanResult.person.tableName && (
-                          <div>
-                            <span className="text-muted-foreground">Tavolo:</span>
-                            <span className="ml-2 font-medium">{scanResult.person.tableName}</span>
-                          </div>
-                        )}
-                        {scanResult.person.ticketType && (
-                          <div>
-                            <span className="text-muted-foreground">Tipo:</span>
-                            <span className="ml-2 font-medium">{scanResult.person.ticketType}</span>
-                          </div>
-                        )}
-                        {scanResult.person.sector && (
-                          <div>
-                            <span className="text-muted-foreground">Settore:</span>
-                            <span className="ml-2 font-medium">{scanResult.person.sector}</span>
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
-            {scanResult && scanResult.alreadyCheckedIn && (
-              <motion.div
-                key="already"
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Card className="border-0 bg-gradient-to-br from-amber-500/20 to-orange-500/10 shadow-xl shadow-amber-500/10" data-testid="card-already-checked">
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <motion.div 
-                        className="w-16 h-16 rounded-2xl bg-amber-500/30 flex items-center justify-center shrink-0"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 300 }}
-                      >
-                        <AlertTriangle className="w-8 h-8 text-amber-400" />
-                      </motion.div>
-                      <div className="flex-1">
-                        <p className="text-amber-400 font-medium text-sm mb-1">GIÀ ENTRATO</p>
-                        <h3 className="text-lg font-bold">
-                          {scanResult.person ? `${scanResult.person.firstName} ${scanResult.person.lastName}` : "Ospite"}
-                        </h3>
-                        <p className="text-sm text-muted-foreground mt-1">
-                          {scanResult.checkedInAt 
-                            ? `Ingresso alle ${format(new Date(scanResult.checkedInAt), "HH:mm", { locale: it })}`
-                            : "QR già utilizzato"
-                          }
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-
-            {scanResult && !scanResult.success && scanResult.error && !scanResult.alreadyCheckedIn && (
-              <motion.div
-                key="error"
-                initial={{ opacity: 0, y: 20, scale: 0.95 }}
-                animate={{ opacity: 1, y: 0, scale: 1 }}
-                exit={{ opacity: 0, y: -20, scale: 0.95 }}
-                transition={{ duration: 0.3 }}
-              >
-                <Card className="border-0 bg-gradient-to-br from-rose-500/20 to-red-500/10 shadow-xl shadow-rose-500/10" data-testid="card-error">
-                  <CardContent className="p-6">
-                    <div className="flex items-start gap-4">
-                      <motion.div 
-                        className="w-16 h-16 rounded-2xl bg-rose-500/30 flex items-center justify-center shrink-0"
-                        initial={{ scale: 0 }}
-                        animate={{ scale: 1 }}
-                        transition={{ type: "spring", stiffness: 300 }}
-                      >
-                        <XCircle className="w-8 h-8 text-rose-400" />
-                      </motion.div>
-                      <div className="flex-1">
-                        <p className="text-rose-400 font-medium text-sm mb-1">ERRORE</p>
-                        <p className="text-sm text-muted-foreground">
-                          {scanResult.error}
-                        </p>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              </motion.div>
-            )}
-          </AnimatePresence>
-
-          {!scanResult && (
-            <Card className="border-0 bg-muted/30">
-              <CardContent className="py-8">
-                <div className="text-center">
-                  <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-3">
-                    <QrCode className="w-8 h-8 text-muted-foreground/50" />
-                  </div>
-                  <p className="text-muted-foreground text-sm">
-                    Pronto per la scansione
-                  </p>
+                  ))}
                 </div>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
+              )}
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
-        <TabsContent value="scanned" className="p-4 mt-0">
-          {recentScans.length > 0 ? (
-            <ScrollArea className="h-[calc(100vh-240px)]">
-              <div className="space-y-2 pr-2">
-                {recentScans.map((scan, index) => (
-                  <motion.div
-                    key={index}
-                    initial={{ opacity: 0, x: -20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    transition={{ delay: index * 0.02 }}
-                  >
-                    <Card 
-                      className={`border-0 ${
-                        scan.success 
-                          ? 'bg-emerald-500/10' 
-                          : scan.alreadyCheckedIn 
-                            ? 'bg-amber-500/10'
-                            : 'bg-rose-500/10'
-                      }`}
-                      data-testid={`recent-scan-${index}`}
-                    >
-                      <CardContent className="p-3">
-                        <div className="flex items-center gap-3">
-                          <div className={`w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ${
-                            scan.success 
-                              ? 'bg-emerald-500/20' 
-                              : scan.alreadyCheckedIn 
-                                ? 'bg-amber-500/20'
-                                : 'bg-rose-500/20'
-                          }`}>
-                            {scan.success ? (
-                              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
-                            ) : scan.alreadyCheckedIn ? (
-                              <AlertTriangle className="w-5 h-5 text-amber-400" />
-                            ) : (
-                              <XCircle className="w-5 h-5 text-rose-400" />
-                            )}
-                          </div>
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium truncate">
-                              {scan.person 
-                                ? `${scan.person.firstName} ${scan.person.lastName}`
-                                : scan.error || "Errore"
-                              }
-                            </p>
-                            {scan.person && (
-                              <p className="text-xs text-muted-foreground">
-                                {scan.person.type === 'lista' && 'Lista'}
-                                {scan.person.type === 'tavolo' && 'Tavolo'}
-                                {scan.person.type === 'biglietto' && 'Biglietto'}
-                                {scan.person.listName && ` • ${scan.person.listName}`}
-                                {scan.person.tableName && ` • ${scan.person.tableName}`}
-                              </p>
-                            )}
-                          </div>
-                          <span className="text-xs text-muted-foreground whitespace-nowrap">
-                            {format(scan.scannedAt, "HH:mm:ss", { locale: it })}
-                          </span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-                ))}
-              </div>
-            </ScrollArea>
-          ) : (
-            <Card className="border-0 bg-muted/30">
-              <CardContent className="py-12 text-center">
-                <History className="w-12 h-12 mx-auto text-muted-foreground/20 mb-4" />
-                <p className="text-muted-foreground">
-                  Nessuna scansione effettuata
-                </p>
-              </CardContent>
-            </Card>
-          )}
-        </TabsContent>
-      </Tabs>
+      {/* Messaggio nessun risultato */}
+      <AnimatePresence>
+        {showSearch && searchQuery.length >= 2 && !searchQuery.startsWith('E4U-') && !isSearching && searchResults.length === 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: 20 }}
+            className="absolute bottom-32 left-4 right-4 z-40"
+          >
+            <div className="bg-slate-800 rounded-2xl p-4 text-center border border-white/10">
+              <Search className="w-8 h-8 text-white/30 mx-auto mb-2" />
+              <p className="text-white/60">Nessun risultato per "{searchQuery}"</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
