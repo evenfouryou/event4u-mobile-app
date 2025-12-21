@@ -81,7 +81,6 @@ export default function ScannerScanPage() {
   const scannerRef = useRef<Html5Qrcode | null>(null);
   const scannerContainerId = "qr-reader";
   
-  const [qrInput, setQrInput] = useState("");
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
   const [recentScans, setRecentScans] = useState<RecentScan[]>([]);
   const [activeTab, setActiveTab] = useState("scan");
@@ -105,15 +104,16 @@ export default function ScannerScanPage() {
       });
       return response.json();
     },
-    onSuccess: (data: ScanResult) => {
+    onSuccess: (data: ScanResult, qrCode: string) => {
       setScanResult(data);
       const newScan: RecentScan = { 
         ...data, 
         scannedAt: new Date(),
-        qrCode: qrInput
+        qrCode: qrCode
       };
       setRecentScans(prev => [newScan, ...prev.slice(0, 99)]);
-      setQrInput("");
+      setSearchQuery("");
+      setSearchResults([]);
       setIsProcessing(false);
       
       if (data.success && data.person) {
@@ -152,26 +152,9 @@ export default function ScannerScanPage() {
     scanMutation.mutate(code.trim());
   }, [isProcessing, scanMutation]);
 
-  const handleManualScan = () => {
-    if (!qrInput.trim()) {
-      toast({
-        title: "Errore",
-        description: "Inserisci un codice QR",
-        variant: "destructive",
-      });
-      return;
-    }
-    handleScan(qrInput);
-  };
-
-  const handleKeyPress = (e: React.KeyboardEvent<HTMLInputElement>) => {
-    if (e.key === 'Enter') {
-      handleManualScan();
-    }
-  };
-
   const resetScanner = () => {
-    setQrInput("");
+    setSearchQuery("");
+    setSearchResults([]);
     setScanResult(null);
     setIsProcessing(false);
     inputRef.current?.focus();
@@ -199,10 +182,7 @@ export default function ScannerScanPage() {
 
   const handleSearchResultClick = (result: any) => {
     if (result.qrCode) {
-      setQrInput(result.qrCode);
       handleScan(result.qrCode);
-      setSearchQuery("");
-      setSearchResults([]);
     }
   };
 
@@ -413,25 +393,51 @@ export default function ScannerScanPage() {
                 </div>
               )}
 
-              <div className="p-4 space-y-4 border-t border-white/5">
+              <div className="p-3 space-y-3 border-t border-white/5">
                 <div className="relative">
-                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
                     ref={inputRef}
-                    placeholder="Oppure inserisci codice manualmente..."
-                    value={qrInput}
-                    onChange={(e) => setQrInput(e.target.value)}
-                    onKeyDown={handleKeyPress}
-                    className="h-14 text-base font-mono pl-12 pr-4 rounded-2xl bg-muted/30 border-white/10"
-                    data-testid="input-qr-code"
+                    placeholder="QR code, nome o telefono..."
+                    value={searchQuery}
+                    onChange={(e) => {
+                      setSearchQuery(e.target.value);
+                      handleSearch(e.target.value);
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && searchQuery.trim()) {
+                        if (searchQuery.startsWith('E4U-')) {
+                          handleScan(searchQuery.trim());
+                        }
+                      }
+                    }}
+                    className="h-12 text-base pl-10 pr-12 rounded-xl bg-muted/30 border-white/10"
+                    data-testid="input-search"
                   />
+                  {isSearching && (
+                    <Loader2 className="absolute right-3 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin text-muted-foreground" />
+                  )}
+                  {searchQuery && !isSearching && (
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute right-1 top-1/2 -translate-y-1/2 h-8 w-8"
+                      onClick={() => {
+                        setSearchQuery("");
+                        setSearchResults([]);
+                        setScanResult(null);
+                      }}
+                    >
+                      <XCircle className="h-4 w-4" />
+                    </Button>
+                  )}
                 </div>
                 
-                <div className="grid grid-cols-2 gap-3">
+                {searchQuery.startsWith('E4U-') && (
                   <Button
-                    onClick={handleManualScan}
-                    disabled={scanMutation.isPending || !qrInput.trim() || isProcessing}
-                    className="h-12 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 rounded-xl"
+                    onClick={() => handleScan(searchQuery.trim())}
+                    disabled={scanMutation.isPending || !searchQuery.trim() || isProcessing}
+                    className="w-full h-11 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 rounded-xl"
                     data-testid="button-scan"
                   >
                     {scanMutation.isPending || isProcessing ? (
@@ -439,102 +445,71 @@ export default function ScannerScanPage() {
                     ) : (
                       <>
                         <ScanLine className="w-5 h-5 mr-2" />
-                        Verifica
+                        Verifica QR
                       </>
                     )}
                   </Button>
-                  <Button
-                    variant="outline"
-                    className="h-12 rounded-xl border-white/10"
-                    onClick={resetScanner}
-                    data-testid="button-reset"
-                  >
-                    <RefreshCw className="w-5 h-5 mr-2" />
-                    Reset
-                  </Button>
-                </div>
-
-                <div className="pt-4 border-t border-white/5">
-                  <p className="text-sm text-muted-foreground mb-2 flex items-center gap-2">
-                    <User className="w-4 h-4" />
-                    Cerca per nome o telefono:
-                  </p>
-                  <div className="relative">
-                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-                    <Input
-                      placeholder="Nome, cognome o telefono..."
-                      value={searchQuery}
-                      onChange={(e) => handleSearch(e.target.value)}
-                      className="h-12 text-base pl-12 pr-4 rounded-xl bg-muted/30 border-white/10"
-                      data-testid="input-search-guest"
-                    />
-                    {isSearching && (
-                      <Loader2 className="absolute right-4 top-1/2 -translate-y-1/2 h-5 w-5 animate-spin text-muted-foreground" />
-                    )}
-                  </div>
-                  
-                  {searchResults.length > 0 && (
-                    <div className="mt-3 space-y-2 max-h-60 overflow-y-auto">
-                      {searchResults.map((result) => (
-                        <motion.div
-                          key={`${result.type}-${result.id}`}
-                          initial={{ opacity: 0, y: 10 }}
-                          animate={{ opacity: 1, y: 0 }}
-                          className={`p-3 rounded-xl cursor-pointer transition-all ${
-                            result.status === 'checked_in' 
-                              ? 'bg-amber-500/10 border border-amber-500/20' 
-                              : 'bg-muted/30 border border-white/5 hover:bg-muted/50'
-                          }`}
-                          onClick={() => handleSearchResultClick(result)}
-                          data-testid={`search-result-${result.id}`}
-                        >
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                              <div className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                                result.type === 'lista' 
-                                  ? 'bg-blue-500/20' 
-                                  : 'bg-purple-500/20'
-                              }`}>
-                                {result.type === 'lista' ? (
-                                  <Users className="w-5 h-5 text-blue-400" />
-                                ) : (
-                                  <Armchair className="w-5 h-5 text-purple-400" />
-                                )}
-                              </div>
-                              <div>
-                                <p className="font-medium">
-                                  {result.firstName} {result.lastName}
-                                </p>
-                                <p className="text-xs text-muted-foreground">
-                                  {result.type === 'lista' ? result.listName : result.tableName}
-                                  {result.phone && ` • ${result.phone}`}
-                                </p>
-                              </div>
+                )}
+                
+                {searchResults.length > 0 && (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {searchResults.map((result) => (
+                      <motion.div
+                        key={`${result.type}-${result.id}`}
+                        initial={{ opacity: 0, y: 5 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className={`p-2.5 rounded-lg cursor-pointer transition-all active:scale-[0.98] ${
+                          result.status === 'checked_in' 
+                            ? 'bg-amber-500/10 border border-amber-500/20' 
+                            : 'bg-muted/30 border border-white/5'
+                        }`}
+                        onClick={() => handleSearchResultClick(result)}
+                        data-testid={`search-result-${result.id}`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2 min-w-0">
+                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                              result.type === 'lista' 
+                                ? 'bg-blue-500/20' 
+                                : 'bg-purple-500/20'
+                            }`}>
+                              {result.type === 'lista' ? (
+                                <Users className="w-4 h-4 text-blue-400" />
+                              ) : (
+                                <Armchair className="w-4 h-4 text-purple-400" />
+                              )}
                             </div>
-                            {result.status === 'checked_in' ? (
-                              <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">
-                                <CheckCircle2 className="w-3 h-3 mr-1" />
-                                Entrato
-                              </Badge>
-                            ) : (
-                              <Badge variant="outline" className="border-emerald-500/30 text-emerald-400">
-                                Check-in
-                              </Badge>
-                            )}
+                            <div className="min-w-0">
+                              <p className="font-medium text-sm truncate">
+                                {result.firstName} {result.lastName}
+                              </p>
+                              <p className="text-xs text-muted-foreground truncate">
+                                {result.type === 'lista' ? result.listName : result.tableName}
+                              </p>
+                            </div>
                           </div>
-                        </motion.div>
-                      ))}
-                    </div>
-                  )}
-                  
-                  {searchQuery.length >= 2 && !isSearching && searchResults.length === 0 && (
-                    <div className="mt-3 p-4 rounded-xl bg-muted/20 text-center">
-                      <p className="text-sm text-muted-foreground">
-                        Nessun risultato trovato
-                      </p>
-                    </div>
-                  )}
-                </div>
+                          {result.status === 'checked_in' ? (
+                            <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 shrink-0 text-xs px-2">
+                              Entrato
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 shrink-0 text-xs px-2">
+                              Check-in
+                            </Badge>
+                          )}
+                        </div>
+                      </motion.div>
+                    ))}
+                  </div>
+                )}
+                
+                {searchQuery.length >= 2 && !searchQuery.startsWith('E4U-') && !isSearching && searchResults.length === 0 && (
+                  <div className="p-3 rounded-lg bg-muted/20 text-center">
+                    <p className="text-sm text-muted-foreground">
+                      Nessun risultato
+                    </p>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
