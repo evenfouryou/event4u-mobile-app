@@ -1058,6 +1058,24 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
 
+  // POST logout endpoint for scanner and other clients
+  app.post('/api/auth/logout', (req: any, res) => {
+    req.logout((err: any) => {
+      if (err) {
+        console.error("Logout error:", err);
+        return res.status(500).json({ message: "Failed to logout" });
+      }
+      req.session.destroy((err: any) => {
+        if (err) {
+          console.error("Session destroy error:", err);
+          return res.status(500).json({ message: "Failed to destroy session" });
+        }
+        res.clearCookie('connect.sid');
+        res.json({ message: "Logged out successfully" });
+      });
+    });
+  });
+
   // Helper function to get current user ID (respecting impersonation)
   const getCurrentUserId = (req: any): string => {
     return req.session.impersonatorId ? req.session.userId : req.user.claims.sub;
