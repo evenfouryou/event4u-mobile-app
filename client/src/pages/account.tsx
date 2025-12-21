@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { Route, Switch, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { useAuth } from "@/hooks/useAuth";
 import { AccountLayout } from "@/components/account-layout";
 import AccountHome from "@/pages/account-home";
 import AccountProfile from "@/pages/account-profile";
@@ -13,6 +14,14 @@ import { Loader2 } from "lucide-react";
 
 export default function AccountPage() {
   const [location, navigate] = useLocation();
+  const { user } = useAuth();
+
+  // Redirect scanners away from account page
+  useEffect(() => {
+    if (user && (user as any).role === 'scanner') {
+      navigate("/scanner");
+    }
+  }, [user, navigate]);
 
   const { data: customer, isLoading, isError } = useQuery({
     queryKey: ["/api/public/customers/me"],
