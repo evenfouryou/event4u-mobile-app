@@ -17,7 +17,9 @@ import {
   Sparkles,
   Clock,
   Settings,
+  Menu,
 } from "lucide-react";
+import { useSidebar } from "@/components/ui/sidebar";
 import { motion } from "framer-motion";
 import { 
   MobileAppLayout, 
@@ -151,11 +153,13 @@ function RecentEventCard({
 function UserHeader({ 
   user, 
   getGreeting, 
-  getInitials 
+  getInitials,
+  onMenuClick
 }: { 
   user: any; 
   getGreeting: () => string; 
   getInitials: (firstName?: string, lastName?: string) => string;
+  onMenuClick?: () => void;
 }) {
   return (
     <motion.div 
@@ -164,15 +168,25 @@ function UserHeader({
       transition={springConfig}
       className="flex items-center justify-between px-4 py-4"
     >
-      <div className="flex items-center gap-4">
-        <Avatar className="h-14 w-14 border-2 border-primary/20">
-          <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground font-semibold text-lg">
+      <div className="flex items-center gap-3">
+        <HapticButton
+          variant="ghost"
+          size="icon"
+          onClick={onMenuClick}
+          className="h-11 w-11"
+          hapticType="light"
+          data-testid="button-menu"
+        >
+          <Menu className="h-6 w-6" />
+        </HapticButton>
+        <Avatar className="h-12 w-12 border-2 border-primary/20">
+          <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground font-semibold text-base">
             {getInitials(user?.firstName ?? undefined, user?.lastName ?? undefined)}
           </AvatarFallback>
         </Avatar>
         <div>
-          <p className="text-base text-muted-foreground">{getGreeting()}</p>
-          <h1 className="text-2xl font-bold">{user?.firstName || 'Utente'}</h1>
+          <p className="text-sm text-muted-foreground">{getGreeting()}</p>
+          <h1 className="text-xl font-bold">{user?.firstName || 'Utente'}</h1>
         </div>
       </div>
       <div className="flex items-center gap-3">
@@ -188,6 +202,7 @@ function UserHeader({
 export default function Home() {
   const { user } = useAuth();
   const [, setLocation] = useLocation();
+  const { toggleSidebar } = useSidebar();
 
   const isSuperAdmin = user?.role === 'super_admin';
   const isBartender = user?.role === 'bartender';
@@ -239,7 +254,8 @@ export default function Home() {
           <UserHeader 
             user={user} 
             getGreeting={getGreeting} 
-            getInitials={getInitials} 
+            getInitials={getInitials}
+            onMenuClick={toggleSidebar}
           />
         }
         contentClassName="pb-24"
@@ -385,7 +401,8 @@ export default function Home() {
         <UserHeader 
           user={user} 
           getGreeting={getGreeting} 
-          getInitials={getInitials} 
+          getInitials={getInitials}
+          onMenuClick={toggleSidebar}
         />
       }
       contentClassName="pb-24"

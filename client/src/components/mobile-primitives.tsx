@@ -2,7 +2,8 @@ import { forwardRef, useCallback } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { Button, ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { X } from "lucide-react";
+import { X, Menu } from "lucide-react";
+import { useSidebar } from "@/components/ui/sidebar";
 
 export function triggerHaptic(type: 'light' | 'medium' | 'heavy' | 'success' | 'error' = 'light') {
   if ('vibrate' in navigator) {
@@ -264,6 +265,7 @@ interface MobileHeaderProps {
   rightAction?: React.ReactNode;
   transparent?: boolean;
   className?: string;
+  showMenuButton?: boolean;
 }
 
 export function MobileHeader({
@@ -273,7 +275,26 @@ export function MobileHeader({
   rightAction,
   transparent = false,
   className,
+  showMenuButton = false,
 }: MobileHeaderProps) {
+  const sidebar = useSidebar();
+  
+  const menuButton = showMenuButton ? (
+    <HapticButton
+      variant="ghost"
+      size="icon"
+      onClick={() => {
+        triggerHaptic('light');
+        sidebar.toggleSidebar();
+      }}
+      className="h-11 w-11"
+      hapticType="light"
+      data-testid="button-menu"
+    >
+      <Menu className="h-6 w-6" />
+    </HapticButton>
+  ) : null;
+
   return (
     <div 
       className={cn(
@@ -284,7 +305,7 @@ export function MobileHeader({
       )}
     >
       <div className="w-12 flex justify-start">
-        {leftAction}
+        {leftAction || menuButton}
       </div>
       
       <div className="flex-1 text-center">
