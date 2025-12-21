@@ -45,7 +45,7 @@ export default function ScannerHomePage() {
   const { user } = useAuth();
 
   const { data: events, isLoading: eventsLoading } = useQuery<Event[]>({
-    queryKey: ['/api/events'],
+    queryKey: ['/api/e4u/my-events'],
   });
 
   const handleLogout = async () => {
