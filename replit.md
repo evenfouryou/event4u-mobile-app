@@ -32,6 +32,21 @@ A WebSocket relay system enabling remote smart card reader access from a desktop
 ### Progressive Web App (PWA)
 The system is an installable PWA with a `manifest.json` for metadata, a Service Worker (`sw.js`) for caching and offline support, and native installation prompts.
 
+### Scanner Management Module
+A dedicated management system for event scanner operators, accessible via "Scanner" in the sidebar (for gestore/super_admin users). Features include:
+- **Scanner Account Creation**: Simplified form with only required fields (first name, last name, email as username, password)
+- **Mobile-Optimized UI**: Search bar for filtering scanners, responsive card layout
+- **Event Assignment**: Dialog to assign scanners to specific events with granular permissions:
+  - List scanning permission (guest lists)
+  - Table scanning permission (reservations)
+  - Ticket scanning permission (SIAE tickets)
+  - Selection of allowed ticket sectors/types for ticket scanning
+- **Security**: Company-scoped data access, sanitized API responses (no password hashes exposed)
+- **API Endpoints**: 
+  - `GET /api/users/scanners` - Returns scanner users with safe fields only
+  - `GET /api/e4u/scanners/assignments` - Returns scanner event assignments scoped to company
+  - `POST /api/e4u/scanners/assign` - Creates scanner event assignments
+
 ### School Badge Manager Module
 A digital badge creation system for schools and organizations, accessible via "Badge Scuole" in the sidebar (for gestore/admin users). Database schema includes 3 tables: `schoolBadgeLandings` (organization landing pages), `schoolBadgeRequests` (badge applications), and `schoolBadges` (generated badges with QR codes). Features include:
 - **Landing Page Creation**: Custom branded pages with school name, description, logo upload (base64), email domain validation, and primary color
