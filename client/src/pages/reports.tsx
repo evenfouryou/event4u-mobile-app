@@ -1,19 +1,35 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { FileText, Download, FileSpreadsheet, TrendingUp, TrendingDown, DollarSign, Calendar, ArrowLeft, Pencil, ChevronDown, ChevronUp, X } from "lucide-react";
+import { 
+  FileText, 
+  FileSpreadsheet, 
+  TrendingUp, 
+  TrendingDown, 
+  DollarSign, 
+  Calendar, 
+  ArrowLeft, 
+  Pencil, 
+  ChevronDown, 
+  ChevronUp,
+  BarChart3,
+  Package,
+  Store,
+  Percent,
+  CircleDollarSign,
+  Sparkles
+} from "lucide-react";
 import { Link, useSearch } from "wouter";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useAuth } from "@/hooks/useAuth";
 import { MobileAppLayout, MobileHeader, HapticButton, BottomSheet, triggerHaptic } from "@/components/mobile-primitives";
-import { Button } from "@/components/ui/button";
 import jsPDF from "jspdf";
 import ExcelJS from "exceljs";
 
@@ -67,17 +83,46 @@ const staggerContainer = {
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.08,
+      staggerChildren: 0.06,
     },
   },
 };
 
 const staggerItem = {
-  hidden: { opacity: 0, y: 20 },
+  hidden: { opacity: 0, y: 24, scale: 0.95 },
   show: { 
     opacity: 1, 
     y: 0,
+    scale: 1,
     transition: springTransition,
+  },
+};
+
+const cardColors = {
+  theoretical: {
+    bg: "from-blue-500/20 to-blue-600/10",
+    icon: "bg-blue-500",
+    iconColor: "text-white",
+  },
+  actual: {
+    bg: "from-emerald-500/20 to-emerald-600/10",
+    icon: "bg-emerald-500",
+    iconColor: "text-white",
+  },
+  variance: {
+    bg: "from-amber-500/20 to-amber-600/10",
+    icon: "bg-amber-500",
+    iconColor: "text-white",
+  },
+  percent: {
+    bg: "from-purple-500/20 to-purple-600/10",
+    icon: "bg-purple-500",
+    iconColor: "text-white",
+  },
+  total: {
+    bg: "from-primary/20 to-primary/5",
+    icon: "bg-primary",
+    iconColor: "text-primary-foreground",
   },
 };
 
@@ -93,6 +138,7 @@ export default function Reports() {
   const [endDate, setEndDate] = useState<string>("");
   const [showDateFilter, setShowDateFilter] = useState(false);
   const [expandedStations, setExpandedStations] = useState<Set<number>>(new Set());
+  const [showExportSheet, setShowExportSheet] = useState(false);
 
   const [correctionSheetOpen, setCorrectionSheetOpen] = useState(false);
   const [correctingProduct, setCorrectingProduct] = useState<{
@@ -248,6 +294,7 @@ export default function Reports() {
   const handleExportPDF = () => {
     if (!reportData) return;
     triggerHaptic('medium');
+    setShowExportSheet(false);
 
     const event = events.find(e => e.id === selectedEventId);
     if (!event) return;
@@ -336,6 +383,7 @@ export default function Reports() {
   const handleExportExcel = async () => {
     if (!reportData) return;
     triggerHaptic('medium');
+    setShowExportSheet(false);
 
     const event = events.find(e => e.id === selectedEventId);
     if (!event) return;
@@ -415,15 +463,19 @@ export default function Reports() {
           />
         }
       >
-        <div className="flex items-center justify-center h-full">
+        <div className="flex items-center justify-center h-full pb-24">
           <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
             transition={springTransition}
             className="text-center"
           >
-            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto" />
-            <p className="text-muted-foreground mt-4">Caricamento...</p>
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="w-14 h-14 rounded-full border-4 border-primary/20 border-t-primary mx-auto"
+            />
+            <p className="text-muted-foreground mt-4 text-base">Caricamento...</p>
           </motion.div>
         </div>
       </MobileAppLayout>
@@ -447,7 +499,11 @@ export default function Reports() {
             <HapticButton
               variant="ghost"
               size="icon"
-              onClick={() => setShowDateFilter(!showDateFilter)}
+              onClick={() => {
+                triggerHaptic('light');
+                setShowDateFilter(!showDateFilter);
+              }}
+              data-testid="button-toggle-date-filter"
             >
               <Calendar className="h-5 w-5" />
             </HapticButton>
@@ -459,20 +515,25 @@ export default function Reports() {
         variants={staggerContainer}
         initial="hidden"
         animate="show"
-        className="space-y-4 pb-24"
+        className="space-y-4 pb-24 pt-2"
       >
         <AnimatePresence>
           {showDateFilter && (
             <motion.div
-              initial={{ opacity: 0, height: 0 }}
-              animate={{ opacity: 1, height: "auto" }}
-              exit={{ opacity: 0, height: 0 }}
+              initial={{ opacity: 0, height: 0, scale: 0.95 }}
+              animate={{ opacity: 1, height: "auto", scale: 1 }}
+              exit={{ opacity: 0, height: 0, scale: 0.95 }}
               transition={springTransition}
             >
-              <Card className="overflow-hidden">
+              <Card className="overflow-hidden border-primary/20">
                 <CardContent className="p-4 space-y-4">
-                  <div className="flex items-center justify-between">
-                    <span className="font-semibold">Filtra per Data</span>
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                        <Calendar className="w-5 h-5 text-primary" />
+                      </div>
+                      <span className="font-semibold">Filtra per Data</span>
+                    </div>
                     {(startDate || endDate) && (
                       <HapticButton
                         variant="ghost"
@@ -481,6 +542,7 @@ export default function Reports() {
                           setStartDate("");
                           setEndDate("");
                         }}
+                        className="text-primary"
                         data-testid="button-clear-dates"
                       >
                         Azzera
@@ -494,7 +556,7 @@ export default function Reports() {
                         type="date"
                         value={startDate}
                         onChange={(e) => setStartDate(e.target.value)}
-                        className="min-h-[44px]"
+                        className="min-h-[48px] text-base"
                         data-testid="input-start-date"
                       />
                     </div>
@@ -504,7 +566,7 @@ export default function Reports() {
                         type="date"
                         value={endDate}
                         onChange={(e) => setEndDate(e.target.value)}
-                        className="min-h-[44px]"
+                        className="min-h-[48px] text-base"
                         data-testid="input-end-date"
                       />
                     </div>
@@ -516,20 +578,34 @@ export default function Reports() {
         </AnimatePresence>
 
         <motion.div variants={staggerItem}>
-          <Card>
+          <Card className="overflow-hidden">
             <CardContent className="p-4">
-              <label className="text-sm text-muted-foreground block mb-2">Evento</label>
+              <div className="flex items-center gap-3 mb-3">
+                <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center">
+                  <Sparkles className="w-5 h-5 text-accent" />
+                </div>
+                <label className="text-sm font-medium">Seleziona Evento</label>
+              </div>
               <Select value={selectedEventId} onValueChange={(v) => {
                 triggerHaptic('light');
                 setSelectedEventId(v);
               }}>
-                <SelectTrigger className="min-h-[48px] text-base" data-testid="select-event">
-                  <SelectValue placeholder="Seleziona un evento" />
+                <SelectTrigger className="min-h-[52px] text-base rounded-xl" data-testid="select-event">
+                  <SelectValue placeholder="Scegli un evento..." />
                 </SelectTrigger>
                 <SelectContent>
                   {filteredEvents.map((event) => (
-                    <SelectItem key={event.id} value={event.id} className="min-h-[44px]">
-                      {event.name} - {new Date((event as any).startDatetime || (event as any).eventDate).toLocaleDateString('it-IT')}
+                    <SelectItem key={event.id} value={event.id} className="min-h-[48px] py-3">
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">{event.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {new Date((event as any).startDatetime || (event as any).eventDate).toLocaleDateString('it-IT', {
+                            weekday: 'short',
+                            day: 'numeric',
+                            month: 'short',
+                          })}
+                        </span>
+                      </div>
                     </SelectItem>
                   ))}
                 </SelectContent>
@@ -542,9 +618,13 @@ export default function Reports() {
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-center py-12"
+            className="text-center py-16"
           >
-            <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-primary mx-auto" />
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+              className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary mx-auto"
+            />
             <p className="text-muted-foreground mt-4">Caricamento report...</p>
           </motion.div>
         )}
@@ -558,108 +638,132 @@ export default function Reports() {
           >
             {revenueAnalysis && revenueAnalysis.theoreticalRevenue > 0 && (
               <>
+                <motion.div variants={staggerItem}>
+                  <Card className={`overflow-hidden bg-gradient-to-br ${cardColors.theoretical.bg} border-0`}>
+                    <CardContent className="p-5">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-14 h-14 rounded-2xl ${cardColors.theoretical.icon} flex items-center justify-center shadow-lg`}>
+                          <DollarSign className={`w-7 h-7 ${cardColors.theoretical.iconColor}`} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm text-muted-foreground">Ricavo Teorico</p>
+                          <div className="text-2xl font-bold" data-testid="text-theoretical-revenue">
+                            €{revenueAnalysis.theoreticalRevenue.toFixed(2)}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Basato sui consumi registrati
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                <motion.div variants={staggerItem}>
+                  <Card className={`overflow-hidden bg-gradient-to-br ${cardColors.actual.bg} border-0`}>
+                    <CardContent className="p-5">
+                      <div className="flex items-center gap-4">
+                        <div className={`w-14 h-14 rounded-2xl ${cardColors.actual.icon} flex items-center justify-center shadow-lg`}>
+                          <CircleDollarSign className={`w-7 h-7 ${cardColors.actual.iconColor}`} />
+                        </div>
+                        <div className="flex-1">
+                          <p className="text-sm text-muted-foreground">Ricavo Effettivo</p>
+                          <div className="text-2xl font-bold" data-testid="text-actual-revenue">
+                            €{revenueAnalysis.actualRevenue.toFixed(2)}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-0.5">
+                            Incasso reale dalla cassa
+                          </p>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
                 <div className="grid grid-cols-2 gap-3">
                   <motion.div variants={staggerItem}>
-                    <Card className="h-full">
+                    <Card className={`h-full overflow-hidden bg-gradient-to-br ${revenueAnalysis.variance >= 0 ? 'from-green-500/20 to-green-600/10' : 'from-red-500/20 to-red-600/10'} border-0`}>
                       <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs text-muted-foreground">Ricavo Teorico</span>
-                          <DollarSign className="w-4 h-4 text-muted-foreground" />
-                        </div>
-                        <div className="text-xl font-bold" data-testid="text-theoretical-revenue">
-                          €{revenueAnalysis.theoreticalRevenue.toFixed(2)}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Basato sui consumi
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-
-                  <motion.div variants={staggerItem}>
-                    <Card className="h-full">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs text-muted-foreground">Ricavo Effettivo</span>
-                          <DollarSign className="w-4 h-4 text-muted-foreground" />
-                        </div>
-                        <div className="text-xl font-bold" data-testid="text-actual-revenue">
-                          €{revenueAnalysis.actualRevenue.toFixed(2)}
-                        </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Incasso reale
-                        </p>
-                      </CardContent>
-                    </Card>
-                  </motion.div>
-
-                  <motion.div variants={staggerItem}>
-                    <Card className="h-full">
-                      <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs text-muted-foreground">Varianza</span>
+                        <div className={`w-12 h-12 rounded-xl ${revenueAnalysis.variance >= 0 ? 'bg-green-500' : 'bg-red-500'} flex items-center justify-center mb-3 shadow-lg`}>
                           {revenueAnalysis.variance >= 0 ? (
-                            <TrendingUp className="w-4 h-4 text-green-500" />
+                            <TrendingUp className="w-6 h-6 text-white" />
                           ) : (
-                            <TrendingDown className="w-4 h-4 text-red-500" />
+                            <TrendingDown className="w-6 h-6 text-white" />
                           )}
                         </div>
+                        <p className="text-xs text-muted-foreground mb-1">Varianza</p>
                         <div className={`text-xl font-bold ${revenueAnalysis.variance >= 0 ? 'text-green-500' : 'text-red-500'}`} data-testid="text-variance">
                           €{revenueAnalysis.variance.toFixed(2)}
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Differenza
-                        </p>
                       </CardContent>
                     </Card>
                   </motion.div>
 
                   <motion.div variants={staggerItem}>
-                    <Card className="h-full">
+                    <Card className={`h-full overflow-hidden bg-gradient-to-br ${cardColors.percent.bg} border-0`}>
                       <CardContent className="p-4">
-                        <div className="flex items-center justify-between mb-2">
-                          <span className="text-xs text-muted-foreground">Varianza %</span>
-                          {revenueAnalysis.variancePercent >= 0 ? (
-                            <TrendingUp className="w-4 h-4 text-green-500" />
-                          ) : (
-                            <TrendingDown className="w-4 h-4 text-red-500" />
-                          )}
+                        <div className={`w-12 h-12 rounded-xl ${cardColors.percent.icon} flex items-center justify-center mb-3 shadow-lg`}>
+                          <Percent className={`w-6 h-6 ${cardColors.percent.iconColor}`} />
                         </div>
+                        <p className="text-xs text-muted-foreground mb-1">Varianza %</p>
                         <div className={`text-xl font-bold ${revenueAnalysis.variancePercent >= 0 ? 'text-green-500' : 'text-red-500'}`} data-testid="text-variance-percent">
                           {revenueAnalysis.variancePercent.toFixed(1)}%
                         </div>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          Percentuale
-                        </p>
                       </CardContent>
                     </Card>
                   </motion.div>
                 </div>
 
                 <motion.div variants={staggerItem}>
-                  <Card>
+                  <Card className="overflow-hidden">
                     <CardHeader className="p-4 pb-2">
-                      <CardTitle className="text-base">Analisi Ricavi</CardTitle>
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                          <BarChart3 className="w-5 h-5 text-primary" />
+                        </div>
+                        <CardTitle className="text-base">Analisi Ricavi</CardTitle>
+                      </div>
                     </CardHeader>
-                    <CardContent className="p-4 pt-0">
-                      <ResponsiveContainer width="100%" height={200}>
+                    <CardContent className="p-4 pt-2">
+                      <ResponsiveContainer width="100%" height={220}>
                         <BarChart
                           data={[
-                            {
-                              name: 'Ricavi',
-                              Teorico: revenueAnalysis.theoreticalRevenue,
-                              Effettivo: revenueAnalysis.actualRevenue,
-                            },
+                            { name: 'Teorico', value: revenueAnalysis.theoreticalRevenue, fill: '#3B82F6' },
+                            { name: 'Effettivo', value: revenueAnalysis.actualRevenue, fill: '#10B981' },
                           ]}
-                          margin={{ top: 10, right: 10, left: -20, bottom: 0 }}
+                          margin={{ top: 10, right: 10, left: -15, bottom: 10 }}
+                          barSize={60}
                         >
-                          <CartesianGrid strokeDasharray="3 3" opacity={0.3} />
-                          <XAxis dataKey="name" fontSize={12} />
-                          <YAxis fontSize={12} />
-                          <Tooltip />
-                          <Legend />
-                          <Bar dataKey="Teorico" fill="hsl(var(--primary))" radius={[4, 4, 0, 0]} />
-                          <Bar dataKey="Effettivo" fill="hsl(var(--accent))" radius={[4, 4, 0, 0]} />
+                          <CartesianGrid strokeDasharray="3 3" opacity={0.2} vertical={false} />
+                          <XAxis 
+                            dataKey="name" 
+                            fontSize={13} 
+                            tickLine={false}
+                            axisLine={false}
+                          />
+                          <YAxis 
+                            fontSize={11} 
+                            tickLine={false}
+                            axisLine={false}
+                            tickFormatter={(value) => `€${value}`}
+                          />
+                          <Tooltip 
+                            formatter={(value: number) => [`€${value.toFixed(2)}`, '']}
+                            contentStyle={{
+                              backgroundColor: 'hsl(var(--card))',
+                              border: '1px solid hsl(var(--border))',
+                              borderRadius: '12px',
+                              padding: '12px',
+                            }}
+                          />
+                          <Bar dataKey="value" radius={[8, 8, 0, 0]}>
+                            {[
+                              { name: 'Teorico', value: revenueAnalysis.theoreticalRevenue, fill: '#3B82F6' },
+                              { name: 'Effettivo', value: revenueAnalysis.actualRevenue, fill: '#10B981' },
+                            ].map((entry, index) => (
+                              <Cell key={`cell-${index}`} fill={entry.fill} />
+                            ))}
+                          </Bar>
                         </BarChart>
                       </ResponsiveContainer>
                     </CardContent>
@@ -670,8 +774,11 @@ export default function Reports() {
 
             {revenueAnalysis && revenueAnalysis.theoreticalRevenue === 0 && (
               <motion.div variants={staggerItem}>
-                <Card>
+                <Card className="border-dashed">
                   <CardContent className="p-6 text-center">
+                    <div className="w-14 h-14 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                      <BarChart3 className="w-7 h-7 text-muted-foreground" />
+                    </div>
                     <p className="text-muted-foreground text-sm">
                       Nessun dato ricavi disponibile. Assicurati di aver assegnato un listino prezzi e registrato dei consumi.
                     </p>
@@ -681,42 +788,35 @@ export default function Reports() {
             )}
 
             <motion.div variants={staggerItem}>
-              <Card className="bg-gradient-to-br from-primary/10 to-primary/5">
+              <Card className={`overflow-hidden bg-gradient-to-br ${cardColors.total.bg} border-0`}>
                 <CardContent className="p-5">
-                  <div className="flex items-center justify-between mb-4">
-                    <div>
-                      <p className="text-sm text-muted-foreground">Costo Totale</p>
-                      <div className="text-3xl font-bold" data-testid="text-total-cost">
-                        €{reportData.totalCost.toFixed(2)}
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex items-center gap-4">
+                      <div className={`w-14 h-14 rounded-2xl ${cardColors.total.icon} flex items-center justify-center shadow-lg`}>
+                        <DollarSign className={`w-7 h-7 ${cardColors.total.iconColor}`} />
                       </div>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {reportData.stations.length} postazioni
-                      </p>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Costo Totale</p>
+                        <div className="text-3xl font-bold" data-testid="text-total-cost">
+                          €{reportData.totalCost.toFixed(2)}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          {reportData.stations.length} postazioni
+                        </p>
+                      </div>
                     </div>
-                    <div className="flex flex-col gap-2">
-                      <HapticButton
-                        variant="outline"
-                        size="sm"
-                        onClick={handleExportPDF}
-                        disabled={!reportData || reportLoading}
-                        className="min-h-[44px] min-w-[44px]"
-                        data-testid="button-export-pdf"
-                      >
-                        <FileText className="w-4 h-4 mr-2" />
-                        PDF
-                      </HapticButton>
-                      <HapticButton
-                        variant="outline"
-                        size="sm"
-                        onClick={handleExportExcel}
-                        disabled={!reportData || reportLoading}
-                        className="min-h-[44px] min-w-[44px]"
-                        data-testid="button-export-excel"
-                      >
-                        <FileSpreadsheet className="w-4 h-4 mr-2" />
-                        Excel
-                      </HapticButton>
-                    </div>
+                    <HapticButton
+                      variant="secondary"
+                      size="icon"
+                      onClick={() => {
+                        triggerHaptic('light');
+                        setShowExportSheet(true);
+                      }}
+                      className="h-12 w-12 rounded-xl"
+                      data-testid="button-open-export"
+                    >
+                      <FileText className="w-5 h-5" />
+                    </HapticButton>
                   </div>
                 </CardContent>
               </Card>
@@ -724,32 +824,39 @@ export default function Reports() {
 
             {reportData.consumedProducts && reportData.consumedProducts.length > 0 && (
               <motion.div variants={staggerItem}>
-                <Card>
+                <Card className="overflow-hidden">
                   <CardHeader className="p-4 pb-2">
-                    <CardTitle className="text-base">Consumo Beverage</CardTitle>
-                    <CardDescription className="text-xs">Prodotti consumati</CardDescription>
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-amber-500/10 flex items-center justify-center">
+                        <Package className="w-5 h-5 text-amber-500" />
+                      </div>
+                      <div>
+                        <CardTitle className="text-base">Consumo Beverage</CardTitle>
+                        <p className="text-xs text-muted-foreground">{reportData.consumedProducts.length} prodotti</p>
+                      </div>
+                    </div>
                   </CardHeader>
-                  <CardContent className="p-4 pt-0">
-                    <div className="space-y-3">
+                  <CardContent className="p-4 pt-2">
+                    <div className="space-y-2">
                       {reportData.consumedProducts.map((product, index) => (
                         <motion.div
                           key={product.productId}
-                          initial={{ opacity: 0, x: -10 }}
+                          initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
-                          transition={{ ...springTransition, delay: index * 0.05 }}
-                          className="flex items-center justify-between p-3 bg-muted/50 rounded-xl"
+                          transition={{ ...springTransition, delay: index * 0.04 }}
+                          className="flex items-center justify-between p-4 bg-muted/30 rounded-xl active:bg-muted/50 transition-colors"
                           data-testid={`row-consumed-product-${product.productId}`}
                         >
-                          <div className="flex-1 min-w-0">
-                            <p className="font-medium text-sm truncate" data-testid={`text-consumed-product-name-${product.productId}`}>
+                          <div className="flex-1 min-w-0 mr-3">
+                            <p className="font-medium truncate" data-testid={`text-consumed-product-name-${product.productId}`}>
                               {product.productName}
                             </p>
-                            <p className="text-xs text-muted-foreground">
+                            <p className="text-sm text-muted-foreground">
                               {product.totalQuantity.toFixed(2)} × €{parseFloat(product.costPrice).toFixed(2)}
                             </p>
                           </div>
                           <div className="flex items-center gap-2">
-                            <span className="font-semibold text-sm">
+                            <span className="font-bold text-base">
                               €{product.totalCost.toFixed(2)}
                             </span>
                             {canCorrect && (
@@ -762,6 +869,7 @@ export default function Reports() {
                                   product.productName, 
                                   product.totalQuantity
                                 )}
+                                className="h-11 w-11"
                                 data-testid={`button-correct-${product.productId}`}
                               >
                                 <Pencil className="h-4 w-4" />
@@ -770,9 +878,9 @@ export default function Reports() {
                           </div>
                         </motion.div>
                       ))}
-                      <div className="flex items-center justify-between p-3 bg-primary/10 rounded-xl border-2 border-primary/20">
+                      <div className="flex items-center justify-between p-4 bg-primary/10 rounded-xl border-2 border-primary/20 mt-3">
                         <span className="font-bold">TOTALE BEVERAGE</span>
-                        <span className="font-bold text-lg" data-testid="text-total-beverage-cost">
+                        <span className="font-bold text-xl" data-testid="text-total-beverage-cost">
                           €{reportData.totalCost.toFixed(2)}
                         </span>
                       </div>
@@ -783,36 +891,49 @@ export default function Reports() {
             )}
 
             <motion.div variants={staggerItem}>
-              <Card>
+              <Card className="overflow-hidden">
                 <CardHeader className="p-4 pb-2">
-                  <CardTitle className="text-base">Dettaglio Postazioni</CardTitle>
-                  <CardDescription className="text-xs">Consumi per postazione</CardDescription>
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center">
+                      <Store className="w-5 h-5 text-teal-500" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-base">Dettaglio Postazioni</CardTitle>
+                      <p className="text-xs text-muted-foreground">{reportData.stations.length} postazioni</p>
+                    </div>
+                  </div>
                 </CardHeader>
-                <CardContent className="p-4 pt-0">
+                <CardContent className="p-4 pt-2">
                   <div className="space-y-3">
-                    {reportData.stations.map((station) => (
+                    {reportData.stations.map((station, stationIndex) => (
                       <motion.div
                         key={station.stationId}
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={springTransition}
-                        className="rounded-xl border border-border overflow-hidden"
+                        transition={{ ...springTransition, delay: stationIndex * 0.05 }}
+                        className="rounded-2xl border border-border overflow-hidden"
                       >
                         <button
                           onClick={() => toggleStation(station.stationId)}
-                          className="w-full flex items-center justify-between p-4 bg-muted/30 min-h-[56px] active:bg-muted/50 transition-colors"
+                          className="w-full flex items-center justify-between p-4 bg-muted/20 min-h-[60px] active:bg-muted/40 transition-colors"
                           data-testid={`accordion-station-${station.stationId}`}
                         >
-                          <span className="font-medium">{station.stationName}</span>
-                          <div className="flex items-center gap-2">
-                            <span className="text-sm text-muted-foreground">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center">
+                              <Store className="w-5 h-5 text-muted-foreground" />
+                            </div>
+                            <span className="font-medium">{station.stationName}</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <span className="font-semibold">
                               €{station.totalCost.toFixed(2)}
                             </span>
-                            {expandedStations.has(station.stationId) ? (
-                              <ChevronUp className="h-5 w-5 text-muted-foreground" />
-                            ) : (
+                            <motion.div
+                              animate={{ rotate: expandedStations.has(station.stationId) ? 180 : 0 }}
+                              transition={springTransition}
+                            >
                               <ChevronDown className="h-5 w-5 text-muted-foreground" />
-                            )}
+                            </motion.div>
                           </div>
                         </button>
                         
@@ -827,21 +948,24 @@ export default function Reports() {
                             >
                               <div className="p-3 space-y-2 bg-background">
                                 {station.items.map((item, idx) => (
-                                  <div
+                                  <motion.div
                                     key={idx}
-                                    className="flex items-center justify-between p-3 bg-muted/30 rounded-lg"
+                                    initial={{ opacity: 0, x: -10 }}
+                                    animate={{ opacity: 1, x: 0 }}
+                                    transition={{ ...springTransition, delay: idx * 0.03 }}
+                                    className="flex items-center justify-between p-3 bg-muted/20 rounded-xl"
                                     data-testid={`row-product-${item.productId}`}
                                   >
-                                    <div className="flex-1 min-w-0">
-                                      <p className="text-sm font-medium truncate" data-testid={`text-product-name-${item.productId}`}>
+                                    <div className="flex-1 min-w-0 mr-3">
+                                      <p className="font-medium truncate" data-testid={`text-product-name-${item.productId}`}>
                                         {item.productName}
                                       </p>
-                                      <p className="text-xs text-muted-foreground">
+                                      <p className="text-sm text-muted-foreground">
                                         {item.quantity.toFixed(2)} × €{parseFloat(item.costPrice).toFixed(2)}
                                       </p>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                      <span className="font-medium text-sm">
+                                      <span className="font-semibold">
                                         €{item.totalCost.toFixed(2)}
                                       </span>
                                       {canCorrect && (
@@ -855,13 +979,14 @@ export default function Reports() {
                                             item.quantity,
                                             station.stationId.toString()
                                           )}
+                                          className="h-11 w-11"
                                           data-testid={`button-correct-station-${station.stationId}-${item.productId}`}
                                         >
                                           <Pencil className="h-4 w-4" />
                                         </HapticButton>
                                       )}
                                     </div>
-                                  </div>
+                                  </motion.div>
                                 ))}
                               </div>
                             </motion.div>
@@ -882,15 +1007,17 @@ export default function Reports() {
             initial="hidden"
             animate="show"
           >
-            <Card>
-              <CardContent className="py-16 text-center">
+            <Card className="border-dashed">
+              <CardContent className="py-20 text-center">
                 <motion.div
                   initial={{ scale: 0.8, opacity: 0 }}
                   animate={{ scale: 1, opacity: 1 }}
                   transition={springTransition}
                 >
-                  <FileText className="w-16 h-16 mx-auto text-muted-foreground/50 mb-4" />
-                  <p className="text-muted-foreground">
+                  <div className="w-20 h-20 rounded-3xl bg-muted/50 flex items-center justify-center mx-auto mb-6">
+                    <FileText className="w-10 h-10 text-muted-foreground/50" />
+                  </div>
+                  <p className="text-muted-foreground text-base">
                     Seleziona un evento per visualizzare il report
                   </p>
                 </motion.div>
@@ -901,19 +1028,57 @@ export default function Reports() {
       </motion.div>
 
       <BottomSheet
+        open={showExportSheet}
+        onClose={() => setShowExportSheet(false)}
+        title="Esporta Report"
+      >
+        <div className="p-4 space-y-3">
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={handleExportPDF}
+            className="w-full flex items-center gap-4 p-4 bg-red-500/10 rounded-2xl active:bg-red-500/20 transition-colors"
+            data-testid="button-export-pdf"
+          >
+            <div className="w-12 h-12 rounded-xl bg-red-500 flex items-center justify-center">
+              <FileText className="w-6 h-6 text-white" />
+            </div>
+            <div className="text-left">
+              <p className="font-semibold">Esporta PDF</p>
+              <p className="text-sm text-muted-foreground">Documento formattato per stampa</p>
+            </div>
+          </motion.button>
+
+          <motion.button
+            whileTap={{ scale: 0.98 }}
+            onClick={handleExportExcel}
+            className="w-full flex items-center gap-4 p-4 bg-green-500/10 rounded-2xl active:bg-green-500/20 transition-colors"
+            data-testid="button-export-excel"
+          >
+            <div className="w-12 h-12 rounded-xl bg-green-500 flex items-center justify-center">
+              <FileSpreadsheet className="w-6 h-6 text-white" />
+            </div>
+            <div className="text-left">
+              <p className="font-semibold">Esporta Excel</p>
+              <p className="text-sm text-muted-foreground">Foglio di calcolo modificabile</p>
+            </div>
+          </motion.button>
+        </div>
+      </BottomSheet>
+
+      <BottomSheet
         open={correctionSheetOpen}
         onClose={() => setCorrectionSheetOpen(false)}
         title="Correggi Consumo"
       >
         <div className="p-4 space-y-5">
-          <div className="p-4 bg-muted/50 rounded-xl">
+          <div className="p-4 bg-muted/30 rounded-2xl">
             <p className="text-xs text-muted-foreground mb-1">Prodotto</p>
-            <p className="font-semibold">{correctingProduct?.productName}</p>
+            <p className="font-semibold text-lg">{correctingProduct?.productName}</p>
           </div>
           
-          <div className="p-4 bg-muted/50 rounded-xl">
+          <div className="p-4 bg-amber-500/10 rounded-2xl">
             <p className="text-xs text-muted-foreground mb-1">Quantità attuale</p>
-            <p className="font-semibold text-lg">{correctingProduct?.currentQuantity.toFixed(2)}</p>
+            <p className="font-bold text-2xl text-amber-600">{correctingProduct?.currentQuantity.toFixed(2)}</p>
           </div>
           
           <div className="space-y-2">
@@ -925,7 +1090,7 @@ export default function Reports() {
               value={newQuantity}
               onChange={(e) => setNewQuantity(e.target.value)}
               placeholder="Inserisci nuova quantità"
-              className="min-h-[48px] text-lg"
+              className="min-h-[52px] text-lg rounded-xl"
               data-testid="input-correct-quantity"
             />
             <p className="text-xs text-muted-foreground">
@@ -939,7 +1104,7 @@ export default function Reports() {
               value={correctionReason}
               onChange={(e) => setCorrectionReason(e.target.value)}
               placeholder="Es: Errore di conteggio..."
-              className="min-h-[100px]"
+              className="min-h-[100px] rounded-xl"
               data-testid="input-correct-reason"
             />
           </div>
@@ -947,14 +1112,14 @@ export default function Reports() {
           <div className="flex gap-3 pt-2">
             <HapticButton
               variant="outline"
-              className="flex-1 min-h-[48px]"
+              className="flex-1 min-h-[52px] rounded-xl"
               onClick={() => setCorrectionSheetOpen(false)}
               data-testid="button-cancel-correct"
             >
               Annulla
             </HapticButton>
             <HapticButton
-              className="flex-1 min-h-[48px]"
+              className="flex-1 min-h-[52px] rounded-xl"
               onClick={handleCorrectConsumption}
               disabled={correctConsumptionMutation.isPending}
               hapticType="success"

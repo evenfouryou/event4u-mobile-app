@@ -1,8 +1,9 @@
-import { useEffect } from "react";
-import { Route, Switch, useLocation } from "wouter";
+import { useEffect, useCallback } from "react";
+import { Route, Switch, useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
-import { AccountLayout } from "@/components/account-layout";
+import { queryClient } from "@/lib/queryClient";
 import AccountHome from "@/pages/account-home";
 import AccountProfile from "@/pages/account-profile";
 import AccountTickets from "@/pages/account-tickets";
@@ -10,13 +11,68 @@ import AccountTicketDetail from "@/pages/account-ticket-detail";
 import AccountNameChange from "@/pages/account-name-change";
 import AccountWallet from "@/pages/account-wallet";
 import AccountResales from "@/pages/account-resales";
-import { Loader2 } from "lucide-react";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { ThemeToggle } from "@/components/theme-toggle";
+import {
+  MobileAppLayout,
+  MobileHeader,
+  MobileBottomBar,
+  MobileNavItem,
+  HapticButton,
+  triggerHaptic,
+} from "@/components/mobile-primitives";
+import {
+  Loader2,
+  User,
+  Ticket,
+  Wallet,
+  RefreshCw,
+  Home,
+  Sparkles,
+  LogOut,
+  ChevronLeft,
+} from "lucide-react";
+
+interface Customer {
+  id: number;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+}
+
+const navItems = [
+  { href: "/account/home", label: "Home", icon: Home },
+  { href: "/account/tickets", label: "Biglietti", icon: Ticket },
+  { href: "/account/wallet", label: "Wallet", icon: Wallet },
+  { href: "/account/resales", label: "Rivendita", icon: RefreshCw },
+  { href: "/account/profile", label: "Profilo", icon: User },
+];
+
+const springTransition = {
+  type: "spring" as const,
+  stiffness: 400,
+  damping: 30,
+};
+
+const fadeIn = {
+  initial: { opacity: 0 },
+  animate: { opacity: 1 },
+  exit: { opacity: 0 },
+  transition: springTransition,
+};
+
+const scaleIn = {
+  initial: { opacity: 0, scale: 0.9 },
+  animate: { opacity: 1, scale: 1 },
+  exit: { opacity: 0, scale: 0.9 },
+  transition: springTransition,
+};
 
 export default function AccountPage() {
   const [location, navigate] = useLocation();
   const { user } = useAuth();
 
-  // Redirect scanners away from account page
   useEffect(() => {
     if (user && (user as any).role === 'scanner') {
       navigate("/scanner");
@@ -24,10 +80,9 @@ export default function AccountPage() {
     }
   }, [user, navigate]);
 
-  // Only fetch customer data if NOT a scanner
   const isScanner = user && (user as any).role === 'scanner';
-  
-  const { data: customer, isLoading, isError } = useQuery({
+
+  const { data: customer, isLoading, isError } = useQuery<Customer>({
     queryKey: ["/api/public/customers/me"],
     enabled: !isScanner,
     retry: false,
@@ -45,14 +100,61 @@ export default function AccountPage() {
     }
   }, [location, navigate]);
 
+  const handleLogout = useCallback(async () => {
+    triggerHaptic('medium');
+    try {
+      await fetch("/api/logout", { method: "GET", credentials: "include" });
+    } catch (e) {
+      console.error("Logout error:", e);
+    }
+    localStorage.removeItem("customerToken");
+    localStorage.removeItem("customerData");
+    queryClient.clear();
+    window.location.href = "/acquista";
+  }, []);
+
+  const getInitials = useCallback(() => {
+    if (!customer) return "U";
+    return `${customer.firstName?.[0] || ''}${customer.lastName?.[0] || ''}`.toUpperCase();
+  }, [customer]);
+
+  const getPageTitle = useCallback(() => {
+    if (location.includes('/account/home')) return 'Home';
+    if (location.includes('/account/profile')) return 'Profilo';
+    if (location.includes('/account/tickets')) return 'Biglietti';
+    if (location.includes('/account/wallet')) return 'Wallet';
+    if (location.includes('/account/resales')) return 'Rivendita';
+    return 'Account';
+  }, [location]);
+
+  const showBackButton = location.includes('/account/tickets/') && 
+    (location.includes('/name-change') || /\/account\/tickets\/[^/]+$/.test(location));
+
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <Loader2 className="w-8 h-8 animate-spin text-primary mx-auto" />
-          <p className="text-muted-foreground mt-4">Caricamento...</p>
-        </div>
-      </div>
+      <MobileAppLayout className="bg-background">
+        <motion.div 
+          className="flex-1 flex items-center justify-center"
+          {...scaleIn}
+        >
+          <div className="text-center space-y-4">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            >
+              <Loader2 className="w-12 h-12 text-primary mx-auto" />
+            </motion.div>
+            <motion.p 
+              className="text-muted-foreground text-lg"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springTransition, delay: 0.2 }}
+            >
+              Caricamento...
+            </motion.p>
+          </div>
+        </motion.div>
+      </MobileAppLayout>
     );
   }
 
@@ -60,17 +162,109 @@ export default function AccountPage() {
     return null;
   }
 
+  const headerContent = (
+    <MobileHeader
+      title={getPageTitle()}
+      leftAction={
+        showBackButton ? (
+          <HapticButton
+            variant="ghost"
+            size="icon"
+            onClick={() => navigate('/account/tickets')}
+            className="rounded-full"
+            hapticType="light"
+            data-testid="button-back"
+          >
+            <ChevronLeft className="w-6 h-6" />
+          </HapticButton>
+        ) : (
+          <Link href="/acquista">
+            <motion.div 
+              className="flex items-center gap-2 cursor-pointer min-h-[44px] min-w-[44px] px-1"
+              whileTap={{ scale: 0.95 }}
+              onClick={() => triggerHaptic('light')}
+              data-testid="link-logo"
+            >
+              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                <Sparkles className="w-4 h-4 text-primary-foreground" />
+              </div>
+            </motion.div>
+          </Link>
+        )
+      }
+      rightAction={
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <Link href="/account/profile">
+            <motion.div
+              whileTap={{ scale: 0.9 }}
+              onClick={() => triggerHaptic('light')}
+            >
+              <Avatar 
+                className="w-10 h-10 bg-primary/20 border-2 border-primary/30 cursor-pointer" 
+                data-testid="button-avatar"
+              >
+                <AvatarFallback className="bg-transparent text-primary font-semibold text-sm">
+                  {getInitials()}
+                </AvatarFallback>
+              </Avatar>
+            </motion.div>
+          </Link>
+        </div>
+      }
+      className="bg-card/95 backdrop-blur-xl border-b border-border"
+    />
+  );
+
+  const footerContent = (
+    <MobileBottomBar className="bg-card/95 backdrop-blur-xl border-t border-border">
+      {navItems.map((item) => {
+        const isActive = location === item.href || 
+          (item.href !== "/account/home" && location.startsWith(item.href));
+        return (
+          <MobileNavItem
+            key={item.href}
+            icon={item.icon}
+            label={item.label}
+            active={isActive}
+            onClick={() => {
+              triggerHaptic('light');
+              navigate(item.href);
+            }}
+          />
+        );
+      })}
+    </MobileBottomBar>
+  );
+
   return (
-    <AccountLayout>
-      <Switch>
-        <Route path="/account/home" component={AccountHome} />
-        <Route path="/account/profile" component={AccountProfile} />
-        <Route path="/account/tickets/:id/name-change" component={AccountNameChange} />
-        <Route path="/account/tickets/:id" component={AccountTicketDetail} />
-        <Route path="/account/tickets" component={AccountTickets} />
-        <Route path="/account/wallet" component={AccountWallet} />
-        <Route path="/account/resales" component={AccountResales} />
-      </Switch>
-    </AccountLayout>
+    <MobileAppLayout
+      header={headerContent}
+      footer={footerContent}
+      className="bg-background"
+      contentClassName="pb-24"
+      noPadding
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={location}
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: -20 }}
+          transition={springTransition}
+          className="flex-1"
+        >
+          <Switch>
+            <Route path="/account/home" component={AccountHome} />
+            <Route path="/account/profile" component={AccountProfile} />
+            <Route path="/account/tickets/:id/name-change" component={AccountNameChange} />
+            <Route path="/account/tickets/:id" component={AccountTicketDetail} />
+            <Route path="/account/tickets" component={AccountTickets} />
+            <Route path="/account/wallet" component={AccountWallet} />
+            <Route path="/account/resales" component={AccountResales} />
+          </Switch>
+        </motion.div>
+      </AnimatePresence>
+    </MobileAppLayout>
   );
 }

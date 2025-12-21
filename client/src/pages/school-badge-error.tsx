@@ -1,35 +1,34 @@
 import { useLocation } from "wouter";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { XCircle, AlertTriangle, Clock, Home } from "lucide-react";
 import { motion } from "framer-motion";
+import { XCircle, AlertTriangle, Clock, Home, RefreshCw } from "lucide-react";
+import { MobileAppLayout, HapticButton, triggerHaptic } from "@/components/mobile-primitives";
 
-const ERROR_MESSAGES: Record<string, { title: string; description: string; icon: typeof XCircle }> = {
+const springConfig = { stiffness: 400, damping: 30 };
+
+const ERROR_MESSAGES: Record<string, { title: string; description: string; icon: typeof XCircle; color: string }> = {
   "missing-token": {
     title: "Token mancante",
     description: "Il link di verifica non contiene un token valido. Assicurati di aver copiato correttamente il link dall'email.",
     icon: AlertTriangle,
+    color: "text-amber-500",
   },
   "invalid-token": {
     title: "Token non valido",
     description: "Il link di verifica non è valido. Potrebbe essere stato già utilizzato o non esiste.",
     icon: XCircle,
+    color: "text-destructive",
   },
   "expired-token": {
     title: "Link scaduto",
     description: "Il link di verifica è scaduto. I link sono validi per 24 ore. Richiedi un nuovo badge per ricevere un nuovo link.",
     icon: Clock,
+    color: "text-amber-500",
   },
   "server-error": {
     title: "Errore del server",
     description: "Si è verificato un errore durante la verifica. Riprova più tardi o contatta l'assistenza.",
     icon: XCircle,
+    color: "text-destructive",
   },
 };
 
@@ -42,36 +41,103 @@ export default function SchoolBadgeError() {
   const errorInfo = ERROR_MESSAGES[reason] || ERROR_MESSAGES["server-error"];
   const IconComponent = errorInfo.icon;
 
+  const handleGoHome = () => {
+    triggerHaptic('medium');
+    setLocation("/");
+  };
+
+  const handleRetry = () => {
+    triggerHaptic('light');
+    window.location.reload();
+  };
+
   return (
-    <div className="min-h-screen flex items-center justify-center p-3 sm:p-4 md:p-6 bg-background">
+    <MobileAppLayout
+      className="bg-background"
+      contentClassName="flex flex-col items-center justify-center px-6"
+      noPadding
+    >
       <motion.div
-        initial={{ opacity: 0, scale: 0.95 }}
-        animate={{ opacity: 1, scale: 1 }}
-        className="w-full max-w-md"
+        initial={{ opacity: 0, y: 40 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ type: "spring", ...springConfig }}
+        className="w-full flex flex-col items-center text-center"
       >
-        <Card className="text-center" data-testid="card-badge-error">
-          <CardHeader>
-            <div className="w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto mb-3 sm:mb-4">
-              <IconComponent className="h-7 w-7 sm:h-8 sm:w-8 text-destructive" />
-            </div>
-            <CardTitle className="text-lg sm:text-xl md:text-2xl" data-testid="text-error-title">{errorInfo.title}</CardTitle>
-            <CardDescription className="text-sm sm:text-base" data-testid="text-error-description">
-              {errorInfo.description}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Button 
-              variant="outline" 
-              onClick={() => setLocation("/")}
-              className="w-full sm:w-auto"
-              data-testid="button-go-home"
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", ...springConfig, delay: 0.1 }}
+          className="w-20 h-20 rounded-3xl bg-destructive/10 flex items-center justify-center mb-6"
+        >
+          <motion.div
+            initial={{ rotate: -180, opacity: 0 }}
+            animate={{ rotate: 0, opacity: 1 }}
+            transition={{ type: "spring", ...springConfig, delay: 0.2 }}
+          >
+            <IconComponent className={`h-10 w-10 ${errorInfo.color}`} />
+          </motion.div>
+        </motion.div>
+
+        <motion.h1
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", ...springConfig, delay: 0.15 }}
+          className="text-2xl font-bold text-foreground mb-3"
+          data-testid="text-error-title"
+        >
+          {errorInfo.title}
+        </motion.h1>
+
+        <motion.p
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", ...springConfig, delay: 0.2 }}
+          className="text-base text-muted-foreground leading-relaxed mb-10 px-4"
+          data-testid="text-error-description"
+        >
+          {errorInfo.description}
+        </motion.p>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ type: "spring", ...springConfig, delay: 0.25 }}
+          className="w-full flex flex-col gap-3 px-2"
+        >
+          <HapticButton
+            onClick={handleGoHome}
+            hapticType="medium"
+            className="w-full h-14 text-base font-semibold rounded-2xl"
+            data-testid="button-go-home"
+          >
+            <Home className="h-5 w-5 mr-3" />
+            Torna alla home
+          </HapticButton>
+
+          {reason === "server-error" && (
+            <HapticButton
+              variant="outline"
+              onClick={handleRetry}
+              hapticType="light"
+              className="w-full h-14 text-base font-medium rounded-2xl"
+              data-testid="button-retry"
             >
-              <Home className="h-4 w-4 mr-2" />
-              Torna alla home
-            </Button>
-          </CardContent>
-        </Card>
+              <RefreshCw className="h-5 w-5 mr-3" />
+              Riprova
+            </HapticButton>
+          )}
+        </motion.div>
       </motion.div>
-    </div>
+
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.5 }}
+        className="absolute bottom-8 text-xs text-muted-foreground/60"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        Codice errore: {reason}
+      </motion.p>
+    </MobileAppLayout>
   );
 }

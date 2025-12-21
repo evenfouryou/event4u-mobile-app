@@ -1,13 +1,12 @@
 import { useState } from 'react';
 import { useQuery, useMutation } from '@tanstack/react-query';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { Card, CardContent } from '@/components/ui/card';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Sparkles, TrendingUp, AlertTriangle, CheckCircle2, Send, ArrowLeft } from 'lucide-react';
+import { Loader2, Sparkles, TrendingUp, AlertTriangle, CheckCircle2, Send, ArrowLeft, Brain, Lightbulb, MessageCircle } from 'lucide-react';
 import { apiRequest } from '@/lib/queryClient';
 import { useToast } from '@/hooks/use-toast';
-import { MobileAppLayout, MobileHeader, HapticButton } from '@/components/mobile-primitives';
+import { MobileAppLayout, MobileHeader, HapticButton, triggerHaptic } from '@/components/mobile-primitives';
 import { useLocation } from 'wouter';
 
 interface Insight {
@@ -28,13 +27,13 @@ const staggerContainer = {
   show: {
     opacity: 1,
     transition: {
-      staggerChildren: 0.1,
+      staggerChildren: 0.12,
     },
   },
 };
 
 const cardVariant = {
-  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  hidden: { opacity: 0, y: 30, scale: 0.92 },
   show: { 
     opacity: 1, 
     y: 0, 
@@ -59,6 +58,7 @@ export default function AIAnalysis() {
       return { response, userQuery };
     },
     onSuccess: (data: any) => {
+      triggerHaptic('success');
       setConversationHistory(prev => [
         ...prev,
         { role: 'user', content: data.userQuery },
@@ -67,6 +67,7 @@ export default function AIAnalysis() {
       setQuery('');
     },
     onError: () => {
+      triggerHaptic('error');
       toast({
         title: "Errore",
         description: "Impossibile analizzare i dati",
@@ -78,37 +79,55 @@ export default function AIAnalysis() {
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (query.trim()) {
+      triggerHaptic('medium');
       analysisMutation.mutate(query);
     }
+  };
+
+  const handleSuggestionTap = (question: string) => {
+    triggerHaptic('light');
+    setQuery(question);
   };
 
   const getInsightIcon = (type: string) => {
     switch (type) {
       case 'warning':
-        return <AlertTriangle className="h-6 w-6 text-warning" />;
+        return <AlertTriangle className="h-7 w-7" />;
       case 'success':
-        return <CheckCircle2 className="h-6 w-6 text-success" />;
+        return <CheckCircle2 className="h-7 w-7" />;
       default:
-        return <TrendingUp className="h-6 w-6 text-primary" />;
+        return <TrendingUp className="h-7 w-7" />;
     }
   };
 
-  const getInsightGradient = (type: string) => {
+  const getInsightColors = (type: string) => {
     switch (type) {
       case 'warning':
-        return 'from-warning/20 to-warning/5';
+        return {
+          iconBg: 'bg-amber-500',
+          iconColor: 'text-black',
+          gradient: 'from-amber-500/25 via-amber-500/10 to-transparent',
+        };
       case 'success':
-        return 'from-green-500/20 to-green-500/5';
+        return {
+          iconBg: 'bg-emerald-500',
+          iconColor: 'text-black',
+          gradient: 'from-emerald-500/25 via-emerald-500/10 to-transparent',
+        };
       default:
-        return 'from-primary/20 to-primary/5';
+        return {
+          iconBg: 'bg-primary',
+          iconColor: 'text-primary-foreground',
+          gradient: 'from-primary/25 via-primary/10 to-transparent',
+        };
     }
   };
 
   const suggestedQuestions = [
-    "Quali sono i prodotti più venduti questo mese?",
-    "Ci sono prodotti che rischiano di finire?",
-    "Quale evento ha avuto il consumo più alto?",
-    "Dammi suggerimenti per ottimizzare le scorte",
+    { icon: TrendingUp, text: "Quali sono i prodotti più venduti questo mese?" },
+    { icon: AlertTriangle, text: "Ci sono prodotti che rischiano di finire?" },
+    { icon: Sparkles, text: "Quale evento ha avuto il consumo più alto?" },
+    { icon: Lightbulb, text: "Dammi suggerimenti per ottimizzare le scorte" },
   ];
 
   const header = (
@@ -120,16 +139,18 @@ export default function AIAnalysis() {
           size="icon"
           onClick={() => setLocation('/')}
           data-testid="button-back"
+          className="h-11 w-11"
         >
-          <ArrowLeft className="h-5 w-5" />
+          <ArrowLeft className="h-6 w-6" />
         </HapticButton>
       }
       rightAction={
         <motion.div
           animate={{ rotate: [0, 15, -15, 0] }}
           transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+          className="h-11 w-11 flex items-center justify-center"
         >
-          <Sparkles className="h-5 w-5 text-primary" />
+          <Brain className="h-6 w-6 text-primary" />
         </motion.div>
       }
     />
@@ -137,88 +158,114 @@ export default function AIAnalysis() {
 
   return (
     <MobileAppLayout header={header} contentClassName="pb-24">
-      <div className="flex flex-col gap-6 py-4">
-        {/* Insights Section */}
+      <div className="flex flex-col gap-8 py-6">
+        {/* Section Header - Insights */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={springTransition}
+          className="flex items-center gap-3"
+        >
+          <div className="h-12 w-12 rounded-2xl bg-primary/20 flex items-center justify-center">
+            <Sparkles className="h-6 w-6 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-foreground">Insights Automatici</h2>
+            <p className="text-muted-foreground">Analisi intelligente dei tuoi dati</p>
+          </div>
+        </motion.div>
+
+        {/* Insights Cards */}
         <motion.div
           variants={staggerContainer}
           initial="hidden"
           animate="show"
           className="flex flex-col gap-4"
         >
-          <motion.h2 
-            variants={cardVariant}
-            className="text-lg font-semibold text-foreground flex items-center gap-2"
-          >
-            <Sparkles className="h-5 w-5 text-primary" />
-            Insights Automatici
-          </motion.h2>
-
           {insightsLoading ? (
             <motion.div variants={cardVariant}>
-              <Card className="min-h-[160px]">
-                <CardContent className="flex items-center justify-center h-[160px]">
+              <Card className="min-h-[180px] bg-gradient-to-br from-primary/10 to-transparent border-0">
+                <CardContent className="flex items-center justify-center h-[180px]">
                   <motion.div
                     animate={{ rotate: 360 }}
                     transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                   >
-                    <Loader2 className="h-8 w-8 text-primary" />
+                    <Loader2 className="h-10 w-10 text-primary" />
                   </motion.div>
                 </CardContent>
               </Card>
             </motion.div>
           ) : (
             <AnimatePresence mode="popLayout">
-              {insights?.map((insight, index) => (
-                <motion.div
-                  key={index}
-                  variants={cardVariant}
-                  layout
-                  whileTap={{ scale: 0.98 }}
-                  transition={springTransition}
-                >
-                  <Card 
-                    className={`min-h-[140px] bg-gradient-to-br ${getInsightGradient(insight.type)} border-0`}
-                    data-testid={`card-insight-${index}`}
+              {insights?.map((insight, index) => {
+                const colors = getInsightColors(insight.type);
+                return (
+                  <motion.div
+                    key={index}
+                    variants={cardVariant}
+                    layout
+                    whileTap={{ scale: 0.97 }}
+                    transition={springTransition}
+                    onTapStart={() => triggerHaptic('light')}
                   >
-                    <CardHeader className="pb-2">
-                      <div className="flex items-start gap-4">
-                        <motion.div
-                          initial={{ scale: 0 }}
-                          animate={{ scale: 1 }}
-                          transition={{ ...springTransition, delay: 0.2 + index * 0.1 }}
-                          className="p-3 rounded-2xl bg-background/50 backdrop-blur-sm"
-                        >
-                          {getInsightIcon(insight.type)}
-                        </motion.div>
-                        <div className="flex-1">
-                          <CardTitle className="text-lg leading-tight">{insight.title}</CardTitle>
+                    <Card 
+                      className={`min-h-[160px] bg-gradient-to-br ${colors.gradient} border-0 overflow-hidden`}
+                      data-testid={`card-insight-${index}`}
+                    >
+                      <CardContent className="p-5">
+                        <div className="flex gap-4">
+                          <motion.div
+                            initial={{ scale: 0, rotate: -180 }}
+                            animate={{ scale: 1, rotate: 0 }}
+                            transition={{ ...springTransition, delay: 0.15 + index * 0.1 }}
+                            className={`h-14 w-14 rounded-2xl ${colors.iconBg} flex items-center justify-center shrink-0`}
+                          >
+                            <span className={colors.iconColor}>
+                              {getInsightIcon(insight.type)}
+                            </span>
+                          </motion.div>
+                          <div className="flex-1 min-w-0">
+                            <h3 className="text-lg font-bold text-foreground leading-tight mb-2">
+                              {insight.title}
+                            </h3>
+                            <p className="text-base text-muted-foreground leading-relaxed">
+                              {insight.description}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </CardHeader>
-                    <CardContent>
-                      <p className="text-base text-muted-foreground leading-relaxed">{insight.description}</p>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
           )}
         </motion.div>
 
-        {/* AI Chat Section */}
+        {/* Section Header - Chat */}
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ ...springTransition, delay: 0.2 }}
+          className="flex items-center gap-3 mt-4"
+        >
+          <div className="h-12 w-12 rounded-2xl bg-[#00CED1]/20 flex items-center justify-center">
+            <MessageCircle className="h-6 w-6 text-[#00CED1]" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-foreground">Chat con l'AI</h2>
+            <p className="text-muted-foreground">Fai domande sui tuoi dati</p>
+          </div>
+        </motion.div>
+
+        {/* Chat Section */}
         <motion.div
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ ...springTransition, delay: 0.3 }}
         >
-          <Card className="overflow-hidden">
-            <CardHeader className="pb-3">
-              <CardTitle className="text-lg">Chat con l'AI</CardTitle>
-              <CardDescription className="text-base">
-                Fai domande sui tuoi dati e ricevi analisi personalizzate
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="flex flex-col gap-4">
+          <Card className="border-0 bg-card/50 backdrop-blur-sm overflow-hidden">
+            <CardContent className="p-5 flex flex-col gap-5">
               {/* Conversation History */}
               <AnimatePresence mode="popLayout">
                 {conversationHistory.length > 0 && (
@@ -226,23 +273,23 @@ export default function AIAnalysis() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="flex flex-col gap-3 max-h-[400px] overflow-y-auto" 
+                    className="flex flex-col gap-4 max-h-[450px] overflow-y-auto" 
                     data-testid="div-conversation-history"
                   >
                     {conversationHistory.map((message, index) => (
                       <motion.div
                         key={index}
-                        initial={{ opacity: 0, x: message.role === 'user' ? 20 : -20 }}
-                        animate={{ opacity: 1, x: 0 }}
+                        initial={{ opacity: 0, x: message.role === 'user' ? 30 : -30, scale: 0.9 }}
+                        animate={{ opacity: 1, x: 0, scale: 1 }}
                         transition={springTransition}
                         className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                         data-testid={`div-message-${index}`}
                       >
                         <div
-                          className={`rounded-2xl px-4 py-3 max-w-[85%] ${
+                          className={`rounded-3xl px-5 py-4 max-w-[90%] ${
                             message.role === 'user'
                               ? 'bg-primary text-primary-foreground'
-                              : 'bg-muted'
+                              : 'bg-muted/80'
                           }`}
                         >
                           <p className="text-base whitespace-pre-wrap leading-relaxed">{message.content}</p>
@@ -260,26 +307,26 @@ export default function AIAnalysis() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     exit={{ opacity: 0 }}
-                    className="flex flex-col gap-3"
+                    className="flex flex-col gap-4"
                   >
-                    <p className="text-base text-muted-foreground">Domande suggerite:</p>
-                    <div className="flex flex-col gap-2">
-                      {suggestedQuestions.map((question, index) => (
-                        <motion.div
+                    <p className="text-base font-medium text-muted-foreground">Domande suggerite:</p>
+                    <div className="flex flex-col gap-3">
+                      {suggestedQuestions.map((item, index) => (
+                        <motion.button
                           key={index}
-                          initial={{ opacity: 0, x: -10 }}
+                          initial={{ opacity: 0, x: -20 }}
                           animate={{ opacity: 1, x: 0 }}
-                          transition={{ ...springTransition, delay: 0.1 * index }}
+                          transition={{ ...springTransition, delay: 0.08 * index }}
+                          whileTap={{ scale: 0.97 }}
+                          onClick={() => handleSuggestionTap(item.text)}
+                          className="flex items-center gap-4 p-4 rounded-2xl bg-muted/50 hover-elevate active-elevate-2 text-left min-h-[56px]"
+                          data-testid={`button-suggestion-${index}`}
                         >
-                          <Badge
-                            variant="outline"
-                            className="cursor-pointer hover-elevate py-3 px-4 text-base font-normal justify-start w-full"
-                            onClick={() => setQuery(question)}
-                            data-testid={`badge-suggestion-${index}`}
-                          >
-                            {question}
-                          </Badge>
-                        </motion.div>
+                          <div className="h-10 w-10 rounded-xl bg-primary/20 flex items-center justify-center shrink-0">
+                            <item.icon className="h-5 w-5 text-primary" />
+                          </div>
+                          <span className="text-base text-foreground">{item.text}</span>
+                        </motion.button>
                       ))}
                     </div>
                   </motion.div>
@@ -287,12 +334,12 @@ export default function AIAnalysis() {
               </AnimatePresence>
 
               {/* Input Form */}
-              <form onSubmit={handleSubmit} className="flex gap-3 items-end">
+              <form onSubmit={handleSubmit} className="flex gap-3 items-end mt-2">
                 <Textarea
                   value={query}
                   onChange={(e) => setQuery(e.target.value)}
                   placeholder="Fai una domanda sui tuoi dati..."
-                  className="min-h-[56px] flex-1 text-base resize-none rounded-2xl"
+                  className="min-h-[60px] flex-1 text-base resize-none rounded-2xl border-2 border-muted focus:border-primary"
                   disabled={analysisMutation.isPending}
                   data-testid="textarea-query"
                 />
@@ -301,7 +348,7 @@ export default function AIAnalysis() {
                   size="icon"
                   disabled={!query.trim() || analysisMutation.isPending}
                   hapticType="medium"
-                  className="h-14 w-14 rounded-2xl shrink-0"
+                  className="h-[60px] w-[60px] rounded-2xl shrink-0 bg-primary"
                   data-testid="button-send"
                 >
                   {analysisMutation.isPending ? (
@@ -309,10 +356,10 @@ export default function AIAnalysis() {
                       animate={{ rotate: 360 }}
                       transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
                     >
-                      <Loader2 className="h-5 w-5" />
+                      <Loader2 className="h-6 w-6" />
                     </motion.div>
                   ) : (
-                    <Send className="h-5 w-5" />
+                    <Send className="h-6 w-6" />
                   )}
                 </HapticButton>
               </form>

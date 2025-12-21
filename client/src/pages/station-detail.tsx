@@ -1,31 +1,22 @@
 import { useState } from "react";
-import { useParams, Link } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  MobileAppLayout,
+  MobileHeader,
+  HapticButton,
+  BottomSheet,
+  triggerHaptic,
+} from "@/components/mobile-primitives";
 import {
   ArrowLeft,
   Package,
@@ -39,7 +30,7 @@ import {
   Users,
   Calendar,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import type { Event, Station, Product, User, StockMovement } from "@shared/schema";
@@ -59,24 +50,28 @@ type EnrichedMovement = StockMovement & {
   productCode?: string;
 };
 
-const movementTypeConfig: Record<string, { label: string; color: string; icon: React.ElementType }> = {
-  LOAD: { label: 'Carico', color: 'text-green-500', icon: ArrowDownLeft },
-  UNLOAD: { label: 'Scarico', color: 'text-red-500', icon: ArrowUpRight },
-  TRANSFER: { label: 'Trasferimento', color: 'text-blue-500', icon: RefreshCw },
-  CONSUME: { label: 'Consumo', color: 'text-orange-500', icon: ArrowUpRight },
-  RETURN: { label: 'Reso', color: 'text-purple-500', icon: ArrowDownLeft },
-  ADJUSTMENT: { label: 'Correzione', color: 'text-yellow-500', icon: Pencil },
-  ADJUST: { label: 'Correzione', color: 'text-yellow-500', icon: Pencil },
+const springConfig = { type: "spring" as const, stiffness: 400, damping: 30 };
+
+const movementTypeConfig: Record<string, { label: string; color: string; bgColor: string; icon: React.ElementType }> = {
+  LOAD: { label: 'Carico', color: 'text-green-500', bgColor: 'bg-green-500/10', icon: ArrowDownLeft },
+  UNLOAD: { label: 'Scarico', color: 'text-red-500', bgColor: 'bg-red-500/10', icon: ArrowUpRight },
+  TRANSFER: { label: 'Trasferimento', color: 'text-blue-500', bgColor: 'bg-blue-500/10', icon: RefreshCw },
+  CONSUME: { label: 'Consumo', color: 'text-orange-500', bgColor: 'bg-orange-500/10', icon: ArrowUpRight },
+  RETURN: { label: 'Reso', color: 'text-purple-500', bgColor: 'bg-purple-500/10', icon: ArrowDownLeft },
+  ADJUSTMENT: { label: 'Correzione', color: 'text-yellow-500', bgColor: 'bg-yellow-500/10', icon: Pencil },
+  ADJUST: { label: 'Correzione', color: 'text-yellow-500', bgColor: 'bg-yellow-500/10', icon: Pencil },
 };
 
 export default function StationDetail() {
   const { eventId, stationId } = useParams<{ eventId: string; stationId: string }>();
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const { user } = useAuth();
-  const [adjustDialogOpen, setAdjustDialogOpen] = useState(false);
+  const [adjustSheetOpen, setAdjustSheetOpen] = useState(false);
   const [selectedStock, setSelectedStock] = useState<EnrichedStock | null>(null);
   const [newQuantity, setNewQuantity] = useState('');
   const [adjustReason, setAdjustReason] = useState('');
+  const [activeTab, setActiveTab] = useState('stock');
 
   const canAdjustStock = user?.role === 'admin' || user?.role === 'super_admin' || user?.role === 'gestore';
 
@@ -129,16 +124,18 @@ export default function StationDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/stocks/station', stationId] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
       queryClient.invalidateQueries({ queryKey: ['/api/events', eventId, 'stocks'] });
-      setAdjustDialogOpen(false);
+      setAdjustSheetOpen(false);
       setSelectedStock(null);
       setNewQuantity('');
       setAdjustReason('');
+      triggerHaptic('success');
       toast({
         title: "Quantità corretta",
         description: "Lo stock è stato aggiornato",
       });
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       toast({
         title: "Errore",
         description: error.message || "Impossibile correggere la quantità",
@@ -148,16 +145,18 @@ export default function StationDetail() {
   });
 
   const handleOpenAdjust = (stock: EnrichedStock) => {
+    triggerHaptic('medium');
     setSelectedStock(stock);
     setNewQuantity(parseFloat(stock.quantity).toFixed(2));
     setAdjustReason('');
-    setAdjustDialogOpen(true);
+    setAdjustSheetOpen(true);
   };
 
   const handleSubmitAdjust = () => {
     if (!selectedStock) return;
     const qty = parseFloat(newQuantity);
     if (isNaN(qty) || qty < 0) {
+      triggerHaptic('error');
       toast({
         title: "Errore",
         description: "Inserisci una quantità valida (>= 0)",
@@ -190,155 +189,203 @@ export default function StationDetail() {
   };
 
   const assignedBartenders = users?.filter(u => station?.bartenderIds?.includes(u.id)) || [];
+  const stockWithQuantity = stationStocks?.filter(s => parseFloat(s.quantity) > 0) || [];
+
+  const handleBack = () => {
+    triggerHaptic('light');
+    navigate(`/events/${eventId}`);
+  };
 
   if (eventLoading || stationLoading) {
     return (
-      <div className="p-6 space-y-6">
-        <Skeleton className="h-12 w-64" />
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
-          <Skeleton className="h-32" />
+      <MobileAppLayout
+        header={
+          <MobileHeader
+            title="Caricamento..."
+            leftAction={
+              <HapticButton variant="ghost" size="icon" onClick={handleBack} data-testid="button-back-loading">
+                <ArrowLeft className="h-5 w-5" />
+              </HapticButton>
+            }
+          />
+        }
+      >
+        <div className="py-4 space-y-4 pb-24">
+          <Skeleton className="h-20 w-full rounded-2xl" />
+          <div className="grid grid-cols-3 gap-3">
+            <Skeleton className="h-24 rounded-2xl" />
+            <Skeleton className="h-24 rounded-2xl" />
+            <Skeleton className="h-24 rounded-2xl" />
+          </div>
+          <Skeleton className="h-12 w-full rounded-xl" />
+          <div className="space-y-3">
+            <Skeleton className="h-28 w-full rounded-2xl" />
+            <Skeleton className="h-28 w-full rounded-2xl" />
+            <Skeleton className="h-28 w-full rounded-2xl" />
+          </div>
         </div>
-      </div>
+      </MobileAppLayout>
     );
   }
 
   if (!event || !station) {
     return (
-      <div className="p-6">
-        <div className="text-center py-12">
-          <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-          <h2 className="text-xl font-semibold mb-2">Postazione non trovata</h2>
-          <p className="text-muted-foreground mb-4">
+      <MobileAppLayout
+        header={
+          <MobileHeader
+            title="Postazione"
+            leftAction={
+              <HapticButton variant="ghost" size="icon" onClick={handleBack} data-testid="button-back-not-found">
+                <ArrowLeft className="h-5 w-5" />
+              </HapticButton>
+            }
+          />
+        }
+      >
+        <div className="flex-1 flex flex-col items-center justify-center py-12 px-4 pb-24">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={springConfig}
+            className="w-20 h-20 rounded-full bg-muted flex items-center justify-center mb-6"
+          >
+            <MapPin className="h-10 w-10 text-muted-foreground" />
+          </motion.div>
+          <h2 className="text-xl font-semibold mb-2 text-center">Postazione non trovata</h2>
+          <p className="text-muted-foreground text-center mb-6">
             La postazione richiesta non esiste o non hai i permessi per visualizzarla.
           </p>
-          <Link href={`/events/${eventId}`}>
-            <Button variant="outline" data-testid="button-back-to-event">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Torna all'Evento
-            </Button>
-          </Link>
+          <HapticButton
+            variant="outline"
+            onClick={handleBack}
+            className="min-h-[48px] px-6"
+            data-testid="button-back-to-event"
+          >
+            <ArrowLeft className="h-5 w-5 mr-2" />
+            Torna all'Evento
+          </HapticButton>
         </div>
-      </div>
+      </MobileAppLayout>
     );
   }
 
   return (
-    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 pb-24 md:pb-8">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col gap-3 sm:gap-4 md:flex-row md:items-center md:justify-between"
-      >
-        <div className="flex items-center gap-3 sm:gap-4">
-          <Link href={`/events/${eventId}`}>
-            <Button variant="outline" size="icon" data-testid="button-back">
-              <ArrowLeft className="h-4 w-4" />
-            </Button>
-          </Link>
-          <div>
-            <div className="flex items-center gap-2 mb-1">
-              <div className="w-9 h-9 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
-                <MapPin className="h-4 w-4 sm:h-5 sm:w-5 text-white" />
-              </div>
-              <h1 className="text-lg sm:text-xl md:text-2xl font-bold" data-testid="text-station-name">{station.name}</h1>
+    <MobileAppLayout
+      header={
+        <MobileHeader
+          title={station.name}
+          subtitle={event.name}
+          leftAction={
+            <HapticButton variant="ghost" size="icon" onClick={handleBack} data-testid="button-back">
+              <ArrowLeft className="h-5 w-5" />
+            </HapticButton>
+          }
+        />
+      }
+    >
+      <div className="py-4 space-y-4 pb-24">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={springConfig}
+          className="flex items-center gap-3 px-1"
+        >
+          <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center flex-shrink-0">
+            <MapPin className="h-6 w-6 text-white" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2">
+              <h1 className="text-xl font-bold truncate" data-testid="text-station-name">{station.name}</h1>
               {(station as any).isGeneral && (
-                <Badge variant="secondary">Fissa</Badge>
+                <Badge variant="secondary" className="shrink-0">Fissa</Badge>
               )}
             </div>
-            <p className="text-sm text-muted-foreground flex items-center gap-2">
-              <Calendar className="h-4 w-4" />
-              {event.name}
+            <p className="text-sm text-muted-foreground flex items-center gap-1.5 truncate">
+              <Calendar className="h-4 w-4 shrink-0" />
+              <span className="truncate">{event.name}</span>
             </p>
           </div>
-        </div>
-      </motion.div>
+        </motion.div>
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1 }}
-        className="grid grid-cols-1 md:grid-cols-3 gap-4"
-      >
-        <Card data-testid="card-total-products">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Prodotti</CardTitle>
-            <Package className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {stationStocks?.filter(s => parseFloat(s.quantity) > 0).length || 0}
-            </div>
-            <p className="text-xs text-muted-foreground">prodotti in stock</p>
-          </CardContent>
-        </Card>
-
-        <Card data-testid="card-movements-count">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Movimenti</CardTitle>
-            <History className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{stationMovements.length}</div>
-            <p className="text-xs text-muted-foreground">movimenti totali</p>
-          </CardContent>
-        </Card>
-
-        <Card data-testid="card-bartenders">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Baristi</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{assignedBartenders.length}</div>
-            <p className="text-xs text-muted-foreground">
-              {assignedBartenders.length > 0 
-                ? assignedBartenders.map(b => b.firstName || (b.email?.split('@')[0] ?? 'Utente')).join(', ')
-                : 'Nessun barista assegnato'}
-            </p>
-          </CardContent>
-        </Card>
-      </motion.div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.2 }}
-      >
-        <Tabs defaultValue="stock" className="w-full">
-          <TabsList className="grid w-full grid-cols-2" data-testid="tabs-station">
-            <TabsTrigger value="stock" data-testid="tab-stock">
-              <Package className="h-4 w-4 mr-2" />
-              Stock
-            </TabsTrigger>
-            <TabsTrigger value="movements" data-testid="tab-movements">
-              <History className="h-4 w-4 mr-2" />
-              Movimenti
-            </TabsTrigger>
-          </TabsList>
-
-          <TabsContent value="stock" className="mt-4">
-            {stocksLoading ? (
-              <div className="space-y-4">
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
-                <Skeleton className="h-16 w-full" />
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springConfig, delay: 0.05 }}
+          className="grid grid-cols-3 gap-3"
+        >
+          <Card className="overflow-hidden" data-testid="card-total-products">
+            <CardContent className="p-3 text-center">
+              <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center mx-auto mb-2">
+                <Package className="h-5 w-5 text-primary" />
               </div>
-            ) : stationStocks && stationStocks.filter(s => parseFloat(s.quantity) > 0).length > 0 ? (
-              <Card>
-                <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Prodotto</TableHead>
-                      <TableHead className="text-right">Quantità</TableHead>
-                      <TableHead className="text-right">Stato</TableHead>
-                      {canAdjustStock && <TableHead className="w-20"></TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {stationStocks.filter(s => parseFloat(s.quantity) > 0).map((stock) => {
+              <div className="text-2xl font-bold tabular-nums">
+                {stockWithQuantity.length}
+              </div>
+              <p className="text-xs text-muted-foreground">Prodotti</p>
+            </CardContent>
+          </Card>
+
+          <Card className="overflow-hidden" data-testid="card-movements-count">
+            <CardContent className="p-3 text-center">
+              <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center mx-auto mb-2">
+                <History className="h-5 w-5 text-blue-500" />
+              </div>
+              <div className="text-2xl font-bold tabular-nums">{stationMovements.length}</div>
+              <p className="text-xs text-muted-foreground">Movimenti</p>
+            </CardContent>
+          </Card>
+
+          <Card className="overflow-hidden" data-testid="card-bartenders">
+            <CardContent className="p-3 text-center">
+              <div className="w-10 h-10 rounded-xl bg-green-500/10 flex items-center justify-center mx-auto mb-2">
+                <Users className="h-5 w-5 text-green-500" />
+              </div>
+              <div className="text-2xl font-bold tabular-nums">{assignedBartenders.length}</div>
+              <p className="text-xs text-muted-foreground">Baristi</p>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springConfig, delay: 0.1 }}
+        >
+          <Tabs value={activeTab} onValueChange={(v) => { triggerHaptic('light'); setActiveTab(v); }} className="w-full">
+            <TabsList className="grid w-full grid-cols-2 h-12" data-testid="tabs-station">
+              <TabsTrigger value="stock" className="min-h-[44px] text-base" data-testid="tab-stock">
+                <Package className="h-5 w-5 mr-2" />
+                Stock
+              </TabsTrigger>
+              <TabsTrigger value="movements" className="min-h-[44px] text-base" data-testid="tab-movements">
+                <History className="h-5 w-5 mr-2" />
+                Movimenti
+              </TabsTrigger>
+            </TabsList>
+
+            <TabsContent value="stock" className="mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
+              <AnimatePresence mode="wait">
+                {stocksLoading ? (
+                  <motion.div
+                    key="loading"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="space-y-3"
+                  >
+                    <Skeleton className="h-28 w-full rounded-2xl" />
+                    <Skeleton className="h-28 w-full rounded-2xl" />
+                    <Skeleton className="h-28 w-full rounded-2xl" />
+                  </motion.div>
+                ) : stockWithQuantity.length > 0 ? (
+                  <motion.div
+                    key="content"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="space-y-3"
+                  >
+                    {stockWithQuantity.map((stock, index) => {
                       const product = getProductInfo(stock.productId);
                       const quantity = parseFloat(stock.quantity);
                       const isLowStock = product?.minThreshold && !isNaN(quantity) && quantity < parseFloat(product.minThreshold);
@@ -347,149 +394,186 @@ export default function StationDetail() {
                       const unitOfMeasure = stock.unitOfMeasure || product?.unitOfMeasure || '';
 
                       return (
-                        <TableRow key={stock.id} data-testid={`stock-row-${stock.id}`}>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">{productName}</div>
-                              <div className="text-sm text-muted-foreground">{productCode}</div>
-                            </div>
-                          </TableCell>
-                          <TableCell className="text-right tabular-nums font-semibold">
-                            {isNaN(quantity) ? '0.00' : quantity.toFixed(2)} {unitOfMeasure}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            {isLowStock ? (
-                              <Badge variant="destructive" data-testid={`badge-low-stock-${stock.id}`}>
-                                <AlertTriangle className="h-3 w-3 mr-1" />
-                                Basso
-                              </Badge>
-                            ) : quantity > 0 ? (
-                              <Badge variant="secondary">OK</Badge>
-                            ) : (
-                              <Badge variant="outline">Esaurito</Badge>
-                            )}
-                          </TableCell>
-                          {canAdjustStock && (
-                            <TableCell>
-                              <Button
-                                size="icon"
-                                variant="ghost"
-                                onClick={() => handleOpenAdjust(stock)}
-                                data-testid={`button-adjust-${stock.id}`}
-                              >
-                                <Pencil className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          )}
-                        </TableRow>
+                        <motion.div
+                          key={stock.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ ...springConfig, delay: index * 0.03 }}
+                        >
+                          <Card 
+                            className="overflow-hidden hover-elevate active-elevate-2"
+                            data-testid={`stock-card-${stock.id}`}
+                          >
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between gap-3">
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-center gap-2 mb-1">
+                                    <h3 className="font-semibold text-base truncate">{productName}</h3>
+                                    {isLowStock && (
+                                      <Badge variant="destructive" className="shrink-0" data-testid={`badge-low-stock-${stock.id}`}>
+                                        <AlertTriangle className="h-3 w-3 mr-1" />
+                                        Basso
+                                      </Badge>
+                                    )}
+                                  </div>
+                                  <p className="text-sm text-muted-foreground mb-3">{productCode}</p>
+                                  <div className="flex items-center justify-between">
+                                    <div className="flex items-baseline gap-1">
+                                      <span className="text-2xl font-bold tabular-nums">
+                                        {isNaN(quantity) ? '0.00' : quantity.toFixed(2)}
+                                      </span>
+                                      <span className="text-sm text-muted-foreground">{unitOfMeasure}</span>
+                                    </div>
+                                    {!isLowStock && quantity > 0 && (
+                                      <Badge variant="secondary">OK</Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                {canAdjustStock && (
+                                  <HapticButton
+                                    size="icon"
+                                    variant="ghost"
+                                    onClick={() => handleOpenAdjust(stock)}
+                                    className="shrink-0"
+                                    data-testid={`button-adjust-${stock.id}`}
+                                  >
+                                    <Pencil className="h-5 w-5" />
+                                  </HapticButton>
+                                )}
+                              </div>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
                       );
                     })}
-                  </TableBody>
-                </Table>
-                </div>
-              </Card>
-            ) : (
-              <Card className="p-8 text-center border-2 border-dashed">
-                <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground mb-1">Nessun prodotto in questa postazione</p>
-                <p className="text-sm text-muted-foreground">
-                  Trasferisci prodotti dal magazzino per iniziare
-                </p>
-              </Card>
-            )}
-          </TabsContent>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="empty"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={springConfig}
+                  >
+                    <Card className="p-8 text-center border-2 border-dashed">
+                      <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                        <Package className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <p className="text-muted-foreground font-medium mb-1">Nessun prodotto</p>
+                      <p className="text-sm text-muted-foreground">
+                        Trasferisci prodotti dal magazzino per iniziare
+                      </p>
+                    </Card>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </TabsContent>
 
-          <TabsContent value="movements" className="mt-4">
-            {stationMovements.length > 0 ? (
-              <Card>
-                <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data/Ora</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Prodotto</TableHead>
-                      <TableHead className="text-right">Quantità</TableHead>
-                      <TableHead>Motivo</TableHead>
-                      <TableHead>Operatore</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {stationMovements.map((movement) => {
+            <TabsContent value="movements" className="mt-4 focus-visible:ring-0 focus-visible:ring-offset-0">
+              <AnimatePresence mode="wait">
+                {stationMovements.length > 0 ? (
+                  <motion.div
+                    key="content"
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    className="space-y-3"
+                  >
+                    {stationMovements.map((movement, index) => {
                       const product = getProductInfo(movement.productId);
                       const config = movementTypeConfig[movement.type] || { 
                         label: movement.type, 
-                        color: 'text-muted-foreground', 
+                        color: 'text-muted-foreground',
+                        bgColor: 'bg-muted',
                         icon: RefreshCw 
                       };
                       const Icon = config.icon;
                       const isIncoming = movement.toStationId === stationId;
 
                       return (
-                        <TableRow key={movement.id} data-testid={`movement-row-${movement.id}`}>
-                          <TableCell className="tabular-nums">
-                            {movement.createdAt 
-                              ? format(new Date(movement.createdAt), 'dd/MM/yyyy HH:mm', { locale: it })
-                              : '-'}
-                          </TableCell>
-                          <TableCell>
-                            <div className={`flex items-center gap-2 ${config.color}`}>
-                              <Icon className="h-4 w-4" />
-                              <span className="font-medium">{config.label}</span>
-                            </div>
-                          </TableCell>
-                          <TableCell>
-                            <div>
-                              <div className="font-medium">
-                                {movement.productName || product?.name || 'Sconosciuto'}
+                        <motion.div
+                          key={movement.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ ...springConfig, delay: index * 0.03 }}
+                        >
+                          <Card className="overflow-hidden" data-testid={`movement-card-${movement.id}`}>
+                            <CardContent className="p-4">
+                              <div className="flex items-start gap-3">
+                                <div className={`w-11 h-11 rounded-xl ${config.bgColor} flex items-center justify-center shrink-0`}>
+                                  <Icon className={`h-5 w-5 ${config.color}`} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                  <div className="flex items-start justify-between gap-2 mb-1">
+                                    <div className="min-w-0">
+                                      <p className={`font-semibold ${config.color}`}>{config.label}</p>
+                                      <p className="text-sm font-medium truncate">
+                                        {movement.productName || product?.name || 'Sconosciuto'}
+                                      </p>
+                                    </div>
+                                    <span className={`text-lg font-bold tabular-nums shrink-0 ${isIncoming ? 'text-green-500' : 'text-red-500'}`}>
+                                      {isIncoming ? '+' : '-'}{parseFloat(movement.quantity).toFixed(2)}
+                                    </span>
+                                  </div>
+                                  {movement.reason && (
+                                    <p className="text-sm text-muted-foreground line-clamp-2 mb-2">{movement.reason}</p>
+                                  )}
+                                  <div className="flex items-center justify-between text-xs text-muted-foreground">
+                                    <span>{getUserName(movement.performedBy)}</span>
+                                    <span className="tabular-nums">
+                                      {movement.createdAt 
+                                        ? format(new Date(movement.createdAt), 'dd/MM HH:mm', { locale: it })
+                                        : '-'}
+                                    </span>
+                                  </div>
+                                </div>
                               </div>
-                              <div className="text-sm text-muted-foreground">
-                                {movement.productCode || product?.code || '-'}
-                              </div>
-                            </div>
-                          </TableCell>
-                          <TableCell className={`text-right tabular-nums font-semibold ${isIncoming ? 'text-green-500' : 'text-red-500'}`}>
-                            {isIncoming ? '+' : '-'}{parseFloat(movement.quantity).toFixed(2)}
-                          </TableCell>
-                          <TableCell className="max-w-48 truncate" title={movement.reason || '-'}>
-                            {movement.reason || '-'}
-                          </TableCell>
-                          <TableCell>
-                            {getUserName(movement.performedBy)}
-                          </TableCell>
-                        </TableRow>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
                       );
                     })}
-                  </TableBody>
-                </Table>
-                </div>
-              </Card>
-            ) : (
-              <Card className="p-8 text-center border-2 border-dashed">
-                <History className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-muted-foreground mb-1">Nessun movimento registrato</p>
-                <p className="text-sm text-muted-foreground">
-                  I movimenti appariranno qui quando saranno effettuati
-                </p>
-              </Card>
-            )}
-          </TabsContent>
-        </Tabs>
-      </motion.div>
+                  </motion.div>
+                ) : (
+                  <motion.div
+                    key="empty"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.95 }}
+                    transition={springConfig}
+                  >
+                    <Card className="p-8 text-center border-2 border-dashed">
+                      <div className="w-16 h-16 rounded-full bg-muted flex items-center justify-center mx-auto mb-4">
+                        <History className="h-8 w-8 text-muted-foreground" />
+                      </div>
+                      <p className="text-muted-foreground font-medium mb-1">Nessun movimento</p>
+                      <p className="text-sm text-muted-foreground">
+                        I movimenti appariranno qui quando saranno effettuati
+                      </p>
+                    </Card>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </TabsContent>
+          </Tabs>
+        </motion.div>
+      </div>
 
-      <Dialog open={adjustDialogOpen} onOpenChange={setAdjustDialogOpen}>
-        <DialogContent data-testid="dialog-adjust-stock">
-          <DialogHeader>
-            <DialogTitle>Correggi Quantità</DialogTitle>
-          </DialogHeader>
+      <BottomSheet
+        open={adjustSheetOpen}
+        onClose={() => setAdjustSheetOpen(false)}
+        title="Correggi Quantità"
+      >
+        <div className="p-4 space-y-4" data-testid="sheet-adjust-stock">
           {selectedStock && (
-            <div className="space-y-4">
-              <div className="p-4 rounded-xl bg-muted/50">
-                <p className="font-medium">{selectedStock.productName || 'Prodotto'}</p>
-                <p className="text-sm text-muted-foreground">
-                  Quantità attuale: {parseFloat(selectedStock.quantity).toFixed(2)} {selectedStock.unitOfMeasure || ''}
+            <>
+              <div className="p-4 rounded-2xl bg-muted/50">
+                <p className="font-semibold text-lg">{selectedStock.productName || 'Prodotto'}</p>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Quantità attuale: <span className="font-medium tabular-nums">{parseFloat(selectedStock.quantity).toFixed(2)}</span> {selectedStock.unitOfMeasure || ''}
                 </p>
               </div>
+              
               <div className="space-y-2">
                 <label className="text-sm font-medium">Nuova Quantità</label>
                 <Input
@@ -499,9 +583,11 @@ export default function StationDetail() {
                   value={newQuantity}
                   onChange={(e) => setNewQuantity(e.target.value)}
                   placeholder="0.00"
+                  className="h-12 text-lg"
                   data-testid="input-new-quantity"
                 />
               </div>
+              
               <div className="space-y-2">
                 <label className="text-sm font-medium">Motivo della correzione (opzionale)</label>
                 <Textarea
@@ -509,30 +595,34 @@ export default function StationDetail() {
                   onChange={(e) => setAdjustReason(e.target.value)}
                   placeholder="Es. Inventario fisico, rottura, errore precedente..."
                   rows={3}
+                  className="text-base"
                   data-testid="input-adjust-reason"
                 />
               </div>
-            </div>
+              
+              <div className="flex gap-3 pt-2">
+                <HapticButton
+                  variant="outline"
+                  onClick={() => setAdjustSheetOpen(false)}
+                  className="flex-1 h-12"
+                  data-testid="button-cancel-adjust"
+                >
+                  Annulla
+                </HapticButton>
+                <HapticButton
+                  onClick={handleSubmitAdjust}
+                  disabled={adjustMutation.isPending}
+                  className="flex-1 h-12 gradient-golden text-black font-semibold"
+                  hapticType="medium"
+                  data-testid="button-confirm-adjust"
+                >
+                  {adjustMutation.isPending ? 'Salvataggio...' : 'Salva'}
+                </HapticButton>
+              </div>
+            </>
           )}
-          <DialogFooter>
-            <Button
-              variant="outline"
-              onClick={() => setAdjustDialogOpen(false)}
-              data-testid="button-cancel-adjust"
-            >
-              Annulla
-            </Button>
-            <Button
-              onClick={handleSubmitAdjust}
-              disabled={adjustMutation.isPending}
-              className="gradient-golden text-black font-semibold"
-              data-testid="button-confirm-adjust"
-            >
-              {adjustMutation.isPending ? 'Salvataggio...' : 'Salva Correzione'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+        </div>
+      </BottomSheet>
+    </MobileAppLayout>
   );
 }

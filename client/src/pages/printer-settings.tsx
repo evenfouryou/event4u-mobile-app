@@ -3,20 +3,21 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { motion, AnimatePresence } from "framer-motion";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  MobileAppLayout,
+  MobileHeader,
+  HapticButton,
+  BottomSheet,
+  triggerHaptic,
+} from "@/components/mobile-primitives";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   Form,
   FormControl,
-  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -32,24 +33,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
 import { Textarea } from "@/components/ui/textarea";
 import {
@@ -72,22 +55,23 @@ import {
   Copy,
   Check,
   Layout,
-  Eye,
   Smartphone,
+  ChevronRight,
+  ArrowLeft,
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useLocation } from "wouter";
 import type { TicketTemplate, DigitalTicketTemplate } from "@shared/schema";
 import type { 
   PrinterModel, 
   PrinterAgent, 
   PrinterProfile,
-  InsertPrinterModel,
-  InsertPrinterProfile,
 } from "@shared/schema";
 import {
   insertPrinterModelSchema,
   insertPrinterProfileSchema,
 } from "@shared/schema";
+
+const springConfig = { type: "spring" as const, stiffness: 400, damping: 30 };
 
 const printerModelFormSchema = insertPrinterModelSchema.extend({
   dpi: z.coerce.number().min(100).max(600),
@@ -106,25 +90,170 @@ const printerProfileFormSchema = insertPrinterProfileSchema.extend({
 type PrinterModelFormData = z.infer<typeof printerModelFormSchema>;
 type PrinterProfileFormData = z.infer<typeof printerProfileFormSchema>;
 
+interface SettingsCardProps {
+  icon: React.ElementType;
+  title: string;
+  description: string;
+  badge?: React.ReactNode;
+  onClick?: () => void;
+  rightContent?: React.ReactNode;
+}
+
+function SettingsCard({ icon: Icon, title, description, badge, onClick, rightContent }: SettingsCardProps) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={springConfig}
+      whileTap={{ scale: 0.98 }}
+    >
+      <Card 
+        className="overflow-visible cursor-pointer hover-elevate active-elevate-2"
+        onClick={() => {
+          triggerHaptic('light');
+          onClick?.();
+        }}
+      >
+        <CardContent className="p-4">
+          <div className="flex items-center gap-4">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Icon className="w-6 h-6 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2">
+                <h3 className="font-semibold text-foreground truncate">{title}</h3>
+                {badge}
+              </div>
+              <p className="text-muted-foreground text-sm truncate">{description}</p>
+            </div>
+            {rightContent || <ChevronRight className="w-5 h-5 text-muted-foreground shrink-0" />}
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
+interface AgentCardProps {
+  agent: PrinterAgent;
+  profiles: PrinterProfile[];
+  onManageProfiles: () => void;
+  onDelete: () => void;
+}
+
+function AgentCard({ agent, profiles, onManageProfiles, onDelete }: AgentCardProps) {
+  const getStatusBadge = (status: string | null) => {
+    switch (status) {
+      case "online":
+        return <Badge className="bg-green-600"><Wifi className="h-3 w-3 mr-1" />Online</Badge>;
+      case "printing":
+        return <Badge className="bg-blue-600"><Loader2 className="h-3 w-3 mr-1 animate-spin" />Stampa</Badge>;
+      case "error":
+        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Errore</Badge>;
+      default:
+        return <Badge variant="secondary"><WifiOff className="h-3 w-3 mr-1" />Offline</Badge>;
+    }
+  };
+
+  const formatDate = (date: string | Date | null) => {
+    if (!date) return "Mai";
+    return new Date(date).toLocaleString("it-IT", {
+      day: "2-digit",
+      month: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+    });
+  };
+
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={springConfig}
+    >
+      <Card className="overflow-visible">
+        <CardContent className="p-4">
+          <div className="flex items-start gap-4">
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Monitor className="w-6 h-6 text-primary" />
+            </div>
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap">
+                <h3 className="font-semibold text-foreground">{agent.deviceName}</h3>
+                {getStatusBadge(agent.status)}
+              </div>
+              <p className="text-muted-foreground text-sm mt-1">
+                {agent.printerName || "Stampante non configurata"}
+              </p>
+              <p className="text-muted-foreground text-xs mt-1">
+                Ultimo heartbeat: {formatDate(agent.lastHeartbeat)}
+              </p>
+              
+              {profiles.length > 0 && (
+                <div className="flex flex-wrap gap-1 mt-2">
+                  {profiles.map(profile => (
+                    <Badge key={profile.id} variant="secondary" className="text-xs">
+                      {profile.name}
+                    </Badge>
+                  ))}
+                </div>
+              )}
+              
+              <div className="flex gap-2 mt-3">
+                <HapticButton
+                  variant="outline"
+                  size="default"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onManageProfiles();
+                  }}
+                  className="flex-1 min-h-[44px]"
+                  data-testid={`button-manage-profiles-${agent.id}`}
+                >
+                  <FileText className="w-4 h-4 mr-2" />
+                  Profili
+                </HapticButton>
+                <HapticButton
+                  variant="outline"
+                  size="icon"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onDelete();
+                  }}
+                  className="min-h-[44px] min-w-[44px]"
+                  hapticType="medium"
+                  data-testid={`button-delete-agent-${agent.id}`}
+                >
+                  <Trash2 className="w-4 h-4 text-destructive" />
+                </HapticButton>
+              </div>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
 export default function PrinterSettings() {
   const { toast } = useToast();
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const isSuperAdmin = user?.role === "super_admin";
   
-  const [activeTab, setActiveTab] = useState("agents");
-  const [modelDialogOpen, setModelDialogOpen] = useState(false);
-  const [profileDialogOpen, setProfileDialogOpen] = useState(false);
+  const [activeSection, setActiveSection] = useState<string | null>(null);
+  const [modelSheetOpen, setModelSheetOpen] = useState(false);
+  const [profileSheetOpen, setProfileSheetOpen] = useState(false);
   const [editingModel, setEditingModel] = useState<PrinterModel | null>(null);
   const [editingProfile, setEditingProfile] = useState<PrinterProfile | null>(null);
-  const [registerDialogOpen, setRegisterDialogOpen] = useState(false);
+  const [registerSheetOpen, setRegisterSheetOpen] = useState(false);
   const [generatedToken, setGeneratedToken] = useState<string | null>(null);
   const [deviceName, setDeviceName] = useState("");
   const [tokenCopied, setTokenCopied] = useState(false);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
-  const [profileAssignDialogOpen, setProfileAssignDialogOpen] = useState(false);
+  const [profileAssignSheetOpen, setProfileAssignSheetOpen] = useState(false);
   const [selectedAgentForProfiles, setSelectedAgentForProfiles] = useState<PrinterAgent | null>(null);
 
-  // Load companies for super_admin to select
   const { data: companies = [] } = useQuery<{ id: string; name: string }[]>({
     queryKey: ["/api/companies"],
     enabled: isSuperAdmin,
@@ -143,7 +272,7 @@ export default function PrinterSettings() {
     queryKey: ["/api/printers/profiles"],
   });
 
-  const { data: templates = [], isLoading: templatesLoading, refetch: refetchTemplates } = useQuery<TicketTemplate[]>({
+  const { data: templates = [], isLoading: templatesLoading } = useQuery<TicketTemplate[]>({
     queryKey: ["/api/ticket/templates"],
   });
 
@@ -156,10 +285,12 @@ export default function PrinterSettings() {
       await apiRequest("DELETE", `/api/ticket/templates/${id}`);
     },
     onSuccess: () => {
+      triggerHaptic('success');
       toast({ title: "Template eliminato" });
       queryClient.invalidateQueries({ queryKey: ["/api/ticket/templates"] });
     },
     onError: () => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: "Impossibile eliminare il template", variant: "destructive" });
     },
   });
@@ -169,10 +300,12 @@ export default function PrinterSettings() {
       await apiRequest("DELETE", `/api/digital-templates/${id}`);
     },
     onSuccess: () => {
+      triggerHaptic('success');
       toast({ title: "Template digitale eliminato" });
       queryClient.invalidateQueries({ queryKey: ["/api/digital-templates"] });
     },
     onError: () => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: "Impossibile eliminare il template", variant: "destructive" });
     },
   });
@@ -211,12 +344,14 @@ export default function PrinterSettings() {
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: "Modello creato", description: "Il modello stampante è stato aggiunto" });
+      triggerHaptic('success');
+      toast({ title: "Modello creato" });
       queryClient.invalidateQueries({ queryKey: ["/api/printers/models"] });
-      setModelDialogOpen(false);
+      setModelSheetOpen(false);
       modelForm.reset();
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
@@ -228,13 +363,15 @@ export default function PrinterSettings() {
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: "Modello aggiornato", description: "Il modello stampante è stato modificato" });
+      triggerHaptic('success');
+      toast({ title: "Modello aggiornato" });
       queryClient.invalidateQueries({ queryKey: ["/api/printers/models"] });
-      setModelDialogOpen(false);
+      setModelSheetOpen(false);
       setEditingModel(null);
       modelForm.reset();
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
@@ -244,10 +381,12 @@ export default function PrinterSettings() {
       await apiRequest("DELETE", `/api/printers/models/${id}`);
     },
     onSuccess: () => {
+      triggerHaptic('success');
       toast({ title: "Modello eliminato" });
       queryClient.invalidateQueries({ queryKey: ["/api/printers/models"] });
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
@@ -258,12 +397,14 @@ export default function PrinterSettings() {
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: "Profilo creato", description: "Il profilo carta è stato aggiunto" });
+      triggerHaptic('success');
+      toast({ title: "Profilo creato" });
       queryClient.invalidateQueries({ queryKey: ["/api/printers/profiles"] });
-      setProfileDialogOpen(false);
+      setProfileSheetOpen(false);
       profileForm.reset();
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
@@ -275,13 +416,15 @@ export default function PrinterSettings() {
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: "Profilo aggiornato", description: "Il profilo carta è stato modificato" });
+      triggerHaptic('success');
+      toast({ title: "Profilo aggiornato" });
       queryClient.invalidateQueries({ queryKey: ["/api/printers/profiles"] });
-      setProfileDialogOpen(false);
+      setProfileSheetOpen(false);
       setEditingProfile(null);
       profileForm.reset();
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
@@ -291,10 +434,12 @@ export default function PrinterSettings() {
       await apiRequest("DELETE", `/api/printers/profiles/${id}`);
     },
     onSuccess: () => {
+      triggerHaptic('success');
       toast({ title: "Profilo eliminato" });
       queryClient.invalidateQueries({ queryKey: ["/api/printers/profiles"] });
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
@@ -305,11 +450,13 @@ export default function PrinterSettings() {
       return response.json();
     },
     onSuccess: (data) => {
+      triggerHaptic('success');
       setGeneratedToken(data.authToken);
       queryClient.invalidateQueries({ queryKey: ["/api/printers/agents"] });
-      toast({ title: "Agent registrato", description: "Copia il token nel Print Agent" });
+      toast({ title: "Agent registrato" });
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
@@ -319,10 +466,12 @@ export default function PrinterSettings() {
       await apiRequest("DELETE", `/api/printers/agents/${id}`);
     },
     onSuccess: () => {
+      triggerHaptic('success');
       toast({ title: "Agent eliminato" });
       queryClient.invalidateQueries({ queryKey: ["/api/printers/agents"] });
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
@@ -333,10 +482,12 @@ export default function PrinterSettings() {
       return response.json();
     },
     onSuccess: () => {
-      toast({ title: "Profilo aggiornato", description: "Il profilo è stato assegnato all'agente" });
+      triggerHaptic('success');
+      toast({ title: "Profilo aggiornato" });
       queryClient.invalidateQueries({ queryKey: ["/api/printers/profiles"] });
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
@@ -345,6 +496,7 @@ export default function PrinterSettings() {
     if (generatedToken) {
       navigator.clipboard.writeText(generatedToken);
       setTokenCopied(true);
+      triggerHaptic('success');
       setTimeout(() => setTokenCopied(false), 2000);
       toast({ title: "Token copiato!" });
     }
@@ -352,11 +504,12 @@ export default function PrinterSettings() {
 
   const handleRegisterAgent = () => {
     if (!deviceName.trim()) {
+      triggerHaptic('error');
       toast({ title: "Errore", description: "Inserisci un nome per il dispositivo", variant: "destructive" });
       return;
     }
-    // Super admin must select a company
     if (isSuperAdmin && !selectedCompanyId) {
+      triggerHaptic('error');
       toast({ title: "Errore", description: "Seleziona un'azienda", variant: "destructive" });
       return;
     }
@@ -367,8 +520,8 @@ export default function PrinterSettings() {
     registerAgentMutation.mutate(data);
   };
 
-  const resetRegisterDialog = () => {
-    setRegisterDialogOpen(false);
+  const resetRegisterSheet = () => {
+    setRegisterSheetOpen(false);
     setGeneratedToken(null);
     setDeviceName("");
     setTokenCopied(false);
@@ -386,7 +539,7 @@ export default function PrinterSettings() {
       driverNotes: model.driverNotes ?? "",
       isActive: model.isActive,
     });
-    setModelDialogOpen(true);
+    setModelSheetOpen(true);
   };
 
   const handleEditProfile = (profile: PrinterProfile) => {
@@ -403,7 +556,7 @@ export default function PrinterSettings() {
       isDefault: profile.isDefault ?? false,
       isActive: profile.isActive,
     });
-    setProfileDialogOpen(true);
+    setProfileSheetOpen(true);
   };
 
   const onSubmitModel = (data: PrinterModelFormData) => {
@@ -422,30 +575,6 @@ export default function PrinterSettings() {
     }
   };
 
-  const getStatusBadge = (status: string | null) => {
-    switch (status) {
-      case "online":
-        return <Badge className="bg-green-600"><Wifi className="h-3 w-3 mr-1" />Online</Badge>;
-      case "printing":
-        return <Badge className="bg-blue-600"><Loader2 className="h-3 w-3 mr-1 animate-spin" />Stampa</Badge>;
-      case "error":
-        return <Badge variant="destructive"><XCircle className="h-3 w-3 mr-1" />Errore</Badge>;
-      default:
-        return <Badge variant="secondary"><WifiOff className="h-3 w-3 mr-1" />Offline</Badge>;
-    }
-  };
-
-  const formatDate = (date: string | Date | null) => {
-    if (!date) return "Mai";
-    return new Date(date).toLocaleString("it-IT", {
-      day: "2-digit",
-      month: "2-digit",
-      year: "numeric",
-      hour: "2-digit",
-      minute: "2-digit",
-    });
-  };
-
   const getProfilesForAgent = (agentId: string) => {
     return profiles.filter(p => p.agentId === agentId);
   };
@@ -454,709 +583,599 @@ export default function PrinterSettings() {
     return profiles.filter(p => !p.agentId);
   };
 
-  const openProfileAssignDialog = (agent: PrinterAgent) => {
+  const openProfileAssignSheet = (agent: PrinterAgent) => {
     setSelectedAgentForProfiles(agent);
-    setProfileAssignDialogOpen(true);
+    setProfileAssignSheetOpen(true);
+  };
+
+  const handleRefresh = () => {
+    triggerHaptic('light');
+    refetchAgents();
+    refetchProfiles();
+    if (isSuperAdmin) refetchModels();
+  };
+
+  const renderMainMenu = () => (
+    <div className="space-y-3 pb-24">
+      <motion.div
+        initial={{ opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ ...springConfig, delay: 0 }}
+      >
+        <p className="text-muted-foreground text-sm px-1 mb-4">
+          Gestisci stampanti, profili carta e template biglietti
+        </p>
+      </motion.div>
+
+      <SettingsCard
+        icon={Monitor}
+        title="Agenti Collegati"
+        description={agentsLoading ? "Caricamento..." : `${agents.length} dispositivi`}
+        badge={agents.filter(a => a.status === "online").length > 0 ? (
+          <Badge className="bg-green-600 text-xs">{agents.filter(a => a.status === "online").length} online</Badge>
+        ) : undefined}
+        onClick={() => setActiveSection("agents")}
+      />
+
+      <SettingsCard
+        icon={Layout}
+        title="Template Biglietti"
+        description={templatesLoading ? "Caricamento..." : `${templates.length} template`}
+        onClick={() => setActiveSection("templates")}
+      />
+
+      <SettingsCard
+        icon={Smartphone}
+        title="Template Digitali"
+        description={digitalTemplatesLoading ? "Caricamento..." : `${digitalTemplates.length} template`}
+        onClick={() => setActiveSection("digital-templates")}
+      />
+
+      {isSuperAdmin && (
+        <SettingsCard
+          icon={Settings}
+          title="Modelli Stampante"
+          description={modelsLoading ? "Caricamento..." : `${models.length} modelli`}
+          badge={<Badge variant="outline" className="text-xs">Admin</Badge>}
+          onClick={() => setActiveSection("models")}
+        />
+      )}
+    </div>
+  );
+
+  const renderAgentsSection = () => (
+    <div className="space-y-4 pb-24">
+      <div className="flex gap-2">
+        <HapticButton
+          variant="outline"
+          className="flex-1 min-h-[48px]"
+          data-testid="button-download-agent"
+        >
+          <Download className="w-4 h-4 mr-2" />
+          Scarica Agent
+        </HapticButton>
+        <HapticButton
+          className="flex-1 min-h-[48px]"
+          onClick={() => setRegisterSheetOpen(true)}
+          data-testid="button-register-agent"
+        >
+          <Key className="w-4 h-4 mr-2" />
+          Genera Token
+        </HapticButton>
+      </div>
+
+      {agentsLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : agents.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={springConfig}
+          className="text-center py-12"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+            <Monitor className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <p className="text-muted-foreground font-medium">Nessun agente collegato</p>
+          <p className="text-muted-foreground text-sm mt-1">
+            Installa Event4U Print Agent su un computer
+          </p>
+        </motion.div>
+      ) : (
+        <div className="space-y-3">
+          {agents.map((agent, index) => (
+            <motion.div
+              key={agent.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springConfig, delay: index * 0.05 }}
+            >
+              <AgentCard
+                agent={agent}
+                profiles={getProfilesForAgent(agent.id)}
+                onManageProfiles={() => openProfileAssignSheet(agent)}
+                onDelete={() => deleteAgentMutation.mutate(agent.id)}
+              />
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderTemplatesSection = () => (
+    <div className="space-y-4 pb-24">
+      {isSuperAdmin && (
+        <Link href="/template-builder">
+          <HapticButton className="w-full min-h-[48px]" data-testid="button-new-template">
+            <Plus className="w-4 h-4 mr-2" />
+            Nuovo Template
+          </HapticButton>
+        </Link>
+      )}
+
+      {templatesLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : templates.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={springConfig}
+          className="text-center py-12"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+            <Layout className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <p className="text-muted-foreground font-medium">Nessun template</p>
+          {isSuperAdmin && (
+            <p className="text-muted-foreground text-sm mt-1">
+              Crea il tuo primo template
+            </p>
+          )}
+        </motion.div>
+      ) : (
+        <div className="space-y-3">
+          {templates.map((template, index) => (
+            <motion.div
+              key={template.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springConfig, delay: index * 0.05 }}
+            >
+              <Card className="overflow-visible">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <Layout className="w-6 h-6 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold text-foreground">{template.name}</h3>
+                        {!template.companyId ? (
+                          <Badge className="bg-purple-600 text-xs">Sistema</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">Azienda</Badge>
+                        )}
+                        {template.isDefault && (
+                          <Badge variant="secondary" className="text-xs">Default</Badge>
+                        )}
+                      </div>
+                      <p className="text-muted-foreground text-sm">
+                        {template.paperWidthMm}mm × {template.paperHeightMm}mm
+                      </p>
+                    </div>
+                    {isSuperAdmin && (
+                      <div className="flex gap-1">
+                        <Link href={`/template-builder/${template.id}`}>
+                          <HapticButton
+                            variant="ghost"
+                            size="icon"
+                            className="min-h-[44px] min-w-[44px]"
+                            data-testid={`button-edit-template-${template.id}`}
+                          >
+                            <Edit className="w-4 h-4" />
+                          </HapticButton>
+                        </Link>
+                        <HapticButton
+                          variant="ghost"
+                          size="icon"
+                          className="min-h-[44px] min-w-[44px]"
+                          onClick={() => deleteTemplateMutation.mutate(template.id)}
+                          hapticType="medium"
+                          data-testid={`button-delete-template-${template.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </HapticButton>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderDigitalTemplatesSection = () => (
+    <div className="space-y-4 pb-24">
+      <Link href="/digital-template-builder">
+        <HapticButton className="w-full min-h-[48px]" data-testid="button-new-digital-template">
+          <Plus className="w-4 h-4 mr-2" />
+          Nuovo Template Digitale
+        </HapticButton>
+      </Link>
+
+      {digitalTemplatesLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : digitalTemplates.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={springConfig}
+          className="text-center py-12"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+            <Smartphone className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <p className="text-muted-foreground font-medium">Nessun template digitale</p>
+          <p className="text-muted-foreground text-sm mt-1">
+            Crea il tuo primo template digitale
+          </p>
+        </motion.div>
+      ) : (
+        <div className="space-y-3">
+          {digitalTemplates.map((template, index) => (
+            <motion.div
+              key={template.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springConfig, delay: index * 0.05 }}
+            >
+              <Card className="overflow-visible">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <Smartphone className="w-6 h-6 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold text-foreground">{template.name}</h3>
+                        {!template.companyId ? (
+                          <Badge className="bg-purple-600 text-xs">Sistema</Badge>
+                        ) : (
+                          <Badge variant="outline" className="text-xs">Azienda</Badge>
+                        )}
+                        {template.isDefault && (
+                          <Badge variant="secondary" className="text-xs">Predefinito</Badge>
+                        )}
+                      </div>
+                      <p className="text-muted-foreground text-sm capitalize">
+                        {template.backgroundStyle || "gradient"}
+                      </p>
+                    </div>
+                    <div className="flex gap-1">
+                      <Link href={`/digital-template-builder/${template.id}`}>
+                        <HapticButton
+                          variant="ghost"
+                          size="icon"
+                          className="min-h-[44px] min-w-[44px]"
+                          data-testid={`button-edit-digital-template-${template.id}`}
+                        >
+                          <Edit className="w-4 h-4" />
+                        </HapticButton>
+                      </Link>
+                      <HapticButton
+                        variant="ghost"
+                        size="icon"
+                        className="min-h-[44px] min-w-[44px]"
+                        onClick={() => deleteDigitalTemplateMutation.mutate(template.id)}
+                        hapticType="medium"
+                        data-testid={`button-delete-digital-template-${template.id}`}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </HapticButton>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const renderModelsSection = () => (
+    <div className="space-y-4 pb-24">
+      <HapticButton
+        className="w-full min-h-[48px]"
+        onClick={() => {
+          setEditingModel(null);
+          modelForm.reset();
+          setModelSheetOpen(true);
+        }}
+        data-testid="button-add-model"
+      >
+        <Plus className="w-4 h-4 mr-2" />
+        Nuovo Modello
+      </HapticButton>
+
+      {modelsLoading ? (
+        <div className="flex items-center justify-center py-12">
+          <Loader2 className="w-8 h-8 animate-spin text-muted-foreground" />
+        </div>
+      ) : models.length === 0 ? (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={springConfig}
+          className="text-center py-12"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
+            <Printer className="w-8 h-8 text-muted-foreground" />
+          </div>
+          <p className="text-muted-foreground font-medium">Nessun modello</p>
+          <p className="text-muted-foreground text-sm mt-1">
+            Aggiungi modelli stampante supportati
+          </p>
+        </motion.div>
+      ) : (
+        <div className="space-y-3">
+          {models.map((model, index) => (
+            <motion.div
+              key={model.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springConfig, delay: index * 0.05 }}
+            >
+              <Card className="overflow-visible">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                      <Printer className="w-6 h-6 text-primary" />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <h3 className="font-semibold text-foreground">{model.vendor} {model.model}</h3>
+                        {model.isActive ? (
+                          <Badge className="bg-green-600 text-xs">Attivo</Badge>
+                        ) : (
+                          <Badge variant="secondary" className="text-xs">Inattivo</Badge>
+                        )}
+                      </div>
+                      <p className="text-muted-foreground text-sm">
+                        {model.dpi} DPI • {model.maxWidthMm}mm • {model.connectionType}
+                      </p>
+                    </div>
+                    <div className="flex gap-1">
+                      <HapticButton
+                        variant="ghost"
+                        size="icon"
+                        className="min-h-[44px] min-w-[44px]"
+                        onClick={() => handleEditModel(model)}
+                        data-testid={`button-edit-model-${model.id}`}
+                      >
+                        <Edit className="w-4 h-4" />
+                      </HapticButton>
+                      <HapticButton
+                        variant="ghost"
+                        size="icon"
+                        className="min-h-[44px] min-w-[44px]"
+                        onClick={() => deleteModelMutation.mutate(model.id)}
+                        hapticType="medium"
+                        data-testid={`button-delete-model-${model.id}`}
+                      >
+                        <Trash2 className="w-4 h-4 text-destructive" />
+                      </HapticButton>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
+  const getSectionTitle = () => {
+    switch (activeSection) {
+      case "agents": return "Agenti Collegati";
+      case "templates": return "Template Biglietti";
+      case "digital-templates": return "Template Digitali";
+      case "models": return "Modelli Stampante";
+      default: return "Impostazioni Stampante";
+    }
+  };
+
+  const renderContent = () => {
+    switch (activeSection) {
+      case "agents": return renderAgentsSection();
+      case "templates": return renderTemplatesSection();
+      case "digital-templates": return renderDigitalTemplatesSection();
+      case "models": return renderModelsSection();
+      default: return renderMainMenu();
+    }
   };
 
   return (
-    <div className="container mx-auto p-6 max-w-7xl">
-      <div className="flex items-center justify-between mb-6">
-        <div>
-          <h1 className="text-2xl font-bold flex items-center gap-2">
-            <Printer className="h-6 w-6" />
-            Impostazioni Stampante
-          </h1>
-          <p className="text-muted-foreground">
-            Gestisci stampanti, profili carta e agenti di stampa
-          </p>
-        </div>
-        <Button variant="outline" onClick={() => {
-          refetchAgents();
-          refetchProfiles();
-          if (isSuperAdmin) refetchModels();
-        }} data-testid="button-refresh-printers">
-          <RefreshCw className="h-4 w-4 mr-2" />
-          Aggiorna
-        </Button>
-      </div>
+    <MobileAppLayout
+      header={
+        <MobileHeader
+          title={getSectionTitle()}
+          leftAction={
+            activeSection ? (
+              <HapticButton
+                variant="ghost"
+                size="icon"
+                onClick={() => setActiveSection(null)}
+                className="min-h-[44px] min-w-[44px]"
+              >
+                <ArrowLeft className="w-5 h-5" />
+              </HapticButton>
+            ) : undefined
+          }
+          rightAction={
+            <HapticButton
+              variant="ghost"
+              size="icon"
+              onClick={handleRefresh}
+              className="min-h-[44px] min-w-[44px]"
+              data-testid="button-refresh-printers"
+            >
+              <RefreshCw className="w-5 h-5" />
+            </HapticButton>
+          }
+        />
+      }
+    >
+      <AnimatePresence mode="wait">
+        <motion.div
+          key={activeSection || "main"}
+          initial={{ opacity: 0, x: activeSection ? 20 : -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          exit={{ opacity: 0, x: activeSection ? -20 : 20 }}
+          transition={springConfig}
+          className="py-4"
+        >
+          {renderContent()}
+        </motion.div>
+      </AnimatePresence>
 
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="mb-4">
-          <TabsTrigger value="agents" data-testid="tab-agents">
-            <Monitor className="h-4 w-4 mr-2" />
-            Agenti Collegati
-          </TabsTrigger>
-          <TabsTrigger value="templates" data-testid="tab-templates">
-            <Layout className="h-4 w-4 mr-2" />
-            Template Biglietti
-          </TabsTrigger>
-          <TabsTrigger value="digital-templates" data-testid="tab-digital-templates">
-            <Smartphone className="h-4 w-4 mr-2" />
-            Template Digitali
-          </TabsTrigger>
-          {isSuperAdmin && (
-            <TabsTrigger value="models" data-testid="tab-models">
-              <Settings className="h-4 w-4 mr-2" />
-              Modelli (Admin)
-            </TabsTrigger>
-          )}
-        </TabsList>
-
-        <TabsContent value="agents">
-          <Card>
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <Monitor className="h-5 w-5" />
-                Agenti Stampante Collegati
-              </CardTitle>
-              <CardDescription>
-                Computer con l'app Event4U Print Agent installata. Scarica l'app per collegare una nuova postazione.
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="mb-4 flex flex-wrap gap-2">
-                <Button variant="outline" data-testid="button-download-agent">
-                  <Download className="h-4 w-4 mr-2" />
-                  Scarica Print Agent
-                </Button>
-
-                <Dialog open={registerDialogOpen} onOpenChange={(open) => {
-                  if (!open) resetRegisterDialog();
-                  else setRegisterDialogOpen(true);
-                }}>
-                  <DialogTrigger asChild>
-                    <Button data-testid="button-register-agent">
-                      <Key className="h-4 w-4 mr-2" />
-                      Genera Token Agent
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>Registra Nuovo Agent</DialogTitle>
-                      <DialogDescription>
-                        Genera un token di autenticazione per collegare un nuovo computer con Print Agent
-                      </DialogDescription>
-                    </DialogHeader>
-                    
-                    {!generatedToken ? (
-                      <div className="space-y-4">
-                        {/* Company selector for super_admin */}
-                        {isSuperAdmin && (
-                          <div className="space-y-2">
-                            <label className="text-sm font-medium">Azienda</label>
-                            <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
-                              <SelectTrigger data-testid="select-company-agent">
-                                <SelectValue placeholder="Seleziona azienda..." />
-                              </SelectTrigger>
-                              <SelectContent>
-                                {companies.map((company) => (
-                                  <SelectItem key={company.id} value={company.id}>
-                                    {company.name}
-                                  </SelectItem>
-                                ))}
-                              </SelectContent>
-                            </Select>
-                            <p className="text-xs text-muted-foreground">
-                              L'azienda a cui associare questo Print Agent
-                            </p>
-                          </div>
-                        )}
-                        <div className="space-y-2">
-                          <label className="text-sm font-medium">Nome Dispositivo</label>
-                          <Input
-                            placeholder="es. Box Office 1, Cassa Ingresso..."
-                            value={deviceName}
-                            onChange={(e) => setDeviceName(e.target.value)}
-                            data-testid="input-device-name"
-                          />
-                          <p className="text-xs text-muted-foreground">
-                            Un nome identificativo per riconoscere questo computer
-                          </p>
-                        </div>
-                        <DialogFooter>
-                          <Button
-                            onClick={handleRegisterAgent}
-                            disabled={registerAgentMutation.isPending || !deviceName.trim() || (isSuperAdmin && !selectedCompanyId)}
-                            data-testid="button-confirm-register"
-                          >
-                            {registerAgentMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                            Genera Token
-                          </Button>
-                        </DialogFooter>
-                      </div>
-                    ) : (
-                      <div className="space-y-4">
-                        <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
-                          <div className="flex items-center gap-2 mb-2 text-green-600">
-                            <CheckCircle2 className="h-5 w-5" />
-                            <span className="font-medium">Token Generato!</span>
-                          </div>
-                          <p className="text-sm text-muted-foreground mb-3">
-                            Copia questo token nel Print Agent sul computer "{deviceName}"
-                          </p>
-                          <div className="flex gap-2">
-                            <Input
-                              value={generatedToken}
-                              readOnly
-                              className="font-mono text-xs"
-                              data-testid="input-generated-token"
-                            />
-                            <Button
-                              size="icon"
-                              variant="outline"
-                              onClick={handleCopyToken}
-                              data-testid="button-copy-token"
-                            >
-                              {tokenCopied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-lg">
-                          <p className="text-xs text-yellow-600">
-                            <AlertTriangle className="h-4 w-4 inline mr-1" />
-                            Questo token viene mostrato una sola volta. Salvalo subito!
-                          </p>
-                        </div>
-                        <DialogFooter>
-                          <Button variant="outline" onClick={resetRegisterDialog} data-testid="button-close-register">
-                            Chiudi
-                          </Button>
-                        </DialogFooter>
-                      </div>
-                    )}
-                  </DialogContent>
-                </Dialog>
-              </div>
-              
-              {agentsLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                </div>
-              ) : agents.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Monitor className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nessun agente collegato</p>
-                  <p className="text-sm">Scarica e installa Event4U Print Agent su un computer con stampante termica</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Dispositivo</TableHead>
-                      <TableHead>Stampante</TableHead>
-                      <TableHead>Profili Collegati</TableHead>
-                      <TableHead>Stato</TableHead>
-                      <TableHead>Ultimo Heartbeat</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {agents.map((agent) => {
-                      const agentProfiles = getProfilesForAgent(agent.id);
-                      return (
-                        <TableRow key={agent.id} data-testid={`row-agent-${agent.id}`}>
-                          <TableCell className="font-medium">{agent.deviceName}</TableCell>
-                          <TableCell>{agent.printerName || "Non configurata"}</TableCell>
-                          <TableCell>
-                            {agentProfiles.length > 0 ? (
-                              <div className="flex flex-wrap gap-1">
-                                {agentProfiles.map(profile => (
-                                  <Badge key={profile.id} variant="secondary" className="text-xs">
-                                    {profile.name}
-                                  </Badge>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="text-muted-foreground text-sm">Nessun profilo</span>
-                            )}
-                          </TableCell>
-                          <TableCell>{getStatusBadge(agent.status)}</TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {formatDate(agent.lastHeartbeat)}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button 
-                                size="icon" 
-                                variant="ghost" 
-                                onClick={() => openProfileAssignDialog(agent)}
-                                data-testid={`button-manage-profiles-${agent.id}`}
-                                title="Gestisci profili"
-                              >
-                                <FileText className="h-4 w-4" />
-                              </Button>
-                              <Button 
-                                size="icon" 
-                                variant="ghost" 
-                                onClick={() => deleteAgentMutation.mutate(agent.id)}
-                                data-testid={`button-delete-agent-${agent.id}`}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
-                      );
-                    })}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="templates">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-2">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Layout className="h-5 w-5" />
-                  Template Biglietti
-                </CardTitle>
-                <CardDescription>
-                  {isSuperAdmin 
-                    ? "Crea e gestisci template grafici per la stampa dei biglietti"
-                    : "Visualizza i template disponibili per la stampa dei biglietti"
-                  }
-                </CardDescription>
-              </div>
+      <BottomSheet
+        open={registerSheetOpen}
+        onClose={resetRegisterSheet}
+        title="Registra Agent"
+      >
+        <div className="p-4 space-y-4">
+          {!generatedToken ? (
+            <>
               {isSuperAdmin && (
-                <Link href="/template-builder">
-                  <Button data-testid="button-new-template">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nuovo Template
-                  </Button>
-                </Link>
-              )}
-            </CardHeader>
-            <CardContent>
-              {templatesLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                </div>
-              ) : templates.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Layout className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nessun template disponibile</p>
-                  {isSuperAdmin && (
-                    <p className="text-sm mt-2">Crea il tuo primo template per personalizzare la stampa dei biglietti</p>
-                  )}
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Dimensioni</TableHead>
-                      <TableHead>Stato</TableHead>
-                      <TableHead>Versione</TableHead>
-                      {isSuperAdmin && <TableHead className="text-right">Azioni</TableHead>}
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {templates.map((template) => (
-                      <TableRow key={template.id} data-testid={`row-template-${template.id}`}>
-                        <TableCell className="font-medium">{template.name}</TableCell>
-                        <TableCell>
-                          {!template.companyId ? (
-                            <Badge variant="default" className="bg-purple-600">Sistema</Badge>
-                          ) : (
-                            <Badge variant="outline">Azienda</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          {template.paperWidthMm}mm × {template.paperHeightMm}mm
-                        </TableCell>
-                        <TableCell>
-                          {template.isActive ? (
-                            <Badge className="bg-green-600"><CheckCircle2 className="h-3 w-3 mr-1" />Attivo</Badge>
-                          ) : (
-                            <Badge variant="secondary"><XCircle className="h-3 w-3 mr-1" />Inattivo</Badge>
-                          )}
-                          {template.isDefault && (
-                            <Badge variant="outline" className="ml-1">Default</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>v{template.version || 1}</TableCell>
-                        {isSuperAdmin && (
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <Link href={`/template-builder/${template.id}`}>
-                                <Button size="icon" variant="ghost" data-testid={`button-edit-template-${template.id}`}>
-                                  <Edit className="h-4 w-4" />
-                                </Button>
-                              </Link>
-                              <Button 
-                                size="icon" 
-                                variant="ghost" 
-                                onClick={() => deleteTemplateMutation.mutate(template.id)}
-                                disabled={deleteTemplateMutation.isPending}
-                                data-testid={`button-delete-template-${template.id}`}
-                              >
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        )}
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="digital-templates">
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between gap-2">
-              <div>
-                <CardTitle className="flex items-center gap-2">
-                  <Smartphone className="h-5 w-5" />
-                  Template Biglietti Digitali
-                </CardTitle>
-                <CardDescription>
-                  Template per la visualizzazione digitale dei biglietti su smartphone e PDF
-                </CardDescription>
-              </div>
-              <Link href="/digital-template-builder">
-                <Button data-testid="button-new-digital-template">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nuovo Template Digitale
-                </Button>
-              </Link>
-            </CardHeader>
-            <CardContent>
-              {digitalTemplatesLoading ? (
-                <div className="flex items-center justify-center py-8">
-                  <Loader2 className="h-6 w-6 animate-spin" />
-                </div>
-              ) : digitalTemplates.length === 0 ? (
-                <div className="text-center py-8 text-muted-foreground">
-                  <Smartphone className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                  <p>Nessun template digitale disponibile</p>
-                  <p className="text-sm mt-2">Crea il tuo primo template per personalizzare i biglietti digitali</p>
-                </div>
-              ) : (
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>Azienda</TableHead>
-                      <TableHead>Stile</TableHead>
-                      <TableHead>Stato</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {digitalTemplates.map((template) => (
-                      <TableRow key={template.id} data-testid={`row-digital-template-${template.id}`}>
-                        <TableCell className="font-medium">{template.name}</TableCell>
-                        <TableCell>
-                          {!template.companyId ? (
-                            <Badge variant="default" className="bg-purple-600">Sistema</Badge>
-                          ) : (
-                            <Badge variant="outline">Azienda</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="capitalize">{template.backgroundStyle || "gradient"}</TableCell>
-                        <TableCell>
-                          {template.isActive ? (
-                            <Badge className="bg-green-600"><CheckCircle2 className="h-3 w-3 mr-1" />Attivo</Badge>
-                          ) : (
-                            <Badge variant="secondary"><XCircle className="h-3 w-3 mr-1" />Disattivo</Badge>
-                          )}
-                          {template.isDefault && (
-                            <Badge variant="outline" className="ml-1">Predefinito</Badge>
-                          )}
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Link href={`/digital-template-builder/${template.id}`}>
-                              <Button size="icon" variant="ghost" data-testid={`button-edit-digital-template-${template.id}`}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                            </Link>
-                            <Button 
-                              size="icon" 
-                              variant="ghost" 
-                              onClick={() => deleteDigitalTemplateMutation.mutate(template.id)}
-                              disabled={deleteDigitalTemplateMutation.isPending}
-                              data-testid={`button-delete-digital-template-${template.id}`}
-                            >
-                              <Trash2 className="h-4 w-4 text-destructive" />
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        {isSuperAdmin && (
-          <TabsContent value="models">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between gap-2">
-                <div>
-                  <CardTitle className="flex items-center gap-2">
-                    <Printer className="h-5 w-5" />
-                    Modelli Stampante (Super Admin)
-                  </CardTitle>
-                  <CardDescription>
-                    Gestisci i modelli di stampante termica supportati dal sistema
-                  </CardDescription>
-                </div>
-                <Dialog open={modelDialogOpen} onOpenChange={(open) => {
-                  setModelDialogOpen(open);
-                  if (!open) {
-                    setEditingModel(null);
-                    modelForm.reset();
-                  }
-                }}>
-                  <DialogTrigger asChild>
-                    <Button data-testid="button-add-model">
-                      <Plus className="h-4 w-4 mr-2" />
-                      Nuovo Modello
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-md">
-                    <DialogHeader>
-                      <DialogTitle>
-                        {editingModel ? "Modifica Modello" : "Nuovo Modello Stampante"}
-                      </DialogTitle>
-                      <DialogDescription>
-                        Aggiungi un nuovo modello di stampante termica al sistema
-                      </DialogDescription>
-                    </DialogHeader>
-                    <Form {...modelForm}>
-                      <form onSubmit={modelForm.handleSubmit(onSubmitModel)} className="space-y-4">
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={modelForm.control}
-                            name="vendor"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Produttore</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="es. X PRINTER" {...field} data-testid="input-model-vendor" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={modelForm.control}
-                            name="model"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Modello</FormLabel>
-                                <FormControl>
-                                  <Input placeholder="es. XP-420B" {...field} data-testid="input-model-name" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-4">
-                          <FormField
-                            control={modelForm.control}
-                            name="dpi"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Risoluzione (DPI)</FormLabel>
-                                <FormControl>
-                                  <Input type="number" {...field} data-testid="input-model-dpi" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={modelForm.control}
-                            name="maxWidthMm"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Largh. Max (mm)</FormLabel>
-                                <FormControl>
-                                  <Input type="number" {...field} data-testid="input-model-width" />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        <FormField
-                          control={modelForm.control}
-                          name="connectionType"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Tipo Connessione</FormLabel>
-                              <Select onValueChange={field.onChange} value={field.value ?? "usb"}>
-                                <FormControl>
-                                  <SelectTrigger data-testid="select-connection-type">
-                                    <SelectValue />
-                                  </SelectTrigger>
-                                </FormControl>
-                                <SelectContent>
-                                  <SelectItem value="usb">USB</SelectItem>
-                                  <SelectItem value="tcp">Rete (TCP/IP)</SelectItem>
-                                  <SelectItem value="bluetooth">Bluetooth</SelectItem>
-                                </SelectContent>
-                              </Select>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={modelForm.control}
-                          name="driverNotes"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Note Driver</FormLabel>
-                              <FormControl>
-                                <Textarea placeholder="Note sull'installazione driver..." {...field} value={field.value ?? ""} data-testid="input-driver-notes" />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-
-                        <FormField
-                          control={modelForm.control}
-                          name="isActive"
-                          render={({ field }) => (
-                            <FormItem className="flex items-center gap-2">
-                              <FormControl>
-                                <Switch checked={field.value} onCheckedChange={field.onChange} />
-                              </FormControl>
-                              <FormLabel className="!mt-0">Attivo</FormLabel>
-                            </FormItem>
-                          )}
-                        />
-
-                        <DialogFooter>
-                          <Button type="submit" disabled={createModelMutation.isPending || updateModelMutation.isPending} data-testid="button-save-model">
-                            {(createModelMutation.isPending || updateModelMutation.isPending) && (
-                              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                            )}
-                            {editingModel ? "Salva Modifiche" : "Crea Modello"}
-                          </Button>
-                        </DialogFooter>
-                      </form>
-                    </Form>
-                  </DialogContent>
-                </Dialog>
-              </CardHeader>
-              <CardContent>
-                {modelsLoading ? (
-                  <div className="flex items-center justify-center py-8">
-                    <Loader2 className="h-6 w-6 animate-spin" />
-                  </div>
-                ) : models.length === 0 ? (
-                  <div className="text-center py-8 text-muted-foreground">
-                    <Printer className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Nessun modello stampante configurato</p>
-                    <p className="text-sm">Aggiungi modelli di stampante termica supportati</p>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Produttore</TableHead>
-                        <TableHead>Modello</TableHead>
-                        <TableHead>DPI</TableHead>
-                        <TableHead>Largh. Max</TableHead>
-                        <TableHead>Connessione</TableHead>
-                        <TableHead>Stato</TableHead>
-                        <TableHead className="text-right">Azioni</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {models.map((model) => (
-                        <TableRow key={model.id} data-testid={`row-model-${model.id}`}>
-                          <TableCell className="font-medium">{model.vendor}</TableCell>
-                          <TableCell>{model.model}</TableCell>
-                          <TableCell>{model.dpi}</TableCell>
-                          <TableCell>{model.maxWidthMm} mm</TableCell>
-                          <TableCell className="capitalize">{model.connectionType}</TableCell>
-                          <TableCell>
-                            {model.isActive ? (
-                              <Badge className="bg-green-600"><CheckCircle2 className="h-3 w-3 mr-1" />Attivo</Badge>
-                            ) : (
-                              <Badge variant="secondary"><XCircle className="h-3 w-3 mr-1" />Inattivo</Badge>
-                            )}
-                          </TableCell>
-                          <TableCell className="text-right">
-                            <div className="flex justify-end gap-1">
-                              <Button size="icon" variant="ghost" onClick={() => handleEditModel(model)} data-testid={`button-edit-model-${model.id}`}>
-                                <Edit className="h-4 w-4" />
-                              </Button>
-                              <Button size="icon" variant="ghost" onClick={() => deleteModelMutation.mutate(model.id)} data-testid={`button-delete-model-${model.id}`}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
-                            </div>
-                          </TableCell>
-                        </TableRow>
+                <div className="space-y-2">
+                  <label className="text-sm font-medium">Azienda</label>
+                  <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+                    <SelectTrigger className="min-h-[48px]" data-testid="select-company-agent">
+                      <SelectValue placeholder="Seleziona azienda..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {companies.map((company) => (
+                        <SelectItem key={company.id} value={company.id}>
+                          {company.name}
+                        </SelectItem>
                       ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-        )}
-      </Tabs>
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
+              <div className="space-y-2">
+                <label className="text-sm font-medium">Nome Dispositivo</label>
+                <Input
+                  placeholder="es. Box Office 1"
+                  value={deviceName}
+                  onChange={(e) => setDeviceName(e.target.value)}
+                  className="min-h-[48px]"
+                  data-testid="input-device-name"
+                />
+              </div>
+              <HapticButton
+                className="w-full min-h-[48px]"
+                onClick={handleRegisterAgent}
+                disabled={registerAgentMutation.isPending || !deviceName.trim() || (isSuperAdmin && !selectedCompanyId)}
+                data-testid="button-confirm-register"
+              >
+                {registerAgentMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                Genera Token
+              </HapticButton>
+            </>
+          ) : (
+            <>
+              <div className="p-4 bg-green-500/10 border border-green-500/20 rounded-xl">
+                <div className="flex items-center gap-2 mb-2 text-green-600">
+                  <CheckCircle2 className="w-5 h-5" />
+                  <span className="font-medium">Token Generato!</span>
+                </div>
+                <p className="text-sm text-muted-foreground mb-3">
+                  Copia questo token nel Print Agent
+                </p>
+                <div className="flex gap-2">
+                  <Input
+                    value={generatedToken}
+                    readOnly
+                    className="font-mono text-xs min-h-[48px]"
+                    data-testid="input-generated-token"
+                  />
+                  <HapticButton
+                    size="icon"
+                    variant="outline"
+                    onClick={handleCopyToken}
+                    className="min-h-[48px] min-w-[48px]"
+                    data-testid="button-copy-token"
+                  >
+                    {tokenCopied ? <Check className="w-5 h-5" /> : <Copy className="w-5 h-5" />}
+                  </HapticButton>
+                </div>
+              </div>
+              <div className="p-3 bg-yellow-500/10 border border-yellow-500/20 rounded-xl">
+                <p className="text-xs text-yellow-600">
+                  <AlertTriangle className="w-4 h-4 inline mr-1" />
+                  Questo token viene mostrato una sola volta!
+                </p>
+              </div>
+              <HapticButton
+                variant="outline"
+                className="w-full min-h-[48px]"
+                onClick={resetRegisterSheet}
+                data-testid="button-close-register"
+              >
+                Chiudi
+              </HapticButton>
+            </>
+          )}
+        </div>
+      </BottomSheet>
 
-      {/* Dialog per gestione profili agente */}
-      <Dialog open={profileAssignDialogOpen} onOpenChange={(open) => {
-        setProfileAssignDialogOpen(open);
-        if (!open) setSelectedAgentForProfiles(null);
-      }}>
-        <DialogContent className="max-w-md">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <FileText className="h-5 w-5" />
-              Gestisci Profili
-            </DialogTitle>
-            <DialogDescription>
-              Assegna o rimuovi profili stampante per "{selectedAgentForProfiles?.deviceName}"
-            </DialogDescription>
-          </DialogHeader>
-          
+      <BottomSheet
+        open={profileAssignSheetOpen}
+        onClose={() => {
+          setProfileAssignSheetOpen(false);
+          setSelectedAgentForProfiles(null);
+        }}
+        title={`Profili - ${selectedAgentForProfiles?.deviceName || ""}`}
+      >
+        <div className="p-4 space-y-4">
           {selectedAgentForProfiles && (
-            <div className="space-y-4">
-              {/* Profili assegnati a questo agente */}
+            <>
               <div>
-                <h4 className="font-medium text-sm mb-2">Profili assegnati</h4>
+                <h4 className="font-medium text-sm mb-3">Profili assegnati</h4>
                 {getProfilesForAgent(selectedAgentForProfiles.id).length > 0 ? (
                   <div className="space-y-2">
                     {getProfilesForAgent(selectedAgentForProfiles.id).map(profile => (
-                      <div key={profile.id} className="flex items-center justify-between p-2 border rounded-md">
+                      <div key={profile.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-xl">
                         <div>
                           <span className="font-medium">{profile.name}</span>
                           <span className="text-xs text-muted-foreground ml-2">
                             {profile.paperWidthMm}×{profile.paperHeightMm}mm
                           </span>
                         </div>
-                        <Button 
-                          size="sm" 
+                        <HapticButton 
+                          size="icon"
                           variant="ghost"
+                          className="min-h-[44px] min-w-[44px]"
                           onClick={() => assignProfileToAgentMutation.mutate({ profileId: profile.id, agentId: null })}
                           disabled={assignProfileToAgentMutation.isPending}
+                          hapticType="medium"
                           data-testid={`button-unassign-profile-${profile.id}`}
                         >
-                          <XCircle className="h-4 w-4 text-destructive" />
-                        </Button>
+                          <XCircle className="w-5 h-5 text-destructive" />
+                        </HapticButton>
                       </div>
                     ))}
                   </div>
@@ -1165,52 +1184,197 @@ export default function PrinterSettings() {
                 )}
               </div>
 
-              {/* Profili non assegnati */}
               <div>
-                <h4 className="font-medium text-sm mb-2">Profili disponibili</h4>
+                <h4 className="font-medium text-sm mb-3">Profili disponibili</h4>
                 {getUnassignedProfiles().length > 0 ? (
                   <div className="space-y-2">
                     {getUnassignedProfiles().map(profile => (
-                      <div key={profile.id} className="flex items-center justify-between p-2 border rounded-md">
+                      <div key={profile.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-xl">
                         <div>
                           <span className="font-medium">{profile.name}</span>
                           <span className="text-xs text-muted-foreground ml-2">
                             {profile.paperWidthMm}×{profile.paperHeightMm}mm
                           </span>
                         </div>
-                        <Button 
-                          size="sm" 
+                        <HapticButton 
+                          size="icon"
                           variant="outline"
+                          className="min-h-[44px] min-w-[44px]"
                           onClick={() => assignProfileToAgentMutation.mutate({ profileId: profile.id, agentId: selectedAgentForProfiles.id })}
                           disabled={assignProfileToAgentMutation.isPending}
                           data-testid={`button-assign-profile-${profile.id}`}
                         >
-                          <Plus className="h-4 w-4" />
-                        </Button>
+                          <Plus className="w-5 h-5" />
+                        </HapticButton>
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-sm text-muted-foreground">Tutti i profili sono già assegnati</p>
+                  <p className="text-sm text-muted-foreground">Tutti i profili sono assegnati</p>
                 )}
               </div>
 
               {profiles.length === 0 && (
-                <div className="text-center py-4 text-muted-foreground">
-                  <FileText className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                  <p className="text-sm">Non ci sono profili nel sistema</p>
+                <div className="text-center py-6">
+                  <FileText className="w-10 h-10 mx-auto mb-2 text-muted-foreground opacity-50" />
+                  <p className="text-sm text-muted-foreground">Nessun profilo nel sistema</p>
                 </div>
               )}
-            </div>
+            </>
           )}
 
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setProfileAssignDialogOpen(false)} data-testid="button-close-profile-dialog">
-              Chiudi
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-    </div>
+          <HapticButton
+            variant="outline"
+            className="w-full min-h-[48px]"
+            onClick={() => setProfileAssignSheetOpen(false)}
+            data-testid="button-close-profile-dialog"
+          >
+            Chiudi
+          </HapticButton>
+        </div>
+      </BottomSheet>
+
+      <BottomSheet
+        open={modelSheetOpen}
+        onClose={() => {
+          setModelSheetOpen(false);
+          setEditingModel(null);
+          modelForm.reset();
+        }}
+        title={editingModel ? "Modifica Modello" : "Nuovo Modello"}
+      >
+        <div className="p-4">
+          <Form {...modelForm}>
+            <form onSubmit={modelForm.handleSubmit(onSubmitModel)} className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={modelForm.control}
+                  name="vendor"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Produttore</FormLabel>
+                      <FormControl>
+                        <Input placeholder="X PRINTER" {...field} className="min-h-[48px]" data-testid="input-model-vendor" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={modelForm.control}
+                  name="model"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Modello</FormLabel>
+                      <FormControl>
+                        <Input placeholder="XP-420B" {...field} className="min-h-[48px]" data-testid="input-model-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <FormField
+                  control={modelForm.control}
+                  name="dpi"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>DPI</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} className="min-h-[48px]" data-testid="input-model-dpi" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={modelForm.control}
+                  name="maxWidthMm"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Largh. Max (mm)</FormLabel>
+                      <FormControl>
+                        <Input type="number" {...field} className="min-h-[48px]" data-testid="input-model-width" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+
+              <FormField
+                control={modelForm.control}
+                name="connectionType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Connessione</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value ?? "usb"}>
+                      <FormControl>
+                        <SelectTrigger className="min-h-[48px]" data-testid="select-connection-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="usb">USB</SelectItem>
+                        <SelectItem value="tcp">Rete (TCP/IP)</SelectItem>
+                        <SelectItem value="bluetooth">Bluetooth</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={modelForm.control}
+                name="driverNotes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Note Driver</FormLabel>
+                    <FormControl>
+                      <Textarea 
+                        placeholder="Note installazione..." 
+                        {...field} 
+                        value={field.value ?? ""} 
+                        className="min-h-[80px]"
+                        data-testid="input-driver-notes" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={modelForm.control}
+                name="isActive"
+                render={({ field }) => (
+                  <FormItem className="flex items-center justify-between p-3 bg-muted/50 rounded-xl">
+                    <FormLabel className="!mt-0">Attivo</FormLabel>
+                    <FormControl>
+                      <Switch checked={field.value} onCheckedChange={field.onChange} />
+                    </FormControl>
+                  </FormItem>
+                )}
+              />
+
+              <HapticButton
+                type="submit"
+                className="w-full min-h-[48px]"
+                disabled={createModelMutation.isPending || updateModelMutation.isPending}
+                data-testid="button-save-model"
+              >
+                {(createModelMutation.isPending || updateModelMutation.isPending) && (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                )}
+                {editingModel ? "Salva Modifiche" : "Crea Modello"}
+              </HapticButton>
+            </form>
+          </Form>
+        </div>
+      </BottomSheet>
+    </MobileAppLayout>
   );
 }

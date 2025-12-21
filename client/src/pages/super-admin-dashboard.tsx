@@ -1,10 +1,13 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Building2, Calendar, TrendingUp, Package, Settings, UserPlus, Ticket } from "lucide-react";
+import { Building2, Calendar, TrendingUp, Package, Settings, UserPlus, Ticket, ChevronLeft } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
+import { MobileAppLayout, MobileHeader, HapticButton, triggerHaptic } from "@/components/mobile-primitives";
+import { useLocation } from "wouter";
 import {
   BarChart,
   Bar,
@@ -12,7 +15,6 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  Legend,
   ResponsiveContainer,
   PieChart,
   Pie,
@@ -49,8 +51,70 @@ type SystemSetting = {
 
 const COLORS = ['hsl(var(--primary))', 'hsl(var(--accent))', 'hsl(var(--chart-1))', 'hsl(var(--chart-2))', 'hsl(var(--chart-3))'];
 
+const springTransition = { type: "spring", stiffness: 400, damping: 30 };
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: springTransition,
+  },
+};
+
+interface StatCardProps {
+  title: string;
+  value: string | number;
+  subtitle?: string;
+  icon: React.ElementType;
+  testId: string;
+  index: number;
+}
+
+function StatCard({ title, value, subtitle, icon: Icon, testId, index }: StatCardProps) {
+  return (
+    <motion.div
+      variants={itemVariants}
+      whileTap={{ scale: 0.98 }}
+      transition={springTransition}
+      onTapStart={() => triggerHaptic('light')}
+    >
+      <Card className="glass-card h-full">
+        <CardContent className="p-5">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-muted-foreground mb-2">{title}</p>
+              <p className="text-3xl font-bold" data-testid={testId}>
+                {value}
+              </p>
+              {subtitle && (
+                <p className="text-sm text-muted-foreground mt-1">{subtitle}</p>
+              )}
+            </div>
+            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+              <Icon className="w-6 h-6 text-primary" />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+}
+
 export default function SuperAdminDashboard() {
   const { toast } = useToast();
+  const [, setLocation] = useLocation();
   
   const { data: analytics, isLoading } = useQuery<AnalyticsData>({
     queryKey: ['/api/super-admin/analytics'],
@@ -66,12 +130,14 @@ export default function SuperAdminDashboard() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/system-settings'] });
+      triggerHaptic('success');
       toast({
         title: "Impostazione aggiornata",
         description: "L'impostazione è stata salvata correttamente.",
       });
     },
     onError: () => {
+      triggerHaptic('error');
       toast({
         title: "Errore",
         description: "Impossibile aggiornare l'impostazione.",
@@ -84,6 +150,7 @@ export default function SuperAdminDashboard() {
   const customerRegistrationEnabled = systemSettings?.find(s => s.key === 'customer_registration_enabled')?.value !== 'false';
 
   const handleRegistrationToggle = (enabled: boolean) => {
+    triggerHaptic('medium');
     updateSettingMutation.mutate({
       key: 'registration_enabled',
       value: enabled ? 'true' : 'false',
@@ -91,6 +158,7 @@ export default function SuperAdminDashboard() {
   };
 
   const handleCustomerRegistrationToggle = (enabled: boolean) => {
+    triggerHaptic('medium');
     updateSettingMutation.mutate({
       key: 'customer_registration_enabled',
       value: enabled ? 'true' : 'false',
@@ -99,17 +167,65 @@ export default function SuperAdminDashboard() {
 
   if (isLoading) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Caricamento analytics...</p>
-      </div>
+      <MobileAppLayout
+        header={
+          <MobileHeader
+            title="Dashboard Super Admin"
+            leftAction={
+              <HapticButton
+                variant="ghost"
+                size="icon"
+                onClick={() => setLocation('/')}
+                data-testid="button-back"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </HapticButton>
+            }
+          />
+        }
+      >
+        <div className="flex items-center justify-center h-full">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={springTransition}
+          >
+            <p className="text-muted-foreground text-base">Caricamento analytics...</p>
+          </motion.div>
+        </div>
+      </MobileAppLayout>
     );
   }
 
   if (!analytics) {
     return (
-      <div className="flex items-center justify-center h-full">
-        <p className="text-muted-foreground">Nessun dato disponibile</p>
-      </div>
+      <MobileAppLayout
+        header={
+          <MobileHeader
+            title="Dashboard Super Admin"
+            leftAction={
+              <HapticButton
+                variant="ghost"
+                size="icon"
+                onClick={() => setLocation('/')}
+                data-testid="button-back"
+              >
+                <ChevronLeft className="h-5 w-5" />
+              </HapticButton>
+            }
+          />
+        }
+      >
+        <div className="flex items-center justify-center h-full">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={springTransition}
+          >
+            <p className="text-muted-foreground text-base">Nessun dato disponibile</p>
+          </motion.div>
+        </div>
+      </MobileAppLayout>
     );
   }
 
@@ -117,238 +233,324 @@ export default function SuperAdminDashboard() {
   const totalRevenue = analytics.companyMetrics.reduce((sum, c) => sum + c.totalRevenue, 0);
 
   return (
-    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 overflow-auto h-full pb-24 md:pb-8">
-      <div>
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-semibold mb-2">Dashboard Super Admin</h1>
-        <p className="text-muted-foreground text-xs sm:text-sm md:text-base">
-          Panoramica completa delle metriche cross-company
-        </p>
-      </div>
+    <MobileAppLayout
+      header={
+        <MobileHeader
+          title="Dashboard Super Admin"
+          subtitle="Metriche cross-company"
+          leftAction={
+            <HapticButton
+              variant="ghost"
+              size="icon"
+              onClick={() => setLocation('/')}
+              data-testid="button-back"
+            >
+              <ChevronLeft className="h-5 w-5" />
+            </HapticButton>
+          }
+        />
+      }
+    >
+      <motion.div
+        variants={containerVariants}
+        initial="hidden"
+        animate="visible"
+        className="space-y-5 py-4 pb-24"
+      >
+        <div className="grid grid-cols-2 gap-4">
+          <StatCard
+            title="Aziende"
+            value={totalCompanies}
+            icon={Building2}
+            testId="text-total-companies"
+            index={0}
+          />
+          <StatCard
+            title="Eventi"
+            value={analytics.eventStatistics.total}
+            subtitle={`${analytics.eventStatistics.active} attivi`}
+            icon={Calendar}
+            testId="text-total-events"
+            index={1}
+          />
+          <StatCard
+            title="Ricavi"
+            value={`€${totalRevenue.toFixed(0)}`}
+            icon={TrendingUp}
+            testId="text-total-revenue"
+            index={2}
+          />
+          <StatCard
+            title="Top Prodotti"
+            value={analytics.topProducts.length}
+            icon={Package}
+            testId="text-top-products-count"
+            index={3}
+          />
+        </div>
 
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-3 md:p-4">
-            <CardTitle className="text-xs md:text-sm font-medium">Aziende</CardTitle>
-            <Building2 className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="p-3 md:p-4 pt-0">
-            <div className="text-xl md:text-2xl font-semibold" data-testid="text-total-companies">
-              {totalCompanies}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-3 md:p-4">
-            <CardTitle className="text-xs md:text-sm font-medium">Eventi</CardTitle>
-            <Calendar className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="p-3 md:p-4 pt-0">
-            <div className="text-xl md:text-2xl font-semibold" data-testid="text-total-events">
-              {analytics.eventStatistics.total}
-            </div>
-            <p className="text-[10px] md:text-xs text-muted-foreground mt-1">
-              {analytics.eventStatistics.active} attivi
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-3 md:p-4">
-            <CardTitle className="text-xs md:text-sm font-medium">Ricavi</CardTitle>
-            <TrendingUp className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="p-3 md:p-4 pt-0">
-            <div className="text-xl md:text-2xl font-semibold" data-testid="text-total-revenue">
-              €{totalRevenue.toFixed(0)}
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardHeader className="flex flex-row items-center justify-between gap-2 space-y-0 pb-2 p-3 md:p-4">
-            <CardTitle className="text-xs md:text-sm font-medium">Top Prodotti</CardTitle>
-            <Package className="w-4 h-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent className="p-3 md:p-4 pt-0">
-            <div className="text-xl md:text-2xl font-semibold" data-testid="text-top-products-count">
-              {analytics.topProducts.length}
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* System Settings Section */}
-      <Card className="glass-card">
-        <CardHeader className="p-3 md:p-4">
-          <div className="flex items-center gap-2">
-            <Settings className="w-5 h-5 text-muted-foreground" />
-            <CardTitle className="text-sm md:text-base">Impostazioni di Sistema</CardTitle>
-          </div>
-          <CardDescription className="text-xs md:text-sm">
-            Gestisci le impostazioni globali della piattaforma
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-3 md:p-4 pt-0 space-y-4">
-          <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/50">
-            <div className="flex items-start gap-3">
-              <UserPlus className="w-5 h-5 text-muted-foreground mt-0.5" />
-              <div className="space-y-1">
-                <Label htmlFor="registration-toggle" className="text-sm font-medium">
-                  Registrazione Nuovi Organizzatori
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  {registrationEnabled 
-                    ? "La registrazione è attiva. Nuovi organizzatori possono registrarsi."
-                    : "La registrazione è disabilitata. I nuovi organizzatori non possono registrarsi."}
-                </p>
+        <motion.div variants={itemVariants}>
+          <Card className="glass-card">
+            <CardHeader className="p-5 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center">
+                  <Settings className="w-5 h-5 text-muted-foreground" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">Impostazioni Sistema</CardTitle>
+                  <CardDescription className="text-sm">
+                    Impostazioni globali piattaforma
+                  </CardDescription>
+                </div>
               </div>
-            </div>
-            <Switch
-              id="registration-toggle"
-              checked={registrationEnabled}
-              onCheckedChange={handleRegistrationToggle}
-              disabled={updateSettingMutation.isPending}
-              data-testid="switch-registration-enabled"
-            />
-          </div>
+            </CardHeader>
+            <CardContent className="p-5 pt-0 space-y-4">
+              <motion.div
+                className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-muted/30 min-h-[72px]"
+                whileTap={{ scale: 0.98 }}
+                transition={springTransition}
+              >
+                <div className="flex items-start gap-3 flex-1">
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center shrink-0">
+                    <UserPlus className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="space-y-1 flex-1">
+                    <Label htmlFor="registration-toggle" className="text-sm font-medium">
+                      Registrazione Organizzatori
+                    </Label>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {registrationEnabled 
+                        ? "Attiva"
+                        : "Disabilitata"}
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="registration-toggle"
+                  checked={registrationEnabled}
+                  onCheckedChange={handleRegistrationToggle}
+                  disabled={updateSettingMutation.isPending}
+                  className="min-w-[44px] min-h-[44px]"
+                  data-testid="switch-registration-enabled"
+                />
+              </motion.div>
 
-          <div className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/50">
-            <div className="flex items-start gap-3">
-              <Ticket className="w-5 h-5 text-muted-foreground mt-0.5" />
-              <div className="space-y-1">
-                <Label htmlFor="customer-registration-toggle" className="text-sm font-medium">
-                  Registrazione Clienti Biglietteria
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  {customerRegistrationEnabled 
-                    ? "La registrazione clienti è attiva. I clienti possono registrarsi per acquistare biglietti."
-                    : "La registrazione clienti è disabilitata. I clienti non possono registrarsi."}
+              <motion.div
+                className="flex items-center justify-between gap-4 p-4 rounded-2xl bg-muted/30 min-h-[72px]"
+                whileTap={{ scale: 0.98 }}
+                transition={springTransition}
+              >
+                <div className="flex items-start gap-3 flex-1">
+                  <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center shrink-0">
+                    <Ticket className="w-5 h-5 text-accent" />
+                  </div>
+                  <div className="space-y-1 flex-1">
+                    <Label htmlFor="customer-registration-toggle" className="text-sm font-medium">
+                      Registrazione Clienti
+                    </Label>
+                    <p className="text-xs text-muted-foreground leading-relaxed">
+                      {customerRegistrationEnabled 
+                        ? "Attiva"
+                        : "Disabilitata"}
+                    </p>
+                  </div>
+                </div>
+                <Switch
+                  id="customer-registration-toggle"
+                  checked={customerRegistrationEnabled}
+                  onCheckedChange={handleCustomerRegistrationToggle}
+                  disabled={updateSettingMutation.isPending}
+                  className="min-w-[44px] min-h-[44px]"
+                  data-testid="switch-customer-registration-enabled"
+                />
+              </motion.div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card className="glass-card">
+            <CardHeader className="p-5 pb-3">
+              <CardTitle className="text-base">Ricavi per Azienda</CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 pt-0">
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={analytics.companyMetrics}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="companyName" 
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                    tickLine={{ stroke: 'hsl(var(--border))' }}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                    tickLine={{ stroke: 'hsl(var(--border))' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '12px',
+                    }}
+                  />
+                  <Bar dataKey="totalRevenue" fill="hsl(var(--primary))" name="Ricavi (€)" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card className="glass-card">
+            <CardHeader className="p-5 pb-3">
+              <CardTitle className="text-base">Eventi per Azienda</CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 pt-0">
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={analytics.companyMetrics}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    dataKey="companyName" 
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                    tickLine={{ stroke: 'hsl(var(--border))' }}
+                  />
+                  <YAxis 
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                    tickLine={{ stroke: 'hsl(var(--border))' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '12px',
+                    }}
+                  />
+                  <Bar dataKey="eventCount" fill="hsl(var(--accent))" name="N° Eventi" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card className="glass-card">
+            <CardHeader className="p-5 pb-3">
+              <CardTitle className="text-base">Top Prodotti per Consumo</CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 pt-0">
+              <ResponsiveContainer width="100%" height={280}>
+                <BarChart data={analytics.topProducts} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis 
+                    type="number" 
+                    tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }}
+                    tickLine={{ stroke: 'hsl(var(--border))' }}
+                  />
+                  <YAxis 
+                    dataKey="productName" 
+                    type="category" 
+                    width={100} 
+                    tick={{ fontSize: 10, fill: 'hsl(var(--muted-foreground))' }}
+                    tickLine={{ stroke: 'hsl(var(--border))' }}
+                  />
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '12px',
+                    }}
+                  />
+                  <Bar dataKey="totalConsumed" fill="hsl(var(--chart-2))" name="Quantità" radius={[0, 6, 6, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card className="glass-card">
+            <CardHeader className="p-5 pb-3">
+              <CardTitle className="text-base">Distribuzione Stati Eventi</CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 pt-0">
+              <ResponsiveContainer width="100%" height={240}>
+                <PieChart>
+                  <Pie
+                    data={[
+                      { name: 'Pianificato', value: analytics.eventStatistics.total - analytics.eventStatistics.active - analytics.eventStatistics.completed },
+                      { name: 'Attivo', value: analytics.eventStatistics.active },
+                      { name: 'Completato', value: analytics.eventStatistics.completed },
+                    ]}
+                    cx="50%"
+                    cy="50%"
+                    labelLine={false}
+                    label={({ name, value }) => `${name}: ${value}`}
+                    outerRadius={80}
+                    innerRadius={40}
+                    fill="hsl(var(--primary))"
+                    dataKey="value"
+                    paddingAngle={2}
+                  >
+                    {[0, 1, 2].map((index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip 
+                    contentStyle={{ 
+                      backgroundColor: 'hsl(var(--card))',
+                      border: '1px solid hsl(var(--border))',
+                      borderRadius: '12px',
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        <motion.div variants={itemVariants}>
+          <Card className="glass-card">
+            <CardHeader className="p-5 pb-3">
+              <CardTitle className="text-base">Metriche Riepilogo</CardTitle>
+            </CardHeader>
+            <CardContent className="p-5 pt-0 space-y-5">
+              <motion.div 
+                className="p-4 rounded-2xl bg-muted/30"
+                whileTap={{ scale: 0.98 }}
+                transition={springTransition}
+                onTapStart={() => triggerHaptic('light')}
+              >
+                <p className="text-sm text-muted-foreground mb-1">Media eventi/azienda</p>
+                <p className="text-2xl font-bold" data-testid="text-avg-events-per-company">
+                  {totalCompanies > 0 ? (analytics.eventStatistics.total / totalCompanies).toFixed(1) : '0'}
                 </p>
-              </div>
-            </div>
-            <Switch
-              id="customer-registration-toggle"
-              checked={customerRegistrationEnabled}
-              onCheckedChange={handleCustomerRegistrationToggle}
-              disabled={updateSettingMutation.isPending}
-              data-testid="switch-customer-registration-enabled"
-            />
-          </div>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        <Card className="glass-card">
-          <CardHeader className="p-3 md:p-4">
-            <CardTitle className="text-sm md:text-base">Ricavi per Azienda</CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 md:p-4 pt-0">
-            <ResponsiveContainer width="100%" height={200} className="md:h-[300px]">
-              <BarChart data={analytics.companyMetrics}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="companyName" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip />
-                <Bar dataKey="totalRevenue" fill="hsl(var(--primary))" name="Ricavi (€)" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardHeader className="p-3 md:p-4">
-            <CardTitle className="text-sm md:text-base">Eventi per Azienda</CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 md:p-4 pt-0">
-            <ResponsiveContainer width="100%" height={200} className="md:h-[300px]">
-              <BarChart data={analytics.companyMetrics}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="companyName" tick={{ fontSize: 10 }} />
-                <YAxis tick={{ fontSize: 10 }} />
-                <Tooltip />
-                <Bar dataKey="eventCount" fill="hsl(var(--accent))" name="N° Eventi" />
-              </BarChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="glass-card">
-        <CardHeader className="p-3 md:p-4">
-          <CardTitle className="text-sm md:text-base">Top Prodotti per Consumo</CardTitle>
-        </CardHeader>
-        <CardContent className="p-3 md:p-4 pt-0">
-          <ResponsiveContainer width="100%" height={250} className="md:h-[400px]">
-            <BarChart data={analytics.topProducts} layout="horizontal">
-              <CartesianGrid strokeDasharray="3 3" />
-              <XAxis type="number" tick={{ fontSize: 10 }} />
-              <YAxis dataKey="productName" type="category" width={80} tick={{ fontSize: 9 }} className="md:w-[150px]" />
-              <Tooltip />
-              <Bar dataKey="totalConsumed" fill="hsl(var(--chart-2))" name="Quantità" />
-            </BarChart>
-          </ResponsiveContainer>
-        </CardContent>
-      </Card>
-
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
-        <Card className="glass-card">
-          <CardHeader className="p-3 md:p-4">
-            <CardTitle className="text-sm md:text-base">Distribuzione Stati Eventi</CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 md:p-4 pt-0">
-            <ResponsiveContainer width="100%" height={200} className="md:h-[300px]">
-              <PieChart>
-                <Pie
-                  data={[
-                    { name: 'Pianificato', value: analytics.eventStatistics.total - analytics.eventStatistics.active - analytics.eventStatistics.completed },
-                    { name: 'Attivo', value: analytics.eventStatistics.active },
-                    { name: 'Completato', value: analytics.eventStatistics.completed },
-                  ]}
-                  cx="50%"
-                  cy="50%"
-                  labelLine={false}
-                  label={(entry) => `${entry.name}: ${entry.value}`}
-                  outerRadius={60}
-                  fill="hsl(var(--primary))"
-                  dataKey="value"
-                >
-                  {[0, 1, 2].map((index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                  ))}
-                </Pie>
-                <Tooltip />
-              </PieChart>
-            </ResponsiveContainer>
-          </CardContent>
-        </Card>
-
-        <Card className="glass-card">
-          <CardHeader className="p-3 md:p-4">
-            <CardTitle className="text-sm md:text-base">Metriche Riepilogo</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 md:space-y-4 p-3 md:p-4 pt-0">
-            <div>
-              <p className="text-xs md:text-sm text-muted-foreground">Media eventi/azienda</p>
-              <p className="text-lg md:text-2xl font-semibold" data-testid="text-avg-events-per-company">
-                {totalCompanies > 0 ? (analytics.eventStatistics.total / totalCompanies).toFixed(1) : '0'}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs md:text-sm text-muted-foreground">Media ricavi/azienda</p>
-              <p className="text-lg md:text-2xl font-semibold" data-testid="text-avg-revenue-per-company">
-                €{totalCompanies > 0 ? (totalRevenue / totalCompanies).toFixed(0) : '0'}
-              </p>
-            </div>
-            <div>
-              <p className="text-xs md:text-sm text-muted-foreground">Media ricavi/evento</p>
-              <p className="text-lg md:text-2xl font-semibold" data-testid="text-avg-revenue-per-event">
-                €{analytics.eventStatistics.total > 0 ? (totalRevenue / analytics.eventStatistics.total).toFixed(0) : '0'}
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-    </div>
+              </motion.div>
+              <motion.div 
+                className="p-4 rounded-2xl bg-muted/30"
+                whileTap={{ scale: 0.98 }}
+                transition={springTransition}
+                onTapStart={() => triggerHaptic('light')}
+              >
+                <p className="text-sm text-muted-foreground mb-1">Media ricavi/azienda</p>
+                <p className="text-2xl font-bold" data-testid="text-avg-revenue-per-company">
+                  €{totalCompanies > 0 ? (totalRevenue / totalCompanies).toFixed(0) : '0'}
+                </p>
+              </motion.div>
+              <motion.div 
+                className="p-4 rounded-2xl bg-muted/30"
+                whileTap={{ scale: 0.98 }}
+                transition={springTransition}
+                onTapStart={() => triggerHaptic('light')}
+              >
+                <p className="text-sm text-muted-foreground mb-1">Media ricavi/evento</p>
+                <p className="text-2xl font-bold" data-testid="text-avg-revenue-per-event">
+                  €{analytics.eventStatistics.total > 0 ? (totalRevenue / analytics.eventStatistics.total).toFixed(0) : '0'}
+                </p>
+              </motion.div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </motion.div>
+    </MobileAppLayout>
   );
 }

@@ -7,6 +7,7 @@ import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
+import { MobileAppLayout, MobileHeader, HapticButton, triggerHaptic } from "@/components/mobile-primitives";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -181,14 +182,16 @@ interface AlertItem {
 
 function LiveIndicator({ isLive }: { isLive: boolean }) {
   return (
-    <div className={`flex items-center gap-1 sm:gap-2 px-1.5 sm:px-3 py-1 sm:py-1.5 rounded-full text-[10px] sm:text-xs font-medium ${
+    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-medium ${
       isLive ? 'bg-red-500/20 text-red-400' : 'bg-slate-500/20 text-slate-400'
     }`}>
-      <span className={`w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full flex-shrink-0 ${isLive ? 'bg-red-500 animate-pulse' : 'bg-slate-500'}`} />
-      <span className="hidden sm:inline">{isLive ? 'LIVE' : 'OFFLINE'}</span>
+      <span className={`w-2 h-2 rounded-full flex-shrink-0 ${isLive ? 'bg-red-500 animate-pulse' : 'bg-slate-500'}`} />
+      <span>{isLive ? 'LIVE' : 'OFFLINE'}</span>
     </div>
   );
 }
+
+const springConfig = { type: "spring" as const, stiffness: 400, damping: 30 };
 
 function KPICard({
   title,
@@ -211,32 +214,39 @@ function KPICard({
   onClick?: () => void;
   testId: string;
 }) {
+  const handleClick = useCallback(() => {
+    if (onClick) {
+      triggerHaptic('light');
+      onClick();
+    }
+  }, [onClick]);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      onClick={onClick}
-      className={`glass-card p-2.5 sm:p-3 md:p-4 ${onClick ? 'cursor-pointer' : ''}`}
+      whileTap={{ scale: 0.97 }}
+      transition={springConfig}
+      onClick={handleClick}
+      className={`glass-card p-4 min-h-[120px] active:bg-white/5 ${onClick ? 'cursor-pointer' : ''}`}
       data-testid={testId}
     >
-      <div className="flex items-start justify-between mb-1.5 sm:mb-2 md:mb-3">
-        <div className={`w-7 h-7 sm:w-8 sm:h-8 md:w-10 md:h-10 rounded-lg sm:rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center`}>
-          <Icon className="h-3.5 w-3.5 sm:h-4 sm:w-4 md:h-5 md:w-5 text-white" />
+      <div className="flex items-start justify-between mb-3">
+        <div className={`w-11 h-11 rounded-xl bg-gradient-to-br ${gradient} flex items-center justify-center`}>
+          <Icon className="h-5 w-5 text-white" />
         </div>
         {trend && (
-          <div className={`hidden sm:flex items-center gap-1 text-xs ${trend.isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
+          <div className={`flex items-center gap-1 text-xs ${trend.isPositive ? 'text-emerald-400' : 'text-rose-400'}`}>
             {trend.isPositive ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
             {trend.value}%
           </div>
         )}
       </div>
-      <div className="text-[10px] sm:text-xs text-muted-foreground mb-0.5">{title}</div>
-      <div className="text-lg sm:text-xl md:text-2xl font-bold mb-0.5 sm:mb-1">{value}</div>
-      {subValue && <div className="text-[9px] sm:text-xs text-muted-foreground">{subValue}</div>}
+      <div className="text-xs text-muted-foreground mb-0.5">{title}</div>
+      <div className="text-2xl font-bold mb-1">{value}</div>
+      {subValue && <div className="text-xs text-muted-foreground">{subValue}</div>}
       {progress !== undefined && (
-        <Progress value={progress} className="h-1 sm:h-1.5 mt-1.5 sm:mt-2 md:mt-3" />
+        <Progress value={progress} className="h-1.5 mt-3" />
       )}
     </motion.div>
   );
@@ -258,22 +268,31 @@ function QuickActionButton({
   testId: string;
 }) {
   const variantStyles = {
-    default: 'bg-white/5 hover:bg-white/10 text-foreground',
-    success: 'bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400',
-    warning: 'bg-amber-500/20 hover:bg-amber-500/30 text-amber-400',
-    danger: 'bg-red-500/20 hover:bg-red-500/30 text-red-400',
+    default: 'bg-white/5 active:bg-white/15 text-foreground',
+    success: 'bg-emerald-500/20 active:bg-emerald-500/40 text-emerald-400',
+    warning: 'bg-amber-500/20 active:bg-amber-500/40 text-amber-400',
+    danger: 'bg-red-500/20 active:bg-red-500/40 text-red-400',
   };
 
+  const handleClick = useCallback(() => {
+    if (!disabled) {
+      triggerHaptic('light');
+      onClick();
+    }
+  }, [disabled, onClick]);
+
   return (
-    <button
-      onClick={onClick}
+    <motion.button
+      whileTap={{ scale: 0.95 }}
+      transition={springConfig}
+      onClick={handleClick}
       disabled={disabled}
-      className={`flex flex-col items-center justify-center gap-1 sm:gap-2 p-2 sm:p-4 min-h-11 rounded-xl transition-all ${variantStyles[variant]} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
+      className={`flex flex-col items-center justify-center gap-2 p-4 min-h-[72px] min-w-[72px] rounded-2xl transition-colors ${variantStyles[variant]} ${disabled ? 'opacity-50 cursor-not-allowed' : ''}`}
       data-testid={testId}
     >
-      <Icon className="h-5 w-5 sm:h-6 sm:w-6" />
-      <span className="text-[10px] sm:text-xs font-medium text-center">{label}</span>
-    </button>
+      <Icon className="h-6 w-6" />
+      <span className="text-xs font-medium text-center leading-tight">{label}</span>
+    </motion.button>
   );
 }
 
@@ -291,18 +310,18 @@ function ActivityLogEntry({ item }: { item: ActivityLogItem }) {
   const { icon: Icon, color } = iconMap[item.type];
 
   return (
-    <div className="flex items-start gap-2 sm:gap-3 py-1.5 sm:py-2">
-      <div className={`p-1 sm:p-1.5 rounded-lg bg-white/5 ${color}`}>
-        <Icon className="h-3 w-3 sm:h-3.5 sm:w-3.5" />
+    <div className="flex items-start gap-3 py-2.5 min-h-[56px]">
+      <div className={`p-2 rounded-xl bg-white/5 ${color}`}>
+        <Icon className="h-4 w-4" />
       </div>
       <div className="flex-1 min-w-0">
-        <p className="text-xs sm:text-sm">{item.message}</p>
-        <div className="flex items-center gap-1.5 sm:gap-2 mt-0.5">
-          <span className="text-[10px] sm:text-xs text-muted-foreground">
+        <p className="text-sm">{item.message}</p>
+        <div className="flex items-center gap-2 mt-1">
+          <span className="text-xs text-muted-foreground">
             {format(item.timestamp, 'HH:mm', { locale: it })}
           </span>
           {item.user && (
-            <span className="text-[10px] sm:text-xs text-muted-foreground">• {item.user}</span>
+            <span className="text-xs text-muted-foreground">• {item.user}</span>
           )}
         </div>
       </div>
@@ -350,23 +369,23 @@ function AlertBanner({ alert, onDismiss }: { alert: AlertItem; onDismiss: () => 
 function EntranceChart({ data }: { data: Array<{ time: string; entries: number; cumulative: number }> }) {
   return (
     <Card className="glass-card">
-      <CardHeader className="pb-2">
+      <CardHeader className="pb-2 px-4">
         <CardTitle className="text-lg flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-emerald-400" />
           Flusso Ingressi
         </CardTitle>
         <CardDescription>Ingressi per fascia oraria</CardDescription>
       </CardHeader>
-      <CardContent>
+      <CardContent className="px-4">
         {data.length === 0 ? (
-          <div className="h-[160px] md:h-[200px] flex items-center justify-center text-muted-foreground">
+          <div className="h-[200px] flex items-center justify-center text-muted-foreground">
             <div className="text-center">
-              <LogIn className="h-8 w-8 mx-auto mb-2 opacity-50" />
+              <LogIn className="h-10 w-10 mx-auto mb-3 opacity-50" />
               <p className="text-sm">Nessun check-in registrato</p>
             </div>
           </div>
         ) : (
-          <div className="h-[160px] md:h-[200px]">
+          <div className="h-[200px]">
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={data} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
                 <defs>
@@ -1319,31 +1338,35 @@ export default function EventHub() {
 
   if (eventLoading) {
     return (
-      <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto">
-        <Skeleton className="h-20 w-full mb-4 sm:mb-6" />
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-6">
-          {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-28 sm:h-32" />)}
+      <MobileAppLayout className="bg-background">
+        <div className="p-4 pb-24">
+          <Skeleton className="h-20 w-full mb-6" />
+          <div className="grid grid-cols-2 gap-4 mb-6">
+            {[1, 2, 3, 4].map(i => <Skeleton key={i} className="h-32 rounded-2xl" />)}
+          </div>
+          <Skeleton className="h-96 rounded-2xl" />
         </div>
-        <Skeleton className="h-96" />
-      </div>
+      </MobileAppLayout>
     );
   }
 
   if (!event) {
     return (
-      <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto">
-        <Card className="glass-card">
-          <CardContent className="p-8 sm:p-12 text-center">
-            <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-            <h2 className="text-xl font-semibold mb-2">Evento non trovato</h2>
-            <p className="text-muted-foreground mb-4">L'evento richiesto non esiste o è stato eliminato.</p>
-            <Button onClick={() => navigate('/events')} data-testid="button-back-to-events">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Torna agli Eventi
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
+      <MobileAppLayout className="bg-background">
+        <div className="p-4 pb-24">
+          <Card className="glass-card">
+            <CardContent className="p-8 text-center">
+              <Package className="h-14 w-14 text-muted-foreground mx-auto mb-4" />
+              <h2 className="text-xl font-semibold mb-2">Evento non trovato</h2>
+              <p className="text-muted-foreground mb-4">L'evento richiesto non esiste o è stato eliminato.</p>
+              <HapticButton onClick={() => navigate('/events')} data-testid="button-back-to-events" className="min-h-[48px]">
+                <ArrowLeft className="h-5 w-5 mr-2" />
+                Torna agli Eventi
+              </HapticButton>
+            </CardContent>
+          </Card>
+        </div>
+      </MobileAppLayout>
     );
   }
 
@@ -1355,230 +1378,125 @@ export default function EventHub() {
 
   const currentTransition = statusTransitions[event.status];
 
+  const mobileHeader = (
+    <div className="bg-background/90 backdrop-blur-xl border-b border-border">
+      <div className="flex items-center gap-3 px-4 py-3 min-h-[60px]">
+        <HapticButton 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => navigate('/events')} 
+          className="h-11 w-11 flex-shrink-0 rounded-xl"
+          data-testid="button-back"
+        >
+          <ArrowLeft className="h-5 w-5" />
+        </HapticButton>
+        <div className="flex-1 min-w-0">
+          <h1 className="text-lg font-bold truncate" data-testid="event-title">{event.name}</h1>
+          <div className="flex items-center gap-2 mt-0.5">
+            <Badge className={`${status.bgColor} ${status.color} text-xs px-2 py-0.5`}>
+              <StatusIcon className="h-3 w-3 mr-1" />
+              {status.label}
+            </Badge>
+            {isLive && <LiveIndicator isLive={isLive} />}
+          </div>
+        </div>
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <HapticButton variant="ghost" size="icon" className="h-11 w-11 rounded-xl" data-testid="button-more-options-mobile">
+              <MoreHorizontal className="h-5 w-5" />
+            </HapticButton>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="w-56">
+            <DropdownMenuItem onClick={() => { triggerHaptic('light'); navigate(`/events/wizard/${id}`); }} className="min-h-[44px]">
+              <Edit className="h-5 w-5 mr-3" />
+              Modifica Evento
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => { triggerHaptic('light'); navigate(`/reports?eventId=${id}`); }} className="min-h-[44px]">
+              <BarChart3 className="h-5 w-5 mr-3" />
+              Visualizza Report
+            </DropdownMenuItem>
+            <DropdownMenuItem onClick={() => { triggerHaptic('light'); navigate(`/night-file?eventId=${id}`); }} className="min-h-[44px]">
+              <FileText className="h-5 w-5 mr-3" />
+              File della Serata
+            </DropdownMenuItem>
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={() => {
+              triggerHaptic('light');
+              queryClient.invalidateQueries({ queryKey: ['/api/events', id] });
+              toast({ title: "Dati aggiornati" });
+            }} className="min-h-[44px]">
+              <RefreshCw className="h-5 w-5 mr-3" />
+              Aggiorna Dati
+            </DropdownMenuItem>
+            {(user?.role === 'super_admin' || user?.role === 'gestore') && (
+              <>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem 
+                  onClick={() => { triggerHaptic('medium'); setDeleteDialogOpen(true); }}
+                  className="text-destructive min-h-[44px]"
+                >
+                  <Trash2 className="h-5 w-5 mr-3" />
+                  Elimina Evento
+                </DropdownMenuItem>
+              </>
+            )}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
+      <div className="flex items-center gap-4 text-sm text-muted-foreground px-4 pb-3">
+        <span className="flex items-center gap-1.5">
+          <Calendar className="h-4 w-4" />
+          {format(new Date(event.startDatetime), "d MMM", { locale: it })}
+        </span>
+        <span className="flex items-center gap-1.5">
+          <Clock className="h-4 w-4" />
+          {format(new Date(event.startDatetime), "HH:mm")}
+        </span>
+        {location && (
+          <span className="flex items-center gap-1.5 truncate flex-1 min-w-0">
+            <MapPin className="h-4 w-4 flex-shrink-0" />
+            <span className="truncate">{location.name}</span>
+          </span>
+        )}
+      </div>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen pb-24 md:pb-8" data-testid="page-event-hub">
+    <MobileAppLayout 
+      header={mobileHeader}
+      className="bg-background"
+      data-testid="page-event-hub"
+    >
       <AnimatePresence>
         {alerts.filter(a => !a.dismissed).map(alert => (
-          <div key={alert.id} className="px-4 md:px-6 pt-2">
+          <div key={alert.id} className="px-4 pt-2">
             <AlertBanner alert={alert} onDismiss={() => dismissAlert(alert.id)} />
           </div>
         ))}
       </AnimatePresence>
 
-      <div className="sticky top-0 z-40 bg-background/80 backdrop-blur-xl border-b">
-        <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto">
-          {/* Mobile Header */}
-          <div className="md:hidden">
-            <div className="flex items-center gap-2 mb-2">
-              <Button 
-                variant="ghost" 
-                size="icon" 
-                onClick={() => navigate('/events')} 
-                className="h-8 w-8 flex-shrink-0"
-                data-testid="button-back"
-              >
-                <ArrowLeft className="h-4 w-4" />
-              </Button>
-              <div className="flex-1 min-w-0">
-                <h1 className="text-lg font-bold truncate" data-testid="event-title">{event.name}</h1>
-                <div className="flex items-center gap-2 mt-1">
-                  <Badge className={`${status.bgColor} ${status.color} text-[10px] px-1.5 py-0.5`}>
-                    <StatusIcon className="h-2.5 w-2.5 mr-0.5" />
-                    {status.label}
-                  </Badge>
-                  {isLive && <span className="w-2 h-2 rounded-full bg-red-500 animate-pulse" />}
-                </div>
-              </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8" data-testid="button-more-options-mobile">
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => navigate(`/events/wizard/${id}`)}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Modifica Evento
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate(`/reports?eventId=${id}`)}>
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                    Visualizza Report
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate(`/night-file?eventId=${id}`)}>
-                    <FileText className="h-4 w-4 mr-2" />
-                    File della Serata
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => {
-                    queryClient.invalidateQueries({ queryKey: ['/api/events', id] });
-                    toast({ title: "Dati aggiornati" });
-                  }}>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Aggiorna Dati
-                  </DropdownMenuItem>
-                  {(user?.role === 'super_admin' || user?.role === 'gestore') && (
-                    <>
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem 
-                        onClick={() => setDeleteDialogOpen(true)}
-                        className="text-destructive"
-                      >
-                        <Trash2 className="h-4 w-4 mr-2" />
-                        Elimina Evento
-                      </DropdownMenuItem>
-                    </>
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-            <div className="flex items-center gap-3 text-xs text-muted-foreground px-1">
-              <span className="flex items-center gap-1">
-                <Calendar className="h-3 w-3" />
-                {format(new Date(event.startDatetime), "d MMM", { locale: it })}
-              </span>
-              <span className="flex items-center gap-1">
-                <Clock className="h-3 w-3" />
-                {format(new Date(event.startDatetime), "HH:mm")}
-              </span>
-              {location && (
-                <span className="flex items-center gap-1 truncate flex-1 min-w-0">
-                  <MapPin className="h-3 w-3 flex-shrink-0" />
-                  <span className="truncate">{location.name}</span>
-                </span>
-              )}
-            </div>
-          </div>
-
-          {/* Desktop Header */}
-          <div className="hidden md:flex items-start justify-between gap-4">
-            <div className="flex items-start gap-3 min-w-0 flex-1">
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => navigate('/events')}
-                className="rounded-xl flex-shrink-0"
-                data-testid="button-back-desktop"
-              >
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-              <div className="min-w-0 flex-1">
-                <div className="flex items-center gap-2">
-                  <h1 className="text-xl md:text-2xl font-bold truncate" data-testid="event-title-desktop">{event.name}</h1>
-                  <Badge className={`${status.bgColor} ${status.color}`}>
-                    <StatusIcon className="h-3 w-3 mr-1" />
-                    {status.label}
-                  </Badge>
-                  <LiveIndicator isLive={isLive} />
-                </div>
-                <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
-                  <span className="flex items-center gap-1">
-                    <Calendar className="h-3.5 w-3.5" />
-                    {format(new Date(event.startDatetime), "EEEE d MMMM", { locale: it })}
-                  </span>
-                  <span className="flex items-center gap-1">
-                    <Clock className="h-3.5 w-3.5" />
-                    {format(new Date(event.startDatetime), "HH:mm", { locale: it })}
-                    {event.endDatetime && ` - ${format(new Date(event.endDatetime), "HH:mm", { locale: it })}`}
-                  </span>
-                  {location && (
-                    <span className="flex items-center gap-1">
-                      <MapPin className="h-3.5 w-3.5" />
-                      {location.name}
-                    </span>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            <div className="flex items-center gap-2 flex-shrink-0">
-              {(user?.role === 'super_admin' || user?.role === 'gestore') && (
-                <Button
-                  variant="destructive"
-                  size="icon"
-                  onClick={() => setDeleteDialogOpen(true)}
-                  className="h-9 w-9"
-                  data-testid="button-delete-event"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </Button>
-              )}
-              
-              {currentTransition && (
-                <Button
-                  onClick={() => setStatusChangeDialogOpen(true)}
-                  className={`bg-gradient-to-r ${status.gradient} text-white h-9 px-3`}
-                  data-testid="button-change-status"
-                >
-                  <currentTransition.icon className="h-4 w-4 mr-2" />
-                  {currentTransition.label}
-                </Button>
-              )}
-
-              <Button 
-                variant="outline" 
-                size="icon" 
-                className="h-9 w-9" 
-                onClick={() => setQuickActionsOpen(true)}
-                data-testid="button-quick-actions"
-              >
-                <Zap className="h-4 w-4" />
-              </Button>
-
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 sm:h-9 sm:w-9" data-testid="button-more-options">
-                    <MoreHorizontal className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => navigate(`/events/wizard/${id}`)}>
-                    <Edit className="h-4 w-4 mr-2" />
-                    Modifica Evento
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate(`/reports?eventId=${id}`)}>
-                    <BarChart3 className="h-4 w-4 mr-2" />
-                    Visualizza Report
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate(`/night-file?eventId=${id}`)}>
-                    <FileText className="h-4 w-4 mr-2" />
-                    File della Serata
-                  </DropdownMenuItem>
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={() => {
-                    queryClient.invalidateQueries({ queryKey: ['/api/events', id] });
-                    toast({ title: "Dati aggiornati" });
-                  }}>
-                    <RefreshCw className="h-4 w-4 mr-2" />
-                    Aggiorna Dati
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* Quick Actions Sheet - Standalone per funzionare su mobile e desktop */}
+      {/* Quick Actions Sheet */}
       <Sheet open={quickActionsOpen} onOpenChange={setQuickActionsOpen}>
-        <SheetContent className="p-4 sm:p-6">
+        <SheetContent className="p-4">
           <div className="flex items-start justify-between">
-            <SheetHeader className="pb-3 sm:pb-4 flex-1">
-              <SheetTitle className="text-base sm:text-lg">Azioni Rapide</SheetTitle>
-              <SheetDescription className="text-xs sm:text-sm">
+            <SheetHeader className="pb-4 flex-1">
+              <SheetTitle className="text-lg">Azioni Rapide</SheetTitle>
+              <SheetDescription className="text-sm">
                 Operazioni veloci per gestire l'evento
               </SheetDescription>
             </SheetHeader>
-            <Button 
+            <HapticButton 
               variant="ghost" 
               size="icon" 
               onClick={() => setQuickActionsOpen(false)}
-              className="h-8 w-8 rounded-full -mt-1 -mr-2"
+              className="h-11 w-11 rounded-full -mt-1 -mr-2"
               data-testid="button-close-quick-actions"
             >
-              <X className="h-4 w-4" />
-            </Button>
+              <X className="h-5 w-5" />
+            </HapticButton>
           </div>
-          <div className="grid grid-cols-3 gap-3 mt-6">
+          <div className="grid grid-cols-3 gap-4 mt-6">
             <QuickActionButton
               icon={QrCode}
               label="Scansiona QR"
@@ -1696,8 +1614,8 @@ export default function EventHub() {
         </SheetContent>
       </Sheet>
 
-      <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-4 sm:mb-6">
+      <div className="px-4 pb-24">
+        <div className="grid grid-cols-2 gap-4 mb-6">
           <KPICard
             title="Biglietti"
             value={ticketedEvent?.ticketsSold || 0}
@@ -1740,12 +1658,19 @@ export default function EventHub() {
           />
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4 sm:space-y-6">
-          <div className="relative" data-testid="tabs-scroll-wrapper">
-            <div className="absolute left-0 top-0 bottom-0 w-6 bg-gradient-to-r from-background to-transparent pointer-events-none z-10 md:hidden" />
-            <div className="absolute right-0 top-0 bottom-0 w-6 bg-gradient-to-l from-background to-transparent pointer-events-none z-10 md:hidden" />
-            <div className="overflow-x-auto scrollbar-hide -mx-3 px-3 md:mx-0 md:px-0 pb-1" data-testid="tabs-scroll-container">
-              <TabsList className="inline-flex justify-start w-full h-auto p-1 bg-muted/50 rounded-xl gap-0.5 md:gap-1 min-w-max">
+        <Tabs 
+          value={activeTab} 
+          onValueChange={(value) => {
+            triggerHaptic('light');
+            setActiveTab(value);
+          }} 
+          className="space-y-6"
+        >
+          <div className="relative -mx-4" data-testid="tabs-scroll-wrapper">
+            <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-background to-transparent pointer-events-none z-10" />
+            <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-background to-transparent pointer-events-none z-10" />
+            <div className="overflow-x-auto scrollbar-hide px-4 pb-2" data-testid="tabs-scroll-container">
+              <TabsList className="inline-flex h-auto p-1.5 bg-muted/50 rounded-2xl gap-1 min-w-max">
                 {[
                   { id: 'overview', label: 'Panoramica', icon: LayoutDashboard },
                   { id: 'ticketing', label: 'Biglietti', icon: Ticket },
@@ -1762,75 +1687,74 @@ export default function EventHub() {
                   <TabsTrigger
                     key={tab.id}
                     value={tab.id}
-                    className="flex-shrink-0 flex items-center gap-1 md:gap-1.5 px-2 md:px-3 py-1.5 md:py-2 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap text-[10px] md:text-xs"
+                    className="flex-shrink-0 flex items-center gap-2 px-4 py-2.5 min-h-[44px] rounded-xl data-[state=active]:bg-primary data-[state=active]:text-primary-foreground whitespace-nowrap text-sm font-medium transition-all"
                     data-testid={`tab-${tab.id}`}
                   >
-                    <tab.icon className="h-3.5 w-3.5 md:h-4 md:w-4 shrink-0" />
-                    <span className="hidden md:inline">{tab.label}</span>
+                    <tab.icon className="h-4 w-4 shrink-0" />
+                    <span>{tab.label}</span>
                   </TabsTrigger>
                 ))}
               </TabsList>
             </div>
           </div>
 
-          <TabsContent value="overview" className="space-y-4 sm:space-y-6">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
-              <div className="md:col-span-1 lg:col-span-2 space-y-4 sm:space-y-6">
-                <Card className="glass-card">
-                  <CardHeader className="pb-3 px-3 sm:px-4 md:px-6">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Activity className="h-5 w-5 text-primary" />
-                        Stato Evento
-                      </CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="px-3 sm:px-4 md:px-6">
-                    <div className="flex items-center gap-1 sm:gap-2">
-                      {Object.entries(statusConfig).map(([key, config], index) => {
-                        const isActive = event.status === key;
-                        const isPassed = Object.keys(statusConfig).indexOf(event.status) > index;
-                        const IconComponent = config.icon;
-                        
-                        return (
-                          <div key={key} className="flex items-center flex-1">
-                            <div className="flex flex-col items-center gap-1 flex-1">
-                              <div className={`flex items-center justify-center w-8 h-8 sm:w-10 sm:h-10 rounded-full border-2 transition-all ${
+          <TabsContent value="overview" className="space-y-6">
+            <div className="space-y-6">
+              <Card className="glass-card">
+                <CardHeader className="pb-3 px-4">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Activity className="h-5 w-5 text-primary" />
+                    Stato Evento
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4">
+                  <div className="flex items-center gap-2">
+                    {Object.entries(statusConfig).map(([key, config], index) => {
+                      const isActive = event.status === key;
+                      const isPassed = Object.keys(statusConfig).indexOf(event.status) > index;
+                      const IconComponent = config.icon;
+                      
+                      return (
+                        <div key={key} className="flex items-center flex-1">
+                          <div className="flex flex-col items-center gap-1.5 flex-1">
+                            <motion.div 
+                              className={`flex items-center justify-center w-12 h-12 rounded-full border-2 transition-all ${
                                 isActive 
-                                  ? 'border-primary bg-primary text-primary-foreground scale-110' 
+                                  ? 'border-primary bg-primary text-primary-foreground' 
                                   : isPassed 
                                   ? 'border-primary bg-primary/20 text-primary' 
                                   : 'border-muted bg-muted/20 text-muted-foreground'
-                              }`}>
-                                <IconComponent className="h-4 w-4 sm:h-5 sm:w-5" />
-                              </div>
-                              <span className={`text-[10px] sm:text-xs text-center ${isActive ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>
-                                {config.label}
-                              </span>
-                            </div>
-                            {index < 3 && (
-                              <div className={`h-0.5 w-full mx-1 sm:mx-2 rounded-full ${
-                                isPassed ? 'bg-primary' : 'bg-muted'
-                              }`} />
-                            )}
+                              }`}
+                              animate={isActive ? { scale: 1.1 } : { scale: 1 }}
+                              transition={springConfig}
+                            >
+                              <IconComponent className="h-5 w-5" />
+                            </motion.div>
+                            <span className={`text-xs text-center ${isActive ? 'font-semibold text-primary' : 'text-muted-foreground'}`}>
+                              {config.label}
+                            </span>
                           </div>
-                        );
-                      })}
-                    </div>
-                  </CardContent>
-                </Card>
+                          {index < 3 && (
+                            <div className={`h-0.5 w-full mx-2 rounded-full ${
+                              isPassed ? 'bg-primary' : 'bg-muted'
+                            }`} />
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </CardContent>
+              </Card>
 
-                <Card className="glass-card">
-                  <CardHeader className="pb-3 px-3 sm:px-4 md:px-6">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Zap className="h-5 w-5 text-amber-400" />
-                        Azioni Rapide
-                      </CardTitle>
-                    </div>
-                  </CardHeader>
-                  <CardContent className="px-3 sm:px-4 md:px-6">
-                    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 sm:gap-3">
+              <Card className="glass-card">
+                <CardHeader className="pb-3 px-4">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Zap className="h-5 w-5 text-amber-400" />
+                    Azioni Rapide
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4">
+                  <div className="grid grid-cols-3 gap-3">
                       <QuickActionButton
                         icon={QrCode}
                         label="Scansiona"
@@ -1896,119 +1820,113 @@ export default function EventHub() {
                     navigate(`/pr/tables?tableId=${table.id}`);
                   }}
                 />
-              </div>
 
-              <div className="space-y-4 sm:space-y-6">
-                <TopConsumptionsWidget eventId={id || ''} />
-                <Card className="glass-card">
-                  <CardHeader className="pb-3 px-3 sm:px-4 md:px-6">
-                    <div className="flex items-center justify-between">
-                      <CardTitle className="text-lg flex items-center gap-2">
-                        <Activity className="h-5 w-5 text-emerald-400" />
-                        Attività Live
-                      </CardTitle>
-                      <LiveIndicator isLive={isLive} />
-                    </div>
-                  </CardHeader>
-                  <CardContent className="px-3 sm:px-4 md:px-6">
-                    <ScrollArea className="h-[200px] sm:h-[280px] pr-4">
-                      {activityLog.length === 0 ? (
-                        <div className="text-center text-muted-foreground py-8">
-                          <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                          <p className="text-sm">Nessuna attività recente</p>
-                          <p className="text-xs mt-1">Le attività appariranno qui in tempo reale</p>
-                        </div>
-                      ) : (
-                        <div className="space-y-1">
-                          {activityLog.map(item => (
-                            <ActivityLogEntry key={item.id} item={item} />
-                          ))}
-                        </div>
-                      )}
-                    </ScrollArea>
-                  </CardContent>
-                </Card>
-
-                <Card className="glass-card">
-                  <CardHeader className="pb-3 px-3 sm:px-4 md:px-6">
+              <TopConsumptionsWidget eventId={id || ''} />
+              
+              <Card className="glass-card">
+                <CardHeader className="pb-3 px-4">
+                  <div className="flex items-center justify-between">
                     <CardTitle className="text-lg flex items-center gap-2">
-                      <Bell className="h-5 w-5 text-amber-400" />
-                      Avvisi
+                      <Activity className="h-5 w-5 text-emerald-400" />
+                      Attività Live
                     </CardTitle>
-                  </CardHeader>
-                  <CardContent className="px-3 sm:px-4 md:px-6">
-                    <div className="space-y-2 sm:space-y-3">
-                      {alerts.length === 0 && eventStocks.length < 5 && (
-                        <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-amber-500/10 border border-amber-500/20">
-                          <AlertTriangle className="h-4 w-4 sm:h-5 sm:w-5 text-amber-400 flex-shrink-0" />
-                          <div>
-                            <p className="text-xs sm:text-sm font-medium text-amber-400">Scorte Basse</p>
-                            <p className="text-[10px] sm:text-xs text-muted-foreground">Meno di 5 prodotti in evento</p>
-                          </div>
+                    <LiveIndicator isLive={isLive} />
+                  </div>
+                </CardHeader>
+                <CardContent className="px-4">
+                  <ScrollArea className="h-[280px] pr-4">
+                    {activityLog.length === 0 ? (
+                      <div className="text-center text-muted-foreground py-8">
+                        <Activity className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                        <p className="text-sm">Nessuna attività recente</p>
+                        <p className="text-xs mt-1">Le attività appariranno qui in tempo reale</p>
+                      </div>
+                    ) : (
+                      <div className="space-y-1">
+                        {activityLog.map(item => (
+                          <ActivityLogEntry key={item.id} item={item} />
+                        ))}
+                      </div>
+                    )}
+                  </ScrollArea>
+                </CardContent>
+              </Card>
+
+              <Card className="glass-card">
+                <CardHeader className="pb-3 px-4">
+                  <CardTitle className="text-lg flex items-center gap-2">
+                    <Bell className="h-5 w-5 text-amber-400" />
+                    Avvisi
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4">
+                  <div className="space-y-3">
+                    {alerts.length === 0 && eventStocks.length < 5 && (
+                      <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                        <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-amber-400">Scorte Basse</p>
+                          <p className="text-xs text-muted-foreground">Meno di 5 prodotti in evento</p>
                         </div>
-                      )}
-                      {alerts.length === 0 && tables.length > 0 && bookedTables === tables.length && (
-                        <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
-                          <CheckCircle2 className="h-4 w-4 sm:h-5 sm:w-5 text-emerald-400 flex-shrink-0" />
-                          <div>
-                            <p className="text-xs sm:text-sm font-medium text-emerald-400">Tavoli Completi</p>
-                            <p className="text-[10px] sm:text-xs text-muted-foreground">Tutti i tavoli sono prenotati</p>
-                          </div>
+                      </div>
+                    )}
+                    {alerts.length === 0 && tables.length > 0 && bookedTables === tables.length && (
+                      <div className="flex items-center gap-3 p-4 rounded-xl bg-emerald-500/10 border border-emerald-500/20">
+                        <CheckCircle2 className="h-5 w-5 text-emerald-400 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-emerald-400">Tavoli Completi</p>
+                          <p className="text-xs text-muted-foreground">Tutti i tavoli sono prenotati</p>
                         </div>
-                      )}
-                      {alerts.length === 0 && !ticketedEvent && guestLists.length === 0 && (
-                        <div className="flex items-center gap-2 sm:gap-3 p-2 sm:p-3 rounded-lg bg-blue-500/10 border border-blue-500/20">
-                          <Bell className="h-4 w-4 sm:h-5 sm:w-5 text-blue-400 flex-shrink-0" />
-                          <div>
-                            <p className="text-xs sm:text-sm font-medium text-blue-400">Configura Evento</p>
-                            <p className="text-[10px] sm:text-xs text-muted-foreground">Aggiungi liste o biglietteria</p>
-                          </div>
+                      </div>
+                    )}
+                    {alerts.length === 0 && !ticketedEvent && guestLists.length === 0 && (
+                      <div className="flex items-center gap-3 p-4 rounded-xl bg-blue-500/10 border border-blue-500/20">
+                        <Bell className="h-5 w-5 text-blue-400 flex-shrink-0" />
+                        <div>
+                          <p className="text-sm font-medium text-blue-400">Configura Evento</p>
+                          <p className="text-xs text-muted-foreground">Aggiungi liste o biglietteria</p>
                         </div>
-                      )}
-                    </div>
-                  </CardContent>
-                </Card>
-              </div>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             </div>
           </TabsContent>
 
           <TabsContent value="ticketing">
             {ticketedEvent ? (
-              <div className="space-y-4 sm:space-y-6">
-                {/* Statistiche Generali */}
+              <div className="space-y-6">
                 <Card className="glass-card">
-                  <CardHeader className="px-4 sm:px-6">
+                  <CardHeader className="px-4">
                     <div className="flex items-center justify-between flex-wrap gap-2">
-                      <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                      <CardTitle className="flex items-center gap-2 text-lg">
                         <Ticket className="h-5 w-5 text-blue-400" />
-                        <span className="hidden sm:inline">Riepilogo Biglietteria</span>
-                        <span className="sm:hidden">Biglietteria</span>
+                        Riepilogo Biglietteria
                       </CardTitle>
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <Badge variant={ticketedEvent.ticketingStatus === 'active' ? 'default' : 'secondary'}>
-                          {ticketedEvent.ticketingStatus === 'active' ? 'Attiva' : 
-                           ticketedEvent.ticketingStatus === 'draft' ? 'Bozza' : 
-                           ticketedEvent.ticketingStatus === 'suspended' ? 'Sospesa' : 'Chiusa'}
-                        </Badge>
-                      </div>
+                      <Badge variant={ticketedEvent.ticketingStatus === 'active' ? 'default' : 'secondary'}>
+                        {ticketedEvent.ticketingStatus === 'active' ? 'Attiva' : 
+                         ticketedEvent.ticketingStatus === 'draft' ? 'Bozza' : 
+                         ticketedEvent.ticketingStatus === 'suspended' ? 'Sospesa' : 'Chiusa'}
+                      </Badge>
                     </div>
                   </CardHeader>
-                  <CardContent>
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-4">
-                      <div className="p-3 sm:p-4 rounded-lg bg-background/50 border" data-testid="stat-sold">
-                        <div className="text-xl sm:text-2xl font-bold text-blue-400">{ticketedEvent.ticketsSold}</div>
+                  <CardContent className="px-4">
+                    <div className="grid grid-cols-2 gap-4 mb-4">
+                      <div className="p-4 rounded-xl bg-background/50 border" data-testid="stat-sold">
+                        <div className="text-2xl font-bold text-blue-400">{ticketedEvent.ticketsSold}</div>
                         <div className="text-xs text-muted-foreground">Venduti</div>
                       </div>
-                      <div className="p-3 sm:p-4 rounded-lg bg-background/50 border" data-testid="stat-available">
-                        <div className="text-xl sm:text-2xl font-bold text-emerald-400">{ticketedEvent.totalCapacity - ticketedEvent.ticketsSold}</div>
+                      <div className="p-4 rounded-xl bg-background/50 border" data-testid="stat-available">
+                        <div className="text-2xl font-bold text-emerald-400">{ticketedEvent.totalCapacity - ticketedEvent.ticketsSold}</div>
                         <div className="text-xs text-muted-foreground">Disponibili</div>
                       </div>
-                      <div className="p-3 sm:p-4 rounded-lg bg-background/50 border" data-testid="stat-cancelled">
-                        <div className="text-xl sm:text-2xl font-bold text-rose-400">{ticketedEvent.ticketsCancelled}</div>
+                      <div className="p-4 rounded-xl bg-background/50 border" data-testid="stat-cancelled">
+                        <div className="text-2xl font-bold text-rose-400">{ticketedEvent.ticketsCancelled}</div>
                         <div className="text-xs text-muted-foreground">Annullati</div>
                       </div>
-                      <div className="p-3 sm:p-4 rounded-lg bg-background/50 border" data-testid="stat-revenue">
-                        <div className="text-xl sm:text-2xl font-bold text-amber-400">€{Number(ticketedEvent.totalRevenue || 0).toFixed(2)}</div>
+                      <div className="p-4 rounded-xl bg-background/50 border" data-testid="stat-revenue">
+                        <div className="text-2xl font-bold text-amber-400">€{Number(ticketedEvent.totalRevenue || 0).toFixed(2)}</div>
                         <div className="text-xs text-muted-foreground">Incasso</div>
                       </div>
                     </div>
@@ -2022,64 +1940,69 @@ export default function EventHub() {
 
                 {/* Elenco Biglietti (Sectors) */}
                 <Card className="glass-card">
-                  <CardHeader className="flex flex-row items-center justify-between gap-2 px-3 sm:px-4 md:px-6">
-                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                      <FileText className="h-4 w-4 sm:h-5 sm:w-5 text-cyan-400" />
-                      <span className="hidden sm:inline">Tipologie Biglietti</span>
-                      <span className="sm:hidden">Biglietti</span>
+                  <CardHeader className="flex flex-row items-center justify-between gap-2 px-4">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <FileText className="h-5 w-5 text-cyan-400" />
+                      Tipologie Biglietti
                     </CardTitle>
-                    <Button
+                    <HapticButton
                       variant="outline"
                       size="sm"
                       onClick={() => navigate(`/siae/ticket-types/${ticketedEvent?.id}`)}
                       data-testid="btn-manage-ticket-types"
+                      className="min-h-[44px]"
                     >
-                      <Settings className="h-4 w-4 sm:mr-2" />
-                      <span className="hidden sm:inline">Gestisci</span>
-                    </Button>
+                      <Settings className="h-4 w-4 mr-2" />
+                      Gestisci
+                    </HapticButton>
                   </CardHeader>
-                  <CardContent className="px-3 sm:px-4 md:px-6">
+                  <CardContent className="px-4">
                     {ticketedEvent.sectors && ticketedEvent.sectors.length > 0 ? (
-                      <div className="space-y-2 sm:space-y-3">
+                      <div className="space-y-3">
                         {ticketedEvent.sectors.map((sector) => {
                           const soldCount = sector.capacity - sector.availableSeats;
                           return (
-                            <div 
+                            <motion.div 
                               key={sector.id} 
-                              className="flex items-center justify-between p-2 sm:p-3 md:p-4 rounded-lg bg-background/50 border gap-2 sm:gap-4"
+                              className="flex items-center justify-between p-4 rounded-xl bg-background/50 border gap-4"
                               data-testid={`ticket-row-${sector.id}`}
+                              whileTap={{ scale: 0.98 }}
+                              transition={springConfig}
                             >
                               <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap">
-                                  <h4 className="font-medium text-sm sm:text-base truncate">{sector.name}</h4>
-                                  <Badge variant={sector.active ? 'default' : 'secondary'} className="text-[10px] sm:text-xs px-1.5 sm:px-2">
+                                <div className="flex items-center gap-2 flex-wrap">
+                                  <h4 className="font-medium text-base truncate">{sector.name}</h4>
+                                  <Badge variant={sector.active ? 'default' : 'secondary'} className="text-xs">
                                     {sector.active ? 'Attivo' : 'Disattivato'}
                                   </Badge>
                                 </div>
-                                <div className="flex items-center gap-2 sm:gap-4 mt-1 text-[10px] sm:text-sm text-muted-foreground flex-wrap">
+                                <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
                                   <span>€{Number(sector.priceIntero).toFixed(2)}</span>
-                                  {sector.priceRidotto && <span className="hidden sm:inline">Ridotto: €{Number(sector.priceRidotto).toFixed(2)}</span>}
-                                  {sector.prevendita && Number(sector.prevendita) > 0 && <span className="hidden sm:inline">DDP: €{Number(sector.prevendita).toFixed(2)}</span>}
+                                  {sector.priceRidotto && <span>Ridotto: €{Number(sector.priceRidotto).toFixed(2)}</span>}
+                                  {sector.prevendita && Number(sector.prevendita) > 0 && <span>DDP: €{Number(sector.prevendita).toFixed(2)}</span>}
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2 sm:gap-4">
+                              <div className="flex items-center gap-4">
                                 <div className="text-right">
-                                  <div className="text-xs sm:text-sm">
+                                  <div className="text-sm">
                                     <span className="font-bold text-blue-400">{soldCount}</span>
                                     <span className="text-muted-foreground">/{sector.capacity}</span>
                                   </div>
-                                  <div className="text-[10px] sm:text-xs text-muted-foreground hidden sm:block">
+                                  <div className="text-xs text-muted-foreground">
                                     {sector.availableSeats} disponibili
                                   </div>
                                 </div>
                                 <Switch
                                   checked={sector.active}
-                                  onCheckedChange={(checked) => toggleSectorMutation.mutate({ sectorId: sector.id, active: checked })}
+                                  onCheckedChange={(checked) => {
+                                    triggerHaptic('light');
+                                    toggleSectorMutation.mutate({ sectorId: sector.id, active: checked });
+                                  }}
                                   disabled={toggleSectorMutation.isPending}
                                   data-testid={`toggle-sector-${sector.id}`}
                                 />
                               </div>
-                            </div>
+                            </motion.div>
                           );
                         })}
                       </div>
@@ -2094,14 +2017,14 @@ export default function EventHub() {
 
                 {/* Pulsanti Report */}
                 <Card className="glass-card">
-                  <CardHeader className="px-3 sm:px-4 md:px-6">
-                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                      <BarChart3 className="h-4 w-4 sm:h-5 sm:w-5 text-purple-400" />
+                  <CardHeader className="px-4">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <BarChart3 className="h-5 w-5 text-purple-400" />
                       Report SIAE
                     </CardTitle>
                   </CardHeader>
-                  <CardContent className="px-3 sm:px-4 md:px-6">
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-2 sm:gap-3">
+                  <CardContent className="px-4">
+                    <div className="grid grid-cols-2 gap-4">
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                           <Button 
@@ -4366,6 +4289,6 @@ export default function EventHub() {
           <Zap className="h-5 w-5" />
         </Button>
       </div>
-    </div>
+    </MobileAppLayout>
   );
 }

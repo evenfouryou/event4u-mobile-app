@@ -50,7 +50,7 @@ import {
   Clock,
   PartyPopper,
   Calendar,
-  ChevronDown,
+  ChevronRight,
   User,
 } from "lucide-react";
 import { format } from "date-fns";
@@ -77,7 +77,7 @@ const guestListFormSchema = z.object({
 type GuestListFormData = z.infer<typeof guestListFormSchema>;
 
 const springTransition = {
-  type: "spring",
+  type: "spring" as const,
   stiffness: 400,
   damping: 30,
 };
@@ -271,11 +271,11 @@ export default function PrGuestListsPage() {
     return (
       <MobileAppLayout>
         <div className="p-4 space-y-4 pb-24">
-          <Skeleton className="h-14 w-full rounded-2xl" />
-          <Skeleton className="h-14 w-full rounded-2xl" />
-          <div className="space-y-3">
+          <Skeleton className="h-16 w-full rounded-2xl" />
+          <Skeleton className="h-16 w-full rounded-2xl" />
+          <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-24 w-full rounded-2xl" />
+              <Skeleton key={i} className="h-28 w-full rounded-2xl" />
             ))}
           </div>
         </div>
@@ -284,16 +284,21 @@ export default function PrGuestListsPage() {
   }
 
   const headerContent = (
-    <div className="px-4 py-3 border-b border-border bg-background/95 backdrop-blur-xl">
-      <div className="flex items-center justify-between gap-3">
-        <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-            <ListChecks className="h-5 w-5 text-primary" />
-          </div>
+    <div className="px-4 py-4 border-b border-border/50 bg-background/95 backdrop-blur-xl">
+      <div className="flex items-center justify-between gap-4">
+        <div className="flex items-center gap-4 min-w-0 flex-1">
+          <motion.div 
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={springTransition}
+            className="h-12 w-12 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0"
+          >
+            <ListChecks className="h-6 w-6 text-primary" />
+          </motion.div>
           <div className="min-w-0">
-            <h1 className="font-bold text-lg truncate">Liste Ospiti</h1>
+            <h1 className="font-bold text-xl truncate">Liste Ospiti</h1>
             {selectedEvent && (
-              <p className="text-xs text-muted-foreground truncate">
+              <p className="text-sm text-muted-foreground truncate mt-0.5">
                 {selectedEvent.name}
               </p>
             )}
@@ -302,6 +307,7 @@ export default function PrGuestListsPage() {
         <HapticButton
           variant="ghost"
           size="icon"
+          className="h-12 w-12 rounded-2xl"
           onClick={() => {
             refetchLists();
             refetchEntries();
@@ -329,18 +335,20 @@ export default function PrGuestListsPage() {
               setSelectedEventId(val);
               setSelectedListId("");
             }}>
-              <SelectTrigger className="h-14 rounded-2xl text-base" data-testid="select-event">
-                <div className="flex items-center gap-3">
-                  <Calendar className="h-5 w-5 text-muted-foreground" />
+              <SelectTrigger className="h-16 rounded-2xl text-base bg-card/50 backdrop-blur-sm border-border/50" data-testid="select-event">
+                <div className="flex items-center gap-4">
+                  <div className="h-10 w-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Calendar className="h-5 w-5 text-primary" />
+                  </div>
                   <SelectValue placeholder="Seleziona evento" />
                 </div>
               </SelectTrigger>
               <SelectContent>
                 {events.map((event) => (
-                  <SelectItem key={event.id} value={event.id} className="min-h-[44px]">
-                    <div className="py-1">
-                      <div className="font-medium">{event.name}</div>
-                      <div className="text-xs text-muted-foreground">
+                  <SelectItem key={event.id} value={event.id} className="min-h-[52px]">
+                    <div className="py-2">
+                      <div className="font-semibold">{event.name}</div>
+                      <div className="text-sm text-muted-foreground">
                         {format(new Date(event.startDatetime), "d MMM yyyy", { locale: it })}
                       </div>
                     </div>
@@ -349,14 +357,16 @@ export default function PrGuestListsPage() {
               </SelectContent>
             </Select>
 
-            <div className="flex gap-2">
+            <div className="flex gap-3">
               <Select value={selectedListId} onValueChange={(val) => {
                 triggerHaptic('light');
                 setSelectedListId(val);
               }} disabled={!selectedEventId}>
-                <SelectTrigger className="h-14 rounded-2xl text-base flex-1" data-testid="select-list">
-                  <div className="flex items-center gap-3">
-                    <Users className="h-5 w-5 text-muted-foreground" />
+                <SelectTrigger className="h-16 rounded-2xl text-base flex-1 bg-card/50 backdrop-blur-sm border-border/50" data-testid="select-list">
+                  <div className="flex items-center gap-4">
+                    <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                      <Users className="h-5 w-5 text-purple-500" />
+                    </div>
                     <SelectValue placeholder={selectedEventId ? "Seleziona lista" : "Prima scegli evento"} />
                   </div>
                 </SelectTrigger>
@@ -367,10 +377,10 @@ export default function PrGuestListsPage() {
                     <div className="p-4 text-center text-muted-foreground">Nessuna lista</div>
                   ) : (
                     guestLists.map((list) => (
-                      <SelectItem key={list.id} value={list.id} className="min-h-[44px]">
-                        <div className="py-1">
-                          <div className="font-medium">{list.name}</div>
-                          <div className="text-xs text-muted-foreground">
+                      <SelectItem key={list.id} value={list.id} className="min-h-[52px]">
+                        <div className="py-2">
+                          <div className="font-semibold">{list.name}</div>
+                          <div className="text-sm text-muted-foreground">
                             {list.currentCount}{list.maxGuests ? `/${list.maxGuests}` : ''} ospiti
                           </div>
                         </div>
@@ -381,16 +391,22 @@ export default function PrGuestListsPage() {
               </Select>
 
               {selectedEventId && (
-                <HapticButton
-                  variant="outline"
-                  size="icon"
-                  className="h-14 w-14 rounded-2xl flex-shrink-0"
-                  onClick={() => setIsCreateListOpen(true)}
-                  hapticType="medium"
-                  data-testid="button-create-list"
+                <motion.div
+                  initial={{ scale: 0.8, opacity: 0 }}
+                  animate={{ scale: 1, opacity: 1 }}
+                  transition={springTransition}
                 >
-                  <Plus className="h-6 w-6" />
-                </HapticButton>
+                  <HapticButton
+                    variant="outline"
+                    size="icon"
+                    className="h-16 w-16 rounded-2xl flex-shrink-0 bg-card/50 backdrop-blur-sm border-border/50"
+                    onClick={() => setIsCreateListOpen(true)}
+                    hapticType="medium"
+                    data-testid="button-create-list"
+                  >
+                    <Plus className="h-7 w-7" />
+                  </HapticButton>
+                </motion.div>
               )}
             </div>
           </motion.div>
@@ -400,34 +416,88 @@ export default function PrGuestListsPage() {
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={springTransition}
-              className="grid grid-cols-4 gap-2"
+              className="space-y-4"
             >
-              <div className="bg-card rounded-2xl p-3 text-center">
-                <p className="text-2xl font-bold">{stats.total}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Totali</p>
+              <div className="grid grid-cols-2 gap-3">
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ ...springTransition, delay: 0 }}
+                  className="bg-card/80 backdrop-blur-sm rounded-2xl p-4 border border-border/30"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-10 w-10 rounded-xl bg-foreground/5 flex items-center justify-center">
+                      <Users className="h-5 w-5 text-foreground" />
+                    </div>
+                    <p className="text-3xl font-bold">{stats.total}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Totali</p>
+                </motion.div>
+
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ ...springTransition, delay: 0.05 }}
+                  className="bg-card/80 backdrop-blur-sm rounded-2xl p-4 border border-border/30"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-10 w-10 rounded-xl bg-green-500/10 flex items-center justify-center">
+                      <PartyPopper className="h-5 w-5 text-green-500" />
+                    </div>
+                    <p className="text-3xl font-bold text-green-500">{stats.arrived}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Arrivati</p>
+                </motion.div>
+
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ ...springTransition, delay: 0.1 }}
+                  className="bg-card/80 backdrop-blur-sm rounded-2xl p-4 border border-border/30"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                      <CheckCircle2 className="h-5 w-5 text-blue-500" />
+                    </div>
+                    <p className="text-3xl font-bold text-blue-500">{stats.confirmed}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">Confermati</p>
+                </motion.div>
+
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ ...springTransition, delay: 0.15 }}
+                  className="bg-card/80 backdrop-blur-sm rounded-2xl p-4 border border-border/30"
+                >
+                  <div className="flex items-center gap-3 mb-2">
+                    <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                      <UserPlus className="h-5 w-5 text-purple-500" />
+                    </div>
+                    <p className="text-3xl font-bold text-purple-500">{stats.plusOnes}</p>
+                  </div>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wider">+1</p>
+                </motion.div>
               </div>
-              <div className="bg-card rounded-2xl p-3 text-center">
-                <p className="text-2xl font-bold text-blue-500">{stats.confirmed}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Conf.</p>
-              </div>
-              <div className="bg-card rounded-2xl p-3 text-center">
-                <p className="text-2xl font-bold text-green-500">{stats.arrived}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">Arriv.</p>
-              </div>
-              <div className="bg-card rounded-2xl p-3 text-center">
-                <p className="text-2xl font-bold text-purple-500">{stats.plusOnes}</p>
-                <p className="text-[10px] text-muted-foreground uppercase tracking-wide">+1</p>
-              </div>
+
               {selectedList.maxGuests && (
-                <div className="col-span-4">
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ ...springTransition, delay: 0.2 }}
+                  className="bg-card/80 backdrop-blur-sm rounded-2xl p-4 border border-border/30"
+                >
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium">Capienza</span>
+                    <span className="text-sm text-muted-foreground">
+                      {selectedList.currentCount}/{selectedList.maxGuests}
+                    </span>
+                  </div>
                   <Progress 
                     value={(selectedList.currentCount / selectedList.maxGuests) * 100} 
-                    className="h-2 rounded-full" 
+                    className="h-3 rounded-full" 
                   />
-                  <p className="text-[10px] text-muted-foreground text-center mt-1">
-                    {selectedList.currentCount}/{selectedList.maxGuests} posti
-                  </p>
-                </div>
+                </motion.div>
               )}
             </motion.div>
           )}
@@ -439,53 +509,65 @@ export default function PrGuestListsPage() {
               transition={springTransition}
               className="relative"
             >
-              <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+              <Search className="absolute left-5 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 placeholder="Cerca ospite..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-14 pl-12 pr-4 rounded-2xl text-base bg-card border-0"
+                className="h-14 pl-14 pr-4 rounded-2xl text-base bg-card/50 backdrop-blur-sm border-border/50"
                 data-testid="input-search-guest"
               />
             </motion.div>
           )}
         </div>
 
-        <div className="flex-1 overflow-y-auto px-4 space-y-3">
+        <div className="flex-1 overflow-y-auto px-4 space-y-3 pb-4">
           {loadingEntries ? (
-            <div className="space-y-3">
+            <div className="space-y-4">
               {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-24 w-full rounded-2xl" />
+                <Skeleton key={i} className="h-28 w-full rounded-2xl" />
               ))}
             </div>
           ) : !selectedListId ? (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center py-16 text-center"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={springTransition}
+              className="flex flex-col items-center justify-center py-20 text-center"
             >
-              <div className="h-20 w-20 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                <ListChecks className="h-10 w-10 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold text-lg mb-1">Seleziona una Lista</h3>
-              <p className="text-muted-foreground text-sm">
+              <motion.div 
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                transition={{ ...springTransition, delay: 0.1 }}
+                className="h-24 w-24 rounded-3xl bg-card/80 backdrop-blur-sm flex items-center justify-center mb-6 border border-border/30"
+              >
+                <ListChecks className="h-12 w-12 text-muted-foreground" />
+              </motion.div>
+              <h3 className="font-bold text-xl mb-2">Seleziona una Lista</h3>
+              <p className="text-muted-foreground text-base px-8">
                 Scegli un evento e una lista per vedere gli ospiti
               </p>
             </motion.div>
           ) : filteredEntries.length === 0 ? (
             <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              className="flex flex-col items-center justify-center py-16 text-center"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={springTransition}
+              className="flex flex-col items-center justify-center py-20 text-center"
             >
-              <div className="h-20 w-20 rounded-full bg-muted/50 flex items-center justify-center mb-4">
-                <Users className="h-10 w-10 text-muted-foreground" />
-              </div>
-              <h3 className="font-semibold text-lg mb-1">
+              <motion.div 
+                initial={{ scale: 0.8 }}
+                animate={{ scale: 1 }}
+                transition={{ ...springTransition, delay: 0.1 }}
+                className="h-24 w-24 rounded-3xl bg-card/80 backdrop-blur-sm flex items-center justify-center mb-6 border border-border/30"
+              >
+                <Users className="h-12 w-12 text-muted-foreground" />
+              </motion.div>
+              <h3 className="font-bold text-xl mb-2">
                 {searchQuery ? "Nessun risultato" : "Lista vuota"}
               </h3>
-              <p className="text-muted-foreground text-sm">
-                {searchQuery ? "Prova a cercare qualcos'altro" : "Aggiungi il primo ospite"}
+              <p className="text-muted-foreground text-base px-8">
+                {searchQuery ? "Prova a cercare qualcos'altro" : "Aggiungi il primo ospite alla lista"}
               </p>
             </motion.div>
           ) : (
@@ -503,59 +585,56 @@ export default function PrGuestListsPage() {
                     animate="visible"
                     exit="exit"
                     layout
+                    whileTap={{ scale: 0.98 }}
                     onClick={() => {
                       triggerHaptic('light');
                       setSelectedGuest(guest);
                     }}
-                    className="bg-card rounded-2xl p-4 active:scale-[0.98] transition-transform cursor-pointer"
+                    className="bg-card/80 backdrop-blur-sm rounded-2xl p-5 border border-border/30 cursor-pointer"
                     data-testid={`card-guest-${guest.id}`}
                   >
-                    <div className="flex items-start gap-4">
-                      <div className="h-12 w-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-                        <User className="h-6 w-6 text-primary" />
+                    <div className="flex items-center gap-4">
+                      <div className="h-14 w-14 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0">
+                        <User className="h-7 w-7 text-primary" />
                       </div>
                       <div className="flex-1 min-w-0">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="min-w-0">
-                            <h3 className="font-semibold text-base truncate">
-                              {guest.firstName} {guest.lastName}
-                            </h3>
-                            <div className="flex items-center gap-2 mt-1 flex-wrap">
-                              <Badge 
-                                variant="outline" 
-                                className={`${statusConfig.bg} ${statusConfig.color} border-0 text-xs`}
-                              >
-                                <StatusIcon className="w-3 h-3 mr-1" />
-                                {statusConfig.label}
-                              </Badge>
-                              {guest.plusOnes > 0 && (
-                                <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-0 text-xs">
-                                  <UserPlus className="w-3 h-3 mr-1" />
-                                  +{guest.plusOnes}
-                                </Badge>
-                              )}
-                            </div>
-                          </div>
-                          <ChevronDown className="h-5 w-5 text-muted-foreground rotate-[-90deg] flex-shrink-0" />
+                        <h3 className="font-bold text-lg truncate">
+                          {guest.firstName} {guest.lastName}
+                        </h3>
+                        <div className="flex items-center gap-2 mt-2 flex-wrap">
+                          <Badge 
+                            variant="outline" 
+                            className={`${statusConfig.bg} ${statusConfig.color} border-0 text-xs px-3 py-1`}
+                          >
+                            <StatusIcon className="w-3.5 h-3.5 mr-1.5" />
+                            {statusConfig.label}
+                          </Badge>
+                          {guest.plusOnes > 0 && (
+                            <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-0 text-xs px-3 py-1">
+                              <UserPlus className="w-3.5 h-3.5 mr-1.5" />
+                              +{guest.plusOnes}
+                            </Badge>
+                          )}
                         </div>
                         
                         {(guest.email || guest.phone) && (
-                          <div className="flex items-center gap-4 mt-2 text-sm text-muted-foreground">
+                          <div className="flex items-center gap-4 mt-3 text-sm text-muted-foreground">
                             {guest.phone && (
-                              <div className="flex items-center gap-1">
-                                <Phone className="h-3.5 w-3.5" />
+                              <div className="flex items-center gap-1.5">
+                                <Phone className="h-4 w-4" />
                                 <span className="truncate">{guest.phone}</span>
                               </div>
                             )}
                             {guest.email && (
-                              <div className="flex items-center gap-1 min-w-0">
-                                <Mail className="h-3.5 w-3.5 flex-shrink-0" />
+                              <div className="flex items-center gap-1.5 min-w-0">
+                                <Mail className="h-4 w-4 flex-shrink-0" />
                                 <span className="truncate">{guest.email}</span>
                               </div>
                             )}
                           </div>
                         )}
                       </div>
+                      <ChevronRight className="h-6 w-6 text-muted-foreground/50 flex-shrink-0" />
                     </div>
                   </motion.div>
                 );
@@ -570,7 +649,7 @@ export default function PrGuestListsPage() {
           onClick={() => setIsAddGuestOpen(true)}
           data-testid="fab-add-guest"
         >
-          <Plus className="h-6 w-6" />
+          <Plus className="h-7 w-7" />
         </FloatingActionButton>
       )}
 
@@ -579,58 +658,56 @@ export default function PrGuestListsPage() {
         onClose={() => setIsAddGuestOpen(false)}
         title="Aggiungi Ospite"
       >
-        <div className="p-4 space-y-4">
+        <div className="p-5 space-y-5 pb-8">
           <Form {...guestForm}>
-            <form onSubmit={guestForm.handleSubmit((data) => addGuestMutation.mutate(data))} className="space-y-4">
-              <div className="grid grid-cols-2 gap-3">
-                <FormField
-                  control={guestForm.control}
-                  name="firstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Nome" 
-                          className="h-12 rounded-xl" 
-                          {...field} 
-                          data-testid="input-guest-firstname" 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={guestForm.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cognome</FormLabel>
-                      <FormControl>
-                        <Input 
-                          placeholder="Cognome" 
-                          className="h-12 rounded-xl" 
-                          {...field} 
-                          data-testid="input-guest-lastname" 
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+            <form onSubmit={guestForm.handleSubmit((data) => addGuestMutation.mutate(data))} className="space-y-5">
+              <FormField
+                control={guestForm.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base">Nome</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Nome" 
+                        className="h-14 rounded-2xl text-base" 
+                        {...field} 
+                        data-testid="input-guest-firstname" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={guestForm.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base">Cognome</FormLabel>
+                    <FormControl>
+                      <Input 
+                        placeholder="Cognome" 
+                        className="h-14 rounded-2xl text-base" 
+                        {...field} 
+                        data-testid="input-guest-lastname" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
               <FormField
                 control={guestForm.control}
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Email (opzionale)</FormLabel>
+                    <FormLabel className="text-base">Email (opzionale)</FormLabel>
                     <FormControl>
                       <Input 
                         type="email" 
                         placeholder="email@example.com" 
-                        className="h-12 rounded-xl" 
+                        className="h-14 rounded-2xl text-base" 
                         {...field} 
                         data-testid="input-guest-email" 
                       />
@@ -644,11 +721,11 @@ export default function PrGuestListsPage() {
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Telefono (opzionale)</FormLabel>
+                    <FormLabel className="text-base">Telefono (opzionale)</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="+39 333 1234567" 
-                        className="h-12 rounded-xl" 
+                        className="h-14 rounded-2xl text-base" 
                         {...field} 
                         data-testid="input-guest-phone" 
                       />
@@ -662,12 +739,12 @@ export default function PrGuestListsPage() {
                 name="plusOnes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Accompagnatori (+1)</FormLabel>
+                    <FormLabel className="text-base">Accompagnatori (+1)</FormLabel>
                     <FormControl>
                       <Input 
                         type="number" 
                         min={0} 
-                        className="h-12 rounded-xl" 
+                        className="h-14 rounded-2xl text-base" 
                         {...field} 
                         data-testid="input-guest-plusones" 
                       />
@@ -681,11 +758,11 @@ export default function PrGuestListsPage() {
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Note (opzionale)</FormLabel>
+                    <FormLabel className="text-base">Note (opzionale)</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="Note aggiuntive" 
-                        className="h-12 rounded-xl" 
+                        className="h-14 rounded-2xl text-base" 
                         {...field} 
                         data-testid="input-guest-notes" 
                       />
@@ -696,7 +773,7 @@ export default function PrGuestListsPage() {
               />
               <HapticButton 
                 type="submit" 
-                className="w-full h-14 rounded-2xl text-base font-semibold"
+                className="w-full h-14 rounded-2xl text-base font-semibold mt-6"
                 disabled={addGuestMutation.isPending}
                 hapticType="medium"
                 data-testid="button-submit-guest"
@@ -718,19 +795,19 @@ export default function PrGuestListsPage() {
         onClose={() => setIsCreateListOpen(false)}
         title="Crea Nuova Lista"
       >
-        <div className="p-4 space-y-4">
+        <div className="p-5 space-y-5 pb-8">
           <Form {...listForm}>
-            <form onSubmit={listForm.handleSubmit((data) => createListMutation.mutate(data))} className="space-y-4">
+            <form onSubmit={listForm.handleSubmit((data) => createListMutation.mutate(data))} className="space-y-5">
               <FormField
                 control={listForm.control}
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome Lista</FormLabel>
+                    <FormLabel className="text-base">Nome Lista</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="Es: VIP, Friends & Family" 
-                        className="h-12 rounded-xl" 
+                        className="h-14 rounded-2xl text-base" 
                         {...field} 
                         data-testid="input-list-name" 
                       />
@@ -744,12 +821,12 @@ export default function PrGuestListsPage() {
                 name="maxGuests"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Limite Ospiti (opzionale)</FormLabel>
+                    <FormLabel className="text-base">Limite Ospiti (opzionale)</FormLabel>
                     <FormControl>
                       <Input 
                         type="number" 
                         placeholder="Nessun limite" 
-                        className="h-12 rounded-xl" 
+                        className="h-14 rounded-2xl text-base" 
                         {...field} 
                         data-testid="input-max-guests" 
                       />
@@ -763,11 +840,11 @@ export default function PrGuestListsPage() {
                 name="description"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Descrizione (opzionale)</FormLabel>
+                    <FormLabel className="text-base">Descrizione (opzionale)</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="Note sulla lista" 
-                        className="h-12 rounded-xl" 
+                        className="h-14 rounded-2xl text-base" 
                         {...field} 
                         data-testid="input-list-description" 
                       />
@@ -778,7 +855,7 @@ export default function PrGuestListsPage() {
               />
               <HapticButton 
                 type="submit" 
-                className="w-full h-14 rounded-2xl text-base font-semibold"
+                className="w-full h-14 rounded-2xl text-base font-semibold mt-6"
                 disabled={createListMutation.isPending}
                 hapticType="medium"
                 data-testid="button-submit-list"
@@ -801,22 +878,27 @@ export default function PrGuestListsPage() {
         title="Dettagli Ospite"
       >
         {selectedGuest && (
-          <div className="p-4 space-y-6">
+          <div className="p-5 space-y-6 pb-8">
             <div className="flex items-center gap-4">
-              <div className="h-16 w-16 rounded-2xl bg-primary/10 flex items-center justify-center">
-                <User className="h-8 w-8 text-primary" />
-              </div>
+              <motion.div 
+                initial={{ scale: 0.8, opacity: 0 }}
+                animate={{ scale: 1, opacity: 1 }}
+                transition={springTransition}
+                className="h-18 w-18 rounded-2xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center"
+              >
+                <User className="h-10 w-10 text-primary" />
+              </motion.div>
               <div className="flex-1">
-                <h2 className="text-xl font-bold">
+                <h2 className="text-2xl font-bold">
                   {selectedGuest.firstName} {selectedGuest.lastName}
                 </h2>
-                <div className="mt-1">
+                <div className="mt-2">
                   {(() => {
                     const config = getStatusConfig(selectedGuest.status);
                     const Icon = config.icon;
                     return (
-                      <Badge variant="outline" className={`${config.bg} ${config.color} border-0`}>
-                        <Icon className="w-3 h-3 mr-1" />
+                      <Badge variant="outline" className={`${config.bg} ${config.color} border-0 px-3 py-1`}>
+                        <Icon className="w-4 h-4 mr-1.5" />
                         {config.label}
                       </Badge>
                     );
@@ -828,96 +910,126 @@ export default function PrGuestListsPage() {
             {(selectedGuest.email || selectedGuest.phone) && (
               <div className="space-y-3">
                 {selectedGuest.phone && (
-                  <a 
+                  <motion.a 
                     href={`tel:${selectedGuest.phone}`}
-                    className="flex items-center gap-3 p-4 bg-card rounded-2xl active:scale-[0.98] transition-transform"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ ...springTransition, delay: 0.1 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex items-center gap-4 p-4 bg-card/80 backdrop-blur-sm rounded-2xl border border-border/30"
                     onClick={() => triggerHaptic('light')}
                   >
-                    <div className="h-10 w-10 rounded-xl bg-green-500/10 flex items-center justify-center">
-                      <Phone className="h-5 w-5 text-green-500" />
+                    <div className="h-12 w-12 rounded-xl bg-green-500/10 flex items-center justify-center">
+                      <Phone className="h-6 w-6 text-green-500" />
                     </div>
-                    <span className="font-medium">{selectedGuest.phone}</span>
-                  </a>
+                    <span className="font-semibold text-lg">{selectedGuest.phone}</span>
+                  </motion.a>
                 )}
                 {selectedGuest.email && (
-                  <a 
+                  <motion.a 
                     href={`mailto:${selectedGuest.email}`}
-                    className="flex items-center gap-3 p-4 bg-card rounded-2xl active:scale-[0.98] transition-transform"
+                    initial={{ opacity: 0, x: -10 }}
+                    animate={{ opacity: 1, x: 0 }}
+                    transition={{ ...springTransition, delay: 0.15 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="flex items-center gap-4 p-4 bg-card/80 backdrop-blur-sm rounded-2xl border border-border/30"
                     onClick={() => triggerHaptic('light')}
                   >
-                    <div className="h-10 w-10 rounded-xl bg-blue-500/10 flex items-center justify-center">
-                      <Mail className="h-5 w-5 text-blue-500" />
+                    <div className="h-12 w-12 rounded-xl bg-blue-500/10 flex items-center justify-center">
+                      <Mail className="h-6 w-6 text-blue-500" />
                     </div>
-                    <span className="font-medium truncate">{selectedGuest.email}</span>
-                  </a>
+                    <span className="font-semibold text-base truncate">{selectedGuest.email}</span>
+                  </motion.a>
                 )}
               </div>
             )}
 
             {selectedGuest.plusOnes > 0 && (
-              <div className="flex items-center gap-3 p-4 bg-card rounded-2xl">
-                <div className="h-10 w-10 rounded-xl bg-purple-500/10 flex items-center justify-center">
-                  <UserPlus className="h-5 w-5 text-purple-500" />
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...springTransition, delay: 0.2 }}
+                className="flex items-center gap-4 p-4 bg-card/80 backdrop-blur-sm rounded-2xl border border-border/30"
+              >
+                <div className="h-12 w-12 rounded-xl bg-purple-500/10 flex items-center justify-center">
+                  <UserPlus className="h-6 w-6 text-purple-500" />
                 </div>
-                <span className="font-medium">{selectedGuest.plusOnes} accompagnatori</span>
-              </div>
+                <span className="font-semibold text-lg">{selectedGuest.plusOnes} accompagnatori</span>
+              </motion.div>
             )}
 
             {selectedGuest.notes && (
-              <div className="p-4 bg-card rounded-2xl">
-                <p className="text-sm text-muted-foreground mb-1">Note</p>
-                <p className="font-medium">{selectedGuest.notes}</p>
-              </div>
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...springTransition, delay: 0.25 }}
+                className="p-4 bg-card/80 backdrop-blur-sm rounded-2xl border border-border/30"
+              >
+                <p className="text-sm text-muted-foreground mb-2">Note</p>
+                <p className="font-medium text-base">{selectedGuest.notes}</p>
+              </motion.div>
             )}
 
             <div className="space-y-3">
-              <p className="text-sm font-medium text-muted-foreground">Cambia Stato</p>
-              <div className="grid grid-cols-2 gap-2">
-                {['pending', 'confirmed', 'arrived', 'cancelled'].map((status) => {
+              <p className="text-sm font-semibold text-muted-foreground uppercase tracking-wider">Cambia Stato</p>
+              <div className="grid grid-cols-2 gap-3">
+                {['pending', 'confirmed', 'arrived', 'cancelled'].map((status, idx) => {
                   const config = getStatusConfig(status);
                   const Icon = config.icon;
                   const isActive = selectedGuest.status === status;
                   
                   return (
-                    <HapticButton
+                    <motion.div
                       key={status}
-                      variant={isActive ? "default" : "outline"}
-                      className={`h-14 rounded-2xl justify-start gap-2 ${isActive ? '' : 'bg-card'}`}
-                      onClick={() => updateGuestMutation.mutate({ 
-                        id: selectedGuest.id, 
-                        data: { status } 
-                      })}
-                      disabled={updateGuestMutation.isPending}
-                      hapticType="medium"
-                      data-testid={`button-status-${status}`}
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      transition={{ ...springTransition, delay: 0.3 + idx * 0.05 }}
                     >
-                      <Icon className={`h-5 w-5 ${isActive ? '' : config.color}`} />
-                      <span className="font-medium">{config.label}</span>
-                    </HapticButton>
+                      <HapticButton
+                        variant={isActive ? "default" : "outline"}
+                        className={`h-14 w-full rounded-2xl justify-start gap-3 ${isActive ? '' : 'bg-card/50 backdrop-blur-sm border-border/50'}`}
+                        onClick={() => updateGuestMutation.mutate({ 
+                          id: selectedGuest.id, 
+                          data: { status } 
+                        })}
+                        disabled={updateGuestMutation.isPending}
+                        hapticType="medium"
+                        data-testid={`button-status-${status}`}
+                      >
+                        <Icon className={`h-5 w-5 ${isActive ? '' : config.color}`} />
+                        <span className="font-semibold">{config.label}</span>
+                      </HapticButton>
+                    </motion.div>
                   );
                 })}
               </div>
             </div>
 
-            <HapticButton
-              variant="outline"
-              className="w-full h-14 rounded-2xl text-red-500 border-red-500/20 hover:bg-red-500/10"
-              onClick={() => {
-                if (confirm("Rimuovere questo ospite dalla lista?")) {
-                  deleteGuestMutation.mutate(selectedGuest.id);
-                }
-              }}
-              disabled={deleteGuestMutation.isPending}
-              hapticType="heavy"
-              data-testid="button-delete-guest"
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springTransition, delay: 0.5 }}
             >
-              {deleteGuestMutation.isPending ? (
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              ) : (
-                <Trash2 className="w-5 h-5 mr-2" />
-              )}
-              Rimuovi Ospite
-            </HapticButton>
+              <HapticButton
+                variant="outline"
+                className="w-full h-14 rounded-2xl text-red-500 border-red-500/30 hover:bg-red-500/10"
+                onClick={() => {
+                  if (confirm("Rimuovere questo ospite dalla lista?")) {
+                    deleteGuestMutation.mutate(selectedGuest.id);
+                  }
+                }}
+                disabled={deleteGuestMutation.isPending}
+                hapticType="heavy"
+                data-testid="button-delete-guest"
+              >
+                {deleteGuestMutation.isPending ? (
+                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                ) : (
+                  <Trash2 className="w-5 h-5 mr-2" />
+                )}
+                Rimuovi Ospite
+              </HapticButton>
+            </motion.div>
           </div>
         )}
       </BottomSheet>

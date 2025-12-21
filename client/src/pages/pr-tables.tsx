@@ -362,23 +362,36 @@ export default function PrTablesPage() {
     >
       <div className="space-y-4 py-4 pb-24">
         <motion.button
-          onClick={() => setIsEventSelectorOpen(true)}
-          className="w-full flex items-center justify-between p-4 bg-card rounded-2xl border border-border active:scale-[0.98] transition-transform"
-          whileTap={{ scale: 0.98 }}
+          onClick={() => {
+            triggerHaptic('light');
+            setIsEventSelectorOpen(true);
+          }}
+          className="w-full flex items-center justify-between p-5 bg-card rounded-3xl border border-border min-h-[80px]"
+          whileTap={{ scale: 0.97 }}
+          transition={springTransition}
           data-testid="button-select-event"
         >
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center">
-              <Calendar className="w-6 h-6 text-primary" />
-            </div>
+          <div className="flex items-center gap-4">
+            <motion.div 
+              className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center"
+              whileHover={{ scale: 1.05 }}
+              transition={springTransition}
+            >
+              <Calendar className="w-7 h-7 text-primary" />
+            </motion.div>
             <div className="text-left">
-              <p className="text-xs text-muted-foreground">Evento Selezionato</p>
-              <p className="font-semibold text-base">
+              <p className="text-sm text-muted-foreground">Evento Selezionato</p>
+              <p className="font-bold text-lg">
                 {selectedEvent ? selectedEvent.name : "Seleziona evento"}
               </p>
             </div>
           </div>
-          <ChevronDown className="w-5 h-5 text-muted-foreground" />
+          <motion.div
+            animate={{ rotate: isEventSelectorOpen ? 180 : 0 }}
+            transition={springTransition}
+          >
+            <ChevronDown className="w-6 h-6 text-muted-foreground" />
+          </motion.div>
         </motion.button>
 
         {selectedEventId && (
@@ -387,37 +400,39 @@ export default function PrTablesPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={springTransition}
-              className="grid grid-cols-4 gap-2"
+              className="grid grid-cols-2 gap-3"
             >
               {[
-                { label: "Totale", value: stats.total, color: "text-foreground" },
-                { label: "Liberi", value: stats.available, color: "text-green-500" },
-                { label: "Prenotati", value: stats.reserved, color: "text-blue-500" },
-                { label: "Posti", value: stats.capacity, color: "text-purple-500" },
+                { label: "Totale", value: stats.total, color: "text-foreground", bgColor: "bg-muted/50" },
+                { label: "Liberi", value: stats.available, color: "text-green-500", bgColor: "bg-green-500/10" },
+                { label: "Prenotati", value: stats.reserved, color: "text-blue-500", bgColor: "bg-blue-500/10" },
+                { label: "Posti Totali", value: stats.capacity, color: "text-purple-500", bgColor: "bg-purple-500/10" },
               ].map((stat, idx) => (
                 <motion.div
                   key={stat.label}
                   initial={{ opacity: 0, scale: 0.9 }}
                   animate={{ opacity: 1, scale: 1 }}
                   transition={{ ...springTransition, delay: idx * 0.05 }}
-                  className="bg-card rounded-2xl p-3 text-center border border-border"
+                  whileTap={{ scale: 0.95 }}
+                  className={`${stat.bgColor} rounded-2xl p-4 text-center border border-border min-h-[80px] flex flex-col justify-center`}
                 >
-                  <p className={`text-xl font-bold ${stat.color}`}>{stat.value}</p>
-                  <p className="text-[10px] text-muted-foreground uppercase tracking-wide">{stat.label}</p>
+                  <p className={`text-3xl font-bold ${stat.color}`}>{stat.value}</p>
+                  <p className="text-xs text-muted-foreground uppercase tracking-wide mt-1">{stat.label}</p>
                 </motion.div>
               ))}
             </motion.div>
 
-            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+            <div className="flex gap-3 overflow-x-auto pb-3 -mx-4 px-4 scrollbar-hide">
               <motion.button
                 whileTap={{ scale: 0.95 }}
+                transition={springTransition}
                 onClick={() => {
                   triggerHaptic('light');
                   setZoneFilter("");
                 }}
-                className={`flex-shrink-0 px-4 py-2.5 rounded-full text-sm font-medium transition-colors min-h-[44px] ${
+                className={`flex-shrink-0 px-5 py-3 rounded-full text-base font-medium transition-colors min-h-[48px] ${
                   !zoneFilter 
-                    ? "bg-primary text-primary-foreground" 
+                    ? "bg-primary text-primary-foreground shadow-lg" 
                     : "bg-card border border-border text-muted-foreground"
                 }`}
               >
@@ -427,13 +442,14 @@ export default function PrTablesPage() {
                 <motion.button
                   key={type}
                   whileTap={{ scale: 0.95 }}
+                  transition={springTransition}
                   onClick={() => {
                     triggerHaptic('light');
                     setZoneFilter(type);
                   }}
-                  className={`flex-shrink-0 px-4 py-2.5 rounded-full text-sm font-medium transition-colors min-h-[44px] ${
+                  className={`flex-shrink-0 px-5 py-3 rounded-full text-base font-medium transition-colors min-h-[48px] ${
                     zoneFilter === type
-                      ? "bg-primary text-primary-foreground"
+                      ? "bg-primary text-primary-foreground shadow-lg"
                       : "bg-card border border-border text-muted-foreground"
                   }`}
                 >
@@ -442,34 +458,45 @@ export default function PrTablesPage() {
               ))}
             </div>
 
-            <div className="relative">
+            <motion.div 
+              className="relative"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={springTransition}
+            >
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
               <Input
                 placeholder="Cerca tavolo..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-12 h-12 rounded-2xl bg-card border-border text-base"
+                className="pl-12 h-14 rounded-2xl bg-card border-border text-base"
                 data-testid="input-search"
               />
-            </div>
+            </motion.div>
 
             {loadingTables ? (
-              <div className="space-y-3">
+              <div className="space-y-4">
                 {[1, 2, 3].map((i) => (
-                  <Skeleton key={i} className="h-32 rounded-2xl" />
+                  <Skeleton key={i} className="h-40 rounded-3xl" />
                 ))}
               </div>
             ) : filteredTables.length === 0 ? (
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
-                className="text-center py-16"
+                transition={springTransition}
+                className="text-center py-20"
               >
-                <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-muted/50 flex items-center justify-center">
-                  <Armchair className="h-10 w-10 text-muted-foreground" />
-                </div>
-                <h3 className="text-lg font-semibold mb-1">Nessun tavolo</h3>
-                <p className="text-muted-foreground text-sm">
+                <motion.div 
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  transition={springTransition}
+                  className="w-24 h-24 mx-auto mb-6 rounded-full bg-muted/50 flex items-center justify-center"
+                >
+                  <Armchair className="h-12 w-12 text-muted-foreground" />
+                </motion.div>
+                <h3 className="text-xl font-semibold mb-2">Nessun tavolo</h3>
+                <p className="text-muted-foreground">
                   Aggiungi il primo tavolo per questo evento
                 </p>
               </motion.div>
@@ -478,7 +505,7 @@ export default function PrTablesPage() {
                 variants={staggerContainer}
                 initial="hidden"
                 animate="visible"
-                className="space-y-3"
+                className="space-y-4"
               >
                 {filteredTables.map((table) => {
                   const booking = getTableBooking(table.id);
@@ -490,57 +517,66 @@ export default function PrTablesPage() {
                       key={table.id}
                       variants={cardVariants}
                       transition={springTransition}
-                      whileTap={{ scale: 0.98 }}
+                      whileTap={{ scale: 0.97 }}
                       onClick={() => handleTablePress(table)}
-                      className="bg-card rounded-2xl p-4 border border-border active:bg-muted/50 cursor-pointer"
+                      className="bg-card rounded-3xl p-5 border border-border active:bg-muted/50 cursor-pointer min-h-[120px]"
                       data-testid={`card-table-${table.id}`}
                     >
                       <div className="flex items-start gap-4">
-                        <div className={`w-14 h-14 rounded-xl ${statusInfo.color}/10 flex items-center justify-center flex-shrink-0`}>
-                          <Armchair className={`w-7 h-7 ${statusInfo.textColor}`} />
-                        </div>
+                        <motion.div 
+                          className={`w-16 h-16 rounded-2xl ${statusInfo.color}/10 flex items-center justify-center flex-shrink-0`}
+                          whileHover={{ scale: 1.05 }}
+                          transition={springTransition}
+                        >
+                          <Armchair className={`w-8 h-8 ${statusInfo.textColor}`} />
+                        </motion.div>
                         
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center justify-between gap-2 mb-1">
-                            <h3 className="font-semibold text-lg truncate">{table.name}</h3>
+                          <div className="flex items-center justify-between gap-3 mb-2">
+                            <h3 className="font-bold text-xl truncate">{table.name}</h3>
                             <Badge 
                               variant="outline" 
-                              className={`${statusInfo.color}/10 ${statusInfo.textColor} border-0 flex-shrink-0`}
+                              className={`${statusInfo.color}/10 ${statusInfo.textColor} border-0 flex-shrink-0 px-3 py-1.5`}
                             >
-                              <StatusIcon className="w-3 h-3 mr-1" />
+                              <StatusIcon className="w-4 h-4 mr-1.5" />
                               {statusInfo.label}
                             </Badge>
                           </div>
                           
-                          <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground mb-2">
-                            <span className="flex items-center gap-1">
-                              <MapPin className="w-3.5 h-3.5" />
+                          <div className="flex flex-wrap items-center gap-4 text-base text-muted-foreground mb-3">
+                            <span className="flex items-center gap-1.5">
+                              <MapPin className="w-4 h-4" />
                               {getTableTypeLabel(table.tableType)}
                             </span>
-                            <span className="flex items-center gap-1">
-                              <Users className="w-3.5 h-3.5" />
+                            <span className="flex items-center gap-1.5">
+                              <Users className="w-4 h-4" />
                               {table.capacity} posti
                             </span>
                             {table.minSpend && (
-                              <span className="flex items-center gap-1">
-                                <DollarSign className="w-3.5 h-3.5" />
+                              <span className="flex items-center gap-1.5">
+                                <DollarSign className="w-4 h-4" />
                                 Min €{table.minSpend}
                               </span>
                             )}
                           </div>
                           
                           {booking && (
-                            <div className="pt-2 border-t border-border">
-                              <div className="flex items-center gap-2">
-                                <div className="w-8 h-8 rounded-full bg-primary/10 flex items-center justify-center">
-                                  <Users className="w-4 h-4 text-primary" />
+                            <motion.div 
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              transition={springTransition}
+                              className="pt-3 border-t border-border"
+                            >
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                                  <Users className="w-5 h-5 text-primary" />
                                 </div>
                                 <div>
-                                  <p className="font-medium text-sm">{booking.customerName}</p>
-                                  <p className="text-xs text-muted-foreground">{booking.guestsCount} ospiti</p>
+                                  <p className="font-semibold">{booking.customerName}</p>
+                                  <p className="text-sm text-muted-foreground">{booking.guestsCount} ospiti</p>
                                 </div>
                               </div>
-                            </div>
+                            </motion.div>
                           )}
                         </div>
                       </div>
@@ -591,38 +627,56 @@ export default function PrTablesPage() {
         onClose={() => setIsEventSelectorOpen(false)}
         title="Seleziona Evento"
       >
-        <div className="p-4 space-y-2">
-          {events.map((event) => (
-            <motion.button
-              key={event.id}
-              whileTap={{ scale: 0.98 }}
-              onClick={() => {
-                triggerHaptic('medium');
-                setSelectedEventId(event.id);
-                setIsEventSelectorOpen(false);
-              }}
-              className={`w-full p-4 rounded-2xl text-left transition-colors ${
-                selectedEventId === event.id
-                  ? "bg-primary/10 border-2 border-primary"
-                  : "bg-card border border-border active:bg-muted"
-              }`}
-              data-testid={`button-event-${event.id}`}
-            >
-              <div className="flex items-center gap-3">
-                <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
-                  selectedEventId === event.id ? "bg-primary/20" : "bg-muted"
-                }`}>
-                  <Calendar className={`w-6 h-6 ${selectedEventId === event.id ? "text-primary" : "text-muted-foreground"}`} />
+        <div className="p-4 space-y-3 pb-8">
+          <AnimatePresence>
+            {events.map((event, idx) => (
+              <motion.button
+                key={event.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...springTransition, delay: idx * 0.05 }}
+                whileTap={{ scale: 0.97 }}
+                onClick={() => {
+                  triggerHaptic('medium');
+                  setSelectedEventId(event.id);
+                  setIsEventSelectorOpen(false);
+                }}
+                className={`w-full p-5 rounded-2xl text-left transition-colors min-h-[80px] ${
+                  selectedEventId === event.id
+                    ? "bg-primary/10 border-2 border-primary"
+                    : "bg-card border border-border active:bg-muted"
+                }`}
+                data-testid={`button-event-${event.id}`}
+              >
+                <div className="flex items-center gap-4">
+                  <motion.div 
+                    className={`w-14 h-14 rounded-2xl flex items-center justify-center ${
+                      selectedEventId === event.id ? "bg-primary/20" : "bg-muted"
+                    }`}
+                    whileHover={{ scale: 1.05 }}
+                    transition={springTransition}
+                  >
+                    <Calendar className={`w-7 h-7 ${selectedEventId === event.id ? "text-primary" : "text-muted-foreground"}`} />
+                  </motion.div>
+                  <div className="flex-1">
+                    <p className="font-bold text-lg">{event.name}</p>
+                    <p className="text-base text-muted-foreground">
+                      {format(new Date(event.startDatetime), "d MMMM yyyy", { locale: it })}
+                    </p>
+                  </div>
+                  {selectedEventId === event.id && (
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={springTransition}
+                    >
+                      <CheckCircle2 className="w-6 h-6 text-primary" />
+                    </motion.div>
+                  )}
                 </div>
-                <div>
-                  <p className="font-semibold">{event.name}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {format(new Date(event.startDatetime), "d MMMM yyyy", { locale: it })}
-                  </p>
-                </div>
-              </div>
-            </motion.button>
-          ))}
+              </motion.button>
+            ))}
+          </AnimatePresence>
         </div>
       </BottomSheet>
 

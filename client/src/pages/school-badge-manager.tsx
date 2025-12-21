@@ -6,12 +6,13 @@ import { z } from "zod";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+  MobileAppLayout,
+  MobileHeader,
+  HapticButton,
+  FloatingActionButton,
+  BottomSheet,
+  triggerHaptic,
+} from "@/components/mobile-primitives";
 import {
   Form,
   FormControl,
@@ -20,22 +21,6 @@ import {
   FormLabel,
   FormMessage,
 } from "@/components/ui/form";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogFooter,
-} from "@/components/ui/dialog";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -48,23 +33,17 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Switch } from "@/components/ui/switch";
 import { Checkbox } from "@/components/ui/checkbox";
-import {
-  Collapsible,
-  CollapsibleContent,
-  CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   GraduationCap,
   Plus,
   Pencil,
   Trash2,
   Users,
-  Eye,
   XCircle,
   CheckCircle2,
   Clock,
@@ -72,14 +51,17 @@ import {
   ExternalLink,
   Copy,
   Upload,
-  Image,
   ChevronDown,
+  ChevronRight,
   Shield,
+  ArrowLeft,
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import type { SchoolBadgeLanding, SchoolBadgeRequest } from "@shared/schema";
+
+const springConfig = { stiffness: 400, damping: 30 };
 
 const landingFormSchema = z.object({
   schoolName: z.string().min(1, "Nome scuola obbligatorio"),
@@ -108,19 +90,21 @@ const statusConfig: Record<string, { label: string; variant: "default" | "second
 
 export default function SchoolBadgeManager() {
   const { toast } = useToast();
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingLanding, setEditingLanding] = useState<SchoolBadgeLanding | null>(null);
   const [viewingLanding, setViewingLanding] = useState<SchoolBadgeLanding | null>(null);
   const [deletingLanding, setDeletingLanding] = useState<SchoolBadgeLanding | null>(null);
   const [revokingRequest, setRevokingRequest] = useState<SchoolBadgeRequest | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
   const [isUploadingLogo, setIsUploadingLogo] = useState(false);
+  const [showPrivacySection, setShowPrivacySection] = useState(false);
 
   const handleLogoFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
     if (!file.type.startsWith("image/")) {
+      triggerHaptic('error');
       toast({
         title: "Errore",
         description: "Il file deve essere un'immagine",
@@ -130,6 +114,7 @@ export default function SchoolBadgeManager() {
     }
 
     if (file.size > 2 * 1024 * 1024) {
+      triggerHaptic('error');
       toast({
         title: "Errore",
         description: "L'immagine deve essere inferiore a 2MB",
@@ -145,6 +130,7 @@ export default function SchoolBadgeManager() {
       setLogoPreview(dataUrl);
       form.setValue("logoUrl", dataUrl);
       setIsUploadingLogo(false);
+      triggerHaptic('success');
     };
     reader.onerror = () => {
       toast({
@@ -153,11 +139,13 @@ export default function SchoolBadgeManager() {
         variant: "destructive",
       });
       setIsUploadingLogo(false);
+      triggerHaptic('error');
     };
     reader.readAsDataURL(file);
   };
 
   const clearLogo = () => {
+    triggerHaptic('light');
     setLogoPreview(null);
     form.setValue("logoUrl", "");
   };
@@ -201,12 +189,14 @@ export default function SchoolBadgeManager() {
       return response.json();
     },
     onSuccess: () => {
+      triggerHaptic('success');
       toast({ title: "Landing creata", description: "La landing page è stata creata con successo" });
-      setIsDialogOpen(false);
+      setIsFormOpen(false);
       form.reset();
       queryClient.invalidateQueries({ queryKey: ["/api/school-badges/landings"] });
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
@@ -222,13 +212,15 @@ export default function SchoolBadgeManager() {
       return response.json();
     },
     onSuccess: () => {
+      triggerHaptic('success');
       toast({ title: "Landing aggiornata", description: "Le modifiche sono state salvate" });
-      setIsDialogOpen(false);
+      setIsFormOpen(false);
       setEditingLanding(null);
       form.reset();
       queryClient.invalidateQueries({ queryKey: ["/api/school-badges/landings"] });
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
@@ -238,11 +230,13 @@ export default function SchoolBadgeManager() {
       await apiRequest("DELETE", `/api/school-badges/landings/${id}`);
     },
     onSuccess: () => {
+      triggerHaptic('success');
       toast({ title: "Landing eliminata" });
       setDeletingLanding(null);
       queryClient.invalidateQueries({ queryKey: ["/api/school-badges/landings"] });
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
@@ -253,6 +247,7 @@ export default function SchoolBadgeManager() {
       return response.json();
     },
     onSuccess: (_, variables) => {
+      triggerHaptic('medium');
       toast({ 
         title: variables.isActive ? "Landing attivata" : "Landing disattivata",
         description: variables.isActive ? "Le richieste sono ora aperte" : "Le richieste sono chiuse"
@@ -260,6 +255,7 @@ export default function SchoolBadgeManager() {
       queryClient.invalidateQueries({ queryKey: ["/api/school-badges/landings"] });
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
@@ -270,18 +266,22 @@ export default function SchoolBadgeManager() {
       return response.json();
     },
     onSuccess: () => {
+      triggerHaptic('success');
       toast({ title: "Badge revocato" });
       setRevokingRequest(null);
       queryClient.invalidateQueries({ queryKey: ["/api/school-badges/landings", viewingLanding?.id, "requests"] });
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
 
-  const openCreateDialog = () => {
+  const openCreateForm = () => {
+    triggerHaptic('medium');
     setEditingLanding(null);
     setLogoPreview(null);
+    setShowPrivacySection(false);
     form.reset({
       schoolName: "",
       slug: "",
@@ -297,12 +297,14 @@ export default function SchoolBadgeManager() {
       requireTerms: false,
       showMarketing: true,
     });
-    setIsDialogOpen(true);
+    setIsFormOpen(true);
   };
 
-  const openEditDialog = (landing: SchoolBadgeLanding) => {
+  const openEditForm = (landing: SchoolBadgeLanding) => {
+    triggerHaptic('light');
     setEditingLanding(landing);
     setLogoPreview(landing.logoUrl || null);
+    setShowPrivacySection(false);
     form.reset({
       schoolName: landing.schoolName,
       slug: landing.slug,
@@ -318,7 +320,7 @@ export default function SchoolBadgeManager() {
       requireTerms: landing.requireTerms ?? false,
       showMarketing: landing.showMarketing ?? true,
     });
-    setIsDialogOpen(true);
+    setIsFormOpen(true);
   };
 
   const onSubmit = (data: LandingFormData) => {
@@ -330,548 +332,664 @@ export default function SchoolBadgeManager() {
   };
 
   const copyLandingUrl = (slug: string) => {
+    triggerHaptic('success');
     const url = `${window.location.origin}/badge/${slug}`;
     navigator.clipboard.writeText(url);
     toast({ title: "URL copiato", description: url });
   };
 
+  const header = (
+    <MobileHeader
+      title="Badge Scuole"
+      subtitle={`${landings.length} landing`}
+    />
+  );
+
   if (isLoading) {
     return (
-      <div className="p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
-        <div className="mb-8">
-          <Skeleton className="h-8 w-64 mb-2 rounded-xl" />
-          <Skeleton className="h-4 w-96 rounded-lg" />
-        </div>
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
+      <MobileAppLayout header={header}>
+        <div className="py-6 pb-24 space-y-4">
           {[1, 2, 3].map((i) => (
-            <Skeleton key={i} className="h-64 rounded-2xl" />
+            <Skeleton key={i} className="h-44 rounded-2xl" />
           ))}
         </div>
-      </div>
+      </MobileAppLayout>
     );
   }
 
   return (
-    <div className="p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8"
-      >
-        <div>
-          <h1 className="text-2xl md:text-3xl font-bold mb-2" data-testid="text-school-badges-title">
-            Gestione Badge Scuole
-          </h1>
-          <p className="text-muted-foreground">
-            Crea e gestisci landing page per la richiesta di badge scolastici
-          </p>
-        </div>
-        <Button onClick={openCreateDialog} data-testid="button-create-landing">
-          <Plus className="h-4 w-4 mr-2" />
-          Nuova Landing
-        </Button>
-      </motion.div>
-
-      {landings.length === 0 ? (
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="glass-card p-12 text-center"
-        >
-          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mx-auto mb-4">
-            <GraduationCap className="h-8 w-8 text-white" />
-          </div>
-          <h3 className="text-lg font-semibold mb-2">Nessuna landing page</h3>
-          <p className="text-muted-foreground mb-4">
-            Crea la tua prima landing page per permettere agli studenti di richiedere i badge
-          </p>
-          <Button onClick={openCreateDialog} data-testid="button-create-first-landing">
-            <Plus className="h-4 w-4 mr-2" />
-            Crea Landing
-          </Button>
-        </motion.div>
-      ) : (
-        <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-          {landings.map((landing, index) => (
+    <MobileAppLayout header={header}>
+      <div className="py-4 pb-24">
+        <AnimatePresence mode="popLayout">
+          {landings.length === 0 ? (
             <motion.div
-              key={landing.id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.1 }}
+              key="empty"
+              initial={{ opacity: 0, scale: 0.95 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.95 }}
+              transition={{ type: "spring", ...springConfig }}
+              className="flex flex-col items-center justify-center py-16 px-4"
             >
-              <Card className="glass-card h-full" data-testid={`card-landing-${landing.id}`}>
-                <CardHeader className="flex flex-row items-start justify-between gap-2">
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2 mb-2">
-                      {landing.logoUrl ? (
-                        <img src={landing.logoUrl} alt={landing.schoolName} className="w-10 h-10 rounded-lg object-cover" />
-                      ) : (
-                        <div 
-                          className="w-10 h-10 rounded-lg flex items-center justify-center"
-                          style={{ backgroundColor: landing.primaryColor || "#3b82f6" }}
-                        >
-                          <GraduationCap className="h-5 w-5 text-white" />
-                        </div>
-                      )}
-                      <div className="min-w-0 flex-1">
-                        <CardTitle className="text-lg truncate">{landing.schoolName}</CardTitle>
-                        <CardDescription className="truncate">/{landing.slug}</CardDescription>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      {landing.isActive ? "Attiva" : "Inattiva"}
-                    </span>
-                    <Switch
-                      checked={landing.isActive}
-                      onCheckedChange={(checked) => 
-                        toggleActiveMutation.mutate({ id: landing.id, isActive: checked })
-                      }
-                      disabled={toggleActiveMutation.isPending}
-                      data-testid={`switch-active-${landing.id}`}
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent className="space-y-4">
-                  {landing.description && (
-                    <p className="text-sm text-muted-foreground line-clamp-2">{landing.description}</p>
-                  )}
-                  {landing.authorizedDomains && landing.authorizedDomains.length > 0 && (
-                    <div className="flex flex-wrap gap-1">
-                      {landing.authorizedDomains.slice(0, 3).map((domain, i) => (
-                        <Badge key={i} variant="outline" className="text-xs">
-                          @{domain}
-                        </Badge>
-                      ))}
-                      {landing.authorizedDomains.length > 3 && (
-                        <Badge variant="outline" className="text-xs">
-                          +{landing.authorizedDomains.length - 3}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                  <div className="flex flex-wrap gap-2 pt-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => copyLandingUrl(landing.slug)}
-                      data-testid={`button-copy-url-${landing.id}`}
-                    >
-                      <Copy className="h-3 w-3 mr-1" />
-                      URL
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => window.open(`/badge/${landing.slug}`, "_blank")}
-                      data-testid={`button-preview-${landing.id}`}
-                    >
-                      <ExternalLink className="h-3 w-3 mr-1" />
-                      Anteprima
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => setViewingLanding(landing)}
-                      data-testid={`button-view-requests-${landing.id}`}
-                    >
-                      <Users className="h-3 w-3 mr-1" />
-                      Richieste
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => openEditDialog(landing)}
-                      data-testid={`button-edit-${landing.id}`}
-                    >
-                      <Pencil className="h-3 w-3" />
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="ghost"
-                      onClick={() => setDeletingLanding(landing)}
-                      data-testid={`button-delete-${landing.id}`}
-                    >
-                      <Trash2 className="h-3 w-3 text-destructive" />
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <motion.div 
+                className="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mb-6"
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ type: "spring", ...springConfig, delay: 0.1 }}
+              >
+                <GraduationCap className="h-10 w-10 text-white" />
+              </motion.div>
+              <h3 className="text-xl font-semibold mb-2 text-center">Nessuna landing page</h3>
+              <p className="text-muted-foreground text-center mb-6">
+                Crea la tua prima landing page per permettere agli studenti di richiedere i badge
+              </p>
+              <HapticButton 
+                onClick={openCreateForm} 
+                hapticType="medium"
+                className="min-h-[52px] px-6"
+                data-testid="button-create-first-landing"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Crea Landing
+              </HapticButton>
             </motion.div>
-          ))}
-        </div>
-      )}
-
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle>{editingLanding ? "Modifica Landing" : "Nuova Landing"}</DialogTitle>
-            <DialogDescription>
-              {editingLanding ? "Modifica i dettagli della landing page" : "Crea una nuova landing page per la richiesta di badge"}
-            </DialogDescription>
-          </DialogHeader>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-              <FormField
-                control={form.control}
-                name="schoolName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Nome Scuola</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="Liceo Scientifico Einstein" data-testid="input-school-name" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="slug"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Slug URL</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="liceo-einstein" data-testid="input-slug" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="logoUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Logo (opzionale)</FormLabel>
-                    <FormControl>
-                      <div className="space-y-3">
-                        {(logoPreview || field.value) && (
-                          <div className="relative inline-block">
-                            <img 
-                              src={logoPreview || field.value} 
-                              alt="Anteprima logo" 
-                              className="w-24 h-24 rounded-lg object-cover border"
-                            />
-                            <Button
-                              type="button"
-                              size="icon"
-                              variant="destructive"
-                              className="absolute -top-2 -right-2 h-6 w-6"
-                              onClick={clearLogo}
-                            >
-                              <XCircle className="h-4 w-4" />
-                            </Button>
+          ) : (
+            <div className="space-y-4">
+              {landings.map((landing, index) => (
+                <motion.div
+                  key={landing.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ type: "spring", ...springConfig, delay: index * 0.05 }}
+                  layout
+                >
+                  <div 
+                    className="bg-card rounded-2xl border border-border overflow-hidden"
+                    data-testid={`card-landing-${landing.id}`}
+                  >
+                    <div className="p-5">
+                      <div className="flex items-start gap-4 mb-4">
+                        {landing.logoUrl ? (
+                          <img 
+                            src={landing.logoUrl} 
+                            alt={landing.schoolName} 
+                            className="w-14 h-14 rounded-xl object-cover flex-shrink-0" 
+                          />
+                        ) : (
+                          <div 
+                            className="w-14 h-14 rounded-xl flex items-center justify-center flex-shrink-0"
+                            style={{ backgroundColor: landing.primaryColor || "#3b82f6" }}
+                          >
+                            <GraduationCap className="h-7 w-7 text-white" />
                           </div>
                         )}
-                        <div className="flex gap-2">
-                          <label className="flex items-center gap-2 px-4 py-2 border rounded-md cursor-pointer hover-elevate">
-                            {isUploadingLogo ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <Upload className="h-4 w-4" />
-                            )}
-                            <span className="text-sm">Carica immagine</span>
-                            <input
-                              type="file"
-                              accept="image/*"
-                              className="hidden"
-                              onChange={handleLogoFileChange}
-                              disabled={isUploadingLogo}
-                              data-testid="input-logo-file"
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <h3 className="font-semibold text-lg truncate">{landing.schoolName}</h3>
+                            <Switch
+                              checked={landing.isActive}
+                              onCheckedChange={(checked) => {
+                                triggerHaptic('medium');
+                                toggleActiveMutation.mutate({ id: landing.id, isActive: checked });
+                              }}
+                              disabled={toggleActiveMutation.isPending}
+                              data-testid={`switch-active-${landing.id}`}
                             />
-                          </label>
+                          </div>
+                          <p className="text-muted-foreground text-sm truncate">/{landing.slug}</p>
+                          <Badge 
+                            variant={landing.isActive ? "default" : "secondary"} 
+                            className="mt-2"
+                          >
+                            {landing.isActive ? "Attiva" : "Inattiva"}
+                          </Badge>
                         </div>
-                        <p className="text-xs text-muted-foreground">Max 2MB. Formati: JPG, PNG, GIF, WebP</p>
                       </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Descrizione (opzionale)</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} placeholder="Descrizione della scuola..." data-testid="input-description" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="authorizedDomains"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Domini email autorizzati</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="scuola.edu.it, liceo.it" data-testid="input-domains" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="primaryColor"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Colore primario</FormLabel>
-                    <FormControl>
-                      <div className="flex gap-2 items-center">
-                        <Input {...field} placeholder="#3b82f6" data-testid="input-primary-color" />
-                        <div className="w-10 h-10 rounded-lg border" style={{ backgroundColor: field.value }} />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="customWelcomeText"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Testo di benvenuto (opzionale)</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} placeholder="Benvenuto! Compila il form..." data-testid="input-welcome-text" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="customThankYouText"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Testo di ringraziamento (opzionale)</FormLabel>
-                    <FormControl>
-                      <Textarea {...field} placeholder="Grazie per la richiesta..." data-testid="input-thankyou-text" />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              
-              <Collapsible className="border rounded-lg">
-                <CollapsibleTrigger className="flex items-center justify-between w-full p-4 hover-elevate" data-testid="collapsible-privacy-trigger">
-                  <div className="flex items-center gap-2">
-                    <Shield className="h-4 w-4 text-muted-foreground" />
-                    <span className="font-medium">Termini e Privacy</span>
-                  </div>
-                  <ChevronDown className="h-4 w-4 text-muted-foreground transition-transform duration-200 [[data-state=open]>&]:rotate-180" />
-                </CollapsibleTrigger>
-                <CollapsibleContent className="px-4 pb-4 space-y-4">
-                  <FormField
-                    control={form.control}
-                    name="termsText"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Testo Termini e Condizioni (opzionale)</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            {...field} 
-                            placeholder="Inserisci il testo dei termini e condizioni..." 
-                            className="min-h-[100px]"
-                            data-testid="input-terms-text" 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="privacyText"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Testo Privacy Policy (opzionale)</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            {...field} 
-                            placeholder="Inserisci il testo dell'informativa privacy..." 
-                            className="min-h-[100px]"
-                            data-testid="input-privacy-text" 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <FormField
-                    control={form.control}
-                    name="marketingText"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Testo Consenso Marketing (opzionale)</FormLabel>
-                        <FormControl>
-                          <Textarea 
-                            {...field} 
-                            placeholder="Inserisci il testo per il consenso marketing..." 
-                            className="min-h-[100px]"
-                            data-testid="input-marketing-text" 
-                          />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                  <div className="flex flex-col gap-4 pt-2">
-                    <FormField
-                      control={form.control}
-                      name="requireTerms"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center gap-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              data-testid="checkbox-require-terms"
-                            />
-                          </FormControl>
-                          <FormLabel className="font-normal cursor-pointer">
-                            Richiedi accettazione termini
-                          </FormLabel>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="showMarketing"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center gap-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              data-testid="checkbox-show-marketing"
-                            />
-                          </FormControl>
-                          <FormLabel className="font-normal cursor-pointer">
-                            Mostra opzione consenso marketing
-                          </FormLabel>
-                        </FormItem>
-                      )}
-                    />
-                  </div>
-                </CollapsibleContent>
-              </Collapsible>
-              
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsDialogOpen(false)}>
-                  Annulla
-                </Button>
-                <Button 
-                  type="submit" 
-                  disabled={createMutation.isPending || updateMutation.isPending}
-                  data-testid="button-submit-landing"
-                >
-                  {(createMutation.isPending || updateMutation.isPending) && (
-                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                  )}
-                  {editingLanding ? "Salva" : "Crea"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
 
-      <Dialog open={!!viewingLanding} onOpenChange={(open) => !open && setViewingLanding(null)}>
-        <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Users className="h-5 w-5" />
-              Richieste - {viewingLanding?.schoolName}
-            </DialogTitle>
-            <DialogDescription>
-              Gestisci le richieste di badge per questa scuola
-            </DialogDescription>
-          </DialogHeader>
+                      {landing.description && (
+                        <p className="text-sm text-muted-foreground line-clamp-2 mb-4">{landing.description}</p>
+                      )}
+
+                      {landing.authorizedDomains && landing.authorizedDomains.length > 0 && (
+                        <div className="flex flex-wrap gap-2 mb-4">
+                          {landing.authorizedDomains.slice(0, 2).map((domain, i) => (
+                            <Badge key={i} variant="outline" className="text-xs">
+                              @{domain}
+                            </Badge>
+                          ))}
+                          {landing.authorizedDomains.length > 2 && (
+                            <Badge variant="outline" className="text-xs">
+                              +{landing.authorizedDomains.length - 2}
+                            </Badge>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="flex flex-wrap gap-2">
+                        <HapticButton
+                          variant="outline"
+                          onClick={() => copyLandingUrl(landing.slug)}
+                          className="flex-1"
+                          data-testid={`button-copy-url-${landing.id}`}
+                        >
+                          <Copy className="h-4 w-4 mr-2" />
+                          Copia URL
+                        </HapticButton>
+                        <HapticButton
+                          variant="outline"
+                          onClick={() => {
+                            triggerHaptic('light');
+                            window.open(`/badge/${landing.slug}`, "_blank");
+                          }}
+                          className="flex-1"
+                          data-testid={`button-preview-${landing.id}`}
+                        >
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Apri
+                        </HapticButton>
+                      </div>
+                    </div>
+
+                    <div className="border-t border-border bg-muted/30">
+                      <div className="flex divide-x divide-border">
+                        <HapticButton
+                          variant="ghost"
+                          onClick={() => {
+                            triggerHaptic('light');
+                            setViewingLanding(landing);
+                          }}
+                          className="flex-1 rounded-none h-12"
+                          data-testid={`button-view-requests-${landing.id}`}
+                        >
+                          <Users className="h-4 w-4 mr-2" />
+                          Richieste
+                        </HapticButton>
+                        <HapticButton
+                          variant="ghost"
+                          onClick={() => openEditForm(landing)}
+                          className="flex-1 rounded-none h-12"
+                          data-testid={`button-edit-${landing.id}`}
+                        >
+                          <Pencil className="h-4 w-4 mr-2" />
+                          Modifica
+                        </HapticButton>
+                        <HapticButton
+                          variant="ghost"
+                          onClick={() => {
+                            triggerHaptic('heavy');
+                            setDeletingLanding(landing);
+                          }}
+                          className="flex-1 rounded-none h-12 text-destructive hover:text-destructive"
+                          data-testid={`button-delete-${landing.id}`}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Elimina
+                        </HapticButton>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <FloatingActionButton
+        onClick={openCreateForm}
+        data-testid="button-create-landing"
+      >
+        <Plus className="h-6 w-6" />
+      </FloatingActionButton>
+
+      <BottomSheet
+        open={isFormOpen}
+        onClose={() => {
+          setIsFormOpen(false);
+          setEditingLanding(null);
+        }}
+        title={editingLanding ? "Modifica Landing" : "Nuova Landing"}
+      >
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="px-4 pb-8 space-y-5">
+            <FormField
+              control={form.control}
+              name="schoolName"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Nome Scuola</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      placeholder="Liceo Scientifico Einstein" 
+                      className="h-12"
+                      data-testid="input-school-name" 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="slug"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Slug URL</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      placeholder="liceo-einstein" 
+                      className="h-12"
+                      data-testid="input-slug" 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="logoUrl"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Logo (opzionale)</FormLabel>
+                  <FormControl>
+                    <div className="space-y-3">
+                      {(logoPreview || field.value) && (
+                        <div className="relative inline-block">
+                          <img 
+                            src={logoPreview || field.value} 
+                            alt="Anteprima logo" 
+                            className="w-24 h-24 rounded-xl object-cover border"
+                          />
+                          <HapticButton
+                            type="button"
+                            size="icon"
+                            variant="destructive"
+                            className="absolute -top-2 -right-2 h-8 w-8 rounded-full"
+                            onClick={clearLogo}
+                          >
+                            <XCircle className="h-4 w-4" />
+                          </HapticButton>
+                        </div>
+                      )}
+                      <label className="flex items-center justify-center gap-2 px-4 py-4 border-2 border-dashed rounded-xl cursor-pointer hover:bg-muted/50 transition-colors min-h-[56px]">
+                        {isUploadingLogo ? (
+                          <Loader2 className="h-5 w-5 animate-spin" />
+                        ) : (
+                          <Upload className="h-5 w-5" />
+                        )}
+                        <span>Carica immagine</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          className="hidden"
+                          onChange={handleLogoFileChange}
+                          disabled={isUploadingLogo}
+                          data-testid="input-logo-file"
+                        />
+                      </label>
+                      <p className="text-xs text-muted-foreground">Max 2MB. Formati: JPG, PNG, GIF, WebP</p>
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="description"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Descrizione (opzionale)</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      {...field} 
+                      placeholder="Descrizione della scuola..." 
+                      className="min-h-[100px]"
+                      data-testid="input-description" 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="authorizedDomains"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Domini email autorizzati</FormLabel>
+                  <FormControl>
+                    <Input 
+                      {...field} 
+                      placeholder="scuola.edu.it, liceo.it" 
+                      className="h-12"
+                      data-testid="input-domains" 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="primaryColor"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Colore primario</FormLabel>
+                  <FormControl>
+                    <div className="flex gap-3 items-center">
+                      <Input 
+                        {...field} 
+                        placeholder="#3b82f6" 
+                        className="h-12 flex-1"
+                        data-testid="input-primary-color" 
+                      />
+                      <div 
+                        className="w-12 h-12 rounded-xl border-2 flex-shrink-0" 
+                        style={{ backgroundColor: field.value }} 
+                      />
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="customWelcomeText"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Testo di benvenuto (opzionale)</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      {...field} 
+                      placeholder="Benvenuto! Compila il form..." 
+                      className="min-h-[80px]"
+                      data-testid="input-welcome-text" 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="customThankYouText"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Testo di ringraziamento (opzionale)</FormLabel>
+                  <FormControl>
+                    <Textarea 
+                      {...field} 
+                      placeholder="Grazie per la richiesta..." 
+                      className="min-h-[80px]"
+                      data-testid="input-thankyou-text" 
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            
+            <div className="border rounded-xl overflow-hidden">
+              <button
+                type="button"
+                onClick={() => {
+                  triggerHaptic('light');
+                  setShowPrivacySection(!showPrivacySection);
+                }}
+                className="flex items-center justify-between w-full p-4 min-h-[56px]"
+                data-testid="collapsible-privacy-trigger"
+              >
+                <div className="flex items-center gap-3">
+                  <Shield className="h-5 w-5 text-muted-foreground" />
+                  <span className="font-medium">Termini e Privacy</span>
+                </div>
+                <motion.div
+                  animate={{ rotate: showPrivacySection ? 90 : 0 }}
+                  transition={{ type: "spring", ...springConfig }}
+                >
+                  <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                </motion.div>
+              </button>
+              
+              <AnimatePresence>
+                {showPrivacySection && (
+                  <motion.div
+                    initial={{ height: 0, opacity: 0 }}
+                    animate={{ height: "auto", opacity: 1 }}
+                    exit={{ height: 0, opacity: 0 }}
+                    transition={{ type: "spring", ...springConfig }}
+                    className="overflow-hidden"
+                  >
+                    <div className="px-4 pb-4 space-y-4 border-t">
+                      <FormField
+                        control={form.control}
+                        name="termsText"
+                        render={({ field }) => (
+                          <FormItem className="pt-4">
+                            <FormLabel>Termini e Condizioni</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                {...field} 
+                                placeholder="Inserisci il testo dei termini..." 
+                                className="min-h-[100px]"
+                                data-testid="input-terms-text" 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="privacyText"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Privacy Policy</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                {...field} 
+                                placeholder="Inserisci l'informativa privacy..." 
+                                className="min-h-[100px]"
+                                data-testid="input-privacy-text" 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="marketingText"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Consenso Marketing</FormLabel>
+                            <FormControl>
+                              <Textarea 
+                                {...field} 
+                                placeholder="Inserisci il testo per il consenso marketing..." 
+                                className="min-h-[100px]"
+                                data-testid="input-marketing-text" 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <div className="space-y-4 pt-2">
+                        <FormField
+                          control={form.control}
+                          name="requireTerms"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center gap-3 space-y-0 min-h-[48px]">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={(checked) => {
+                                    triggerHaptic('light');
+                                    field.onChange(checked);
+                                  }}
+                                  className="h-6 w-6"
+                                  data-testid="checkbox-require-terms"
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal cursor-pointer text-base">
+                                Richiedi accettazione termini
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="showMarketing"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center gap-3 space-y-0 min-h-[48px]">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={(checked) => {
+                                    triggerHaptic('light');
+                                    field.onChange(checked);
+                                  }}
+                                  className="h-6 w-6"
+                                  data-testid="checkbox-show-marketing"
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal cursor-pointer text-base">
+                                Mostra opzione consenso marketing
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            <div className="flex gap-3 pt-4">
+              <HapticButton 
+                type="button" 
+                variant="outline" 
+                onClick={() => {
+                  setIsFormOpen(false);
+                  setEditingLanding(null);
+                }}
+                className="flex-1 h-14"
+              >
+                Annulla
+              </HapticButton>
+              <HapticButton 
+                type="submit" 
+                disabled={createMutation.isPending || updateMutation.isPending}
+                className="flex-1 h-14"
+                hapticType="success"
+                data-testid="button-submit-landing"
+              >
+                {(createMutation.isPending || updateMutation.isPending) && (
+                  <Loader2 className="h-5 w-5 mr-2 animate-spin" />
+                )}
+                {editingLanding ? "Salva" : "Crea"}
+              </HapticButton>
+            </div>
+          </form>
+        </Form>
+      </BottomSheet>
+
+      <BottomSheet
+        open={!!viewingLanding}
+        onClose={() => setViewingLanding(null)}
+        title={`Richieste - ${viewingLanding?.schoolName}`}
+      >
+        <div className="px-4 pb-8">
           {isLoadingRequests ? (
-            <div className="space-y-4">
+            <div className="space-y-4 py-4">
               {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-16 rounded-lg" />
+                <Skeleton key={i} className="h-24 rounded-xl" />
               ))}
             </div>
           ) : requests.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              Nessuna richiesta ricevuta
+            <div className="flex flex-col items-center justify-center py-12">
+              <Users className="h-12 w-12 text-muted-foreground mb-4" />
+              <p className="text-muted-foreground text-center">Nessuna richiesta ricevuta</p>
             </div>
           ) : (
-            <div className="rounded-lg border overflow-hidden">
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Cognome</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Telefono</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Azioni</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {requests.map((request) => {
-                    const status = statusConfig[request.status] || statusConfig.pending;
-                    const StatusIcon = status.icon;
-                    return (
-                      <TableRow key={request.id} data-testid={`row-request-${request.id}`}>
-                        <TableCell>{request.firstName}</TableCell>
-                        <TableCell>{request.lastName}</TableCell>
-                        <TableCell>{request.email}</TableCell>
-                        <TableCell>{request.phone || "-"}</TableCell>
-                        <TableCell>
+            <div className="space-y-3 py-4">
+              {requests.map((request) => {
+                const status = statusConfig[request.status] || statusConfig.pending;
+                const StatusIcon = status.icon;
+                return (
+                  <motion.div
+                    key={request.id}
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ type: "spring", ...springConfig }}
+                    className="bg-muted/50 rounded-xl p-4"
+                    data-testid={`row-request-${request.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium">
+                          {request.firstName} {request.lastName}
+                        </p>
+                        <p className="text-sm text-muted-foreground truncate">{request.email}</p>
+                        {request.phone && (
+                          <p className="text-sm text-muted-foreground">{request.phone}</p>
+                        )}
+                        <div className="flex items-center gap-2 mt-2">
                           <Badge variant={status.variant} className="gap-1">
                             <StatusIcon className="h-3 w-3" />
                             {status.label}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {request.createdAt && format(new Date(request.createdAt), "dd/MM/yyyy HH:mm", { locale: it })}
-                        </TableCell>
-                        <TableCell>
-                          {request.status !== "revoked" && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              onClick={() => setRevokingRequest(request)}
-                              data-testid={`button-revoke-${request.id}`}
-                            >
-                              <XCircle className="h-4 w-4 text-destructive" />
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+                          <span className="text-xs text-muted-foreground">
+                            {request.createdAt && format(new Date(request.createdAt), "dd/MM/yy HH:mm", { locale: it })}
+                          </span>
+                        </div>
+                      </div>
+                      {request.status !== "revoked" && (
+                        <HapticButton
+                          size="icon"
+                          variant="ghost"
+                          onClick={() => {
+                            triggerHaptic('heavy');
+                            setRevokingRequest(request);
+                          }}
+                          className="text-destructive"
+                          data-testid={`button-revoke-${request.id}`}
+                        >
+                          <XCircle className="h-5 w-5" />
+                        </HapticButton>
+                      )}
+                    </div>
+                  </motion.div>
+                );
+              })}
             </div>
           )}
-        </DialogContent>
-      </Dialog>
+        </div>
+      </BottomSheet>
 
       <AlertDialog open={!!deletingLanding} onOpenChange={(open) => !open && setDeletingLanding(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl mx-4">
           <AlertDialogHeader>
             <AlertDialogTitle>Eliminare questa landing?</AlertDialogTitle>
             <AlertDialogDescription>
               Questa azione non può essere annullata. Verranno eliminate anche tutte le richieste e i badge associati.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annulla</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col gap-2">
+            <AlertDialogCancel className="min-h-[48px]">Annulla</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => deletingLanding && deleteMutation.mutate(deletingLanding.id)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                triggerHaptic('heavy');
+                deletingLanding && deleteMutation.mutate(deletingLanding.id);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 min-h-[48px]"
               data-testid="button-confirm-delete"
             >
               {deleteMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
@@ -882,18 +1000,21 @@ export default function SchoolBadgeManager() {
       </AlertDialog>
 
       <AlertDialog open={!!revokingRequest} onOpenChange={(open) => !open && setRevokingRequest(null)}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-2xl mx-4">
           <AlertDialogHeader>
             <AlertDialogTitle>Revocare questo badge?</AlertDialogTitle>
             <AlertDialogDescription>
               Il badge di {revokingRequest?.firstName} {revokingRequest?.lastName} verrà revocato e non sarà più valido.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annulla</AlertDialogCancel>
+          <AlertDialogFooter className="flex-col gap-2">
+            <AlertDialogCancel className="min-h-[48px]">Annulla</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => revokingRequest && revokeMutation.mutate(revokingRequest.id)}
-              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              onClick={() => {
+                triggerHaptic('heavy');
+                revokingRequest && revokeMutation.mutate(revokingRequest.id);
+              }}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90 min-h-[48px]"
               data-testid="button-confirm-revoke"
             >
               {revokeMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
@@ -902,6 +1023,6 @@ export default function SchoolBadgeManager() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+    </MobileAppLayout>
   );
 }

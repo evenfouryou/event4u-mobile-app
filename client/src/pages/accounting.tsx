@@ -1,21 +1,19 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Badge } from "@/components/ui/badge";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger, DialogFooter } from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle, AlertDialogTrigger } from "@/components/ui/alert-dialog";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Link } from "wouter";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { MobileAppLayout, MobileHeader, HapticButton, triggerHaptic, BottomSheet } from "@/components/mobile-primitives";
 import { 
   Receipt, 
   Wrench, 
@@ -31,12 +29,24 @@ import {
   Calculator,
   TrendingUp,
   Clock,
+  ChevronRight,
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import type { FixedCost, ExtraCost, Maintenance, AccountingDocument, Location, Event } from "@shared/schema";
 
-function StatsCard({
+const springConfig = { type: "spring" as const, stiffness: 400, damping: 30 };
+
+type TabType = "fixed-costs" | "extra-costs" | "maintenances" | "documents";
+
+const tabs: { id: TabType; label: string; icon: React.ElementType; gradient: string }[] = [
+  { id: "fixed-costs", label: "Costi Fissi", icon: Receipt, gradient: "from-blue-500 to-indigo-600" },
+  { id: "extra-costs", label: "Extra", icon: Euro, gradient: "from-amber-500 to-orange-600" },
+  { id: "maintenances", label: "Manutenzioni", icon: Wrench, gradient: "from-violet-500 to-purple-600" },
+  { id: "documents", label: "Documenti", icon: FileText, gradient: "from-rose-500 to-pink-600" },
+];
+
+function MobileStatsCard({
   title,
   value,
   icon: Icon,
@@ -55,33 +65,67 @@ function StatsCard({
 }) {
   return (
     <motion.div 
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.3, delay }}
-      className="glass-card p-5"
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ ...springConfig, delay }}
+      className="glass-card p-4 flex-1 min-w-0"
     >
-      <div className="flex items-start justify-between mb-3">
-        <div className={`w-11 h-11 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center`}>
+      <div className="flex items-center gap-3">
+        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0`}>
           <Icon className="h-5 w-5 text-white" />
         </div>
+        <div className="min-w-0 flex-1">
+          <p className="text-xl font-bold truncate" data-testid={testId}>
+            {value}
+          </p>
+          <p className="text-xs text-muted-foreground truncate">{title}</p>
+        </div>
         {trend && (
-          <span className="text-xs text-teal flex items-center gap-1">
+          <span className="text-xs text-teal flex items-center gap-0.5 shrink-0">
             <TrendingUp className="h-3 w-3" />
             {trend}
           </span>
         )}
       </div>
-      <p className="text-2xl font-bold mb-1" data-testid={testId}>
-        {value}
-      </p>
-      <p className="text-xs text-muted-foreground">{title}</p>
     </motion.div>
+  );
+}
+
+function MobileTabPill({
+  tab,
+  isActive,
+  onSelect,
+}: {
+  tab: typeof tabs[0];
+  isActive: boolean;
+  onSelect: () => void;
+}) {
+  const Icon = tab.icon;
+  
+  return (
+    <motion.button
+      onClick={() => {
+        triggerHaptic('light');
+        onSelect();
+      }}
+      className={`flex items-center gap-2 px-4 py-3 rounded-2xl whitespace-nowrap min-h-[48px] transition-colors ${
+        isActive 
+          ? "bg-primary text-black font-semibold" 
+          : "bg-white/5 text-muted-foreground"
+      }`}
+      whileTap={{ scale: 0.97 }}
+      transition={springConfig}
+      data-testid={`tab-${tab.id}`}
+    >
+      <Icon className="h-4 w-4" />
+      <span className="text-sm">{tab.label}</span>
+    </motion.button>
   );
 }
 
 export default function Accounting() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("fixed-costs");
+  const [activeTab, setActiveTab] = useState<TabType>("fixed-costs");
   const isAdmin = user?.role === "super_admin" || user?.role === "gestore";
 
   const { data: fixedCosts = [] } = useQuery<FixedCost[]>({
@@ -112,133 +156,325 @@ export default function Accounting() {
   const pendingMaintenances = maintenances.filter(m => m.status === "pending" || m.status === "scheduled").length;
   const pendingDocuments = documents.filter(d => d.status === "pending").length;
 
-  return (
-    <div className="p-3 sm:p-4 md:p-8 max-w-7xl mx-auto pb-24 md:pb-8">
-      <motion.div 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-4 sm:mb-6"
-      >
-        <div className="flex items-center gap-2 sm:gap-3 flex-1">
-          <Link href="/">
-            <Button variant="ghost" size="icon" className="rounded-xl" data-testid="button-back">
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-          </Link>
-          <div className="flex items-center gap-3">
-            <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center glow-golden">
-              <Calculator className="h-6 w-6 text-white" />
-            </div>
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold" data-testid="text-accounting-title">
-                Contabilità
-              </h1>
-              <p className="text-sm text-muted-foreground">
-                Gestione costi, manutenzioni e documenti
-              </p>
-            </div>
-          </div>
+  const header = (
+    <MobileHeader
+      title="Contabilità"
+      subtitle="Gestione costi e documenti"
+      leftAction={
+        <Link href="/">
+          <HapticButton 
+            variant="ghost" 
+            size="icon" 
+            className="h-11 w-11 rounded-xl"
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </HapticButton>
+        </Link>
+      }
+      rightAction={
+        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
+          <Calculator className="h-5 w-5 text-white" />
         </div>
-      </motion.div>
+      }
+    />
+  );
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-        <StatsCard
-          title="Costi Fissi Mensili"
-          value={`€${totalFixedCosts.toFixed(0)}`}
-          icon={Receipt}
-          gradient="from-blue-500 to-indigo-600"
-          testId="stat-fixed-costs"
-          delay={0.1}
-        />
-        <StatsCard
-          title="Costi Extra Totali"
-          value={`€${totalExtraCosts.toFixed(0)}`}
-          icon={Euro}
-          gradient="from-amber-500 to-orange-600"
-          testId="stat-extra-costs"
-          delay={0.2}
-        />
-        <StatsCard
-          title="Manutenzioni in Corso"
-          value={pendingMaintenances}
-          icon={Wrench}
-          gradient="from-violet-500 to-purple-600"
-          testId="stat-maintenances"
-          delay={0.3}
-        />
-        <StatsCard
-          title="Documenti in Attesa"
-          value={pendingDocuments}
-          icon={FileText}
-          gradient="from-rose-500 to-pink-600"
-          testId="stat-documents"
-          delay={0.4}
-        />
+  return (
+    <MobileAppLayout header={header} noPadding>
+      <div className="px-4 pb-24">
+        <motion.div 
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={springConfig}
+          className="grid grid-cols-2 gap-3 py-4"
+        >
+          <MobileStatsCard
+            title="Costi Fissi/Mese"
+            value={`€${totalFixedCosts.toFixed(0)}`}
+            icon={Receipt}
+            gradient="from-blue-500 to-indigo-600"
+            testId="stat-fixed-costs"
+            delay={0.05}
+          />
+          <MobileStatsCard
+            title="Costi Extra"
+            value={`€${totalExtraCosts.toFixed(0)}`}
+            icon={Euro}
+            gradient="from-amber-500 to-orange-600"
+            testId="stat-extra-costs"
+            delay={0.1}
+          />
+          <MobileStatsCard
+            title="Manutenzioni"
+            value={pendingMaintenances}
+            icon={Wrench}
+            gradient="from-violet-500 to-purple-600"
+            testId="stat-maintenances"
+            delay={0.15}
+          />
+          <MobileStatsCard
+            title="Doc. in Attesa"
+            value={pendingDocuments}
+            icon={FileText}
+            gradient="from-rose-500 to-pink-600"
+            testId="stat-documents"
+            delay={0.2}
+          />
+        </motion.div>
+
+        <motion.div 
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springConfig, delay: 0.15 }}
+          className="overflow-x-auto scrollbar-hide -mx-4 px-4 pb-4"
+        >
+          <div className="flex gap-2">
+            {tabs.map((tab) => (
+              <MobileTabPill
+                key={tab.id}
+                tab={tab}
+                isActive={activeTab === tab.id}
+                onSelect={() => setActiveTab(tab.id)}
+              />
+            ))}
+          </div>
+        </motion.div>
+
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={activeTab}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={springConfig}
+          >
+            {activeTab === "fixed-costs" && <FixedCostsSection isAdmin={isAdmin} />}
+            {activeTab === "extra-costs" && <ExtraCostsSection isAdmin={isAdmin} />}
+            {activeTab === "maintenances" && <MaintenancesSection isAdmin={isAdmin} />}
+            {activeTab === "documents" && <DocumentsSection isAdmin={isAdmin} />}
+          </motion.div>
+        </AnimatePresence>
       </div>
+    </MobileAppLayout>
+  );
+}
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-      >
-        <Tabs value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid w-full grid-cols-2 lg:grid-cols-4 h-auto bg-white/5 rounded-xl p-1">
-            <TabsTrigger 
-              value="fixed-costs" 
-              className="flex items-center gap-2 py-3 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-black" 
-              data-testid="tab-fixed-costs"
+function MobileTransactionCard({
+  title,
+  subtitle,
+  amount,
+  icon: Icon,
+  iconGradient,
+  badges,
+  metadata,
+  onEdit,
+  onDelete,
+  isAdmin,
+  testId,
+}: {
+  title: string;
+  subtitle?: string | null;
+  amount?: string;
+  icon: React.ElementType;
+  iconGradient: string;
+  badges?: { label: string; variant?: "default" | "secondary" | "destructive" | "outline" }[];
+  metadata?: { icon: React.ElementType; label: string }[];
+  onEdit?: () => void;
+  onDelete?: () => void;
+  isAdmin: boolean;
+  testId: string;
+}) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 10 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={springConfig}
+      className="glass-card p-4"
+      data-testid={testId}
+    >
+      <div className="flex gap-3">
+        <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${iconGradient} flex items-center justify-center shrink-0`}>
+          <Icon className="h-5 w-5 text-white" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <div className="flex items-start justify-between gap-2">
+            <div className="min-w-0 flex-1">
+              <h3 className="font-semibold truncate">{title}</h3>
+              {subtitle && (
+                <p className="text-sm text-muted-foreground line-clamp-2 mt-0.5">{subtitle}</p>
+              )}
+            </div>
+            {amount && (
+              <span className="text-lg font-bold text-primary shrink-0">{amount}</span>
+            )}
+          </div>
+          
+          {badges && badges.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 mt-2">
+              {badges.map((badge, idx) => (
+                <Badge key={idx} variant={badge.variant || "outline"} className="text-xs">
+                  {badge.label}
+                </Badge>
+              ))}
+            </div>
+          )}
+          
+          {metadata && metadata.length > 0 && (
+            <div className="flex flex-wrap gap-3 mt-2 text-xs text-muted-foreground">
+              {metadata.map((item, idx) => (
+                <span key={idx} className="flex items-center gap-1">
+                  <item.icon className="h-3 w-3" />
+                  {item.label}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+      
+      {isAdmin && (onEdit || onDelete) && (
+        <div className="flex justify-end gap-2 mt-3 pt-3 border-t border-white/5">
+          {onEdit && (
+            <HapticButton
+              size="icon"
+              variant="ghost"
+              className="h-11 w-11 rounded-xl"
+              onClick={onEdit}
+              data-testid={`${testId}-edit`}
             >
-              <Receipt className="h-4 w-4" />
-              <span className="hidden sm:inline">Costi Fissi</span>
-              <span className="sm:hidden">Fissi</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="extra-costs" 
-              className="flex items-center gap-2 py-3 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-black" 
-              data-testid="tab-extra-costs"
-            >
-              <Euro className="h-4 w-4" />
-              <span className="hidden sm:inline">Costi Extra</span>
-              <span className="sm:hidden">Extra</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="maintenances" 
-              className="flex items-center gap-2 py-3 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-black" 
-              data-testid="tab-maintenances"
-            >
-              <Wrench className="h-4 w-4" />
-              <span className="hidden sm:inline">Manutenzioni</span>
-              <span className="sm:hidden">Manut.</span>
-            </TabsTrigger>
-            <TabsTrigger 
-              value="documents" 
-              className="flex items-center gap-2 py-3 rounded-lg data-[state=active]:bg-primary data-[state=active]:text-black" 
-              data-testid="tab-documents"
-            >
-              <FileText className="h-4 w-4" />
-              <span className="hidden sm:inline">Documenti</span>
-              <span className="sm:hidden">Doc.</span>
-            </TabsTrigger>
-          </TabsList>
+              <Pencil className="h-5 w-5" />
+            </HapticButton>
+          )}
+          {onDelete && (
+            <AlertDialog>
+              <AlertDialogTrigger asChild>
+                <HapticButton 
+                  size="icon" 
+                  variant="ghost" 
+                  className="h-11 w-11 rounded-xl"
+                  hapticType="medium"
+                  data-testid={`${testId}-delete`}
+                >
+                  <Trash2 className="h-5 w-5 text-destructive" />
+                </HapticButton>
+              </AlertDialogTrigger>
+              <AlertDialogContent className="w-[90vw] rounded-2xl">
+                <AlertDialogHeader>
+                  <AlertDialogTitle>Conferma eliminazione</AlertDialogTitle>
+                  <AlertDialogDescription>
+                    Questa azione non può essere annullata.
+                  </AlertDialogDescription>
+                </AlertDialogHeader>
+                <AlertDialogFooter className="flex-row gap-2">
+                  <AlertDialogCancel className="flex-1 min-h-[48px] rounded-xl">Annulla</AlertDialogCancel>
+                  <AlertDialogAction 
+                    onClick={onDelete}
+                    className="flex-1 min-h-[48px] rounded-xl bg-destructive"
+                  >
+                    Elimina
+                  </AlertDialogAction>
+                </AlertDialogFooter>
+              </AlertDialogContent>
+            </AlertDialog>
+          )}
+        </div>
+      )}
+    </motion.div>
+  );
+}
 
-          <TabsContent value="fixed-costs" className="mt-6">
-            <FixedCostsSection isAdmin={isAdmin} />
-          </TabsContent>
-
-          <TabsContent value="extra-costs" className="mt-6">
-            <ExtraCostsSection isAdmin={isAdmin} />
-          </TabsContent>
-
-          <TabsContent value="maintenances" className="mt-6">
-            <MaintenancesSection isAdmin={isAdmin} />
-          </TabsContent>
-
-          <TabsContent value="documents" className="mt-6">
-            <DocumentsSection isAdmin={isAdmin} />
-          </TabsContent>
-        </Tabs>
-      </motion.div>
+function MobileSectionHeader({
+  icon: Icon,
+  iconGradient,
+  title,
+  subtitle,
+  onAdd,
+  addLabel,
+  isAdmin,
+  testId,
+}: {
+  icon: React.ElementType;
+  iconGradient: string;
+  title: string;
+  subtitle: string;
+  onAdd?: () => void;
+  addLabel?: string;
+  isAdmin: boolean;
+  testId?: string;
+}) {
+  return (
+    <div className="flex items-center justify-between gap-3 mb-4">
+      <div className="flex items-center gap-3">
+        <div className={`w-10 h-10 rounded-xl bg-gradient-to-br ${iconGradient} flex items-center justify-center`}>
+          <Icon className="h-5 w-5 text-white" />
+        </div>
+        <div>
+          <h2 className="font-semibold">{title}</h2>
+          <p className="text-xs text-muted-foreground">{subtitle}</p>
+        </div>
+      </div>
+      {isAdmin && onAdd && (
+        <HapticButton
+          className="gradient-golden text-black font-semibold min-h-[44px] rounded-xl"
+          onClick={onAdd}
+          hapticType="medium"
+          data-testid={testId}
+        >
+          <Plus className="h-4 w-4 mr-1.5" />
+          {addLabel || "Nuovo"}
+        </HapticButton>
+      )}
     </div>
+  );
+}
+
+function MobileSearchBar({
+  value,
+  onChange,
+  placeholder,
+  testId,
+}: {
+  value: string;
+  onChange: (value: string) => void;
+  placeholder: string;
+  testId: string;
+}) {
+  return (
+    <div className="relative mb-4">
+      <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+      <Input
+        placeholder={placeholder}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
+        className="pl-12 h-12 bg-white/5 border-white/10 rounded-xl"
+        data-testid={testId}
+      />
+    </div>
+  );
+}
+
+function EmptyState({
+  icon: Icon,
+  iconBg,
+  message,
+}: {
+  icon: React.ElementType;
+  iconBg: string;
+  message: string;
+}) {
+  return (
+    <motion.div 
+      initial={{ opacity: 0, scale: 0.95 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={springConfig}
+      className="text-center py-12"
+    >
+      <div className={`w-16 h-16 rounded-2xl ${iconBg} flex items-center justify-center mx-auto mb-4`}>
+        <Icon className="h-8 w-8" />
+      </div>
+      <p className="text-muted-foreground">{message}</p>
+    </motion.div>
   );
 }
 
@@ -261,9 +497,11 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/fixed-costs"] });
       setIsDialogOpen(false);
+      triggerHaptic('success');
       toast({ title: "Costo fisso creato con successo" });
     },
     onError: (err: any) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: err.message, variant: "destructive" });
     },
   });
@@ -275,9 +513,11 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
       queryClient.invalidateQueries({ queryKey: ["/api/fixed-costs"] });
       setEditingCost(null);
       setIsDialogOpen(false);
+      triggerHaptic('success');
       toast({ title: "Costo fisso aggiornato" });
     },
     onError: (err: any) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: err.message, variant: "destructive" });
     },
   });
@@ -286,9 +526,11 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
     mutationFn: (id: string) => apiRequest("DELETE", `/api/fixed-costs/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/fixed-costs"] });
+      triggerHaptic('success');
       toast({ title: "Costo fisso eliminato" });
     },
     onError: (err: any) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: err.message, variant: "destructive" });
     },
   });
@@ -296,12 +538,13 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const locationValue = formData.get("locationId") as string;
     const data = {
       name: formData.get("name") as string,
       category: formData.get("category") as string,
       amount: formData.get("amount") as string,
       frequency: formData.get("frequency") as string,
-      locationId: formData.get("locationId") as string || null,
+      locationId: locationValue && locationValue !== "_none" ? locationValue : null,
       validFrom: formData.get("validFrom") as string || null,
       validTo: formData.get("validTo") as string || null,
       notes: formData.get("notes") as string || null,
@@ -344,362 +587,209 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-12 rounded-xl" />
-        <Skeleton className="h-64 rounded-2xl" />
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-28 rounded-2xl" />
+        ))}
       </div>
     );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="glass-card overflow-hidden"
-    >
-      <div className="p-5 border-b border-white/5">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-              <Receipt className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h2 className="font-semibold">Costi Fissi</h2>
-              <p className="text-sm text-muted-foreground">Costi ricorrenti legati alle location</p>
-            </div>
-          </div>
-          {isAdmin && (
-            <Dialog open={isDialogOpen} onOpenChange={(open) => {
-              setIsDialogOpen(open);
-              if (!open) setEditingCost(null);
-            }}>
-              <DialogTrigger asChild>
-                <Button className="gradient-golden text-black font-semibold" data-testid="button-add-fixed-cost">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nuovo Costo
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{editingCost ? "Modifica Costo Fisso" : "Nuovo Costo Fisso"}</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nome *</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      defaultValue={editingCost?.name || ""}
-                      placeholder="es. Affitto locale"
-                      required
-                      data-testid="input-fixed-cost-name"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="category">Categoria *</Label>
-                      <Select name="category" defaultValue={editingCost?.category || "altro"}>
-                        <SelectTrigger data-testid="select-fixed-cost-category">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="affitto">Affitto</SelectItem>
-                          <SelectItem value="service">Servizi</SelectItem>
-                          <SelectItem value="permessi">Permessi</SelectItem>
-                          <SelectItem value="sicurezza">Sicurezza</SelectItem>
-                          <SelectItem value="amministrativi">Amministrativi</SelectItem>
-                          <SelectItem value="utenze">Utenze</SelectItem>
-                          <SelectItem value="altro">Altro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="amount">Importo (€) *</Label>
-                      <Input
-                        id="amount"
-                        name="amount"
-                        type="number"
-                        step="0.01"
-                        defaultValue={editingCost?.amount || ""}
-                        placeholder="0.00"
-                        required
-                        data-testid="input-fixed-cost-amount"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="frequency">Frequenza *</Label>
-                      <Select name="frequency" defaultValue={editingCost?.frequency || "monthly"}>
-                        <SelectTrigger data-testid="select-fixed-cost-frequency">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="monthly">Mensile</SelectItem>
-                          <SelectItem value="quarterly">Trimestrale</SelectItem>
-                          <SelectItem value="yearly">Annuale</SelectItem>
-                          <SelectItem value="per_event">Per evento</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="locationId">Location</Label>
-                      <Select name="locationId" defaultValue={editingCost?.locationId || ""}>
-                        <SelectTrigger data-testid="select-fixed-cost-location">
-                          <SelectValue placeholder="Generale" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="_none">Generale</SelectItem>
-                          {locations.map((loc) => (
-                            <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="validFrom">Valido Da</Label>
-                      <Input
-                        id="validFrom"
-                        name="validFrom"
-                        type="date"
-                        defaultValue={editingCost?.validFrom ? format(new Date(editingCost.validFrom), "yyyy-MM-dd") : ""}
-                        data-testid="input-fixed-cost-valid-from"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="validTo">Valido Fino</Label>
-                      <Input
-                        id="validTo"
-                        name="validTo"
-                        type="date"
-                        defaultValue={editingCost?.validTo ? format(new Date(editingCost.validTo), "yyyy-MM-dd") : ""}
-                        data-testid="input-fixed-cost-valid-to"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Note</Label>
-                    <Textarea
-                      id="notes"
-                      name="notes"
-                      defaultValue={editingCost?.notes || ""}
-                      placeholder="Note aggiuntive"
-                      data-testid="input-fixed-cost-notes"
-                    />
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit" className="gradient-golden text-black" disabled={createMutation.isPending || updateMutation.isPending} data-testid="button-save-fixed-cost">
-                      {editingCost ? "Aggiorna" : "Crea"}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-          )}
-        </div>
-      </div>
-      <div className="p-5">
-        <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              placeholder="Cerca costi fissi..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 h-12 bg-white/5 border-white/10 rounded-xl"
-              data-testid="input-search-fixed-costs"
-            />
-          </div>
-        </div>
+    <div>
+      <MobileSectionHeader
+        icon={Receipt}
+        iconGradient="from-blue-500 to-indigo-600"
+        title="Costi Fissi"
+        subtitle="Costi ricorrenti"
+        onAdd={() => setIsDialogOpen(true)}
+        addLabel="Nuovo"
+        isAdmin={isAdmin}
+        testId="button-add-fixed-cost"
+      />
 
-        {filteredCosts.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 rounded-2xl bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
-              <Receipt className="h-8 w-8 text-blue-400" />
-            </div>
-            <p className="text-muted-foreground">
-              {searchTerm ? "Nessun risultato trovato" : "Nessun costo fisso registrato"}
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-white/5">
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead className="text-right">Importo</TableHead>
-                    <TableHead>Frequenza</TableHead>
-                    {isAdmin && <TableHead className="text-right">Azioni</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCosts.map((cost) => (
-                    <TableRow key={cost.id} className="border-white/5" data-testid={`row-fixed-cost-${cost.id}`}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{cost.name}</div>
-                          {cost.notes && (
-                            <div className="text-sm text-muted-foreground line-clamp-1">{cost.notes}</div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="border-white/10">
-                          {categoryLabels[cost.category] || cost.category}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3 text-muted-foreground" />
-                          {getLocationName(cost.locationId)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-medium text-primary">
-                        €{parseFloat(cost.amount).toFixed(2)}
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="secondary">
-                          {frequencyLabels[cost.frequency] || cost.frequency}
-                        </Badge>
-                      </TableCell>
-                      {isAdmin && (
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => {
-                                setEditingCost(cost);
-                                setIsDialogOpen(true);
-                              }}
-                              data-testid={`button-edit-fixed-cost-${cost.id}`}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button size="icon" variant="ghost" data-testid={`button-delete-fixed-cost-${cost.id}`}>
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Eliminare questo costo?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Questa azione non può essere annullata.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Annulla</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => deleteMutation.mutate(cost.id)}>
-                                    Elimina
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+      <MobileSearchBar
+        value={searchTerm}
+        onChange={setSearchTerm}
+        placeholder="Cerca costi fissi..."
+        testId="input-search-fixed-costs"
+      />
 
-            {/* Mobile Cards */}
-            <div className="md:hidden space-y-3">
-              {filteredCosts.map((cost) => (
-                <div key={cost.id} className="glass-card p-4" data-testid={`card-fixed-cost-${cost.id}`}>
-                  <div className="flex justify-between items-start gap-3 mb-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{cost.name}</div>
-                      {cost.notes && (
-                        <div className="text-sm text-muted-foreground line-clamp-2 mt-1">{cost.notes}</div>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-primary">€{parseFloat(cost.amount).toFixed(2)}</div>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <Badge variant="outline" className="border-white/10">
-                      {categoryLabels[cost.category] || cost.category}
-                    </Badge>
-                    <Badge variant="secondary">
-                      {frequencyLabels[cost.frequency] || cost.frequency}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
-                    <MapPin className="h-3 w-3" />
-                    {getLocationName(cost.locationId)}
-                  </div>
-                  {isAdmin && (
-                    <div className="flex justify-end gap-2 pt-3 border-t border-white/5">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="min-h-[48px] min-w-[48px]"
-                        onClick={() => {
-                          setEditingCost(cost);
-                          setIsDialogOpen(true);
-                        }}
-                        data-testid={`button-edit-fixed-cost-mobile-${cost.id}`}
-                      >
-                        <Pencil className="h-5 w-5" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button size="icon" variant="ghost" className="min-h-[48px] min-w-[48px]" data-testid={`button-delete-fixed-cost-mobile-${cost.id}`}>
-                            <Trash2 className="h-5 w-5 text-destructive" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="w-[95vw] max-w-lg">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Eliminare questo costo?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Questa azione non può essere annullata.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Annulla</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteMutation.mutate(cost.id)}>
-                              Elimina
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          </>
-        )}
-
-        <div className="mt-6 pt-4 border-t border-white/5">
-          <div className="flex justify-between items-center p-4 rounded-xl bg-primary/10">
-            <span className="text-muted-foreground font-medium">
-              Totale mensile stimato:
-            </span>
-            <span className="text-2xl font-bold text-primary">
-              €{filteredCosts.reduce((sum, cost) => {
-                const amount = parseFloat(cost.amount);
-                if (cost.frequency === "monthly") return sum + amount;
-                if (cost.frequency === "quarterly") return sum + (amount / 3);
-                if (cost.frequency === "yearly") return sum + (amount / 12);
-                return sum;
-              }, 0).toFixed(2)}
-            </span>
-          </div>
+      {filteredCosts.length === 0 ? (
+        <EmptyState
+          icon={Receipt}
+          iconBg="bg-blue-500/20 text-blue-400"
+          message={searchTerm ? "Nessun risultato trovato" : "Nessun costo fisso registrato"}
+        />
+      ) : (
+        <div className="space-y-3">
+          {filteredCosts.map((cost, index) => (
+            <motion.div
+              key={cost.id}
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springConfig, delay: index * 0.05 }}
+            >
+              <MobileTransactionCard
+                title={cost.name}
+                subtitle={cost.notes}
+                amount={`€${parseFloat(cost.amount).toFixed(2)}`}
+                icon={Receipt}
+                iconGradient="from-blue-500 to-indigo-600"
+                badges={[
+                  { label: categoryLabels[cost.category] || cost.category },
+                  { label: frequencyLabels[cost.frequency] || cost.frequency, variant: "secondary" },
+                ]}
+                metadata={[
+                  { icon: MapPin, label: getLocationName(cost.locationId) },
+                ]}
+                onEdit={() => {
+                  setEditingCost(cost);
+                  setIsDialogOpen(true);
+                }}
+                onDelete={() => deleteMutation.mutate(cost.id)}
+                isAdmin={isAdmin}
+                testId={`card-fixed-cost-${cost.id}`}
+              />
+            </motion.div>
+          ))}
         </div>
-      </div>
-    </motion.div>
+      )}
+
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        setIsDialogOpen(open);
+        if (!open) setEditingCost(null);
+      }}>
+        <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingCost ? "Modifica Costo Fisso" : "Nuovo Costo Fisso"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome *</Label>
+              <Input
+                id="name"
+                name="name"
+                defaultValue={editingCost?.name || ""}
+                placeholder="es. Affitto locale"
+                required
+                className="h-12 rounded-xl"
+                data-testid="input-fixed-cost-name"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="category">Categoria *</Label>
+                <Select name="category" defaultValue={editingCost?.category || "altro"}>
+                  <SelectTrigger className="h-12 rounded-xl" data-testid="select-fixed-cost-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="affitto">Affitto</SelectItem>
+                    <SelectItem value="service">Servizi</SelectItem>
+                    <SelectItem value="permessi">Permessi</SelectItem>
+                    <SelectItem value="sicurezza">Sicurezza</SelectItem>
+                    <SelectItem value="amministrativi">Amministrativi</SelectItem>
+                    <SelectItem value="utenze">Utenze</SelectItem>
+                    <SelectItem value="altro">Altro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="amount">Importo (€) *</Label>
+                <Input
+                  id="amount"
+                  name="amount"
+                  type="number"
+                  step="0.01"
+                  defaultValue={editingCost?.amount || ""}
+                  placeholder="0.00"
+                  required
+                  className="h-12 rounded-xl"
+                  data-testid="input-fixed-cost-amount"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="frequency">Frequenza *</Label>
+                <Select name="frequency" defaultValue={editingCost?.frequency || "monthly"}>
+                  <SelectTrigger className="h-12 rounded-xl" data-testid="select-fixed-cost-frequency">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="monthly">Mensile</SelectItem>
+                    <SelectItem value="quarterly">Trimestrale</SelectItem>
+                    <SelectItem value="yearly">Annuale</SelectItem>
+                    <SelectItem value="per_event">Per evento</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="locationId">Location</Label>
+                <Select name="locationId" defaultValue={editingCost?.locationId || "_none"}>
+                  <SelectTrigger className="h-12 rounded-xl" data-testid="select-fixed-cost-location">
+                    <SelectValue placeholder="Generale" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">Generale</SelectItem>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="validFrom">Valido Da</Label>
+                <Input
+                  id="validFrom"
+                  name="validFrom"
+                  type="date"
+                  defaultValue={editingCost?.validFrom ? format(new Date(editingCost.validFrom), "yyyy-MM-dd") : ""}
+                  className="h-12 rounded-xl"
+                  data-testid="input-fixed-cost-valid-from"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="validTo">Valido Fino</Label>
+                <Input
+                  id="validTo"
+                  name="validTo"
+                  type="date"
+                  defaultValue={editingCost?.validTo ? format(new Date(editingCost.validTo), "yyyy-MM-dd") : ""}
+                  className="h-12 rounded-xl"
+                  data-testid="input-fixed-cost-valid-to"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Note</Label>
+              <Textarea
+                id="notes"
+                name="notes"
+                defaultValue={editingCost?.notes || ""}
+                placeholder="Note aggiuntive"
+                className="rounded-xl"
+                data-testid="input-fixed-cost-notes"
+              />
+            </div>
+            <DialogFooter>
+              <HapticButton 
+                type="submit" 
+                className="w-full gradient-golden text-black min-h-[48px] rounded-xl" 
+                disabled={createMutation.isPending || updateMutation.isPending} 
+                hapticType="success"
+                data-testid="button-save-fixed-cost"
+              >
+                {editingCost ? "Aggiorna" : "Crea"}
+              </HapticButton>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
 
@@ -722,9 +812,11 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/extra-costs"] });
       setIsDialogOpen(false);
+      triggerHaptic('success');
       toast({ title: "Costo extra creato con successo" });
     },
     onError: (err: any) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: err.message, variant: "destructive" });
     },
   });
@@ -736,9 +828,11 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
       queryClient.invalidateQueries({ queryKey: ["/api/extra-costs"] });
       setEditingCost(null);
       setIsDialogOpen(false);
+      triggerHaptic('success');
       toast({ title: "Costo extra aggiornato" });
     },
     onError: (err: any) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: err.message, variant: "destructive" });
     },
   });
@@ -747,9 +841,11 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
     mutationFn: (id: string) => apiRequest("DELETE", `/api/extra-costs/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/extra-costs"] });
+      triggerHaptic('success');
       toast({ title: "Costo extra eliminato" });
     },
     onError: (err: any) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: err.message, variant: "destructive" });
     },
   });
@@ -757,13 +853,13 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const eventValue = formData.get("eventId") as string;
     const data = {
       name: formData.get("name") as string,
       category: formData.get("category") as string,
       amount: formData.get("amount") as string,
-      eventId: formData.get("eventId") as string || null,
+      eventId: eventValue && eventValue !== "_none" ? eventValue : null,
       invoiceNumber: formData.get("invoiceNumber") as string || null,
-      invoiceDate: formData.get("invoiceDate") as string || null,
       notes: formData.get("notes") as string || null,
     };
 
@@ -780,356 +876,211 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
   );
 
   const getEventName = (eventId: string | null) => {
-    if (!eventId) return "Non associato";
+    if (!eventId) return "Nessun evento";
     const event = events.find(e => e.id === eventId);
     return event?.name || "N/D";
   };
 
   const categoryLabels: Record<string, string> = {
+    artisti: "Artisti",
+    promozione: "Promozione",
+    materiali: "Materiali",
     personale: "Personale",
-    service: "Service",
-    noleggi: "Noleggi",
-    acquisti: "Acquisti",
+    affitto: "Affitto",
+    catering: "Catering",
     altro: "Altro",
   };
 
+  const totalExtra = filteredCosts.reduce((sum, cost) => sum + parseFloat(cost.amount || "0"), 0);
+
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-12 rounded-xl" />
-        <Skeleton className="h-64 rounded-2xl" />
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-28 rounded-2xl" />
+        ))}
       </div>
     );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="glass-card overflow-hidden"
-    >
-      <div className="p-5 border-b border-white/5">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-              <Euro className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h2 className="font-semibold">Costi Extra</h2>
-              <p className="text-sm text-muted-foreground">Spese una tantum o variabili</p>
-            </div>
-          </div>
-          {isAdmin && (
-            <Dialog open={isDialogOpen} onOpenChange={(open) => {
-              setIsDialogOpen(open);
-              if (!open) setEditingCost(null);
-            }}>
-              <DialogTrigger asChild>
-                <Button className="gradient-golden text-black font-semibold" data-testid="button-add-extra-cost">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nuovo Costo
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{editingCost ? "Modifica Costo Extra" : "Nuovo Costo Extra"}</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nome *</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      defaultValue={editingCost?.name || ""}
-                      placeholder="es. Noleggio proiettore"
-                      required
-                      data-testid="input-extra-cost-name"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="category">Categoria *</Label>
-                      <Select name="category" defaultValue={editingCost?.category || "altro"}>
-                        <SelectTrigger data-testid="select-extra-cost-category">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="personale">Personale</SelectItem>
-                          <SelectItem value="service">Service</SelectItem>
-                          <SelectItem value="noleggi">Noleggi</SelectItem>
-                          <SelectItem value="acquisti">Acquisti</SelectItem>
-                          <SelectItem value="altro">Altro</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="amount">Importo (€) *</Label>
-                      <Input
-                        id="amount"
-                        name="amount"
-                        type="number"
-                        step="0.01"
-                        defaultValue={editingCost?.amount || ""}
-                        placeholder="0.00"
-                        required
-                        data-testid="input-extra-cost-amount"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="eventId">Evento</Label>
-                    <Select name="eventId" defaultValue={editingCost?.eventId || ""}>
-                      <SelectTrigger data-testid="select-extra-cost-event">
-                        <SelectValue placeholder="Seleziona evento (opzionale)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="_none">Non associato</SelectItem>
-                        {events.map((evt) => (
-                          <SelectItem key={evt.id} value={evt.id}>{evt.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="invoiceNumber">N. Fattura</Label>
-                      <Input
-                        id="invoiceNumber"
-                        name="invoiceNumber"
-                        defaultValue={editingCost?.invoiceNumber || ""}
-                        placeholder="es. FT-001"
-                        data-testid="input-extra-cost-invoice-number"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="invoiceDate">Data Fattura</Label>
-                      <Input
-                        id="invoiceDate"
-                        name="invoiceDate"
-                        type="date"
-                        defaultValue={editingCost?.invoiceDate ? format(new Date(editingCost.invoiceDate), "yyyy-MM-dd") : ""}
-                        data-testid="input-extra-cost-invoice-date"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Note</Label>
-                    <Textarea
-                      id="notes"
-                      name="notes"
-                      defaultValue={editingCost?.notes || ""}
-                      placeholder="Note aggiuntive"
-                      data-testid="input-extra-cost-notes"
-                    />
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit" className="gradient-golden text-black" disabled={createMutation.isPending || updateMutation.isPending} data-testid="button-save-extra-cost">
-                      {editingCost ? "Aggiorna" : "Crea"}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-          )}
-        </div>
-      </div>
-      <div className="p-5">
-        <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              placeholder="Cerca costi extra..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 h-12 bg-white/5 border-white/10 rounded-xl"
-              data-testid="input-search-extra-costs"
-            />
-          </div>
-        </div>
+    <div>
+      <MobileSectionHeader
+        icon={Euro}
+        iconGradient="from-amber-500 to-orange-600"
+        title="Costi Extra"
+        subtitle="Spese per evento"
+        onAdd={() => setIsDialogOpen(true)}
+        addLabel="Nuovo"
+        isAdmin={isAdmin}
+        testId="button-add-extra-cost"
+      />
 
-        {filteredCosts.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 rounded-2xl bg-amber-500/20 flex items-center justify-center mx-auto mb-4">
-              <Euro className="h-8 w-8 text-amber-400" />
-            </div>
-            <p className="text-muted-foreground">
-              {searchTerm ? "Nessun risultato trovato" : "Nessun costo extra registrato"}
-            </p>
+      <MobileSearchBar
+        value={searchTerm}
+        onChange={setSearchTerm}
+        placeholder="Cerca costi extra..."
+        testId="input-search-extra-costs"
+      />
+
+      {filteredCosts.length === 0 ? (
+        <EmptyState
+          icon={Euro}
+          iconBg="bg-amber-500/20 text-amber-400"
+          message={searchTerm ? "Nessun risultato trovato" : "Nessun costo extra registrato"}
+        />
+      ) : (
+        <>
+          <div className="space-y-3">
+            {filteredCosts.map((cost, index) => (
+              <motion.div
+                key={cost.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...springConfig, delay: index * 0.05 }}
+              >
+                <MobileTransactionCard
+                  title={cost.name}
+                  subtitle={cost.notes}
+                  amount={`€${parseFloat(cost.amount || "0").toFixed(2)}`}
+                  icon={Euro}
+                  iconGradient="from-amber-500 to-orange-600"
+                  badges={[
+                    { label: categoryLabels[cost.category] || cost.category },
+                  ]}
+                  metadata={[
+                    { icon: Calendar, label: getEventName(cost.eventId) },
+                    ...(cost.invoiceNumber ? [{ icon: FileText, label: `Fatt. ${cost.invoiceNumber}` }] : []),
+                  ]}
+                  onEdit={() => {
+                    setEditingCost(cost);
+                    setIsDialogOpen(true);
+                  }}
+                  onDelete={() => deleteMutation.mutate(cost.id)}
+                  isAdmin={isAdmin}
+                  testId={`card-extra-cost-${cost.id}`}
+                />
+              </motion.div>
+            ))}
           </div>
-        ) : (
-          <>
-            {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-white/5">
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead>Evento</TableHead>
-                    <TableHead className="text-right">Importo</TableHead>
-                    <TableHead>Fattura</TableHead>
-                    {isAdmin && <TableHead className="text-right">Azioni</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredCosts.map((cost) => (
-                    <TableRow key={cost.id} className="border-white/5" data-testid={`row-extra-cost-${cost.id}`}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{cost.name}</div>
-                          {cost.notes && (
-                            <div className="text-sm text-muted-foreground line-clamp-1">{cost.notes}</div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="border-white/10">
-                          {categoryLabels[cost.category] || cost.category}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-muted-foreground" />
-                          {getEventName(cost.eventId)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-medium text-primary">
-                        €{parseFloat(cost.amount).toFixed(2)}
-                      </TableCell>
-                      <TableCell>
-                        {cost.invoiceNumber || "-"}
-                      </TableCell>
-                      {isAdmin && (
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => {
-                                setEditingCost(cost);
-                                setIsDialogOpen(true);
-                              }}
-                              data-testid={`button-edit-extra-cost-${cost.id}`}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button size="icon" variant="ghost" data-testid={`button-delete-extra-cost-${cost.id}`}>
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Eliminare questo costo?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Questa azione non può essere annullata.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Annulla</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => deleteMutation.mutate(cost.id)}>
-                                    Elimina
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
-                      )}
-                    </TableRow>
+          
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...springConfig, delay: 0.2 }}
+            className="mt-4 p-4 rounded-2xl bg-amber-500/10 flex items-center justify-between"
+          >
+            <span className="text-muted-foreground font-medium">Totale:</span>
+            <span className="text-2xl font-bold text-amber-400">€{totalExtra.toFixed(2)}</span>
+          </motion.div>
+        </>
+      )}
+
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        setIsDialogOpen(open);
+        if (!open) setEditingCost(null);
+      }}>
+        <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingCost ? "Modifica Costo Extra" : "Nuovo Costo Extra"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome *</Label>
+              <Input
+                id="name"
+                name="name"
+                defaultValue={editingCost?.name || ""}
+                placeholder="es. DJ Fee"
+                required
+                className="h-12 rounded-xl"
+                data-testid="input-extra-cost-name"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="category">Categoria *</Label>
+                <Select name="category" defaultValue={editingCost?.category || "altro"}>
+                  <SelectTrigger className="h-12 rounded-xl" data-testid="select-extra-cost-category">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="artisti">Artisti</SelectItem>
+                    <SelectItem value="promozione">Promozione</SelectItem>
+                    <SelectItem value="materiali">Materiali</SelectItem>
+                    <SelectItem value="personale">Personale</SelectItem>
+                    <SelectItem value="affitto">Affitto</SelectItem>
+                    <SelectItem value="catering">Catering</SelectItem>
+                    <SelectItem value="altro">Altro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="amount">Importo (€) *</Label>
+                <Input
+                  id="amount"
+                  name="amount"
+                  type="number"
+                  step="0.01"
+                  defaultValue={editingCost?.amount || ""}
+                  placeholder="0.00"
+                  required
+                  className="h-12 rounded-xl"
+                  data-testid="input-extra-cost-amount"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="eventId">Evento</Label>
+              <Select name="eventId" defaultValue={editingCost?.eventId || "_none"}>
+                <SelectTrigger className="h-12 rounded-xl" data-testid="select-extra-cost-event">
+                  <SelectValue placeholder="Seleziona evento" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="_none">Nessun evento</SelectItem>
+                  {events.map((event) => (
+                    <SelectItem key={event.id} value={event.id}>{event.name}</SelectItem>
                   ))}
-                </TableBody>
-              </Table>
+                </SelectContent>
+              </Select>
             </div>
-
-            {/* Mobile Cards */}
-            <div className="md:hidden space-y-3">
-              {filteredCosts.map((cost) => (
-                <div key={cost.id} className="glass-card p-4" data-testid={`card-extra-cost-${cost.id}`}>
-                  <div className="flex justify-between items-start gap-3 mb-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{cost.name}</div>
-                      {cost.notes && (
-                        <div className="text-sm text-muted-foreground line-clamp-2 mt-1">{cost.notes}</div>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-primary">€{parseFloat(cost.amount).toFixed(2)}</div>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <Badge variant="outline" className="border-white/10">
-                      {categoryLabels[cost.category] || cost.category}
-                    </Badge>
-                  </div>
-                  <div className="space-y-1 text-sm text-muted-foreground mb-3">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {getEventName(cost.eventId)}
-                    </div>
-                    {cost.invoiceNumber && (
-                      <div className="flex items-center gap-1">
-                        <FileText className="h-3 w-3" />
-                        Fattura: {cost.invoiceNumber}
-                      </div>
-                    )}
-                  </div>
-                  {isAdmin && (
-                    <div className="flex justify-end gap-2 pt-3 border-t border-white/5">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="min-h-[48px] min-w-[48px]"
-                        onClick={() => {
-                          setEditingCost(cost);
-                          setIsDialogOpen(true);
-                        }}
-                        data-testid={`button-edit-extra-cost-mobile-${cost.id}`}
-                      >
-                        <Pencil className="h-5 w-5" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button size="icon" variant="ghost" className="min-h-[48px] min-w-[48px]" data-testid={`button-delete-extra-cost-mobile-${cost.id}`}>
-                            <Trash2 className="h-5 w-5 text-destructive" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="w-[95vw] max-w-lg">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Eliminare questo costo?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Questa azione non può essere annullata.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Annulla</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteMutation.mutate(cost.id)}>
-                              Elimina
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  )}
-                </div>
-              ))}
+            <div className="space-y-2">
+              <Label htmlFor="invoiceNumber">N. Fattura</Label>
+              <Input
+                id="invoiceNumber"
+                name="invoiceNumber"
+                defaultValue={editingCost?.invoiceNumber || ""}
+                placeholder="es. FT-2024-001"
+                className="h-12 rounded-xl"
+                data-testid="input-extra-cost-invoice"
+              />
             </div>
-          </>
-        )}
-
-        <div className="mt-6 pt-4 border-t border-white/5">
-          <div className="flex justify-between items-center p-4 rounded-xl bg-amber-500/10">
-            <span className="text-muted-foreground font-medium">
-              Totale costi extra:
-            </span>
-            <span className="text-2xl font-bold text-amber-400">
-              €{filteredCosts.reduce((sum, cost) => sum + parseFloat(cost.amount), 0).toFixed(2)}
-            </span>
-          </div>
-        </div>
-      </div>
-    </motion.div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Note</Label>
+              <Textarea
+                id="notes"
+                name="notes"
+                defaultValue={editingCost?.notes || ""}
+                placeholder="Note aggiuntive"
+                className="rounded-xl"
+                data-testid="input-extra-cost-notes"
+              />
+            </div>
+            <DialogFooter>
+              <HapticButton 
+                type="submit" 
+                className="w-full gradient-golden text-black min-h-[48px] rounded-xl" 
+                disabled={createMutation.isPending || updateMutation.isPending} 
+                hapticType="success"
+                data-testid="button-save-extra-cost"
+              >
+                {editingCost ? "Aggiorna" : "Crea"}
+              </HapticButton>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
 
@@ -1152,9 +1103,11 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/maintenances"] });
       setIsDialogOpen(false);
+      triggerHaptic('success');
       toast({ title: "Manutenzione creata con successo" });
     },
     onError: (err: any) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: err.message, variant: "destructive" });
     },
   });
@@ -1166,9 +1119,11 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
       queryClient.invalidateQueries({ queryKey: ["/api/maintenances"] });
       setEditingMaintenance(null);
       setIsDialogOpen(false);
+      triggerHaptic('success');
       toast({ title: "Manutenzione aggiornata" });
     },
     onError: (err: any) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: err.message, variant: "destructive" });
     },
   });
@@ -1177,9 +1132,11 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
     mutationFn: (id: string) => apiRequest("DELETE", `/api/maintenances/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/maintenances"] });
+      triggerHaptic('success');
       toast({ title: "Manutenzione eliminata" });
     },
     onError: (err: any) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: err.message, variant: "destructive" });
     },
   });
@@ -1187,12 +1144,13 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
   const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
     e.preventDefault();
     const formData = new FormData(e.currentTarget);
+    const locationValue = formData.get("locationId") as string;
     const data = {
       name: formData.get("name") as string,
       description: formData.get("description") as string || null,
       type: formData.get("type") as string,
       status: formData.get("status") as string,
-      locationId: formData.get("locationId") as string || null,
+      locationId: locationValue && locationValue !== "_none" ? locationValue : null,
       amount: formData.get("amount") as string || null,
       scheduledDate: formData.get("scheduledDate") as string || null,
       completedDate: formData.get("completedDate") as string || null,
@@ -1223,386 +1181,237 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
     urgente: "Urgente",
   };
 
-  const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
     pending: { label: "In attesa", variant: "secondary" },
     scheduled: { label: "Programmata", variant: "outline" },
-    completed: { label: "Completata", variant: "default" },
+    completed: { label: "Completata", variant: "default", className: "bg-teal-500/20 text-teal border-teal-500/30" },
   };
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-12 rounded-xl" />
-        <Skeleton className="h-64 rounded-2xl" />
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-28 rounded-2xl" />
+        ))}
       </div>
     );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="glass-card overflow-hidden"
-    >
-      <div className="p-5 border-b border-white/5">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
-              <Wrench className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h2 className="font-semibold">Manutenzioni</h2>
-              <p className="text-sm text-muted-foreground">Interventi e riparazioni programmate</p>
-            </div>
-          </div>
-          {isAdmin && (
-            <Dialog open={isDialogOpen} onOpenChange={(open) => {
-              setIsDialogOpen(open);
-              if (!open) setEditingMaintenance(null);
-            }}>
-              <DialogTrigger asChild>
-                <Button className="gradient-golden text-black font-semibold" data-testid="button-add-maintenance">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nuova Manutenzione
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{editingMaintenance ? "Modifica Manutenzione" : "Nuova Manutenzione"}</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="name">Nome *</Label>
-                    <Input
-                      id="name"
-                      name="name"
-                      defaultValue={editingMaintenance?.name || ""}
-                      placeholder="es. Revisione impianto audio"
-                      required
-                      data-testid="input-maintenance-name"
-                    />
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="description">Descrizione</Label>
-                    <Textarea
-                      id="description"
-                      name="description"
-                      defaultValue={editingMaintenance?.description || ""}
-                      placeholder="Descrizione intervento"
-                      data-testid="input-maintenance-description"
-                    />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="type">Tipo *</Label>
-                      <Select name="type" defaultValue={editingMaintenance?.type || "ordinaria"}>
-                        <SelectTrigger data-testid="select-maintenance-type">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="ordinaria">Ordinaria</SelectItem>
-                          <SelectItem value="straordinaria">Straordinaria</SelectItem>
-                          <SelectItem value="urgente">Urgente</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="status">Stato *</Label>
-                      <Select name="status" defaultValue={editingMaintenance?.status || "pending"}>
-                        <SelectTrigger data-testid="select-maintenance-status">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">In attesa</SelectItem>
-                          <SelectItem value="scheduled">Programmata</SelectItem>
-                          <SelectItem value="completed">Completata</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="locationId">Location</Label>
-                      <Select name="locationId" defaultValue={editingMaintenance?.locationId || ""}>
-                        <SelectTrigger data-testid="select-maintenance-location">
-                          <SelectValue placeholder="Generale" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="_none">Generale</SelectItem>
-                          {locations.map((loc) => (
-                            <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="amount">Costo (€)</Label>
-                      <Input
-                        id="amount"
-                        name="amount"
-                        type="number"
-                        step="0.01"
-                        defaultValue={editingMaintenance?.amount || ""}
-                        placeholder="0.00"
-                        data-testid="input-maintenance-amount"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="scheduledDate">Data Prevista</Label>
-                      <Input
-                        id="scheduledDate"
-                        name="scheduledDate"
-                        type="date"
-                        defaultValue={editingMaintenance?.scheduledDate ? format(new Date(editingMaintenance.scheduledDate), "yyyy-MM-dd") : ""}
-                        data-testid="input-maintenance-scheduled-date"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="completedDate">Data Completamento</Label>
-                      <Input
-                        id="completedDate"
-                        name="completedDate"
-                        type="date"
-                        defaultValue={editingMaintenance?.completedDate ? format(new Date(editingMaintenance.completedDate), "yyyy-MM-dd") : ""}
-                        data-testid="input-maintenance-completed-date"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Note</Label>
-                    <Textarea
-                      id="notes"
-                      name="notes"
-                      defaultValue={editingMaintenance?.notes || ""}
-                      placeholder="Note aggiuntive"
-                      data-testid="input-maintenance-notes"
-                    />
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit" className="gradient-golden text-black" disabled={createMutation.isPending || updateMutation.isPending} data-testid="button-save-maintenance">
-                      {editingMaintenance ? "Aggiorna" : "Crea"}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-          )}
-        </div>
-      </div>
-      <div className="p-5">
-        <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              placeholder="Cerca manutenzioni..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 h-12 bg-white/5 border-white/10 rounded-xl"
-              data-testid="input-search-maintenances"
-            />
-          </div>
-        </div>
+    <div>
+      <MobileSectionHeader
+        icon={Wrench}
+        iconGradient="from-violet-500 to-purple-600"
+        title="Manutenzioni"
+        subtitle="Interventi programmati"
+        onAdd={() => setIsDialogOpen(true)}
+        addLabel="Nuova"
+        isAdmin={isAdmin}
+        testId="button-add-maintenance"
+      />
 
-        {filteredMaintenances.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 rounded-2xl bg-violet-500/20 flex items-center justify-center mx-auto mb-4">
-              <Wrench className="h-8 w-8 text-violet-400" />
-            </div>
-            <p className="text-muted-foreground">
-              {searchTerm ? "Nessun risultato trovato" : "Nessuna manutenzione registrata"}
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-white/5">
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead className="text-right">Costo</TableHead>
-                    {isAdmin && <TableHead className="text-right">Azioni</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredMaintenances.map((maintenance) => (
-                    <TableRow key={maintenance.id} className="border-white/5" data-testid={`row-maintenance-${maintenance.id}`}>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{maintenance.name}</div>
-                          {maintenance.description && (
-                            <div className="text-sm text-muted-foreground line-clamp-1">{maintenance.description}</div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3 text-muted-foreground" />
-                          {getLocationName(maintenance.locationId)}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <Badge variant="outline" className="border-white/10">
-                          {typeLabels[maintenance.type] || maintenance.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={statusLabels[maintenance.status]?.variant || "secondary"}
-                          className={maintenance.status === "completed" ? "bg-teal-500/20 text-teal border-teal-500/30" : ""}
-                        >
-                          {statusLabels[maintenance.status]?.label || maintenance.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        {maintenance.amount ? (
-                          <span className="font-medium text-primary">€{parseFloat(maintenance.amount).toFixed(2)}</span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
-                      {isAdmin && (
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => {
-                                setEditingMaintenance(maintenance);
-                                setIsDialogOpen(true);
-                              }}
-                              data-testid={`button-edit-maintenance-${maintenance.id}`}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button size="icon" variant="ghost" data-testid={`button-delete-maintenance-${maintenance.id}`}>
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Eliminare questa manutenzione?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Questa azione non può essere annullata.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Annulla</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => deleteMutation.mutate(maintenance.id)}>
-                                    Elimina
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+      <MobileSearchBar
+        value={searchTerm}
+        onChange={setSearchTerm}
+        placeholder="Cerca manutenzioni..."
+        testId="input-search-maintenances"
+      />
 
-            {/* Mobile Cards */}
-            <div className="md:hidden space-y-3">
-              {filteredMaintenances.map((maintenance) => (
-                <div key={maintenance.id} className="glass-card p-4" data-testid={`card-maintenance-${maintenance.id}`}>
-                  <div className="flex justify-between items-start gap-3 mb-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{maintenance.name}</div>
-                      {maintenance.description && (
-                        <div className="text-sm text-muted-foreground line-clamp-2 mt-1">{maintenance.description}</div>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      {maintenance.amount ? (
-                        <div className="text-lg font-bold text-primary">€{parseFloat(maintenance.amount).toFixed(2)}</div>
-                      ) : (
-                        <div className="text-muted-foreground">-</div>
-                      )}
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <Badge variant="outline" className="border-white/10">
-                      {typeLabels[maintenance.type] || maintenance.type}
-                    </Badge>
-                    <Badge 
-                      variant={statusLabels[maintenance.status]?.variant || "secondary"}
-                      className={maintenance.status === "completed" ? "bg-teal-500/20 text-teal border-teal-500/30" : ""}
-                    >
-                      {statusLabels[maintenance.status]?.label || maintenance.status}
-                    </Badge>
-                  </div>
-                  <div className="flex items-center gap-1 text-sm text-muted-foreground mb-3">
-                    <MapPin className="h-3 w-3" />
-                    {getLocationName(maintenance.locationId)}
-                  </div>
-                  {isAdmin && (
-                    <div className="flex justify-end gap-2 pt-3 border-t border-white/5">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="min-h-[48px] min-w-[48px]"
-                        onClick={() => {
-                          setEditingMaintenance(maintenance);
-                          setIsDialogOpen(true);
-                        }}
-                        data-testid={`button-edit-maintenance-mobile-${maintenance.id}`}
-                      >
-                        <Pencil className="h-5 w-5" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button size="icon" variant="ghost" className="min-h-[48px] min-w-[48px]" data-testid={`button-delete-maintenance-mobile-${maintenance.id}`}>
-                            <Trash2 className="h-5 w-5 text-destructive" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="w-[95vw] max-w-lg">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Eliminare questa manutenzione?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Questa azione non può essere annullata.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Annulla</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteMutation.mutate(maintenance.id)}>
-                              Elimina
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  )}
-                </div>
-              ))}
+      {filteredMaintenances.length === 0 ? (
+        <EmptyState
+          icon={Wrench}
+          iconBg="bg-violet-500/20 text-violet-400"
+          message={searchTerm ? "Nessun risultato trovato" : "Nessuna manutenzione registrata"}
+        />
+      ) : (
+        <div className="space-y-3">
+          {filteredMaintenances.map((maintenance, index) => {
+            const statusInfo = statusConfig[maintenance.status] || statusConfig.pending;
+            return (
+              <motion.div
+                key={maintenance.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...springConfig, delay: index * 0.05 }}
+              >
+                <MobileTransactionCard
+                  title={maintenance.name}
+                  subtitle={maintenance.description}
+                  amount={maintenance.amount ? `€${parseFloat(maintenance.amount).toFixed(2)}` : undefined}
+                  icon={Wrench}
+                  iconGradient="from-violet-500 to-purple-600"
+                  badges={[
+                    { label: typeLabels[maintenance.type] || maintenance.type },
+                    { label: statusInfo.label, variant: statusInfo.variant },
+                  ]}
+                  metadata={[
+                    { icon: MapPin, label: getLocationName(maintenance.locationId) },
+                    ...(maintenance.scheduledDate ? [{ icon: Clock, label: format(new Date(maintenance.scheduledDate), "dd/MM/yy", { locale: it }) }] : []),
+                  ]}
+                  onEdit={() => {
+                    setEditingMaintenance(maintenance);
+                    setIsDialogOpen(true);
+                  }}
+                  onDelete={() => deleteMutation.mutate(maintenance.id)}
+                  isAdmin={isAdmin}
+                  testId={`card-maintenance-${maintenance.id}`}
+                />
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        setIsDialogOpen(open);
+        if (!open) setEditingMaintenance(null);
+      }}>
+        <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingMaintenance ? "Modifica Manutenzione" : "Nuova Manutenzione"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="name">Nome *</Label>
+              <Input
+                id="name"
+                name="name"
+                defaultValue={editingMaintenance?.name || ""}
+                placeholder="es. Revisione impianto"
+                required
+                className="h-12 rounded-xl"
+                data-testid="input-maintenance-name"
+              />
             </div>
-          </>
-        )}
-      </div>
-    </motion.div>
+            <div className="space-y-2">
+              <Label htmlFor="description">Descrizione</Label>
+              <Textarea
+                id="description"
+                name="description"
+                defaultValue={editingMaintenance?.description || ""}
+                placeholder="Descrizione intervento"
+                className="rounded-xl"
+                data-testid="input-maintenance-description"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="type">Tipo *</Label>
+                <Select name="type" defaultValue={editingMaintenance?.type || "ordinaria"}>
+                  <SelectTrigger className="h-12 rounded-xl" data-testid="select-maintenance-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="ordinaria">Ordinaria</SelectItem>
+                    <SelectItem value="straordinaria">Straordinaria</SelectItem>
+                    <SelectItem value="urgente">Urgente</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">Stato *</Label>
+                <Select name="status" defaultValue={editingMaintenance?.status || "pending"}>
+                  <SelectTrigger className="h-12 rounded-xl" data-testid="select-maintenance-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">In attesa</SelectItem>
+                    <SelectItem value="scheduled">Programmata</SelectItem>
+                    <SelectItem value="completed">Completata</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="locationId">Location</Label>
+                <Select name="locationId" defaultValue={editingMaintenance?.locationId || "_none"}>
+                  <SelectTrigger className="h-12 rounded-xl" data-testid="select-maintenance-location">
+                    <SelectValue placeholder="Generale" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="_none">Generale</SelectItem>
+                    {locations.map((loc) => (
+                      <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="amount">Costo (€)</Label>
+                <Input
+                  id="amount"
+                  name="amount"
+                  type="number"
+                  step="0.01"
+                  defaultValue={editingMaintenance?.amount || ""}
+                  placeholder="0.00"
+                  className="h-12 rounded-xl"
+                  data-testid="input-maintenance-amount"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="scheduledDate">Data Prevista</Label>
+                <Input
+                  id="scheduledDate"
+                  name="scheduledDate"
+                  type="date"
+                  defaultValue={editingMaintenance?.scheduledDate ? format(new Date(editingMaintenance.scheduledDate), "yyyy-MM-dd") : ""}
+                  className="h-12 rounded-xl"
+                  data-testid="input-maintenance-scheduled-date"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="completedDate">Completata il</Label>
+                <Input
+                  id="completedDate"
+                  name="completedDate"
+                  type="date"
+                  defaultValue={editingMaintenance?.completedDate ? format(new Date(editingMaintenance.completedDate), "yyyy-MM-dd") : ""}
+                  className="h-12 rounded-xl"
+                  data-testid="input-maintenance-completed-date"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Note</Label>
+              <Textarea
+                id="notes"
+                name="notes"
+                defaultValue={editingMaintenance?.notes || ""}
+                placeholder="Note aggiuntive"
+                className="rounded-xl"
+                data-testid="input-maintenance-notes"
+              />
+            </div>
+            <DialogFooter>
+              <HapticButton 
+                type="submit" 
+                className="w-full gradient-golden text-black min-h-[48px] rounded-xl" 
+                disabled={createMutation.isPending || updateMutation.isPending} 
+                hapticType="success"
+                data-testid="button-save-maintenance"
+              >
+                {editingMaintenance ? "Aggiorna" : "Crea"}
+              </HapticButton>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }
 
 function DocumentsSection({ isAdmin }: { isAdmin: boolean }) {
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingDoc, setEditingDoc] = useState<AccountingDocument | null>(null);
+  const [editingDocument, setEditingDocument] = useState<AccountingDocument | null>(null);
   const [searchTerm, setSearchTerm] = useState("");
 
   const { data: documents = [], isLoading } = useQuery<AccountingDocument[]>({
     queryKey: ["/api/accounting-documents"],
-  });
-
-  const { data: events = [] } = useQuery<Event[]>({
-    queryKey: ["/api/events"],
   });
 
   const createMutation = useMutation({
@@ -1610,9 +1419,11 @@ function DocumentsSection({ isAdmin }: { isAdmin: boolean }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/accounting-documents"] });
       setIsDialogOpen(false);
+      triggerHaptic('success');
       toast({ title: "Documento creato con successo" });
     },
     onError: (err: any) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: err.message, variant: "destructive" });
     },
   });
@@ -1622,11 +1433,13 @@ function DocumentsSection({ isAdmin }: { isAdmin: boolean }) {
       apiRequest("PATCH", `/api/accounting-documents/${id}`, data),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/accounting-documents"] });
-      setEditingDoc(null);
+      setEditingDocument(null);
       setIsDialogOpen(false);
+      triggerHaptic('success');
       toast({ title: "Documento aggiornato" });
     },
     onError: (err: any) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: err.message, variant: "destructive" });
     },
   });
@@ -1635,9 +1448,11 @@ function DocumentsSection({ isAdmin }: { isAdmin: boolean }) {
     mutationFn: (id: string) => apiRequest("DELETE", `/api/accounting-documents/${id}`),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/accounting-documents"] });
+      triggerHaptic('success');
       toast({ title: "Documento eliminato" });
     },
     onError: (err: any) => {
+      triggerHaptic('error');
       toast({ title: "Errore", description: err.message, variant: "destructive" });
     },
   });
@@ -1647,404 +1462,232 @@ function DocumentsSection({ isAdmin }: { isAdmin: boolean }) {
     const formData = new FormData(e.currentTarget);
     const data = {
       type: formData.get("type") as string,
+      status: formData.get("status") as string,
       documentNumber: formData.get("documentNumber") as string || null,
       amount: formData.get("amount") as string || null,
-      eventId: formData.get("eventId") as string || null,
       issueDate: formData.get("issueDate") as string || null,
       dueDate: formData.get("dueDate") as string || null,
-      status: formData.get("status") as string,
       notes: formData.get("notes") as string || null,
     };
 
-    if (editingDoc) {
-      updateMutation.mutate({ id: editingDoc.id, data });
+    if (editingDocument) {
+      updateMutation.mutate({ id: editingDocument.id, data });
     } else {
       createMutation.mutate(data);
     }
   };
 
-  const filteredDocs = documents.filter(doc =>
+  const filteredDocuments = documents.filter(doc =>
+    doc.type.toLowerCase().includes(searchTerm.toLowerCase()) ||
     (doc.documentNumber?.toLowerCase().includes(searchTerm.toLowerCase())) ||
     (doc.notes?.toLowerCase().includes(searchTerm.toLowerCase()))
   );
 
-  const getEventName = (eventId: string | null) => {
-    if (!eventId) return "Non associato";
-    const event = events.find(e => e.id === eventId);
-    return event?.name || "N/D";
-  };
-
   const typeLabels: Record<string, string> = {
     fattura: "Fattura",
     preventivo: "Preventivo",
-    ricevuta: "Ricevuta",
     contratto: "Contratto",
+    ricevuta: "Ricevuta",
+    altro: "Altro",
   };
 
-  const statusLabels: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline" }> = {
+  const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
     pending: { label: "In attesa", variant: "secondary" },
-    paid: { label: "Pagato", variant: "default" },
-    cancelled: { label: "Annullato", variant: "destructive" },
+    paid: { label: "Pagato", variant: "default", className: "bg-teal-500/20 text-teal border-teal-500/30" },
+    overdue: { label: "Scaduto", variant: "destructive" },
+    cancelled: { label: "Annullato", variant: "outline" },
   };
 
   if (isLoading) {
     return (
-      <div className="space-y-4">
-        <Skeleton className="h-12 rounded-xl" />
-        <Skeleton className="h-64 rounded-2xl" />
+      <div className="space-y-3">
+        {[1, 2, 3].map((i) => (
+          <Skeleton key={i} className="h-28 rounded-2xl" />
+        ))}
       </div>
     );
   }
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="glass-card overflow-hidden"
-    >
-      <div className="p-5 border-b border-white/5">
-        <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-rose-500 to-pink-600 flex items-center justify-center">
-              <FileText className="h-5 w-5 text-white" />
-            </div>
-            <div>
-              <h2 className="font-semibold">Documenti Contabili</h2>
-              <p className="text-sm text-muted-foreground">Fatture, ricevute e preventivi</p>
-            </div>
-          </div>
-          {isAdmin && (
-            <Dialog open={isDialogOpen} onOpenChange={(open) => {
-              setIsDialogOpen(open);
-              if (!open) setEditingDoc(null);
-            }}>
-              <DialogTrigger asChild>
-                <Button className="gradient-golden text-black font-semibold" data-testid="button-add-document">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Nuovo Documento
-                </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                <DialogHeader>
-                  <DialogTitle>{editingDoc ? "Modifica Documento" : "Nuovo Documento"}</DialogTitle>
-                </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="type">Tipo *</Label>
-                      <Select name="type" defaultValue={editingDoc?.type || "fattura"}>
-                        <SelectTrigger data-testid="select-document-type">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="fattura">Fattura</SelectItem>
-                          <SelectItem value="preventivo">Preventivo</SelectItem>
-                          <SelectItem value="ricevuta">Ricevuta</SelectItem>
-                          <SelectItem value="contratto">Contratto</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="documentNumber">Numero</Label>
-                      <Input
-                        id="documentNumber"
-                        name="documentNumber"
-                        defaultValue={editingDoc?.documentNumber || ""}
-                        placeholder="es. FT-2024-001"
-                        data-testid="input-document-number"
-                      />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="amount">Importo (€)</Label>
-                      <Input
-                        id="amount"
-                        name="amount"
-                        type="number"
-                        step="0.01"
-                        defaultValue={editingDoc?.amount || ""}
-                        placeholder="0.00"
-                        data-testid="input-document-amount"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="status">Stato *</Label>
-                      <Select name="status" defaultValue={editingDoc?.status || "pending"}>
-                        <SelectTrigger data-testid="select-document-status">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="pending">In attesa</SelectItem>
-                          <SelectItem value="paid">Pagato</SelectItem>
-                          <SelectItem value="cancelled">Annullato</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="eventId">Evento</Label>
-                    <Select name="eventId" defaultValue={editingDoc?.eventId || ""}>
-                      <SelectTrigger data-testid="select-document-event">
-                        <SelectValue placeholder="Seleziona evento (opzionale)" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="_none">Non associato</SelectItem>
-                        {events.map((evt) => (
-                          <SelectItem key={evt.id} value={evt.id}>{evt.name}</SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="issueDate">Data Emissione</Label>
-                      <Input
-                        id="issueDate"
-                        name="issueDate"
-                        type="date"
-                        defaultValue={editingDoc?.issueDate ? format(new Date(editingDoc.issueDate), "yyyy-MM-dd") : ""}
-                        data-testid="input-document-issue-date"
-                      />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="dueDate">Data Scadenza</Label>
-                      <Input
-                        id="dueDate"
-                        name="dueDate"
-                        type="date"
-                        defaultValue={editingDoc?.dueDate ? format(new Date(editingDoc.dueDate), "yyyy-MM-dd") : ""}
-                        data-testid="input-document-due-date"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="notes">Note</Label>
-                    <Textarea
-                      id="notes"
-                      name="notes"
-                      defaultValue={editingDoc?.notes || ""}
-                      placeholder="Note aggiuntive"
-                      data-testid="input-document-notes"
-                    />
-                  </div>
-                  <DialogFooter>
-                    <Button type="submit" className="gradient-golden text-black" disabled={createMutation.isPending || updateMutation.isPending} data-testid="button-save-document">
-                      {editingDoc ? "Aggiorna" : "Crea"}
-                    </Button>
-                  </DialogFooter>
-                </form>
-              </DialogContent>
-            </Dialog>
-          )}
-        </div>
-      </div>
-      <div className="p-5">
-        <div className="mb-4">
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
-            <Input
-              placeholder="Cerca documenti..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="pl-12 h-12 bg-white/5 border-white/10 rounded-xl"
-              data-testid="input-search-documents"
-            />
-          </div>
-        </div>
+    <div>
+      <MobileSectionHeader
+        icon={FileText}
+        iconGradient="from-rose-500 to-pink-600"
+        title="Documenti"
+        subtitle="Fatture e contratti"
+        onAdd={() => setIsDialogOpen(true)}
+        addLabel="Nuovo"
+        isAdmin={isAdmin}
+        testId="button-add-document"
+      />
 
-        {filteredDocs.length === 0 ? (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 rounded-2xl bg-rose-500/20 flex items-center justify-center mx-auto mb-4">
-              <FileText className="h-8 w-8 text-rose-400" />
-            </div>
-            <p className="text-muted-foreground">
-              {searchTerm ? "Nessun risultato trovato" : "Nessun documento registrato"}
-            </p>
-          </div>
-        ) : (
-          <>
-            {/* Desktop Table */}
-            <div className="hidden md:block overflow-x-auto">
-              <Table>
-                <TableHeader>
-                  <TableRow className="border-white/5">
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Numero</TableHead>
-                    <TableHead>Evento</TableHead>
-                    <TableHead className="text-right">Importo</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead>Scadenza</TableHead>
-                    {isAdmin && <TableHead className="text-right">Azioni</TableHead>}
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filteredDocs.map((doc) => (
-                    <TableRow key={doc.id} className="border-white/5" data-testid={`row-document-${doc.id}`}>
-                      <TableCell>
-                        <Badge variant="outline" className="border-white/10">
-                          {typeLabels[doc.type] || doc.type}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        <div>
-                          <div className="font-medium">{doc.documentNumber || "-"}</div>
-                          {doc.notes && (
-                            <div className="text-sm text-muted-foreground line-clamp-1">{doc.notes}</div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-muted-foreground" />
-                          {getEventName(doc.eventId)}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right font-medium text-primary">
-                        {doc.amount ? `€${parseFloat(doc.amount).toFixed(2)}` : "-"}
-                      </TableCell>
-                      <TableCell>
-                        <Badge 
-                          variant={statusLabels[doc.status]?.variant || "secondary"}
-                          className={doc.status === "paid" ? "bg-teal-500/20 text-teal border-teal-500/30" : ""}
-                        >
-                          {statusLabels[doc.status]?.label || doc.status}
-                        </Badge>
-                      </TableCell>
-                      <TableCell>
-                        {doc.dueDate && (
-                          <span className={`text-sm ${new Date(doc.dueDate) < new Date() && doc.status !== 'paid' ? 'text-destructive' : ''}`}>
-                            {format(new Date(doc.dueDate), "dd/MM/yyyy", { locale: it })}
-                          </span>
-                        )}
-                      </TableCell>
-                      {isAdmin && (
-                        <TableCell className="text-right">
-                          <div className="flex justify-end gap-1">
-                            <Button
-                              size="icon"
-                              variant="ghost"
-                              onClick={() => {
-                                setEditingDoc(doc);
-                                setIsDialogOpen(true);
-                              }}
-                              data-testid={`button-edit-document-${doc.id}`}
-                            >
-                              <Pencil className="h-4 w-4" />
-                            </Button>
-                            <AlertDialog>
-                              <AlertDialogTrigger asChild>
-                                <Button size="icon" variant="ghost" data-testid={`button-delete-document-${doc.id}`}>
-                                  <Trash2 className="h-4 w-4 text-destructive" />
-                                </Button>
-                              </AlertDialogTrigger>
-                              <AlertDialogContent>
-                                <AlertDialogHeader>
-                                  <AlertDialogTitle>Eliminare questo documento?</AlertDialogTitle>
-                                  <AlertDialogDescription>
-                                    Questa azione non può essere annullata.
-                                  </AlertDialogDescription>
-                                </AlertDialogHeader>
-                                <AlertDialogFooter>
-                                  <AlertDialogCancel>Annulla</AlertDialogCancel>
-                                  <AlertDialogAction onClick={() => deleteMutation.mutate(doc.id)}>
-                                    Elimina
-                                  </AlertDialogAction>
-                                </AlertDialogFooter>
-                              </AlertDialogContent>
-                            </AlertDialog>
-                          </div>
-                        </TableCell>
-                      )}
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </div>
+      <MobileSearchBar
+        value={searchTerm}
+        onChange={setSearchTerm}
+        placeholder="Cerca documenti..."
+        testId="input-search-documents"
+      />
 
-            {/* Mobile Cards */}
-            <div className="md:hidden space-y-3">
-              {filteredDocs.map((doc) => (
-                <div key={doc.id} className="glass-card p-4" data-testid={`card-document-${doc.id}`}>
-                  <div className="flex justify-between items-start gap-3 mb-3">
-                    <div className="flex-1 min-w-0">
-                      <div className="font-medium truncate">{doc.documentNumber || "-"}</div>
-                      {doc.notes && (
-                        <div className="text-sm text-muted-foreground line-clamp-2 mt-1">{doc.notes}</div>
-                      )}
-                    </div>
-                    <div className="text-right">
-                      <div className="text-lg font-bold text-primary">
-                        {doc.amount ? `€${parseFloat(doc.amount).toFixed(2)}` : "-"}
-                      </div>
-                    </div>
-                  </div>
-                  <div className="flex flex-wrap gap-2 mb-3">
-                    <Badge variant="outline" className="border-white/10">
-                      {typeLabels[doc.type] || doc.type}
-                    </Badge>
-                    <Badge 
-                      variant={statusLabels[doc.status]?.variant || "secondary"}
-                      className={doc.status === "paid" ? "bg-teal-500/20 text-teal border-teal-500/30" : ""}
-                    >
-                      {statusLabels[doc.status]?.label || doc.status}
-                    </Badge>
-                  </div>
-                  <div className="space-y-1 text-sm text-muted-foreground mb-3">
-                    <div className="flex items-center gap-1">
-                      <Calendar className="h-3 w-3" />
-                      {getEventName(doc.eventId)}
-                    </div>
-                    {doc.dueDate && (
-                      <div className={`flex items-center gap-1 ${new Date(doc.dueDate) < new Date() && doc.status !== 'paid' ? 'text-destructive' : ''}`}>
-                        <Clock className="h-3 w-3" />
-                        Scadenza: {format(new Date(doc.dueDate), "dd/MM/yyyy", { locale: it })}
-                      </div>
-                    )}
-                  </div>
-                  {isAdmin && (
-                    <div className="flex justify-end gap-2 pt-3 border-t border-white/5">
-                      <Button
-                        size="icon"
-                        variant="ghost"
-                        className="min-h-[48px] min-w-[48px]"
-                        onClick={() => {
-                          setEditingDoc(doc);
-                          setIsDialogOpen(true);
-                        }}
-                        data-testid={`button-edit-document-mobile-${doc.id}`}
-                      >
-                        <Pencil className="h-5 w-5" />
-                      </Button>
-                      <AlertDialog>
-                        <AlertDialogTrigger asChild>
-                          <Button size="icon" variant="ghost" className="min-h-[48px] min-w-[48px]" data-testid={`button-delete-document-mobile-${doc.id}`}>
-                            <Trash2 className="h-5 w-5 text-destructive" />
-                          </Button>
-                        </AlertDialogTrigger>
-                        <AlertDialogContent className="w-[95vw] max-w-lg">
-                          <AlertDialogHeader>
-                            <AlertDialogTitle>Eliminare questo documento?</AlertDialogTitle>
-                            <AlertDialogDescription>
-                              Questa azione non può essere annullata.
-                            </AlertDialogDescription>
-                          </AlertDialogHeader>
-                          <AlertDialogFooter>
-                            <AlertDialogCancel>Annulla</AlertDialogCancel>
-                            <AlertDialogAction onClick={() => deleteMutation.mutate(doc.id)}>
-                              Elimina
-                            </AlertDialogAction>
-                          </AlertDialogFooter>
-                        </AlertDialogContent>
-                      </AlertDialog>
-                    </div>
-                  )}
-                </div>
-              ))}
+      {filteredDocuments.length === 0 ? (
+        <EmptyState
+          icon={FileText}
+          iconBg="bg-rose-500/20 text-rose-400"
+          message={searchTerm ? "Nessun risultato trovato" : "Nessun documento registrato"}
+        />
+      ) : (
+        <div className="space-y-3">
+          {filteredDocuments.map((doc, index) => {
+            const statusInfo = statusConfig[doc.status] || statusConfig.pending;
+            return (
+              <motion.div
+                key={doc.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...springConfig, delay: index * 0.05 }}
+              >
+                <MobileTransactionCard
+                  title={typeLabels[doc.type] || doc.type}
+                  subtitle={doc.documentNumber ? `N. ${doc.documentNumber}` : undefined}
+                  amount={doc.amount ? `€${parseFloat(doc.amount).toFixed(2)}` : undefined}
+                  icon={FileText}
+                  iconGradient="from-rose-500 to-pink-600"
+                  badges={[
+                    { label: typeLabels[doc.type] || doc.type },
+                    { label: statusInfo.label, variant: statusInfo.variant },
+                  ]}
+                  metadata={[
+                    ...(doc.issueDate ? [{ icon: Calendar, label: format(new Date(doc.issueDate), "dd/MM/yy", { locale: it }) }] : []),
+                    ...(doc.dueDate ? [{ icon: Clock, label: `Scade: ${format(new Date(doc.dueDate), "dd/MM/yy", { locale: it })}` }] : []),
+                  ]}
+                  onEdit={() => {
+                    setEditingDocument(doc);
+                    setIsDialogOpen(true);
+                  }}
+                  onDelete={() => deleteMutation.mutate(doc.id)}
+                  isAdmin={isAdmin}
+                  testId={`card-document-${doc.id}`}
+                />
+              </motion.div>
+            );
+          })}
+        </div>
+      )}
+
+      <Dialog open={isDialogOpen} onOpenChange={(open) => {
+        setIsDialogOpen(open);
+        if (!open) setEditingDocument(null);
+      }}>
+        <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto rounded-2xl">
+          <DialogHeader>
+            <DialogTitle>{editingDocument ? "Modifica Documento" : "Nuovo Documento"}</DialogTitle>
+          </DialogHeader>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="type">Tipo *</Label>
+                <Select name="type" defaultValue={editingDocument?.type || "fattura"}>
+                  <SelectTrigger className="h-12 rounded-xl" data-testid="select-document-type">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="fattura">Fattura</SelectItem>
+                    <SelectItem value="preventivo">Preventivo</SelectItem>
+                    <SelectItem value="contratto">Contratto</SelectItem>
+                    <SelectItem value="ricevuta">Ricevuta</SelectItem>
+                    <SelectItem value="altro">Altro</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="status">Stato *</Label>
+                <Select name="status" defaultValue={editingDocument?.status || "pending"}>
+                  <SelectTrigger className="h-12 rounded-xl" data-testid="select-document-status">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="pending">In attesa</SelectItem>
+                    <SelectItem value="paid">Pagato</SelectItem>
+                    <SelectItem value="overdue">Scaduto</SelectItem>
+                    <SelectItem value="cancelled">Annullato</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-          </>
-        )}
-      </div>
-    </motion.div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="documentNumber">N. Documento</Label>
+                <Input
+                  id="documentNumber"
+                  name="documentNumber"
+                  defaultValue={editingDocument?.documentNumber || ""}
+                  placeholder="es. FT-001"
+                  className="h-12 rounded-xl"
+                  data-testid="input-document-number"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="amount">Importo (€)</Label>
+                <Input
+                  id="amount"
+                  name="amount"
+                  type="number"
+                  step="0.01"
+                  defaultValue={editingDocument?.amount || ""}
+                  placeholder="0.00"
+                  className="h-12 rounded-xl"
+                  data-testid="input-document-amount"
+                />
+              </div>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-2">
+                <Label htmlFor="issueDate">Data Emissione</Label>
+                <Input
+                  id="issueDate"
+                  name="issueDate"
+                  type="date"
+                  defaultValue={editingDocument?.issueDate ? format(new Date(editingDocument.issueDate), "yyyy-MM-dd") : ""}
+                  className="h-12 rounded-xl"
+                  data-testid="input-document-issue-date"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="dueDate">Data Scadenza</Label>
+                <Input
+                  id="dueDate"
+                  name="dueDate"
+                  type="date"
+                  defaultValue={editingDocument?.dueDate ? format(new Date(editingDocument.dueDate), "yyyy-MM-dd") : ""}
+                  className="h-12 rounded-xl"
+                  data-testid="input-document-due-date"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="notes">Note</Label>
+              <Textarea
+                id="notes"
+                name="notes"
+                defaultValue={editingDocument?.notes || ""}
+                placeholder="Note aggiuntive"
+                className="rounded-xl"
+                data-testid="input-document-notes"
+              />
+            </div>
+            <DialogFooter>
+              <HapticButton 
+                type="submit" 
+                className="w-full gradient-golden text-black min-h-[48px] rounded-xl" 
+                disabled={createMutation.isPending || updateMutation.isPending} 
+                hapticType="success"
+                data-testid="button-save-document"
+              >
+                {editingDocument ? "Aggiorna" : "Crea"}
+              </HapticButton>
+            </DialogFooter>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </div>
   );
 }

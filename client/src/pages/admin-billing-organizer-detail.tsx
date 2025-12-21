@@ -1,23 +1,13 @@
 import { useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
-import { useParams, Link } from "wouter";
+import { useParams, useLocation } from "wouter";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
+import { motion, AnimatePresence } from "framer-motion";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import {
   Select,
   SelectContent,
@@ -25,15 +15,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import {
+  MobileAppLayout,
+  MobileHeader,
+  HapticButton,
+  BottomSheet,
+  triggerHaptic,
+} from "@/components/mobile-primitives";
 import {
   ArrowLeft,
   Building2,
@@ -46,9 +35,9 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  Calendar,
   ArrowUpRight,
   ArrowDownRight,
+  ChevronRight,
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -96,12 +85,22 @@ const invoiceFormSchema = z.object({
   notes: z.string().optional(),
 });
 
+const springConfig = { type: "spring" as const, stiffness: 400, damping: 30 };
+
+const tabItems = [
+  { id: "subscription", icon: CreditCard, label: "Abbonamento" },
+  { id: "commissions", icon: Percent, label: "Commissioni" },
+  { id: "wallet", icon: Wallet, label: "Wallet" },
+  { id: "invoices", icon: Receipt, label: "Fatture" },
+];
+
 export default function AdminBillingOrganizerDetail() {
   const { companyId } = useParams<{ companyId: string }>();
+  const [, navigate] = useLocation();
   const { toast } = useToast();
   const [activeTab, setActiveTab] = useState("subscription");
-  const [isSubscriptionDialogOpen, setIsSubscriptionDialogOpen] = useState(false);
-  const [isInvoiceDialogOpen, setIsInvoiceDialogOpen] = useState(false);
+  const [isSubscriptionSheetOpen, setIsSubscriptionSheetOpen] = useState(false);
+  const [isInvoiceSheetOpen, setIsInvoiceSheetOpen] = useState(false);
   const [thresholdValue, setThresholdValue] = useState("");
 
   const { data, isLoading } = useQuery<OrganizerDetailData>({
@@ -152,11 +151,13 @@ export default function AdminBillingOrganizerDetail() {
       });
     },
     onSuccess: () => {
+      triggerHaptic("success");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/billing/organizers", companyId] });
-      setIsSubscriptionDialogOpen(false);
+      setIsSubscriptionSheetOpen(false);
       toast({ title: "Abbonamento Creato", description: "L'abbonamento è stato assegnato con successo." });
     },
     onError: (error: any) => {
+      triggerHaptic("error");
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
@@ -166,10 +167,12 @@ export default function AdminBillingOrganizerDetail() {
       return apiRequest("PUT", `/api/admin/billing/organizers/${companyId}/commissions`, formData);
     },
     onSuccess: () => {
+      triggerHaptic("success");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/billing/organizers", companyId] });
       toast({ title: "Commissioni Aggiornate", description: "Il profilo commissioni è stato salvato." });
     },
     onError: (error: any) => {
+      triggerHaptic("error");
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
@@ -181,10 +184,12 @@ export default function AdminBillingOrganizerDetail() {
       });
     },
     onSuccess: () => {
+      triggerHaptic("success");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/billing/organizers", companyId] });
       toast({ title: "Soglia Aggiornata", description: "La soglia fatturazione è stata aggiornata." });
     },
     onError: (error: any) => {
+      triggerHaptic("error");
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
@@ -194,12 +199,14 @@ export default function AdminBillingOrganizerDetail() {
       return apiRequest("POST", `/api/admin/billing/organizers/${companyId}/invoices`, formData);
     },
     onSuccess: () => {
+      triggerHaptic("success");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/billing/organizers", companyId] });
-      setIsInvoiceDialogOpen(false);
+      setIsInvoiceSheetOpen(false);
       invoiceForm.reset();
       toast({ title: "Fattura Creata", description: "La fattura è stata generata con successo." });
     },
     onError: (error: any) => {
+      triggerHaptic("error");
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
@@ -209,10 +216,12 @@ export default function AdminBillingOrganizerDetail() {
       return apiRequest("PUT", `/api/admin/billing/invoices/${invoiceId}/mark-paid`);
     },
     onSuccess: () => {
+      triggerHaptic("success");
       queryClient.invalidateQueries({ queryKey: ["/api/admin/billing/organizers", companyId] });
       toast({ title: "Fattura Pagata", description: "La fattura è stata segnata come pagata." });
     },
     onError: (error: any) => {
+      triggerHaptic("error");
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
@@ -227,20 +236,52 @@ export default function AdminBillingOrganizerDetail() {
     return format(new Date(date), "dd MMM yyyy", { locale: it });
   };
 
+  const handleBack = () => {
+    triggerHaptic("light");
+    navigate("/admin/billing/organizers");
+  };
+
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6" data-testid="page-admin-billing-organizer-detail">
-        <Skeleton className="h-8 w-64" />
-        <Skeleton className="h-[600px] w-full" />
-      </div>
+      <MobileAppLayout
+        header={
+          <MobileHeader
+            title="Caricamento..."
+            leftAction={
+              <HapticButton variant="ghost" size="icon" onClick={handleBack}>
+                <ArrowLeft className="w-5 h-5" />
+              </HapticButton>
+            }
+          />
+        }
+      >
+        <div className="py-4 space-y-4 pb-24" data-testid="page-admin-billing-organizer-detail">
+          <Skeleton className="h-20 w-full rounded-2xl" />
+          <Skeleton className="h-14 w-full rounded-xl" />
+          <Skeleton className="h-64 w-full rounded-2xl" />
+        </div>
+      </MobileAppLayout>
     );
   }
 
   if (!data) {
     return (
-      <div className="p-6" data-testid="page-admin-billing-organizer-detail">
-        <p className="text-muted-foreground">Organizzatore non trovato</p>
-      </div>
+      <MobileAppLayout
+        header={
+          <MobileHeader
+            title="Non trovato"
+            leftAction={
+              <HapticButton variant="ghost" size="icon" onClick={handleBack}>
+                <ArrowLeft className="w-5 h-5" />
+              </HapticButton>
+            }
+          />
+        }
+      >
+        <div className="flex items-center justify-center h-full pb-24" data-testid="page-admin-billing-organizer-detail">
+          <p className="text-muted-foreground">Organizzatore non trovato</p>
+        </div>
+      </MobileAppLayout>
     );
   }
 
@@ -248,493 +289,598 @@ export default function AdminBillingOrganizerDetail() {
   const balance = parseFloat(wallet.balance);
 
   return (
-    <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6" data-testid="page-admin-billing-organizer-detail">
-      <div className="flex items-center gap-3 sm:gap-4">
-        <Link href="/admin/billing/organizers">
-          <Button variant="ghost" size="icon" className="h-10 w-10">
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
-        </Link>
-        <div className="min-w-0">
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2">
-            <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 flex-shrink-0" />
-            <span className="truncate">{company.name}</span>
-          </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Gestione billing e abbonamento
-          </p>
-        </div>
-      </div>
-
-      <Tabs value={activeTab} onValueChange={setActiveTab}>
-        <TabsList className="grid w-full grid-cols-2 sm:grid-cols-4 h-auto">
-          <TabsTrigger value="subscription" className="gap-2" data-testid="tab-subscription">
-            <CreditCard className="w-4 h-4" />
-            Abbonamento
-          </TabsTrigger>
-          <TabsTrigger value="commissions" className="gap-2" data-testid="tab-commissions">
-            <Percent className="w-4 h-4" />
-            Commissioni
-          </TabsTrigger>
-          <TabsTrigger value="wallet" className="gap-2" data-testid="tab-wallet">
-            <Wallet className="w-4 h-4" />
-            Wallet
-          </TabsTrigger>
-          <TabsTrigger value="invoices" className="gap-2" data-testid="tab-invoices">
-            <Receipt className="w-4 h-4" />
-            Fatture
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="subscription" className="mt-4 sm:mt-6 space-y-4">
-          <Card>
-            <CardHeader className="p-4 sm:p-6">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-                <div>
-                  <CardTitle className="text-base sm:text-lg">Abbonamento Attuale</CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">Stato e dettagli dell'abbonamento</CardDescription>
-                </div>
-                <Button onClick={() => setIsSubscriptionDialogOpen(true)} data-testid="button-assign-plan" className="h-10 w-full sm:w-auto">
-                  <Plus className="w-4 h-4 mr-2" />
-                  {subscription ? "Cambia Piano" : "Assegna Piano"}
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6">
-              {subscription && plan ? (
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
-                  <div>
-                    <p className="text-sm text-muted-foreground">Piano</p>
-                    <p className="font-medium">{plan.name}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Tipo</p>
-                    <Badge variant={subscription.billingCycle === "monthly" ? "default" : "secondary"}>
-                      {subscription.billingCycle === "monthly" ? "Mensile" : "Per Evento"}
-                    </Badge>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Stato</p>
-                    {subscription.status === "active" ? (
-                      <Badge className="bg-green-500/20 text-green-500">
-                        <CheckCircle className="w-3 h-3 mr-1" />
-                        Attivo
-                      </Badge>
-                    ) : subscription.status === "suspended" ? (
-                      <Badge variant="secondary">
-                        <Clock className="w-3 h-3 mr-1" />
-                        Sospeso
-                      </Badge>
-                    ) : (
-                      <Badge variant="destructive">
-                        <XCircle className="w-3 h-3 mr-1" />
-                        Scaduto
-                      </Badge>
-                    )}
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Data Inizio</p>
-                    <p className="font-medium">{formatDate(subscription.startDate)}</p>
-                  </div>
-                  {subscription.endDate && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Scadenza</p>
-                      <p className="font-medium">{formatDate(subscription.endDate)}</p>
-                    </div>
-                  )}
-                  {subscription.billingCycle === "per_event" && (
-                    <div>
-                      <p className="text-sm text-muted-foreground">Eventi Usati</p>
-                      <p className="font-medium">
-                        {subscription.eventsUsed} / {plan.eventsIncluded || "∞"}
-                      </p>
-                    </div>
-                  )}
-                  <div>
-                    <p className="text-sm text-muted-foreground">Prezzo</p>
-                    <p className="font-medium">{formatCurrency(plan.price)}</p>
-                  </div>
-                </div>
-              ) : (
-                <p className="text-muted-foreground text-center py-8">
-                  Nessun abbonamento attivo. Assegna un piano per iniziare.
-                </p>
-              )}
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="commissions" className="mt-4 sm:mt-6">
-          <Card>
-            <CardHeader className="p-4 sm:p-6">
-              <CardTitle className="text-base sm:text-lg">Profilo Commissioni</CardTitle>
-              <CardDescription className="text-xs sm:text-sm">Configura le commissioni per canale di vendita</CardDescription>
-            </CardHeader>
-            <CardContent className="p-4 sm:p-6">
-              <Form {...commissionForm}>
-                <form
-                  onSubmit={commissionForm.handleSubmit((data) => updateCommissionsMutation.mutate(data))}
-                  className="space-y-4 sm:space-y-6"
-                >
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 sm:gap-6">
-                    <div className="space-y-4 p-4 rounded-lg border">
-                      <h4 className="font-medium">Vendite Online</h4>
-                      <FormField
-                        control={commissionForm.control}
-                        name="channelOnlineType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Tipo</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger data-testid="select-online-type">
-                                  <SelectValue />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="percent">Percentuale</SelectItem>
-                                <SelectItem value="fixed">Fisso (€)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={commissionForm.control}
-                        name="channelOnlineValue"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Valore</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                {...field}
-                                data-testid="input-online-value"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <div className="space-y-4 p-4 rounded-lg border">
-                      <h4 className="font-medium">Biglietteria Fisica</h4>
-                      <FormField
-                        control={commissionForm.control}
-                        name="channelPrintedType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Tipo</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger data-testid="select-printed-type">
-                                  <SelectValue />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="percent">Percentuale</SelectItem>
-                                <SelectItem value="fixed">Fisso (€)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={commissionForm.control}
-                        name="channelPrintedValue"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Valore</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                {...field}
-                                data-testid="input-printed-value"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-
-                    <div className="space-y-4 p-4 rounded-lg border">
-                      <h4 className="font-medium">Vendite PR</h4>
-                      <FormField
-                        control={commissionForm.control}
-                        name="channelPrType"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Tipo</FormLabel>
-                            <Select onValueChange={field.onChange} value={field.value}>
-                              <FormControl>
-                                <SelectTrigger data-testid="select-pr-type">
-                                  <SelectValue />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="percent">Percentuale</SelectItem>
-                                <SelectItem value="fixed">Fisso (€)</SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={commissionForm.control}
-                        name="channelPrValue"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Valore</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                {...field}
-                                data-testid="input-pr-value"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                  </div>
-                  <Button type="submit" disabled={updateCommissionsMutation.isPending} data-testid="button-save-commissions">
-                    {updateCommissionsMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Salva Commissioni
-                  </Button>
-                </form>
-              </Form>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="wallet" className="mt-4 sm:mt-6 space-y-4">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4">
-            <Card>
-              <CardHeader className="p-4 sm:p-6">
-                <CardTitle className="text-base sm:text-lg">Saldo Wallet</CardTitle>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6">
-                <p className={`text-2xl sm:text-3xl md:text-4xl font-bold ${balance < 0 ? "text-destructive" : "text-green-500"}`}>
-                  {formatCurrency(balance)}
-                </p>
-                <p className="text-sm text-muted-foreground mt-2">
-                  {balance < 0 ? "Debito accumulato" : "Credito disponibile"}
-                </p>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="p-4 sm:p-6">
-                <CardTitle className="text-base sm:text-lg">Soglia Fatturazione</CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Importo minimo per generare fattura automatica</CardDescription>
-              </CardHeader>
-              <CardContent className="p-4 sm:p-6 space-y-4">
-                <div className="flex flex-col sm:flex-row gap-2">
-                  <Input
-                    type="number"
-                    step="0.01"
-                    placeholder={wallet.thresholdAmount}
-                    value={thresholdValue}
-                    onChange={(e) => setThresholdValue(e.target.value)}
-                    data-testid="input-threshold"
-                  />
-                  <Button
-                    onClick={() => updateThresholdMutation.mutate(thresholdValue || wallet.thresholdAmount)}
-                    disabled={updateThresholdMutation.isPending}
-                    data-testid="button-update-threshold"
-                  >
-                    {updateThresholdMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                    Aggiorna
-                  </Button>
-                </div>
-                <p className="text-sm text-muted-foreground">
-                  Attuale: {formatCurrency(wallet.thresholdAmount)}
-                </p>
-              </CardContent>
-            </Card>
+    <MobileAppLayout
+      header={
+        <MobileHeader
+          leftAction={
+            <HapticButton variant="ghost" size="icon" onClick={handleBack}>
+              <ArrowLeft className="w-5 h-5" />
+            </HapticButton>
+          }
+        />
+      }
+    >
+      <div className="py-4 space-y-4 pb-24" data-testid="page-admin-billing-organizer-detail">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={springConfig}
+          className="flex items-center gap-3"
+        >
+          <div className="h-14 w-14 rounded-2xl bg-yellow-500/20 flex items-center justify-center">
+            <Building2 className="w-7 h-7 text-yellow-500" />
           </div>
+          <div className="flex-1 min-w-0">
+            <h1 className="text-xl font-bold truncate">{company.name}</h1>
+            <p className="text-muted-foreground text-sm">Gestione billing</p>
+          </div>
+        </motion.div>
 
-          <Card>
-            <CardHeader>
-              <CardTitle>Movimenti Recenti</CardTitle>
-              <CardDescription>Ultime transazioni del wallet</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Data</TableHead>
-                      <TableHead>Tipo</TableHead>
-                      <TableHead>Canale</TableHead>
-                      <TableHead>Importo</TableHead>
-                      <TableHead>Saldo Dopo</TableHead>
-                      <TableHead>Note</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {recentLedgerEntries?.map((entry) => (
-                      <TableRow key={entry.id} data-testid={`row-ledger-${entry.id}`}>
-                        <TableCell>{formatDate(entry.createdAt)}</TableCell>
-                        <TableCell>
-                          <Badge variant="outline">
-                            {entry.type === "commission"
-                              ? "Commissione"
-                              : entry.type === "subscription"
-                              ? "Abbonamento"
-                              : entry.type === "invoice"
-                              ? "Fattura"
-                              : entry.type === "payment"
-                              ? "Pagamento"
-                              : "Rettifica"}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springConfig, delay: 0.05 }}
+          className="flex gap-2 overflow-x-auto py-1 -mx-4 px-4"
+        >
+          {tabItems.map((tab) => (
+            <HapticButton
+              key={tab.id}
+              variant={activeTab === tab.id ? "default" : "outline"}
+              className="flex-shrink-0 gap-2 rounded-full"
+              onClick={() => setActiveTab(tab.id)}
+              data-testid={`tab-${tab.id}`}
+            >
+              <tab.icon className="w-4 h-4" />
+              {tab.label}
+            </HapticButton>
+          ))}
+        </motion.div>
+
+        <AnimatePresence mode="wait">
+          {activeTab === "subscription" && (
+            <motion.div
+              key="subscription"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={springConfig}
+              className="space-y-4"
+            >
+              <Card className="rounded-2xl">
+                <CardHeader className="p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <CardTitle className="text-lg">Abbonamento</CardTitle>
+                      <CardDescription className="text-sm">Stato attuale</CardDescription>
+                    </div>
+                    <HapticButton
+                      onClick={() => setIsSubscriptionSheetOpen(true)}
+                      data-testid="button-assign-plan"
+                      className="rounded-xl"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      {subscription ? "Cambia" : "Assegna"}
+                    </HapticButton>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  {subscription && plan ? (
+                    <div className="space-y-4">
+                      <div className="grid grid-cols-2 gap-4">
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ ...springConfig, delay: 0.1 }}
+                          className="p-4 rounded-xl bg-muted/50"
+                        >
+                          <p className="text-xs text-muted-foreground mb-1">Piano</p>
+                          <p className="font-semibold">{plan.name}</p>
+                        </motion.div>
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ ...springConfig, delay: 0.15 }}
+                          className="p-4 rounded-xl bg-muted/50"
+                        >
+                          <p className="text-xs text-muted-foreground mb-1">Tipo</p>
+                          <Badge variant={subscription.billingCycle === "monthly" ? "default" : "secondary"}>
+                            {subscription.billingCycle === "monthly" ? "Mensile" : "Per Evento"}
                           </Badge>
-                        </TableCell>
-                        <TableCell>
-                          {entry.channel && (
-                            <Badge variant="secondary">
-                              {entry.channel === "online"
-                                ? "Online"
-                                : entry.channel === "printed"
-                                ? "Biglietteria"
-                                : "PR"}
-                            </Badge>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <span
-                            className={`flex items-center gap-1 ${
-                              entry.direction === "debit" ? "text-destructive" : "text-green-500"
-                            }`}
-                          >
-                            {entry.direction === "debit" ? (
-                              <ArrowDownRight className="w-4 h-4" />
-                            ) : (
-                              <ArrowUpRight className="w-4 h-4" />
-                            )}
-                            {formatCurrency(entry.amount)}
-                          </span>
-                        </TableCell>
-                        <TableCell>{formatCurrency(entry.balanceAfter)}</TableCell>
-                        <TableCell className="text-muted-foreground text-sm max-w-[200px] truncate">
-                          {entry.note || "-"}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {(!recentLedgerEntries || recentLedgerEntries.length === 0) && (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                          Nessun movimento registrato
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-
-        <TabsContent value="invoices" className="mt-6">
-          <Card>
-            <CardHeader>
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle>Fatture</CardTitle>
-                  <CardDescription>Elenco fatture generate per questo organizzatore</CardDescription>
-                </div>
-                <Button onClick={() => setIsInvoiceDialogOpen(true)} data-testid="button-create-invoice">
-                  <Plus className="w-4 h-4 mr-2" />
-                  Genera Fattura
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow>
-                      <TableHead>Numero</TableHead>
-                      <TableHead>Periodo</TableHead>
-                      <TableHead>Importo</TableHead>
-                      <TableHead>Stato</TableHead>
-                      <TableHead>Scadenza</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {invoices?.map((invoice) => (
-                      <TableRow key={invoice.id} data-testid={`row-invoice-${invoice.id}`}>
-                        <TableCell className="font-medium">{invoice.invoiceNumber}</TableCell>
-                        <TableCell>
-                          {formatDate(invoice.periodStart)} - {formatDate(invoice.periodEnd)}
-                        </TableCell>
-                        <TableCell>{formatCurrency(invoice.amount)}</TableCell>
-                        <TableCell>
-                          {invoice.status === "paid" ? (
+                        </motion.div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ ...springConfig, delay: 0.2 }}
+                          className="p-4 rounded-xl bg-muted/50"
+                        >
+                          <p className="text-xs text-muted-foreground mb-1">Stato</p>
+                          {subscription.status === "active" ? (
                             <Badge className="bg-green-500/20 text-green-500">
                               <CheckCircle className="w-3 h-3 mr-1" />
-                              Pagata
+                              Attivo
                             </Badge>
-                          ) : invoice.status === "issued" ? (
+                          ) : subscription.status === "suspended" ? (
                             <Badge variant="secondary">
                               <Clock className="w-3 h-3 mr-1" />
-                              Emessa
+                              Sospeso
                             </Badge>
-                          ) : invoice.status === "void" ? (
-                            <Badge variant="destructive">Annullata</Badge>
                           ) : (
-                            <Badge variant="outline">Bozza</Badge>
+                            <Badge variant="destructive">
+                              <XCircle className="w-3 h-3 mr-1" />
+                              Scaduto
+                            </Badge>
                           )}
-                        </TableCell>
-                        <TableCell>{formatDate(invoice.dueDate)}</TableCell>
-                        <TableCell className="text-right">
-                          {invoice.status === "issued" && (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() => markPaidMutation.mutate(invoice.id)}
-                              disabled={markPaidMutation.isPending}
-                              data-testid={`button-mark-paid-${invoice.id}`}
-                            >
-                              {markPaidMutation.isPending ? (
-                                <Loader2 className="w-4 h-4 animate-spin" />
-                              ) : (
-                                <>
-                                  <CheckCircle className="w-4 h-4 mr-2" />
-                                  Segna Pagata
-                                </>
-                              )}
-                            </Button>
-                          )}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                    {(!invoices || invoices.length === 0) && (
-                      <TableRow>
-                        <TableCell colSpan={6} className="text-center text-muted-foreground py-8">
-                          Nessuna fattura generata
-                        </TableCell>
-                      </TableRow>
-                    )}
-                  </TableBody>
-                </Table>
-              </div>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
+                        </motion.div>
+                        <motion.div
+                          initial={{ opacity: 0, scale: 0.95 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          transition={{ ...springConfig, delay: 0.25 }}
+                          className="p-4 rounded-xl bg-muted/50"
+                        >
+                          <p className="text-xs text-muted-foreground mb-1">Data Inizio</p>
+                          <p className="font-semibold">{formatDate(subscription.startDate)}</p>
+                        </motion.div>
+                      </div>
+                      <motion.div
+                        initial={{ opacity: 0, scale: 0.95 }}
+                        animate={{ opacity: 1, scale: 1 }}
+                        transition={{ ...springConfig, delay: 0.3 }}
+                        className="p-4 rounded-xl bg-primary/10 border border-primary/20"
+                      >
+                        <p className="text-xs text-muted-foreground mb-1">Prezzo</p>
+                        <p className="text-2xl font-bold text-primary">{formatCurrency(plan.price)}</p>
+                      </motion.div>
+                    </div>
+                  ) : (
+                    <div className="py-12 text-center">
+                      <CreditCard className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
+                      <p className="text-muted-foreground">Nessun abbonamento attivo</p>
+                      <p className="text-sm text-muted-foreground/70">Assegna un piano per iniziare</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
 
-      <Dialog open={isSubscriptionDialogOpen} onOpenChange={setIsSubscriptionDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Assegna Piano</DialogTitle>
-            <DialogDescription>
-              Seleziona un piano di abbonamento per questo organizzatore
-            </DialogDescription>
-          </DialogHeader>
+          {activeTab === "commissions" && (
+            <motion.div
+              key="commissions"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={springConfig}
+            >
+              <Card className="rounded-2xl">
+                <CardHeader className="p-4">
+                  <CardTitle className="text-lg">Profilo Commissioni</CardTitle>
+                  <CardDescription className="text-sm">Configura per canale</CardDescription>
+                </CardHeader>
+                <CardContent className="p-4 pt-0">
+                  <Form {...commissionForm}>
+                    <form
+                      onSubmit={commissionForm.handleSubmit((data) => updateCommissionsMutation.mutate(data))}
+                      className="space-y-4"
+                    >
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ ...springConfig, delay: 0.1 }}
+                        className="p-4 rounded-xl border space-y-4"
+                      >
+                        <h4 className="font-medium flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-lg bg-blue-500/20 flex items-center justify-center">
+                            <CreditCard className="w-4 h-4 text-blue-500" />
+                          </div>
+                          Vendite Online
+                        </h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          <FormField
+                            control={commissionForm.control}
+                            name="channelOnlineType"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Tipo</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger className="h-12" data-testid="select-online-type">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="percent">Percentuale</SelectItem>
+                                    <SelectItem value="fixed">Fisso (€)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={commissionForm.control}
+                            name="channelOnlineValue"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Valore</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    className="h-12"
+                                    {...field}
+                                    data-testid="input-online-value"
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ ...springConfig, delay: 0.15 }}
+                        className="p-4 rounded-xl border space-y-4"
+                      >
+                        <h4 className="font-medium flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-lg bg-green-500/20 flex items-center justify-center">
+                            <Receipt className="w-4 h-4 text-green-500" />
+                          </div>
+                          Biglietteria Fisica
+                        </h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          <FormField
+                            control={commissionForm.control}
+                            name="channelPrintedType"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Tipo</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger className="h-12" data-testid="select-printed-type">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="percent">Percentuale</SelectItem>
+                                    <SelectItem value="fixed">Fisso (€)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={commissionForm.control}
+                            name="channelPrintedValue"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Valore</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    className="h-12"
+                                    {...field}
+                                    data-testid="input-printed-value"
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </motion.div>
+
+                      <motion.div
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ ...springConfig, delay: 0.2 }}
+                        className="p-4 rounded-xl border space-y-4"
+                      >
+                        <h4 className="font-medium flex items-center gap-2">
+                          <div className="h-8 w-8 rounded-lg bg-purple-500/20 flex items-center justify-center">
+                            <Percent className="w-4 h-4 text-purple-500" />
+                          </div>
+                          Vendite PR
+                        </h4>
+                        <div className="grid grid-cols-2 gap-3">
+                          <FormField
+                            control={commissionForm.control}
+                            name="channelPrType"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Tipo</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger className="h-12" data-testid="select-pr-type">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="percent">Percentuale</SelectItem>
+                                    <SelectItem value="fixed">Fisso (€)</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={commissionForm.control}
+                            name="channelPrValue"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-xs">Valore</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    className="h-12"
+                                    {...field}
+                                    data-testid="input-pr-value"
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </motion.div>
+
+                      <HapticButton
+                        type="submit"
+                        className="w-full h-12 rounded-xl"
+                        disabled={updateCommissionsMutation.isPending}
+                        data-testid="button-save-commissions"
+                        hapticType="medium"
+                      >
+                        {updateCommissionsMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        Salva Commissioni
+                      </HapticButton>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {activeTab === "wallet" && (
+            <motion.div
+              key="wallet"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={springConfig}
+              className="space-y-4"
+            >
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ ...springConfig, delay: 0.1 }}
+              >
+                <Card className="rounded-2xl overflow-hidden">
+                  <div className={`p-6 ${balance < 0 ? "bg-destructive/10" : "bg-green-500/10"}`}>
+                    <p className="text-sm text-muted-foreground mb-1">Saldo Wallet</p>
+                    <p className={`text-4xl font-bold ${balance < 0 ? "text-destructive" : "text-green-500"}`}>
+                      {formatCurrency(balance)}
+                    </p>
+                    <p className="text-sm text-muted-foreground mt-2">
+                      {balance < 0 ? "Debito accumulato" : "Credito disponibile"}
+                    </p>
+                  </div>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ ...springConfig, delay: 0.15 }}
+              >
+                <Card className="rounded-2xl">
+                  <CardHeader className="p-4">
+                    <CardTitle className="text-lg">Soglia Fatturazione</CardTitle>
+                    <CardDescription className="text-sm">Importo minimo per fattura automatica</CardDescription>
+                  </CardHeader>
+                  <CardContent className="p-4 pt-0 space-y-4">
+                    <div className="flex gap-3">
+                      <Input
+                        type="number"
+                        step="0.01"
+                        placeholder={wallet.thresholdAmount}
+                        value={thresholdValue}
+                        onChange={(e) => setThresholdValue(e.target.value)}
+                        className="h-12 flex-1"
+                        data-testid="input-threshold"
+                      />
+                      <HapticButton
+                        onClick={() => updateThresholdMutation.mutate(thresholdValue || wallet.thresholdAmount)}
+                        disabled={updateThresholdMutation.isPending}
+                        className="h-12 px-6 rounded-xl"
+                        data-testid="button-update-threshold"
+                        hapticType="medium"
+                      >
+                        {updateThresholdMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                        Aggiorna
+                      </HapticButton>
+                    </div>
+                    <p className="text-sm text-muted-foreground">
+                      Attuale: {formatCurrency(wallet.thresholdAmount)}
+                    </p>
+                  </CardContent>
+                </Card>
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ ...springConfig, delay: 0.2 }}
+              >
+                <Card className="rounded-2xl">
+                  <CardHeader className="p-4">
+                    <CardTitle className="text-lg">Movimenti Recenti</CardTitle>
+                  </CardHeader>
+                  <CardContent className="p-0">
+                    {recentLedgerEntries?.length > 0 ? (
+                      <div className="divide-y divide-border">
+                        {recentLedgerEntries.map((entry, index) => (
+                          <motion.div
+                            key={entry.id}
+                            initial={{ opacity: 0, x: -10 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ ...springConfig, delay: 0.05 * index }}
+                            className="flex items-center gap-3 p-4"
+                            data-testid={`row-ledger-${entry.id}`}
+                          >
+                            <div className={`h-10 w-10 rounded-full flex items-center justify-center ${
+                              entry.direction === "debit" ? "bg-destructive/20" : "bg-green-500/20"
+                            }`}>
+                              {entry.direction === "debit" ? (
+                                <ArrowDownRight className="w-5 h-5 text-destructive" />
+                              ) : (
+                                <ArrowUpRight className="w-5 h-5 text-green-500" />
+                              )}
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <p className="font-medium text-sm">
+                                {entry.type === "commission"
+                                  ? "Commissione"
+                                  : entry.type === "subscription"
+                                  ? "Abbonamento"
+                                  : entry.type === "invoice"
+                                  ? "Fattura"
+                                  : entry.type === "payment"
+                                  ? "Pagamento"
+                                  : "Rettifica"}
+                              </p>
+                              <p className="text-xs text-muted-foreground">{formatDate(entry.createdAt)}</p>
+                            </div>
+                            <p className={`font-semibold ${
+                              entry.direction === "debit" ? "text-destructive" : "text-green-500"
+                            }`}>
+                              {entry.direction === "debit" ? "-" : "+"}
+                              {formatCurrency(entry.amount)}
+                            </p>
+                          </motion.div>
+                        ))}
+                      </div>
+                    ) : (
+                      <div className="py-12 text-center">
+                        <Wallet className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
+                        <p className="text-muted-foreground">Nessun movimento</p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </motion.div>
+            </motion.div>
+          )}
+
+          {activeTab === "invoices" && (
+            <motion.div
+              key="invoices"
+              initial={{ opacity: 0, x: 20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: -20 }}
+              transition={springConfig}
+            >
+              <Card className="rounded-2xl">
+                <CardHeader className="p-4">
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <CardTitle className="text-lg">Fatture</CardTitle>
+                      <CardDescription className="text-sm">Elenco fatture</CardDescription>
+                    </div>
+                    <HapticButton
+                      onClick={() => setIsInvoiceSheetOpen(true)}
+                      data-testid="button-create-invoice"
+                      className="rounded-xl"
+                    >
+                      <Plus className="w-4 h-4 mr-2" />
+                      Genera
+                    </HapticButton>
+                  </div>
+                </CardHeader>
+                <CardContent className="p-0">
+                  {invoices?.length > 0 ? (
+                    <div className="divide-y divide-border">
+                      {invoices.map((invoice, index) => (
+                        <motion.div
+                          key={invoice.id}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ ...springConfig, delay: 0.05 * index }}
+                          className="p-4"
+                          data-testid={`row-invoice-${invoice.id}`}
+                        >
+                          <div className="flex items-start justify-between gap-3 mb-3">
+                            <div>
+                              <p className="font-semibold">{invoice.invoiceNumber}</p>
+                              <p className="text-xs text-muted-foreground">
+                                {formatDate(invoice.periodStart)} - {formatDate(invoice.periodEnd)}
+                              </p>
+                            </div>
+                            {invoice.status === "paid" ? (
+                              <Badge className="bg-green-500/20 text-green-500">
+                                <CheckCircle className="w-3 h-3 mr-1" />
+                                Pagata
+                              </Badge>
+                            ) : invoice.status === "issued" ? (
+                              <Badge variant="secondary">
+                                <Clock className="w-3 h-3 mr-1" />
+                                Emessa
+                              </Badge>
+                            ) : invoice.status === "void" ? (
+                              <Badge variant="destructive">Annullata</Badge>
+                            ) : (
+                              <Badge variant="outline">Bozza</Badge>
+                            )}
+                          </div>
+                          <div className="flex items-center justify-between">
+                            <p className="text-xl font-bold">{formatCurrency(invoice.amount)}</p>
+                            {invoice.status === "issued" && (
+                              <HapticButton
+                                variant="outline"
+                                size="sm"
+                                onClick={() => markPaidMutation.mutate(invoice.id)}
+                                disabled={markPaidMutation.isPending}
+                                data-testid={`button-mark-paid-${invoice.id}`}
+                                className="h-10 rounded-lg"
+                              >
+                                {markPaidMutation.isPending ? (
+                                  <Loader2 className="w-4 h-4 animate-spin" />
+                                ) : (
+                                  <>
+                                    <CheckCircle className="w-4 h-4 mr-2" />
+                                    Pagata
+                                  </>
+                                )}
+                              </HapticButton>
+                            )}
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-2">
+                            Scadenza: {formatDate(invoice.dueDate)}
+                          </p>
+                        </motion.div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-12 text-center">
+                      <Receipt className="w-12 h-12 mx-auto text-muted-foreground/50 mb-3" />
+                      <p className="text-muted-foreground">Nessuna fattura</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+      </div>
+
+      <BottomSheet
+        open={isSubscriptionSheetOpen}
+        onClose={() => setIsSubscriptionSheetOpen(false)}
+        title="Assegna Piano"
+      >
+        <div className="p-4">
           <Form {...subscriptionForm}>
             <form
               onSubmit={subscriptionForm.handleSubmit((data) => createSubscriptionMutation.mutate(data))}
@@ -748,7 +894,7 @@ export default function AdminBillingOrganizerDetail() {
                     <FormLabel>Piano</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger data-testid="select-plan">
+                        <SelectTrigger className="h-12" data-testid="select-plan">
                           <SelectValue placeholder="Seleziona piano" />
                         </SelectTrigger>
                       </FormControl>
@@ -774,7 +920,7 @@ export default function AdminBillingOrganizerDetail() {
                     <FormLabel>Ciclo Fatturazione</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
-                        <SelectTrigger data-testid="select-billing-cycle">
+                        <SelectTrigger className="h-12" data-testid="select-billing-cycle">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
@@ -794,34 +940,43 @@ export default function AdminBillingOrganizerDetail() {
                   <FormItem>
                     <FormLabel>Data Inizio</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} data-testid="input-start-date" />
+                      <Input type="date" className="h-12" {...field} data-testid="input-start-date" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsSubscriptionDialogOpen(false)}>
+              <div className="flex gap-3 pt-4">
+                <HapticButton
+                  type="button"
+                  variant="outline"
+                  className="flex-1 h-12 rounded-xl"
+                  onClick={() => setIsSubscriptionSheetOpen(false)}
+                >
                   Annulla
-                </Button>
-                <Button type="submit" disabled={createSubscriptionMutation.isPending} data-testid="button-confirm-subscription">
+                </HapticButton>
+                <HapticButton
+                  type="submit"
+                  className="flex-1 h-12 rounded-xl"
+                  disabled={createSubscriptionMutation.isPending}
+                  data-testid="button-confirm-subscription"
+                  hapticType="medium"
+                >
                   {createSubscriptionMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Assegna
-                </Button>
-              </DialogFooter>
+                </HapticButton>
+              </div>
             </form>
           </Form>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </BottomSheet>
 
-      <Dialog open={isInvoiceDialogOpen} onOpenChange={setIsInvoiceDialogOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Genera Fattura</DialogTitle>
-            <DialogDescription>
-              Crea una nuova fattura per il periodo selezionato
-            </DialogDescription>
-          </DialogHeader>
+      <BottomSheet
+        open={isInvoiceSheetOpen}
+        onClose={() => setIsInvoiceSheetOpen(false)}
+        title="Genera Fattura"
+      >
+        <div className="p-4">
           <Form {...invoiceForm}>
             <form
               onSubmit={invoiceForm.handleSubmit((data) => createInvoiceMutation.mutate(data))}
@@ -834,7 +989,7 @@ export default function AdminBillingOrganizerDetail() {
                   <FormItem>
                     <FormLabel>Data Inizio Periodo</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} data-testid="input-period-start" />
+                      <Input type="date" className="h-12" {...field} data-testid="input-period-start" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -847,7 +1002,7 @@ export default function AdminBillingOrganizerDetail() {
                   <FormItem>
                     <FormLabel>Data Fine Periodo</FormLabel>
                     <FormControl>
-                      <Input type="date" {...field} data-testid="input-period-end" />
+                      <Input type="date" className="h-12" {...field} data-testid="input-period-end" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -860,25 +1015,36 @@ export default function AdminBillingOrganizerDetail() {
                   <FormItem>
                     <FormLabel>Note (opzionale)</FormLabel>
                     <FormControl>
-                      <Input {...field} data-testid="input-invoice-notes" />
+                      <Input className="h-12" {...field} data-testid="input-invoice-notes" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
-              <DialogFooter>
-                <Button type="button" variant="outline" onClick={() => setIsInvoiceDialogOpen(false)}>
+              <div className="flex gap-3 pt-4">
+                <HapticButton
+                  type="button"
+                  variant="outline"
+                  className="flex-1 h-12 rounded-xl"
+                  onClick={() => setIsInvoiceSheetOpen(false)}
+                >
                   Annulla
-                </Button>
-                <Button type="submit" disabled={createInvoiceMutation.isPending} data-testid="button-confirm-invoice">
+                </HapticButton>
+                <HapticButton
+                  type="submit"
+                  className="flex-1 h-12 rounded-xl"
+                  disabled={createInvoiceMutation.isPending}
+                  data-testid="button-confirm-invoice"
+                  hapticType="medium"
+                >
                   {createInvoiceMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
                   Genera
-                </Button>
-              </DialogFooter>
+                </HapticButton>
+              </div>
             </form>
           </Form>
-        </DialogContent>
-      </Dialog>
-    </div>
+        </div>
+      </BottomSheet>
+    </MobileAppLayout>
   );
 }

@@ -185,8 +185,8 @@ function MobileUserCard({
       animate={{ opacity: 1, y: 0, scale: 1 }}
       transition={{ 
         type: "spring", 
-        stiffness: 300, 
-        damping: 25,
+        stiffness: 400, 
+        damping: 30,
         delay: index * 0.05 
       }}
       className="glass-card p-4 active:scale-[0.98] transition-transform"
@@ -730,7 +730,7 @@ export default function UsersPage() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 25 }}
+          transition={{ type: "spring", stiffness: 400, damping: 30 }}
           className="relative mt-4 mb-4"
         >
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
@@ -756,7 +756,7 @@ export default function UsersPage() {
           <motion.div
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25, delay: 0.05 }}
+            transition={{ type: "spring", stiffness: 400, damping: 30, delay: 0.05 }}
             className="flex gap-2 overflow-x-auto pb-4 -mx-4 px-4 scrollbar-hide"
           >
             <button
@@ -799,7 +799,7 @@ export default function UsersPage() {
         <motion.div
           initial={{ opacity: 0, y: 10 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ type: "spring", stiffness: 300, damping: 25, delay: 0.1 }}
+          transition={{ type: "spring", stiffness: 400, damping: 30, delay: 0.1 }}
           className="grid grid-cols-2 gap-3 mb-6"
         >
           <div className="glass-card p-4">
@@ -865,7 +865,7 @@ export default function UsersPage() {
           <motion.div 
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            transition={{ type: "spring", stiffness: 400, damping: 30 }}
             className="glass-card p-8 text-center"
           >
             <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">

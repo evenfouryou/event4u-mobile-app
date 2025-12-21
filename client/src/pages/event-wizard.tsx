@@ -97,7 +97,7 @@ function generateRecurringDatesPreview(
 
 const springTransition = {
   type: "spring",
-  stiffness: 300,
+  stiffness: 400,
   damping: 30,
 };
 
@@ -601,7 +601,7 @@ export default function EventWizard() {
           className="w-full"
         >
           {currentStep === 1 && (
-            <div className="space-y-5">
+            <div className="space-y-6">
               <FormField
                 control={form.control}
                 name="name"
@@ -609,12 +609,15 @@ export default function EventWizard() {
                   <FormItem>
                     <FormLabel className="text-base font-medium">Nome Evento</FormLabel>
                     <FormControl>
-                      <Input 
-                        placeholder="es. Matrimonio Rossi-Bianchi" 
-                        {...field} 
-                        className="h-14 text-base px-4"
-                        data-testid="input-event-name" 
-                      />
+                      <div className="relative">
+                        <FileText className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input 
+                          placeholder="es. Matrimonio Rossi-Bianchi" 
+                          {...field} 
+                          className="h-14 text-base pl-12 pr-4"
+                          data-testid="input-event-name" 
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -911,7 +914,7 @@ export default function EventWizard() {
           )}
 
           {currentStep === 2 && (
-            <div className="space-y-5">
+            <div className="space-y-6">
               <FormField
                 control={form.control}
                 name="startDatetime"
@@ -919,13 +922,16 @@ export default function EventWizard() {
                   <FormItem>
                     <FormLabel className="text-base font-medium">Data/Ora Inizio</FormLabel>
                     <FormControl>
-                      <Input
-                        type="datetime-local"
-                        className="h-14 text-base px-4"
-                        value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().slice(0, 16) : ''}
-                        onChange={(e) => field.onChange(new Date(e.target.value))}
-                        data-testid="input-start-datetime"
-                      />
+                      <div className="relative">
+                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+                        <Input
+                          type="datetime-local"
+                          className="h-14 text-base pl-12 pr-4"
+                          value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().slice(0, 16) : ''}
+                          onChange={(e) => field.onChange(new Date(e.target.value))}
+                          data-testid="input-start-datetime"
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -939,13 +945,16 @@ export default function EventWizard() {
                   <FormItem>
                     <FormLabel className="text-base font-medium">Data/Ora Fine</FormLabel>
                     <FormControl>
-                      <Input
-                        type="datetime-local"
-                        className="h-14 text-base px-4"
-                        value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().slice(0, 16) : ''}
-                        onChange={(e) => field.onChange(new Date(e.target.value))}
-                        data-testid="input-end-datetime"
-                      />
+                      <div className="relative">
+                        <Clock className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+                        <Input
+                          type="datetime-local"
+                          className="h-14 text-base pl-12 pr-4"
+                          value={field.value instanceof Date && !isNaN(field.value.getTime()) ? field.value.toISOString().slice(0, 16) : ''}
+                          onChange={(e) => field.onChange(new Date(e.target.value))}
+                          data-testid="input-end-datetime"
+                        />
+                      </div>
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -959,14 +968,17 @@ export default function EventWizard() {
                   <FormItem>
                     <FormLabel className="text-base font-medium">Capienza Stimata (opzionale)</FormLabel>
                     <FormControl>
-                      <Input
-                        type="number"
-                        placeholder="es. 100"
-                        className="h-14 text-base px-4"
-                        value={field.value || ''}
-                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                        data-testid="input-capacity"
-                      />
+                      <div className="relative">
+                        <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+                        <Input
+                          type="number"
+                          placeholder="es. 100"
+                          className="h-14 text-base pl-12 pr-4"
+                          value={field.value || ''}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                          data-testid="input-capacity"
+                        />
+                      </div>
                     </FormControl>
                     <FormDescription className="text-sm">Numero massimo di partecipanti previsti</FormDescription>
                     <FormMessage />
@@ -977,7 +989,7 @@ export default function EventWizard() {
           )}
 
           {currentStep === 3 && (
-            <div className="space-y-5">
+            <div className="space-y-6">
               <FormField
                 control={form.control}
                 name="isRecurring"
@@ -1017,7 +1029,8 @@ export default function EventWizard() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="space-y-5"
+                    transition={springTransition}
+                    className="space-y-6"
                   >
                     <FormField
                       control={form.control}
@@ -1049,14 +1062,17 @@ export default function EventWizard() {
                         <FormItem>
                           <FormLabel className="text-base font-medium">Intervallo</FormLabel>
                           <FormControl>
-                            <Input
-                              type="number"
-                              min="1"
-                              className="h-14 text-base px-4"
-                              value={field.value || 1}
-                              onChange={(e) => field.onChange(parseInt(e.target.value))}
-                              data-testid="input-recurrence-interval"
-                            />
+                            <div className="relative">
+                              <Repeat className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+                              <Input
+                                type="number"
+                                min="1"
+                                className="h-14 text-base pl-12 pr-4"
+                                value={field.value || 1}
+                                onChange={(e) => field.onChange(parseInt(e.target.value))}
+                                data-testid="input-recurrence-interval"
+                              />
+                            </div>
                           </FormControl>
                           <FormDescription className="text-sm">Ogni quanti giorni/settimane/mesi</FormDescription>
                           <FormMessage />
@@ -1071,15 +1087,18 @@ export default function EventWizard() {
                         <FormItem>
                           <FormLabel className="text-base font-medium">Numero di occorrenze</FormLabel>
                           <FormControl>
-                            <Input
-                              type="number"
-                              min="1"
-                              placeholder="es. 5"
-                              className="h-14 text-base px-4"
-                              value={field.value || ''}
-                              onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                              data-testid="input-recurrence-count"
-                            />
+                            <div className="relative">
+                              <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+                              <Input
+                                type="number"
+                                min="1"
+                                placeholder="es. 5"
+                                className="h-14 text-base pl-12 pr-4"
+                                value={field.value || ''}
+                                onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                                data-testid="input-recurrence-count"
+                              />
+                            </div>
                           </FormControl>
                           <FormDescription className="text-sm">
                             Lascia vuoto per specificare una data di fine
@@ -1182,7 +1201,7 @@ export default function EventWizard() {
           )}
 
           {currentStep === 4 && siaeEnabled && (
-            <div className="space-y-5">
+            <div className="space-y-6">
               <div className="space-y-3">
                 <Label className="text-base font-medium">Genere Evento (TAB.1 SIAE)</Label>
                 <Select 
@@ -1278,15 +1297,18 @@ export default function EventWizard() {
 
               <div className="space-y-3">
                 <Label className="text-base font-medium">Max Biglietti per Utente</Label>
-                <Input
-                  type="number"
-                  min={1}
-                  max={50}
-                  className="h-14 text-base px-4"
-                  value={siaeMaxTicketsPerUser}
-                  onChange={(e) => setSiaeMaxTicketsPerUser(parseInt(e.target.value) || 10)}
-                  data-testid="input-max-tickets"
-                />
+                <div className="relative">
+                  <Ticket className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+                  <Input
+                    type="number"
+                    min={1}
+                    max={50}
+                    className="h-14 text-base pl-12 pr-4"
+                    value={siaeMaxTicketsPerUser}
+                    onChange={(e) => setSiaeMaxTicketsPerUser(parseInt(e.target.value) || 10)}
+                    data-testid="input-max-tickets"
+                  />
+                </div>
               </div>
 
               <div className="flex items-center justify-between rounded-2xl border-2 p-5">
@@ -1318,7 +1340,8 @@ export default function EventWizard() {
                     initial={{ opacity: 0, height: 0 }}
                     animate={{ opacity: 1, height: 'auto' }}
                     exit={{ opacity: 0, height: 0 }}
-                    className="space-y-4 rounded-2xl border bg-muted/30 p-5"
+                    transition={springTransition}
+                    className="space-y-5 rounded-2xl border bg-muted/30 p-5"
                   >
                     <div className="space-y-3">
                       <Label className="text-base font-medium">Tipo Turno</Label>
@@ -1338,28 +1361,34 @@ export default function EventWizard() {
 
                     <div className="space-y-3">
                       <Label className="text-base font-medium">Numero Eventi Inclusi</Label>
-                      <Input
-                        type="number"
-                        min={1}
-                        max={100}
-                        className="h-14 text-base px-4"
-                        value={siaeSubscriptionEventsCount}
-                        onChange={(e) => setSiaeSubscriptionEventsCount(parseInt(e.target.value) || 5)}
-                        data-testid="input-subscription-events-count"
-                      />
+                      <div className="relative">
+                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+                        <Input
+                          type="number"
+                          min={1}
+                          max={100}
+                          className="h-14 text-base pl-12 pr-4"
+                          value={siaeSubscriptionEventsCount}
+                          onChange={(e) => setSiaeSubscriptionEventsCount(parseInt(e.target.value) || 5)}
+                          data-testid="input-subscription-events-count"
+                        />
+                      </div>
                     </div>
 
                     <div className="space-y-3">
                       <Label className="text-base font-medium">Prezzo Abbonamento (€)</Label>
-                      <Input
-                        type="number"
-                        min={0}
-                        step="0.01"
-                        className="h-14 text-base px-4"
-                        value={siaeSubscriptionPrice}
-                        onChange={(e) => setSiaeSubscriptionPrice(e.target.value)}
-                        data-testid="input-subscription-price"
-                      />
+                      <div className="relative">
+                        <Euro className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+                        <Input
+                          type="number"
+                          min={0}
+                          step="0.01"
+                          className="h-14 text-base pl-12 pr-4"
+                          value={siaeSubscriptionPrice}
+                          onChange={(e) => setSiaeSubscriptionPrice(e.target.value)}
+                          data-testid="input-subscription-price"
+                        />
+                      </div>
                     </div>
                   </motion.div>
                 )}
@@ -1368,7 +1397,7 @@ export default function EventWizard() {
           )}
 
           {currentStep === 5 && siaeEnabled && (
-            <div className="space-y-5">
+            <div className="space-y-6">
               {siaeSectors.length === 0 ? (
                 <motion.div 
                   initial={{ opacity: 0, scale: 0.95 }}
@@ -1427,21 +1456,24 @@ export default function EventWizard() {
                           </HapticButton>
                         </div>
                         
-                        <div className="space-y-4">
+                        <div className="space-y-5">
                           <div className="space-y-2">
                             <Label className="text-base">Nome Biglietto *</Label>
-                            <Input
-                              value={ticket.name}
-                              className="h-14 text-base px-4"
-                              onChange={(e) => {
-                                const updated = siaeSectors.map(s => 
-                                  s.id === ticket.id ? { ...s, name: e.target.value } : s
-                                );
-                                setSiaeSectors(updated);
-                              }}
-                              placeholder="es. Ingresso Standard, VIP"
-                              data-testid={`input-ticket-name-${index}`}
-                            />
+                            <div className="relative">
+                              <Ticket className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+                              <Input
+                                value={ticket.name}
+                                className="h-14 text-base pl-12 pr-4"
+                                onChange={(e) => {
+                                  const updated = siaeSectors.map(s => 
+                                    s.id === ticket.id ? { ...s, name: e.target.value } : s
+                                  );
+                                  setSiaeSectors(updated);
+                                }}
+                                placeholder="es. Ingresso Standard, VIP"
+                                data-testid={`input-ticket-name-${index}`}
+                              />
+                            </div>
                           </div>
 
                           <div className="space-y-2">
@@ -1469,53 +1501,62 @@ export default function EventWizard() {
                           <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                               <Label className="text-base">Prezzo € *</Label>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                className="h-14 text-base px-4"
-                                value={ticket.price}
-                                onChange={(e) => {
-                                  const updated = siaeSectors.map(s => 
-                                    s.id === ticket.id ? { ...s, price: e.target.value } : s
-                                  );
-                                  setSiaeSectors(updated);
-                                }}
-                                data-testid={`input-price-${index}`}
-                              />
+                              <div className="relative">
+                                <Euro className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  className="h-14 text-base pl-12 pr-4"
+                                  value={ticket.price}
+                                  onChange={(e) => {
+                                    const updated = siaeSectors.map(s => 
+                                      s.id === ticket.id ? { ...s, price: e.target.value } : s
+                                    );
+                                    setSiaeSectors(updated);
+                                  }}
+                                  data-testid={`input-price-${index}`}
+                                />
+                              </div>
                             </div>
                             <div className="space-y-2">
                               <Label className="text-base">DDP €</Label>
-                              <Input
-                                type="number"
-                                step="0.01"
-                                className="h-14 text-base px-4"
-                                value={ticket.ddp}
-                                onChange={(e) => {
-                                  const updated = siaeSectors.map(s => 
-                                    s.id === ticket.id ? { ...s, ddp: e.target.value } : s
-                                  );
-                                  setSiaeSectors(updated);
-                                }}
-                                placeholder="0.00"
-                                data-testid={`input-ddp-${index}`}
-                              />
+                              <div className="relative">
+                                <Euro className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  className="h-14 text-base pl-12 pr-4"
+                                  value={ticket.ddp}
+                                  onChange={(e) => {
+                                    const updated = siaeSectors.map(s => 
+                                      s.id === ticket.id ? { ...s, ddp: e.target.value } : s
+                                    );
+                                    setSiaeSectors(updated);
+                                  }}
+                                  placeholder="0.00"
+                                  data-testid={`input-ddp-${index}`}
+                                />
+                              </div>
                             </div>
                           </div>
 
                           <div className="space-y-2">
                             <Label className="text-base">Quantità *</Label>
-                            <Input
-                              type="number"
-                              className="h-14 text-base px-4"
-                              value={ticket.quantity}
-                              onChange={(e) => {
-                                const updated = siaeSectors.map(s => 
-                                  s.id === ticket.id ? { ...s, quantity: parseInt(e.target.value) || 0 } : s
-                                );
-                                setSiaeSectors(updated);
-                              }}
-                              data-testid={`input-quantity-${index}`}
-                            />
+                            <div className="relative">
+                              <Users className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
+                              <Input
+                                type="number"
+                                className="h-14 text-base pl-12 pr-4"
+                                value={ticket.quantity}
+                                onChange={(e) => {
+                                  const updated = siaeSectors.map(s => 
+                                    s.id === ticket.id ? { ...s, quantity: parseInt(e.target.value) || 0 } : s
+                                  );
+                                  setSiaeSectors(updated);
+                                }}
+                                data-testid={`input-quantity-${index}`}
+                              />
+                            </div>
                           </div>
 
                           <div className="border-t pt-4">
@@ -1543,7 +1584,8 @@ export default function EventWizard() {
                                   initial={{ opacity: 0, height: 0 }}
                                   animate={{ opacity: 1, height: 'auto' }}
                                   exit={{ opacity: 0, height: 0 }}
-                                  className="mt-4 space-y-4"
+                                  transition={springTransition}
+                                  className="mt-4 space-y-5"
                                 >
                                   <div className="space-y-2">
                                     <Label className="text-base">Codice Settore SIAE</Label>
@@ -1624,7 +1666,7 @@ export default function EventWizard() {
           )}
 
           {currentStep === STEPS[STEPS.length - 1].id && (
-            <div className="space-y-5">
+            <div className="space-y-6">
               <motion.div 
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -1802,52 +1844,62 @@ export default function EventWizard() {
           </div>
         </div>
       }
-      contentClassName="py-4"
+      contentClassName="py-4 pb-24"
     >
       <div className="mb-6">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-around mb-4">
           {STEPS.map((step, index) => {
             const Icon = step.icon;
             const isActive = currentStep === step.id;
             const isCompleted = currentStep > step.id;
             
             return (
-              <motion.div
+              <motion.button
                 key={step.id}
+                type="button"
                 initial={{ scale: 0.8, opacity: 0 }}
                 animate={{ scale: 1, opacity: 1 }}
-                transition={{ delay: index * 0.05 }}
-                className="flex flex-col items-center gap-1.5"
+                transition={{ delay: index * 0.05, ...springTransition }}
+                className="flex flex-col items-center gap-2 min-w-[56px] min-h-[56px] py-1"
+                onClick={() => {
+                  if (isCompleted || isActive) {
+                    triggerHaptic('light');
+                    setDirection(step.id > currentStep ? 1 : -1);
+                    setCurrentStep(step.id);
+                  }
+                }}
+                data-testid={`step-indicator-${step.id}`}
               >
                 <motion.div 
                   className={cn(
-                    "w-11 h-11 rounded-full flex items-center justify-center transition-colors",
-                    isActive && "bg-primary text-primary-foreground",
+                    "w-14 h-14 rounded-full flex items-center justify-center transition-all shadow-sm",
+                    isActive && "bg-primary text-primary-foreground shadow-lg shadow-primary/30",
                     isCompleted && "bg-green-600 text-white",
                     !isActive && !isCompleted && "bg-muted text-muted-foreground"
                   )}
-                  animate={isActive ? { scale: [1, 1.1, 1] } : {}}
-                  transition={{ duration: 0.3 }}
+                  animate={isActive ? { scale: [1, 1.08, 1] } : {}}
+                  transition={{ duration: 0.4, ...springTransition }}
+                  whileTap={{ scale: 0.95 }}
                 >
                   {isCompleted ? (
-                    <CheckCircle2 className="h-5 w-5" />
+                    <CheckCircle2 className="h-6 w-6" />
                   ) : (
-                    <Icon className="h-5 w-5" />
+                    <Icon className="h-6 w-6" />
                   )}
                 </motion.div>
                 <span className={cn(
-                  "text-xs font-medium text-center",
+                  "text-xs font-semibold text-center",
                   isActive && "text-primary",
                   isCompleted && "text-green-600",
                   !isActive && !isCompleted && "text-muted-foreground"
                 )}>
                   {step.title}
                 </span>
-              </motion.div>
+              </motion.button>
             );
           })}
         </div>
-        <Progress value={progress} className="h-1.5" />
+        <Progress value={progress} className="h-2 rounded-full" />
       </div>
 
       <Form {...form}>

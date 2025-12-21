@@ -1,13 +1,18 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertCircle, CheckCircle2, ArrowLeft, Mail } from "lucide-react";
+import { AlertCircle, CheckCircle2, ArrowLeft, Mail, Send } from "lucide-react";
 import { Link } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
+import { triggerHaptic, HapticButton, MobileAppLayout } from "@/components/mobile-primitives";
+
+const springTransition = {
+  type: "spring" as const,
+  stiffness: 400,
+  damping: 30,
+};
 
 export default function PublicForgotPassword() {
   const [email, setEmail] = useState("");
@@ -20,108 +25,178 @@ export default function PublicForgotPassword() {
     setError("");
     setSuccess("");
     setIsLoading(true);
+    triggerHaptic('medium');
 
     try {
       const response: any = await apiRequest('POST', '/api/public/customers/forgot-password', { email });
       setSuccess(response.message || "Se l'email è registrata, riceverai un link per reimpostare la password.");
       setEmail("");
+      triggerHaptic('success');
     } catch (err: any) {
       setError(err.message || "Si è verificato un errore. Riprova più tardi.");
+      triggerHaptic('error');
     } finally {
       setIsLoading(false);
     }
   };
 
-  return (
-    <div className="min-h-screen bg-background flex flex-col">
-      <header className="border-b border-border">
-        <div className="container mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
-          <Link href="/">
-            <img 
-              src="/logo.png" 
-              alt="Event4U" 
-              className="h-10 w-auto cursor-pointer"
-            />
-          </Link>
-          <Button variant="outline" asChild data-testid="button-back-login">
-            <Link href="/accedi">
-              <ArrowLeft className="h-4 w-4 mr-2" />
-              Torna al Login
-            </Link>
-          </Button>
-        </div>
-      </header>
+  const header = (
+    <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur-xl">
+      <Link href="/">
+        <img 
+          src="/logo.png" 
+          alt="Event4U" 
+          className="h-10 w-auto cursor-pointer"
+        />
+      </Link>
+      <HapticButton 
+        variant="ghost" 
+        size="icon"
+        asChild 
+        data-testid="button-back-login"
+        className="h-11 w-11"
+        hapticType="light"
+      >
+        <Link href="/accedi">
+          <ArrowLeft className="h-5 w-5" />
+        </Link>
+      </HapticButton>
+    </div>
+  );
 
-      <main className="flex-1 flex items-center justify-center p-4 sm:p-6">
+  return (
+    <MobileAppLayout header={header} contentClassName="flex flex-col justify-center px-6 py-8">
+      <motion.div
+        initial={{ opacity: 0, y: 30 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={springTransition}
+        className="w-full"
+      >
+        <motion.div
+          initial={{ scale: 0.8, opacity: 0 }}
+          animate={{ scale: 1, opacity: 1 }}
+          transition={{ ...springTransition, delay: 0.1 }}
+          className="mx-auto w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mb-6"
+        >
+          <Mail className="h-10 w-10 text-primary" />
+        </motion.div>
+
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
-          className="w-full max-w-md"
+          transition={{ ...springTransition, delay: 0.15 }}
+          className="text-center mb-8"
         >
-          <Card className="bg-card/80 backdrop-blur-md border-border">
-            <CardHeader className="text-center p-4 sm:p-6">
-              <div className="mx-auto w-12 h-12 sm:w-16 sm:h-16 bg-primary/10 rounded-full flex items-center justify-center mb-3 sm:mb-4">
-                <Mail className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
-              </div>
-              <CardTitle className="text-foreground text-xl sm:text-2xl">Password Dimenticata</CardTitle>
-              <CardDescription className="text-muted-foreground">
-                Inserisci la tua email per ricevere un link di reset password
-              </CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handleSubmit} className="space-y-4">
-                {error && (
-                  <Alert variant="destructive" data-testid="alert-error">
-                    <AlertCircle className="h-4 w-4" />
-                    <AlertDescription>{error}</AlertDescription>
-                  </Alert>
-                )}
-
-                {success && (
-                  <Alert data-testid="alert-success" className="border-green-500 bg-green-500/10">
-                    <CheckCircle2 className="h-4 w-4 text-green-500" />
-                    <AlertDescription className="text-green-400">
-                      {success}
-                    </AlertDescription>
-                  </Alert>
-                )}
-
-                <div className="space-y-2">
-                  <Label htmlFor="email" className="text-muted-foreground">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="tuaemail@esempio.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                    disabled={isLoading}
-                    data-testid="input-email"
-                    className="bg-muted/50 border-border text-foreground placeholder:text-muted-foreground"
-                  />
-                </div>
-
-                <Button 
-                  type="submit" 
-                  className="w-full" 
-                  disabled={isLoading}
-                  data-testid="button-submit"
-                >
-                  {isLoading ? "Invio in corso..." : "Invia Link di Reset"}
-                </Button>
-
-                <div className="text-center text-sm text-muted-foreground">
-                  Ricordi la password?{" "}
-                  <Link href="/accedi" className="text-primary hover:underline" data-testid="link-login">
-                    Accedi
-                  </Link>
-                </div>
-              </form>
-            </CardContent>
-          </Card>
+          <h1 className="text-2xl font-bold text-foreground mb-2">Password Dimenticata</h1>
+          <p className="text-muted-foreground text-base">
+            Inserisci la tua email per ricevere un link di reset password
+          </p>
         </motion.div>
-      </main>
-    </div>
+
+        <motion.form 
+          onSubmit={handleSubmit} 
+          className="space-y-6"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springTransition, delay: 0.2 }}
+        >
+          <AnimatePresence mode="wait">
+            {error && (
+              <motion.div
+                key="error"
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                transition={springTransition}
+              >
+                <Alert variant="destructive" data-testid="alert-error" className="border-destructive/50">
+                  <AlertCircle className="h-5 w-5" />
+                  <AlertDescription className="text-base">{error}</AlertDescription>
+                </Alert>
+              </motion.div>
+            )}
+
+            {success && (
+              <motion.div
+                key="success"
+                initial={{ opacity: 0, y: -10, scale: 0.95 }}
+                animate={{ opacity: 1, y: 0, scale: 1 }}
+                exit={{ opacity: 0, y: -10, scale: 0.95 }}
+                transition={springTransition}
+              >
+                <Alert data-testid="alert-success" className="border-green-500/50 bg-green-500/10">
+                  <CheckCircle2 className="h-5 w-5 text-green-500" />
+                  <AlertDescription className="text-green-400 text-base">
+                    {success}
+                  </AlertDescription>
+                </Alert>
+              </motion.div>
+            )}
+          </AnimatePresence>
+
+          <div className="space-y-3">
+            <Label htmlFor="email" className="text-muted-foreground text-base font-medium">
+              Email
+            </Label>
+            <div className="relative">
+              <div className="absolute left-4 top-1/2 -translate-y-1/2 pointer-events-none">
+                <Mail className="h-5 w-5 text-muted-foreground" />
+              </div>
+              <Input
+                id="email"
+                type="email"
+                placeholder="tuaemail@esempio.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                disabled={isLoading}
+                data-testid="input-email"
+                className="h-14 pl-12 pr-4 text-base bg-muted/50 border-border text-foreground placeholder:text-muted-foreground rounded-xl"
+              />
+            </div>
+          </div>
+
+          <HapticButton 
+            type="submit" 
+            className="w-full h-14 text-base font-semibold rounded-xl gap-2" 
+            disabled={isLoading}
+            data-testid="button-submit"
+            hapticType="medium"
+          >
+            {isLoading ? (
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                className="h-5 w-5 border-2 border-primary-foreground border-t-transparent rounded-full"
+              />
+            ) : (
+              <>
+                <Send className="h-5 w-5" />
+                Invia Link di Reset
+              </>
+            )}
+          </HapticButton>
+
+          <motion.div 
+            className="text-center pt-4"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ ...springTransition, delay: 0.3 }}
+          >
+            <p className="text-muted-foreground text-base">
+              Ricordi la password?{" "}
+              <Link 
+                href="/accedi" 
+                className="text-primary font-semibold active:opacity-70 transition-opacity" 
+                data-testid="link-login"
+                onClick={() => triggerHaptic('light')}
+              >
+                Accedi
+              </Link>
+            </p>
+          </motion.div>
+        </motion.form>
+      </motion.div>
+    </MobileAppLayout>
   );
 }

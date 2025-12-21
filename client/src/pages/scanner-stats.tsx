@@ -1,11 +1,7 @@
 import { useParams, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/useAuth";
-import { format, parseISO } from "date-fns";
-import { it } from "date-fns/locale";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
+import { Card, CardContent } from "@/components/ui/card";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Progress } from "@/components/ui/progress";
 import { motion } from "framer-motion";
@@ -15,7 +11,6 @@ import {
   Users,
   Ticket,
   Armchair,
-  TrendingUp,
   Clock,
   CheckCircle2,
   CalendarDays,
@@ -23,8 +18,10 @@ import {
   Target,
   Activity,
   RefreshCw,
+  ChevronRight,
 } from "lucide-react";
 import { queryClient } from "@/lib/queryClient";
+import { MobileAppLayout, MobileHeader, HapticButton, triggerHaptic } from "@/components/mobile-primitives";
 
 interface ScanStats {
   totalLists: number;
@@ -47,6 +44,32 @@ interface Event {
   startDatetime: string;
   status: string;
 }
+
+const springTransition = {
+  type: "spring" as const,
+  stiffness: 400,
+  damping: 30,
+};
+
+const staggerContainer = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+    },
+  },
+};
+
+const staggerItem = {
+  hidden: { opacity: 0, y: 24, scale: 0.95 },
+  show: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    transition: springTransition,
+  },
+};
 
 export default function ScannerStatsPage() {
   const { eventId } = useParams<{ eventId?: string }>();
@@ -73,6 +96,7 @@ export default function ScannerStatsPage() {
   };
 
   const handleRefresh = () => {
+    triggerHaptic('medium');
     if (eventId) {
       queryClient.invalidateQueries({ queryKey: ['/api/e4u/events', eventId, 'scan-stats'] });
     } else {
@@ -85,56 +109,86 @@ export default function ScannerStatsPage() {
     const checkedAll = (stats?.checkedInLists || 0) + (stats?.checkedInTables || 0) + (stats?.checkedInTickets || 0);
     const overallProgress = calcProgress(checkedAll, totalAll);
 
-    return (
-      <div className="min-h-screen bg-gradient-to-b from-background to-background/95 pb-24">
-        <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-xl border-b border-white/5">
-          <div className="flex items-center justify-between p-4">
-            <div className="flex items-center gap-3">
-              <Link href={`/scanner/scan/${eventId}`}>
-                <Button variant="ghost" size="icon" className="rounded-full" data-testid="button-back">
-                  <ArrowLeft className="h-5 w-5" />
-                </Button>
-              </Link>
-              <div className="flex-1 min-w-0">
-                <h1 className="text-lg font-bold flex items-center gap-2" data-testid="text-title">
-                  <Activity className="h-5 w-5 text-blue-400" />
-                  Statistiche Evento
-                </h1>
-                {event && (
-                  <p className="text-xs text-muted-foreground truncate max-w-[180px]">
-                    {event.name}
-                  </p>
-                )}
-              </div>
+    const header = (
+      <div className="bg-background/80 backdrop-blur-xl border-b border-white/5">
+        <div className="flex items-center justify-between px-4 py-3">
+          <div className="flex items-center gap-4">
+            <Link href={`/scanner/scan/${eventId}`}>
+              <HapticButton 
+                variant="ghost" 
+                size="icon" 
+                className="h-12 w-12 rounded-2xl" 
+                hapticType="light"
+                data-testid="button-back"
+              >
+                <ArrowLeft className="h-6 w-6" />
+              </HapticButton>
+            </Link>
+            <div className="flex-1 min-w-0">
+              <h1 className="text-xl font-bold flex items-center gap-2" data-testid="text-title">
+                <Activity className="h-6 w-6 text-blue-400" />
+                Statistiche
+              </h1>
+              {event && (
+                <p className="text-sm text-muted-foreground truncate">
+                  {event.name}
+                </p>
+              )}
             </div>
-            <Button variant="outline" size="icon" className="rounded-full" onClick={handleRefresh} data-testid="button-refresh">
-              <RefreshCw className="h-4 w-4" />
-            </Button>
           </div>
-        </div>
-
-        <div className="p-4 space-y-4">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
+          <HapticButton 
+            variant="outline" 
+            size="icon" 
+            className="h-12 w-12 rounded-2xl" 
+            onClick={handleRefresh}
+            hapticType="medium"
+            data-testid="button-refresh"
           >
-            <Card className="border-0 bg-gradient-to-br from-blue-500/15 to-blue-600/5 shadow-lg shadow-blue-500/5" data-testid="card-overview">
-              <CardContent className="p-6">
-                <div className="text-center mb-6">
-                  <div className="w-20 h-20 rounded-3xl bg-blue-500/20 flex items-center justify-center mx-auto mb-4">
-                    <Target className="w-10 h-10 text-blue-400" />
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-2">Progresso Totale</p>
-                  <div className="flex items-center justify-center gap-3">
-                    <span className="text-5xl font-bold text-blue-400" data-testid="text-progress">
-                      {overallProgress}%
+            <RefreshCw className="h-5 w-5" />
+          </HapticButton>
+        </div>
+      </div>
+    );
+
+    return (
+      <MobileAppLayout header={header} contentClassName="pb-24">
+        <motion.div 
+          className="py-6 space-y-6"
+          variants={staggerContainer}
+          initial="hidden"
+          animate="show"
+        >
+          <motion.div variants={staggerItem}>
+            <Card className="border-0 bg-gradient-to-br from-blue-500/20 to-blue-600/5 shadow-xl shadow-blue-500/10 overflow-visible" data-testid="card-overview">
+              <CardContent className="p-8">
+                <div className="text-center">
+                  <motion.div 
+                    className="w-24 h-24 rounded-3xl bg-blue-500/25 flex items-center justify-center mx-auto mb-6"
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ ...springTransition, delay: 0.2 }}
+                  >
+                    <Target className="w-12 h-12 text-blue-400" />
+                  </motion.div>
+                  <p className="text-base text-muted-foreground mb-3">Progresso Totale</p>
+                  <motion.div 
+                    className="flex items-center justify-center gap-2"
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ ...springTransition, delay: 0.3 }}
+                  >
+                    <span className="text-6xl font-bold text-blue-400 tabular-nums" data-testid="text-progress">
+                      {overallProgress}
                     </span>
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-2">
-                    {checkedAll} di {totalAll} ingressi
+                    <span className="text-3xl font-bold text-blue-400/60">%</span>
+                  </motion.div>
+                  <p className="text-base text-muted-foreground mt-3">
+                    <span className="font-semibold text-foreground">{checkedAll}</span> di {totalAll} ingressi
                   </p>
                 </div>
-                <Progress value={overallProgress} className="h-3 bg-blue-500/20" />
+                <div className="mt-8">
+                  <Progress value={overallProgress} className="h-4 bg-blue-500/20 rounded-full" />
+                </div>
               </CardContent>
             </Card>
           </motion.div>
@@ -143,12 +197,13 @@ export default function ScannerStatsPage() {
             <div className="space-y-4">
               {[1, 2, 3].map(i => (
                 <Card key={i} className="border-0 bg-muted/30">
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-4">
-                      <Skeleton className="h-14 w-14 rounded-2xl" />
-                      <div className="flex-1 space-y-2">
-                        <Skeleton className="h-4 w-24" />
-                        <Skeleton className="h-6 w-20" />
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-5">
+                      <Skeleton className="h-16 w-16 rounded-2xl" />
+                      <div className="flex-1 space-y-3">
+                        <Skeleton className="h-5 w-28" />
+                        <Skeleton className="h-8 w-24" />
+                        <Skeleton className="h-3 w-full rounded-full" />
                       </div>
                     </div>
                   </CardContent>
@@ -156,27 +211,26 @@ export default function ScannerStatsPage() {
               ))}
             </div>
           ) : (
-            <div className="grid gap-4">
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <Card className="border-0 bg-gradient-to-r from-purple-500/10 to-purple-600/5" data-testid="card-lists">
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-2xl bg-purple-500/20 flex items-center justify-center">
-                        <Users className="w-7 h-7 text-purple-400" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm text-muted-foreground">Liste Invitati</p>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-3xl font-bold">{stats?.checkedInLists || 0}</span>
-                          <span className="text-muted-foreground">/ {stats?.totalLists || 0}</span>
+            <div className="space-y-4">
+              <motion.div variants={staggerItem}>
+                <Card className="border-0 bg-gradient-to-r from-purple-500/15 to-purple-600/5 overflow-visible" data-testid="card-lists">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-5">
+                      <motion.div 
+                        className="w-16 h-16 rounded-2xl bg-purple-500/25 flex items-center justify-center shrink-0"
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Users className="w-8 h-8 text-purple-400" />
+                      </motion.div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-base text-muted-foreground mb-1">Liste Invitati</p>
+                        <div className="flex items-baseline gap-2 mb-3">
+                          <span className="text-4xl font-bold tabular-nums">{stats?.checkedInLists || 0}</span>
+                          <span className="text-lg text-muted-foreground">/ {stats?.totalLists || 0}</span>
                         </div>
                         <Progress 
                           value={calcProgress(stats?.checkedInLists || 0, stats?.totalLists || 0)} 
-                          className="h-2 mt-2 bg-purple-500/20" 
+                          className="h-3 bg-purple-500/20 rounded-full" 
                         />
                       </div>
                     </div>
@@ -184,26 +238,25 @@ export default function ScannerStatsPage() {
                 </Card>
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <Card className="border-0 bg-gradient-to-r from-amber-500/10 to-amber-600/5" data-testid="card-tables">
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-2xl bg-amber-500/20 flex items-center justify-center">
-                        <Armchair className="w-7 h-7 text-amber-400" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm text-muted-foreground">Tavoli / Prenotazioni</p>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-3xl font-bold">{stats?.checkedInTables || 0}</span>
-                          <span className="text-muted-foreground">/ {stats?.totalTables || 0}</span>
+              <motion.div variants={staggerItem}>
+                <Card className="border-0 bg-gradient-to-r from-amber-500/15 to-amber-600/5 overflow-visible" data-testid="card-tables">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-5">
+                      <motion.div 
+                        className="w-16 h-16 rounded-2xl bg-amber-500/25 flex items-center justify-center shrink-0"
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Armchair className="w-8 h-8 text-amber-400" />
+                      </motion.div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-base text-muted-foreground mb-1">Tavoli / Prenotazioni</p>
+                        <div className="flex items-baseline gap-2 mb-3">
+                          <span className="text-4xl font-bold tabular-nums">{stats?.checkedInTables || 0}</span>
+                          <span className="text-lg text-muted-foreground">/ {stats?.totalTables || 0}</span>
                         </div>
                         <Progress 
                           value={calcProgress(stats?.checkedInTables || 0, stats?.totalTables || 0)} 
-                          className="h-2 mt-2 bg-amber-500/20" 
+                          className="h-3 bg-amber-500/20 rounded-full" 
                         />
                       </div>
                     </div>
@@ -211,26 +264,25 @@ export default function ScannerStatsPage() {
                 </Card>
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.3 }}
-              >
-                <Card className="border-0 bg-gradient-to-r from-emerald-500/10 to-emerald-600/5" data-testid="card-tickets">
-                  <CardContent className="p-5">
-                    <div className="flex items-center gap-4">
-                      <div className="w-14 h-14 rounded-2xl bg-emerald-500/20 flex items-center justify-center">
-                        <Ticket className="w-7 h-7 text-emerald-400" />
-                      </div>
-                      <div className="flex-1">
-                        <p className="text-sm text-muted-foreground">Biglietti SIAE</p>
-                        <div className="flex items-baseline gap-2">
-                          <span className="text-3xl font-bold">{stats?.checkedInTickets || 0}</span>
-                          <span className="text-muted-foreground">/ {stats?.totalTickets || 0}</span>
+              <motion.div variants={staggerItem}>
+                <Card className="border-0 bg-gradient-to-r from-emerald-500/15 to-emerald-600/5 overflow-visible" data-testid="card-tickets">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-5">
+                      <motion.div 
+                        className="w-16 h-16 rounded-2xl bg-emerald-500/25 flex items-center justify-center shrink-0"
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Ticket className="w-8 h-8 text-emerald-400" />
+                      </motion.div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-base text-muted-foreground mb-1">Biglietti SIAE</p>
+                        <div className="flex items-baseline gap-2 mb-3">
+                          <span className="text-4xl font-bold tabular-nums">{stats?.checkedInTickets || 0}</span>
+                          <span className="text-lg text-muted-foreground">/ {stats?.totalTickets || 0}</span>
                         </div>
                         <Progress 
                           value={calcProgress(stats?.checkedInTickets || 0, stats?.totalTickets || 0)} 
-                          className="h-2 mt-2 bg-emerald-500/20" 
+                          className="h-3 bg-emerald-500/20 rounded-full" 
                         />
                       </div>
                     </div>
@@ -240,124 +292,173 @@ export default function ScannerStatsPage() {
             </div>
           )}
 
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-          >
+          <motion.div variants={staggerItem}>
             <Link href={`/scanner/scanned/${eventId}`}>
-              <Card className="hover-elevate cursor-pointer border-0 bg-muted/30" data-testid="card-view-list">
-                <CardContent className="p-5">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
-                        <CheckCircle2 className="w-6 h-6 text-primary" />
+              <motion.div
+                whileTap={{ scale: 0.98 }}
+                transition={springTransition}
+              >
+                <Card className="border-0 bg-gradient-to-r from-primary/10 to-primary/5 overflow-visible" data-testid="card-view-list">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between gap-4">
+                      <div className="flex items-center gap-5">
+                        <div className="w-14 h-14 rounded-2xl bg-primary/20 flex items-center justify-center shrink-0">
+                          <CheckCircle2 className="w-7 h-7 text-primary" />
+                        </div>
+                        <div>
+                          <p className="text-lg font-semibold">Vedi Lista Entrati</p>
+                          <p className="text-base text-muted-foreground">
+                            {checkedAll} persone registrate
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-semibold">Vedi Lista Entrati</p>
-                        <p className="text-sm text-muted-foreground">
-                          {checkedAll} persone registrate
-                        </p>
-                      </div>
+                      <ChevronRight className="w-6 h-6 text-muted-foreground shrink-0" />
                     </div>
-                    <ArrowLeft className="w-5 h-5 text-muted-foreground rotate-180" />
-                  </div>
-                </CardContent>
-              </Card>
+                  </CardContent>
+                </Card>
+              </motion.div>
             </Link>
           </motion.div>
-        </div>
-      </div>
+        </motion.div>
+      </MobileAppLayout>
     );
   }
 
-  return (
-    <div className="min-h-screen bg-gradient-to-b from-background to-background/95 pb-24">
-      <div className="sticky top-0 z-10 bg-background/90 backdrop-blur-xl border-b border-white/5">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <Link href="/scanner">
-              <Button variant="ghost" size="icon" className="rounded-full" data-testid="button-back">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <h1 className="text-lg font-bold flex items-center gap-2" data-testid="text-title">
-              <BarChart3 className="h-5 w-5 text-blue-400" />
-              Statistiche Generali
-            </h1>
-          </div>
-          <Button variant="outline" size="icon" className="rounded-full" onClick={handleRefresh} data-testid="button-refresh">
-            <RefreshCw className="h-4 w-4" />
-          </Button>
+  const header = (
+    <div className="bg-background/80 backdrop-blur-xl border-b border-white/5">
+      <div className="flex items-center justify-between px-4 py-3">
+        <div className="flex items-center gap-4">
+          <Link href="/scanner">
+            <HapticButton 
+              variant="ghost" 
+              size="icon" 
+              className="h-12 w-12 rounded-2xl" 
+              hapticType="light"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="h-6 w-6" />
+            </HapticButton>
+          </Link>
+          <h1 className="text-xl font-bold flex items-center gap-3" data-testid="text-title">
+            <BarChart3 className="h-6 w-6 text-blue-400" />
+            Statistiche Generali
+          </h1>
         </div>
+        <HapticButton 
+          variant="outline" 
+          size="icon" 
+          className="h-12 w-12 rounded-2xl" 
+          onClick={handleRefresh}
+          hapticType="medium"
+          data-testid="button-refresh"
+        >
+          <RefreshCw className="h-5 w-5" />
+        </HapticButton>
       </div>
+    </div>
+  );
 
-      <div className="p-4 space-y-4">
+  return (
+    <MobileAppLayout header={header} contentClassName="pb-24">
+      <motion.div 
+        className="py-6 space-y-6"
+        variants={staggerContainer}
+        initial="hidden"
+        animate="show"
+      >
         {totalStatsLoading ? (
-          <div className="space-y-4">
-            {[1, 2, 3].map(i => (
-              <Card key={i} className="border-0 bg-muted/30">
-                <CardContent className="p-6">
-                  <Skeleton className="h-20 w-full" />
-                </CardContent>
-              </Card>
-            ))}
+          <div className="space-y-6">
+            <Card className="border-0 bg-muted/30">
+              <CardContent className="p-8">
+                <div className="flex flex-col items-center">
+                  <Skeleton className="h-20 w-20 rounded-3xl mb-4" />
+                  <Skeleton className="h-5 w-32 mb-2" />
+                  <Skeleton className="h-14 w-28" />
+                </div>
+              </CardContent>
+            </Card>
+            <div className="space-y-4">
+              {[1, 2].map(i => (
+                <Card key={i} className="border-0 bg-muted/30">
+                  <CardContent className="p-6">
+                    <div className="flex flex-col items-center">
+                      <Skeleton className="h-16 w-16 rounded-2xl mb-4" />
+                      <Skeleton className="h-4 w-20 mb-2" />
+                      <Skeleton className="h-10 w-16" />
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           </div>
         ) : (
           <>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <Card className="border-0 bg-gradient-to-br from-emerald-500/15 to-green-600/5 shadow-lg shadow-emerald-500/5" data-testid="card-total-scans">
-                <CardContent className="p-6 text-center">
-                  <div className="w-16 h-16 rounded-3xl bg-emerald-500/20 flex items-center justify-center mx-auto mb-4">
-                    <Zap className="w-8 h-8 text-emerald-400" />
-                  </div>
-                  <p className="text-sm text-muted-foreground mb-1">Scansioni Totali</p>
-                  <span className="text-5xl font-bold text-emerald-400">
+            <motion.div variants={staggerItem}>
+              <Card className="border-0 bg-gradient-to-br from-emerald-500/20 to-green-600/5 shadow-xl shadow-emerald-500/10 overflow-visible" data-testid="card-total-scans">
+                <CardContent className="p-8 text-center">
+                  <motion.div 
+                    className="w-20 h-20 rounded-3xl bg-emerald-500/25 flex items-center justify-center mx-auto mb-6"
+                    initial={{ scale: 0, rotate: -180 }}
+                    animate={{ scale: 1, rotate: 0 }}
+                    transition={{ ...springTransition, delay: 0.2 }}
+                  >
+                    <Zap className="w-10 h-10 text-emerald-400" />
+                  </motion.div>
+                  <p className="text-base text-muted-foreground mb-2">Scansioni Totali</p>
+                  <motion.span 
+                    className="text-6xl font-bold text-emerald-400 tabular-nums block"
+                    initial={{ scale: 0.5, opacity: 0 }}
+                    animate={{ scale: 1, opacity: 1 }}
+                    transition={{ ...springTransition, delay: 0.3 }}
+                  >
                     {totalStats?.totalScans || 0}
-                  </span>
+                  </motion.span>
                 </CardContent>
               </Card>
             </motion.div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <motion.div
-                initial={{ opacity: 0, x: -20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.1 }}
-              >
-                <Card className="border-0 bg-gradient-to-br from-blue-500/10 to-blue-600/5 h-full" data-testid="card-today-scans">
-                  <CardContent className="p-5 text-center">
-                    <div className="w-12 h-12 rounded-2xl bg-blue-500/20 flex items-center justify-center mx-auto mb-3">
-                      <Clock className="w-6 h-6 text-blue-400" />
+            <div className="space-y-4">
+              <motion.div variants={staggerItem}>
+                <Card className="border-0 bg-gradient-to-br from-blue-500/15 to-blue-600/5 overflow-visible" data-testid="card-today-scans">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-5">
+                      <motion.div 
+                        className="w-16 h-16 rounded-2xl bg-blue-500/25 flex items-center justify-center shrink-0"
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <Clock className="w-8 h-8 text-blue-400" />
+                      </motion.div>
+                      <div className="flex-1">
+                        <p className="text-base text-muted-foreground mb-1">Scansioni Oggi</p>
+                        <span className="text-4xl font-bold tabular-nums">{totalStats?.todayScans || 0}</span>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mb-1">Oggi</p>
-                    <span className="text-3xl font-bold">{totalStats?.todayScans || 0}</span>
                   </CardContent>
                 </Card>
               </motion.div>
 
-              <motion.div
-                initial={{ opacity: 0, x: 20 }}
-                animate={{ opacity: 1, x: 0 }}
-                transition={{ delay: 0.2 }}
-              >
-                <Card className="border-0 bg-gradient-to-br from-purple-500/10 to-purple-600/5 h-full" data-testid="card-events-count">
-                  <CardContent className="p-5 text-center">
-                    <div className="w-12 h-12 rounded-2xl bg-purple-500/20 flex items-center justify-center mx-auto mb-3">
-                      <CalendarDays className="w-6 h-6 text-purple-400" />
+              <motion.div variants={staggerItem}>
+                <Card className="border-0 bg-gradient-to-br from-purple-500/15 to-purple-600/5 overflow-visible" data-testid="card-events-count">
+                  <CardContent className="p-6">
+                    <div className="flex items-center gap-5">
+                      <motion.div 
+                        className="w-16 h-16 rounded-2xl bg-purple-500/25 flex items-center justify-center shrink-0"
+                        whileTap={{ scale: 0.95 }}
+                      >
+                        <CalendarDays className="w-8 h-8 text-purple-400" />
+                      </motion.div>
+                      <div className="flex-1">
+                        <p className="text-base text-muted-foreground mb-1">Eventi Scansionati</p>
+                        <span className="text-4xl font-bold tabular-nums">{totalStats?.totalEventsScanned || 0}</span>
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground mb-1">Eventi</p>
-                    <span className="text-3xl font-bold">{totalStats?.totalEventsScanned || 0}</span>
                   </CardContent>
                 </Card>
               </motion.div>
             </div>
           </>
         )}
-      </div>
-    </div>
+      </motion.div>
+    </MobileAppLayout>
   );
 }

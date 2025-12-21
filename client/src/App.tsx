@@ -88,6 +88,7 @@ import PrTables from "@/pages/pr-tables";
 import PrScanner from "@/pages/pr-scanner";
 import PrStaff from "@/pages/pr-staff";
 import PrMyEvents from "@/pages/pr-my-events";
+import PrEvents from "@/pages/pr-events";
 import DownloadSmartCardApp from "@/pages/download-smart-card-app";
 import SchoolBadgeManager from "@/pages/school-badge-manager";
 import SchoolBadgeLanding from "@/pages/school-badge-landing";
@@ -109,6 +110,7 @@ import ScannerScanned from "@/pages/scanner-scanned";
 import ClientWallet from "@/pages/client-wallet";
 import StaffPrHome from "@/pages/staff-pr-home";
 import StaffPrEventPanel from "@/pages/staff-pr-event-panel";
+import PrDashboard from "@/pages/pr-dashboard";
 import CassaBiglietti from "@/pages/cassa-biglietti";
 import CashierManagement from "@/pages/cashier-management";
 import CashierDashboard from "@/pages/cashier-dashboard";
@@ -307,6 +309,7 @@ function Router() {
               <Route path="/pr/scanner" component={PrScanner} />
               <Route path="/pr/staff" component={PrStaff} />
               <Route path="/pr/my-events" component={PrMyEvents} />
+              <Route path="/pr/events" component={PrEvents} />
               <Route path="/school-badges" component={SchoolBadgeManager} />
               <Route path="/school-badges/scanner" component={SchoolBadgeScanner} />
               <Route path="/badge-error" component={SchoolBadgeError} />
@@ -330,6 +333,7 @@ function Router() {
               <Route path="/scanner/:eventId?" component={E4uScanner} />
               <Route path="/wallet" component={ClientWallet} />
               <Route path="/staff-pr-home" component={StaffPrHome} />
+              <Route path="/pr-dashboard" component={PrDashboard} />
               <Route path="/events/:id/panel" component={StaffPrEventPanel} />
               <Route path="/cassa-biglietti" component={CassaBiglietti} />
               <Route path="/cashier/management" component={CashierManagement} />

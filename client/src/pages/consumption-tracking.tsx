@@ -3,17 +3,21 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Label } from "@/components/ui/label";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Search, Plus, AlertTriangle, Package, ArrowLeft, Upload, Download, Warehouse, History, Check, RotateCcw, Send } from "lucide-react";
+import { Search, Plus, AlertTriangle, Package, ArrowLeft, Upload, Download, Warehouse, History, Check, Send } from "lucide-react";
 import { useLocation } from "wouter";
+import { motion, AnimatePresence } from "framer-motion";
+import { MobileAppLayout, MobileHeader, HapticButton, triggerHaptic } from "@/components/mobile-primitives";
 import type { Event, Station, Product, Stock, StockMovement } from "@shared/schema";
+
+const springConfig = { stiffness: 400, damping: 30 };
+
+type TabValue = 'carico' | 'scarico' | 'storico';
 
 export default function ConsumptionTracking() {
   const [, setLocation] = useLocation();
@@ -21,6 +25,7 @@ export default function ConsumptionTracking() {
   const [loadQuantities, setLoadQuantities] = useState<Record<string, string>>({});
   const [remainingQuantities, setRemainingQuantities] = useState<Record<string, string>>({});
   const [isSubmittingAll, setIsSubmittingAll] = useState(false);
+  const [activeTab, setActiveTab] = useState<TabValue>('scarico');
   const { toast } = useToast();
 
   const urlParams = new URLSearchParams(window.location.search);
@@ -95,7 +100,6 @@ export default function ConsumptionTracking() {
   const getProductStock = (productId: string): number => {
     if (!selectedStationId) return 0;
     
-    // Handle "general" event inventory (stocks without station)
     if (selectedStationId === 'general') {
       const stock = eventStocks?.find(s => 
         s.productId === productId && !s.stationId
@@ -105,7 +109,6 @@ export default function ConsumptionTracking() {
       return isNaN(quantity) ? 0 : quantity;
     }
     
-    // Handle specific station
     const stock = eventStocks?.find(s => 
       s.productId === productId && s.stationId === selectedStationId
     );
@@ -136,11 +139,12 @@ export default function ConsumptionTracking() {
       await apiRequest('POST', '/api/stock/consume', data);
     },
     onSuccess: (_, variables) => {
+      triggerHaptic('success');
       queryClient.invalidateQueries({ queryKey: ['/api/events', selectedEventId, 'stocks'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
-      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/reports') });
-      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/events') && query.queryKey[2] === 'revenue-analysis' });
+      queryClient.invalidateQueries({ predicate: (query) => !!query.queryKey[0]?.toString().includes('/api/reports') });
+      queryClient.invalidateQueries({ predicate: (query) => !!query.queryKey[0]?.toString().includes('/api/events') && query.queryKey[2] === 'revenue-analysis' });
       setRemainingQuantities(prev => ({ ...prev, [variables.productId]: "" }));
       toast({
         title: "Consumo registrato",
@@ -148,6 +152,7 @@ export default function ConsumptionTracking() {
       });
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
           title: "Non autorizzato",
@@ -170,11 +175,12 @@ export default function ConsumptionTracking() {
       await apiRequest('POST', '/api/stock/return-to-warehouse', data);
     },
     onSuccess: (_, variables) => {
+      triggerHaptic('success');
       queryClient.invalidateQueries({ queryKey: ['/api/events', selectedEventId, 'stocks'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
-      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/reports') });
-      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/events') && query.queryKey[2] === 'revenue-analysis' });
+      queryClient.invalidateQueries({ predicate: (query) => !!query.queryKey[0]?.toString().includes('/api/reports') });
+      queryClient.invalidateQueries({ predicate: (query) => !!query.queryKey[0]?.toString().includes('/api/events') && query.queryKey[2] === 'revenue-analysis' });
       setRemainingQuantities(prev => ({ ...prev, [variables.productId]: "" }));
       toast({
         title: "Reso al magazzino",
@@ -182,6 +188,7 @@ export default function ConsumptionTracking() {
       });
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       toast({
         title: "Errore",
         description: error.message || "Impossibile restituire al magazzino",
@@ -195,11 +202,12 @@ export default function ConsumptionTracking() {
       await apiRequest('POST', '/api/stock/event-transfer', data);
     },
     onSuccess: (_, variables) => {
+      triggerHaptic('success');
       queryClient.invalidateQueries({ queryKey: ['/api/events', selectedEventId, 'stocks'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
       queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
-      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/reports') });
-      queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/events') && query.queryKey[2] === 'revenue-analysis' });
+      queryClient.invalidateQueries({ predicate: (query) => !!query.queryKey[0]?.toString().includes('/api/reports') });
+      queryClient.invalidateQueries({ predicate: (query) => !!query.queryKey[0]?.toString().includes('/api/events') && query.queryKey[2] === 'revenue-analysis' });
       setLoadQuantities(prev => ({ ...prev, [variables.productId]: "" }));
       toast({
         title: "Prodotto caricato",
@@ -207,6 +215,7 @@ export default function ConsumptionTracking() {
       });
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
           title: "Non autorizzato",
@@ -231,6 +240,7 @@ export default function ConsumptionTracking() {
     const remaining = parseFloat(remainingQuantities[productId] || "0");
     
     if (remaining < 0 || remaining > stockValue) {
+      triggerHaptic('error');
       toast({
         title: "Errore",
         description: "Quantità rimasta non valida",
@@ -240,7 +250,6 @@ export default function ConsumptionTracking() {
     }
     
     const consumed = stockValue - remaining;
-    
     const stationIdForApi = selectedStationId === 'general' ? null : selectedStationId;
     
     if (consumed > 0) {
@@ -274,6 +283,7 @@ export default function ConsumptionTracking() {
     const stockValue = getProductStock(productId);
     
     if (stockValue <= 0) {
+      triggerHaptic('error');
       toast({
         title: "Errore",
         description: "Nessuna giacenza da scaricare",
@@ -295,6 +305,7 @@ export default function ConsumptionTracking() {
     if (!selectedEventId || !selectedStationId) return;
     const qty = parseFloat(loadQuantities[productId] || "0");
     if (qty <= 0) {
+      triggerHaptic('error');
       toast({
         title: "Errore",
         description: "Inserisci una quantità valida",
@@ -314,6 +325,7 @@ export default function ConsumptionTracking() {
 
   const handleSubmitAllConsume = async () => {
     if (!selectedEventId || !selectedStationId) {
+      triggerHaptic('error');
       toast({
         title: "Errore",
         description: "Seleziona evento e postazione",
@@ -335,6 +347,7 @@ export default function ConsumptionTracking() {
       .filter(item => !isNaN(item.remaining) && item.remaining >= 0 && item.remaining <= item.stockValue);
     
     if (itemsToSubmit.length === 0) {
+      triggerHaptic('error');
       toast({
         title: "Nessun prodotto da inviare",
         description: "Compila la quantità rimasta per almeno un prodotto",
@@ -378,18 +391,20 @@ export default function ConsumptionTracking() {
     queryClient.invalidateQueries({ queryKey: ['/api/events', selectedEventId, 'stocks'] });
     queryClient.invalidateQueries({ queryKey: ['/api/stock/general'] });
     queryClient.invalidateQueries({ queryKey: ['/api/stock/movements'] });
-    queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/reports') });
-    queryClient.invalidateQueries({ predicate: (query) => query.queryKey[0]?.toString().includes('/api/events') && query.queryKey[2] === 'revenue-analysis' });
+    queryClient.invalidateQueries({ predicate: (query) => !!query.queryKey[0]?.toString().includes('/api/reports') });
+    queryClient.invalidateQueries({ predicate: (query) => !!query.queryKey[0]?.toString().includes('/api/events') && query.queryKey[2] === 'revenue-analysis' });
     
     setRemainingQuantities({});
     setIsSubmittingAll(false);
     
     if (successCount > 0) {
+      triggerHaptic('success');
       toast({
         title: "Chiusura completata",
         description: `${successCount} prodotti aggiornati${errorCount > 0 ? `, ${errorCount} errori` : ''}`,
       });
     } else {
+      triggerHaptic('error');
       toast({
         title: "Errore",
         description: "Nessun prodotto aggiornato",
@@ -415,277 +430,359 @@ export default function ConsumptionTracking() {
   const productsWithStock = filteredProducts.filter(p => getProductStock(p.id) > 0);
   const productsInGeneral = filteredProducts.filter(p => getGeneralStock(p.id) > 0);
 
-  const getProductName = (productId: string) => {
-    return products?.find(p => p.id === productId)?.name || productId;
+  const handleTabChange = (tab: TabValue) => {
+    triggerHaptic('light');
+    setActiveTab(tab);
   };
 
   if (eventsLoading) {
     return (
-      <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto">
-        <Skeleton className="h-96" />
-      </div>
+      <MobileAppLayout
+        header={
+          <MobileHeader
+            title="Consumi"
+            leftAction={
+              <HapticButton
+                variant="ghost"
+                size="icon"
+                onClick={() => setLocation('/beverage')}
+                data-testid="button-back"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </HapticButton>
+            }
+          />
+        }
+      >
+        <div className="py-4 space-y-4 pb-24">
+          <Skeleton className="h-20 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl" />
+          <Skeleton className="h-32 rounded-2xl" />
+        </div>
+      </MobileAppLayout>
     );
   }
 
   if (!selectedEvent) {
     return (
-      <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto">
-        <Card>
-          <CardContent className="p-12 text-center">
-            <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-            <p className="text-muted-foreground mb-2">Nessun evento in corso</p>
-            <p className="text-sm text-muted-foreground">Non ci sono eventi attivi al momento</p>
-          </CardContent>
-        </Card>
+      <MobileAppLayout
+        header={
+          <MobileHeader
+            title="Consumi"
+            leftAction={
+              <HapticButton
+                variant="ghost"
+                size="icon"
+                onClick={() => setLocation('/beverage')}
+                data-testid="button-back"
+              >
+                <ArrowLeft className="h-5 w-5" />
+              </HapticButton>
+            }
+          />
+        }
+      >
+        <div className="flex flex-col items-center justify-center py-16 pb-24">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={springConfig}
+            className="text-center"
+          >
+            <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="h-10 w-10 text-muted-foreground" />
+            </div>
+            <p className="text-lg font-medium text-muted-foreground mb-2">Nessun evento in corso</p>
+            <p className="text-muted-foreground">Non ci sono eventi attivi al momento</p>
+          </motion.div>
+        </div>
+      </MobileAppLayout>
+    );
+  }
+
+  const header = (
+    <div className="bg-background border-b border-border">
+      <MobileHeader
+        title={selectedEvent?.name || "Consumi"}
+        subtitle={selectedStationId === 'general' ? "Inventario Generale" : selectedStation?.name}
+        leftAction={
+          <HapticButton
+            variant="ghost"
+            size="icon"
+            onClick={() => setLocation('/beverage')}
+            data-testid="button-back"
+          >
+            <ArrowLeft className="h-5 w-5" />
+          </HapticButton>
+        }
+      />
+
+      {!urlEventId && !urlStationId && (
+        <div className="px-4 pb-3 grid grid-cols-2 gap-3">
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Evento</Label>
+            <Select value={selectedEventId} onValueChange={(v) => { triggerHaptic('light'); setSelectedEventId(v); }}>
+              <SelectTrigger data-testid="select-event" className="h-12 rounded-xl">
+                <SelectValue placeholder="Evento" />
+              </SelectTrigger>
+              <SelectContent>
+                {activeEvents.map(event => (
+                  <SelectItem key={event.id} value={event.id}>
+                    {event.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label className="text-xs text-muted-foreground">Postazione</Label>
+            <Select 
+              value={selectedStationId} 
+              onValueChange={(v) => { triggerHaptic('light'); setSelectedStationId(v); }}
+            >
+              <SelectTrigger data-testid="select-station" className="h-12 rounded-xl">
+                <SelectValue placeholder="Postazione" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="general">Inventario Generale</SelectItem>
+                {stations && stations.length > 0 && (
+                  <>
+                    <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                      Postazioni
+                    </div>
+                    {stations.map(station => (
+                      <SelectItem key={station.id} value={station.id}>
+                        {station.name}
+                      </SelectItem>
+                    ))}
+                  </>
+                )}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+      )}
+
+      <div className="px-4 pb-3">
+        <div className="relative">
+          <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+          <Input
+            placeholder="Cerca prodotto..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-12 h-12 rounded-xl bg-muted/30 border-0"
+            data-testid="input-search-product"
+          />
+        </div>
       </div>
+
+      <div className="px-4 pb-3">
+        <div className="flex bg-muted/50 rounded-xl p-1 gap-1">
+          {[
+            { value: 'carico' as TabValue, icon: Upload, label: 'Carico' },
+            { value: 'scarico' as TabValue, icon: Download, label: 'Scarico' },
+            { value: 'storico' as TabValue, icon: History, label: 'Storico' },
+          ].map(({ value, icon: Icon, label }) => (
+            <button
+              key={value}
+              onClick={() => handleTabChange(value)}
+              data-testid={`tab-${value}`}
+              className={`flex-1 flex items-center justify-center gap-2 py-3 px-4 rounded-lg transition-all min-h-[44px] ${
+                activeTab === value 
+                  ? 'bg-background shadow-sm text-foreground font-medium' 
+                  : 'text-muted-foreground'
+              }`}
+            >
+              <Icon className="h-4 w-4" />
+              <span className="text-sm">{label}</span>
+            </button>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+
+  if (!selectedStationId) {
+    return (
+      <MobileAppLayout header={header}>
+        <div className="flex flex-col items-center justify-center py-16 pb-24">
+          <motion.div
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={springConfig}
+            className="text-center"
+          >
+            <div className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+              <AlertTriangle className="h-10 w-10 text-muted-foreground" />
+            </div>
+            <p className="text-lg font-medium text-muted-foreground mb-2">Seleziona una postazione</p>
+            <p className="text-muted-foreground">Scegli evento e postazione sopra</p>
+          </motion.div>
+        </div>
+      </MobileAppLayout>
     );
   }
 
   return (
-    <div className="pb-24 md:pb-8">
-      <div className="sticky top-0 z-40 bg-background border-b">
-        <div className="p-3 sm:p-4 md:p-6 space-y-3">
-          <div className="flex items-center gap-3">
-            <Button 
-              variant="ghost" 
-              size="icon" 
-              onClick={() => setLocation('/beverage')}
-              data-testid="button-back"
+    <MobileAppLayout header={header} noPadding>
+      <div className="px-4 py-4 pb-24">
+        <AnimatePresence mode="wait">
+          {activeTab === 'carico' && (
+            <motion.div
+              key="carico"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={springConfig}
             >
-              <ArrowLeft className="h-5 w-5" />
-            </Button>
-            <div className="flex-1">
-              <h1 className="text-xl sm:text-2xl font-semibold">{selectedEvent?.name}</h1>
-              {selectedStationId === 'general' ? (
-                <p className="text-sm text-muted-foreground">Inventario Generale Evento</p>
-              ) : selectedStation ? (
-                <p className="text-sm text-muted-foreground">{selectedStation.name}</p>
-              ) : null}
-            </div>
-          </div>
-          
-          {!urlEventId && !urlStationId && (
-            <div className="grid grid-cols-2 gap-2 sm:gap-3">
-              <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm">Evento</Label>
-                <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-                  <SelectTrigger data-testid="select-event" className="h-11 sm:h-10">
-                    <SelectValue placeholder="Evento" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {activeEvents.map(event => (
-                      <SelectItem key={event.id} value={event.id}>
-                        {event.name}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-green-500/10 flex items-center justify-center">
+                  <Warehouse className="h-6 w-6 text-green-500" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-lg">Carica dal Magazzino</h2>
+                  <p className="text-muted-foreground text-sm">Trasferisci prodotti alla postazione</p>
+                </div>
               </div>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs sm:text-sm">Postazione</Label>
-                <Select 
-                  value={selectedStationId} 
-                  onValueChange={setSelectedStationId}
-                >
-                  <SelectTrigger data-testid="select-station" className="h-11 sm:h-10">
-                    <SelectValue placeholder="Postazione" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="general">
-                      Inventario Generale Evento
-                    </SelectItem>
-                    {stations && stations.length > 0 && (
-                      <>
-                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
-                          Postazioni
-                        </div>
-                        {stations.map(station => (
-                          <SelectItem key={station.id} value={station.id}>
-                            {station.name}
-                          </SelectItem>
-                        ))}
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-          )}
-
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Cerca prodotto..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 h-11 sm:h-10"
-              data-testid="input-search-product"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="p-3 sm:p-4 md:p-6">
-        {!selectedStationId ? (
-          <Card>
-            <CardContent className="p-12 text-center">
-              <AlertTriangle className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
-              <p className="text-muted-foreground mb-2">Seleziona una postazione</p>
-              <p className="text-sm text-muted-foreground">
-                Scegli evento e postazione sopra per visualizzare i prodotti
-              </p>
-            </CardContent>
-          </Card>
-        ) : (
-          <Tabs defaultValue="scarico" className="w-full">
-            <TabsList className="grid w-full grid-cols-3 mb-4">
-              <TabsTrigger value="carico" className="flex items-center gap-2" data-testid="tab-carico">
-                <Upload className="h-4 w-4" />
-                Carico
-              </TabsTrigger>
-              <TabsTrigger value="scarico" className="flex items-center gap-2" data-testid="tab-scarico">
-                <Download className="h-4 w-4" />
-                Scarico
-              </TabsTrigger>
-              <TabsTrigger value="storico" className="flex items-center gap-2" data-testid="tab-storico">
-                <History className="h-4 w-4" />
-                Storico
-              </TabsTrigger>
-            </TabsList>
-
-            <TabsContent value="carico">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Warehouse className="h-5 w-5 text-green-600" />
-                    Carica dal Magazzino
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Trasferisci prodotti dal magazzino alla postazione
-                  </p>
-                </CardHeader>
-                <CardContent className="p-0">
-                  {filteredProducts.filter(p => getGeneralStock(p.id) > 0).length === 0 ? (
-                    <div className="p-8 text-center">
-                      <Package className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-muted-foreground">Nessun prodotto disponibile nel magazzino</p>
-                    </div>
-                  ) : (
-                    <div className="divide-y">
-                      {filteredProducts.filter(p => getGeneralStock(p.id) > 0).map((product) => {
-                        const generalStock = getGeneralStock(product.id);
-                        const stationStock = getProductStock(product.id);
-                        return (
-                          <div 
-                            key={product.id} 
-                            className="p-3 sm:p-4 hover:bg-muted/50"
-                            data-testid={`load-row-${product.id}`}
-                          >
-                            <div className="flex items-start justify-between gap-2 mb-2 sm:mb-0 sm:items-center">
+              {filteredProducts.filter(p => getGeneralStock(p.id) > 0).length === 0 ? (
+                <Card className="rounded-2xl">
+                  <CardContent className="p-8 text-center">
+                    <Package className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground">Nessun prodotto disponibile</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {filteredProducts.filter(p => getGeneralStock(p.id) > 0).map((product, index) => {
+                    const generalStock = getGeneralStock(product.id);
+                    const stationStock = getProductStock(product.id);
+                    return (
+                      <motion.div
+                        key={product.id}
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ ...springConfig, delay: index * 0.05 }}
+                      >
+                        <Card className="rounded-2xl overflow-hidden" data-testid={`load-row-${product.id}`}>
+                          <CardContent className="p-4">
+                            <div className="flex items-center justify-between gap-3 mb-4">
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium text-sm sm:text-base truncate">{product.name}</div>
-                                <div className="text-xs text-muted-foreground">{product.code}</div>
+                                <div className="font-medium text-base truncate">{product.name}</div>
+                                <div className="text-sm text-muted-foreground">{product.code}</div>
                               </div>
                               
-                              <div className="flex gap-3 sm:gap-4 text-right shrink-0">
+                              <div className="flex gap-4 shrink-0">
                                 <div className="text-center">
-                                  <div className="text-[10px] sm:text-xs text-muted-foreground">Magaz.</div>
-                                  <div className="text-sm sm:text-base font-bold text-green-600">
-                                    {generalStock.toFixed(1)}
+                                  <div className="text-xs text-muted-foreground">Magazzino</div>
+                                  <div className="text-xl font-bold text-green-500">
+                                    {generalStock.toFixed(0)}
                                   </div>
                                 </div>
                                 <div className="text-center">
-                                  <div className="text-[10px] sm:text-xs text-muted-foreground">Post.</div>
-                                  <div className="text-sm sm:text-base font-bold">{stationStock.toFixed(1)}</div>
+                                  <div className="text-xs text-muted-foreground">Postazione</div>
+                                  <div className="text-xl font-bold">{stationStock.toFixed(0)}</div>
                                 </div>
                               </div>
                             </div>
                             
-                            <div className="flex items-center gap-2 mt-2">
+                            <div className="flex items-center gap-3">
                               <Input
                                 type="number"
                                 min="0"
                                 step="1"
                                 inputMode="numeric"
-                                placeholder="Quantità da caricare"
+                                placeholder="Quantità"
                                 value={loadQuantities[product.id] || ""}
                                 onChange={(e) => setLoadQuantities(prev => ({ ...prev, [product.id]: e.target.value }))}
-                                className="flex-1 h-11 text-center text-base"
+                                className="flex-1 h-14 text-center text-xl rounded-xl"
                                 data-testid={`input-load-${product.id}`}
                               />
-                              <Button
+                              <HapticButton
                                 onClick={() => handleLoad(product.id)}
                                 disabled={loadMutation.isPending}
-                                className="bg-green-600 hover:bg-green-700 h-11 px-4"
+                                className="h-14 px-6 rounded-xl bg-green-600"
+                                hapticType="medium"
                                 aria-label={`Carica ${product.name}`}
                                 data-testid={`button-load-${product.id}`}
                               >
-                                <Plus className="h-5 w-5 sm:mr-1" />
-                                <span className="hidden sm:inline">Carica</span>
-                              </Button>
+                                <Plus className="h-6 w-6" />
+                              </HapticButton>
                             </div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                          </CardContent>
+                        </Card>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              )}
+            </motion.div>
+          )}
 
-            <TabsContent value="scarico">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <Package className="h-5 w-5 text-orange-500" />
-                    Chiudi Prodotti
-                  </CardTitle>
-                  <p className="text-xs sm:text-sm text-muted-foreground">
-                    Inserisci la quantità <strong>rimasta</strong>: il consumato viene calcolato automaticamente
-                  </p>
-                </CardHeader>
-                <CardContent className="p-0">
-                  {productsWithStock.length === 0 ? (
-                    <div className="p-8 text-center">
-                      <Package className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-muted-foreground mb-1">Nessun prodotto caricato</p>
-                      <p className="text-xs text-muted-foreground">
-                        Vai nella sezione Carico per trasferire prodotti
-                      </p>
-                    </div>
-                  ) : (
-                    <>
-                      <div className="divide-y">
-                        {productsWithStock.map((product) => {
-                          const stockValue = getProductStock(product.id);
-                          const remaining = parseFloat(remainingQuantities[product.id] || "");
-                          const consumed = !isNaN(remaining) ? stockValue - remaining : 0;
-                          const isLowStock = stockValue <= 5;
-                          
-                          return (
-                            <div 
-                              key={product.id} 
-                              className="p-3 sm:p-4 hover:bg-muted/50"
-                              data-testid={`consume-row-${product.id}`}
-                            >
-                              <div className="flex items-start justify-between gap-2 mb-3">
+          {activeTab === 'scarico' && (
+            <motion.div
+              key="scarico"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={springConfig}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-orange-500/10 flex items-center justify-center">
+                  <Package className="h-6 w-6 text-orange-500" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-lg">Chiudi Prodotti</h2>
+                  <p className="text-muted-foreground text-sm">Inserisci quantità rimasta</p>
+                </div>
+              </div>
+
+              {productsWithStock.length === 0 ? (
+                <Card className="rounded-2xl">
+                  <CardContent className="p-8 text-center">
+                    <Package className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground mb-1">Nessun prodotto caricato</p>
+                    <p className="text-sm text-muted-foreground">
+                      Vai in Carico per trasferire prodotti
+                    </p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <>
+                  <div className="space-y-3">
+                    {productsWithStock.map((product, index) => {
+                      const stockValue = getProductStock(product.id);
+                      const remaining = parseFloat(remainingQuantities[product.id] || "");
+                      const consumed = !isNaN(remaining) ? stockValue - remaining : 0;
+                      const isLowStock = stockValue <= 5;
+                      
+                      return (
+                        <motion.div
+                          key={product.id}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ ...springConfig, delay: index * 0.05 }}
+                        >
+                          <Card className="rounded-2xl overflow-hidden" data-testid={`consume-row-${product.id}`}>
+                            <CardContent className="p-4">
+                              <div className="flex items-start justify-between gap-3 mb-4">
                                 <div className="flex-1 min-w-0">
-                                  <div className="font-medium text-sm sm:text-base truncate">{product.name}</div>
-                                  <div className="text-xs text-muted-foreground">{product.code}</div>
+                                  <div className="font-medium text-base truncate">{product.name}</div>
+                                  <div className="text-sm text-muted-foreground">{product.code}</div>
                                 </div>
                                 
-                                <div className="text-center shrink-0 bg-muted/50 rounded-lg px-3 py-1">
-                                  <div className="text-[10px] sm:text-xs text-muted-foreground">Caricato</div>
-                                  <div className={`text-lg sm:text-xl font-bold ${isLowStock ? 'text-orange-500' : ''}`}>
-                                    {stockValue.toFixed(1)}
+                                <div className="bg-muted/50 rounded-xl px-4 py-2 text-center shrink-0">
+                                  <div className="text-xs text-muted-foreground">Caricato</div>
+                                  <div className={`text-2xl font-bold ${isLowStock ? 'text-orange-500' : ''}`}>
+                                    {stockValue.toFixed(0)}
                                   </div>
                                 </div>
                               </div>
                               
-                              <div className="grid grid-cols-[1fr_auto_auto] gap-2 items-end">
+                              <div className="grid grid-cols-[1fr_auto_auto] gap-3 items-end">
                                 <div>
-                                  <Label className="text-xs text-muted-foreground mb-1 block">Quantità Rimasta</Label>
+                                  <Label className="text-xs text-muted-foreground mb-2 block">Rimasta</Label>
                                   <Input
                                     type="number"
                                     min="0"
@@ -695,121 +792,144 @@ export default function ConsumptionTracking() {
                                     placeholder="0"
                                     value={remainingQuantities[product.id] || ""}
                                     onChange={(e) => setRemainingQuantities(prev => ({ ...prev, [product.id]: e.target.value }))}
-                                    className="h-12 text-center text-lg"
+                                    className="h-14 text-center text-xl rounded-xl"
                                     data-testid={`input-remaining-${product.id}`}
                                   />
                                 </div>
                                 
                                 {!isNaN(remaining) && remaining >= 0 && (
-                                  <div className="text-center bg-orange-500/10 rounded-lg px-3 py-2 h-12 flex flex-col justify-center">
-                                    <div className="text-[10px] text-muted-foreground leading-none">Consumato</div>
-                                    <div className="text-base font-bold text-orange-500 leading-none">
-                                      {consumed.toFixed(1)}
+                                  <motion.div 
+                                    initial={{ scale: 0 }}
+                                    animate={{ scale: 1 }}
+                                    transition={springConfig}
+                                    className="text-center bg-orange-500/10 rounded-xl px-4 py-2 h-14 flex flex-col justify-center"
+                                  >
+                                    <div className="text-xs text-muted-foreground">Consumato</div>
+                                    <div className="text-xl font-bold text-orange-500">
+                                      {consumed.toFixed(0)}
                                     </div>
-                                  </div>
+                                  </motion.div>
                                 )}
                                 
-                                <Button
+                                <HapticButton
                                   variant="outline"
                                   onClick={() => handleConsumeAll(product.id)}
                                   disabled={consumeMutation.isPending}
-                                  className="h-12 px-3 text-xs whitespace-nowrap"
+                                  className="h-14 px-4 rounded-xl"
+                                  hapticType="medium"
                                   data-testid={`button-finish-${product.id}`}
                                 >
-                                  <Check className="h-4 w-4 sm:mr-1" />
-                                  <span className="hidden sm:inline">Finito</span>
-                                </Button>
+                                  <Check className="h-5 w-5" />
+                                </HapticButton>
                               </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                      
-                      <div className="p-3 sm:p-4 border-t bg-muted/30">
-                        <Button
-                          onClick={handleSubmitAllConsume}
-                          disabled={isSubmittingAll || getFilledCount() === 0}
-                          className="w-full h-14 text-base sm:text-lg bg-green-600 hover:bg-green-700"
-                          data-testid="button-submit-all-consume"
-                        >
-                          <Send className="h-5 w-5 mr-2" />
-                          {isSubmittingAll ? "Invio..." : `Invia Tutto (${getFilledCount()})`}
-                        </Button>
-                        {getFilledCount() > 0 && (
-                          <p className="text-xs text-center text-muted-foreground mt-2">
-                            Compila tutte le quantità rimaste, poi invia
-                          </p>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      );
+                    })}
+                  </div>
+                  
+                  <motion.div 
+                    className="mt-6"
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ ...springConfig, delay: 0.2 }}
+                  >
+                    <HapticButton
+                      onClick={handleSubmitAllConsume}
+                      disabled={isSubmittingAll || getFilledCount() === 0}
+                      className="w-full h-16 text-lg rounded-2xl bg-green-600"
+                      hapticType="heavy"
+                      data-testid="button-submit-all-consume"
+                    >
+                      <Send className="h-6 w-6 mr-3" />
+                      {isSubmittingAll ? "Invio..." : `Invia Tutto (${getFilledCount()})`}
+                    </HapticButton>
+                    {getFilledCount() > 0 && (
+                      <p className="text-sm text-center text-muted-foreground mt-3">
+                        Compila tutte le quantità, poi invia
+                      </p>
+                    )}
+                  </motion.div>
+                </>
+              )}
+            </motion.div>
+          )}
 
-            <TabsContent value="storico">
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="text-lg flex items-center gap-2">
-                    <History className="h-5 w-5 text-blue-500" />
-                    Riepilogo Consumi
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    Totale consumato per ogni prodotto in questo evento
-                  </p>
-                </CardHeader>
-                <CardContent className="p-0">
-                  {eventConsumptions.length === 0 ? (
-                    <div className="p-8 text-center">
-                      <History className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                      <p className="text-muted-foreground">Nessun consumo registrato</p>
-                    </div>
-                  ) : (
-                    <div className="divide-y">
-                      {(() => {
-                        const productTotals = new Map<string, number>();
-                        eventConsumptions.forEach(m => {
-                          const current = productTotals.get(m.productId) || 0;
-                          productTotals.set(m.productId, current + parseFloat(m.quantity));
-                        });
-                        
-                        return Array.from(productTotals.entries()).map(([productId, total]) => {
-                          const product = products?.find(p => p.id === productId);
-                          return (
-                            <div 
-                              key={productId} 
-                              className="flex items-center gap-3 p-4"
-                              data-testid={`summary-row-${productId}`}
-                            >
-                              <div className="w-12 h-12 rounded-lg bg-orange-500/10 flex items-center justify-center shrink-0">
-                                <Package className="h-6 w-6 text-orange-500" />
+          {activeTab === 'storico' && (
+            <motion.div
+              key="storico"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              exit={{ opacity: 0, x: 20 }}
+              transition={springConfig}
+            >
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
+                  <History className="h-6 w-6 text-blue-500" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-lg">Riepilogo Consumi</h2>
+                  <p className="text-muted-foreground text-sm">Totale consumato per prodotto</p>
+                </div>
+              </div>
+
+              {eventConsumptions.length === 0 ? (
+                <Card className="rounded-2xl">
+                  <CardContent className="p-8 text-center">
+                    <History className="h-12 w-12 text-muted-foreground mx-auto mb-3" />
+                    <p className="text-muted-foreground">Nessun consumo registrato</p>
+                  </CardContent>
+                </Card>
+              ) : (
+                <div className="space-y-3">
+                  {(() => {
+                    const productTotals = new Map<string, number>();
+                    eventConsumptions.forEach(m => {
+                      const current = productTotals.get(m.productId) || 0;
+                      productTotals.set(m.productId, current + parseFloat(m.quantity));
+                    });
+                    
+                    return Array.from(productTotals.entries()).map(([productId, total], index) => {
+                      const product = products?.find(p => p.id === productId);
+                      return (
+                        <motion.div
+                          key={productId}
+                          initial={{ opacity: 0, y: 20 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ ...springConfig, delay: index * 0.05 }}
+                        >
+                          <Card className="rounded-2xl" data-testid={`summary-row-${productId}`}>
+                            <CardContent className="p-4 flex items-center gap-4">
+                              <div className="w-14 h-14 rounded-2xl bg-orange-500/10 flex items-center justify-center shrink-0">
+                                <Package className="h-7 w-7 text-orange-500" />
                               </div>
                               
                               <div className="flex-1 min-w-0">
-                                <div className="font-medium truncate">{product?.name || productId}</div>
-                                <div className="text-xs text-muted-foreground">{product?.code}</div>
+                                <div className="font-medium text-base truncate">{product?.name || productId}</div>
+                                <div className="text-sm text-muted-foreground">{product?.code}</div>
                               </div>
                               
                               <div className="text-right shrink-0">
-                                <div className="text-2xl font-bold text-orange-500">
-                                  {total.toFixed(1)}
+                                <div className="text-3xl font-bold text-orange-500">
+                                  {total.toFixed(0)}
                                 </div>
-                                <div className="text-xs text-muted-foreground">
+                                <div className="text-sm text-muted-foreground">
                                   {product?.unitOfMeasure || 'pz'}
                                 </div>
                               </div>
-                            </div>
-                          );
-                        });
-                      })()}
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </TabsContent>
-          </Tabs>
-        )}
+                            </CardContent>
+                          </Card>
+                        </motion.div>
+                      );
+                    });
+                  })()}
+                </div>
+              )}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-    </div>
+    </MobileAppLayout>
   );
 }

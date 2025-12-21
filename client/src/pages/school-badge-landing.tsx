@@ -6,13 +6,7 @@ import { z } from "zod";
 import { useParams } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
+import { motion } from "framer-motion";
 import {
   Form,
   FormControl,
@@ -22,7 +16,6 @@ import {
   FormMessage,
 } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -47,8 +40,10 @@ import {
   AlertCircle,
   ChevronDown,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { MobileAppLayout, HapticButton, triggerHaptic } from "@/components/mobile-primitives";
 import type { SchoolBadgeLanding } from "@shared/schema";
+
+const springConfig = { type: "spring" as const, stiffness: 400, damping: 30 };
 
 const PHONE_PREFIXES = [
   { code: "+39", country: "Italia" },
@@ -132,9 +127,11 @@ export default function SchoolBadgeLanding() {
     },
     onSuccess: () => {
       setSubmitted(true);
+      triggerHaptic('success');
       toast({ title: "Richiesta inviata", description: "Controlla la tua email per verificare il tuo indirizzo" });
     },
     onError: (error: Error) => {
+      triggerHaptic('error');
       const message = error.message;
       if (message.includes("domain")) {
         toast({ title: "Dominio non autorizzato", description: "Il tuo indirizzo email non appartiene a un dominio autorizzato", variant: "destructive" });
@@ -147,9 +144,11 @@ export default function SchoolBadgeLanding() {
   });
 
   const onSubmit = (data: RequestFormData) => {
+    triggerHaptic('medium');
     if (landing?.authorizedDomains && landing.authorizedDomains.length > 0) {
       const emailDomain = data.email.split("@")[1];
       if (!landing.authorizedDomains.includes(emailDomain)) {
+        triggerHaptic('error');
         toast({ 
           title: "Dominio non autorizzato", 
           description: `L'email deve appartenere a uno dei seguenti domini: ${landing.authorizedDomains.join(", ")}`,
@@ -163,92 +162,125 @@ export default function SchoolBadgeLanding() {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <Card className="w-full max-w-md">
-          <CardHeader className="text-center">
-            <Skeleton className="h-16 w-16 rounded-xl mx-auto mb-4" />
-            <Skeleton className="h-8 w-48 mx-auto mb-2" />
-            <Skeleton className="h-4 w-64 mx-auto" />
-          </CardHeader>
-          <CardContent className="space-y-4">
-            {[1, 2, 3, 4].map((i) => (
-              <Skeleton key={i} className="h-12 w-full" />
-            ))}
-          </CardContent>
-        </Card>
-      </div>
+      <MobileAppLayout className="bg-background">
+        <div className="flex flex-col items-center justify-center min-h-full px-6 py-8">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={springConfig}
+            className="w-full"
+          >
+            <div className="flex flex-col items-center mb-8">
+              <Skeleton className="h-24 w-24 rounded-3xl mb-6" />
+              <Skeleton className="h-8 w-48 mb-3" />
+              <Skeleton className="h-5 w-64" />
+            </div>
+            <div className="space-y-5">
+              {[1, 2, 3, 4].map((i) => (
+                <Skeleton key={i} className="h-14 w-full rounded-xl" />
+              ))}
+              <Skeleton className="h-14 w-full rounded-xl mt-6" />
+            </div>
+          </motion.div>
+        </div>
+      </MobileAppLayout>
     );
   }
 
   if (error || !landing) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-        >
-          <Card className="w-full max-w-md text-center">
-            <CardHeader>
-              <div className="w-16 h-16 rounded-2xl bg-destructive/10 flex items-center justify-center mx-auto mb-4">
-                <AlertCircle className="h-8 w-8 text-destructive" />
-              </div>
-              <CardTitle>Pagina non trovata</CardTitle>
-              <CardDescription>
-                Questa pagina di richiesta badge non esiste o non è più attiva.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </motion.div>
-      </div>
+      <MobileAppLayout className="bg-background">
+        <div className="flex flex-col items-center justify-center min-h-full px-6 py-8">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={springConfig}
+            className="w-full text-center"
+          >
+            <motion.div 
+              className="w-24 h-24 rounded-3xl bg-destructive/10 flex items-center justify-center mx-auto mb-6"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ ...springConfig, delay: 0.1 }}
+            >
+              <AlertCircle className="h-12 w-12 text-destructive" />
+            </motion.div>
+            <h1 className="text-2xl font-bold text-foreground mb-3">Pagina non trovata</h1>
+            <p className="text-base text-muted-foreground leading-relaxed px-4">
+              Questa pagina di richiesta badge non esiste o non è più attiva.
+            </p>
+          </motion.div>
+        </div>
+      </MobileAppLayout>
     );
   }
 
   if (!landing.isActive) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-        >
-          <Card className="w-full max-w-md text-center">
-            <CardHeader>
-              <div className="w-16 h-16 rounded-2xl bg-muted flex items-center justify-center mx-auto mb-4">
-                <GraduationCap className="h-8 w-8 text-muted-foreground" />
-              </div>
-              <CardTitle>Richieste chiuse</CardTitle>
-              <CardDescription>
-                Le richieste di badge per questa scuola non sono attualmente aperte.
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </motion.div>
-      </div>
+      <MobileAppLayout className="bg-background">
+        <div className="flex flex-col items-center justify-center min-h-full px-6 py-8">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={springConfig}
+            className="w-full text-center"
+          >
+            <motion.div 
+              className="w-24 h-24 rounded-3xl bg-muted flex items-center justify-center mx-auto mb-6"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ ...springConfig, delay: 0.1 }}
+            >
+              <GraduationCap className="h-12 w-12 text-muted-foreground" />
+            </motion.div>
+            <h1 className="text-2xl font-bold text-foreground mb-3">Richieste chiuse</h1>
+            <p className="text-base text-muted-foreground leading-relaxed px-4">
+              Le richieste di badge per questa scuola non sono attualmente aperte.
+            </p>
+          </motion.div>
+        </div>
+      </MobileAppLayout>
     );
   }
 
   if (submitted) {
     return (
-      <div className="min-h-screen flex items-center justify-center p-4 bg-background">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95 }}
-          animate={{ opacity: 1, scale: 1 }}
-        >
-          <Card className="w-full max-w-md text-center">
-            <CardHeader>
-              <div 
-                className="w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                style={{ backgroundColor: landing.primaryColor || "#3b82f6" }}
-              >
-                <CheckCircle2 className="h-8 w-8 text-white" />
-              </div>
-              <CardTitle>Richiesta inviata</CardTitle>
-              <CardDescription>
-                {landing.customThankYouText || "Grazie per la tua richiesta! Controlla la tua email per verificare il tuo indirizzo e completare la procedura."}
-              </CardDescription>
-            </CardHeader>
-          </Card>
-        </motion.div>
-      </div>
+      <MobileAppLayout className="bg-background">
+        <div className="flex flex-col items-center justify-center min-h-full px-6 py-8">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.9, y: 20 }}
+            animate={{ opacity: 1, scale: 1, y: 0 }}
+            transition={springConfig}
+            className="w-full text-center"
+          >
+            <motion.div 
+              className="w-24 h-24 rounded-3xl flex items-center justify-center mx-auto mb-6"
+              style={{ backgroundColor: landing.primaryColor || "#3b82f6" }}
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ ...springConfig, delay: 0.1 }}
+            >
+              <CheckCircle2 className="h-12 w-12 text-white" />
+            </motion.div>
+            <motion.h1 
+              className="text-2xl font-bold text-foreground mb-3"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springConfig, delay: 0.2 }}
+            >
+              Richiesta inviata
+            </motion.h1>
+            <motion.p 
+              className="text-base text-muted-foreground leading-relaxed px-4"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springConfig, delay: 0.3 }}
+            >
+              {landing.customThankYouText || "Grazie per la tua richiesta! Controlla la tua email per verificare il tuo indirizzo e completare la procedura."}
+            </motion.p>
+          </motion.div>
+        </div>
+      </MobileAppLayout>
     );
   }
 
@@ -257,269 +289,425 @@ export default function SchoolBadgeLanding() {
   const marketingTextToShow = landing.marketingText || DEFAULT_MARKETING_TEXT;
 
   return (
-    <div className="min-h-screen flex items-center justify-center p-4 bg-background">
+    <MobileAppLayout 
+      className="bg-background"
+      contentClassName="pb-8"
+    >
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 30 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
+        transition={springConfig}
+        className="w-full px-5 py-6"
+        data-testid="card-badge-request"
       >
-        <Card className="glass-card" data-testid="card-badge-request">
-          <CardHeader className="text-center">
-            <div className="flex items-center justify-center gap-2 mb-4">
-              <img 
-                src="/logo.png" 
-                alt="Event4U" 
-                className="h-8 w-auto"
-                data-testid="img-event4u-logo"
+        <motion.div 
+          className="flex flex-col items-center mb-8"
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ ...springConfig, delay: 0.1 }}
+        >
+          <img 
+            src="/logo.png" 
+            alt="Event4U" 
+            className="h-10 w-auto mb-6"
+            data-testid="img-event4u-logo"
+          />
+          
+          {landing.logoUrl ? (
+            <motion.img 
+              src={landing.logoUrl} 
+              alt={landing.schoolName} 
+              className="w-24 h-24 rounded-3xl object-cover mb-5"
+              data-testid="img-school-logo"
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ ...springConfig, delay: 0.15 }}
+            />
+          ) : (
+            <motion.div 
+              className="w-24 h-24 rounded-3xl flex items-center justify-center mb-5"
+              style={{ backgroundColor: landing.primaryColor || "#3b82f6" }}
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ ...springConfig, delay: 0.15 }}
+            >
+              <GraduationCap className="h-12 w-12 text-white" />
+            </motion.div>
+          )}
+          
+          <h1 className="text-2xl font-bold text-foreground text-center mb-2" data-testid="text-school-name">
+            {landing.schoolName}
+          </h1>
+          <p className="text-base text-muted-foreground text-center leading-relaxed px-2">
+            {landing.customWelcomeText || landing.description || "Richiedi il tuo badge digitale compilando il form sottostante."}
+          </p>
+          
+          {landing.authorizedDomains && landing.authorizedDomains.length > 0 && (
+            <p className="text-sm text-muted-foreground/70 mt-3 text-center">
+              Email autorizzate: {landing.authorizedDomains.map(d => `@${d}`).join(", ")}
+            </p>
+          )}
+        </motion.div>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-5">
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ ...springConfig, delay: 0.2 }}
+            >
+              <FormField
+                control={form.control}
+                name="firstName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base font-medium">Nome</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input 
+                          {...field} 
+                          className="h-14 pl-12 text-base rounded-xl" 
+                          placeholder="Mario" 
+                          data-testid="input-first-name"
+                          onFocus={() => triggerHaptic('light')}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            </div>
-            {landing.logoUrl ? (
-              <img 
-                src={landing.logoUrl} 
-                alt={landing.schoolName} 
-                className="w-20 h-20 rounded-2xl object-cover mx-auto mb-4"
-                data-testid="img-school-logo"
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ ...springConfig, delay: 0.25 }}
+            >
+              <FormField
+                control={form.control}
+                name="lastName"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base font-medium">Cognome</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <User className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input 
+                          {...field} 
+                          className="h-14 pl-12 text-base rounded-xl" 
+                          placeholder="Rossi" 
+                          data-testid="input-last-name"
+                          onFocus={() => triggerHaptic('light')}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
               />
-            ) : (
-              <div 
-                className="w-20 h-20 rounded-2xl flex items-center justify-center mx-auto mb-4"
-                style={{ backgroundColor: landing.primaryColor || "#3b82f6" }}
-              >
-                <GraduationCap className="h-10 w-10 text-white" />
-              </div>
-            )}
-            <CardTitle className="text-2xl" data-testid="text-school-name">{landing.schoolName}</CardTitle>
-            <CardDescription>
-              {landing.customWelcomeText || landing.description || "Richiedi il tuo badge digitale compilando il form sottostante."}
-            </CardDescription>
-            {landing.authorizedDomains && landing.authorizedDomains.length > 0 && (
-              <p className="text-xs text-muted-foreground mt-2">
-                Email autorizzate: {landing.authorizedDomains.map(d => `@${d}`).join(", ")}
-              </p>
-            )}
-          </CardHeader>
-          <CardContent>
-            <Form {...form}>
-              <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="firstName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Nome</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input {...field} className="pl-10" placeholder="Mario" data-testid="input-first-name" />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="lastName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Cognome</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <User className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input {...field} className="pl-10" placeholder="Rossi" data-testid="input-last-name" />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="email"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Email</FormLabel>
-                      <FormControl>
-                        <div className="relative">
-                          <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                          <Input {...field} type="email" className="pl-10" placeholder="mario.rossi@scuola.edu.it" data-testid="input-email" />
-                        </div>
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormItem>
-                  <FormLabel>Telefono {!landing.requirePhone && "(opzionale)"}</FormLabel>
-                  <div className="flex gap-2">
-                    <FormField
-                      control={form.control}
-                      name="phonePrefix"
-                      render={({ field }) => (
-                        <Select onValueChange={field.onChange} defaultValue={field.value}>
-                          <FormControl>
-                            <SelectTrigger className="w-28" data-testid="select-phone-prefix">
-                              <SelectValue placeholder="+39" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {PHONE_PREFIXES.map((prefix) => (
-                              <SelectItem key={prefix.code} value={prefix.code}>
-                                {prefix.code}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="phone"
-                      render={({ field }) => (
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ ...springConfig, delay: 0.3 }}
+            >
+              <FormField
+                control={form.control}
+                name="email"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base font-medium">Email</FormLabel>
+                    <FormControl>
+                      <div className="relative">
+                        <Mail className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                        <Input 
+                          {...field} 
+                          type="email" 
+                          className="h-14 pl-12 text-base rounded-xl" 
+                          placeholder="mario.rossi@scuola.edu.it" 
+                          data-testid="input-email"
+                          onFocus={() => triggerHaptic('light')}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </motion.div>
+
+            <motion.div
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ ...springConfig, delay: 0.35 }}
+            >
+              <FormItem>
+                <FormLabel className="text-base font-medium">
+                  Telefono {!landing.requirePhone && "(opzionale)"}
+                </FormLabel>
+                <div className="flex gap-3">
+                  <FormField
+                    control={form.control}
+                    name="phonePrefix"
+                    render={({ field }) => (
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
-                          <div className="relative flex-1">
-                            <Phone className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                            <Input {...field} type="tel" className="pl-10" placeholder="123 456 7890" data-testid="input-phone" />
-                          </div>
+                          <SelectTrigger 
+                            className="w-24 h-14 text-base rounded-xl" 
+                            data-testid="select-phone-prefix"
+                            onClick={() => triggerHaptic('light')}
+                          >
+                            <SelectValue placeholder="+39" />
+                          </SelectTrigger>
                         </FormControl>
-                      )}
-                    />
-                  </div>
-                  <FormMessage />
-                </FormItem>
-
-                {landing.requireTerms && (
-                  <div className="space-y-3 pt-2">
-                    <FormField
-                      control={form.control}
-                      name="acceptedTerms"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              data-testid="checkbox-terms"
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel className="text-sm font-normal cursor-pointer">
-                              Accetto i <span className="text-primary underline cursor-pointer" onClick={(e) => { e.preventDefault(); setTermsOpen(!termsOpen); }}>termini e condizioni</span> e l'<span className="text-primary underline cursor-pointer" onClick={(e) => { e.preventDefault(); setPrivacyOpen(!privacyOpen); }}>informativa sulla privacy</span> *
-                            </FormLabel>
-                            <FormMessage />
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <Collapsible open={termsOpen} onOpenChange={setTermsOpen}>
-                      <CollapsibleTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="w-full justify-between p-2 h-auto text-muted-foreground hover:text-foreground"
-                          type="button"
-                          data-testid="button-toggle-terms"
-                        >
-                          <span className="text-xs">Termini e condizioni</span>
-                          <ChevronDown className={`h-4 w-4 transition-transform ${termsOpen ? 'rotate-180' : ''}`} />
-                        </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="p-3 text-xs text-muted-foreground bg-muted/50 rounded-md mt-1" data-testid="text-terms-content">
-                          {termsTextToShow}
+                        <SelectContent>
+                          {PHONE_PREFIXES.map((prefix) => (
+                            <SelectItem 
+                              key={prefix.code} 
+                              value={prefix.code}
+                              className="min-h-[44px] text-base"
+                            >
+                              {prefix.code}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="phone"
+                    render={({ field }) => (
+                      <FormControl>
+                        <div className="relative flex-1">
+                          <Phone className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
+                          <Input 
+                            {...field} 
+                            type="tel" 
+                            className="h-14 pl-12 text-base rounded-xl" 
+                            placeholder="123 456 7890" 
+                            data-testid="input-phone"
+                            onFocus={() => triggerHaptic('light')}
+                          />
                         </div>
-                      </CollapsibleContent>
-                    </Collapsible>
+                      </FormControl>
+                    )}
+                  />
+                </div>
+                <FormMessage />
+              </FormItem>
+            </motion.div>
 
-                    <Collapsible open={privacyOpen} onOpenChange={setPrivacyOpen}>
-                      <CollapsibleTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="w-full justify-between p-2 h-auto text-muted-foreground hover:text-foreground"
-                          type="button"
-                          data-testid="button-toggle-privacy"
-                        >
-                          <span className="text-xs">Informativa sulla privacy</span>
-                          <ChevronDown className={`h-4 w-4 transition-transform ${privacyOpen ? 'rotate-180' : ''}`} />
-                        </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="p-3 text-xs text-muted-foreground bg-muted/50 rounded-md mt-1" data-testid="text-privacy-content">
-                          {privacyTextToShow}
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  </div>
-                )}
-
-                {landing.showMarketing && (
-                  <div className="space-y-3 pt-2">
-                    <FormField
-                      control={form.control}
-                      name="acceptedMarketing"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                              data-testid="checkbox-marketing"
-                            />
-                          </FormControl>
-                          <div className="space-y-1 leading-none">
-                            <FormLabel className="text-sm font-normal cursor-pointer">
-                              Acconsento a ricevere comunicazioni promozionali
-                            </FormLabel>
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-
-                    <Collapsible open={marketingOpen} onOpenChange={setMarketingOpen}>
-                      <CollapsibleTrigger asChild>
-                        <Button 
-                          variant="ghost" 
-                          size="sm" 
-                          className="w-full justify-between p-2 h-auto text-muted-foreground hover:text-foreground"
-                          type="button"
-                          data-testid="button-toggle-marketing"
-                        >
-                          <span className="text-xs">Dettagli sul consenso marketing</span>
-                          <ChevronDown className={`h-4 w-4 transition-transform ${marketingOpen ? 'rotate-180' : ''}`} />
-                        </Button>
-                      </CollapsibleTrigger>
-                      <CollapsibleContent>
-                        <div className="p-3 text-xs text-muted-foreground bg-muted/50 rounded-md mt-1" data-testid="text-marketing-content">
-                          {marketingTextToShow}
-                        </div>
-                      </CollapsibleContent>
-                    </Collapsible>
-                  </div>
-                )}
-
-                <Button 
-                  type="submit" 
-                  className="w-full"
-                  disabled={submitMutation.isPending}
-                  style={{ backgroundColor: landing.primaryColor || undefined }}
-                  data-testid="button-submit-request"
-                >
-                  {submitMutation.isPending ? (
-                    <>
-                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                      Invio in corso...
-                    </>
-                  ) : (
-                    "Richiedi Badge"
+            {landing.requireTerms && (
+              <motion.div 
+                className="space-y-4 pt-3"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...springConfig, delay: 0.4 }}
+              >
+                <FormField
+                  control={form.control}
+                  name="acceptedTerms"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-4 space-y-0 p-4 bg-muted/30 rounded-xl">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) => {
+                            triggerHaptic('light');
+                            field.onChange(checked);
+                          }}
+                          className="h-6 w-6 mt-0.5"
+                          data-testid="checkbox-terms"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-relaxed flex-1">
+                        <FormLabel className="text-base font-normal cursor-pointer">
+                          Accetto i{" "}
+                          <span 
+                            className="text-primary underline" 
+                            onClick={(e) => { 
+                              e.preventDefault(); 
+                              triggerHaptic('light');
+                              setTermsOpen(!termsOpen); 
+                            }}
+                          >
+                            termini e condizioni
+                          </span>{" "}
+                          e l'{" "}
+                          <span 
+                            className="text-primary underline" 
+                            onClick={(e) => { 
+                              e.preventDefault(); 
+                              triggerHaptic('light');
+                              setPrivacyOpen(!privacyOpen); 
+                            }}
+                          >
+                            informativa sulla privacy
+                          </span>{" "}*
+                        </FormLabel>
+                        <FormMessage />
+                      </div>
+                    </FormItem>
                   )}
-                </Button>
-              </form>
-            </Form>
-          </CardContent>
-        </Card>
+                />
+                
+                <Collapsible open={termsOpen} onOpenChange={setTermsOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button 
+                      className="w-full flex items-center justify-between min-h-[44px] px-4 py-3 text-muted-foreground rounded-xl bg-muted/20 active:bg-muted/40"
+                      type="button"
+                      onClick={() => triggerHaptic('light')}
+                      data-testid="button-toggle-terms"
+                    >
+                      <span className="text-sm font-medium">Termini e condizioni</span>
+                      <motion.div
+                        animate={{ rotate: termsOpen ? 180 : 0 }}
+                        transition={springConfig}
+                      >
+                        <ChevronDown className="h-5 w-5" />
+                      </motion.div>
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <motion.div 
+                      className="p-4 text-sm text-muted-foreground bg-muted/30 rounded-xl mt-2 leading-relaxed"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      data-testid="text-terms-content"
+                    >
+                      {termsTextToShow}
+                    </motion.div>
+                  </CollapsibleContent>
+                </Collapsible>
+
+                <Collapsible open={privacyOpen} onOpenChange={setPrivacyOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button 
+                      className="w-full flex items-center justify-between min-h-[44px] px-4 py-3 text-muted-foreground rounded-xl bg-muted/20 active:bg-muted/40"
+                      type="button"
+                      onClick={() => triggerHaptic('light')}
+                      data-testid="button-toggle-privacy"
+                    >
+                      <span className="text-sm font-medium">Informativa sulla privacy</span>
+                      <motion.div
+                        animate={{ rotate: privacyOpen ? 180 : 0 }}
+                        transition={springConfig}
+                      >
+                        <ChevronDown className="h-5 w-5" />
+                      </motion.div>
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <motion.div 
+                      className="p-4 text-sm text-muted-foreground bg-muted/30 rounded-xl mt-2 leading-relaxed"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      data-testid="text-privacy-content"
+                    >
+                      {privacyTextToShow}
+                    </motion.div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </motion.div>
+            )}
+
+            {landing.showMarketing && (
+              <motion.div 
+                className="space-y-4 pt-2"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...springConfig, delay: 0.45 }}
+              >
+                <FormField
+                  control={form.control}
+                  name="acceptedMarketing"
+                  render={({ field }) => (
+                    <FormItem className="flex flex-row items-start space-x-4 space-y-0 p-4 bg-muted/30 rounded-xl">
+                      <FormControl>
+                        <Checkbox
+                          checked={field.value}
+                          onCheckedChange={(checked) => {
+                            triggerHaptic('light');
+                            field.onChange(checked);
+                          }}
+                          className="h-6 w-6 mt-0.5"
+                          data-testid="checkbox-marketing"
+                        />
+                      </FormControl>
+                      <div className="space-y-1 leading-relaxed flex-1">
+                        <FormLabel className="text-base font-normal cursor-pointer">
+                          Acconsento a ricevere comunicazioni promozionali
+                        </FormLabel>
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
+                <Collapsible open={marketingOpen} onOpenChange={setMarketingOpen}>
+                  <CollapsibleTrigger asChild>
+                    <button 
+                      className="w-full flex items-center justify-between min-h-[44px] px-4 py-3 text-muted-foreground rounded-xl bg-muted/20 active:bg-muted/40"
+                      type="button"
+                      onClick={() => triggerHaptic('light')}
+                      data-testid="button-toggle-marketing"
+                    >
+                      <span className="text-sm font-medium">Dettagli sul consenso marketing</span>
+                      <motion.div
+                        animate={{ rotate: marketingOpen ? 180 : 0 }}
+                        transition={springConfig}
+                      >
+                        <ChevronDown className="h-5 w-5" />
+                      </motion.div>
+                    </button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <motion.div 
+                      className="p-4 text-sm text-muted-foreground bg-muted/30 rounded-xl mt-2 leading-relaxed"
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      data-testid="text-marketing-content"
+                    >
+                      {marketingTextToShow}
+                    </motion.div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </motion.div>
+            )}
+
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springConfig, delay: 0.5 }}
+              className="pt-4"
+            >
+              <HapticButton 
+                type="submit" 
+                className="w-full h-14 text-lg font-semibold rounded-xl"
+                disabled={submitMutation.isPending}
+                style={{ backgroundColor: landing.primaryColor || undefined }}
+                hapticType="medium"
+                data-testid="button-submit-request"
+              >
+                {submitMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-5 w-5 mr-3 animate-spin" />
+                    Invio in corso...
+                  </>
+                ) : (
+                  "Richiedi Badge"
+                )}
+              </HapticButton>
+            </motion.div>
+          </form>
+        </Form>
       </motion.div>
-    </div>
+    </MobileAppLayout>
   );
 }

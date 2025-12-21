@@ -1,17 +1,17 @@
 import { useState } from "react";
 import { useParams, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { motion, AnimatePresence } from "framer-motion";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { MobileAppLayout, MobileHeader, HapticButton, triggerHaptic } from "@/components/mobile-primitives";
 import {
   ArrowLeft,
   QrCode,
@@ -27,6 +27,7 @@ import {
   Loader2,
   ScanLine,
   LogOut,
+  Trash2,
 } from "lucide-react";
 
 interface ScanResult {
@@ -57,6 +58,37 @@ interface RecentScan extends ScanResult {
   scannedAt: Date;
   qrCode: string;
 }
+
+const springTransition = {
+  type: "spring",
+  stiffness: 400,
+  damping: 30,
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    transition: springTransition
+  },
+  exit: { 
+    opacity: 0, 
+    y: -20, 
+    scale: 0.95,
+    transition: { duration: 0.2 }
+  }
+};
+
+const listItemVariants = {
+  hidden: { opacity: 0, x: -20 },
+  visible: (i: number) => ({
+    opacity: 1,
+    x: 0,
+    transition: { ...springTransition, delay: i * 0.05 }
+  }),
+};
 
 export default function E4uScannerPage() {
   const { eventId } = useParams<{ eventId?: string }>();
@@ -98,11 +130,13 @@ export default function E4uScannerPage() {
       setQrInput("");
       
       if (data.success && data.person) {
+        triggerHaptic('success');
         toast({ 
           title: "Check-in effettuato!", 
           description: `${data.person.firstName} ${data.person.lastName}` 
         });
       } else if (data.alreadyCheckedIn) {
+        triggerHaptic('error');
         toast({ 
           title: "Già registrato", 
           description: data.message || "Questo QR è già stato utilizzato",
@@ -111,6 +145,7 @@ export default function E4uScannerPage() {
       }
     },
     onError: (error: any) => {
+      triggerHaptic('error');
       const errorResult: ScanResult = { 
         success: false, 
         error: error.message || "Errore durante la scansione" 
@@ -126,6 +161,7 @@ export default function E4uScannerPage() {
 
   const handleScan = () => {
     if (!qrInput.trim()) {
+      triggerHaptic('error');
       toast({
         title: "Errore",
         description: "Inserisci o scansiona un codice QR",
@@ -134,6 +170,7 @@ export default function E4uScannerPage() {
       return;
     }
     if (!activeEventId) {
+      triggerHaptic('error');
       toast({
         title: "Errore",
         description: "Seleziona un evento prima di scansionare",
@@ -151,11 +188,13 @@ export default function E4uScannerPage() {
   };
 
   const resetScanner = () => {
+    triggerHaptic('light');
     setQrInput("");
     setScanResult(null);
   };
 
   const clearHistory = () => {
+    triggerHaptic('medium');
     setRecentScans([]);
   };
 
@@ -170,383 +209,484 @@ export default function E4uScannerPage() {
     }
   };
 
-  return (
-    <div className="container mx-auto p-3 sm:p-4 md:p-6 max-w-2xl pb-24 md:pb-6">
-      <div className="flex items-center justify-between gap-3 sm:gap-4 mb-4 sm:mb-6">
-        <div className="flex items-center gap-3 sm:gap-4">
-          {!isStandaloneScanner && (
-            <Link href="/events">
-              <Button variant="ghost" size="icon" data-testid="button-back">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-          )}
-          <div>
-            <h1 className="text-xl sm:text-2xl font-bold tracking-tight" data-testid="text-page-title">
-              Scanner QR
-            </h1>
-            {selectedEvent && (
-              <p className="text-muted-foreground text-xs sm:text-sm" data-testid="text-event-name">
-                {selectedEvent.name}
-              </p>
-            )}
-            {isStandaloneScanner && user && (
-              <p className="text-muted-foreground text-xs" data-testid="text-scanner-user">
-                {(user as any).firstName} {(user as any).lastName}
-              </p>
-            )}
-          </div>
-        </div>
-        {isStandaloneScanner && (
-          <Button 
-            variant="outline" 
-            size="sm" 
+  const headerContent = (
+    <MobileHeader
+      title="Scanner QR"
+      subtitle={selectedEvent?.name}
+      leftAction={
+        !isStandaloneScanner ? (
+          <Link href="/events">
+            <HapticButton variant="ghost" size="icon" data-testid="button-back">
+              <ArrowLeft className="h-5 w-5" />
+            </HapticButton>
+          </Link>
+        ) : undefined
+      }
+      rightAction={
+        isStandaloneScanner ? (
+          <HapticButton 
+            variant="ghost" 
+            size="icon"
             onClick={handleLogout}
             data-testid="button-logout"
           >
-            <LogOut className="h-4 w-4 mr-2" />
-            Esci
-          </Button>
-        )}
-      </div>
+            <LogOut className="h-5 w-5" />
+          </HapticButton>
+        ) : undefined
+      }
+    />
+  );
 
-      {!eventId && (
-        <Card className="mb-4 sm:mb-6">
-          <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 sm:pb-3">
-            <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-              <Ticket className="h-4 w-4 sm:h-5 sm:w-5" />
-              Seleziona Evento
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="p-3 sm:p-4 md:p-6 pt-0">
-            <Select 
-              value={selectedEventId} 
-              onValueChange={setSelectedEventId}
-            >
-              <SelectTrigger data-testid="select-event">
-                <SelectValue placeholder="Scegli un evento..." />
-              </SelectTrigger>
-              <SelectContent>
-                {eventsLoading ? (
-                  <div className="p-4 text-center text-muted-foreground">
-                    Caricamento...
-                  </div>
-                ) : events && events.length > 0 ? (
-                  events.map((event: any) => (
-                    <SelectItem 
-                      key={event.id} 
-                      value={event.id.toString()}
-                      data-testid={`select-event-option-${event.id}`}
-                    >
-                      {event.name} - {format(new Date(event.startDatetime), "d MMM yyyy", { locale: it })}
-                    </SelectItem>
-                  ))
-                ) : (
-                  <div className="p-4 text-center text-muted-foreground">
-                    Nessun evento disponibile
-                  </div>
-                )}
-              </SelectContent>
-            </Select>
-          </CardContent>
-        </Card>
-      )}
-
-      <Card className="mb-4 sm:mb-6">
-        <CardHeader className="p-3 sm:p-4 md:p-6 pb-2 sm:pb-3">
-          <CardTitle className="text-base sm:text-lg flex items-center gap-2">
-            <QrCode className="w-4 h-4 sm:w-5 sm:h-5" />
-            Scansione QR Code
-          </CardTitle>
-          <CardDescription className="text-xs sm:text-sm">
-            Usa il lettore QR o inserisci manualmente il codice
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="p-3 sm:p-4 md:p-6 space-y-4">
-          <div className="flex flex-col sm:flex-row gap-2">
-            <Input
-              placeholder="Inserisci o scansiona QR code..."
-              value={qrInput}
-              onChange={(e) => setQrInput(e.target.value)}
-              onKeyDown={handleKeyPress}
-              autoFocus
-              className="h-12 sm:h-14 text-base sm:text-lg font-mono"
-              disabled={!activeEventId}
-              data-testid="input-qr-code"
-            />
-            <Button
-              onClick={handleScan}
-              disabled={scanMutation.isPending || !qrInput.trim() || !activeEventId}
-              className="h-12 sm:h-14 w-full sm:w-auto sm:min-w-[120px]"
-              data-testid="button-scan"
-            >
-              {scanMutation.isPending ? (
-                <Loader2 className="w-4 h-4 animate-spin" />
-              ) : (
-                <>
-                  <ScanLine className="w-4 h-4 mr-2" />
-                  Scansiona
-                </>
-              )}
-            </Button>
-          </div>
-          <Button
-            variant="outline"
-            className="w-full h-12 sm:h-10"
-            onClick={resetScanner}
-            data-testid="button-reset"
+  return (
+    <MobileAppLayout
+      header={headerContent}
+      contentClassName="pb-24"
+    >
+      <div className="space-y-4 py-4">
+        {!eventId && (
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={cardVariants}
           >
-            <RefreshCw className="w-4 h-4 mr-2" />
-            Reset
-          </Button>
-        </CardContent>
-      </Card>
-
-      {scanResult && scanResult.success && scanResult.person && (
-        <Card className="border-emerald-500/50 bg-emerald-500/5 mb-6" data-testid="card-success">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                <CheckCircle2 className="w-6 h-6 text-emerald-400" />
-              </div>
-              <div>
-                <CardTitle className="text-emerald-400">Check-in Effettuato</CardTitle>
-                <CardDescription>{scanResult.message || "Ingresso registrato con successo"}</CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-background rounded-lg p-4 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <User className="w-5 h-5 text-muted-foreground" />
-                  <span className="text-lg font-semibold" data-testid="text-person-name">
-                    {scanResult.person.firstName} {scanResult.person.lastName}
-                  </span>
+            <Card className="overflow-hidden">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                    <Ticket className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h2 className="font-semibold text-lg">Seleziona Evento</h2>
+                    <p className="text-muted-foreground text-sm">Scegli l'evento per il check-in</p>
+                  </div>
                 </div>
-                <Badge variant="outline" className="capitalize" data-testid="badge-type">
-                  {scanResult.person.type === 'lista' ? (
-                    <><Users className="w-3 h-3 mr-1" /> Lista</>
-                  ) : scanResult.person.type === 'biglietto' ? (
-                    <><Ticket className="w-3 h-3 mr-1" /> Biglietto</>
-                  ) : (
-                    <><Armchair className="w-3 h-3 mr-1" /> Tavolo</>
-                  )}
-                </Badge>
-              </div>
-              
-              <div className="grid grid-cols-2 gap-2 text-sm">
-                {scanResult.person.phone && (
-                  <div>
-                    <span className="text-muted-foreground">Telefono:</span>
-                    <span className="ml-2 font-medium" data-testid="text-phone">
-                      {scanResult.person.phone}
-                    </span>
-                  </div>
-                )}
-                {scanResult.person.listName && (
-                  <div>
-                    <span className="text-muted-foreground">Lista:</span>
-                    <span className="ml-2 font-medium" data-testid="text-list-name">
-                      {scanResult.person.listName}
-                    </span>
-                  </div>
-                )}
-                {scanResult.person.tableName && (
-                  <div>
-                    <span className="text-muted-foreground">Tavolo:</span>
-                    <span className="ml-2 font-medium" data-testid="text-table-name">
-                      {scanResult.person.tableName}
-                    </span>
-                  </div>
-                )}
-                {scanResult.person.plusOnes !== undefined && scanResult.person.plusOnes > 0 && (
-                  <div>
-                    <span className="text-muted-foreground">Accompagnatori:</span>
-                    <span className="ml-2 font-medium" data-testid="text-plus-ones">
-                      +{scanResult.person.plusOnes}
-                    </span>
-                  </div>
-                )}
-                {scanResult.person.ticketCode && (
-                  <div>
-                    <span className="text-muted-foreground">Codice:</span>
-                    <span className="ml-2 font-medium font-mono" data-testid="text-ticket-code">
-                      {scanResult.person.ticketCode}
-                    </span>
-                  </div>
-                )}
-                {scanResult.person.ticketType && (
-                  <div>
-                    <span className="text-muted-foreground">Tipo:</span>
-                    <span className="ml-2 font-medium" data-testid="text-ticket-type">
-                      {scanResult.person.ticketType}
-                    </span>
-                  </div>
-                )}
-                {scanResult.person.sector && (
-                  <div>
-                    <span className="text-muted-foreground">Settore:</span>
-                    <span className="ml-2 font-medium" data-testid="text-ticket-sector">
-                      {scanResult.person.sector}
-                    </span>
-                  </div>
-                )}
-                {scanResult.person.price && (
-                  <div>
-                    <span className="text-muted-foreground">Prezzo:</span>
-                    <span className="ml-2 font-medium" data-testid="text-ticket-price">
-                      €{parseFloat(scanResult.person.price).toFixed(2)}
-                    </span>
-                  </div>
-                )}
-              </div>
-              
-              {scanResult.person.status && (
-                <Badge 
-                  variant={scanResult.person.status === 'confirmed' ? 'default' : 'secondary'}
-                  data-testid="badge-status"
+                <Select 
+                  value={selectedEventId} 
+                  onValueChange={(v) => {
+                    triggerHaptic('light');
+                    setSelectedEventId(v);
+                  }}
                 >
-                  {scanResult.person.status === 'confirmed' ? 'Confermato' : scanResult.person.status}
-                </Badge>
-              )}
-            </div>
-          </CardContent>
-        </Card>
-      )}
+                  <SelectTrigger className="h-14 text-base" data-testid="select-event">
+                    <SelectValue placeholder="Scegli un evento..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eventsLoading ? (
+                      <div className="p-4 text-center text-muted-foreground">
+                        <Loader2 className="h-5 w-5 animate-spin mx-auto mb-2" />
+                        Caricamento...
+                      </div>
+                    ) : events && events.length > 0 ? (
+                      events.map((event: any) => (
+                        <SelectItem 
+                          key={event.id} 
+                          value={event.id.toString()}
+                          className="py-3"
+                          data-testid={`select-event-option-${event.id}`}
+                        >
+                          <div className="flex flex-col">
+                            <span className="font-medium">{event.name}</span>
+                            <span className="text-xs text-muted-foreground">
+                              {format(new Date(event.startDatetime), "d MMM yyyy", { locale: it })}
+                            </span>
+                          </div>
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="p-4 text-center text-muted-foreground">
+                        Nessun evento disponibile
+                      </div>
+                    )}
+                  </SelectContent>
+                </Select>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
 
-      {scanResult && scanResult.alreadyCheckedIn && (
-        <Card className="border-amber-500/50 bg-amber-500/5 mb-6" data-testid="card-already-checked">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center">
-                <AlertTriangle className="w-6 h-6 text-amber-400" />
+        <motion.div
+          initial="hidden"
+          animate="visible"
+          variants={cardVariants}
+        >
+          <Card className="overflow-hidden">
+            <CardContent className="p-4 space-y-4">
+              <div className="flex items-center gap-3">
+                <div className="w-12 h-12 rounded-2xl bg-primary/10 flex items-center justify-center">
+                  <QrCode className="w-6 h-6 text-primary" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-lg">Scansione QR Code</h2>
+                  <p className="text-muted-foreground text-sm">Usa il lettore o inserisci manualmente</p>
+                </div>
               </div>
-              <div>
-                <CardTitle className="text-amber-400">Già Registrato</CardTitle>
-                <CardDescription>
-                  {scanResult.checkedInAt 
-                    ? `Check-in effettuato alle ${format(new Date(scanResult.checkedInAt), "HH:mm", { locale: it })}`
-                    : "Questo QR è già stato utilizzato"
-                  }
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          {scanResult.person && (
-            <CardContent>
-              <div className="bg-background rounded-lg p-4">
-                <p className="font-semibold" data-testid="text-already-person-name">
-                  {scanResult.person.firstName} {scanResult.person.lastName}
-                </p>
+
+              <Input
+                placeholder="Inserisci o scansiona QR code..."
+                value={qrInput}
+                onChange={(e) => setQrInput(e.target.value)}
+                onKeyDown={handleKeyPress}
+                autoFocus
+                className="h-14 text-lg font-mono"
+                disabled={!activeEventId}
+                data-testid="input-qr-code"
+              />
+
+              <div className="flex gap-3">
+                <HapticButton
+                  onClick={handleScan}
+                  disabled={scanMutation.isPending || !qrInput.trim() || !activeEventId}
+                  className="flex-1 h-14 text-base font-semibold"
+                  hapticType="medium"
+                  data-testid="button-scan"
+                >
+                  {scanMutation.isPending ? (
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <ScanLine className="w-5 h-5 mr-2" />
+                      Scansiona
+                    </>
+                  )}
+                </HapticButton>
+
+                <HapticButton
+                  variant="outline"
+                  size="icon"
+                  className="h-14 w-14"
+                  onClick={resetScanner}
+                  data-testid="button-reset"
+                >
+                  <RefreshCw className="w-5 h-5" />
+                </HapticButton>
               </div>
             </CardContent>
-          )}
-        </Card>
-      )}
+          </Card>
+        </motion.div>
 
-      {scanResult && !scanResult.success && scanResult.error && (
-        <Card className="border-rose-500/50 bg-rose-500/5 mb-6" data-testid="card-error">
-          <CardHeader className="pb-3">
-            <div className="flex items-center gap-3">
-              <div className="w-12 h-12 rounded-full bg-rose-500/20 flex items-center justify-center">
-                <XCircle className="w-6 h-6 text-rose-400" />
-              </div>
-              <div>
-                <CardTitle className="text-rose-400">Errore Scansione</CardTitle>
-                <CardDescription data-testid="text-error-message">
-                  {scanResult.error}
-                </CardDescription>
-              </div>
-            </div>
-          </CardHeader>
-          <CardContent>
-            <div className="bg-background rounded-lg p-4">
-              <p className="text-sm text-muted-foreground">
-                Verifica che il codice QR sia valido e appartenga a questo evento.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {!scanResult && activeEventId && (
-        <Card className="mb-6">
-          <CardContent className="py-12">
-            <div className="text-center">
-              <QrCode className="w-24 h-24 mx-auto text-muted-foreground/30 mb-4" />
-              <p className="text-muted-foreground">
-                Inserisci o scansiona un codice QR per effettuare il check-in
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {recentScans.length > 0 && (
-        <Card data-testid="card-recent-scans">
-          <CardHeader className="pb-3 flex flex-row items-center justify-between gap-2">
-            <div>
-              <CardTitle className="text-lg flex items-center gap-2">
-                <Clock className="h-5 w-5" />
-                Scansioni Recenti
-              </CardTitle>
-              <CardDescription>
-                Ultime {recentScans.length} scansioni
-              </CardDescription>
-            </div>
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              onClick={clearHistory}
-              data-testid="button-clear-history"
+        <AnimatePresence mode="wait">
+          {scanResult && scanResult.success && scanResult.person && (
+            <motion.div
+              key="success"
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              variants={cardVariants}
             >
-              Cancella
-            </Button>
-          </CardHeader>
-          <CardContent>
-            <ScrollArea className="h-[200px]">
-              <div className="space-y-2">
-                {recentScans.map((scan, index) => (
-                  <div 
-                    key={index} 
-                    className="flex items-center justify-between p-3 rounded-lg bg-muted/50"
-                    data-testid={`recent-scan-${index}`}
-                  >
-                    <div className="flex items-center gap-3">
-                      {scan.success ? (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-400" />
-                      ) : scan.alreadyCheckedIn ? (
-                        <AlertTriangle className="w-4 h-4 text-amber-400" />
-                      ) : (
-                        <XCircle className="w-4 h-4 text-rose-400" />
-                      )}
-                      <div>
-                        <p className="font-medium text-sm">
-                          {scan.person 
-                            ? `${scan.person.firstName} ${scan.person.lastName}`
-                            : scan.error || "Errore"
-                          }
-                        </p>
-                        {scan.person && (
-                          <p className="text-xs text-muted-foreground">
-                            {scan.person.type === 'lista' ? 'Lista' : 'Tavolo'}
-                            {scan.person.listName && ` - ${scan.person.listName}`}
-                            {scan.person.tableName && ` - ${scan.person.tableName}`}
-                          </p>
-                        )}
-                      </div>
+              <Card className="border-2 border-emerald-500/50 bg-emerald-500/5 overflow-hidden" data-testid="card-success">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4 mb-4">
+                    <motion.div 
+                      className="w-16 h-16 rounded-full bg-emerald-500/20 flex items-center justify-center"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ ...springTransition, delay: 0.1 }}
+                    >
+                      <CheckCircle2 className="w-8 h-8 text-emerald-400" />
+                    </motion.div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-emerald-400">Check-in Effettuato</h3>
+                      <p className="text-muted-foreground text-sm">{scanResult.message || "Ingresso registrato con successo"}</p>
                     </div>
-                    <span className="text-xs text-muted-foreground">
-                      {format(scan.scannedAt, "HH:mm", { locale: it })}
-                    </span>
                   </div>
-                ))}
-              </div>
-            </ScrollArea>
-          </CardContent>
-        </Card>
-      )}
-    </div>
+
+                  <div className="bg-background/50 rounded-2xl p-4 space-y-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <User className="w-5 h-5 text-muted-foreground" />
+                        <span className="text-xl font-bold" data-testid="text-person-name">
+                          {scanResult.person.firstName} {scanResult.person.lastName}
+                        </span>
+                      </div>
+                      <Badge variant="outline" className="capitalize h-8 px-3" data-testid="badge-type">
+                        {scanResult.person.type === 'lista' ? (
+                          <><Users className="w-4 h-4 mr-1" /> Lista</>
+                        ) : scanResult.person.type === 'biglietto' ? (
+                          <><Ticket className="w-4 h-4 mr-1" /> Biglietto</>
+                        ) : (
+                          <><Armchair className="w-4 h-4 mr-1" /> Tavolo</>
+                        )}
+                      </Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-3 text-sm">
+                      {scanResult.person.phone && (
+                        <div className="bg-muted/30 rounded-xl p-3">
+                          <span className="text-muted-foreground text-xs block mb-1">Telefono</span>
+                          <span className="font-medium" data-testid="text-phone">
+                            {scanResult.person.phone}
+                          </span>
+                        </div>
+                      )}
+                      {scanResult.person.listName && (
+                        <div className="bg-muted/30 rounded-xl p-3">
+                          <span className="text-muted-foreground text-xs block mb-1">Lista</span>
+                          <span className="font-medium" data-testid="text-list-name">
+                            {scanResult.person.listName}
+                          </span>
+                        </div>
+                      )}
+                      {scanResult.person.tableName && (
+                        <div className="bg-muted/30 rounded-xl p-3">
+                          <span className="text-muted-foreground text-xs block mb-1">Tavolo</span>
+                          <span className="font-medium" data-testid="text-table-name">
+                            {scanResult.person.tableName}
+                          </span>
+                        </div>
+                      )}
+                      {scanResult.person.plusOnes !== undefined && scanResult.person.plusOnes > 0 && (
+                        <div className="bg-muted/30 rounded-xl p-3">
+                          <span className="text-muted-foreground text-xs block mb-1">Accompagnatori</span>
+                          <span className="font-medium" data-testid="text-plus-ones">
+                            +{scanResult.person.plusOnes}
+                          </span>
+                        </div>
+                      )}
+                      {scanResult.person.ticketCode && (
+                        <div className="bg-muted/30 rounded-xl p-3">
+                          <span className="text-muted-foreground text-xs block mb-1">Codice</span>
+                          <span className="font-medium font-mono" data-testid="text-ticket-code">
+                            {scanResult.person.ticketCode}
+                          </span>
+                        </div>
+                      )}
+                      {scanResult.person.ticketType && (
+                        <div className="bg-muted/30 rounded-xl p-3">
+                          <span className="text-muted-foreground text-xs block mb-1">Tipo</span>
+                          <span className="font-medium" data-testid="text-ticket-type">
+                            {scanResult.person.ticketType}
+                          </span>
+                        </div>
+                      )}
+                      {scanResult.person.sector && (
+                        <div className="bg-muted/30 rounded-xl p-3">
+                          <span className="text-muted-foreground text-xs block mb-1">Settore</span>
+                          <span className="font-medium" data-testid="text-ticket-sector">
+                            {scanResult.person.sector}
+                          </span>
+                        </div>
+                      )}
+                      {scanResult.person.price && (
+                        <div className="bg-muted/30 rounded-xl p-3">
+                          <span className="text-muted-foreground text-xs block mb-1">Prezzo</span>
+                          <span className="font-medium" data-testid="text-ticket-price">
+                            €{parseFloat(scanResult.person.price).toFixed(2)}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                    
+                    {scanResult.person.status && (
+                      <Badge 
+                        variant={scanResult.person.status === 'confirmed' ? 'default' : 'secondary'}
+                        className="h-8 px-3"
+                        data-testid="badge-status"
+                      >
+                        {scanResult.person.status === 'confirmed' ? 'Confermato' : scanResult.person.status}
+                      </Badge>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {scanResult && scanResult.alreadyCheckedIn && (
+            <motion.div
+              key="already"
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              variants={cardVariants}
+            >
+              <Card className="border-2 border-amber-500/50 bg-amber-500/5 overflow-hidden" data-testid="card-already-checked">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                    <motion.div 
+                      className="w-16 h-16 rounded-full bg-amber-500/20 flex items-center justify-center"
+                      initial={{ scale: 0, rotate: -180 }}
+                      animate={{ scale: 1, rotate: 0 }}
+                      transition={springTransition}
+                    >
+                      <AlertTriangle className="w-8 h-8 text-amber-400" />
+                    </motion.div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-amber-400">Già Registrato</h3>
+                      <p className="text-muted-foreground text-sm">
+                        {scanResult.checkedInAt 
+                          ? `Check-in alle ${format(new Date(scanResult.checkedInAt), "HH:mm", { locale: it })}`
+                          : "QR già utilizzato"
+                        }
+                      </p>
+                    </div>
+                  </div>
+                  {scanResult.person && (
+                    <div className="bg-background/50 rounded-2xl p-4 mt-4">
+                      <p className="font-bold text-lg" data-testid="text-already-person-name">
+                        {scanResult.person.firstName} {scanResult.person.lastName}
+                      </p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {scanResult && !scanResult.success && scanResult.error && (
+            <motion.div
+              key="error"
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              variants={cardVariants}
+            >
+              <Card className="border-2 border-rose-500/50 bg-rose-500/5 overflow-hidden" data-testid="card-error">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-4">
+                    <motion.div 
+                      className="w-16 h-16 rounded-full bg-rose-500/20 flex items-center justify-center"
+                      initial={{ scale: 0 }}
+                      animate={{ scale: [0, 1.2, 1] }}
+                      transition={{ duration: 0.4 }}
+                    >
+                      <XCircle className="w-8 h-8 text-rose-400" />
+                    </motion.div>
+                    <div className="flex-1">
+                      <h3 className="text-xl font-bold text-rose-400">Errore Scansione</h3>
+                      <p className="text-muted-foreground text-sm" data-testid="text-error-message">
+                        {scanResult.error}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="bg-background/50 rounded-2xl p-4 mt-4">
+                    <p className="text-sm text-muted-foreground">
+                      Verifica che il codice QR sia valido e appartenga a questo evento.
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+
+          {!scanResult && activeEventId && (
+            <motion.div
+              key="placeholder"
+              initial="hidden"
+              animate="visible"
+              exit="exit"
+              variants={cardVariants}
+            >
+              <Card className="overflow-hidden">
+                <CardContent className="py-16">
+                  <motion.div 
+                    className="text-center"
+                    animate={{ 
+                      scale: [1, 1.02, 1],
+                      opacity: [0.5, 0.8, 0.5]
+                    }}
+                    transition={{ 
+                      duration: 2,
+                      repeat: Infinity,
+                      ease: "easeInOut"
+                    }}
+                  >
+                    <QrCode className="w-24 h-24 mx-auto text-muted-foreground/30 mb-4" />
+                    <p className="text-muted-foreground text-lg">
+                      Inserisci o scansiona un codice QR
+                    </p>
+                  </motion.div>
+                </CardContent>
+              </Card>
+            </motion.div>
+          )}
+        </AnimatePresence>
+
+        {recentScans.length > 0 && (
+          <motion.div
+            initial="hidden"
+            animate="visible"
+            variants={cardVariants}
+          >
+            <Card className="overflow-hidden" data-testid="card-recent-scans">
+              <CardContent className="p-4">
+                <div className="flex items-center justify-between mb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-muted/50 flex items-center justify-center">
+                      <Clock className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                    <div>
+                      <h3 className="font-semibold">Scansioni Recenti</h3>
+                      <p className="text-muted-foreground text-xs">
+                        Ultime {recentScans.length} scansioni
+                      </p>
+                    </div>
+                  </div>
+                  <HapticButton 
+                    variant="ghost" 
+                    size="icon"
+                    className="h-10 w-10"
+                    onClick={clearHistory}
+                    hapticType="light"
+                    data-testid="button-clear-history"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </HapticButton>
+                </div>
+
+                <div className="space-y-2 max-h-[300px] overflow-y-auto overscroll-contain">
+                  {recentScans.map((scan, index) => (
+                    <motion.div 
+                      key={index}
+                      custom={index}
+                      initial="hidden"
+                      animate="visible"
+                      variants={listItemVariants}
+                      className="flex items-center justify-between p-4 rounded-2xl bg-muted/30 min-h-[60px]"
+                      data-testid={`recent-scan-${index}`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                          scan.success 
+                            ? 'bg-emerald-500/20' 
+                            : scan.alreadyCheckedIn 
+                              ? 'bg-amber-500/20' 
+                              : 'bg-rose-500/20'
+                        }`}>
+                          {scan.success ? (
+                            <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+                          ) : scan.alreadyCheckedIn ? (
+                            <AlertTriangle className="w-5 h-5 text-amber-400" />
+                          ) : (
+                            <XCircle className="w-5 h-5 text-rose-400" />
+                          )}
+                        </div>
+                        <div>
+                          <p className="font-medium">
+                            {scan.person 
+                              ? `${scan.person.firstName} ${scan.person.lastName}`
+                              : scan.error || "Errore"
+                            }
+                          </p>
+                          {scan.person && (
+                            <p className="text-xs text-muted-foreground">
+                              {scan.person.type === 'lista' ? 'Lista' : scan.person.type === 'biglietto' ? 'Biglietto' : 'Tavolo'}
+                              {scan.person.listName && ` - ${scan.person.listName}`}
+                              {scan.person.tableName && ` - ${scan.person.tableName}`}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <span className="text-sm text-muted-foreground font-medium">
+                        {format(scan.scannedAt, "HH:mm", { locale: it })}
+                      </span>
+                    </motion.div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+      </div>
+    </MobileAppLayout>
   );
 }

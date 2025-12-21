@@ -363,7 +363,7 @@ export default function PriceLists() {
                     initial={{ opacity: 0 }}
                     animate={{ opacity: 1 }}
                     transition={{ delay: i * 0.1 }}
-                    className="h-28 rounded-2xl bg-muted/50 animate-pulse"
+                    className="h-[120px] rounded-2xl bg-muted/50 animate-pulse"
                   />
                 ))}
               </div>
@@ -392,7 +392,7 @@ export default function PriceLists() {
                 variants={staggerContainer}
                 initial="hidden"
                 animate="show"
-                className="space-y-3"
+                className="space-y-4"
               >
                 {priceLists.map((priceList) => {
                   const supplier = suppliers.find(s => s.id === priceList.supplierId);
@@ -400,45 +400,49 @@ export default function PriceLists() {
                     <motion.div
                       key={priceList.id}
                       variants={staggerItem}
-                      whileTap={{ scale: 0.98 }}
+                      whileTap={{ scale: 0.97 }}
                       data-testid={`card-price-list-${priceList.id}`}
                     >
                       <Card
-                        className="overflow-hidden cursor-pointer active:bg-accent/50 transition-colors"
+                        className="overflow-hidden cursor-pointer active:bg-accent/50 transition-colors rounded-2xl"
                         onClick={() => handleSelectPriceList(priceList)}
                       >
                         <CardContent className="p-0">
-                          <div className="flex items-center min-h-[88px]">
-                            <div className="shrink-0 w-16 h-full flex items-center justify-center bg-primary/10">
-                              <DollarSign className="h-7 w-7 text-primary" />
+                          <div className="flex items-stretch min-h-[120px]">
+                            <div className="shrink-0 w-20 flex items-center justify-center bg-gradient-to-br from-primary/20 to-primary/5">
+                              <div className="w-14 h-14 rounded-2xl bg-primary/15 flex items-center justify-center">
+                                <DollarSign className="h-8 w-8 text-primary" />
+                              </div>
                             </div>
-                            <div className="flex-1 py-4 px-4 min-w-0">
-                              <div className="flex items-start justify-between gap-2 mb-1">
-                                <p className="font-semibold text-base truncate">{priceList.name}</p>
+                            <div className="flex-1 py-5 px-4 min-w-0 flex flex-col justify-center">
+                              <div className="flex items-start justify-between gap-3 mb-2">
+                                <p className="font-bold text-lg leading-tight truncate">{priceList.name}</p>
                                 <Badge 
                                   variant={priceList.active ? "default" : "secondary"}
-                                  className="shrink-0"
+                                  className="shrink-0 text-xs"
                                 >
                                   {priceList.active ? "Attivo" : "Inattivo"}
                                 </Badge>
                               </div>
                               {supplier && (
-                                <p className="text-muted-foreground text-sm mb-1 truncate">
+                                <p className="text-muted-foreground text-sm mb-2 truncate">
                                   {supplier.name}
                                 </p>
                               )}
                               {priceList.validFrom && (
-                                <div className="flex items-center gap-1.5 text-muted-foreground text-xs">
-                                  <Calendar className="h-3.5 w-3.5" />
+                                <div className="flex items-center gap-1.5 text-muted-foreground text-sm">
+                                  <Calendar className="h-4 w-4" />
                                   <span>
-                                    {format(new Date(priceList.validFrom), 'dd MMM yyyy', { locale: it })}
-                                    {priceList.validTo && ` - ${format(new Date(priceList.validTo), 'dd MMM yyyy', { locale: it })}`}
+                                    {format(new Date(priceList.validFrom), 'dd MMM', { locale: it })}
+                                    {priceList.validTo && ` - ${format(new Date(priceList.validTo), 'dd MMM', { locale: it })}`}
                                   </span>
                                 </div>
                               )}
                             </div>
-                            <div className="shrink-0 pr-3">
-                              <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                            <div className="shrink-0 flex items-center pr-4">
+                              <div className="w-11 h-11 rounded-full bg-muted/50 flex items-center justify-center">
+                                <ChevronRight className="h-6 w-6 text-muted-foreground" />
+                              </div>
                             </div>
                           </div>
                         </CardContent>
@@ -464,11 +468,11 @@ export default function PriceLists() {
                   initial={{ opacity: 0, y: -10 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ ...springTransition, delay: 0.1 }}
-                  className="flex gap-3"
+                  className="flex gap-4"
                 >
                   <HapticButton
                     variant="outline"
-                    className="flex-1 h-12"
+                    className="flex-1 h-14 text-base rounded-2xl"
                     onClick={() => setIsItemSheetOpen(true)}
                     data-testid="button-add-item"
                   >
@@ -478,26 +482,26 @@ export default function PriceLists() {
                   <HapticButton
                     variant="destructive"
                     size="icon"
-                    className="h-12 w-12"
+                    className="h-14 w-14 rounded-2xl"
                     onClick={() => {
                       setPriceListToDelete(selectedPriceList.id);
                       setDeleteDialogOpen(true);
                     }}
                     data-testid="button-delete-price-list"
                   >
-                    <Trash2 className="h-5 w-5" />
+                    <Trash2 className="h-6 w-6" />
                   </HapticButton>
                 </motion.div>
 
                 {itemsLoading ? (
-                  <div className="space-y-3">
+                  <div className="space-y-4">
                     {[1, 2, 3].map((i) => (
                       <motion.div
                         key={i}
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         transition={{ delay: i * 0.1 }}
-                        className="h-24 rounded-2xl bg-muted/50 animate-pulse"
+                        className="h-[130px] rounded-2xl bg-muted/50 animate-pulse"
                       />
                     ))}
                   </div>
@@ -506,26 +510,27 @@ export default function PriceLists() {
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
                     transition={springTransition}
-                    className="flex flex-col items-center justify-center py-16"
+                    className="flex flex-col items-center justify-center py-20"
                   >
                     <motion.div
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ ...springTransition, delay: 0.1 }}
-                      className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4"
+                      className="w-20 h-20 rounded-full bg-muted/50 flex items-center justify-center mb-6"
                     >
-                      <Package className="h-8 w-8 text-muted-foreground" />
+                      <Package className="h-10 w-10 text-muted-foreground" />
                     </motion.div>
-                    <p className="text-muted-foreground text-center">
-                      Nessun prodotto in questo listino
+                    <p className="text-lg font-medium text-foreground mb-2">Nessun prodotto</p>
+                    <p className="text-muted-foreground text-center px-8 mb-6">
+                      Aggiungi prodotti a questo listino
                     </p>
                     <HapticButton 
-                      className="mt-4 h-12"
+                      className="h-14 px-8 text-base"
                       onClick={() => setIsItemSheetOpen(true)}
                       data-testid="button-add-first-item"
                     >
                       <Plus className="h-5 w-5 mr-2" />
-                      Aggiungi Primo Prodotto
+                      Aggiungi Prodotto
                     </HapticButton>
                   </motion.div>
                 ) : (
@@ -533,7 +538,7 @@ export default function PriceLists() {
                     variants={staggerContainer}
                     initial="hidden"
                     animate="show"
-                    className="space-y-3"
+                    className="space-y-4"
                   >
                     {items.map((item) => {
                       const product = products.find(p => p.id === item.productId);
@@ -548,41 +553,56 @@ export default function PriceLists() {
                         <motion.div
                           key={item.id}
                           variants={staggerItem}
+                          whileTap={{ scale: 0.98 }}
                           data-testid={`row-item-${item.id}`}
                         >
-                          <Card className="overflow-hidden">
-                            <CardContent className="p-4">
-                              <div className="flex items-start justify-between gap-3 mb-3">
-                                <div className="flex-1 min-w-0">
-                                  <p className="font-semibold text-base truncate">{product.name}</p>
-                                  <p className="text-muted-foreground text-xs font-mono">{product.code}</p>
+                          <Card className="overflow-hidden rounded-2xl">
+                            <CardContent className="p-0">
+                              <div className="flex items-stretch min-h-[110px]">
+                                <div className="shrink-0 w-16 flex items-center justify-center bg-gradient-to-br from-muted/50 to-muted/20">
+                                  <div className="w-11 h-11 rounded-xl bg-muted flex items-center justify-center">
+                                    <Package className="h-6 w-6 text-muted-foreground" />
+                                  </div>
                                 </div>
-                                <HapticButton
-                                  variant="ghost"
-                                  size="icon"
-                                  className="h-11 w-11 shrink-0"
-                                  onClick={() => deleteItemMutation.mutate(item.id)}
-                                  disabled={deleteItemMutation.isPending}
-                                  hapticType="medium"
-                                  data-testid={`button-delete-item-${item.id}`}
-                                >
-                                  <Trash2 className="h-5 w-5 text-destructive" />
-                                </HapticButton>
-                              </div>
-                              <div className="grid grid-cols-3 gap-3">
-                                <div>
-                                  <p className="text-xs text-muted-foreground mb-0.5">Costo</p>
-                                  <p className="font-medium">€ {costPrice.toFixed(2)}</p>
+                                <div className="flex-1 py-4 px-4 min-w-0 flex flex-col justify-center">
+                                  <div className="flex items-start justify-between gap-3 mb-3">
+                                    <div className="min-w-0">
+                                      <p className="font-bold text-base truncate">{product.name}</p>
+                                      <p className="text-muted-foreground text-xs font-mono">{product.code}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center gap-4">
+                                    <div className="flex-1">
+                                      <p className="text-xs text-muted-foreground">Costo</p>
+                                      <p className="font-medium text-sm">€ {costPrice.toFixed(2)}</p>
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-xs text-muted-foreground">Vendita</p>
+                                      <p className="font-bold text-base text-primary">€ {salePrice.toFixed(2)}</p>
+                                    </div>
+                                    <div className="flex-1">
+                                      <p className="text-xs text-muted-foreground">Margine</p>
+                                      <p className={`font-bold text-sm ${margin >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                                        {marginPercent.toFixed(0)}%
+                                      </p>
+                                    </div>
+                                  </div>
                                 </div>
-                                <div>
-                                  <p className="text-xs text-muted-foreground mb-0.5">Vendita</p>
-                                  <p className="font-bold text-primary">€ {salePrice.toFixed(2)}</p>
-                                </div>
-                                <div>
-                                  <p className="text-xs text-muted-foreground mb-0.5">Margine</p>
-                                  <p className={`font-medium ${margin >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                                    {marginPercent.toFixed(0)}%
-                                  </p>
+                                <div className="shrink-0 flex items-center pr-3">
+                                  <HapticButton
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-12 w-12 rounded-full"
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      deleteItemMutation.mutate(item.id);
+                                    }}
+                                    disabled={deleteItemMutation.isPending}
+                                    hapticType="medium"
+                                    data-testid={`button-delete-item-${item.id}`}
+                                  >
+                                    <Trash2 className="h-5 w-5 text-destructive" />
+                                  </HapticButton>
                                 </div>
                               </div>
                             </CardContent>
@@ -622,7 +642,7 @@ export default function PriceLists() {
                   <FormItem>
                     <FormLabel>Nome Listino *</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Listino Estate 2024" className="h-12" data-testid="input-name" />
+                      <Input {...field} placeholder="Listino Estate 2024" className="h-14 text-base rounded-xl" data-testid="input-name" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -638,7 +658,7 @@ export default function PriceLists() {
                     <FormControl>
                       <select
                         {...field}
-                        className="w-full h-12 rounded-md border border-input bg-background px-3 text-base"
+                        className="w-full h-14 rounded-xl border border-input bg-background px-4 text-base"
                         data-testid="select-supplier"
                       >
                         <option value="">Seleziona fornitore</option>
@@ -662,7 +682,7 @@ export default function PriceLists() {
                     <FormItem>
                       <FormLabel>Valido Da</FormLabel>
                       <FormControl>
-                        <Input {...field} type="date" className="h-12" data-testid="input-valid-from" />
+                        <Input {...field} type="date" className="h-14 text-base rounded-xl" data-testid="input-valid-from" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -676,7 +696,7 @@ export default function PriceLists() {
                     <FormItem>
                       <FormLabel>Valido Fino</FormLabel>
                       <FormControl>
-                        <Input {...field} type="date" className="h-12" data-testid="input-valid-to" />
+                        <Input {...field} type="date" className="h-14 text-base rounded-xl" data-testid="input-valid-to" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -684,16 +704,16 @@ export default function PriceLists() {
                 />
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-4 pt-6">
                 <HapticButton
                   type="button"
                   variant="outline"
-                  className="flex-1 h-12"
+                  className="flex-1 h-14 text-base rounded-2xl"
                   onClick={() => setIsCreateSheetOpen(false)}
                 >
                   Annulla
                 </HapticButton>
-                <HapticButton type="submit" className="flex-1 h-12" disabled={createMutation.isPending} data-testid="button-submit">
+                <HapticButton type="submit" className="flex-1 h-14 text-base rounded-2xl" disabled={createMutation.isPending} data-testid="button-submit">
                   {createMutation.isPending ? "Creazione..." : "Crea Listino"}
                 </HapticButton>
               </div>
@@ -721,7 +741,7 @@ export default function PriceLists() {
                   <FormItem>
                     <FormLabel>Nome Listino *</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="Listino Estate 2024" className="h-12" data-testid="input-edit-name" />
+                      <Input {...field} placeholder="Listino Estate 2024" className="h-14 text-base rounded-xl" data-testid="input-edit-name" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -736,7 +756,7 @@ export default function PriceLists() {
                     <FormItem>
                       <FormLabel>Valido Da</FormLabel>
                       <FormControl>
-                        <Input {...field} type="date" className="h-12" data-testid="input-edit-valid-from" />
+                        <Input {...field} type="date" className="h-14 text-base rounded-xl" data-testid="input-edit-valid-from" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -750,7 +770,7 @@ export default function PriceLists() {
                     <FormItem>
                       <FormLabel>Valido Fino</FormLabel>
                       <FormControl>
-                        <Input {...field} type="date" className="h-12" data-testid="input-edit-valid-to" />
+                        <Input {...field} type="date" className="h-14 text-base rounded-xl" data-testid="input-edit-valid-to" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -758,16 +778,16 @@ export default function PriceLists() {
                 />
               </div>
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-4 pt-6">
                 <HapticButton
                   type="button"
                   variant="outline"
-                  className="flex-1 h-12"
+                  className="flex-1 h-14 text-base rounded-2xl"
                   onClick={() => setIsEditSheetOpen(false)}
                 >
                   Annulla
                 </HapticButton>
-                <HapticButton type="submit" className="flex-1 h-12" disabled={updateMutation.isPending} data-testid="button-submit-edit">
+                <HapticButton type="submit" className="flex-1 h-14 text-base rounded-2xl" disabled={updateMutation.isPending} data-testid="button-submit-edit">
                   {updateMutation.isPending ? "Salvataggio..." : "Salva"}
                 </HapticButton>
               </div>
@@ -793,7 +813,7 @@ export default function PriceLists() {
                     <FormControl>
                       <select
                         {...field}
-                        className="w-full h-12 rounded-md border border-input bg-background px-3 text-base"
+                        className="w-full h-14 rounded-xl border border-input bg-background px-4 text-base"
                         data-testid="select-product"
                       >
                         <option value="">Seleziona prodotto</option>
@@ -816,23 +836,23 @@ export default function PriceLists() {
                   <FormItem>
                     <FormLabel>Prezzo di Vendita *</FormLabel>
                     <FormControl>
-                      <Input {...field} type="number" step="0.01" placeholder="10.00" className="h-12 text-lg" data-testid="input-sale-price" />
+                      <Input {...field} type="number" step="0.01" placeholder="10.00" className="h-14 text-lg rounded-xl" data-testid="input-sale-price" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
                 )}
               />
 
-              <div className="flex gap-3 pt-4">
+              <div className="flex gap-4 pt-6">
                 <HapticButton
                   type="button"
                   variant="outline"
-                  className="flex-1 h-12"
+                  className="flex-1 h-14 text-base rounded-2xl"
                   onClick={() => setIsItemSheetOpen(false)}
                 >
                   Annulla
                 </HapticButton>
-                <HapticButton type="submit" className="flex-1 h-12" disabled={createItemMutation.isPending} data-testid="button-submit-item">
+                <HapticButton type="submit" className="flex-1 h-14 text-base rounded-2xl" disabled={createItemMutation.isPending} data-testid="button-submit-item">
                   {createItemMutation.isPending ? "Aggiunta..." : "Aggiungi"}
                 </HapticButton>
               </div>
@@ -849,15 +869,16 @@ export default function PriceLists() {
               Sei sicuro di voler eliminare questo listino? Questa azione è irreversibile e eliminerà anche tutti i prezzi associati.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel className="h-12">Annulla</AlertDialogCancel>
+          <AlertDialogFooter className="gap-3">
+            <AlertDialogCancel className="h-14 text-base rounded-2xl flex-1">Annulla</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => {
+                triggerHaptic('medium');
                 if (priceListToDelete) {
                   deleteMutation.mutate(priceListToDelete);
                 }
               }}
-              className="h-12 bg-destructive text-destructive-foreground"
+              className="h-14 text-base rounded-2xl flex-1 bg-destructive text-destructive-foreground"
             >
               Elimina
             </AlertDialogAction>

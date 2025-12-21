@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
+  MobileAppLayout,
   HapticButton, 
   FloatingActionButton,
   triggerHaptic,
@@ -26,6 +27,8 @@ import {
 import type { Event, Station, EventFormat, Location } from "@shared/schema";
 
 type FilterType = 'all' | 'active' | 'past';
+
+const springConfig = { type: "spring", stiffness: 400, damping: 30 };
 
 const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: React.ElementType }> = {
   draft: { label: 'Bozza', color: 'text-muted-foreground', bgColor: 'bg-muted/50', icon: FilePenLine },
@@ -50,6 +53,7 @@ function FilterChip({
   return (
     <motion.button
       whileTap={{ scale: 0.95 }}
+      transition={springConfig}
       onClick={() => {
         triggerHaptic('light');
         onClick();
@@ -101,74 +105,70 @@ function EventCard({
       initial={{ opacity: 0, y: 30, scale: 0.95 }}
       animate={{ opacity: 1, y: 0, scale: 1 }}
       exit={{ opacity: 0, y: -20, scale: 0.95 }}
-      transition={{ 
-        type: "spring", 
-        stiffness: 300, 
-        damping: 30,
-        delay 
-      }}
+      transition={{ ...springConfig, delay }}
       whileTap={{ scale: 0.98 }}
       onClick={() => {
         triggerHaptic('medium');
         onNavigate(isDraft ? `/events/wizard/${event.id}` : `/events/${event.id}/hub`);
       }}
-      className="relative overflow-hidden rounded-2xl bg-card border border-border active:bg-card/80 cursor-pointer"
+      className="relative overflow-hidden rounded-3xl bg-card border border-border active:bg-card/80 cursor-pointer"
       data-testid={`event-card-${event.id}`}
     >
-      <div className={`absolute top-0 left-0 right-0 h-1.5 ${
+      <div className={`absolute top-0 left-0 right-0 h-2 ${
         event.status === 'ongoing' ? 'bg-gradient-to-r from-teal-500 to-cyan-500' : 
         event.status === 'scheduled' ? 'bg-gradient-to-r from-blue-500 to-indigo-500' :
         event.status === 'closed' ? 'bg-gradient-to-r from-rose-500 to-pink-500' :
         'bg-gradient-to-r from-gray-500 to-slate-500'
       }`} />
       
-      <div className="p-5 pt-6">
-        <div className="flex items-start justify-between gap-4 mb-4">
+      <div className="p-6 pt-7">
+        <div className="flex items-start justify-between gap-4 mb-5">
           <div className="flex-1 min-w-0">
-            <h3 className="text-xl font-bold truncate mb-2">{event.name}</h3>
+            <h3 className="text-2xl font-bold truncate mb-3">{event.name}</h3>
             <div className="flex items-center gap-2 flex-wrap">
-              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-sm font-medium ${status.bgColor} ${status.color}`}>
-                <StatusIcon className="h-3.5 w-3.5" />
+              <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium min-h-[32px] ${status.bgColor} ${status.color}`}>
+                <StatusIcon className="h-4 w-4" />
                 {status.label}
               </span>
               {format && (
                 <span 
-                  className="px-3 py-1 rounded-full text-sm font-medium text-white"
+                  className="px-4 py-1.5 rounded-full text-sm font-medium text-white min-h-[32px] inline-flex items-center"
                   style={{ backgroundColor: format.color ?? '#3b82f6' }}
                 >
                   {format.name}
                 </span>
               )}
               {event.seriesId && (
-                <span className="inline-flex items-center gap-1 px-3 py-1 rounded-full text-sm font-medium bg-violet-500/20 text-violet-400">
-                  <Repeat className="h-3.5 w-3.5" />
+                <span className="inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-sm font-medium bg-violet-500/20 text-violet-400 min-h-[32px]">
+                  <Repeat className="h-4 w-4" />
                 </span>
               )}
             </div>
           </div>
           
           <motion.div 
-            className="w-11 h-11 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0"
-            whileHover={{ scale: 1.1 }}
+            className="w-12 h-12 rounded-full bg-white/5 flex items-center justify-center flex-shrink-0 min-w-[48px] min-h-[48px]"
+            whileTap={{ scale: 0.9 }}
+            transition={springConfig}
           >
-            <ChevronRight className="h-5 w-5 text-muted-foreground" />
+            <ChevronRight className="h-6 w-6 text-muted-foreground" />
           </motion.div>
         </div>
 
-        <div className="space-y-3">
+        <div className="space-y-4">
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 rounded-xl bg-primary/10 flex items-center justify-center flex-shrink-0">
-              <CalendarIcon className="h-5 w-5 text-primary" />
+            <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center flex-shrink-0">
+              <CalendarIcon className="h-6 w-6 text-primary" />
             </div>
             <div className="flex-1 min-w-0">
-              <p className="font-semibold text-base">
+              <p className="font-semibold text-lg">
                 {new Date(event.startDatetime).toLocaleDateString('it-IT', {
                   weekday: 'long',
                   day: 'numeric',
                   month: 'long',
                 })}
               </p>
-              <p className="text-muted-foreground text-sm">
+              <p className="text-muted-foreground text-base">
                 {new Date(event.startDatetime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
                 {' - '}
                 {new Date(event.endDatetime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
@@ -178,26 +178,26 @@ function EventCard({
 
           {locationName && (
             <div className="flex items-center gap-4">
-              <div className="w-12 h-12 rounded-xl bg-teal-500/10 flex items-center justify-center flex-shrink-0">
-                <MapPin className="h-5 w-5 text-teal-500" />
+              <div className="w-14 h-14 rounded-2xl bg-teal-500/10 flex items-center justify-center flex-shrink-0">
+                <MapPin className="h-6 w-6 text-teal-500" />
               </div>
               <div className="flex-1 min-w-0">
-                <p className="font-medium text-base truncate">{locationName}</p>
+                <p className="font-medium text-lg truncate">{locationName}</p>
               </div>
             </div>
           )}
 
-          <div className="flex items-center gap-5 pt-3 border-t border-border/50">
+          <div className="flex items-center gap-6 pt-4 border-t border-border/50">
             {event.capacity && (
               <div className="flex items-center gap-2 text-muted-foreground">
-                <Users className="h-4 w-4" />
-                <span className="text-sm font-medium">{event.capacity} posti</span>
+                <Users className="h-5 w-5" />
+                <span className="text-base font-medium">{event.capacity} posti</span>
               </div>
             )}
             {stationCount > 0 && (
               <div className="flex items-center gap-2 text-muted-foreground">
-                <ListFilter className="h-4 w-4" />
-                <span className="text-sm font-medium">{stationCount} postazioni</span>
+                <ListFilter className="h-5 w-5" />
+                <span className="text-base font-medium">{stationCount} postazioni</span>
               </div>
             )}
           </div>
@@ -207,11 +207,12 @@ function EventCard({
           <motion.div 
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            className="mt-4 pt-4 border-t border-border/50"
+            transition={springConfig}
+            className="mt-5 pt-4 border-t border-border/50"
           >
             <div className="flex items-center gap-2 text-primary">
-              <FilePenLine className="h-4 w-4" />
-              <span className="text-sm font-medium">Tocca per continuare la configurazione</span>
+              <FilePenLine className="h-5 w-5" />
+              <span className="text-base font-medium">Tocca per continuare la configurazione</span>
             </div>
           </motion.div>
         )}
@@ -253,11 +254,11 @@ function EmptyState({
       initial={{ opacity: 0, scale: 0.9 }}
       animate={{ opacity: 1, scale: 1 }}
       exit={{ opacity: 0, scale: 0.9 }}
-      transition={{ type: "spring", stiffness: 300, damping: 30 }}
-      className="flex flex-col items-center justify-center py-16 px-6 text-center"
+      transition={springConfig}
+      className="flex flex-col items-center justify-center py-20 px-6 text-center"
     >
       <motion.div 
-        className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center mb-6"
+        className="w-24 h-24 rounded-3xl bg-primary/10 flex items-center justify-center mb-8"
         animate={{ 
           scale: [1, 1.05, 1],
           rotate: [0, 2, -2, 0],
@@ -268,27 +269,56 @@ function EmptyState({
           ease: "easeInOut" 
         }}
       >
-        <CalendarIcon className="h-10 w-10 text-primary" />
+        <CalendarIcon className="h-12 w-12 text-primary" />
       </motion.div>
       
-      <h3 className="text-xl font-bold mb-2">
+      <h3 className="text-2xl font-bold mb-3">
         {searchQuery ? `Nessun risultato per "${searchQuery}"` : title}
       </h3>
-      <p className="text-muted-foreground mb-6 max-w-[280px]">
+      <p className="text-lg text-muted-foreground mb-8 max-w-[300px]">
         {searchQuery ? "Prova con un termine di ricerca diverso" : subtitle}
       </p>
       
       {canCreate && !searchQuery && filter === 'all' && (
         <HapticButton 
           onClick={onCreateClick}
-          className="gradient-golden text-black font-semibold min-h-[52px] px-6"
+          className="gradient-golden text-black font-semibold min-h-[56px] px-8 text-lg"
           hapticType="success"
           data-testid="button-create-event-empty"
         >
-          <Sparkles className="h-5 w-5 mr-2" />
+          <Sparkles className="h-6 w-6 mr-2" />
           Crea Evento
         </HapticButton>
       )}
+    </motion.div>
+  );
+}
+
+function EventsHeader({ 
+  totalCount 
+}: { 
+  totalCount: number;
+}) {
+  return (
+    <motion.div 
+      initial={{ opacity: 0, y: -20 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={springConfig}
+      className="flex items-center gap-4 px-5 py-4 bg-background/80 backdrop-blur-xl border-b border-border/50"
+    >
+      <motion.div 
+        className="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0"
+        whileTap={{ scale: 0.95 }}
+        transition={springConfig}
+      >
+        <CalendarIcon className="h-7 w-7 text-white" />
+      </motion.div>
+      <div>
+        <h1 className="text-2xl font-bold">I Miei Eventi</h1>
+        <p className="text-base text-muted-foreground">
+          {totalCount} {totalCount === 1 ? 'evento' : 'eventi'} totali
+        </p>
+      </div>
     </motion.div>
   );
 }
@@ -378,40 +408,15 @@ export default function Events() {
   };
 
   return (
-    <div 
-      className="min-h-screen bg-background pb-24"
-      style={{ 
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingLeft: 'env(safe-area-inset-left)',
-        paddingRight: 'env(safe-area-inset-right)',
-      }}
+    <MobileAppLayout
+      header={<EventsHeader totalCount={filterCounts.all} />}
+      noPadding
+      contentClassName="pb-24"
     >
-      <motion.header 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="sticky top-0 z-20 bg-background/80 backdrop-blur-xl border-b border-border/50 px-5 py-4"
-      >
-        <div className="flex items-center gap-4">
-          <motion.div 
-            className="w-12 h-12 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center flex-shrink-0"
-            whileTap={{ scale: 0.95 }}
-          >
-            <CalendarIcon className="h-6 w-6 text-white" />
-          </motion.div>
-          <div>
-            <h1 className="text-2xl font-bold">I Miei Eventi</h1>
-            <p className="text-sm text-muted-foreground">
-              {filterCounts.all} {filterCounts.all === 1 ? 'evento' : 'eventi'} totali
-            </p>
-          </div>
-        </div>
-      </motion.header>
-
       <motion.div 
         initial={{ opacity: 0, y: 10 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.1, type: "spring", stiffness: 300, damping: 30 }}
+        transition={{ ...springConfig, delay: 0.1 }}
         className="flex gap-3 overflow-x-auto px-5 py-4 scrollbar-hide"
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
@@ -438,7 +443,7 @@ export default function Events() {
         />
       </motion.div>
 
-      <div className="px-5">
+      <div className="px-5 space-y-5">
         <AnimatePresence mode="wait">
           {eventsLoading ? (
             <motion.div
@@ -446,10 +451,11 @@ export default function Events() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="space-y-4"
+              transition={springConfig}
+              className="space-y-5"
             >
               {[1, 2, 3].map((i) => (
-                <Skeleton key={i} className="h-52 rounded-2xl" />
+                <Skeleton key={i} className="h-64 rounded-3xl" />
               ))}
             </motion.div>
           ) : filteredEvents.length === 0 ? (
@@ -466,7 +472,8 @@ export default function Events() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="space-y-4"
+              transition={springConfig}
+              className="space-y-5"
             >
               {filteredEvents.map((event, index) => (
                 <EventCard
@@ -492,9 +499,9 @@ export default function Events() {
           data-testid="fab-create-event"
           className="gradient-golden shadow-xl shadow-primary/30"
         >
-          <Plus className="h-6 w-6 text-black" />
+          <Plus className="h-7 w-7 text-black" />
         </FloatingActionButton>
       )}
-    </div>
+    </MobileAppLayout>
   );
 }

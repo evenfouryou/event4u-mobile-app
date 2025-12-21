@@ -3,7 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
-import { MobileAppLayout, HapticButton, BottomSheet, triggerHaptic } from "@/components/mobile-primitives";
+import { MobileAppLayout, HapticButton, BottomSheet, FloatingActionButton, triggerHaptic, MobileHeader } from "@/components/mobile-primitives";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   AlertDialog,
@@ -34,8 +34,7 @@ import {
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Plus, Warehouse as WarehouseIcon, TrendingUp, TrendingDown, Package, AlertTriangle, X, ListPlus, ArrowLeft, Pencil, BoxesIcon, Activity, Trash2, Search } from "lucide-react";
+import { Plus, Warehouse as WarehouseIcon, TrendingUp, TrendingDown, Package, AlertTriangle, X, ArrowLeft, Pencil, BoxesIcon, Activity, Trash2, Search } from "lucide-react";
 import { Link } from "wouter";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -66,16 +65,16 @@ interface MultiUnloadItem {
   reason?: string;
 }
 
-const springTransition = { type: "spring", stiffness: 300, damping: 30 };
+const springTransition = { type: "spring", stiffness: 400, damping: 30 };
 const staggerContainer = {
   hidden: { opacity: 0 },
   show: {
     opacity: 1,
-    transition: { staggerChildren: 0.08 }
+    transition: { staggerChildren: 0.06 }
   }
 };
 const staggerItem = {
-  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  hidden: { opacity: 0, y: 24, scale: 0.95 },
   show: { opacity: 1, y: 0, scale: 1, transition: springTransition }
 };
 
@@ -95,18 +94,19 @@ function StatsCard({
   return (
     <motion.div
       variants={staggerItem}
-      className="glass-card p-4 min-h-[100px]"
-      whileTap={{ scale: 0.97 }}
+      className="glass-card p-5"
+      whileTap={{ scale: 0.96 }}
+      transition={springTransition}
     >
-      <div className="flex items-center gap-3 mb-2">
-        <div className={`w-12 h-12 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center`}>
-          <Icon className="h-6 w-6 text-white" />
+      <div className="flex items-center gap-4">
+        <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${gradient} flex items-center justify-center shrink-0`}>
+          <Icon className="h-7 w-7 text-white" />
         </div>
-        <div className="flex-1">
-          <p className="text-2xl font-bold" data-testid={testId}>
+        <div className="flex-1 min-w-0">
+          <p className="text-2xl font-bold tabular-nums" data-testid={testId}>
             {value}
           </p>
-          <p className="text-xs text-muted-foreground">{title}</p>
+          <p className="text-sm text-muted-foreground truncate">{title}</p>
         </div>
       </div>
     </motion.div>
@@ -129,40 +129,43 @@ function StockCard({
   return (
     <motion.div
       variants={staggerItem}
-      className="glass-card p-5"
+      className="glass-card p-6"
       whileTap={{ scale: 0.98 }}
+      transition={springTransition}
       data-testid={`stock-card-${stock.productId}`}
     >
-      <div className="flex items-start justify-between gap-3">
+      <div className="flex items-start justify-between gap-4">
         <div className="flex-1 min-w-0">
-          <div className="font-semibold text-base truncate">{stock.productName}</div>
-          <div className="text-sm text-muted-foreground font-mono">{stock.productCode}</div>
+          <div className="font-semibold text-lg truncate">{stock.productName}</div>
+          <div className="text-sm text-muted-foreground font-mono mt-1">{stock.productCode}</div>
         </div>
         {canAdjust && (
           <HapticButton
             variant="ghost"
             size="icon"
             onClick={onAdjust}
+            className="shrink-0"
             data-testid={`button-adjust-${stock.productId}`}
           >
             <Pencil className="h-5 w-5" />
           </HapticButton>
         )}
       </div>
-      <div className="flex items-center justify-between mt-4 pt-4 border-t border-white/10">
+      <div className="flex items-end justify-between mt-5 pt-5 border-t border-white/10">
         <div>
           <div className="text-xs text-muted-foreground mb-1">Quantità</div>
-          <div className="text-xl font-bold tabular-nums">
-            {parseFloat(stock.quantity).toFixed(2)} <span className="text-sm text-muted-foreground font-normal">{stock.unitOfMeasure}</span>
+          <div className="text-3xl font-bold tabular-nums">
+            {parseFloat(stock.quantity).toFixed(2)} 
+            <span className="text-base text-muted-foreground font-normal ml-2">{stock.unitOfMeasure}</span>
           </div>
         </div>
         {isLowStock ? (
-          <Badge variant="destructive" className="gap-1 h-8 px-3" data-testid={`badge-low-stock-${stock.productId}`}>
+          <Badge variant="destructive" className="gap-1.5 h-10 px-4 text-sm" data-testid={`badge-low-stock-${stock.productId}`}>
             <AlertTriangle className="h-4 w-4" />
             Stock Basso
           </Badge>
         ) : (
-          <Badge variant="secondary" className="bg-teal/20 text-teal border-teal/30 h-8 px-3">OK</Badge>
+          <Badge variant="secondary" className="bg-teal/20 text-teal border-teal/30 h-10 px-4 text-sm">OK</Badge>
         )}
       </div>
     </motion.div>
@@ -179,32 +182,33 @@ function MovementCard({
   return (
     <motion.div
       variants={staggerItem}
-      className="glass-card p-5"
+      className="glass-card p-6"
       whileTap={{ scale: 0.98 }}
+      transition={springTransition}
       data-testid={`movement-card-${movement.id}`}
     >
-      <div className="flex items-start justify-between gap-3 mb-3">
+      <div className="flex items-start justify-between gap-4 mb-4">
         <div className="flex-1 min-w-0">
-          <div className="font-semibold truncate">{product?.name || 'Sconosciuto'}</div>
-          <div className="text-sm text-muted-foreground font-mono">{product?.code || '-'}</div>
+          <div className="font-semibold text-lg truncate">{product?.name || 'Sconosciuto'}</div>
+          <div className="text-sm text-muted-foreground font-mono mt-1">{product?.code || '-'}</div>
         </div>
         <Badge 
           variant={movement.type === 'LOAD' ? 'secondary' : 'outline'}
-          className={movement.type === 'LOAD' ? 'bg-teal/20 text-teal border-teal/30 h-8' : 'h-8'}
+          className={movement.type === 'LOAD' ? 'bg-teal/20 text-teal border-teal/30 h-10 px-4' : 'h-10 px-4'}
         >
           {movement.type === 'LOAD' ? 'Carico' : 'Scarico'}
         </Badge>
       </div>
-      <div className="flex items-center justify-between pt-3 border-t border-white/10">
+      <div className="flex items-center justify-between pt-4 border-t border-white/10">
         <div className="text-sm text-muted-foreground">
           {movement.createdAt ? new Date(movement.createdAt).toLocaleString('it-IT') : '-'}
         </div>
-        <div className={`text-xl font-bold tabular-nums ${movement.type === 'LOAD' ? 'text-teal' : 'text-amber-500'}`}>
+        <div className={`text-2xl font-bold tabular-nums ${movement.type === 'LOAD' ? 'text-teal' : 'text-amber-500'}`}>
           {movement.type === 'LOAD' ? '+' : '-'}{parseFloat(movement.quantity).toFixed(2)}
         </div>
       </div>
       {(movement.supplier || movement.reason) && (
-        <div className="mt-3 pt-3 border-t border-white/10 text-sm text-muted-foreground space-y-1">
+        <div className="mt-4 pt-4 border-t border-white/10 text-sm text-muted-foreground space-y-1">
           {movement.supplier && <div>Fornitore: {movement.supplier}</div>}
           {movement.reason && <div>Motivo: {movement.reason}</div>}
         </div>
@@ -232,6 +236,7 @@ export default function Warehouse() {
   const [adjustReason, setAdjustReason] = useState("");
   const [clearWarehouseDialogOpen, setClearWarehouseDialogOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("stocks");
+  const [fabMenuOpen, setFabMenuOpen] = useState(false);
   const { toast } = useToast();
 
   useEffect(() => {
@@ -645,17 +650,17 @@ export default function Warehouse() {
   }).slice(0, 50) || [];
 
   const header = (
-    <div className="flex items-center gap-3 px-4 py-4 bg-background/80 backdrop-blur-xl border-b border-white/10">
-      <HapticButton variant="ghost" size="icon" asChild>
-        <Link href="/beverage" data-testid="button-back">
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-      </HapticButton>
-      <div className="flex-1">
-        <h1 className="text-xl font-bold">Magazzino</h1>
-        <p className="text-xs text-muted-foreground">Gestione inventario</p>
-      </div>
-    </div>
+    <MobileHeader
+      title="Magazzino"
+      subtitle="Gestione inventario"
+      leftAction={
+        <HapticButton variant="ghost" size="icon" asChild>
+          <Link href="/beverage" data-testid="button-back">
+            <ArrowLeft className="h-5 w-5" />
+          </Link>
+        </HapticButton>
+      }
+    />
   );
 
   return (
@@ -665,7 +670,7 @@ export default function Warehouse() {
           variants={staggerContainer}
           initial="hidden"
           animate="show"
-          className="grid grid-cols-2 gap-3"
+          className="grid grid-cols-2 gap-4"
         >
           <StatsCard title="Prodotti" value={totalProducts} icon={BoxesIcon} gradient="from-blue-500 to-indigo-600" testId="stat-total-products" />
           <StatsCard title="Quantità Totale" value={totalQuantity.toFixed(0)} icon={Package} gradient="from-emerald-500 to-teal-600" testId="stat-total-quantity" />
@@ -677,48 +682,21 @@ export default function Warehouse() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2, ...springTransition }}
-          className="grid grid-cols-2 gap-3"
-        >
-          <HapticButton
-            className="gradient-golden text-black font-semibold glow-golden h-14 text-base"
-            onClick={() => setMultiLoadDialogOpen(true)}
-            data-testid="button-multi-load"
-            hapticType="medium"
-          >
-            <TrendingUp className="h-5 w-5 mr-2" />
-            Carico
-          </HapticButton>
-          <HapticButton
-            variant="destructive"
-            className="h-14 text-base font-semibold"
-            onClick={() => setMultiUnloadDialogOpen(true)}
-            data-testid="button-multi-unload"
-            hapticType="medium"
-          >
-            <TrendingDown className="h-5 w-5 mr-2" />
-            Scarico
-          </HapticButton>
-        </motion.div>
-
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.3, ...springTransition }}
         >
           <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); triggerHaptic('light'); }}>
             <TabsList className="w-full h-14 p-1 bg-card/50">
-              <TabsTrigger value="stocks" className="flex-1 h-12 text-sm font-medium" data-testid="tab-stocks">
+              <TabsTrigger value="stocks" className="flex-1 h-12 text-base font-medium" data-testid="tab-stocks">
                 Giacenze
               </TabsTrigger>
-              <TabsTrigger value="event-transfer" className="flex-1 h-12 text-sm font-medium" data-testid="tab-event-transfer">
+              <TabsTrigger value="event-transfer" className="flex-1 h-12 text-base font-medium" data-testid="tab-event-transfer">
                 Evento
               </TabsTrigger>
-              <TabsTrigger value="movements" className="flex-1 h-12 text-sm font-medium" data-testid="tab-movements">
+              <TabsTrigger value="movements" className="flex-1 h-12 text-base font-medium" data-testid="tab-movements">
                 Movimenti
               </TabsTrigger>
             </TabsList>
 
-            <TabsContent value="stocks" className="mt-4 space-y-4">
+            <TabsContent value="stocks" className="mt-6 space-y-4">
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
@@ -733,7 +711,7 @@ export default function Warehouse() {
               {canAdjustStock && stocks && stocks.filter(s => parseFloat(s.quantity) > 0).length > 0 && (
                 <HapticButton
                   variant="outline"
-                  className="w-full h-12 border-destructive/50 text-destructive"
+                  className="w-full h-14 border-destructive/50 text-destructive"
                   onClick={() => setClearWarehouseDialogOpen(true)}
                   data-testid="button-clear-warehouse"
                   hapticType="heavy"
@@ -744,11 +722,11 @@ export default function Warehouse() {
               )}
 
               {stocksLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-32 rounded-2xl" />)}
+                <div className="space-y-4">
+                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-40 rounded-2xl" />)}
                 </div>
               ) : filteredStocks.length > 0 ? (
-                <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-3">
+                <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-4">
                   {filteredStocks.map((stock) => {
                     const product = products?.find(p => p.id === stock.productId);
                     const isLowStock = product?.minThreshold && parseFloat(stock.quantity) < parseFloat(product.minThreshold);
@@ -766,8 +744,9 @@ export default function Warehouse() {
                 </motion.div>
               ) : (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
+                  initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
+                  transition={springTransition}
                   className="glass-card p-12 text-center"
                 >
                   <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mx-auto mb-4">
@@ -778,7 +757,7 @@ export default function Warehouse() {
               )}
             </TabsContent>
 
-            <TabsContent value="event-transfer" className="mt-4 space-y-4">
+            <TabsContent value="event-transfer" className="mt-6 space-y-4">
               <Select value={selectedEventId} onValueChange={setSelectedEventId}>
                 <SelectTrigger className="h-14 text-base" data-testid="select-event">
                   <SelectValue placeholder="Seleziona evento" />
@@ -799,8 +778,9 @@ export default function Warehouse() {
 
               {!selectedEventId ? (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
+                  initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
+                  transition={springTransition}
                   className="glass-card p-12 text-center"
                 >
                   <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
@@ -813,12 +793,13 @@ export default function Warehouse() {
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
+                    transition={springTransition}
                     className="glass-card overflow-hidden"
                   >
                     <div className="p-5 border-b border-white/10">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
-                          <TrendingUp className="h-6 w-6 text-white" />
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shrink-0">
+                          <TrendingUp className="h-7 w-7 text-white" />
                         </div>
                         <div>
                           <h3 className="font-semibold text-lg">Trasferisci a Evento</h3>
@@ -826,7 +807,7 @@ export default function Warehouse() {
                         </div>
                       </div>
                     </div>
-                    <div className="divide-y divide-white/10 max-h-[300px] overflow-y-auto">
+                    <div className="divide-y divide-white/10 max-h-[320px] overflow-y-auto">
                       {productsWithGeneralStock.length === 0 ? (
                         <div className="p-8 text-center">
                           <Package className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
@@ -836,27 +817,27 @@ export default function Warehouse() {
                         productsWithGeneralStock.map((product) => {
                           const generalStock = getGeneralStock(product.id);
                           return (
-                            <div key={product.id} className="p-4 space-y-3" data-testid={`transfer-row-${product.id}`}>
+                            <div key={product.id} className="p-5 space-y-4" data-testid={`transfer-row-${product.id}`}>
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <div className="font-medium">{product.name}</div>
+                                  <div className="font-medium text-base">{product.name}</div>
                                   <div className="text-sm text-muted-foreground">Disponibile: <span className="text-teal font-semibold">{generalStock.toFixed(1)}</span></div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-3">
                                 <Input
                                   type="number"
                                   min="0"
                                   placeholder="Qtà"
                                   value={transferQuantities[product.id] || ""}
                                   onChange={(e) => setTransferQuantities(prev => ({ ...prev, [product.id]: e.target.value }))}
-                                  className="flex-1 h-12 text-center text-lg"
+                                  className="flex-1 h-14 text-center text-lg"
                                   data-testid={`input-transfer-${product.id}`}
                                 />
                                 <HapticButton
                                   onClick={() => handleTransferToEvent(product.id)}
                                   disabled={transferToEventMutation.isPending}
-                                  className="gradient-golden text-black h-12 px-6"
+                                  className="gradient-golden text-black h-14 px-6"
                                   data-testid={`button-transfer-${product.id}`}
                                 >
                                   <Plus className="h-5 w-5" />
@@ -872,13 +853,13 @@ export default function Warehouse() {
                   <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
+                    transition={{ delay: 0.1, ...springTransition }}
                     className="glass-card overflow-hidden"
                   >
                     <div className="p-5 border-b border-white/10">
-                      <div className="flex items-center gap-3">
-                        <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center">
-                          <TrendingDown className="h-6 w-6 text-white" />
+                      <div className="flex items-center gap-4">
+                        <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center shrink-0">
+                          <TrendingDown className="h-7 w-7 text-white" />
                         </div>
                         <div>
                           <h3 className="font-semibold text-lg">Scarica da Evento</h3>
@@ -886,7 +867,7 @@ export default function Warehouse() {
                         </div>
                       </div>
                     </div>
-                    <div className="divide-y divide-white/10 max-h-[300px] overflow-y-auto">
+                    <div className="divide-y divide-white/10 max-h-[320px] overflow-y-auto">
                       {productsWithEventStock.length === 0 ? (
                         <div className="p-8 text-center">
                           <Package className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
@@ -896,28 +877,28 @@ export default function Warehouse() {
                         productsWithEventStock.map((product) => {
                           const eventStock = getEventStock(product.id);
                           return (
-                            <div key={product.id} className="p-4 space-y-3" data-testid={`consume-row-${product.id}`}>
+                            <div key={product.id} className="p-5 space-y-4" data-testid={`consume-row-${product.id}`}>
                               <div className="flex items-center justify-between">
                                 <div>
-                                  <div className="font-medium">{product.name}</div>
+                                  <div className="font-medium text-base">{product.name}</div>
                                   <div className="text-sm text-muted-foreground">Disponibile: <span className="text-amber-500 font-semibold">{eventStock.toFixed(1)}</span></div>
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2">
+                              <div className="flex items-center gap-3">
                                 <Input
                                   type="number"
                                   min="0"
                                   placeholder="Qtà"
                                   value={consumeQuantities[product.id] || ""}
                                   onChange={(e) => setConsumeQuantities(prev => ({ ...prev, [product.id]: e.target.value }))}
-                                  className="flex-1 h-12 text-center text-lg"
+                                  className="flex-1 h-14 text-center text-lg"
                                   data-testid={`input-consume-${product.id}`}
                                 />
                                 <HapticButton
                                   variant="destructive"
                                   onClick={() => handleConsumeFromEvent(product.id)}
                                   disabled={consumeFromEventMutation.isPending}
-                                  className="h-12 px-6"
+                                  className="h-14 px-6"
                                   data-testid={`button-consume-${product.id}`}
                                 >
                                   <TrendingDown className="h-5 w-5" />
@@ -933,8 +914,8 @@ export default function Warehouse() {
               )}
             </TabsContent>
 
-            <TabsContent value="movements" className="mt-4 space-y-4">
-              <div className="space-y-3">
+            <TabsContent value="movements" className="mt-6 space-y-4">
+              <div className="space-y-4">
                 <div className="relative">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
@@ -958,11 +939,11 @@ export default function Warehouse() {
               </div>
 
               {movementsLoading ? (
-                <div className="space-y-3">
-                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-32 rounded-2xl" />)}
+                <div className="space-y-4">
+                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-40 rounded-2xl" />)}
                 </div>
               ) : filteredMovements.length > 0 ? (
-                <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-3">
+                <motion.div variants={staggerContainer} initial="hidden" animate="show" className="space-y-4">
                   {filteredMovements.map((movement) => {
                     const product = products?.find(p => p.id === movement.productId);
                     return <MovementCard key={movement.id} movement={movement} product={product} />;
@@ -970,8 +951,9 @@ export default function Warehouse() {
                 </motion.div>
               ) : (
                 <motion.div
-                  initial={{ opacity: 0, scale: 0.9 }}
+                  initial={{ opacity: 0, scale: 0.95 }}
                   animate={{ opacity: 1, scale: 1 }}
+                  transition={springTransition}
                   className="glass-card p-12 text-center"
                 >
                   <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
@@ -985,12 +967,80 @@ export default function Warehouse() {
         </motion.div>
       </div>
 
+      <AnimatePresence>
+        {fabMenuOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40"
+            onClick={() => setFabMenuOpen(false)}
+          />
+        )}
+      </AnimatePresence>
+
+      <AnimatePresence>
+        {fabMenuOpen && (
+          <>
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.8 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.8 }}
+              transition={springTransition}
+              className="fixed z-50 right-4"
+              style={{ bottom: 'calc(5.5rem + env(safe-area-inset-bottom))' }}
+            >
+              <HapticButton
+                onClick={() => { setFabMenuOpen(false); setMultiLoadDialogOpen(true); }}
+                className="gradient-golden text-black font-semibold glow-golden h-14 px-6 rounded-full shadow-lg"
+                data-testid="button-fab-load"
+                hapticType="medium"
+              >
+                <TrendingUp className="h-5 w-5 mr-2" />
+                Carico
+              </HapticButton>
+            </motion.div>
+            <motion.div
+              initial={{ opacity: 0, y: 20, scale: 0.8 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: 20, scale: 0.8 }}
+              transition={{ ...springTransition, delay: 0.05 }}
+              className="fixed z-50 right-4"
+              style={{ bottom: 'calc(9.5rem + env(safe-area-inset-bottom))' }}
+            >
+              <HapticButton
+                variant="destructive"
+                onClick={() => { setFabMenuOpen(false); setMultiUnloadDialogOpen(true); }}
+                className="h-14 px-6 rounded-full shadow-lg font-semibold"
+                data-testid="button-fab-unload"
+                hapticType="medium"
+              >
+                <TrendingDown className="h-5 w-5 mr-2" />
+                Scarico
+              </HapticButton>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
+      <FloatingActionButton
+        onClick={() => { setFabMenuOpen(!fabMenuOpen); triggerHaptic('medium'); }}
+        data-testid="button-fab-main"
+      >
+        <motion.div
+          animate={{ rotate: fabMenuOpen ? 45 : 0 }}
+          transition={springTransition}
+        >
+          <Plus className="h-6 w-6" />
+        </motion.div>
+      </FloatingActionButton>
+
       <BottomSheet
         open={multiLoadDialogOpen}
         onClose={() => { setMultiLoadDialogOpen(false); setMultiLoadItems([]); }}
         title="Carico Multiprodotto"
       >
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 pb-8">
           <AnimatePresence>
             {multiLoadItems.length === 0 ? (
               <motion.div
@@ -1007,9 +1057,10 @@ export default function Warehouse() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, x: -100 }}
-                  className="glass-card p-4 space-y-3"
+                  transition={springTransition}
+                  className="glass-card p-5 space-y-4"
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center justify-between gap-3">
                     <Select
                       value={item.productId}
                       onValueChange={(value) => handleUpdateMultiLoadItem(item.id, 'productId', value)}
@@ -1034,7 +1085,7 @@ export default function Warehouse() {
                       <X className="h-5 w-5" />
                     </HapticButton>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-4">
                     <Input
                       type="number"
                       step="0.01"
@@ -1076,7 +1127,7 @@ export default function Warehouse() {
             Aggiungi Prodotto
           </HapticButton>
 
-          <div className="grid grid-cols-2 gap-3 pt-4">
+          <div className="grid grid-cols-2 gap-4 pt-4">
             <HapticButton
               variant="outline"
               className="h-14"
@@ -1103,7 +1154,7 @@ export default function Warehouse() {
         onClose={() => { setMultiUnloadDialogOpen(false); setMultiUnloadItems([]); }}
         title="Scarico Multiprodotto"
       >
-        <div className="p-4 space-y-4">
+        <div className="p-4 space-y-4 pb-8">
           <AnimatePresence>
             {multiUnloadItems.length === 0 ? (
               <motion.div
@@ -1120,9 +1171,10 @@ export default function Warehouse() {
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   exit={{ opacity: 0, x: -100 }}
-                  className="glass-card p-4 space-y-3"
+                  transition={springTransition}
+                  className="glass-card p-5 space-y-4"
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center justify-between gap-3">
                     <Select
                       value={item.productId}
                       onValueChange={(value) => handleUpdateMultiUnloadItem(item.id, 'productId', value)}
@@ -1147,7 +1199,7 @@ export default function Warehouse() {
                       <X className="h-5 w-5" />
                     </HapticButton>
                   </div>
-                  <div className="grid grid-cols-2 gap-3">
+                  <div className="grid grid-cols-2 gap-4">
                     <Input
                       type="number"
                       step="0.01"
@@ -1180,7 +1232,7 @@ export default function Warehouse() {
             Aggiungi Prodotto
           </HapticButton>
 
-          <div className="grid grid-cols-2 gap-3 pt-4">
+          <div className="grid grid-cols-2 gap-4 pt-4">
             <HapticButton
               variant="outline"
               className="h-14"
@@ -1208,7 +1260,7 @@ export default function Warehouse() {
         onClose={() => setLoadDialogOpen(false)}
         title="Carico Merce"
       >
-        <div className="p-4">
+        <div className="p-4 pb-8">
           <Form {...loadForm}>
             <form onSubmit={loadForm.handleSubmit((data) => loadMutation.mutate(data))} className="space-y-4">
               <FormField
@@ -1274,7 +1326,7 @@ export default function Warehouse() {
                   </FormItem>
                 )}
               />
-              <div className="grid grid-cols-2 gap-3 pt-4">
+              <div className="grid grid-cols-2 gap-4 pt-4">
                 <HapticButton type="button" variant="outline" className="h-14" onClick={() => setLoadDialogOpen(false)} data-testid="button-cancel-load">
                   Annulla
                 </HapticButton>
@@ -1292,7 +1344,7 @@ export default function Warehouse() {
         onClose={() => setUnloadDialogOpen(false)}
         title="Scarico Merce"
       >
-        <div className="p-4">
+        <div className="p-4 pb-8">
           <Form {...unloadForm}>
             <form onSubmit={unloadForm.handleSubmit((data) => unloadMutation.mutate(data))} className="space-y-4">
               <FormField
@@ -1345,7 +1397,7 @@ export default function Warehouse() {
                   </FormItem>
                 )}
               />
-              <div className="grid grid-cols-2 gap-3 pt-4">
+              <div className="grid grid-cols-2 gap-4 pt-4">
                 <HapticButton type="button" variant="outline" className="h-14" onClick={() => setUnloadDialogOpen(false)} data-testid="button-cancel-unload">
                   Annulla
                 </HapticButton>
@@ -1363,14 +1415,14 @@ export default function Warehouse() {
         onClose={() => setAdjustDialogOpen(false)}
         title="Correggi Quantità"
       >
-        <div className="p-4 space-y-4">
-          <div className="glass-card p-4">
+        <div className="p-4 space-y-4 pb-8">
+          <div className="glass-card p-5">
             <p className="text-sm text-muted-foreground mb-1">Prodotto</p>
             <p className="font-semibold text-lg">{adjustingProduct?.name}</p>
           </div>
-          <div className="glass-card p-4">
+          <div className="glass-card p-5">
             <p className="text-sm text-muted-foreground mb-1">Quantità attuale</p>
-            <p className="font-bold text-2xl">{adjustingProduct ? parseFloat(adjustingProduct.quantity).toFixed(2) : '-'}</p>
+            <p className="font-bold text-3xl tabular-nums">{adjustingProduct ? parseFloat(adjustingProduct.quantity).toFixed(2) : '-'}</p>
           </div>
           <div className="space-y-2">
             <label className="text-sm font-medium">Nuova Quantità</label>
@@ -1395,7 +1447,7 @@ export default function Warehouse() {
               data-testid="input-adjust-reason"
             />
           </div>
-          <div className="grid grid-cols-2 gap-3 pt-4">
+          <div className="grid grid-cols-2 gap-4 pt-4">
             <HapticButton variant="outline" className="h-14" onClick={() => setAdjustDialogOpen(false)} data-testid="button-cancel-adjust">
               Annulla
             </HapticButton>
@@ -1420,22 +1472,23 @@ export default function Warehouse() {
               Sei sicuro di voler azzerare tutte le giacenze del magazzino? Questa operazione non può essere annullata.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter className="flex-col gap-2">
+          <AlertDialogFooter className="flex-col gap-3">
             <AlertDialogCancel asChild>
-              <Button variant="outline" className="h-14 w-full" data-testid="button-cancel-clear">
+              <HapticButton variant="outline" className="h-14 w-full" data-testid="button-cancel-clear">
                 Annulla
-              </Button>
+              </HapticButton>
             </AlertDialogCancel>
             <AlertDialogAction asChild>
-              <Button
+              <HapticButton
                 variant="destructive"
                 className="h-14 w-full"
                 onClick={() => clearWarehouseMutation.mutate()}
                 disabled={clearWarehouseMutation.isPending}
                 data-testid="button-confirm-clear"
+                hapticType="heavy"
               >
                 {clearWarehouseMutation.isPending ? 'Svuotamento...' : 'Svuota Magazzino'}
-              </Button>
+              </HapticButton>
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

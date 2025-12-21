@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
@@ -8,7 +7,9 @@ import { Link, useSearch } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
-import { triggerHaptic } from "@/components/mobile-primitives";
+import { triggerHaptic, HapticButton, SafeArea } from "@/components/mobile-primitives";
+
+const springConfig = { type: "spring" as const, stiffness: 400, damping: 30 };
 
 export default function Login() {
   const searchString = useSearch();
@@ -92,14 +93,12 @@ export default function Login() {
   };
 
   return (
-    <div 
-      className="min-h-screen bg-background flex flex-col relative overflow-x-hidden"
-      style={{
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingBottom: 'env(safe-area-inset-bottom)',
-        paddingLeft: 'env(safe-area-inset-left)',
-        paddingRight: 'env(safe-area-inset-right)',
-      }}
+    <SafeArea 
+      className="min-h-screen bg-background flex flex-col relative overflow-hidden"
+      top={true}
+      bottom={true}
+      left={true}
+      right={true}
     >
       <motion.div 
         className="absolute top-0 left-0 w-[400px] h-[400px] rounded-full opacity-20 pointer-events-none"
@@ -122,15 +121,16 @@ export default function Login() {
 
       <div className="flex-1 flex flex-col justify-center px-6 py-8 relative z-10">
         <motion.div 
-          initial={{ opacity: 0, y: -20 }}
+          initial={{ opacity: 0, y: -30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5 }}
+          transition={springConfig}
           className="flex flex-col items-center mb-10"
         >
-          <Link href="/" className="flex flex-col items-center gap-3">
+          <Link href="/" className="flex flex-col items-center gap-3 min-h-[44px]">
             <motion.div 
               className="w-20 h-20 rounded-2xl bg-gradient-to-br from-yellow-400 to-amber-500 flex items-center justify-center shadow-lg"
               whileTap={{ scale: 0.95 }}
+              transition={springConfig}
             >
               <Sparkles className="h-10 w-10 text-black" />
             </motion.div>
@@ -141,10 +141,10 @@ export default function Login() {
         </motion.div>
 
         <motion.div 
-          initial={{ opacity: 0, y: 20 }}
+          initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.5, delay: 0.1 }}
-          className="w-full max-w-md mx-auto"
+          transition={{ ...springConfig, delay: 0.1 }}
+          className="w-full"
         >
           <div className="text-center mb-8">
             <h1 className="text-2xl font-bold mb-2">Bentornato</h1>
@@ -158,10 +158,11 @@ export default function Login() {
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
+                transition={springConfig}
               >
                 <Alert variant="destructive" data-testid="alert-error" className="border-destructive/50 bg-destructive/10">
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertDescription>{error}</AlertDescription>
+                  <AlertCircle className="h-5 w-5" />
+                  <AlertDescription className="text-base">{error}</AlertDescription>
                 </Alert>
               </motion.div>
             )}
@@ -170,29 +171,36 @@ export default function Login() {
               <motion.div
                 initial={{ opacity: 0, scale: 0.95 }}
                 animate={{ opacity: 1, scale: 1 }}
+                transition={springConfig}
               >
                 <Alert data-testid="alert-resend-verification" className="border-primary/50 bg-primary/10">
-                  <Mail className="h-4 w-4 text-primary" />
+                  <Mail className="h-5 w-5 text-primary" />
                   <AlertDescription>
-                    <div className="space-y-3">
-                      <p className="text-sm">La tua email non è stata ancora verificata.</p>
-                      <Button 
+                    <div className="space-y-4">
+                      <p className="text-base">La tua email non è stata ancora verificata.</p>
+                      <HapticButton 
                         type="button"
                         variant="outline"
                         onClick={handleResendVerification}
                         disabled={isResending}
-                        className="w-full h-14 border-primary/30 hover:bg-primary/10"
+                        className="w-full h-14 border-primary/30 text-base rounded-xl"
+                        hapticType="medium"
                         data-testid="button-resend-verification"
                       >
                         {isResending ? "Invio in corso..." : "Rinvia Email di Verifica"}
-                      </Button>
+                      </HapticButton>
                     </div>
                   </AlertDescription>
                 </Alert>
               </motion.div>
             )}
 
-            <div className="space-y-2">
+            <motion.div 
+              className="space-y-2"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ ...springConfig, delay: 0.15 }}
+            >
               <Label htmlFor="email" className="text-base font-medium">Email o Username</Label>
               <Input
                 id="email"
@@ -201,12 +209,17 @@ export default function Login() {
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 required
-                className="h-14 text-base bg-background/50 border-white/10 focus:border-primary px-4"
+                className="h-14 text-lg bg-background/50 border-white/10 focus:border-primary px-4 rounded-xl"
                 data-testid="input-email"
               />
-            </div>
+            </motion.div>
 
-            <div className="space-y-2">
+            <motion.div 
+              className="space-y-2"
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              transition={{ ...springConfig, delay: 0.2 }}
+            >
               <Label htmlFor="password" className="text-base font-medium">Password</Label>
               <Input
                 id="password"
@@ -215,57 +228,78 @@ export default function Login() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
-                className="h-14 text-base bg-background/50 border-white/10 focus:border-primary px-4"
+                className="h-14 text-lg bg-background/50 border-white/10 focus:border-primary px-4 rounded-xl"
                 data-testid="input-password"
               />
-            </div>
+            </motion.div>
 
-            <div className="flex justify-end">
+            <motion.div 
+              className="flex justify-end"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ ...springConfig, delay: 0.25 }}
+            >
               <Link 
                 href="/forgot-password" 
-                className="text-base text-primary font-medium min-h-[44px] flex items-center"
+                className="text-base text-primary font-medium min-h-[44px] flex items-center px-2"
                 data-testid="link-forgot-password"
               >
                 Password dimenticata?
               </Link>
-            </div>
+            </motion.div>
 
-            <motion.div whileTap={{ scale: 0.98 }}>
-              <Button
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springConfig, delay: 0.3 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <HapticButton
                 type="submit"
-                className="w-full h-14 gradient-golden text-black font-semibold text-lg"
+                className="w-full h-14 gradient-golden text-black font-semibold text-lg rounded-xl"
                 disabled={isLoading}
+                hapticType="medium"
                 data-testid="button-submit"
               >
                 {isLoading ? "Accesso in corso..." : "Accedi"}
-              </Button>
+              </HapticButton>
             </motion.div>
 
-            <div className="relative my-8">
+            <motion.div 
+              className="relative my-8"
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ ...springConfig, delay: 0.35 }}
+            >
               <div className="absolute inset-0 flex items-center">
                 <span className="w-full border-t border-white/10" />
               </div>
               <div className="relative flex justify-center text-sm uppercase">
                 <span className="bg-background px-4 text-muted-foreground">oppure</span>
               </div>
-            </div>
+            </motion.div>
 
-            <motion.div whileTap={{ scale: 0.98 }}>
-              <Button
+            <motion.div 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springConfig, delay: 0.4 }}
+              whileTap={{ scale: 0.98 }}
+            >
+              <HapticButton
                 type="button"
                 variant="outline"
-                className="w-full h-14 border-white/10 hover:bg-white/5 text-base"
+                className="w-full h-14 border-white/10 text-base rounded-xl"
                 onClick={() => {
-                  triggerHaptic('light');
                   window.location.href = '/api/login';
                 }}
+                hapticType="light"
                 data-testid="button-replit-login"
               >
                 <svg className="h-6 w-6 mr-3" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.6 0 12 0zm0 3c4.97 0 9 4.03 9 9s-4.03 9-9 9-9-4.03-9-9 4.03-9 9-9z"/>
                 </svg>
                 Accedi con Replit
-              </Button>
+              </HapticButton>
             </motion.div>
           </form>
         </motion.div>
@@ -273,14 +307,14 @@ export default function Login() {
         <motion.div 
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
-          transition={{ duration: 0.5, delay: 0.3 }}
+          transition={{ ...springConfig, delay: 0.45 }}
           className="mt-10 text-center"
         >
           <p className="text-base text-muted-foreground">
             Non hai un account?{" "}
             <Link 
               href="/register" 
-              className="text-primary font-semibold min-h-[44px] inline-flex items-center" 
+              className="text-primary font-semibold min-h-[44px] inline-flex items-center px-1" 
               data-testid="link-register"
             >
               Registrati gratis
@@ -292,11 +326,11 @@ export default function Login() {
       <motion.footer 
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
-        transition={{ duration: 0.5, delay: 0.4 }}
+        transition={{ ...springConfig, delay: 0.5 }}
         className="py-6 text-center text-sm text-muted-foreground"
       >
         © {new Date().getFullYear()} Event Four You
       </motion.footer>
-    </div>
+    </SafeArea>
   );
 }

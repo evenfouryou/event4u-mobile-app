@@ -2,18 +2,11 @@ import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
 import { type SiaeAuditLog } from "@shared/schema";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import {
   Select,
@@ -22,25 +15,22 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import {
+  MobileAppLayout,
+  MobileHeader,
+  BottomSheet,
+  HapticButton,
+  triggerHaptic,
+} from "@/components/mobile-primitives";
 import {
   ClipboardList,
   Search,
   Eye,
-  User,
   Calendar,
   Activity,
   FileText,
-  Tag,
   Shield,
   AlertTriangle,
   CheckCircle2,
@@ -50,12 +40,21 @@ import {
   Send,
   Ban,
   Globe,
+  Filter,
+  ChevronRight,
+  ArrowLeft,
 } from "lucide-react";
+const springTransition = {
+  type: "spring" as const,
+  stiffness: 400,
+  damping: 30,
+};
 
 export default function SiaeAuditLogsPage() {
   const { user } = useAuth();
   const [selectedLog, setSelectedLog] = useState<SiaeAuditLog | null>(null);
-  const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+  const [isDetailSheetOpen, setIsDetailSheetOpen] = useState(false);
+  const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [entityFilter, setEntityFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -67,24 +66,24 @@ export default function SiaeAuditLogsPage() {
     enabled: !!companyId,
   });
 
-  const getActionIcon = (action: string) => {
+  const getActionIcon = (action: string, size: string = "h-5 w-5") => {
     switch (action) {
       case "create":
-        return <PlusCircle className="h-4 w-4 text-emerald-400" />;
+        return <PlusCircle className={`${size} text-emerald-400`} />;
       case "update":
-        return <Pencil className="h-4 w-4 text-blue-400" />;
+        return <Pencil className={`${size} text-blue-400`} />;
       case "delete":
-        return <Trash2 className="h-4 w-4 text-red-400" />;
+        return <Trash2 className={`${size} text-red-400`} />;
       case "cancel":
-        return <Ban className="h-4 w-4 text-orange-400" />;
+        return <Ban className={`${size} text-orange-400`} />;
       case "emit":
-        return <FileText className="h-4 w-4 text-purple-400" />;
+        return <FileText className={`${size} text-purple-400`} />;
       case "validate":
-        return <CheckCircle2 className="h-4 w-4 text-green-400" />;
+        return <CheckCircle2 className={`${size} text-green-400`} />;
       case "transmit":
-        return <Send className="h-4 w-4 text-cyan-400" />;
+        return <Send className={`${size} text-cyan-400`} />;
       default:
-        return <Activity className="h-4 w-4 text-gray-400" />;
+        return <Activity className={`${size} text-gray-400`} />;
     }
   };
 
@@ -132,6 +131,33 @@ export default function SiaeAuditLogsPage() {
     }
   };
 
+  const getActionLabel = (action: string): string => {
+    switch (action) {
+      case "create": return "Creazione";
+      case "update": return "Modifica";
+      case "delete": return "Eliminazione";
+      case "cancel": return "Annullamento";
+      case "emit": return "Emissione";
+      case "validate": return "Validazione";
+      case "transmit": return "Trasmissione";
+      default: return action;
+    }
+  };
+
+  const getEntityLabel = (entity: string): string => {
+    switch (entity) {
+      case "ticket": return "Biglietto";
+      case "transaction": return "Transazione";
+      case "customer": return "Cliente";
+      case "event": return "Evento";
+      case "sector": return "Settore";
+      case "subscription": return "Abbonamento";
+      case "name_change": return "Cambio Nome";
+      case "resale": return "Rivendita";
+      default: return entity;
+    }
+  };
+
   const filteredLogs = auditLogs?.filter((log) => {
     const matchesSearch =
       searchQuery === "" ||
@@ -155,10 +181,12 @@ export default function SiaeAuditLogsPage() {
 
   const uniqueActions = Array.from(new Set(auditLogs?.map(l => l.action) || []));
   const uniqueEntities = Array.from(new Set(auditLogs?.map(l => l.entityType) || []));
+  const activeFiltersCount = (actionFilter !== "all" ? 1 : 0) + (entityFilter !== "all" ? 1 : 0);
 
   const handleViewDetails = (log: SiaeAuditLog) => {
+    triggerHaptic('medium');
     setSelectedLog(log);
-    setIsDetailDialogOpen(true);
+    setIsDetailSheetOpen(true);
   };
 
   const parseJsonSafely = (jsonString: string | null) => {
@@ -170,380 +198,416 @@ export default function SiaeAuditLogsPage() {
     }
   };
 
+  const handleClearFilters = () => {
+    triggerHaptic('light');
+    setActionFilter("all");
+    setEntityFilter("all");
+  };
+
   if (isLoading) {
     return (
-      <div className="container mx-auto py-6 space-y-6">
-        <div className="flex items-center gap-3">
-          <ClipboardList className="h-8 w-8 text-amber-400" />
-          <h1 className="text-2xl font-bold text-white">Log Audit SIAE</h1>
+      <MobileAppLayout
+        header={
+          <MobileHeader
+            title="Log Audit SIAE"
+            leftAction={
+              <HapticButton variant="ghost" size="icon" onClick={() => window.history.back()}>
+                <ArrowLeft className="h-5 w-5" />
+              </HapticButton>
+            }
+          />
+        }
+      >
+        <div className="space-y-4 py-4 pb-24">
+          <div className="grid grid-cols-2 gap-3">
+            {[1, 2, 3, 4].map((i) => (
+              <Skeleton key={i} className="h-20 rounded-2xl" />
+            ))}
+          </div>
+          <div className="space-y-3">
+            {[1, 2, 3, 4, 5].map((i) => (
+              <Skeleton key={i} className="h-32 rounded-2xl" />
+            ))}
+          </div>
         </div>
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
-          {[1, 2, 3, 4, 5].map((i) => (
-            <Skeleton key={i} className="h-24" />
-          ))}
-        </div>
-        <Skeleton className="h-96" />
-      </div>
+      </MobileAppLayout>
     );
   }
 
   return (
-    <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-      <div className="flex items-center justify-between gap-3 sm:gap-4 flex-wrap">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <ClipboardList className="h-6 w-6 sm:h-8 sm:w-8 text-amber-400 flex-shrink-0" />
-          <div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Log Audit SIAE</h1>
-            <p className="text-xs sm:text-sm text-gray-400">Registro delle operazioni fiscali</p>
-          </div>
+    <MobileAppLayout
+      header={
+        <MobileHeader
+          title="Log Audit SIAE"
+          subtitle="Registro operazioni fiscali"
+          leftAction={
+            <HapticButton variant="ghost" size="icon" onClick={() => window.history.back()}>
+              <ArrowLeft className="h-5 w-5" />
+            </HapticButton>
+          }
+          rightAction={
+            <div className="relative">
+              <HapticButton 
+                variant="ghost" 
+                size="icon" 
+                onClick={() => setIsFilterSheetOpen(true)}
+              >
+                <Filter className="h-5 w-5" />
+              </HapticButton>
+              {activeFiltersCount > 0 && (
+                <span className="absolute -top-1 -right-1 bg-amber-500 text-black text-[10px] font-bold min-w-[18px] h-[18px] rounded-full flex items-center justify-center">
+                  {activeFiltersCount}
+                </span>
+              )}
+            </div>
+          }
+        />
+      }
+    >
+      <div className="space-y-4 py-4 pb-24">
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={springTransition}
+          className="relative"
+        >
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+          <Input
+            placeholder="Cerca log..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="pl-12 h-12 bg-[#151922] border-gray-800 rounded-2xl text-base"
+            data-testid="input-search-logs"
+          />
+        </motion.div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ ...springTransition, delay: 0.05 }}
+          >
+            <Card className="bg-[#151922] border-gray-800 rounded-2xl">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-amber-500/20 flex items-center justify-center">
+                    <Activity className="h-6 w-6 text-amber-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-white">{stats.total}</p>
+                    <p className="text-xs text-gray-400">Totale Log</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ ...springTransition, delay: 0.1 }}
+          >
+            <Card className="bg-[#151922] border-gray-800 rounded-2xl">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                    <PlusCircle className="h-6 w-6 text-emerald-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-white">{stats.creates}</p>
+                    <p className="text-xs text-gray-400">Creazioni</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ ...springTransition, delay: 0.15 }}
+          >
+            <Card className="bg-[#151922] border-gray-800 rounded-2xl">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-blue-500/20 flex items-center justify-center">
+                    <Pencil className="h-6 w-6 text-blue-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-white">{stats.updates}</p>
+                    <p className="text-xs text-gray-400">Modifiche</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ ...springTransition, delay: 0.2 }}
+          >
+            <Card className="bg-[#151922] border-gray-800 rounded-2xl">
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-cyan-500/20 flex items-center justify-center">
+                    <Send className="h-6 w-6 text-cyan-400" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold text-white">{stats.transmits}</p>
+                    <p className="text-xs text-gray-400">Trasmissioni</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </div>
+
+        <div className="space-y-3">
+          <AnimatePresence mode="popLayout">
+            {filteredLogs && filteredLogs.length > 0 ? (
+              filteredLogs.map((log, index) => (
+                <motion.div
+                  key={log.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.95 }}
+                  transition={{ ...springTransition, delay: index * 0.03 }}
+                  layout
+                >
+                  <Card 
+                    className="bg-[#151922] border-gray-800 rounded-2xl active:scale-[0.98] transition-transform"
+                    onClick={() => handleViewDetails(log)}
+                    data-testid={`card-audit-log-${log.id}`}
+                  >
+                    <CardContent className="p-4">
+                      <div className="flex items-start gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-gray-800 flex items-center justify-center flex-shrink-0">
+                          {getActionIcon(log.action, "h-6 w-6")}
+                        </div>
+                        
+                        <div className="flex-1 min-w-0 space-y-2">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {getActionBadge(log.action)}
+                            {getEntityBadge(log.entityType)}
+                          </div>
+                          
+                          <p className="text-white text-sm line-clamp-2">
+                            {log.description || "Operazione registrata"}
+                          </p>
+                          
+                          <div className="flex items-center gap-4 text-xs text-gray-400">
+                            <div className="flex items-center gap-1">
+                              <Calendar className="h-3.5 w-3.5" />
+                              {log.createdAt ? format(new Date(log.createdAt), "dd/MM/yy HH:mm", { locale: it }) : "-"}
+                            </div>
+                            {log.fiscalSealCode && (
+                              <div className="flex items-center gap-1">
+                                <Shield className="h-3.5 w-3.5 text-amber-400" />
+                                <span className="font-mono">{log.fiscalSealCode}</span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                        
+                        <ChevronRight className="h-5 w-5 text-gray-500 flex-shrink-0 mt-3" />
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              ))
+            ) : (
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={springTransition}
+                className="py-16 flex flex-col items-center gap-4"
+              >
+                <div className="w-20 h-20 rounded-full bg-gray-800/50 flex items-center justify-center">
+                  <AlertTriangle className="h-10 w-10 text-gray-600" />
+                </div>
+                <div className="text-center space-y-1">
+                  <p className="text-gray-400 font-medium">Nessun log trovato</p>
+                  <p className="text-sm text-gray-500">
+                    I log delle operazioni appariranno qui
+                  </p>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2 sm:gap-4">
-        <Card className="bg-[#151922] border-gray-800">
-          <CardContent className="p-3 sm:p-4">
-            <div className="flex items-center gap-2 sm:gap-3">
-              <Activity className="h-6 w-6 sm:h-8 sm:w-8 text-amber-400 flex-shrink-0" />
-              <div>
-                <p className="text-2xl font-bold text-white">{stats.total}</p>
-                <p className="text-xs text-gray-400">Totale Log</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#151922] border-gray-800">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <PlusCircle className="h-8 w-8 text-emerald-400" />
-              <div>
-                <p className="text-2xl font-bold text-white">{stats.creates}</p>
-                <p className="text-xs text-gray-400">Creazioni</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#151922] border-gray-800">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Pencil className="h-8 w-8 text-blue-400" />
-              <div>
-                <p className="text-2xl font-bold text-white">{stats.updates}</p>
-                <p className="text-xs text-gray-400">Modifiche</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#151922] border-gray-800">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Trash2 className="h-8 w-8 text-red-400" />
-              <div>
-                <p className="text-2xl font-bold text-white">{stats.deletes}</p>
-                <p className="text-xs text-gray-400">Eliminazioni</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="bg-[#151922] border-gray-800">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-3">
-              <Send className="h-8 w-8 text-cyan-400" />
-              <div>
-                <p className="text-2xl font-bold text-white">{stats.transmits}</p>
-                <p className="text-xs text-gray-400">Trasmissioni</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      <Card className="bg-[#151922] border-gray-800">
-        <CardContent className="p-4">
-          <div className="flex flex-col md:flex-row gap-4 items-center justify-between">
-            <div className="relative flex-1 max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-              <Input
-                placeholder="Cerca per descrizione, ID entità, sigillo..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-10 bg-[#0a0e17] border-gray-700"
-                data-testid="input-search-logs"
-              />
-            </div>
-
-            <div className="flex gap-2 flex-wrap">
-              <Select value={actionFilter} onValueChange={setActionFilter}>
-                <SelectTrigger className="w-[160px] bg-[#0a0e17] border-gray-700" data-testid="select-action-filter">
-                  <SelectValue placeholder="Azione" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tutte le azioni</SelectItem>
-                  {uniqueActions.map((action) => (
-                    <SelectItem key={action} value={action}>
-                      {action === "create" ? "Creazione" :
-                       action === "update" ? "Modifica" :
-                       action === "delete" ? "Eliminazione" :
-                       action === "cancel" ? "Annullamento" :
-                       action === "emit" ? "Emissione" :
-                       action === "validate" ? "Validazione" :
-                       action === "transmit" ? "Trasmissione" : action}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-
-              <Select value={entityFilter} onValueChange={setEntityFilter}>
-                <SelectTrigger className="w-[160px] bg-[#0a0e17] border-gray-700" data-testid="select-entity-filter">
-                  <SelectValue placeholder="Entità" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">Tutte le entità</SelectItem>
-                  {uniqueEntities.map((entity) => (
-                    <SelectItem key={entity} value={entity}>
-                      {entity === "ticket" ? "Biglietto" :
-                       entity === "transaction" ? "Transazione" :
-                       entity === "customer" ? "Cliente" :
-                       entity === "event" ? "Evento" :
-                       entity === "sector" ? "Settore" :
-                       entity === "subscription" ? "Abbonamento" :
-                       entity === "name_change" ? "Cambio Nome" :
-                       entity === "resale" ? "Rivendita" : entity}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
+      <BottomSheet
+        open={isFilterSheetOpen}
+        onClose={() => setIsFilterSheetOpen(false)}
+        title="Filtri"
+      >
+        <div className="p-4 space-y-6 pb-8">
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-gray-400">Tipo Azione</label>
+            <Select value={actionFilter} onValueChange={setActionFilter}>
+              <SelectTrigger className="h-12 bg-[#0a0e17] border-gray-700 rounded-xl" data-testid="select-action-filter">
+                <SelectValue placeholder="Tutte le azioni" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutte le azioni</SelectItem>
+                {uniqueActions.map((action) => (
+                  <SelectItem key={action} value={action}>
+                    {getActionLabel(action)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </CardContent>
-      </Card>
 
-      <Card className="bg-[#151922] border-gray-800">
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-          <Table>
-            <TableHeader>
-              <TableRow className="border-gray-800 hover:bg-transparent">
-                <TableHead className="text-gray-400">Data/Ora</TableHead>
-                <TableHead className="text-gray-400">Azione</TableHead>
-                <TableHead className="text-gray-400">Entità</TableHead>
-                <TableHead className="text-gray-400">Descrizione</TableHead>
-                <TableHead className="text-gray-400">Sigillo Fiscale</TableHead>
-                <TableHead className="text-gray-400">IP</TableHead>
-                <TableHead className="text-gray-400 text-right">Azioni</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {filteredLogs && filteredLogs.length > 0 ? (
-                filteredLogs.map((log) => (
-                  <TableRow 
-                    key={log.id} 
-                    className="border-gray-800 hover:bg-gray-800/50"
-                    data-testid={`row-audit-log-${log.id}`}
-                  >
-                    <TableCell className="text-white">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-gray-500" />
-                        <span className="text-sm">
-                          {log.createdAt ? format(new Date(log.createdAt), "dd/MM/yyyy HH:mm:ss", { locale: it }) : "-"}
-                        </span>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        {getActionIcon(log.action)}
-                        {getActionBadge(log.action)}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        {getEntityBadge(log.entityType)}
-                        {log.entityId && (
-                          <span className="text-xs text-gray-500 font-mono">
-                            {log.entityId.slice(0, 8)}...
-                          </span>
-                        )}
-                      </div>
-                    </TableCell>
-                    <TableCell className="text-gray-300 max-w-xs truncate">
-                      {log.description || "-"}
-                    </TableCell>
-                    <TableCell>
-                      {log.fiscalSealCode ? (
-                        <Badge variant="outline" className="font-mono text-xs">
-                          <Shield className="h-3 w-3 mr-1" />
-                          {log.fiscalSealCode}
-                        </Badge>
-                      ) : (
-                        <span className="text-gray-500">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell>
-                      {log.ipAddress ? (
-                        <div className="flex items-center gap-1 text-gray-400 text-xs">
-                          <Globe className="h-3 w-3" />
-                          {log.ipAddress}
-                        </div>
-                      ) : (
-                        <span className="text-gray-500">-</span>
-                      )}
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => handleViewDetails(log)}
-                        data-testid={`button-view-log-${log.id}`}
-                      >
-                        <Eye className="h-4 w-4" />
-                      </Button>
-                    </TableCell>
-                  </TableRow>
-                ))
-              ) : (
-                <TableRow>
-                  <TableCell colSpan={7} className="text-center py-12">
-                    <div className="flex flex-col items-center gap-2">
-                      <AlertTriangle className="h-12 w-12 text-gray-600" />
-                      <p className="text-gray-400">Nessun log trovato</p>
-                      <p className="text-sm text-gray-500">
-                        I log delle operazioni appariranno qui
-                      </p>
-                    </div>
-                  </TableCell>
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-gray-400">Tipo Entità</label>
+            <Select value={entityFilter} onValueChange={setEntityFilter}>
+              <SelectTrigger className="h-12 bg-[#0a0e17] border-gray-700 rounded-xl" data-testid="select-entity-filter">
+                <SelectValue placeholder="Tutte le entità" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutte le entità</SelectItem>
+                {uniqueEntities.map((entity) => (
+                  <SelectItem key={entity} value={entity}>
+                    {getEntityLabel(entity)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
-        </CardContent>
-      </Card>
 
-      <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-        <DialogContent className="max-w-2xl bg-[#151922] border-gray-800">
-          <DialogHeader>
-            <DialogTitle className="flex items-center gap-2 text-white">
-              <ClipboardList className="h-5 w-5 text-amber-400" />
-              Dettaglio Log Audit
-            </DialogTitle>
-            <DialogDescription>
-              Informazioni complete dell'operazione registrata
-            </DialogDescription>
-          </DialogHeader>
+          <div className="flex gap-3 pt-4">
+            <HapticButton
+              variant="outline"
+              className="flex-1 h-12 rounded-xl"
+              onClick={handleClearFilters}
+            >
+              Resetta
+            </HapticButton>
+            <HapticButton
+              className="flex-1 h-12 rounded-xl bg-amber-500 hover:bg-amber-600 text-black"
+              onClick={() => {
+                triggerHaptic('light');
+                setIsFilterSheetOpen(false);
+              }}
+            >
+              Applica
+            </HapticButton>
+          </div>
+        </div>
+      </BottomSheet>
 
-          {selectedLog && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-400">Data/Ora</label>
-                  <div className="flex items-center gap-2 text-white">
-                    <Calendar className="h-4 w-4 text-amber-400" />
-                    {selectedLog.createdAt ? format(new Date(selectedLog.createdAt), "dd MMMM yyyy, HH:mm:ss", { locale: it }) : "-"}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-400">Azione</label>
-                  <div className="flex items-center gap-2">
-                    {getActionIcon(selectedLog.action)}
-                    {getActionBadge(selectedLog.action)}
-                  </div>
-                </div>
+      <BottomSheet
+        open={isDetailSheetOpen}
+        onClose={() => setIsDetailSheetOpen(false)}
+        title="Dettaglio Log"
+      >
+        {selectedLog && (
+          <div className="p-4 space-y-6 pb-8">
+            <div className="flex items-center gap-4">
+              <div className="w-14 h-14 rounded-2xl bg-gray-800 flex items-center justify-center">
+                {getActionIcon(selectedLog.action, "h-7 w-7")}
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-400">Tipo Entità</label>
-                  {getEntityBadge(selectedLog.entityType)}
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-400">ID Entità</label>
-                  <code className="text-sm text-amber-400 bg-gray-900 px-2 py-1 rounded">
-                    {selectedLog.entityId || "-"}
-                  </code>
-                </div>
+              <div className="space-y-1">
+                {getActionBadge(selectedLog.action)}
+                <p className="text-sm text-gray-400">
+                  {selectedLog.createdAt ? format(new Date(selectedLog.createdAt), "dd MMMM yyyy, HH:mm:ss", { locale: it }) : "-"}
+                </p>
               </div>
+            </div>
 
-              <div className="space-y-2">
-                <label className="text-sm text-gray-400">Descrizione</label>
-                <p className="text-white bg-gray-900 p-3 rounded">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Tipo Entità</p>
+                {getEntityBadge(selectedLog.entityType)}
+              </div>
+              <div className="space-y-1">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">ID Entità</p>
+                <code className="text-xs text-amber-400 bg-gray-900 px-2 py-1 rounded block truncate">
+                  {selectedLog.entityId || "-"}
+                </code>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <p className="text-xs text-gray-500 uppercase tracking-wide">Descrizione</p>
+              <div className="bg-gray-900 p-4 rounded-xl">
+                <p className="text-white text-sm">
                   {selectedLog.description || "Nessuna descrizione"}
                 </p>
               </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-400">Sigillo Fiscale</label>
-                  {selectedLog.fiscalSealCode ? (
-                    <Badge variant="outline" className="font-mono">
-                      <Shield className="h-3 w-3 mr-1" />
-                      {selectedLog.fiscalSealCode}
-                    </Badge>
-                  ) : (
-                    <span className="text-gray-500">-</span>
-                  )}
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-400">Codice Carta</label>
-                  {selectedLog.cardCode ? (
-                    <code className="text-sm text-blue-400 bg-gray-900 px-2 py-1 rounded">
-                      {selectedLog.cardCode}
-                    </code>
-                  ) : (
-                    <span className="text-gray-500">-</span>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-400">Indirizzo IP</label>
-                  <div className="flex items-center gap-2 text-gray-300">
-                    <Globe className="h-4 w-4" />
-                    {selectedLog.ipAddress || "-"}
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-400">User Agent</label>
-                  <p className="text-xs text-gray-400 truncate max-w-[200px]">
-                    {selectedLog.userAgent || "-"}
-                  </p>
-                </div>
-              </div>
-
-              {(selectedLog.oldData || selectedLog.newData) && (
-                <div className="space-y-2">
-                  <label className="text-sm text-gray-400">Modifiche Dati</label>
-                  <div className="grid grid-cols-2 gap-4">
-                    {selectedLog.oldData && (
-                      <div className="space-y-1">
-                        <p className="text-xs text-red-400">Dati Precedenti</p>
-                        <ScrollArea className="h-32 bg-gray-900 rounded p-2">
-                          <pre className="text-xs text-gray-300">
-                            {JSON.stringify(parseJsonSafely(selectedLog.oldData), null, 2)}
-                          </pre>
-                        </ScrollArea>
-                      </div>
-                    )}
-                    {selectedLog.newData && (
-                      <div className="space-y-1">
-                        <p className="text-xs text-green-400">Dati Nuovi</p>
-                        <ScrollArea className="h-32 bg-gray-900 rounded p-2">
-                          <pre className="text-xs text-gray-300">
-                            {JSON.stringify(parseJsonSafely(selectedLog.newData), null, 2)}
-                          </pre>
-                        </ScrollArea>
-                      </div>
-                    )}
-                  </div>
-                </div>
-              )}
             </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Sigillo Fiscale</p>
+                {selectedLog.fiscalSealCode ? (
+                  <div className="flex items-center gap-2">
+                    <Shield className="h-4 w-4 text-amber-400" />
+                    <span className="text-white font-mono text-sm">{selectedLog.fiscalSealCode}</span>
+                  </div>
+                ) : (
+                  <span className="text-gray-500 text-sm">-</span>
+                )}
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Codice Carta</p>
+                {selectedLog.cardCode ? (
+                  <span className="text-blue-400 font-mono text-sm">{selectedLog.cardCode}</span>
+                ) : (
+                  <span className="text-gray-500 text-sm">-</span>
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Indirizzo IP</p>
+                <div className="flex items-center gap-2 text-gray-300 text-sm">
+                  <Globe className="h-4 w-4" />
+                  {selectedLog.ipAddress || "-"}
+                </div>
+              </div>
+              <div className="space-y-2">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">User Agent</p>
+                <p className="text-xs text-gray-400 truncate">
+                  {selectedLog.userAgent || "-"}
+                </p>
+              </div>
+            </div>
+
+            {(selectedLog.oldData || selectedLog.newData) && (
+              <div className="space-y-3">
+                <p className="text-xs text-gray-500 uppercase tracking-wide">Modifiche Dati</p>
+                <div className="space-y-3">
+                  {selectedLog.oldData && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-red-400 font-medium">Dati Precedenti</p>
+                      <ScrollArea className="h-32 bg-gray-900 rounded-xl p-3">
+                        <pre className="text-xs text-gray-300">
+                          {JSON.stringify(parseJsonSafely(selectedLog.oldData), null, 2)}
+                        </pre>
+                      </ScrollArea>
+                    </div>
+                  )}
+                  {selectedLog.newData && (
+                    <div className="space-y-2">
+                      <p className="text-xs text-green-400 font-medium">Dati Nuovi</p>
+                      <ScrollArea className="h-32 bg-gray-900 rounded-xl p-3">
+                        <pre className="text-xs text-gray-300">
+                          {JSON.stringify(parseJsonSafely(selectedLog.newData), null, 2)}
+                        </pre>
+                      </ScrollArea>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </BottomSheet>
+    </MobileAppLayout>
   );
 }

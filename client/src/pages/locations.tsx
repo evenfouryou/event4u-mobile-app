@@ -24,11 +24,19 @@ import { insertLocationSchema, type Location, type InsertLocation, type Event } 
 import { useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
+  MobileAppLayout,
+  MobileHeader,
   FloatingActionButton, 
   HapticButton, 
   BottomSheet,
   triggerHaptic 
 } from "@/components/mobile-primitives";
+
+const springConfig = {
+  type: "spring" as const,
+  stiffness: 400,
+  damping: 30,
+};
 
 export default function Locations() {
   const [sheetOpen, setSheetOpen] = useState(false);
@@ -119,51 +127,45 @@ export default function Locations() {
     visible: {
       opacity: 1,
       transition: {
-        staggerChildren: 0.08,
+        staggerChildren: 0.06,
       },
     },
   };
 
   const cardVariants = {
-    hidden: { opacity: 0, y: 20, scale: 0.95 },
+    hidden: { opacity: 0, y: 24, scale: 0.96 },
     visible: {
       opacity: 1,
       y: 0,
       scale: 1,
-      transition: {
-        type: "spring",
-        stiffness: 300,
-        damping: 25,
-      },
+      transition: springConfig,
     },
   };
 
-  return (
-    <div 
-      className="min-h-screen bg-background pb-24"
-      style={{ 
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingLeft: 'env(safe-area-inset-left)',
-        paddingRight: 'env(safe-area-inset-right)',
-      }}
-    >
-      <motion.div
-        initial={{ opacity: 0, y: -10 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ type: "spring", stiffness: 300, damping: 30 }}
-        className="px-4 pt-6 pb-4"
-      >
-        <h1 className="text-2xl font-bold text-foreground">Locali</h1>
-        <p className="text-muted-foreground text-sm mt-1">
-          Le sedi dei tuoi eventi
-        </p>
-      </motion.div>
+  const headerContent = (
+    <MobileHeader
+      title="Locali"
+      subtitle="Le sedi dei tuoi eventi"
+    />
+  );
 
-      <div className="px-4">
+  return (
+    <MobileAppLayout
+      header={headerContent}
+      contentClassName="pb-24"
+    >
+      <div className="py-4">
         {isLoading ? (
           <div className="space-y-4">
             {[1, 2, 3].map((i) => (
-              <Skeleton key={i} className="h-32 rounded-2xl" />
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 16 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ ...springConfig, delay: i * 0.08 }}
+              >
+                <Skeleton className="h-40 rounded-2xl" />
+              </motion.div>
             ))}
           </div>
         ) : locations && locations.length > 0 ? (
@@ -174,109 +176,133 @@ export default function Locations() {
             className="space-y-4"
           >
             <AnimatePresence mode="popLayout">
-              {locations.map((location, index) => (
-                <motion.div
-                  key={location.id}
-                  variants={cardVariants}
-                  layout
-                  layoutId={location.id}
-                >
-                  <Card 
-                    className="overflow-hidden active:scale-[0.98] transition-transform touch-manipulation"
-                    data-testid={`location-card-${location.id}`}
+              {locations.map((location) => {
+                const eventCounts = getLocationEventCount(location.id);
+                
+                return (
+                  <motion.div
+                    key={location.id}
+                    variants={cardVariants}
+                    layout
+                    layoutId={location.id}
                   >
-                    <CardContent 
-                      className="p-0"
-                      onClick={() => handleLocationTap(location)}
+                    <Card 
+                      className="overflow-hidden rounded-2xl active:scale-[0.98] transition-transform touch-manipulation"
+                      data-testid={`location-card-${location.id}`}
                     >
-                      <div className="flex items-stretch min-h-[120px]">
-                        <div className="w-20 bg-primary/10 flex items-center justify-center flex-shrink-0">
-                          <MapPin className="h-8 w-8 text-primary" />
-                        </div>
-                        
-                        <div className="flex-1 p-4 flex flex-col justify-center min-w-0">
-                          <div className="flex items-start justify-between gap-2 mb-2">
-                            <h3 className="font-semibold text-lg text-foreground truncate">
-                              {location.name}
-                            </h3>
-                            <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0 mt-0.5" />
+                      <CardContent 
+                        className="p-0"
+                        onClick={() => handleLocationTap(location)}
+                      >
+                        <div className="flex items-stretch min-h-[140px]">
+                          <div className="w-24 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center flex-shrink-0">
+                            <motion.div
+                              whileTap={{ scale: 0.9 }}
+                              transition={springConfig}
+                            >
+                              <MapPin className="h-10 w-10 text-primary" />
+                            </motion.div>
                           </div>
                           
-                          <div className="flex flex-wrap gap-2 mb-3">
-                            {location.city && (
-                              <Badge variant="secondary" className="text-xs">
-                                {location.city}
-                              </Badge>
-                            )}
-                            {location.isPublic && (
-                              <Badge variant="outline" className="bg-teal-500/10 text-teal-600 border-teal-500/30 text-xs">
-                                <Globe className="w-3 h-3 mr-1" />
-                                Pubblico
-                              </Badge>
-                            )}
-                          </div>
-                          
-                          <div className="flex flex-wrap items-center gap-4 text-sm text-muted-foreground">
-                            {location.capacity && (
-                              <div className="flex items-center gap-1.5">
-                                <Users className="h-4 w-4" />
-                                <span>{location.capacity}</span>
-                              </div>
-                            )}
-                            {(() => {
-                              const eventCounts = getLocationEventCount(location.id);
-                              return eventCounts.active > 0 ? (
-                                <div className="flex items-center gap-1.5">
-                                  <Calendar className="h-4 w-4" />
-                                  <span>{eventCounts.active} attivi</span>
+                          <div className="flex-1 p-5 flex flex-col justify-center min-w-0">
+                            <div className="flex items-start justify-between gap-3 mb-3">
+                              <h3 className="font-bold text-xl text-foreground leading-tight line-clamp-2">
+                                {location.name}
+                              </h3>
+                              <motion.div
+                                whileTap={{ scale: 0.85, x: 2 }}
+                                transition={springConfig}
+                                className="min-w-[44px] min-h-[44px] flex items-center justify-center -mr-2 -mt-1"
+                              >
+                                <ChevronRight className="h-6 w-6 text-muted-foreground" />
+                              </motion.div>
+                            </div>
+                            
+                            <div className="flex flex-wrap gap-2 mb-4">
+                              {location.city && (
+                                <Badge variant="secondary" className="text-sm px-3 py-1">
+                                  {location.city}
+                                </Badge>
+                              )}
+                              {location.isPublic && (
+                                <Badge variant="outline" className="bg-teal-500/10 text-teal-600 border-teal-500/30 text-sm px-3 py-1">
+                                  <Globe className="w-3.5 h-3.5 mr-1.5" />
+                                  Pubblico
+                                </Badge>
+                              )}
+                            </div>
+                            
+                            <div className="flex flex-wrap items-center gap-5 text-base text-muted-foreground">
+                              {location.capacity && (
+                                <div className="flex items-center gap-2 min-h-[44px]">
+                                  <Users className="h-5 w-5" />
+                                  <span className="font-medium">{location.capacity}</span>
                                 </div>
-                              ) : null;
-                            })()}
-                            {location.openingHours && (
-                              <div className="flex items-center gap-1.5">
-                                <Clock className="h-4 w-4" />
-                                <span className="truncate max-w-[120px]">{location.openingHours}</span>
-                              </div>
-                            )}
+                              )}
+                              {eventCounts.active > 0 && (
+                                <div className="flex items-center gap-2 min-h-[44px]">
+                                  <Calendar className="h-5 w-5 text-teal-500" />
+                                  <span className="font-medium text-teal-600">{eventCounts.active} attivi</span>
+                                </div>
+                              )}
+                              {location.openingHours && (
+                                <div className="flex items-center gap-2 min-h-[44px]">
+                                  <Clock className="h-5 w-5" />
+                                  <span className="truncate">{location.openingHours}</span>
+                                </div>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
-              ))}
+                      </CardContent>
+                    </Card>
+                  </motion.div>
+                );
+              })}
             </AnimatePresence>
           </motion.div>
         ) : (
           <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
             animate={{ opacity: 1, scale: 1 }}
-            transition={{ type: "spring", stiffness: 300, damping: 25 }}
+            transition={springConfig}
           >
             <Card className="rounded-2xl">
-              <CardContent className="py-16 text-center">
+              <CardContent className="py-20 text-center">
                 <motion.div
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
-                  transition={{ type: "spring", stiffness: 400, damping: 20, delay: 0.1 }}
+                  transition={{ ...springConfig, delay: 0.1 }}
                 >
-                  <div className="w-20 h-20 bg-primary/10 rounded-full flex items-center justify-center mx-auto mb-4">
-                    <MapPin className="h-10 w-10 text-primary" />
+                  <div className="w-24 h-24 bg-gradient-to-br from-primary/20 to-primary/5 rounded-full flex items-center justify-center mx-auto mb-6">
+                    <MapPin className="h-12 w-12 text-primary" />
                   </div>
                 </motion.div>
-                <h3 className="text-lg font-semibold mb-2">Nessun locale</h3>
-                <p className="text-muted-foreground text-sm mb-6">
-                  Aggiungi il primo locale per iniziare
-                </p>
-                <HapticButton 
-                  onClick={() => setSheetOpen(true)} 
-                  data-testid="button-create-first-location"
-                  hapticType="medium"
-                  className="min-h-[48px] px-6"
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ ...springConfig, delay: 0.2 }}
                 >
-                  <Plus className="h-5 w-5 mr-2" />
-                  Aggiungi Locale
-                </HapticButton>
+                  <h3 className="text-xl font-bold mb-3">Nessun locale</h3>
+                  <p className="text-muted-foreground text-base mb-8">
+                    Aggiungi il primo locale per iniziare
+                  </p>
+                </motion.div>
+                <motion.div
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ ...springConfig, delay: 0.3 }}
+                >
+                  <HapticButton 
+                    onClick={() => setSheetOpen(true)} 
+                    data-testid="button-create-first-location"
+                    hapticType="medium"
+                    className="min-h-[52px] px-8 text-base"
+                  >
+                    <Plus className="h-5 w-5 mr-2" />
+                    Aggiungi Locale
+                  </HapticButton>
+                </motion.div>
               </CardContent>
             </Card>
           </motion.div>
@@ -284,7 +310,10 @@ export default function Locations() {
       </div>
 
       <FloatingActionButton
-        onClick={() => setSheetOpen(true)}
+        onClick={() => {
+          triggerHaptic('medium');
+          setSheetOpen(true);
+        }}
         data-testid="button-create-location"
         position="bottom-right"
       >
@@ -303,11 +332,11 @@ export default function Locations() {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-base">Nome Locale</FormLabel>
+                  <FormLabel className="text-base font-medium">Nome Locale</FormLabel>
                   <FormControl>
                     <Input 
                       {...field} 
-                      className="h-12 text-base"
+                      className="h-14 text-base rounded-xl"
                       data-testid="input-location-name" 
                     />
                   </FormControl>
@@ -321,12 +350,12 @@ export default function Locations() {
               name="address"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-base">Indirizzo</FormLabel>
+                  <FormLabel className="text-base font-medium">Indirizzo</FormLabel>
                   <FormControl>
                     <Textarea 
                       {...field} 
                       value={field.value || ''} 
-                      className="min-h-[80px] text-base"
+                      className="min-h-[88px] text-base rounded-xl"
                       data-testid="input-location-address" 
                     />
                   </FormControl>
@@ -340,13 +369,13 @@ export default function Locations() {
               name="city"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-base">Città</FormLabel>
+                  <FormLabel className="text-base font-medium">Città</FormLabel>
                   <FormControl>
                     <Input 
                       {...field} 
                       value={field.value || ''} 
                       placeholder="es. Milano, Roma" 
-                      className="h-12 text-base"
+                      className="h-14 text-base rounded-xl"
                       data-testid="input-location-city" 
                     />
                   </FormControl>
@@ -360,7 +389,7 @@ export default function Locations() {
               name="capacity"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-base">Capienza (persone)</FormLabel>
+                  <FormLabel className="text-base font-medium">Capienza (persone)</FormLabel>
                   <FormControl>
                     <Input
                       {...field}
@@ -368,7 +397,7 @@ export default function Locations() {
                       inputMode="numeric"
                       value={field.value || ''}
                       onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
-                      className="h-12 text-base"
+                      className="h-14 text-base rounded-xl"
                       data-testid="input-location-capacity"
                     />
                   </FormControl>
@@ -382,13 +411,13 @@ export default function Locations() {
               name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-base">Note</FormLabel>
+                  <FormLabel className="text-base font-medium">Note</FormLabel>
                   <FormControl>
                     <Textarea
                       {...field}
                       value={field.value || ''}
                       placeholder="Tipo locale, impianti disponibili, ecc."
-                      className="min-h-[80px] text-base"
+                      className="min-h-[88px] text-base rounded-xl"
                       data-testid="input-location-notes"
                     />
                   </FormControl>
@@ -397,10 +426,12 @@ export default function Locations() {
               )}
             />
 
-            <div className="border-t border-border pt-5 mt-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Ticket className="w-5 h-5 text-muted-foreground" />
-                <span className="font-medium">Impostazioni SIAE</span>
+            <div className="border-t border-border pt-6 mt-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                  <Ticket className="w-5 h-5 text-primary" />
+                </div>
+                <span className="font-semibold text-lg">Impostazioni SIAE</span>
               </div>
 
               <FormField
@@ -408,17 +439,17 @@ export default function Locations() {
                 name="siaeLocationCode"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">Codice Locale SIAE</FormLabel>
+                    <FormLabel className="text-base font-medium">Codice Locale SIAE</FormLabel>
                     <FormControl>
                       <Input 
                         {...field} 
                         value={field.value || ''} 
                         placeholder="es. 12345678"
-                        className="h-12 text-base"
+                        className="h-14 text-base rounded-xl"
                         data-testid="input-siae-location-code" 
                       />
                     </FormControl>
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-sm text-muted-foreground mt-2">
                       Codice identificativo del locale rilasciato dalla SIAE
                     </p>
                     <FormMessage />
@@ -427,25 +458,30 @@ export default function Locations() {
               />
             </div>
 
-            <div className="border-t border-border pt-5 mt-5">
-              <div className="flex items-center gap-2 mb-4">
-                <Globe className="w-5 h-5 text-muted-foreground" />
-                <span className="font-medium">Vetrina Pubblica</span>
+            <div className="border-t border-border pt-6 mt-6">
+              <div className="flex items-center gap-3 mb-5">
+                <div className="w-10 h-10 rounded-full bg-teal-500/10 flex items-center justify-center">
+                  <Globe className="w-5 h-5 text-teal-500" />
+                </div>
+                <span className="font-semibold text-lg">Vetrina Pubblica</span>
               </div>
 
               <FormField
                 control={form.control}
                 name="isPublic"
                 render={({ field }) => (
-                  <FormItem className="flex items-center justify-between rounded-xl border border-border p-4 mb-4">
+                  <FormItem className="flex items-center justify-between rounded-2xl border border-border p-5 mb-5">
                     <div className="flex-1">
-                      <FormLabel className="font-medium text-base">Mostra nella Vetrina</FormLabel>
-                      <p className="text-sm text-muted-foreground">Rendi visibile il locale</p>
+                      <FormLabel className="font-semibold text-base">Mostra nella Vetrina</FormLabel>
+                      <p className="text-sm text-muted-foreground mt-1">Rendi visibile il locale</p>
                     </div>
                     <FormControl>
                       <Switch
                         checked={field.value}
-                        onCheckedChange={field.onChange}
+                        onCheckedChange={(checked) => {
+                          triggerHaptic('light');
+                          field.onChange(checked);
+                        }}
                         className="ml-4"
                         data-testid="switch-is-public"
                       />
@@ -459,13 +495,13 @@ export default function Locations() {
                 name="heroImageUrl"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">URL Immagine di Copertina</FormLabel>
+                    <FormLabel className="text-base font-medium">URL Immagine di Copertina</FormLabel>
                     <FormControl>
                       <Input 
                         {...field} 
                         value={field.value || ''} 
                         placeholder="https://esempio.com/immagine.jpg" 
-                        className="h-12 text-base"
+                        className="h-14 text-base rounded-xl"
                         data-testid="input-hero-image" 
                       />
                     </FormControl>
@@ -478,14 +514,14 @@ export default function Locations() {
                 control={form.control}
                 name="shortDescription"
                 render={({ field }) => (
-                  <FormItem className="mt-4">
-                    <FormLabel className="text-base">Descrizione Breve</FormLabel>
+                  <FormItem className="mt-5">
+                    <FormLabel className="text-base font-medium">Descrizione Breve</FormLabel>
                     <FormControl>
                       <Textarea 
                         {...field} 
                         value={field.value || ''} 
                         placeholder="Una breve descrizione del locale"
-                        className="min-h-[80px] text-base"
+                        className="min-h-[88px] text-base rounded-xl"
                         data-testid="input-short-description" 
                       />
                     </FormControl>
@@ -498,14 +534,14 @@ export default function Locations() {
                 control={form.control}
                 name="openingHours"
                 render={({ field }) => (
-                  <FormItem className="mt-4">
-                    <FormLabel className="text-base">Orari di Apertura</FormLabel>
+                  <FormItem className="mt-5">
+                    <FormLabel className="text-base font-medium">Orari di Apertura</FormLabel>
                     <FormControl>
                       <Input 
                         {...field} 
                         value={field.value || ''} 
                         placeholder="es. Ven-Sab 23:00-05:00"
-                        className="h-12 text-base"
+                        className="h-14 text-base rounded-xl"
                         data-testid="input-opening-hours" 
                       />
                     </FormControl>
@@ -515,12 +551,12 @@ export default function Locations() {
               />
             </div>
 
-            <div className="flex gap-3 pt-4 pb-4">
+            <div className="flex gap-4 pt-6 pb-6">
               <HapticButton
                 type="button"
                 variant="outline"
                 onClick={handleSheetClose}
-                className="flex-1 h-14 text-base"
+                className="flex-1 h-14 text-base rounded-xl"
                 hapticType="light"
                 data-testid="button-cancel-location"
               >
@@ -529,7 +565,7 @@ export default function Locations() {
               <HapticButton
                 type="submit"
                 disabled={createMutation.isPending}
-                className="flex-1 h-14 text-base"
+                className="flex-1 h-14 text-base rounded-xl"
                 hapticType="medium"
                 data-testid="button-submit-location"
               >
@@ -539,6 +575,6 @@ export default function Locations() {
           </form>
         </Form>
       </BottomSheet>
-    </div>
+    </MobileAppLayout>
   );
 }
