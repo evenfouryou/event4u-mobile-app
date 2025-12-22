@@ -45,6 +45,30 @@ interface C1ReportData {
     ridotto: { count: number; amount: number };
     omaggio: { count: number; amount: number };
   };
+  // === NUOVI CAMPI NORMATIVI 2025 ===
+  cfOrganizzatore?: string; // Codice fiscale organizzatore
+  cfTitolare?: string; // Codice fiscale titolare sistema emissione
+  ragioneSocialeOrganizzatore?: string;
+  ragioneSocialeTitolare?: string;
+  matricolaMisuratoreFiscale?: string; // Matricola dispositivo fiscale
+  progressivoFiscale?: number; // Progressivo fiscale giornaliero
+  impostaIntrattenimento?: number; // Imposta intrattenimento totale
+  corrispettiviEsenti?: number; // Corrispettivi esenti IVA
+  corrispettiviSoggetti?: number; // Corrispettivi soggetti IVA
+  provincia?: string;
+  comune?: string;
+  // Dettaglio annullamenti per causale - Allegato B
+  annullamentiPerCausale?: Array<{
+    causale: string; // ANN=Annullamento, ERR=Errore, RIM=Rimborso, DUP=Duplicato
+    causaleDescrizione: string;
+    count: number;
+    importoTotale: number;
+  }>;
+  // Rivendite secondary ticketing
+  rivenditeCount?: number;
+  rivenditeImporto?: number;
+  // Cambi nominativo
+  cambiNominativoCount?: number;
 }
 
 export default function SiaeReportC1() {
@@ -112,9 +136,11 @@ export default function SiaeReportC1() {
   const totalCapacity = report.sectors.reduce((sum, s) => sum + s.capacity, 0);
   const totalEmessi = report.totalTicketsSold;
   const totalRicavoLordo = report.totalRevenue;
-  const impostaIntrattenimento = 0;
+  const impostaIntrattenimento = report.impostaIntrattenimento || 0;
   const imponibileIva = report.netRevenue;
   const ivaLorda = report.vatAmount;
+  const corrispettiviEsenti = report.corrispettiviEsenti || 0;
+  const corrispettiviSoggetti = report.corrispettiviSoggetti || report.totalRevenue;
 
   return (
     <>
@@ -187,25 +213,31 @@ export default function SiaeReportC1() {
             <tbody>
               <tr>
                 <td className="border border-black p-1 w-1/4 font-semibold">ORGANIZZATORE</td>
-                <td className="border border-black p-1" colSpan={3}>Event4U S.r.l.</td>
+                <td className="border border-black p-1">{report.ragioneSocialeOrganizzatore || 'Event4U S.r.l.'}</td>
+                <td className="border border-black p-1 font-semibold w-1/6">COD. FISCALE</td>
+                <td className="border border-black p-1 font-mono" data-testid="cf-organizzatore">{report.cfOrganizzatore || 'N/D'}</td>
               </tr>
               <tr>
                 <td className="border border-black p-1 font-semibold">TITOLARE SISTEMA EMISSIONE</td>
-                <td className="border border-black p-1">Event4U S.r.l.</td>
-                <td className="border border-black p-1 font-semibold w-1/6">COD. FISCALE / P.IVA</td>
-                <td className="border border-black p-1">12345678901</td>
+                <td className="border border-black p-1">{report.ragioneSocialeTitolare || 'Event4U S.r.l.'}</td>
+                <td className="border border-black p-1 font-semibold">COD. FISCALE / P.IVA</td>
+                <td className="border border-black p-1 font-mono" data-testid="cf-titolare">{report.cfTitolare || 'N/D'}</td>
               </tr>
               <tr>
                 <td className="border border-black p-1 font-semibold">CODICE SISTEMA EMISSIONE</td>
                 <td className="border border-black p-1">{report.eventCode || 'N/D'}</td>
-                <td className="border border-black p-1 font-semibold">PROVINCIA</td>
-                <td className="border border-black p-1">MI</td>
+                <td className="border border-black p-1 font-semibold">MATRICOLA MISURATORE</td>
+                <td className="border border-black p-1 font-mono" data-testid="matricola-misuratore">{report.matricolaMisuratoreFiscale || 'N/D'}</td>
               </tr>
               <tr>
-                <td className="border border-black p-1 font-semibold">DENOMINAZIONE</td>
-                <td className="border border-black p-1">{report.eventName}</td>
+                <td className="border border-black p-1 font-semibold">PROVINCIA</td>
+                <td className="border border-black p-1">{report.provincia || 'N/D'}</td>
                 <td className="border border-black p-1 font-semibold">COMUNE</td>
-                <td className="border border-black p-1">{report.venueName || 'Milano'}</td>
+                <td className="border border-black p-1">{report.comune || report.venueName || 'N/D'}</td>
+              </tr>
+              <tr>
+                <td className="border border-black p-1 font-semibold">DENOMINAZIONE EVENTO</td>
+                <td className="border border-black p-1" colSpan={3}>{report.eventName}</td>
               </tr>
               <tr>
                 <td className="border border-black p-1 font-semibold">TIPO EVENTO (1)</td>
@@ -224,24 +256,10 @@ export default function SiaeReportC1() {
                 </td>
               </tr>
               <tr>
-                <td className="border border-black p-1 font-semibold">TIPO DELL'OPERA (manifestazione)</td>
-                <td className="border border-black p-1" colSpan={3}>Evento musicale / Discoteca</td>
-              </tr>
-              <tr>
-                <td className="border border-black p-1 font-semibold">COMPONENTI ESECUTORI / TITOLO</td>
-                <td className="border border-black p-1" colSpan={3}>{report.eventName}</td>
-              </tr>
-              <tr>
-                <td className="border border-black p-1 font-semibold">NUMERO OPERE RAPPRESENTATE</td>
-                <td className="border border-black p-1">1</td>
-                <td className="border border-black p-1 font-semibold">CODICE LOCALE</td>
-                <td className="border border-black p-1">001</td>
-              </tr>
-              <tr>
                 <td className="border border-black p-1 font-semibold">ORA INIZIO</td>
                 <td className="border border-black p-1">{report.eventTime || '21:00'}</td>
-                <td className="border border-black p-1 font-semibold">IMPOSTA INTRATTENIMENTO</td>
-                <td className="border border-black p-1">0,00</td>
+                <td className="border border-black p-1 font-semibold">PROGRESSIVO FISCALE</td>
+                <td className="border border-black p-1 font-mono" data-testid="progressivo-fiscale">{report.progressivoFiscale || 1}</td>
               </tr>
             </tbody>
           </table>
@@ -329,11 +347,26 @@ export default function SiaeReportC1() {
           </table>
         </div>
 
-        <div className="border border-black mb-6">
+        <div className="border border-black mb-4">
+          <div className="bg-gray-100 px-2 py-1 font-bold border-b border-black">
+            QUADRO C - RIEPILOGO CORRISPETTIVI E IMPOSTE
+          </div>
           <table className="w-full text-xs">
             <tbody>
               <tr>
-                <td className="border border-black p-2 w-1/2 font-semibold">TOTALE IVA da assolvere</td>
+                <td className="border border-black p-2 w-1/2 font-semibold">Corrispettivi Soggetti IVA</td>
+                <td className="border border-black p-2 text-right" data-testid="corrispettivi-soggetti">{corrispettiviSoggetti.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td className="border border-black p-2 font-semibold">Corrispettivi Esenti IVA</td>
+                <td className="border border-black p-2 text-right" data-testid="corrispettivi-esenti">{corrispettiviEsenti.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td className="border border-black p-2 font-semibold">Imposta Intrattenimento</td>
+                <td className="border border-black p-2 text-right" data-testid="imposta-intrattenimento">{impostaIntrattenimento.toFixed(2)}</td>
+              </tr>
+              <tr>
+                <td className="border border-black p-2 font-semibold">TOTALE IVA da assolvere</td>
                 <td className="border border-black p-2 text-right font-bold">{ivaLorda.toFixed(2)}</td>
               </tr>
               <tr>
@@ -347,6 +380,66 @@ export default function SiaeReportC1() {
             </tbody>
           </table>
         </div>
+
+        {/* QUADRO D - Dettaglio Annullamenti per Causale */}
+        {report.annullamentiPerCausale && report.annullamentiPerCausale.length > 0 && (
+          <div className="border border-black mb-4" data-testid="quadro-annullamenti">
+            <div className="bg-gray-100 px-2 py-1 font-bold border-b border-black">
+              QUADRO D - DETTAGLIO ANNULLAMENTI PER CAUSALE
+            </div>
+            <table className="w-full text-xs">
+              <thead>
+                <tr className="bg-gray-50">
+                  <th className="border border-black p-1 text-left">CAUSALE</th>
+                  <th className="border border-black p-1 text-left">DESCRIZIONE</th>
+                  <th className="border border-black p-1 text-right">N° TITOLI</th>
+                  <th className="border border-black p-1 text-right">IMPORTO TOTALE</th>
+                </tr>
+              </thead>
+              <tbody>
+                {report.annullamentiPerCausale.map((ann, idx) => (
+                  <tr key={idx}>
+                    <td className="border border-black p-1 font-mono">{ann.causale}</td>
+                    <td className="border border-black p-1">{ann.causaleDescrizione}</td>
+                    <td className="border border-black p-1 text-right">{ann.count}</td>
+                    <td className="border border-black p-1 text-right">{ann.importoTotale.toFixed(2)}</td>
+                  </tr>
+                ))}
+                <tr className="bg-gray-100 font-bold">
+                  <td className="border border-black p-1" colSpan={2}>TOTALE ANNULLAMENTI</td>
+                  <td className="border border-black p-1 text-right">{report.cancelledTicketsCount}</td>
+                  <td className="border border-black p-1 text-right">
+                    {report.annullamentiPerCausale.reduce((sum, a) => sum + a.importoTotale, 0).toFixed(2)}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
+
+        {/* QUADRO E - Secondary Ticketing e Cambi Nominativo */}
+        {((report.rivenditeCount && report.rivenditeCount > 0) || (report.cambiNominativoCount && report.cambiNominativoCount > 0)) && (
+          <div className="border border-black mb-6" data-testid="quadro-secondary">
+            <div className="bg-gray-100 px-2 py-1 font-bold border-b border-black">
+              QUADRO E - OPERAZIONI SECONDARY TICKETING
+            </div>
+            <table className="w-full text-xs">
+              <tbody>
+                <tr>
+                  <td className="border border-black p-2 w-1/2 font-semibold">Rivendite Effettuate</td>
+                  <td className="border border-black p-2 text-center">{report.rivenditeCount || 0}</td>
+                  <td className="border border-black p-2 text-right font-semibold">Importo Totale</td>
+                  <td className="border border-black p-2 text-right">{(report.rivenditeImporto || 0).toFixed(2)}</td>
+                </tr>
+                <tr>
+                  <td className="border border-black p-2 font-semibold">Cambi Nominativo</td>
+                  <td className="border border-black p-2 text-center">{report.cambiNominativoCount || 0}</td>
+                  <td className="border border-black p-2" colSpan={2}></td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        )}
 
         <div className="flex justify-between mt-8 text-xs">
           <div className="w-1/3">

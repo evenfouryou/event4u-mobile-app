@@ -1435,23 +1435,61 @@ export const siaeNameChangesRelations = relations(siaeNameChanges, ({ one }) => 
   }),
 }));
 
-// Rimessa in Vendita (Resale) - Provvedimento 356768/2025 6.4
+// Rimessa in Vendita (Resale) - Provvedimento 356768/2025 6.4 + Allegato B 2025
 export const siaeResales = pgTable("siae_resales", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   originalTicketId: varchar("original_ticket_id").notNull().references(() => siaeTickets.id),
   newTicketId: varchar("new_ticket_id").references(() => siaeTickets.id),
   sellerId: varchar("seller_id").notNull().references(() => siaeCustomers.id),
   buyerId: varchar("buyer_id").references(() => siaeCustomers.id),
+  
   // Prezzi
   originalPrice: decimal("original_price", { precision: 10, scale: 2 }).notNull(),
   resalePrice: decimal("resale_price", { precision: 10, scale: 2 }).notNull(),
   platformFee: decimal("platform_fee", { precision: 10, scale: 2 }).default('0'),
+  prezzoMassimo: decimal("prezzo_massimo", { precision: 10, scale: 2 }), // Prezzo massimo consentito per rivendita
+  
+  // === NUOVI CAMPI ALLEGATO B - SECONDARY TICKETING ===
+  // Causale codificata rivendita (obbligatoria)
+  causaleRivendita: varchar("causale_rivendita", { length: 3 }).notNull().default('IMP'), 
+  // IMP=Impedimento, RIN=Rinuncia, ERR=Errore acquisto, ALT=Altro
+  causaleDettaglio: text("causale_dettaglio"), // Descrizione dettagliata se causale=ALT
+  
+  // Verifica identità venditore (obbligatoria)
+  venditoreVerificato: boolean("venditore_verificato").notNull().default(false),
+  venditoreDocumentoTipo: varchar("venditore_documento_tipo", { length: 20 }), // CI, PASSAPORTO, PATENTE
+  venditoreDocumentoNumero: varchar("venditore_documento_numero", { length: 50 }),
+  venditoreVerificaData: timestamp("venditore_verifica_data"),
+  venditoreVerificaOperatore: varchar("venditore_verifica_operatore", { length: 100 }),
+  
+  // Verifica identità acquirente (obbligatoria alla vendita)
+  acquirenteVerificato: boolean("acquirente_verificato").notNull().default(false),
+  acquirenteDocumentoTipo: varchar("acquirente_documento_tipo", { length: 20 }),
+  acquirenteDocumentoNumero: varchar("acquirente_documento_numero", { length: 50 }),
+  acquirenteVerificaData: timestamp("acquirente_verifica_data"),
+  acquirenteVerificaOperatore: varchar("acquirente_verifica_operatore", { length: 100 }),
+  
+  // Controllo prezzo massimo
+  controlloPrezzoEseguito: boolean("controllo_prezzo_eseguito").notNull().default(false),
+  controlloPrezzoSuperato: boolean("controllo_prezzo_superato").notNull().default(false),
+  controlloPrezzoData: timestamp("controllo_prezzo_data"),
+  controlloPrezzoNote: text("controllo_prezzo_note"),
+  
+  // Log controlli effettuati (audit trail obbligatorio)
+  logControlli: text("log_controlli"), // JSON array dei controlli effettuati
+  
   // Stato
-  status: varchar("status", { length: 20 }).notNull().default('listed'), // listed, sold, cancelled, expired
+  status: varchar("status", { length: 20 }).notNull().default('listed'), // listed, sold, cancelled, expired, rejected
+  motivoRifiuto: varchar("motivo_rifiuto", { length: 255 }), // Se status=rejected
   listedAt: timestamp("listed_at").defaultNow(),
   soldAt: timestamp("sold_at"),
   cancelledAt: timestamp("cancelled_at"),
   expiresAt: timestamp("expires_at"),
+  
+  // Trasmissione fiscale
+  transmissionId: varchar("transmission_id").references(() => siaeTransmissions.id),
+  sigilloFiscaleRivendita: varchar("sigillo_fiscale_rivendita", { length: 16 }), // Nuovo sigillo per rivendita
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1529,31 +1567,54 @@ export const siaeLogsRelations = relations(siaeLogs, ({ one }) => ({
   }),
 }));
 
-// Trasmissioni SIAE (SIAE Transmissions) - Decreto Art. 10-14
+// Trasmissioni SIAE (SIAE Transmissions) - Decreto Art. 10-14 + Specifiche 2025
 export const siaeTransmissions = pgTable("siae_transmissions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   companyId: varchar("company_id").notNull().references(() => companies.id),
   transmissionType: varchar("transmission_type", { length: 20 }).notNull(), // daily, monthly, corrective
   periodDate: timestamp("period_date").notNull(), // Data periodo (giorno o mese)
+  
+  // === NUOVI CAMPI SPECIFICHE 2025 - Allegato 1 ===
+  versioneTracciato: varchar("versione_tracciato", { length: 10 }).notNull().default('2025.1'), // Versione tracciato XML obbligatoria
+  codiceIntervento: varchar("codice_intervento", { length: 3 }), // Tipo intervento: ORD=ordinaria, COR=correttiva, INT=integrativa
+  identificativoMittente: varchar("identificativo_mittente", { length: 50 }), // ID univoco mittente registrato AdE
+  progressivoInvio: integer("progressivo_invio").notNull().default(1), // Progressivo invio per periodo fiscale
+  motivoRettifica: varchar("motivo_rettifica", { length: 255 }), // Obbligatorio se codiceIntervento=COR/INT
+  riferimentoTrasmissioneOriginale: varchar("riferimento_trasmissione_originale", { length: 50 }), // ID trasmissione originale se correttiva
+  cfOrganizzatore: varchar("cf_organizzatore", { length: 16 }), // CF organizzatore evento
+  matricolaMisuratoreFiscale: varchar("matricola_misuratore_fiscale", { length: 20 }), // Matricola dispositivo fiscale
+  
   // File
   fileName: varchar("file_name", { length: 255 }), // Formato: AAAA>MM>GG>SSSSSSSS>MP>TT>V
   fileExtension: varchar("file_extension", { length: 4 }).notNull().default('.XST'), // .XST o .XSI
   fileContent: text("file_content"), // Contenuto XML
   fileHash: varchar("file_hash", { length: 64 }), // SHA-256 hash
   digitalSignature: text("digital_signature"), // Firma digitale
+  
   // Invio
   status: varchar("status", { length: 20 }).notNull().default('pending'), // pending, sent, received, error
   sentAt: timestamp("sent_at"),
   sentToPec: varchar("sent_to_pec", { length: 255 }),
   pecMessageId: varchar("pec_message_id", { length: 255 }),
-  // Risposta
+  
+  // Risposta AdE
   receivedAt: timestamp("received_at"),
   receiptContent: text("receipt_content"),
+  receiptProtocol: varchar("receipt_protocol", { length: 50 }), // Protocollo ricevuta AdE
   errorMessage: text("error_message"),
+  errorCode: varchar("error_code", { length: 10 }), // Codice errore AdE
   retryCount: integer("retry_count").notNull().default(0),
-  // Statistiche
+  
+  // Statistiche estese
   ticketsCount: integer("tickets_count").notNull().default(0),
+  ticketsCancelled: integer("tickets_cancelled").notNull().default(0), // Biglietti annullati nel periodo
+  ticketsChanged: integer("tickets_changed").notNull().default(0), // Cambi nominativo
+  ticketsResold: integer("tickets_resold").notNull().default(0), // Rivendite secondary ticketing
   totalAmount: decimal("total_amount", { precision: 12, scale: 2 }),
+  totalIva: decimal("total_iva", { precision: 12, scale: 2 }), // IVA totale
+  totalImpostaIntrattenimento: decimal("total_imposta_intrattenimento", { precision: 12, scale: 2 }), // Imposta intrattenimento
+  totalEsenti: decimal("total_esenti", { precision: 12, scale: 2 }), // Corrispettivi esenti
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });

@@ -1,7 +1,7 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
-import { Building2, Calendar, TrendingUp, Package, Settings, UserPlus, Ticket, ChevronLeft } from "lucide-react";
+import { Building2, Calendar, TrendingUp, Package, Settings, UserPlus, Ticket, ChevronLeft, CreditCard, FileText, Send, ClipboardList, Shield } from "lucide-react";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useToast } from "@/hooks/use-toast";
@@ -364,6 +364,106 @@ export default function SuperAdminDashboard() {
                   data-testid="switch-customer-registration-enabled"
                 />
               </motion.div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* === NUOVA SEZIONE GESTIONE SIAE === */}
+        <motion.div variants={itemVariants}>
+          <Card className="glass-card">
+            <CardHeader className="p-5 pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-chart-2/10 flex items-center justify-center">
+                  <Shield className="w-5 h-5 text-chart-2" />
+                </div>
+                <div>
+                  <CardTitle className="text-base">Gestione SIAE</CardTitle>
+                  <CardDescription className="text-sm">
+                    Biglietteria fiscale e trasmissioni
+                  </CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-5 pt-0">
+              <div className="grid grid-cols-2 gap-3">
+                <motion.button
+                  className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/30 hover-elevate"
+                  whileTap={{ scale: 0.96 }}
+                  transition={springTransition}
+                  onClick={() => { triggerHaptic('light'); setLocation('/siae-config'); }}
+                  data-testid="link-siae-config"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
+                    <Settings className="w-5 h-5 text-primary" />
+                  </div>
+                  <span className="text-xs font-medium text-center">Configurazione</span>
+                </motion.button>
+
+                <motion.button
+                  className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/30 hover-elevate"
+                  whileTap={{ scale: 0.96 }}
+                  transition={springTransition}
+                  onClick={() => { triggerHaptic('light'); setLocation('/siae-tables'); }}
+                  data-testid="link-siae-tables"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
+                    <ClipboardList className="w-5 h-5 text-accent" />
+                  </div>
+                  <span className="text-xs font-medium text-center">Tabelle Codificate</span>
+                </motion.button>
+
+                <motion.button
+                  className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/30 hover-elevate"
+                  whileTap={{ scale: 0.96 }}
+                  transition={springTransition}
+                  onClick={() => { triggerHaptic('light'); setLocation('/siae-activation-cards'); }}
+                  data-testid="link-siae-cards"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-chart-1/10 flex items-center justify-center">
+                    <CreditCard className="w-5 h-5 text-chart-1" />
+                  </div>
+                  <span className="text-xs font-medium text-center">Carte Attivazione</span>
+                </motion.button>
+
+                <motion.button
+                  className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/30 hover-elevate"
+                  whileTap={{ scale: 0.96 }}
+                  transition={springTransition}
+                  onClick={() => { triggerHaptic('light'); setLocation('/siae-transmissions'); }}
+                  data-testid="link-siae-transmissions"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-chart-2/10 flex items-center justify-center">
+                    <Send className="w-5 h-5 text-chart-2" />
+                  </div>
+                  <span className="text-xs font-medium text-center">Trasmissioni</span>
+                </motion.button>
+
+                <motion.button
+                  className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/30 hover-elevate"
+                  whileTap={{ scale: 0.96 }}
+                  transition={springTransition}
+                  onClick={() => { triggerHaptic('light'); setLocation('/siae-report-c1'); }}
+                  data-testid="link-siae-report-c1"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-chart-3/10 flex items-center justify-center">
+                    <FileText className="w-5 h-5 text-chart-3" />
+                  </div>
+                  <span className="text-xs font-medium text-center">Report C1/C2</span>
+                </motion.button>
+
+                <motion.button
+                  className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/30 hover-elevate"
+                  whileTap={{ scale: 0.96 }}
+                  transition={springTransition}
+                  onClick={() => { triggerHaptic('light'); setLocation('/siae-audit-logs'); }}
+                  data-testid="link-siae-audit"
+                >
+                  <div className="w-10 h-10 rounded-xl bg-chart-4/10 flex items-center justify-center">
+                    <Shield className="w-5 h-5 text-chart-4" />
+                  </div>
+                  <span className="text-xs font-medium text-center">Audit Logs</span>
+                </motion.button>
+              </div>
             </CardContent>
           </Card>
         </motion.div>

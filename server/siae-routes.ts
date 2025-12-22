@@ -2806,6 +2806,53 @@ router.get('/api/siae/ticketed-events/:id/reports/c1', requireAuth, async (req: 
     const vatAmount = totalRevenue * (vatRate / (100 + vatRate));
     const netRevenue = totalRevenue - vatAmount;
 
+    // === NUOVI CAMPI 2025: Recupera dati organizzatore ===
+    // Recupera la company associata all'evento per CF e ragione sociale
+    const company = event.companyId ? await db.select().from(companies).where(eq(companies.id, event.companyId)).then(rows => rows[0]) : null;
+    
+    // Recupera il canale di emissione per matricola misuratore
+    const emissionChannel = event.emissionChannelId ? await db.select().from(siaeEmissionChannels).where(eq(siaeEmissionChannels.id, event.emissionChannelId)).then(rows => rows[0]) : null;
+    
+    // Calcola annullamenti per causale
+    const annullamentiPerCausale: Array<{causale: string; causaleDescrizione: string; count: number; importoTotale: number}> = [];
+    const causaleMap: Record<string, {desc: string; count: number; amount: number}> = {};
+    
+    for (const ticket of cancelledTickets) {
+      const causale = ticket.cancellationReason?.startsWith('ANN') ? 'ANN' :
+                      ticket.cancellationReason?.startsWith('ERR') ? 'ERR' :
+                      ticket.cancellationReason?.startsWith('RIM') ? 'RIM' :
+                      ticket.cancellationReason?.startsWith('DUP') ? 'DUP' : 'ANN';
+      const price = getTicketPrice(ticket);
+      if (!causaleMap[causale]) {
+        causaleMap[causale] = { 
+          desc: causale === 'ANN' ? 'Annullamento' : 
+                causale === 'ERR' ? 'Errore emissione' : 
+                causale === 'RIM' ? 'Rimborso' : 
+                causale === 'DUP' ? 'Duplicato' : 'Annullamento',
+          count: 0, 
+          amount: 0 
+        };
+      }
+      causaleMap[causale].count += 1;
+      causaleMap[causale].amount += price;
+    }
+    for (const [causale, data] of Object.entries(causaleMap)) {
+      annullamentiPerCausale.push({causale, causaleDescrizione: data.desc, count: data.count, importoTotale: data.amount});
+    }
+    
+    // Recupera rivendite secondary ticketing per l'evento
+    const resales = await db.select().from(siaeResales).where(eq(siaeResales.ticketedEventId, id));
+    const completedResales = resales.filter(r => r.status === 'completed' || r.status === 'approved');
+    const rivenditeCount = completedResales.length;
+    const rivenditeImporto = completedResales.reduce((sum, r) => sum + Number(r.newPrice || 0), 0);
+    
+    // Conta cambi nominativo
+    const cambiNominativoCount = allTickets.filter(t => t.nominativoModificato === true).length;
+    
+    // Calcola corrispettivi esenti (omaggi) e soggetti IVA
+    const corrispettiviEsenti = activeTickets.filter(t => getTicketType(t) === 'omaggio').reduce((s, t) => s + getTicketPrice(t), 0);
+    const corrispettiviSoggetti = totalRevenue - corrispettiviEsenti;
+
     res.json({
       reportType: isMonthly ? 'mensile' : 'giornaliero',
       reportName: isMonthly ? 'Riepilogo Mensile' : 'Registro Giornaliero',
@@ -2824,6 +2871,23 @@ router.get('/api/siae/ticketed-events/:id/reports/c1', requireAuth, async (req: 
       netRevenue,
       cancelledTicketsCount: cancelledTickets.length,
       dailySales,
+      // === NUOVI CAMPI NORMATIVI 2025 ===
+      cfOrganizzatore: company?.taxCode || company?.vatNumber || null,
+      cfTitolare: company?.taxCode || company?.vatNumber || null,
+      ragioneSocialeOrganizzatore: company?.name || 'Event4U S.r.l.',
+      ragioneSocialeTitolare: company?.name || 'Event4U S.r.l.',
+      matricolaMisuratoreFiscale: emissionChannel?.fiscalDeviceId || null,
+      progressivoFiscale: 1, // Progressivo del giorno (da calcolare da trasmissioni)
+      provincia: event.venueProvince || null,
+      comune: event.venueCity || event.venueName || null,
+      impostaIntrattenimento: 0, // Calcolare se applicabile
+      corrispettiviEsenti,
+      corrispettiviSoggetti,
+      annullamentiPerCausale: annullamentiPerCausale.length > 0 ? annullamentiPerCausale : undefined,
+      rivenditeCount: rivenditeCount > 0 ? rivenditeCount : undefined,
+      rivenditeImporto: rivenditeImporto > 0 ? rivenditeImporto : undefined,
+      cambiNominativoCount: cambiNominativoCount > 0 ? cambiNominativoCount : undefined,
+      // Fine campi 2025
       sectors: sectors.map(s => {
         const sectorActiveTickets = activeTickets.filter(t => t.sectorId === s.id);
         const sectorCancelledTickets = cancelledTickets.filter(t => t.sectorId === s.id);

@@ -49,7 +49,13 @@ import {
   XCircle,
   Eye,
   Loader2,
+  AlertTriangle,
+  UserCheck,
+  Shield,
+  FileText,
 } from "lucide-react";
+import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 
 export default function SiaeResalesPage() {
@@ -81,8 +87,31 @@ export default function SiaeResalesPage() {
         return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Annullato</Badge>;
       case "expired":
         return <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">Scaduto</Badge>;
+      case "rejected":
+        return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">Rifiutato</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
+    }
+  };
+
+  // Helper per causali rivendita - Allegato B
+  const getCausaleLabel = (causale: string | undefined) => {
+    switch (causale) {
+      case "IMP": return "Impedimento";
+      case "RIN": return "Rinuncia";
+      case "ERR": return "Errore Acquisto";
+      case "ALT": return "Altro";
+      default: return causale || "-";
+    }
+  };
+
+  // Helper per tipo documento
+  const getDocumentoLabel = (tipo: string | undefined) => {
+    switch (tipo) {
+      case "CI": return "Carta d'Identità";
+      case "PASSAPORTO": return "Passaporto";
+      case "PATENTE": return "Patente";
+      default: return tipo || "-";
     }
   };
 
@@ -223,10 +252,10 @@ export default function SiaeResalesPage() {
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead>Biglietto</TableHead>
-                    <TableHead>Venditore</TableHead>
-                    <TableHead>Acquirente</TableHead>
-                    <TableHead>Prezzo Originale</TableHead>
-                    <TableHead>Prezzo Rivendita</TableHead>
+                    <TableHead>Causale</TableHead>
+                    <TableHead>Prezzo Orig.</TableHead>
+                    <TableHead>Prezzo Rivend.</TableHead>
+                    <TableHead>Verifiche</TableHead>
                     <TableHead>Stato</TableHead>
                     <TableHead>Data</TableHead>
                     <TableHead className="text-right">Azioni</TableHead>
@@ -238,11 +267,10 @@ export default function SiaeResalesPage() {
                       <TableCell className="font-mono text-xs" data-testid={`cell-ticket-${resale.id}`}>
                         {resale.originalTicketId?.slice(0, 8)}...
                       </TableCell>
-                      <TableCell className="font-mono text-xs" data-testid={`cell-seller-${resale.id}`}>
-                        {resale.sellerId?.slice(0, 8)}...
-                      </TableCell>
-                      <TableCell className="font-mono text-xs" data-testid={`cell-buyer-${resale.id}`}>
-                        {resale.buyerId ? `${resale.buyerId.slice(0, 8)}...` : "-"}
+                      <TableCell data-testid={`cell-causale-${resale.id}`}>
+                        <Badge variant="outline" className="text-xs">
+                          {getCausaleLabel((resale as any).causaleRivendita)}
+                        </Badge>
                       </TableCell>
                       <TableCell data-testid={`cell-original-price-${resale.id}`}>
                         <span className="flex items-center gap-1">
@@ -255,6 +283,20 @@ export default function SiaeResalesPage() {
                           <Euro className="w-3 h-3" />
                           {Number(resale.resalePrice).toFixed(2)}
                         </span>
+                      </TableCell>
+                      <TableCell data-testid={`cell-verifiche-${resale.id}`}>
+                        <div className="flex items-center gap-1">
+                          {(resale as any).venditoreVerificato ? (
+                            <UserCheck className="w-4 h-4 text-emerald-400" title="Venditore verificato" />
+                          ) : (
+                            <AlertTriangle className="w-4 h-4 text-amber-400" title="Verifica venditore mancante" />
+                          )}
+                          {(resale as any).controlloPrezzoEseguito ? (
+                            <Shield className="w-4 h-4 text-emerald-400" title="Prezzo verificato" />
+                          ) : (
+                            <Shield className="w-4 h-4 text-muted-foreground" title="Controllo prezzo non eseguito" />
+                          )}
+                        </div>
                       </TableCell>
                       <TableCell data-testid={`cell-status-${resale.id}`}>
                         {getStatusBadge(resale.status)}
@@ -285,47 +327,191 @@ export default function SiaeResalesPage() {
       )}
 
       <Dialog open={isDetailDialogOpen} onOpenChange={setIsDetailDialogOpen}>
-        <DialogContent className="max-w-lg" data-testid="dialog-detail">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-detail">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2">
               <RefreshCcw className="w-5 h-5 text-[#FFD700]" />
-              Dettaglio Rivendita
+              Dettaglio Rivendita - Allegato B
             </DialogTitle>
+            <DialogDescription>
+              Informazioni complete secondo normativa secondary ticketing
+            </DialogDescription>
           </DialogHeader>
           {selectedResale && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-6">
+              {/* Stato e Prezzi */}
+              <div className="grid grid-cols-3 gap-4">
                 <div className="p-3 rounded-lg bg-background/50 border border-border/50">
                   <div className="text-xs text-muted-foreground mb-1">Stato</div>
                   {getStatusBadge(selectedResale.status)}
                 </div>
                 <div className="p-3 rounded-lg bg-background/50 border border-border/50">
+                  <div className="text-xs text-muted-foreground mb-1">Prezzo Originale</div>
+                  <div className="text-lg font-bold flex items-center gap-1">
+                    <Euro className="w-4 h-4" />
+                    {Number(selectedResale.originalPrice).toFixed(2)}
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-background/50 border border-border/50">
                   <div className="text-xs text-muted-foreground mb-1">Prezzo Rivendita</div>
-                  <div className="text-xl font-bold text-[#FFD700] flex items-center gap-1">
+                  <div className="text-lg font-bold text-[#FFD700] flex items-center gap-1">
                     <Euro className="w-4 h-4" />
                     {Number(selectedResale.resalePrice).toFixed(2)}
                   </div>
                 </div>
               </div>
-              <div className="space-y-3">
+
+              {/* Causale Rivendita - Allegato B */}
+              <Card className="glass-card">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-2 mb-3">
+                    <FileText className="w-4 h-4 text-primary" />
+                    <span className="font-medium">Causale Rivendita</span>
+                  </div>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Codice Causale</div>
+                      <Badge variant="outline">{getCausaleLabel((selectedResale as any).causaleRivendita)}</Badge>
+                    </div>
+                    {(selectedResale as any).causaleDettaglio && (
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Dettaglio</div>
+                        <span className="text-sm">{(selectedResale as any).causaleDettaglio}</span>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Verifica Venditore */}
+              <Card className="glass-card">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <UserCheck className="w-4 h-4 text-primary" />
+                      <span className="font-medium">Verifica Venditore</span>
+                    </div>
+                    {(selectedResale as any).venditoreVerificato ? (
+                      <Badge className="bg-emerald-500/20 text-emerald-400">Verificato</Badge>
+                    ) : (
+                      <Badge className="bg-amber-500/20 text-amber-400">Non Verificato</Badge>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Tipo Documento</div>
+                      <span>{getDocumentoLabel((selectedResale as any).venditoreDocumentoTipo)}</span>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Numero Documento</div>
+                      <span className="font-mono">{(selectedResale as any).venditoreDocumentoNumero || "-"}</span>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Data Verifica</div>
+                      <span>
+                        {(selectedResale as any).venditoreVerificaData 
+                          ? format(new Date((selectedResale as any).venditoreVerificaData), "dd/MM/yyyy HH:mm", { locale: it })
+                          : "-"}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Operatore</div>
+                      <span>{(selectedResale as any).venditoreVerificaOperatore || "-"}</span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Verifica Acquirente (se venduto) */}
+              {selectedResale.status === "sold" && (
+                <Card className="glass-card">
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="flex items-center gap-2">
+                        <UserCheck className="w-4 h-4 text-accent" />
+                        <span className="font-medium">Verifica Acquirente</span>
+                      </div>
+                      {(selectedResale as any).acquirenteVerificato ? (
+                        <Badge className="bg-emerald-500/20 text-emerald-400">Verificato</Badge>
+                      ) : (
+                        <Badge className="bg-amber-500/20 text-amber-400">Non Verificato</Badge>
+                      )}
+                    </div>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Tipo Documento</div>
+                        <span>{getDocumentoLabel((selectedResale as any).acquirenteDocumentoTipo)}</span>
+                      </div>
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Numero Documento</div>
+                        <span className="font-mono">{(selectedResale as any).acquirenteDocumentoNumero || "-"}</span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              )}
+
+              {/* Controllo Prezzo */}
+              <Card className="glass-card">
+                <CardContent className="p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-2">
+                      <Shield className="w-4 h-4 text-primary" />
+                      <span className="font-medium">Controllo Prezzo Massimo</span>
+                    </div>
+                    {(selectedResale as any).controlloPrezzoEseguito ? (
+                      (selectedResale as any).controlloPrezzoSuperato ? (
+                        <Badge className="bg-red-500/20 text-red-400">Limite Superato</Badge>
+                      ) : (
+                        <Badge className="bg-emerald-500/20 text-emerald-400">Conforme</Badge>
+                      )
+                    ) : (
+                      <Badge variant="secondary">Non Eseguito</Badge>
+                    )}
+                  </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Prezzo Massimo Consentito</div>
+                      <span>
+                        {(selectedResale as any).prezzoMassimo 
+                          ? `€${Number((selectedResale as any).prezzoMassimo).toFixed(2)}`
+                          : "-"}
+                      </span>
+                    </div>
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Data Controllo</div>
+                      <span>
+                        {(selectedResale as any).controlloPrezzoData 
+                          ? format(new Date((selectedResale as any).controlloPrezzoData), "dd/MM/yyyy HH:mm", { locale: it })
+                          : "-"}
+                      </span>
+                    </div>
+                  </div>
+                  {(selectedResale as any).controlloPrezzoNote && (
+                    <div className="mt-3">
+                      <div className="text-xs text-muted-foreground mb-1">Note</div>
+                      <p className="text-sm">{(selectedResale as any).controlloPrezzoNote}</p>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+
+              {/* Info Aggiuntive */}
+              <div className="space-y-3 text-sm">
                 <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">ID Biglietto</span>
-                  <span className="font-mono text-sm">{selectedResale.originalTicketId}</span>
+                  <span className="text-muted-foreground">ID Biglietto Originale</span>
+                  <span className="font-mono">{selectedResale.originalTicketId}</span>
                 </div>
                 <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Venditore</span>
-                  <span className="font-mono text-sm">{selectedResale.sellerId}</span>
+                  <span className="text-muted-foreground">ID Venditore</span>
+                  <span className="font-mono">{selectedResale.sellerId}</span>
                 </div>
                 {selectedResale.buyerId && (
                   <div className="flex justify-between py-2 border-b">
-                    <span className="text-muted-foreground">Acquirente</span>
-                    <span className="font-mono text-sm">{selectedResale.buyerId}</span>
+                    <span className="text-muted-foreground">ID Acquirente</span>
+                    <span className="font-mono">{selectedResale.buyerId}</span>
                   </div>
                 )}
-                <div className="flex justify-between py-2 border-b">
-                  <span className="text-muted-foreground">Prezzo Originale</span>
-                  <span>€{Number(selectedResale.originalPrice).toFixed(2)}</span>
-                </div>
                 <div className="flex justify-between py-2 border-b">
                   <span className="text-muted-foreground">Data Inserimento</span>
                   <span>
@@ -335,15 +521,25 @@ export default function SiaeResalesPage() {
                 {selectedResale.soldAt && (
                   <div className="flex justify-between py-2 border-b">
                     <span className="text-muted-foreground">Data Vendita</span>
-                    <span>
-                      {format(new Date(selectedResale.soldAt), "dd/MM/yyyy HH:mm", { locale: it })}
-                    </span>
+                    <span>{format(new Date(selectedResale.soldAt), "dd/MM/yyyy HH:mm", { locale: it })}</span>
+                  </div>
+                )}
+                {(selectedResale as any).sigilloFiscaleRivendita && (
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-muted-foreground">Sigillo Fiscale Rivendita</span>
+                    <span className="font-mono text-xs">{(selectedResale as any).sigilloFiscaleRivendita}</span>
                   </div>
                 )}
                 {selectedResale.platformFee && (
                   <div className="flex justify-between py-2 border-b">
                     <span className="text-muted-foreground">Commissione Piattaforma</span>
                     <span>€{Number(selectedResale.platformFee).toFixed(2)}</span>
+                  </div>
+                )}
+                {(selectedResale as any).motivoRifiuto && (
+                  <div className="flex justify-between py-2 border-b text-red-400">
+                    <span>Motivo Rifiuto</span>
+                    <span>{(selectedResale as any).motivoRifiuto}</span>
                   </div>
                 )}
               </div>
