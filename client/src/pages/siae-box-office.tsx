@@ -296,6 +296,8 @@ export default function SiaeBoxOfficePage() {
     <MobileHeader
       title="Box Office"
       subtitle={isSuperAdmin ? "Admin View" : "Gestione Cassa"}
+      showBackButton
+      showUserMenu
     />
   );
 

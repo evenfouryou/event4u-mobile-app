@@ -210,11 +210,8 @@ export default function SiaeAuditLogsPage() {
         header={
           <MobileHeader
             title="Log Audit SIAE"
-            leftAction={
-              <HapticButton variant="ghost" size="icon" onClick={() => window.history.back()}>
-                <ArrowLeft className="h-5 w-5" />
-              </HapticButton>
-            }
+            showBackButton
+            showUserMenu
           />
         }
       >
@@ -240,11 +237,8 @@ export default function SiaeAuditLogsPage() {
         <MobileHeader
           title="Log Audit SIAE"
           subtitle="Registro operazioni fiscali"
-          leftAction={
-            <HapticButton variant="ghost" size="icon" onClick={() => window.history.back()}>
-              <ArrowLeft className="h-5 w-5" />
-            </HapticButton>
-          }
+          showBackButton
+          showUserMenu
           rightAction={
             <div className="relative">
               <HapticButton 

@@ -178,7 +178,7 @@ export default function StripeAdminPage() {
 
   return (
     <MobileAppLayout
-      header={<MobileHeader title="Stripe Admin" showBackButton showMenuButton />}
+      header={<MobileHeader title="Stripe Admin" showBackButton showMenuButton showUserMenu />}
       contentClassName="pb-24"
     >
       <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-stripe-admin">

@@ -432,7 +432,7 @@ export default function SiaeTicketedEventsPage() {
 
   return (
     <MobileAppLayout
-      header={<MobileHeader title="Eventi Biglietteria" showBackButton showMenuButton />}
+      header={<MobileHeader title="Eventi Biglietteria" showBackButton showMenuButton showUserMenu />}
       contentClassName="pb-24"
     >
       <div className="p-6 space-y-6" data-testid="page-siae-ticketed-events">

@@ -523,7 +523,7 @@ function CancellationReasonsTab() {
 export default function SiaeTablesPage() {
   return (
     <MobileAppLayout
-      header={<MobileHeader title="Tabelle SIAE" showBackButton showMenuButton />}
+      header={<MobileHeader title="Tabelle SIAE" showBackButton showMenuButton showUserMenu />}
       contentClassName="pb-24"
     >
       <div className="p-4 md:p-6 space-y-6 overflow-auto h-full pb-24 md:pb-8" data-testid="page-siae-tables">

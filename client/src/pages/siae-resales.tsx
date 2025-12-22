@@ -136,7 +136,7 @@ export default function SiaeResalesPage() {
 
   return (
     <MobileAppLayout
-      header={<MobileHeader title="Rivendite" showBackButton showMenuButton />}
+      header={<MobileHeader title="Rivendite" showBackButton showMenuButton showUserMenu />}
       contentClassName="pb-24"
     >
       <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-siae-resales">

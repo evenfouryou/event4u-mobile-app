@@ -194,16 +194,8 @@ export default function SiaeTransmissionsPage() {
   const header = (
     <MobileHeader
       title="Trasmissioni SIAE"
-      leftAction={
-        <HapticButton
-          variant="ghost"
-          size="icon"
-          className="h-11 w-11 rounded-full"
-          onClick={() => window.history.back()}
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </HapticButton>
-      }
+      showBackButton
+      showUserMenu
       rightAction={
         <div className="relative">
           <HapticButton

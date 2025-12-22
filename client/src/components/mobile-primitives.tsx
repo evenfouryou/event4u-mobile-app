@@ -2,8 +2,16 @@ import { forwardRef, useCallback, useContext } from "react";
 import { motion, AnimatePresence, PanInfo } from "framer-motion";
 import { Button, ButtonProps } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { X, Menu, ArrowLeft } from "lucide-react";
+import { X, Menu, ArrowLeft, LogOut, User } from "lucide-react";
 import { SidebarContext } from "@/components/ui/sidebar";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { queryClient } from "@/lib/queryClient";
 
 function useSidebarSafe() {
   const context = useContext(SidebarContext);
@@ -275,6 +283,7 @@ interface MobileHeaderProps {
   className?: string;
   showMenuButton?: boolean;
   showBackButton?: boolean;
+  showUserMenu?: boolean;
   onBack?: () => void;
 }
 
@@ -287,6 +296,7 @@ export function MobileHeader({
   className,
   showMenuButton = false,
   showBackButton = false,
+  showUserMenu = false,
   onBack,
 }: MobileHeaderProps) {
   const sidebar = useSidebarSafe();
@@ -298,6 +308,17 @@ export function MobileHeader({
     } else {
       window.history.back();
     }
+  };
+
+  const handleLogout = async () => {
+    triggerHaptic('medium');
+    try {
+      await fetch('/api/logout', { credentials: 'include' });
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
+    queryClient.clear();
+    window.location.href = '/login';
   };
   
   const backButton = showBackButton ? (
@@ -329,8 +350,40 @@ export function MobileHeader({
     </HapticButton>
   ) : null;
 
-  // Determine right side content - menu button if showMenuButton and not already provided
-  const rightContent = rightAction || (showMenuButton ? menuButton : null);
+  const userMenuButton = showUserMenu ? (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>
+        <Button
+          variant="ghost"
+          size="icon"
+          className="h-11 w-11"
+          data-testid="button-user-menu"
+        >
+          <User className="h-6 w-6" />
+        </Button>
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-48">
+        <DropdownMenuItem
+          onClick={handleLogout}
+          className="text-destructive focus:text-destructive cursor-pointer"
+          data-testid="button-logout-menu"
+        >
+          <LogOut className="h-4 w-4 mr-2" />
+          Esci
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  ) : null;
+
+  // Determine right side content - combine rightAction with user menu if both present
+  const rightContent = rightAction ? (
+    showUserMenu ? (
+      <div className="flex items-center gap-1">
+        {rightAction}
+        {userMenuButton}
+      </div>
+    ) : rightAction
+  ) : userMenuButton || (showMenuButton ? menuButton : null);
   
   return (
     <div 

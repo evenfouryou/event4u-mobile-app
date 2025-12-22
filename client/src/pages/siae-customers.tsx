@@ -417,6 +417,8 @@ export default function SiaeCustomersPage() {
     <MobileHeader
       title="Clienti SIAE"
       subtitle={`${filteredCustomers.length} clienti`}
+      showBackButton
+      showUserMenu
       rightAction={
         <HapticButton
           variant="ghost"

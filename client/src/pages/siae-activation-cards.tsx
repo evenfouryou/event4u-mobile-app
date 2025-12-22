@@ -72,18 +72,8 @@ export default function SiaeActivationCardsPage() {
   const header = (
     <MobileHeader
       title="Lettore Carte SIAE"
-      leftAction={
-        <HapticButton
-          variant="ghost"
-          size="icon"
-          onClick={() => window.history.back()}
-          className="h-11 w-11"
-          hapticType="light"
-          data-testid="button-back"
-        >
-          <ChevronLeft className="h-6 w-6" />
-        </HapticButton>
-      }
+      showBackButton
+      showUserMenu
       rightAction={
         <HapticButton 
           variant="ghost" 

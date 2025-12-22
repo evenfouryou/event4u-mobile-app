@@ -293,7 +293,7 @@ export default function SiaeNumberedSeatsPage() {
 
   return (
     <MobileAppLayout
-      header={<MobileHeader title="Posti Numerati" showBackButton showMenuButton />}
+      header={<MobileHeader title="Posti Numerati" showBackButton showMenuButton showUserMenu />}
       contentClassName="pb-24"
     >
       <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">

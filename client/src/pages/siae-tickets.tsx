@@ -408,16 +408,9 @@ export default function SiaeTicketsPage() {
     <MobileHeader
       title="Biglietti SIAE"
       subtitle={baseEvent?.name}
-      leftAction={
-        <HapticButton
-          variant="ghost"
-          size="icon"
-          onClick={() => navigate(`/events/${ticketedEvent?.eventId}/hub`)}
-          data-testid="button-back"
-        >
-          <ArrowLeft className="h-5 w-5" />
-        </HapticButton>
-      }
+      showBackButton
+      showUserMenu
+      onBack={() => navigate(`/events/${ticketedEvent?.eventId}/hub`)}
       rightAction={
         <div className={`flex items-center gap-1.5 px-2 py-1 rounded-full text-xs font-medium ${
           cardReadiness.ready 

@@ -199,11 +199,8 @@ export default function SiaeSubscriptionsPage() {
   const header = (
     <MobileHeader
       title="Abbonamenti SIAE"
-      leftAction={
-        <div className="flex items-center gap-2">
-          <CreditCard className="w-5 h-5 text-[#FFD700]" />
-        </div>
-      }
+      showBackButton
+      showUserMenu
       rightAction={
         <HapticButton
           size="icon"

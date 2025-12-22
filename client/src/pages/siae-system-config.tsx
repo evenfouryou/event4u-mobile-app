@@ -309,16 +309,9 @@ export default function SiaeSystemConfigPage() {
   const renderHeader = () => (
     <MobileHeader
       title={getSectionTitle()}
-      leftAction={
-        <HapticButton
-          variant="ghost"
-          size="icon"
-          onClick={handleBack}
-          data-testid="button-back"
-        >
-          <ArrowLeft className="w-5 h-5" />
-        </HapticButton>
-      }
+      showBackButton
+      showUserMenu
+      onBack={handleBack}
       rightAction={
         activeSection !== 'menu' ? (
           <HapticButton
