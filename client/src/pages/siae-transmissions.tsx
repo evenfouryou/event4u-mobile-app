@@ -63,6 +63,7 @@ export default function SiaeTransmissionsPage() {
   const [isFilterSheetOpen, setIsFilterSheetOpen] = useState(false);
   const [isTestEmailSheetOpen, setIsTestEmailSheetOpen] = useState(false);
   const [isSendDailySheetOpen, setIsSendDailySheetOpen] = useState(false);
+  const [isConfirmReceiptSheetOpen, setIsConfirmReceiptSheetOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const [transmissionType, setTransmissionType] = useState<string>("daily");
@@ -70,6 +71,8 @@ export default function SiaeTransmissionsPage() {
   const [testEmail, setTestEmail] = useState<string>("servertest2@batest.siae.it");
   const [dailyDate, setDailyDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [dailyEmail, setDailyEmail] = useState<string>("servertest2@batest.siae.it");
+  const [receiptProtocol, setReceiptProtocol] = useState<string>("");
+  const [receiptContent, setReceiptContent] = useState<string>("");
 
   const companyId = user?.companyId;
 
@@ -201,6 +204,36 @@ export default function SiaeTransmissionsPage() {
       toast({
         title: "Trasmissione Inviata",
         description: `Trasmissione giornaliera inviata con ${data.transmission?.ticketsCount || 0} biglietti.`,
+      });
+    },
+    onError: (error: Error) => {
+      triggerHaptic('error');
+      toast({
+        title: "Errore",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const confirmReceiptMutation = useMutation({
+    mutationFn: async ({ id, receiptProtocol, receiptContent }: { id: string; receiptProtocol: string; receiptContent?: string }) => {
+      const response = await apiRequest("POST", `/api/siae/transmissions/${id}/confirm-receipt`, {
+        receiptProtocol,
+        receiptContent,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.includes('transmissions') || false });
+      setIsConfirmReceiptSheetOpen(false);
+      setIsDetailSheetOpen(false);
+      setReceiptProtocol("");
+      setReceiptContent("");
+      triggerHaptic('success');
+      toast({
+        title: "Conferma Registrata",
+        description: "La conferma di ricezione SIAE è stata registrata.",
       });
     },
     onError: (error: Error) => {
@@ -715,6 +748,12 @@ export default function SiaeTransmissionsPage() {
                   </span>
                 </div>
               )}
+              {selectedTransmission.receiptProtocol && (
+                <div className="flex justify-between py-3 border-b border-border/50">
+                  <span className="text-muted-foreground text-sm">Protocollo SIAE</span>
+                  <span className="text-sm font-mono text-green-400">{selectedTransmission.receiptProtocol}</span>
+                </div>
+              )}
               {selectedTransmission.retryCount > 0 && (
                 <div className="flex justify-between py-3 border-b border-border/50">
                   <span className="text-muted-foreground text-sm">Tentativi</span>
@@ -730,6 +769,17 @@ export default function SiaeTransmissionsPage() {
             </div>
 
             <div className="flex flex-col gap-3 pt-4">
+              {selectedTransmission.status === "sent" && (
+                <HapticButton
+                  className="w-full h-12 bg-green-500 text-white hover:bg-green-500/90"
+                  onClick={() => setIsConfirmReceiptSheetOpen(true)}
+                  hapticType="medium"
+                  data-testid={`button-confirm-receipt-${selectedTransmission.id}`}
+                >
+                  <CheckCircle2 className="w-5 h-5 mr-2" />
+                  Conferma Ricezione SIAE
+                </HapticButton>
+              )}
               {selectedTransmission.fileContent && selectedTransmission.status === "pending" && (
                 <HapticButton
                   className="w-full h-12 bg-[#FFD700] text-black hover:bg-[#FFD700]/90"
@@ -902,6 +952,88 @@ export default function SiaeTransmissionsPage() {
             >
               {sendDailyMutation.isPending && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
               Genera e Invia
+            </HapticButton>
+          </div>
+        </div>
+      </BottomSheet>
+
+      <BottomSheet
+        open={isConfirmReceiptSheetOpen}
+        onClose={() => {
+          setIsConfirmReceiptSheetOpen(false);
+          setReceiptProtocol("");
+          setReceiptContent("");
+        }}
+        title="Conferma Ricezione SIAE"
+      >
+        <div className="p-4 space-y-6">
+          <div className="text-center py-4">
+            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-green-500/20 flex items-center justify-center">
+              <CheckCircle2 className="w-8 h-8 text-green-400" />
+            </div>
+            <p className="text-muted-foreground text-sm">
+              Registra la conferma di ricezione ricevuta da SIAE
+            </p>
+          </div>
+
+          <div className="space-y-4">
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Protocollo Ricezione *</Label>
+              <Input
+                type="text"
+                value={receiptProtocol}
+                onChange={(e) => setReceiptProtocol(e.target.value)}
+                className="h-12"
+                placeholder="Es: SIAE-2025-001234"
+                data-testid="input-receipt-protocol"
+              />
+              <p className="text-xs text-muted-foreground mt-1">
+                Inserisci il numero di protocollo presente nell'email di conferma SIAE
+              </p>
+            </div>
+            
+            <div>
+              <Label className="text-sm font-medium mb-2 block">Contenuto Ricevuta (opzionale)</Label>
+              <Input
+                type="text"
+                value={receiptContent}
+                onChange={(e) => setReceiptContent(e.target.value)}
+                className="h-12"
+                placeholder="Note o riferimenti aggiuntivi"
+                data-testid="input-receipt-content"
+              />
+            </div>
+          </div>
+
+          <div className="flex gap-3 pt-4">
+            <HapticButton
+              variant="outline"
+              className="flex-1 h-12"
+              onClick={() => {
+                setIsConfirmReceiptSheetOpen(false);
+                setReceiptProtocol("");
+                setReceiptContent("");
+              }}
+            >
+              Annulla
+            </HapticButton>
+            <HapticButton
+              className="flex-1 h-12 bg-green-500 text-white hover:bg-green-500/90"
+              onClick={() => {
+                if (selectedTransmission) {
+                  confirmReceiptMutation.mutate({
+                    id: selectedTransmission.id,
+                    receiptProtocol,
+                    receiptContent: receiptContent || undefined,
+                  });
+                }
+              }}
+              disabled={!receiptProtocol || confirmReceiptMutation.isPending}
+              hapticType="medium"
+              data-testid="button-confirm-receipt-submit"
+            >
+              {confirmReceiptMutation.isPending && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
+              Conferma Ricezione
             </HapticButton>
           </div>
         </div>

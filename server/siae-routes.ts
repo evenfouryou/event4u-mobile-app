@@ -2179,6 +2179,52 @@ router.post("/api/siae/transmissions/test-email", requireAuth, requireGestore, a
   }
 });
 
+// Confirm transmission receipt from SIAE
+router.post("/api/siae/transmissions/:id/confirm-receipt", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { receiptProtocol, receiptContent, receivedAt } = req.body;
+    
+    if (!receiptProtocol) {
+      return res.status(400).json({ message: "Il protocollo di ricezione è obbligatorio" });
+    }
+    
+    const transmission = await siaeStorage.getSiaeTransmission(id);
+    if (!transmission) {
+      return res.status(404).json({ message: "Trasmissione non trovata" });
+    }
+    
+    if (transmission.status !== 'sent') {
+      return res.status(400).json({ message: "La trasmissione deve essere in stato 'inviato' per confermare la ricezione" });
+    }
+    
+    // Update transmission with receipt info
+    const updatedTransmission = await siaeStorage.updateSiaeTransmission(id, {
+      status: 'received',
+      receivedAt: receivedAt ? new Date(receivedAt) : new Date(),
+      receiptProtocol,
+      receiptContent: receiptContent || null,
+    });
+    
+    // Log the confirmation
+    await siaeStorage.createSiaeLog({
+      companyId: transmission.companyId,
+      eventType: 'transmission_confirmed',
+      eventDetails: `Conferma ricezione trasmissione ${id} - Protocollo: ${receiptProtocol}`,
+      transmissionId: id,
+    });
+    
+    res.json({
+      success: true,
+      message: "Conferma ricezione registrata con successo",
+      transmission: updatedTransmission,
+    });
+  } catch (error: any) {
+    console.error('[SIAE-ROUTES] Failed to confirm transmission receipt:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // ==================== Box Office Sessions ====================
 
 router.get("/api/siae/emission-channels/:channelId/sessions", requireAuth, async (req: Request, res: Response) => {
