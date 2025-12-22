@@ -3,9 +3,11 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   Table,
   TableBody,
@@ -28,19 +30,38 @@ import {
   Banknote,
   Globe,
   Loader2,
+  Ticket,
+  Calendar,
+  Eye,
 } from "lucide-react";
 import { motion } from "framer-motion";
-import type { SiaeTransaction } from "@shared/schema";
+import type { SiaeTransaction, SiaeTicketedEvent, Event } from "@shared/schema";
 import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 
 export default function StripeAdminPage() {
   const { user } = useAuth();
+  const [, navigate] = useLocation();
   const companyId = user?.companyId;
+  const [selectedEventId, setSelectedEventId] = useState<string>("all");
+
+  const { data: ticketedEvents } = useQuery<SiaeTicketedEvent[]>({
+    queryKey: ['/api/siae/ticketed-events'],
+    enabled: !!companyId,
+  });
+
+  const { data: events } = useQuery<Event[]>({
+    queryKey: ['/api/events'],
+    enabled: !!companyId,
+  });
 
   const { data: allTransactions, isLoading } = useQuery<SiaeTransaction[]>({
     queryKey: ['/api/siae/transactions'],
     enabled: !!companyId,
   });
+
+  const filteredTransactions = allTransactions?.filter(t => 
+    selectedEventId === "all" || t.ticketedEventId === selectedEventId
+  );
 
   const isProduction = false;
   const stripeMode = isProduction ? "production" : "sandbox";
@@ -90,10 +111,10 @@ export default function StripeAdminPage() {
   today.setHours(0, 0, 0, 0);
 
   const stats = {
-    totalRevenue: allTransactions
+    totalRevenue: filteredTransactions
       ?.filter(t => t.status === "completed")
       .reduce((sum, t) => sum + Number(t.totalAmount || 0), 0) || 0,
-    todayRevenue: allTransactions
+    todayRevenue: filteredTransactions
       ?.filter(t => {
         if (t.status !== "completed" || !t.createdAt) return false;
         const txDate = new Date(t.createdAt);
@@ -101,20 +122,32 @@ export default function StripeAdminPage() {
         return txDate.getTime() === today.getTime();
       })
       .reduce((sum, t) => sum + Number(t.totalAmount || 0), 0) || 0,
-    successfulTransactions: allTransactions?.filter(t => t.status === "completed").length || 0,
-    failedTransactions: allTransactions?.filter(t => t.status === "failed").length || 0,
-    pendingPayments: allTransactions
+    successfulTransactions: filteredTransactions?.filter(t => t.status === "completed").length || 0,
+    failedTransactions: filteredTransactions?.filter(t => t.status === "failed").length || 0,
+    pendingPayments: filteredTransactions
       ?.filter(t => t.status === "pending")
       .reduce((sum, t) => sum + Number(t.totalAmount || 0), 0) || 0,
+    refundedTransactions: filteredTransactions?.filter(t => t.status === "refunded").length || 0,
+    totalTickets: filteredTransactions
+      ?.filter(t => t.status === "completed")
+      .reduce((sum, t) => sum + (t.ticketsCount || 0), 0) || 0,
   };
 
-  const recentTransactions = allTransactions
+  const recentTransactions = filteredTransactions
     ?.sort((a, b) => {
       const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
       const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
       return dateB - dateA;
     })
-    .slice(0, 20);
+    .slice(0, 50);
+
+  const getEventName = (ticketedEventId: string | null) => {
+    if (!ticketedEventId) return "-";
+    const ticketedEvent = ticketedEvents?.find(e => e.id === ticketedEventId);
+    if (!ticketedEvent) return "Evento sconosciuto";
+    const event = events?.find(e => e.id === ticketedEvent.eventId);
+    return event?.name || "Evento sconosciuto";
+  };
 
   const openStripeDashboard = () => {
     const dashboardUrl = isProduction
@@ -171,6 +204,41 @@ export default function StripeAdminPage() {
           <ExternalLink className="w-4 h-4 mr-2" />
           Apri Dashboard Stripe
         </Button>
+      </motion.div>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ delay: 0.05 }}
+      >
+        <Card className="glass-card" data-testid="card-event-filter">
+          <CardContent className="p-4">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                <Calendar className="w-5 h-5 text-primary" />
+              </div>
+              <div className="flex-1">
+                <label className="text-sm font-medium mb-1 block">Filtra per Evento</label>
+                <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                  <SelectTrigger className="h-10" data-testid="select-event-filter">
+                    <SelectValue placeholder="Tutti gli eventi" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tutti gli eventi</SelectItem>
+                    {ticketedEvents?.map((te) => {
+                      const event = events?.find(e => e.id === te.eventId);
+                      return (
+                        <SelectItem key={te.id} value={te.id}>
+                          {event?.name || "Evento sconosciuto"}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </motion.div>
 
       <motion.div
@@ -360,10 +428,13 @@ export default function StripeAdminPage() {
                   <TableHeader>
                     <TableRow className="bg-muted/50">
                       <TableHead>Data</TableHead>
+                      <TableHead>Evento</TableHead>
                       <TableHead>Importo</TableHead>
+                      <TableHead>Biglietti</TableHead>
                       <TableHead>Stato</TableHead>
                       <TableHead>Pagamento</TableHead>
                       <TableHead>Cliente</TableHead>
+                      <TableHead className="text-right">Azioni</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -377,11 +448,22 @@ export default function StripeAdminPage() {
                             {transaction.createdAt && format(new Date(transaction.createdAt), "HH:mm", { locale: it })}
                           </div>
                         </TableCell>
+                        <TableCell data-testid={`cell-event-${transaction.id}`}>
+                          <div className="max-w-[150px] truncate text-sm" title={getEventName(transaction.ticketedEventId)}>
+                            {getEventName(transaction.ticketedEventId)}
+                          </div>
+                        </TableCell>
                         <TableCell data-testid={`cell-amount-${transaction.id}`}>
                           <span className="flex items-center gap-1 font-medium text-[#FFD700]">
                             <Euro className="w-3 h-3" />
                             {Number(transaction.totalAmount).toFixed(2)}
                           </span>
+                        </TableCell>
+                        <TableCell data-testid={`cell-tickets-${transaction.id}`}>
+                          <Badge variant="outline" className="gap-1">
+                            <Ticket className="w-3 h-3" />
+                            {transaction.ticketsCount || 0}
+                          </Badge>
                         </TableCell>
                         <TableCell data-testid={`cell-status-${transaction.id}`}>
                           {getStatusBadge(transaction.status)}
@@ -399,6 +481,17 @@ export default function StripeAdminPage() {
                               <div className="text-xs text-muted-foreground">{transaction.customerEmail}</div>
                             )}
                           </div>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => navigate(`/siae/transactions?eventId=${transaction.ticketedEventId}`)}
+                            title="Vedi Dettagli"
+                            data-testid={`button-view-${transaction.id}`}
+                          >
+                            <Eye className="w-4 h-4" />
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))}
