@@ -1559,7 +1559,25 @@ export default function EventWizard() {
                             </div>
                           </div>
 
-                          <div className="border-t pt-4">
+                          <div className="border-t pt-4 space-y-4">
+                            <div 
+                              className="flex items-center gap-3 min-h-[44px]"
+                              onClick={() => {
+                                triggerHaptic('light');
+                                const updated = siaeSectors.map(s => 
+                                  s.id === ticket.id ? { ...s, isNumbered: !s.isNumbered } : s
+                                );
+                                setSiaeSectors(updated);
+                              }}
+                            >
+                              <Checkbox
+                                checked={ticket.isNumbered}
+                                className="h-6 w-6"
+                                data-testid={`checkbox-numbered-${index}`}
+                              />
+                              <Label className="text-base">Posti numerati</Label>
+                            </div>
+
                             <div 
                               className="flex items-center gap-3 min-h-[44px]"
                               onClick={() => {
@@ -1585,7 +1603,7 @@ export default function EventWizard() {
                                   animate={{ opacity: 1, height: 'auto' }}
                                   exit={{ opacity: 0, height: 0 }}
                                   transition={springTransition}
-                                  className="mt-4 space-y-5"
+                                  className="space-y-5"
                                 >
                                   <div className="space-y-2">
                                     <Label className="text-base">Codice Settore SIAE</Label>
@@ -1610,24 +1628,6 @@ export default function EventWizard() {
                                         ))}
                                       </SelectContent>
                                     </Select>
-                                  </div>
-
-                                  <div 
-                                    className="flex items-center gap-3 min-h-[44px]"
-                                    onClick={() => {
-                                      triggerHaptic('light');
-                                      const updated = siaeSectors.map(s => 
-                                        s.id === ticket.id ? { ...s, isNumbered: !s.isNumbered } : s
-                                      );
-                                      setSiaeSectors(updated);
-                                    }}
-                                  >
-                                    <Checkbox
-                                      checked={ticket.isNumbered}
-                                      className="h-6 w-6"
-                                      data-testid={`checkbox-numbered-${index}`}
-                                    />
-                                    <Label className="text-base">Posti numerati</Label>
                                   </div>
                                 </motion.div>
                               )}
@@ -1844,7 +1844,7 @@ export default function EventWizard() {
           </div>
         </div>
       }
-      contentClassName="py-4"
+      contentClassName="py-4 pb-8"
     >
       <div className="mb-6">
         <div className="flex items-center justify-around mb-4">
