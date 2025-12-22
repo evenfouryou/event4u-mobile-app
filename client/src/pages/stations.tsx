@@ -392,7 +392,7 @@ export default function StationsPage() {
   const headerContent = (
     <MobileHeader
       title="Postazioni"
-      showBackButton
+      showBackButton showMenuButton
       rightAction={
         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
           <Boxes className="h-6 w-6 text-white" />

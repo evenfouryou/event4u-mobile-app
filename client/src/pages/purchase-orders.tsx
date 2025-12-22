@@ -463,7 +463,7 @@ export default function PurchaseOrders() {
   const header = (
     <MobileHeader
       title="Ordini d'Acquisto"
-      showBackButton
+      showBackButton showMenuButton
       rightAction={
         <HapticButton
           variant="ghost"

@@ -47,6 +47,7 @@ import {
   Search,
   Loader2,
 } from "lucide-react";
+import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 
 export default function SiaeNameChangesPage() {
   const { user } = useAuth();
@@ -130,18 +131,18 @@ export default function SiaeNameChangesPage() {
   };
 
   return (
-    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-siae-name-changes">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2 sm:gap-3" data-testid="page-title">
-            <UserCog className="w-6 h-6 sm:w-8 sm:h-8 text-[#FFD700] flex-shrink-0" />
-            Cambio Nominativo
-          </h1>
-          <p className="text-muted-foreground mt-1">
-            Gestisci le richieste di cambio nominativo sui biglietti
-          </p>
+    <MobileAppLayout
+      header={<MobileHeader title="Cambio Nominativo" showBackButton showMenuButton />}
+      contentClassName="pb-24"
+    >
+      <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-siae-name-changes">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div>
+            <p className="text-muted-foreground mt-1">
+              Gestisci le richieste di cambio nominativo sui biglietti
+            </p>
+          </div>
         </div>
-      </div>
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4">
         <Card className="glass-card">
@@ -437,6 +438,7 @@ export default function SiaeNameChangesPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </MobileAppLayout>
   );
 }

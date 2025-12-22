@@ -453,7 +453,7 @@ export default function Reports() {
         header={
           <MobileHeader
             title="Report"
-            showBackButton
+            showBackButton showMenuButton
           />
         }
       >
@@ -482,7 +482,7 @@ export default function Reports() {
         <MobileHeader
           title="Report"
           subtitle={selectedEvent ? selectedEvent.name : "Seleziona evento"}
-          showBackButton
+          showBackButton showMenuButton
           rightAction={
             <HapticButton
               variant="ghost"

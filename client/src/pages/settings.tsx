@@ -2,7 +2,7 @@ import { motion } from "framer-motion";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/use-theme";
-import { HapticButton, triggerHaptic } from "@/components/mobile-primitives";
+import { HapticButton, MobileAppLayout, MobileHeader, triggerHaptic } from "@/components/mobile-primitives";
 import { Switch } from "@/components/ui/switch";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -199,25 +199,10 @@ export default function Settings() {
     : user?.role || 'Utente';
 
   return (
-    <div 
-      className="min-h-screen bg-background pb-24"
-      style={{ 
-        paddingTop: 'env(safe-area-inset-top)',
-        paddingLeft: 'env(safe-area-inset-left)',
-        paddingRight: 'env(safe-area-inset-right)'
-      }}
+    <MobileAppLayout
+      header={<MobileHeader title="Impostazioni" showBackButton showMenuButton />}
+      contentClassName="pb-24"
     >
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={springTransition}
-        className="px-4 pt-6 pb-2"
-      >
-        <h1 className="text-2xl font-bold text-foreground" data-testid="text-settings-title">
-          Impostazioni
-        </h1>
-      </motion.div>
-
       <motion.div
         variants={staggerContainer}
         initial="hidden"
@@ -361,6 +346,6 @@ export default function Settings() {
           Event4U v1.0.0
         </motion.p>
       </motion.div>
-    </div>
+    </MobileAppLayout>
   );
 }

@@ -321,6 +321,9 @@ export function MobileHeader({
     </HapticButton>
   ) : null;
 
+  // Determine right side content - menu button if showMenuButton and not already provided
+  const rightContent = rightAction || (showMenuButton ? menuButton : null);
+  
   return (
     <div 
       className={cn(
@@ -331,7 +334,7 @@ export function MobileHeader({
       )}
     >
       <div className="w-12 flex justify-start">
-        {leftAction || backButton || menuButton}
+        {leftAction || backButton || (!showBackButton && menuButton)}
       </div>
       
       <div className="flex-1 text-center">
@@ -344,7 +347,7 @@ export function MobileHeader({
       </div>
       
       <div className="w-12 flex justify-end">
-        {rightAction}
+        {rightContent}
       </div>
     </div>
   );

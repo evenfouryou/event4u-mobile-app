@@ -22,6 +22,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Building2, Search, ExternalLink, AlertTriangle, CheckCircle, XCircle, Clock } from "lucide-react";
+import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 import type { Company, OrganizerSubscription, OrganizerWallet, OrganizerCommissionProfile } from "@shared/schema";
 
 interface OrganizerBillingData {
@@ -114,18 +115,18 @@ export default function AdminBillingOrganizers() {
   }
 
   return (
-    <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6" data-testid="page-admin-billing-organizers">
-      <div>
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2">
-          <Building2 className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 flex-shrink-0" />
-          Billing Organizzatori
-        </h1>
-        <p className="text-muted-foreground text-sm sm:text-base">
-          Gestisci abbonamenti, commissioni e fatturazione per gli organizzatori
-        </p>
-      </div>
+    <MobileAppLayout
+      header={<MobileHeader title="Organizzatori Billing" showBackButton showMenuButton />}
+      contentClassName="pb-24"
+    >
+      <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6" data-testid="page-admin-billing-organizers">
+        <div>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Gestisci abbonamenti, commissioni e fatturazione per gli organizzatori
+          </p>
+        </div>
 
-      <Card>
+        <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
@@ -229,6 +230,7 @@ export default function AdminBillingOrganizers() {
           </div>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </MobileAppLayout>
   );
 }

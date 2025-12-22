@@ -31,6 +31,7 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { SiaeTransaction } from "@shared/schema";
+import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 
 export default function StripeAdminPage() {
   const { user } = useAuth();
@@ -143,7 +144,11 @@ export default function StripeAdminPage() {
   }
 
   return (
-    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-stripe-admin">
+    <MobileAppLayout
+      header={<MobileHeader title="Stripe Admin" showBackButton showMenuButton />}
+      contentClassName="pb-24"
+    >
+      <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-stripe-admin">
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -404,6 +409,7 @@ export default function StripeAdminPage() {
           </CardContent>
         </Card>
       </motion.div>
-    </div>
+      </div>
+    </MobileAppLayout>
   );
 }

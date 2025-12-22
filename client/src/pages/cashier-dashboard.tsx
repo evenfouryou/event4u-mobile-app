@@ -49,7 +49,7 @@ export default function CashierDashboardPage() {
 
   return (
     <MobileAppLayout
-      header={<MobileHeader title="I Miei Eventi" showBackButton />}
+      header={<MobileHeader title="I Miei Eventi" showBackButton showMenuButton />}
       contentClassName="pb-24"
     >
       <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-cashier-dashboard">

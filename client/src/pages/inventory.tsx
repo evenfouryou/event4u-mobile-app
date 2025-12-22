@@ -317,7 +317,7 @@ export default function Inventory() {
   const headerContent = (
     <MobileHeader
       title="Inventario"
-      showBackButton
+      showBackButton showMenuButton
     />
   );
 

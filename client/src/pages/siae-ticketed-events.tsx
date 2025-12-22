@@ -106,6 +106,7 @@ import {
 } from "lucide-react";
 import { Link } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
+import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 
 const formSchema = insertSiaeTicketedEventSchema.omit({ companyId: true });
 type FormData = z.infer<typeof formSchema>;
@@ -427,27 +428,20 @@ export default function SiaeTicketedEventsPage() {
   }
 
   return (
-    <div className="p-6 space-y-6" data-testid="page-siae-ticketed-events">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-4">
-          <Link href="/">
-            <Button variant="ghost" size="icon" data-testid="button-back-siae-events">
-              <ArrowLeft className="w-5 h-5" />
-            </Button>
-          </Link>
+    <MobileAppLayout
+      header={<MobileHeader title="Eventi Biglietteria" showBackButton showMenuButton />}
+      contentClassName="pb-24"
+    >
+      <div className="p-6 space-y-6" data-testid="page-siae-ticketed-events">
+        <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold text-foreground flex items-center gap-3" data-testid="page-title">
-              <Ticket className="w-8 h-8 text-[#FFD700]" />
-              Eventi Biglietteria SIAE
-            </h1>
             <p className="text-muted-foreground mt-1">
               {isSuperAdmin 
                 ? "Visualizza tutti gli eventi biglietteria SIAE di tutti gli organizzatori"
                 : "Gestisci la biglietteria SIAE per i tuoi eventi"}
             </p>
           </div>
-        </div>
-        {!isSuperAdmin && (
+          {!isSuperAdmin && (
           <Button
             onClick={() => setIsCreateDialogOpen(true)}
             disabled={!eventsWithoutTicketing?.length}
@@ -1413,6 +1407,7 @@ export default function SiaeTicketedEventsPage() {
           </Form>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </MobileAppLayout>
   );
 }

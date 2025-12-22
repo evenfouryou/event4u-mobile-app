@@ -358,7 +358,7 @@ export default function Suppliers() {
     <MobileHeader
       title="Fornitori"
       subtitle={`${suppliers?.length ?? 0} fornitori`}
-      showBackButton
+      showBackButton showMenuButton
       rightAction={
         <motion.div 
           initial={{ scale: 0 }}

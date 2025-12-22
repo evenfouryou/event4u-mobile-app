@@ -12,6 +12,7 @@ import { apiRequest, queryClient } from "@/lib/queryClient";
 import { Cookie, FileText, Settings, Save, Loader2, AlertCircle } from "lucide-react";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 
 interface SiteSettings {
   cookie_consent_enabled?: boolean;
@@ -80,42 +81,52 @@ export default function AdminSiteSettings() {
 
   if (error) {
     return (
-      <div className="p-6" data-testid="page-admin-site-settings">
-        <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            Errore nel caricamento delle impostazioni. Verifica di avere i permessi necessari.
-          </AlertDescription>
-        </Alert>
-      </div>
+      <MobileAppLayout
+        header={<MobileHeader title="Impostazioni Sito" showBackButton showMenuButton />}
+        contentClassName="pb-24"
+      >
+        <div className="p-6" data-testid="page-admin-site-settings">
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>
+              Errore nel caricamento delle impostazioni. Verifica di avere i permessi necessari.
+            </AlertDescription>
+          </Alert>
+        </div>
+      </MobileAppLayout>
     );
   }
 
   if (isLoading) {
     return (
-      <div className="p-6 space-y-6" data-testid="page-admin-site-settings">
-        <div className="space-y-2">
-          <Skeleton className="h-8 w-64" />
-          <Skeleton className="h-4 w-96" />
+      <MobileAppLayout
+        header={<MobileHeader title="Impostazioni Sito" showBackButton showMenuButton />}
+        contentClassName="pb-24"
+      >
+        <div className="p-6 space-y-6" data-testid="page-admin-site-settings">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-64" />
+            <Skeleton className="h-4 w-96" />
+          </div>
+          <Skeleton className="h-[400px] w-full" />
         </div>
-        <Skeleton className="h-[400px] w-full" />
-      </div>
+      </MobileAppLayout>
     );
   }
 
   return (
-    <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6" data-testid="page-admin-site-settings">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2">
-            <Settings className="w-5 h-5 sm:w-6 sm:h-6 text-primary flex-shrink-0" />
-            Impostazioni Sito
-          </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Gestisci le impostazioni globali del sito, cookie e testi legali
-          </p>
-        </div>
-        <Button
+    <MobileAppLayout
+      header={<MobileHeader title="Impostazioni Sito" showBackButton showMenuButton />}
+      contentClassName="pb-24"
+    >
+      <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6" data-testid="page-admin-site-settings">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              Gestisci le impostazioni globali del sito, cookie e testi legali
+            </p>
+          </div>
+          <Button
           onClick={handleSave}
           disabled={updateMutation.isPending || !hasChanges}
           data-testid="button-save-settings"
@@ -283,5 +294,6 @@ export default function AdminSiteSettings() {
         </TabsContent>
       </Tabs>
     </div>
+    </MobileAppLayout>
   );
 }

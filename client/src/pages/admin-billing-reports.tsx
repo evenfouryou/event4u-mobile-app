@@ -31,6 +31,7 @@ import {
   Calendar,
   Filter,
 } from "lucide-react";
+import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 import type { Company } from "@shared/schema";
 
 interface SalesReportData {
@@ -126,18 +127,18 @@ export default function AdminBillingReports() {
   );
 
   return (
-    <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6" data-testid="page-admin-billing-reports">
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2">
-            <BarChart3 className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 flex-shrink-0" />
-            Report Vendite
-          </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Analisi vendite e commissioni per tutti gli organizzatori
-          </p>
-        </div>
-        <Button onClick={handleExportCSV} className="gap-2" data-testid="button-export-csv">
+    <MobileAppLayout
+      header={<MobileHeader title="Report Billing" showBackButton showMenuButton />}
+      contentClassName="pb-24"
+    >
+      <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6" data-testid="page-admin-billing-reports">
+        <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-3 sm:gap-4">
+          <div>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              Analisi vendite e commissioni per tutti gli organizzatori
+            </p>
+          </div>
+          <Button onClick={handleExportCSV} className="gap-2" data-testid="button-export-csv">
           <Download className="w-4 h-4" />
           Esporta CSV
         </Button>
@@ -430,6 +431,7 @@ export default function AdminBillingReports() {
           )}
         </>
       ) : null}
-    </div>
+      </div>
+    </MobileAppLayout>
   );
 }

@@ -341,7 +341,7 @@ export default function ScannerManagement() {
 
   return (
     <MobileAppLayout
-      header={<MobileHeader title="Gestione Scanner" showBackButton />}
+      header={<MobileHeader title="Gestione Scanner" showBackButton showMenuButton />}
       contentClassName="pb-24"
     >
       <div className="p-4 space-y-4">

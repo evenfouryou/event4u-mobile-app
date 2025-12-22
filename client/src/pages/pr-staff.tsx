@@ -72,6 +72,7 @@ import {
   UserCog,
   Clock,
 } from "lucide-react";
+import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import type { EventStaffAssignment, Event, User } from "@shared/schema";
@@ -284,20 +285,20 @@ export default function PrStaffPage() {
   }
 
   return (
-    <div className="container mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 pb-24 md:pb-8">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold tracking-tight flex items-center gap-2">
-            <UserPlus className="w-6 h-6 sm:w-8 sm:h-8 text-primary flex-shrink-0" />
-            Staff Eventi
-          </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Assegna e gestisci lo staff per ogni evento
-          </p>
-        </div>
-        
-        <div className="flex gap-2">
-          <Button
+    <MobileAppLayout
+      header={<MobileHeader title="Team PR" showBackButton showMenuButton />}
+      contentClassName="pb-24"
+    >
+      <div className="container mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 pb-24 md:pb-8">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
+          <div>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              Assegna e gestisci lo staff per ogni evento
+            </p>
+          </div>
+          
+          <div className="flex gap-2">
+            <Button
             variant="outline"
             size="icon"
             onClick={() => refetchStaff()}
@@ -638,6 +639,7 @@ export default function PrStaffPage() {
           </CardContent>
         </Card>
       )}
-    </div>
+      </div>
+    </MobileAppLayout>
   );
 }

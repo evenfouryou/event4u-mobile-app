@@ -217,7 +217,7 @@ export default function Companies() {
     <MobileHeader
       title="Aziende"
       subtitle={companies ? `${companies.length} aziende` : undefined}
-      showBackButton
+      showBackButton showMenuButton
       rightAction={
         <motion.div
           initial={{ scale: 0 }}

@@ -74,6 +74,7 @@ import {
   Ban,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 
 export default function SiaeTransactionsPage() {
   const { user } = useAuth();
@@ -260,28 +261,18 @@ export default function SiaeTransactionsPage() {
   };
 
   return (
-    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-siae-transactions">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate(`/events/${ticketedEvent?.eventId}/hub`)}
-            data-testid="button-back"
-          >
-            <ArrowLeft className="h-5 w-5" />
-          </Button>
+    <MobileAppLayout
+      header={<MobileHeader title="Transazioni" showBackButton showMenuButton />}
+      contentClassName="pb-24"
+    >
+      <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-siae-transactions">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2 sm:gap-3" data-testid="page-title">
-              <Receipt className="w-6 h-6 sm:w-8 sm:h-8 text-[#FFD700] flex-shrink-0" />
-              Transazioni
-            </h1>
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">
               {baseEvent?.name || "Caricamento..."}
             </p>
           </div>
-        </div>
-        <Button variant="outline" className="w-full sm:w-auto" data-testid="button-export">
+          <Button variant="outline" className="w-full sm:w-auto" data-testid="button-export">
           <Download className="w-4 h-4 mr-2" />
           Esporta Report
         </Button>
@@ -729,6 +720,7 @@ export default function SiaeTransactionsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </MobileAppLayout>
   );
 }

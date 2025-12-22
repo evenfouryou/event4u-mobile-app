@@ -345,7 +345,7 @@ export default function StaffPage() {
     <MobileHeader
       title="Staff"
       subtitle={`${staffList.length} membri · ${activeCount} attivi`}
-      showBackButton
+      showBackButton showMenuButton
       rightAction={
         <HapticButton
           variant="ghost"

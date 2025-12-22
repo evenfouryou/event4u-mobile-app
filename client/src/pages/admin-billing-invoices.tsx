@@ -23,6 +23,7 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Receipt, Search, CheckCircle, Clock, XCircle, Loader2, Eye } from "lucide-react";
+import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 import {
   Dialog,
   DialogContent,
@@ -129,18 +130,18 @@ export default function AdminBillingInvoices() {
   }
 
   return (
-    <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6" data-testid="page-admin-billing-invoices">
-      <div>
-        <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2">
-          <Receipt className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 flex-shrink-0" />
-          Fatture
-        </h1>
-        <p className="text-muted-foreground text-sm sm:text-base">
-          Gestisci tutte le fatture degli organizzatori
-        </p>
-      </div>
+    <MobileAppLayout
+      header={<MobileHeader title="Fatture" showBackButton showMenuButton />}
+      contentClassName="pb-24"
+    >
+      <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6" data-testid="page-admin-billing-invoices">
+        <div>
+          <p className="text-muted-foreground text-sm sm:text-base">
+            Gestisci tutte le fatture degli organizzatori
+          </p>
+        </div>
 
-      <Card>
+        <Card>
         <CardHeader>
           <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
             <div>
@@ -312,6 +313,7 @@ export default function AdminBillingInvoices() {
           )}
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </MobileAppLayout>
   );
 }

@@ -45,6 +45,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Plus, CreditCard, Edit, Ban, Loader2, CheckCircle, XCircle } from "lucide-react";
+import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -182,18 +183,18 @@ export default function AdminBillingPlans() {
   }
 
   return (
-    <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6" data-testid="page-admin-billing-plans">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-        <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold flex items-center gap-2">
-            <CreditCard className="w-5 h-5 sm:w-6 sm:h-6 text-yellow-500 flex-shrink-0" />
-            Piani Abbonamento
-          </h1>
-          <p className="text-muted-foreground text-sm sm:text-base">
-            Gestisci i piani di abbonamento per gli organizzatori
-          </p>
-        </div>
-        <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
+    <MobileAppLayout
+      header={<MobileHeader title="Piani Billing" showBackButton showMenuButton />}
+      contentClassName="pb-24"
+    >
+      <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 md:py-8 space-y-4 sm:space-y-6" data-testid="page-admin-billing-plans">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
+          <div>
+            <p className="text-muted-foreground text-sm sm:text-base">
+              Gestisci i piani di abbonamento per gli organizzatori
+            </p>
+          </div>
+          <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
           <DialogTrigger asChild>
             <Button data-testid="button-create-plan">
               <Plus className="w-4 h-4 mr-2" />
@@ -536,6 +537,7 @@ export default function AdminBillingPlans() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </MobileAppLayout>
   );
 }

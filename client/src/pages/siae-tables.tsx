@@ -28,6 +28,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { useToast } from "@/hooks/use-toast";
 import { useForm } from "react-hook-form";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
+import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 
 type SiaeEventGenre = {
   id: string;
@@ -521,13 +522,16 @@ function CancellationReasonsTab() {
 
 export default function SiaeTablesPage() {
   return (
-    <div className="p-4 md:p-6 space-y-6 overflow-auto h-full pb-24 md:pb-8" data-testid="page-siae-tables">
-      <div>
-        <h1 className="text-2xl md:text-3xl font-semibold mb-2" data-testid="title-page">Tabelle SIAE</h1>
-        <p className="text-muted-foreground text-sm md:text-base" data-testid="description-page">
-          Gestione tabelle di sistema secondo Decreto 23/07/2001 e Provvedimento 356768/2025
-        </p>
-      </div>
+    <MobileAppLayout
+      header={<MobileHeader title="Tabelle SIAE" showBackButton showMenuButton />}
+      contentClassName="pb-24"
+    >
+      <div className="p-4 md:p-6 space-y-6 overflow-auto h-full pb-24 md:pb-8" data-testid="page-siae-tables">
+        <div>
+          <p className="text-muted-foreground text-sm md:text-base" data-testid="description-page">
+            Gestione tabelle di sistema secondo Decreto 23/07/2001 e Provvedimento 356768/2025
+          </p>
+        </div>
 
       <Card className="glass-card" data-testid="card-tables">
         <CardContent className="p-4 md:p-6">
@@ -577,6 +581,7 @@ export default function SiaeTablesPage() {
           </Tabs>
         </CardContent>
       </Card>
-    </div>
+      </div>
+    </MobileAppLayout>
   );
 }

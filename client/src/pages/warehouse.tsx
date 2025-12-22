@@ -653,7 +653,7 @@ export default function Warehouse() {
     <MobileHeader
       title="Magazzino"
       subtitle="Gestione inventario"
-      showBackButton
+      showBackButton showMenuButton
     />
   );
 

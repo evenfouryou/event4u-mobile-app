@@ -626,7 +626,7 @@ export default function CassaBigliettiPage() {
 
   return (
     <MobileAppLayout
-      header={<MobileHeader title="Cassa Biglietti" showBackButton />}
+      header={<MobileHeader title="Cassa Biglietti" showBackButton showMenuButton />}
       contentClassName="pb-24"
     >
       <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-cassa-biglietti">

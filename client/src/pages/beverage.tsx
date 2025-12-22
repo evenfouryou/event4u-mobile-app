@@ -507,7 +507,7 @@ export default function Beverage() {
           <MobileHeader
             title="Beverage"
             subtitle={`Ciao, ${user?.firstName || 'Magazziniere'}`}
-            showBackButton
+            showBackButton showMenuButton
           />
         }
         contentClassName="pb-24"
@@ -546,7 +546,7 @@ export default function Beverage() {
       header={
         <MobileHeader
           title="Beverage"
-          showBackButton
+          showBackButton showMenuButton
           rightAction={
             user && (user.role === 'admin' || user.role === 'super_admin') && (
               <HapticButton

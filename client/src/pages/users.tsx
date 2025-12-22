@@ -704,7 +704,7 @@ export default function UsersPage() {
     <MobileHeader
       title="Utenti"
       subtitle={`${filteredUsers.length} ${filteredUsers.length === 1 ? 'utente' : 'utenti'}`}
-      showBackButton
+      showBackButton showMenuButton
       rightAction={
         <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
           <UsersIcon className="h-5 w-5 text-white" />

@@ -355,7 +355,7 @@ export default function Products() {
   const header = (
     <MobileHeader
       title="Catalogo Prodotti"
-      showBackButton
+      showBackButton showMenuButton
       rightAction={
         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
           <Package className="h-6 w-6 text-white" />

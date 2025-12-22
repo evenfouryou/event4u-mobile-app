@@ -40,6 +40,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog";
 import { Plus, Tag, Edit, Trash2, Search } from "lucide-react";
+import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { insertEventFormatSchema, type EventFormat, type InsertEventFormat } from "@shared/schema";
@@ -176,13 +177,13 @@ export default function EventFormats() {
   }, [formats, searchQuery]);
 
   return (
-    <div className="flex flex-col gap-6 p-6">
-      <div className="flex items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Tag className="h-6 w-6 text-primary" />
-          <h1 className="text-2xl font-semibold">Format Eventi</h1>
-        </div>
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+    <MobileAppLayout
+      header={<MobileHeader title="Formati Evento" showBackButton showMenuButton />}
+      contentClassName="pb-24"
+    >
+      <div className="flex flex-col gap-6 p-6">
+        <div className="flex items-center justify-between gap-4">
+          <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogTrigger asChild>
             <Button 
               onClick={() => handleOpenDialog()} 
@@ -391,6 +392,7 @@ export default function EventFormats() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    </MobileAppLayout>
   );
 }

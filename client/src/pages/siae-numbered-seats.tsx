@@ -65,6 +65,7 @@ import {
   Lock,
   AlertTriangle,
 } from "lucide-react";
+import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 
 const seatFormSchema = z.object({
   sectorId: z.string().min(1, "Seleziona un settore"),
@@ -291,17 +292,17 @@ export default function SiaeNumberedSeatsPage() {
   };
 
   return (
-    <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
-        <div className="flex items-center gap-2 sm:gap-3">
-          <Grid3X3 className="h-6 w-6 sm:h-8 sm:w-8 text-amber-400 flex-shrink-0" />
+    <MobileAppLayout
+      header={<MobileHeader title="Posti Numerati" showBackButton showMenuButton />}
+      contentClassName="pb-24"
+    >
+      <div className="px-3 sm:px-4 md:px-6 py-4 sm:py-6 space-y-4 sm:space-y-6">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4">
           <div>
-            <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-white">Posti Numerati</h1>
             <p className="text-xs sm:text-sm text-gray-400">Gestione posti a sedere per eventi</p>
           </div>
-        </div>
 
-        <Button
+          <Button
           onClick={() => setIsCreateDialogOpen(true)}
           className="bg-amber-500 hover:bg-amber-600 text-black"
           disabled={!selectedSectorId}
@@ -961,6 +962,7 @@ export default function SiaeNumberedSeatsPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </MobileAppLayout>
   );
 }

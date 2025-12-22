@@ -22,6 +22,7 @@ import {
   ArrowLeft, Save, Loader2, Palette, Image, QrCode, Layout, Type, Calendar, MapPin, Ticket, User, Upload, X, Check,
   RotateCcw, Building2, FileText, Store
 } from 'lucide-react';
+import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 import type { DigitalTicketTemplate } from '@shared/schema';
 
 const DEFAULT_LOGO_URL = '/logo.png';
@@ -670,17 +671,12 @@ export default function DigitalTemplateBuilder() {
   }
 
   return (
-    <div className="container mx-auto p-4 max-w-7xl">
-      <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-6">
-        <div className="flex items-center gap-3 flex-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            onClick={() => navigate('/printer-settings')}
-            data-testid="button-back"
-          >
-            <ArrowLeft className="w-5 h-5" />
-          </Button>
+    <MobileAppLayout
+      header={<MobileHeader title="Template Digitali" showBackButton showMenuButton />}
+      contentClassName="pb-24"
+    >
+      <div className="container mx-auto p-4 max-w-7xl">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4 mb-6">
           <div className="flex-1 min-w-0">
             <h1 className="text-lg sm:text-2xl font-bold truncate">
               {isEditing ? 'Modifica Template' : 'Nuovo Template'}
@@ -1554,6 +1550,6 @@ export default function DigitalTemplateBuilder() {
           </div>
         </form>
       </Form>
-    </div>
+    </MobileAppLayout>
   );
 }

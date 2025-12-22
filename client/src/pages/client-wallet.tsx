@@ -22,6 +22,7 @@ import {
   XCircle,
   PartyPopper,
 } from "lucide-react";
+import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 
 interface E4UWalletData {
   listEntries: Array<{
@@ -361,18 +362,18 @@ export default function ClientWalletPage() {
   const totalE4U = listEntries.length + tableGuests.length;
   
   return (
-    <div className="container max-w-4xl py-6 space-y-6">
-      <div className="flex items-center gap-3">
-        <div className="p-3 rounded-xl bg-primary/20">
-          <Wallet className="h-6 w-6 text-primary" />
+    <MobileAppLayout
+      header={<MobileHeader title="Il Mio Wallet" showBackButton showMenuButton />}
+      contentClassName="pb-24"
+    >
+      <div className="container max-w-4xl py-6 space-y-6">
+        <div className="flex items-center gap-3">
+          <div>
+            <p className="text-muted-foreground">I tuoi biglietti e iscrizioni agli eventi</p>
+          </div>
         </div>
-        <div>
-          <h1 className="text-2xl font-bold" data-testid="text-page-title">Il Mio Wallet</h1>
-          <p className="text-muted-foreground">I tuoi biglietti e iscrizioni agli eventi</p>
-        </div>
-      </div>
-      
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
+        
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2" data-testid="tabs-wallet">
           <TabsTrigger value="e4u" className="gap-2" data-testid="tab-e4u">
             <Users className="h-4 w-4" />
@@ -446,6 +447,7 @@ export default function ClientWalletPage() {
           </ScrollArea>
         </TabsContent>
       </Tabs>
-    </div>
+      </div>
+    </MobileAppLayout>
   );
 }

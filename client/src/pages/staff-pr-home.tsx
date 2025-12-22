@@ -20,7 +20,7 @@ import {
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import type { Event } from "@shared/schema";
-import { HapticButton, SafeArea } from "@/components/mobile-primitives";
+import { HapticButton, SafeArea, MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 
 interface EventWithAssignment extends Event {
   assignmentType: 'owner' | 'staff' | 'pr' | 'scanner';
@@ -133,7 +133,10 @@ export default function StaffPrHome() {
   };
 
   return (
-    <SafeArea className="min-h-screen bg-background pb-24">
+    <MobileAppLayout
+      header={<MobileHeader title="Dashboard Staff" showBackButton showMenuButton />}
+      contentClassName="pb-24"
+    >
       <motion.div 
         className="px-4 py-6 space-y-6"
         variants={staggerContainer}
@@ -398,6 +401,6 @@ export default function StaffPrHome() {
           )}
         </motion.div>
       </motion.div>
-    </SafeArea>
+    </MobileAppLayout>
   );
 }

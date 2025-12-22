@@ -241,7 +241,7 @@ export default function Personnel() {
     <MobileHeader
       title="Personale"
       subtitle="Gestione staff"
-      showBackButton
+      showBackButton showMenuButton
     />
   );
 
