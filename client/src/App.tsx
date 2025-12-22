@@ -85,7 +85,6 @@ import AccountNameChange from "@/pages/account-name-change";
 import { AccountLayout } from "@/components/account-layout";
 import PrGuestLists from "@/pages/pr-guest-lists";
 import PrTables from "@/pages/pr-tables";
-import PrScanner from "@/pages/pr-scanner";
 import PrStaff from "@/pages/pr-staff";
 import PrMyEvents from "@/pages/pr-my-events";
 import PrEvents from "@/pages/pr-events";
@@ -101,7 +100,6 @@ import PrinterSettings from "@/pages/printer-settings";
 import TemplateBuilder from "@/pages/template-builder";
 import DigitalTemplateBuilder from "@/pages/digital-template-builder";
 import StripeAdmin from "@/pages/stripe-admin";
-import E4uScanner from "@/pages/e4u-scanner";
 import ScannerHome from "@/pages/scanner-home";
 import ScannerHistory from "@/pages/scanner-history";
 import ScannerStats from "@/pages/scanner-stats";
@@ -306,7 +304,6 @@ function Router() {
               <Route path="/siae/reports/c2/:id" component={SiaeReportC2} />
               <Route path="/pr/guest-lists" component={PrGuestLists} />
               <Route path="/pr/tables" component={PrTables} />
-              <Route path="/pr/scanner" component={PrScanner} />
               <Route path="/pr/staff" component={PrStaff} />
               <Route path="/pr/my-events" component={PrMyEvents} />
               <Route path="/pr/events" component={PrEvents} />
@@ -330,7 +327,11 @@ function Router() {
               <Route path="/admin/billing/reports" component={AdminBillingReports} />
               <Route path="/organizer/billing" component={OrganizerBilling} />
               <Route path="/billing" component={OrganizerBilling} />
-              <Route path="/scanner/:eventId?" component={E4uScanner} />
+              <Route path="/scanner/scan/:eventId" component={ScannerScan} />
+              <Route path="/scanner/scanned/:eventId" component={ScannerScanned} />
+              <Route path="/scanner/stats/:eventId?" component={ScannerStats} />
+              <Route path="/scanner/history" component={ScannerHistory} />
+              <Route path="/scanner" component={ScannerHome} />
               <Route path="/wallet" component={ClientWallet} />
               <Route path="/staff-pr-home" component={StaffPrHome} />
               <Route path="/pr-dashboard" component={PrDashboard} />

@@ -484,12 +484,6 @@ export function AppSidebar() {
         group: "Gestione PR",
       },
       {
-        title: "Scanner QR",
-        icon: QrCode,
-        url: "/scanner",
-        group: "Operazioni",
-      },
-      {
         title: "Impostazioni",
         icon: Settings,
         url: "/settings",
