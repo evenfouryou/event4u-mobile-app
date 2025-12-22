@@ -159,7 +159,32 @@ export default function AccountPage() {
   }
 
   if (isError || !customer) {
-    return null;
+    // Show loading while redirect is happening
+    return (
+      <MobileAppLayout className="bg-background">
+        <motion.div 
+          className="flex-1 flex items-center justify-center"
+          {...scaleIn}
+        >
+          <div className="text-center space-y-4">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+            >
+              <Loader2 className="w-12 h-12 text-primary mx-auto" />
+            </motion.div>
+            <motion.p 
+              className="text-muted-foreground text-lg"
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ ...springTransition, delay: 0.2 }}
+            >
+              Reindirizzamento al login...
+            </motion.p>
+          </div>
+        </motion.div>
+      </MobileAppLayout>
+    );
   }
 
   const headerContent = (

@@ -176,6 +176,12 @@ function Router() {
         <Route path="/scanner">
           <Redirect to="/login" />
         </Route>
+        <Route path="/account/:rest*">
+          <Redirect to="/accedi" />
+        </Route>
+        <Route path="/account">
+          <Redirect to="/accedi" />
+        </Route>
         <Route component={NotFound} />
       </Switch>
     );
