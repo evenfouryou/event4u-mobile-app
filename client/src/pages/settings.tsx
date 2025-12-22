@@ -160,7 +160,12 @@ export default function Settings() {
   
   const handleLogout = async () => {
     triggerHaptic('medium');
-    window.location.href = '/api/logout';
+    try {
+      await fetch('/api/logout', { credentials: 'include' });
+      window.location.href = '/login';
+    } catch (error) {
+      window.location.href = '/login';
+    }
   };
   
   const handleThemeToggle = (checked: boolean) => {
