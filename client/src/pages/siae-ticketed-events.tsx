@@ -104,7 +104,7 @@ import {
   FileText,
   Send,
 } from "lucide-react";
-import { Link } from "wouter";
+import { Link, useRoute } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
 import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 
@@ -129,10 +129,13 @@ type SectorFormData = z.infer<typeof sectorFormSchema>;
 export default function SiaeTicketedEventsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
+  const [, params] = useRoute("/siae/ticketed-events/:id");
+  const urlEventId = params?.id;
+  
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isSectorDialogOpen, setIsSectorDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<SiaeTicketedEvent | null>(null);
-  const [expandedEventId, setExpandedEventId] = useState<string | null>(null);
+  const [expandedEventId, setExpandedEventId] = useState<string | null>(urlEventId || null);
   const [publicInfoImageUrl, setPublicInfoImageUrl] = useState("");
   const [publicInfoDescription, setPublicInfoDescription] = useState("");
 

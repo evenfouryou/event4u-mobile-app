@@ -294,6 +294,7 @@ function Router() {
               <Route path="/siae/activation-cards" component={SiaeActivationCards} />
               <Route path="/siae/system-config" component={SiaeSystemConfig} />
               <Route path="/siae/customers" component={SiaeCustomers} />
+              <Route path="/siae/ticketed-events/:id" component={SiaeTicketedEvents} />
               <Route path="/siae/ticketed-events" component={SiaeTicketedEvents} />
               <Route path="/siae/tickets/:eventId" component={SiaeTickets} />
               <Route path="/siae/ticket-types/:eventId" component={SiaeTicketTypes} />
