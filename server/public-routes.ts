@@ -47,7 +47,7 @@ import { sendTicketEmail, sendPasswordResetEmail } from "./email-service";
 import { ticketTemplates, ticketTemplateElements } from "@shared/schema";
 import { sendOTP as sendMSG91OTP, verifyOTP as verifyMSG91OTP, resendOTP as resendMSG91OTP, isMSG91Configured } from "./msg91-service";
 import { siaeStorage } from "./siae-storage";
-import { siaeNameChanges, siaeResales } from "@shared/schema";
+import { siaeNameChanges, siaeResales, siaeWalletTransactions } from "@shared/schema";
 
 const router = Router();
 
@@ -2889,6 +2889,123 @@ router.get("/api/public/account/wallet/transactions", async (req, res) => {
   } catch (error: any) {
     console.error("[PUBLIC] Get wallet transactions error:", error);
     res.status(500).json({ message: "Errore nel caricamento transazioni" });
+  }
+});
+
+// ==================== WALLET TOPUP ====================
+
+// Crea payment intent per ricarica wallet
+router.post("/api/public/account/wallet/topup", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer || !customer.id) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const { amount } = req.body;
+    const numAmount = parseFloat(amount);
+    
+    if (!numAmount || numAmount < 5 || numAmount > 500) {
+      return res.status(400).json({ 
+        message: "Importo non valido. Minimo €5, massimo €500." 
+      });
+    }
+
+    const amountInCents = Math.round(numAmount * 100);
+    
+    const stripe = await getUncachableStripeClient();
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountInCents,
+      currency: "eur",
+      metadata: {
+        type: "wallet_topup",
+        customerId: customer.id,
+        amount: numAmount.toString(),
+      },
+    });
+
+    res.json({
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+      amount: numAmount,
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Wallet topup create error:", error);
+    res.status(500).json({ message: "Errore nella creazione del pagamento" });
+  }
+});
+
+// Conferma ricarica wallet dopo pagamento
+router.post("/api/public/account/wallet/topup/confirm", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer || !customer.id) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const { paymentIntentId } = req.body;
+    if (!paymentIntentId) {
+      return res.status(400).json({ message: "Payment intent non fornito" });
+    }
+
+    const stripe = await getUncachableStripeClient();
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    if (paymentIntent.status !== "succeeded") {
+      return res.status(400).json({ 
+        message: "Pagamento non completato",
+        status: paymentIntent.status,
+      });
+    }
+
+    // Verifica che sia un topup per questo cliente
+    if (paymentIntent.metadata?.type !== "wallet_topup" || 
+        paymentIntent.metadata?.customerId !== customer.id) {
+      return res.status(400).json({ message: "Payment intent non valido" });
+    }
+
+    const amount = parseFloat(paymentIntent.metadata.amount || "0");
+    if (amount <= 0) {
+      return res.status(400).json({ message: "Importo non valido" });
+    }
+
+    // Verifica che non sia già stato accreditato
+    const existingTx = await db
+      .select()
+      .from(siaeWalletTransactions)
+      .where(eq(siaeWalletTransactions.stripePaymentIntentId, paymentIntentId))
+      .limit(1);
+
+    if (existingTx.length > 0) {
+      return res.status(400).json({ message: "Ricarica già accreditata" });
+    }
+
+    // Accredita il wallet
+    const wallet = await siaeStorage.getOrCreateCustomerWallet(customer.id);
+    const currentBalance = parseFloat(wallet.balance || "0");
+    const newBalance = currentBalance + amount;
+
+    await siaeStorage.updateWalletBalance(wallet.id, newBalance.toFixed(2));
+
+    const transaction = await siaeStorage.createWalletTransaction({
+      walletId: wallet.id,
+      customerId: customer.id,
+      type: "credit",
+      amount: amount.toFixed(2),
+      balanceAfter: newBalance.toFixed(2),
+      description: `Ricarica wallet €${amount.toFixed(2)}`,
+      stripePaymentIntentId: paymentIntentId,
+      status: "completed",
+    });
+
+    res.json({
+      success: true,
+      transaction,
+      newBalance: newBalance.toFixed(2),
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Wallet topup confirm error:", error);
+    res.status(500).json({ message: "Errore nella conferma della ricarica" });
   }
 });
 

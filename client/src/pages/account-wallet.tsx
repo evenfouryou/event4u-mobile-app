@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useState, useEffect } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -14,10 +14,33 @@ import {
   Unlock,
   Plus,
   ChevronRight,
+  X,
+  CheckCircle,
 } from "lucide-react";
 import { HapticButton, triggerHaptic } from "@/components/mobile-primitives";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { loadStripe, StripeElementsOptions } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+
+let stripePromise: ReturnType<typeof loadStripe> | null = null;
+
+async function getStripe() {
+  if (!stripePromise) {
+    const response = await fetch("/api/public/stripe-key");
+    const { publishableKey } = await response.json();
+    stripePromise = loadStripe(publishableKey);
+  }
+  return stripePromise;
+}
 
 interface WalletData {
   id: string;
@@ -65,6 +88,113 @@ const transactionLabels: Record<string, string> = {
 
 const quickAmounts = [10, 20, 50, 100];
 
+function StripePaymentForm({ 
+  amount, 
+  paymentIntentId,
+  onSuccess, 
+  onCancel 
+}: { 
+  amount: number;
+  paymentIntentId: string;
+  onSuccess: () => void;
+  onCancel: () => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+  const { toast } = useToast();
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [isElementReady, setIsElementReady] = useState(false);
+
+  const confirmMutation = useMutation({
+    mutationFn: async (intentId: string) => {
+      const res = await apiRequest("POST", "/api/public/account/wallet/topup/confirm", { paymentIntentId: intentId });
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/public/account/wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/public/account/wallet/transactions"] });
+      triggerHaptic('success');
+      toast({ title: "Ricarica completata!", description: `€${amount.toFixed(2)} aggiunti al tuo wallet.` });
+      onSuccess();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleSubmit = async () => {
+    if (!stripe || !elements || !isElementReady) return;
+    setIsProcessing(true);
+
+    try {
+      const { error, paymentIntent } = await stripe.confirmPayment({
+        elements,
+        confirmParams: { return_url: window.location.href },
+        redirect: "if_required",
+      });
+
+      if (error) {
+        toast({ title: "Pagamento fallito", description: error.message, variant: "destructive" });
+        setIsProcessing(false);
+        return;
+      }
+
+      if (paymentIntent?.status === "succeeded") {
+        confirmMutation.mutate(paymentIntent.id);
+      } else {
+        toast({ title: "Pagamento non completato", description: "Riprova", variant: "destructive" });
+        setIsProcessing(false);
+      }
+    } catch (err: any) {
+      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      setIsProcessing(false);
+    }
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="text-center mb-4">
+        <p className="text-3xl font-bold text-foreground">€{amount.toFixed(2)}</p>
+        <p className="text-muted-foreground">Ricarica wallet</p>
+      </div>
+      
+      <div className="p-4 bg-muted/30 rounded-2xl border border-border">
+        <PaymentElement 
+          options={{ layout: "tabs" }} 
+          onReady={() => setIsElementReady(true)} 
+        />
+      </div>
+
+      <div className="flex gap-3">
+        <HapticButton
+          variant="outline"
+          className="flex-1 h-14 rounded-2xl"
+          onClick={onCancel}
+          disabled={isProcessing}
+          data-testid="button-cancel-payment"
+        >
+          <X className="w-5 h-5 mr-2" />
+          Annulla
+        </HapticButton>
+        <HapticButton
+          className="flex-1 h-14 rounded-2xl"
+          onClick={handleSubmit}
+          disabled={!stripe || !isElementReady || isProcessing}
+          hapticType="success"
+          data-testid="button-confirm-payment"
+        >
+          {isProcessing ? (
+            <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+          ) : (
+            <CreditCard className="w-5 h-5 mr-2" />
+          )}
+          {isProcessing ? "Elaborazione..." : "Paga"}
+        </HapticButton>
+      </div>
+    </div>
+  );
+}
+
 const springTransition = {
   type: "spring",
   stiffness: 400,
@@ -93,6 +223,11 @@ const fadeInUp = {
 export default function AccountWallet() {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState("");
+  const [showPaymentDialog, setShowPaymentDialog] = useState(false);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [paymentIntentId, setPaymentIntentId] = useState<string | null>(null);
+  const [stripeLoaded, setStripeLoaded] = useState<Awaited<ReturnType<typeof loadStripe>> | null>(null);
+  const { toast } = useToast();
 
   const { data: wallet, isLoading: walletLoading } = useQuery<WalletData>({
     queryKey: ["/api/public/account/wallet"],
@@ -100,6 +235,24 @@ export default function AccountWallet() {
 
   const { data: transactionsData, isLoading: transactionsLoading } = useQuery<TransactionsResponse>({
     queryKey: ["/api/public/account/wallet/transactions"],
+  });
+
+  const createTopupMutation = useMutation({
+    mutationFn: async (amount: number) => {
+      const res = await apiRequest("POST", "/api/public/account/wallet/topup", { amount });
+      return res.json();
+    },
+    onSuccess: async (data) => {
+      setClientSecret(data.clientSecret);
+      setPaymentIntentId(data.paymentIntentId);
+      const stripe = await getStripe();
+      setStripeLoaded(stripe);
+      setShowPaymentDialog(true);
+    },
+    onError: (error: Error) => {
+      triggerHaptic('error');
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    },
   });
 
   const isLoading = walletLoading || transactionsLoading;
@@ -117,6 +270,48 @@ export default function AccountWallet() {
   };
 
   const currentAmount = selectedAmount || (customAmount ? parseInt(customAmount) : 0);
+
+  const handleRecharge = () => {
+    if (currentAmount < 5) {
+      toast({ title: "Importo minimo €5", variant: "destructive" });
+      return;
+    }
+    if (currentAmount > 500) {
+      toast({ title: "Importo massimo €500", variant: "destructive" });
+      return;
+    }
+    triggerHaptic('medium');
+    createTopupMutation.mutate(currentAmount);
+  };
+
+  const handlePaymentSuccess = () => {
+    setShowPaymentDialog(false);
+    setClientSecret(null);
+    setPaymentIntentId(null);
+    setSelectedAmount(null);
+    setCustomAmount("");
+  };
+
+  const handlePaymentCancel = () => {
+    setShowPaymentDialog(false);
+    setClientSecret(null);
+    setPaymentIntentId(null);
+  };
+
+  const elementsOptions: StripeElementsOptions | null = clientSecret ? {
+    clientSecret,
+    appearance: {
+      theme: "night",
+      variables: {
+        colorPrimary: "#f59e0b",
+        colorBackground: "#1a1a2e",
+        colorText: "#ffffff",
+        colorDanger: "#ef4444",
+        fontFamily: "system-ui, sans-serif",
+        borderRadius: "12px",
+      },
+    },
+  } : null;
 
   if (isLoading) {
     return (
@@ -240,12 +435,17 @@ export default function AccountWallet() {
           >
             <HapticButton
               className="w-full h-14 text-lg font-semibold rounded-2xl bg-gradient-to-r from-primary to-primary/80"
-              disabled={currentAmount <= 0}
+              disabled={currentAmount <= 0 || createTopupMutation.isPending}
               hapticType="success"
+              onClick={handleRecharge}
               data-testid="button-recharge"
             >
-              <CreditCard className="w-5 h-5 mr-2" />
-              Ricarica €{currentAmount > 0 ? currentAmount : "0"}
+              {createTopupMutation.isPending ? (
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              ) : (
+                <CreditCard className="w-5 h-5 mr-2" />
+              )}
+              {createTopupMutation.isPending ? "Caricamento..." : `Ricarica €${currentAmount > 0 ? currentAmount : "0"}`}
             </HapticButton>
           </motion.div>
         </motion.div>
@@ -341,6 +541,31 @@ export default function AccountWallet() {
           )}
         </motion.div>
       </motion.div>
+
+      <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <CreditCard className="w-5 h-5" />
+              Pagamento Sicuro
+            </DialogTitle>
+          </DialogHeader>
+          {elementsOptions && stripeLoaded && paymentIntentId ? (
+            <Elements stripe={stripeLoaded} options={elementsOptions}>
+              <StripePaymentForm
+                amount={currentAmount}
+                paymentIntentId={paymentIntentId}
+                onSuccess={handlePaymentSuccess}
+                onCancel={handlePaymentCancel}
+              />
+            </Elements>
+          ) : (
+            <div className="flex items-center justify-center py-8">
+              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
