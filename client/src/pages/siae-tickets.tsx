@@ -1109,24 +1109,29 @@ export default function SiaeTicketsPage() {
             </Select>
           </div>
           
-          {selectedTicket?.transactionId && (
-            <div className="flex items-center gap-3 p-4 bg-amber-500/10 border border-amber-500/30 rounded-xl">
-              <Checkbox 
-                id="refund-checkbox" 
-                checked={refundOnCancel} 
-                onCheckedChange={(checked) => setRefundOnCancel(checked === true)}
-                data-testid="checkbox-refund"
-              />
-              <div>
-                <Label htmlFor="refund-checkbox" className="font-medium cursor-pointer">
-                  Rimborsa via Stripe
-                </Label>
-                <p className="text-xs text-muted-foreground">
-                  Il cliente riceverà il rimborso
-                </p>
-              </div>
+          <div className={`flex items-center gap-3 p-4 rounded-xl ${
+            selectedTicket?.transactionId 
+              ? 'bg-amber-500/10 border border-amber-500/30' 
+              : 'bg-muted/50 border border-border opacity-60'
+          }`}>
+            <Checkbox 
+              id="refund-checkbox" 
+              checked={refundOnCancel} 
+              onCheckedChange={(checked) => setRefundOnCancel(checked === true)}
+              disabled={!selectedTicket?.transactionId}
+              data-testid="checkbox-refund"
+            />
+            <div>
+              <Label htmlFor="refund-checkbox" className={`font-medium ${selectedTicket?.transactionId ? 'cursor-pointer' : 'cursor-not-allowed'}`}>
+                Rimborso automatico
+              </Label>
+              <p className="text-xs text-muted-foreground">
+                {selectedTicket?.transactionId 
+                  ? 'Il cliente riceverà il rimborso via Stripe'
+                  : 'Non disponibile - biglietto senza pagamento online'}
+              </p>
             </div>
-          )}
+          </div>
 
           <div className="flex gap-3 pt-2">
             <HapticButton
