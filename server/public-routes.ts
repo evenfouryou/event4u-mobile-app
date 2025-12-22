@@ -2593,6 +2593,7 @@ router.get("/api/public/account/tickets/:id", async (req, res) => {
         allowsChangeName: siaeTicketedEvents.allowsChangeName,
         allowsResale: siaeTicketedEvents.allowsResale,
         organizerCompany: companies.name,
+        companyId: companies.id,
         ticketingManager: siaeSystemConfig.businessName,
         progressiveNumber: siaeFiscalSeals.progressiveNumber,
       })

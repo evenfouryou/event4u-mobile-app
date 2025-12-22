@@ -63,6 +63,7 @@ interface TicketDetail {
   existingResale: { id: string; resalePrice: string } | null;
   hoursToEvent: number;
   organizerCompany: string | null;
+  companyId: string | null;
   ticketingManager: string | null;
   progressiveNumber: number | null;
   emissionDateTime: string | null;
@@ -116,7 +117,16 @@ export default function AccountTicketDetail() {
   });
 
   const { data: digitalTemplate } = useQuery<DigitalTicketTemplate | null>({
-    queryKey: ['/api/digital-templates/default'],
+    queryKey: ['/api/digital-templates/default', ticket?.companyId],
+    queryFn: async () => {
+      const url = ticket?.companyId 
+        ? `/api/digital-templates/default/${ticket.companyId}`
+        : '/api/digital-templates/default';
+      const res = await fetch(url, { credentials: 'include' });
+      if (!res.ok) return null;
+      return res.json();
+    },
+    enabled: !!ticket,
   });
 
   const showQrCode = ticket && 
