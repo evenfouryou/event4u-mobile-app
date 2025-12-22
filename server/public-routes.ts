@@ -216,6 +216,7 @@ router.get("/api/public/events", async (req, res) => {
         maxTicketsPerUser: siaeTicketedEvents.maxTicketsPerUser,
         requiresNominative: siaeTicketedEvents.requiresNominative,
         eventName: events.name,
+        eventImageUrl: events.imageUrl,
         eventStart: events.startDatetime,
         eventEnd: events.endDatetime,
         locationId: locations.id,
