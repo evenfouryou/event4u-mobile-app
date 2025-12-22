@@ -459,7 +459,7 @@ export default function Home() {
             <QuickActionButton
               icon={QrCode}
               label="Scanner"
-              href="/e4u-scanner"
+              href="/scanner"
               gradient="from-teal-500 to-emerald-600"
               delay={0.4}
             />

@@ -299,7 +299,7 @@ export function AppSidebar() {
       menuItems.push({
         title: "Cassa",
         icon: Receipt,
-        url: "/cash-register",
+        url: "/cashier/dashboard",
         group: "Moduli",
       });
     }

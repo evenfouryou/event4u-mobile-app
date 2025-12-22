@@ -56,6 +56,7 @@ import {
   List,
   Table2,
 } from "lucide-react";
+import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -339,25 +340,21 @@ export default function ScannerManagement() {
   }
 
   return (
-    <div className="min-h-screen pb-20 md:pb-0">
-      <div className="sticky top-0 z-10 bg-background/80 backdrop-blur-lg border-b border-white/10">
-        <div className="flex items-center justify-between p-4">
-          <div className="flex items-center gap-3">
-            <Link href="/">
-              <Button variant="ghost" size="icon" className="md:hidden" data-testid="btn-back">
-                <ArrowLeft className="h-5 w-5" />
-              </Button>
-            </Link>
-            <div>
-              <h1 className="text-xl md:text-2xl font-bold flex items-center gap-2">
-                <ScanLine className="h-6 w-6 text-emerald-500" />
-                <span className="hidden sm:inline">Gestione Scanner</span>
-                <span className="sm:hidden">Scanner</span>
-              </h1>
-              <p className="text-sm text-muted-foreground hidden md:block">
-                Crea e gestisci gli account scanner per il controllo accessi
-              </p>
-            </div>
+    <MobileAppLayout
+      header={<MobileHeader title="Gestione Scanner" showBackButton />}
+      contentClassName="pb-24"
+    >
+      <div className="p-4 space-y-4">
+        <div className="flex items-center justify-between gap-3">
+          <div className="relative flex-1">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+            <Input
+              placeholder="Cerca scanner..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="pl-10 bg-background/50"
+              data-testid="input-search-scanner"
+            />
           </div>
           <Button 
             onClick={() => setShowCreateDialog(true)}
@@ -370,21 +367,7 @@ export default function ScannerManagement() {
           </Button>
         </div>
 
-        <div className="px-4 pb-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Cerca scanner..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-10 bg-background/50"
-              data-testid="input-search-scanner"
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="p-4 space-y-3">
+        <div className="space-y-3">
         {scannersLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map(i => (
@@ -926,6 +909,7 @@ export default function ScannerManagement() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-    </div>
+      </div>
+    </MobileAppLayout>
   );
 }

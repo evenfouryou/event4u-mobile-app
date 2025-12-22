@@ -8,6 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Skeleton } from "@/components/ui/skeleton";
+import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 import {
   Calendar,
   Ticket,
@@ -47,20 +48,12 @@ export default function CashierDashboardPage() {
   };
 
   return (
-    <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-cashier-dashboard">
-      <div className="flex items-center justify-between flex-wrap gap-3">
-        <div>
-          <h1 className="text-xl sm:text-2xl md:text-3xl font-bold text-foreground flex items-center gap-2 sm:gap-3" data-testid="page-title">
-            <Store className="w-6 h-6 sm:w-8 sm:h-8 text-[#FFD700] flex-shrink-0" />
-            I Miei Eventi
-          </h1>
-          <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-            Eventi con quote biglietti assegnate
-          </p>
-        </div>
-      </div>
-
-      {isLoading ? (
+    <MobileAppLayout
+      header={<MobileHeader title="I Miei Eventi" showBackButton />}
+      contentClassName="pb-24"
+    >
+      <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-cashier-dashboard">
+        {isLoading ? (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {[1, 2, 3].map((i) => (
             <Card key={i} className="glass-card">
@@ -177,6 +170,7 @@ export default function CashierDashboardPage() {
           })}
         </div>
       )}
-    </div>
+      </div>
+    </MobileAppLayout>
   );
 }
