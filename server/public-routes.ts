@@ -48,8 +48,24 @@ import { ticketTemplates, ticketTemplateElements } from "@shared/schema";
 import { sendOTP as sendMSG91OTP, verifyOTP as verifyMSG91OTP, resendOTP as resendMSG91OTP, isMSG91Configured } from "./msg91-service";
 import { siaeStorage } from "./siae-storage";
 import { siaeNameChanges, siaeResales, siaeWalletTransactions } from "@shared/schema";
+import svgCaptcha from "svg-captcha";
 
 const router = Router();
+
+// ==================== CAPTCHA STORAGE ====================
+
+// In-memory CAPTCHA storage (token -> { text, expiresAt })
+const captchaStore = new Map<string, { text: string; expiresAt: Date }>();
+
+// Clean up expired CAPTCHAs every 5 minutes
+setInterval(() => {
+  const now = new Date();
+  for (const [token, data] of captchaStore.entries()) {
+    if (data.expiresAt < now) {
+      captchaStore.delete(token);
+    }
+  }
+}, 5 * 60 * 1000);
 
 // ==================== HELPER FUNCTIONS ====================
 
@@ -1213,6 +1229,89 @@ router.delete("/api/public/cart", async (req, res) => {
   }
 });
 
+// ==================== CAPTCHA ====================
+
+// Generate CAPTCHA for ticket purchase protection
+router.get("/api/public/captcha/generate", async (req, res) => {
+  try {
+    // Fetch CAPTCHA config from siaeSystemConfig
+    const [config] = await db.select().from(siaeSystemConfig).limit(1);
+    const captchaEnabled = config?.captchaEnabled ?? true;
+    const captchaMinChars = config?.captchaMinChars ?? 5;
+    const captchaImageWidth = config?.captchaImageWidth ?? 200;
+    const captchaImageHeight = config?.captchaImageHeight ?? 60;
+    const captchaDistortion = config?.captchaDistortion ?? 'medium';
+
+    // Generate CAPTCHA
+    const captcha = svgCaptcha.create({
+      size: captchaMinChars,
+      width: captchaImageWidth,
+      height: captchaImageHeight,
+      noise: captchaDistortion === 'high' ? 3 : captchaDistortion === 'medium' ? 2 : 1,
+      color: true,
+      background: '#f0f0f0',
+    });
+
+    // Generate token
+    const token = crypto.randomBytes(32).toString("hex");
+
+    // Store CAPTCHA with 5 minute expiration
+    const expiresAt = new Date(Date.now() + 5 * 60 * 1000);
+    captchaStore.set(token, {
+      text: captcha.text,
+      expiresAt,
+    });
+
+    res.json({
+      token,
+      svg: captcha.data,
+      width: captchaImageWidth,
+      height: captchaImageHeight,
+      enabled: captchaEnabled,
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] CAPTCHA generate error:", error);
+    res.status(500).json({ message: "Errore nella generazione CAPTCHA" });
+  }
+});
+
+// Validate CAPTCHA
+router.post("/api/public/captcha/validate", async (req, res) => {
+  try {
+    const { token, text } = req.body;
+
+    if (!token || !text) {
+      return res.status(400).json({ valid: false, message: "Token e testo richiesti" });
+    }
+
+    const captchaData = captchaStore.get(token);
+
+    if (!captchaData) {
+      return res.json({ valid: false, message: "CAPTCHA non trovato o scaduto" });
+    }
+
+    if (captchaData.expiresAt < new Date()) {
+      captchaStore.delete(token);
+      return res.json({ valid: false, message: "CAPTCHA scaduto" });
+    }
+
+    // Case-insensitive validation
+    const isValid = captchaData.text.toLowerCase() === text.toLowerCase();
+
+    // Delete token after validation (one-time use)
+    captchaStore.delete(token);
+
+    if (isValid) {
+      res.json({ valid: true });
+    } else {
+      res.json({ valid: false, message: "CAPTCHA non corretto" });
+    }
+  } catch (error: any) {
+    console.error("[PUBLIC] CAPTCHA validate error:", error);
+    res.status(500).json({ valid: false, message: "Errore nella validazione CAPTCHA" });
+  }
+});
+
 // ==================== CHECKOUT ====================
 
 // Verifica disponibilità sigilli fiscali (da chiamare prima del checkout)
@@ -1257,10 +1356,56 @@ router.get("/api/public/stripe-key", async (req, res) => {
 router.post("/api/public/checkout/create-payment-intent", async (req, res) => {
   try {
     const sessionId = getOrCreateSessionId(req, res);
+    const { captchaToken, captchaText } = req.body;
     let customer = await getAuthenticatedCustomer(req);
 
     if (!customer) {
       return res.status(401).json({ message: "Devi essere autenticato per procedere al pagamento" });
+    }
+
+    // Validate CAPTCHA if enabled
+    const [captchaConfig] = await db.select().from(siaeSystemConfig).limit(1);
+    const captchaEnabled = captchaConfig?.captchaEnabled ?? true;
+
+    if (captchaEnabled) {
+      if (!captchaToken || !captchaText) {
+        return res.status(400).json({ 
+          message: "CAPTCHA richiesto per procedere al pagamento",
+          code: "CAPTCHA_REQUIRED"
+        });
+      }
+
+      const captchaData = captchaStore.get(captchaToken);
+
+      if (!captchaData) {
+        return res.status(400).json({ 
+          message: "CAPTCHA non trovato o scaduto. Riprova.",
+          code: "CAPTCHA_EXPIRED"
+        });
+      }
+
+      if (captchaData.expiresAt < new Date()) {
+        captchaStore.delete(captchaToken);
+        return res.status(400).json({ 
+          message: "CAPTCHA scaduto. Riprova.",
+          code: "CAPTCHA_EXPIRED"
+        });
+      }
+
+      // Case-insensitive validation
+      const isValid = captchaData.text.toLowerCase() === captchaText.toLowerCase();
+
+      // Delete token after validation (one-time use)
+      captchaStore.delete(captchaToken);
+
+      if (!isValid) {
+        return res.status(400).json({ 
+          message: "CAPTCHA non corretto. Riprova.",
+          code: "CAPTCHA_INVALID"
+        });
+      }
+
+      console.log("[PUBLIC] CAPTCHA validation passed");
     }
 
     // CRITICAL: Verifica smart card SIAE PRIMA di creare il payment intent
