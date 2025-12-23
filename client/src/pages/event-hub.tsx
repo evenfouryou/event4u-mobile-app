@@ -2225,7 +2225,8 @@ export default function EventHub() {
                     <CardContent className="space-y-3">
                       <Button 
                         className="w-full" 
-                        onClick={() => navigate(`/siae/report-c1?eventId=${id}`)}
+                        onClick={() => handleReportC1('giornaliero')}
+                        disabled={!ticketedEvent?.id}
                         data-testid="button-view-c1"
                       >
                         <FileText className="h-4 w-4 mr-2" />
@@ -2255,7 +2256,8 @@ export default function EventHub() {
                     <CardContent className="space-y-3">
                       <Button 
                         className="w-full" 
-                        onClick={() => navigate(`/siae/report-c2?eventId=${id}`)}
+                        onClick={handleReportC2}
+                        disabled={!ticketedEvent?.id}
                         data-testid="button-view-c2"
                       >
                         <FileText className="h-4 w-4 mr-2" />
@@ -3962,77 +3964,6 @@ export default function EventHub() {
                   </>
                 )}
 
-                {/* Pulsanti Report */}
-                <Card className="glass-card">
-                  <CardHeader className="px-4">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <BarChart3 className="h-5 w-5 text-purple-400" />
-                      Report SIAE
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="px-4">
-                    <div className="grid grid-cols-2 gap-4">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger asChild>
-                          <Button 
-                            variant="outline" 
-                            className="h-auto py-4 flex flex-col gap-2" 
-                            data-testid="btn-report-c1"
-                            disabled={!ticketedEvent?.id || reportLoading}
-                          >
-                            {reportLoading ? <Loader2 className="h-6 w-6 animate-spin text-blue-400" /> : <FileText className="h-6 w-6 text-blue-400" />}
-                            <span className="text-sm font-medium">Report C1</span>
-                            <span className="text-xs text-muted-foreground">Registro Vendite</span>
-                          </Button>
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="center">
-                          <DropdownMenuItem onClick={() => handleReportC1('giornaliero')} data-testid="btn-report-c1-giornaliero">
-                            <Calendar className="h-4 w-4 mr-2" />
-                            Giornaliero
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleReportC1('mensile')} data-testid="btn-report-c1-mensile">
-                            <FileText className="h-4 w-4 mr-2" />
-                            Mensile
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
-                      <Button 
-                        variant="outline" 
-                        className="h-auto py-4 flex flex-col gap-2" 
-                        data-testid="btn-report-c2"
-                        onClick={handleReportC2}
-                        disabled={!ticketedEvent?.id || reportLoading}
-                      >
-                        {reportLoading ? <Loader2 className="h-6 w-6 animate-spin text-emerald-400" /> : <FileText className="h-6 w-6 text-emerald-400" />}
-                        <span className="text-sm font-medium">Report C2</span>
-                        <span className="text-xs text-muted-foreground">Riepilogo Evento</span>
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        className="h-auto py-4 flex flex-col gap-2" 
-                        data-testid="btn-report-xml"
-                        onClick={handleExportXML}
-                        disabled={!ticketedEvent?.id || reportLoading}
-                      >
-                        {reportLoading ? <Loader2 className="h-6 w-6 animate-spin text-amber-400" /> : <Download className="h-6 w-6 text-amber-400" />}
-                        <span className="text-sm font-medium">Export XML</span>
-                        <span className="text-xs text-muted-foreground">Trasmissione SIAE</span>
-                      </Button>
-                      <Button 
-                        variant="outline" 
-                        className="h-auto py-4 flex flex-col gap-2" 
-                        data-testid="btn-report-pdf"
-                        onClick={handleExportPDF}
-                        disabled={!ticketedEvent?.id || reportLoading}
-                      >
-                        {reportLoading ? <Loader2 className="h-6 w-6 animate-spin text-rose-400" /> : <Download className="h-6 w-6 text-rose-400" />}
-                        <span className="text-sm font-medium">Export PDF</span>
-                        <span className="text-xs text-muted-foreground">Stampa Registro</span>
-                      </Button>
-                    </div>
-                  </CardContent>
-                </Card>
-
                 {/* Quick Navigation Buttons */}
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <Button 
@@ -4314,7 +4245,8 @@ export default function EventHub() {
                     <CardContent className="px-4 space-y-3">
                       <HapticButton 
                         className="w-full min-h-[44px]" 
-                        onClick={() => navigate(`/siae/report-c1?eventId=${id}`)}
+                        onClick={() => handleReportC1('giornaliero')}
+                        disabled={!ticketedEvent?.id}
                         data-testid="button-view-c1"
                       >
                         <FileText className="h-4 w-4 mr-2" />
@@ -4344,7 +4276,8 @@ export default function EventHub() {
                     <CardContent className="px-4 space-y-3">
                       <HapticButton 
                         className="w-full min-h-[44px]" 
-                        onClick={() => navigate(`/siae/report-c2?eventId=${id}`)}
+                        onClick={handleReportC2}
+                        disabled={!ticketedEvent?.id}
                         data-testid="button-view-c2"
                       >
                         <FileText className="h-4 w-4 mr-2" />

@@ -310,12 +310,6 @@ export function AppSidebar() {
         group: "Gestione",
       },
       {
-        title: "Gestione Cassieri",
-        icon: UserPlus,
-        url: "/cashier/management",
-        group: "Gestione",
-      },
-      {
         title: "Location",
         icon: MapPin,
         url: "/locations",
@@ -432,6 +426,12 @@ export function AppSidebar() {
             title: "Posti Numerati",
             icon: Grid3X3,
             url: "/siae/numbered-seats",
+            group: "Biglietteria SIAE",
+          },
+          {
+            title: "Gestione Cassieri",
+            icon: UserPlus,
+            url: "/cashier/management",
             group: "Biglietteria SIAE",
           }
       );
