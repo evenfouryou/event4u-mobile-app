@@ -1,8 +1,9 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, useLocation } from "wouter";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   Table,
   TableBody,
@@ -11,10 +12,19 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { ArrowLeft, Printer, RefreshCw, Send, CheckCircle, Loader2, FileText, Euro, Ticket, Building2, Calendar } from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { ArrowLeft, Printer, RefreshCw, Send, CheckCircle, Loader2, FileText, Euro, Ticket, Building2, Calendar, History, Eye } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { format } from "date-fns";
+import { it } from "date-fns/locale";
 
 // Interfaccia conforme al modello C1 SIAE con Quadri A, B, C
 interface C1ReportData {
@@ -88,16 +98,32 @@ interface C1ReportData {
   }>;
 }
 
+interface TransmissionRecord {
+  id: string;
+  periodDate: string;
+  transmissionType: 'daily' | 'monthly';
+  status: 'pending' | 'sent' | 'error';
+  totalAmount?: string;
+  createdAt: string;
+}
+
 export default function SiaeReportC1() {
   const { id } = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
   const printRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
   
-  // Get report type from query string
+  // Get report type from query string and use as state
   const urlParams = new URLSearchParams(window.location.search);
-  const reportType = urlParams.get('type') || 'giornaliero';
+  const defaultType = urlParams.get('type') || 'giornaliero';
+  const [reportType, setReportType] = useState<'giornaliero' | 'mensile'>(defaultType as 'giornaliero' | 'mensile');
   const isMonthly = reportType === 'mensile';
+
+  // Update URL when report type changes
+  useEffect(() => {
+    const newUrl = `${window.location.pathname}?type=${reportType}`;
+    window.history.replaceState({}, '', newUrl);
+  }, [reportType]);
 
   const { data: report, isLoading, error } = useQuery<C1ReportData>({
     queryKey: ['/api/siae/ticketed-events', id, 'reports', 'c1', reportType],
@@ -113,6 +139,12 @@ export default function SiaeReportC1() {
     enabled: !!id,
     refetchOnMount: 'always',
     staleTime: 0,
+  });
+
+  // Fetch transmission history
+  const { data: transmissions, isLoading: transmissionsLoading } = useQuery<TransmissionRecord[]>({
+    queryKey: ['/api/siae/ticketed-events', id, 'transmissions'],
+    enabled: !!id,
   });
 
   const handlePrint = () => {
@@ -141,6 +173,7 @@ export default function SiaeReportC1() {
         description: data.message || "Il report C1 è stato salvato come trasmissione SIAE",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/siae'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/ticketed-events', id, 'transmissions'] });
     },
     onError: (error: any) => {
       toast({
@@ -150,6 +183,23 @@ export default function SiaeReportC1() {
       });
     },
   });
+
+  const getStatusBadgeVariant = (status: string) => {
+    switch (status) {
+      case 'sent': return 'default';
+      case 'error': return 'destructive';
+      default: return 'secondary';
+    }
+  };
+
+  const getStatusLabel = (status: string) => {
+    switch (status) {
+      case 'sent': return 'Inviato';
+      case 'error': return 'Errore';
+      case 'pending': return 'In attesa';
+      default: return status;
+    }
+  };
 
   if (isLoading) {
     return (
@@ -273,6 +323,80 @@ export default function SiaeReportC1() {
                 <span className="text-sm text-muted-foreground">Capienza Totale</span>
               </div>
               <div className="text-2xl font-bold">{totalCapacity}</div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <div className="grid grid-cols-3 gap-4 no-print">
+          <Card className="col-span-1">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Tipo Report
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <Select value={reportType} onValueChange={(value: 'giornaliero' | 'mensile') => setReportType(value)}>
+                <SelectTrigger data-testid="select-report-type">
+                  <SelectValue placeholder="Seleziona tipo" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="giornaliero">Giornaliero</SelectItem>
+                  <SelectItem value="mensile">Mensile</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground mt-2">
+                {isMonthly 
+                  ? "Report cumulativo per l'intero mese" 
+                  : "Report per singola giornata"}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="col-span-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <History className="w-4 h-4" />
+                Storico Trasmissioni
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {transmissionsLoading ? (
+                <div className="flex items-center justify-center p-4">
+                  <Loader2 className="w-5 h-5 animate-spin text-muted-foreground" />
+                </div>
+              ) : !transmissions || transmissions.length === 0 ? (
+                <p className="text-muted-foreground text-sm">Nessuna trasmissione ancora effettuata</p>
+              ) : (
+                <div className="space-y-2 max-h-48 overflow-y-auto">
+                  {transmissions.map((t) => (
+                    <div 
+                      key={t.id} 
+                      className="flex items-center justify-between p-2 border rounded-md"
+                      data-testid={`transmission-${t.id}`}
+                    >
+                      <div className="flex items-center gap-2">
+                        <span className="text-sm font-medium">
+                          {format(new Date(t.periodDate), 'dd/MM/yyyy', { locale: it })}
+                        </span>
+                        <Badge variant="outline">
+                          {t.transmissionType === 'daily' ? 'Giornaliero' : 'Mensile'}
+                        </Badge>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {t.totalAmount && (
+                          <span className="text-sm text-muted-foreground">
+                            €{Number(t.totalAmount).toFixed(2)}
+                          </span>
+                        )}
+                        <Badge variant={getStatusBadgeVariant(t.status)}>
+                          {getStatusLabel(t.status)}
+                        </Badge>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
