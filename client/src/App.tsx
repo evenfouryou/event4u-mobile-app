@@ -58,7 +58,6 @@ import SiaeCustomers from "@/pages/siae-customers";
 import SiaeTicketedEvents from "@/pages/siae-ticketed-events";
 import SiaeTickets from "@/pages/siae-tickets";
 import SiaeTicketTypes from "@/pages/siae-ticket-types";
-import SiaeBiglietteria from "@/pages/siae-biglietteria";
 import SiaeTransactions from "@/pages/siae-transactions";
 import SiaeNameChanges from "@/pages/siae-name-changes";
 import SiaeResales from "@/pages/siae-resales";
@@ -110,6 +109,7 @@ import ClientWallet from "@/pages/client-wallet";
 import StaffPrHome from "@/pages/staff-pr-home";
 import StaffPrEventPanel from "@/pages/staff-pr-event-panel";
 import PrDashboard from "@/pages/pr-dashboard";
+import CassaBiglietti from "@/pages/cassa-biglietti";
 import CashierManagement from "@/pages/cashier-management";
 import CashierDashboard from "@/pages/cashier-dashboard";
 import ScannerManagement from "@/pages/scanner-management";
@@ -297,8 +297,6 @@ function Router() {
               <Route path="/siae/ticketed-events/:id" component={SiaeTicketedEvents} />
               <Route path="/siae/ticketed-events" component={SiaeTicketedEvents} />
               <Route path="/siae/tickets/:eventId" component={SiaeTickets} />
-              <Route path="/siae/biglietteria/:eventId" component={SiaeBiglietteria} />
-              <Route path="/siae/biglietteria" component={SiaeBiglietteria} />
               <Route path="/siae/ticket-types/:eventId" component={SiaeTicketTypes} />
               <Route path="/siae/transactions/:eventId" component={SiaeTransactions} />
               <Route path="/siae/name-changes" component={SiaeNameChanges} />
@@ -345,6 +343,7 @@ function Router() {
               <Route path="/staff-pr-home" component={StaffPrHome} />
               <Route path="/pr-dashboard" component={PrDashboard} />
               <Route path="/events/:id/panel" component={StaffPrEventPanel} />
+              <Route path="/cassa-biglietti" component={CassaBiglietti} />
               <Route path="/cashier/management" component={CashierManagement} />
               <Route path="/cashier/dashboard" component={CashierDashboard} />
               <Route path="/scanner-management" component={ScannerManagement} />
