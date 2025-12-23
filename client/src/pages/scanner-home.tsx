@@ -4,10 +4,12 @@ import { apiRequest } from "@/lib/queryClient";
 import { format, isAfter, isToday, parseISO } from "date-fns";
 import { it } from "date-fns/locale";
 import { Link } from "wouter";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Button } from "@/components/ui/button";
 import { motion } from "framer-motion";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { SafeArea, HapticButton, triggerHaptic } from "@/components/mobile-primitives";
 import {
   Calendar,
@@ -63,6 +65,7 @@ const staggerItem = {
 
 export default function ScannerHomePage() {
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   const { data: events, isLoading: eventsLoading } = useQuery<Event[]>({
     queryKey: ['/api/e4u/my-events'],
@@ -108,6 +111,190 @@ export default function ScannerHomePage() {
   const futureEvents = upcomingEvents.filter(event => 
     !isToday(parseISO(event.startDatetime))
   );
+
+  if (!isMobile) {
+    return (
+      <div className="container mx-auto p-6 space-y-6" data-testid="page-scanner-home">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-emerald-500 to-green-600 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+              <ScanLine className="h-7 w-7 text-white" />
+            </div>
+            <div>
+              <h1 className="text-3xl font-bold" data-testid="text-title">Scanner</h1>
+              {user && (
+                <p className="text-muted-foreground" data-testid="text-user-name">
+                  Ciao, {(user as any).firstName || (user as any).username}!
+                </p>
+              )}
+            </div>
+          </div>
+          <Button variant="outline" onClick={handleLogout} data-testid="button-logout">
+            <LogOut className="w-4 h-4 mr-2" />
+            Esci
+          </Button>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+          <Link href="/scanner/history">
+            <Card className="hover-elevate cursor-pointer h-full" data-testid="card-history">
+              <CardContent className="p-6 flex flex-col items-center justify-center text-center">
+                <div className="w-16 h-16 rounded-2xl bg-purple-500/20 flex items-center justify-center mb-4">
+                  <History className="h-8 w-8 text-purple-400" />
+                </div>
+                <span className="font-semibold text-lg">Eventi Passati</span>
+                <span className="text-sm text-muted-foreground mt-1">Storico scansioni</span>
+              </CardContent>
+            </Card>
+          </Link>
+          <Link href="/scanner/stats">
+            <Card className="hover-elevate cursor-pointer h-full" data-testid="card-stats">
+              <CardContent className="p-6 flex flex-col items-center justify-center text-center">
+                <div className="w-16 h-16 rounded-2xl bg-blue-500/20 flex items-center justify-center mb-4">
+                  <BarChart3 className="h-8 w-8 text-blue-400" />
+                </div>
+                <span className="font-semibold text-lg">Statistiche</span>
+                <span className="text-sm text-muted-foreground mt-1">Riepilogo generale</span>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+
+        {todayEvents.length > 0 && (
+          <Card>
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-emerald-500/20 flex items-center justify-center">
+                  <Zap className="h-5 w-5 text-emerald-400" />
+                </div>
+                <div>
+                  <CardTitle data-testid="text-today-section">Eventi di Oggi</CardTitle>
+                  <CardDescription>{todayEvents.length} eventi in programma</CardDescription>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {todayEvents.map((event) => (
+                <Link key={event.id} href={`/scanner/scan/${event.id}`}>
+                  <Card 
+                    className="hover-elevate cursor-pointer bg-gradient-to-r from-emerald-500/10 to-green-500/5" 
+                    data-testid={`card-event-today-${event.id}`}
+                  >
+                    <CardContent className="p-4 flex items-center gap-4">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <Badge className="bg-emerald-500 text-white border-0">
+                            <Sparkles className="h-3 w-3 mr-1" />
+                            Oggi
+                          </Badge>
+                        </div>
+                        <h3 className="font-bold text-lg" data-testid="text-event-name">
+                          {event.name}
+                        </h3>
+                        <div className="flex items-center gap-4 mt-2">
+                          <p className="text-sm font-medium text-emerald-400 flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            {format(parseISO(event.startDatetime), "HH:mm", { locale: it })}
+                          </p>
+                          {event.location && (
+                            <p className="text-sm text-muted-foreground flex items-center gap-2">
+                              <MapPin className="h-4 w-4" />
+                              {event.location.name}
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                      <div className="w-14 h-14 rounded-2xl bg-emerald-500/30 flex items-center justify-center shrink-0">
+                        <QrCode className="h-7 w-7 text-emerald-400" />
+                      </div>
+                      <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                    </CardContent>
+                  </Card>
+                </Link>
+              ))}
+            </CardContent>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                <CalendarDays className="h-5 w-5 text-primary" />
+              </div>
+              <div>
+                <CardTitle data-testid="text-upcoming-section">
+                  {todayEvents.length > 0 ? "Prossimi Eventi" : "Seleziona Evento"}
+                </CardTitle>
+                <CardDescription>Eventi disponibili per la scansione</CardDescription>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {eventsLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="flex items-center gap-4 p-4 rounded-lg bg-muted/30">
+                    <Skeleton className="h-14 w-14 rounded-2xl" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-24" />
+                      <Skeleton className="h-5 w-40" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : futureEvents.length > 0 ? (
+              <div className="space-y-3">
+                {futureEvents.map((event) => (
+                  <Link key={event.id} href={`/scanner/scan/${event.id}`}>
+                    <Card 
+                      className="hover-elevate cursor-pointer" 
+                      data-testid={`card-event-${event.id}`}
+                    >
+                      <CardContent className="p-4">
+                        <div className="flex items-center gap-4">
+                          <div className="w-14 h-14 rounded-2xl bg-primary/10 flex items-center justify-center shrink-0">
+                            <Calendar className="h-6 w-6 text-primary" />
+                          </div>
+                          <div className="flex-1 min-w-0">
+                            <p className="text-xs text-muted-foreground mb-1 font-medium">
+                              {format(parseISO(event.startDatetime), "EEEE d MMMM", { locale: it })}
+                            </p>
+                            <h3 className="font-semibold text-base" data-testid="text-event-name">
+                              {event.name}
+                            </h3>
+                            {event.location && (
+                              <p className="text-xs text-muted-foreground flex items-center gap-1.5 mt-1">
+                                <MapPin className="h-3.5 w-3.5" />
+                                {event.location.name}
+                              </p>
+                            )}
+                          </div>
+                          <Button variant="ghost" size="icon">
+                            <ChevronRight className="h-5 w-5" />
+                          </Button>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </Link>
+                ))}
+              </div>
+            ) : todayEvents.length === 0 ? (
+              <div className="flex flex-col items-center justify-center py-12 text-center">
+                <div className="w-20 h-20 rounded-3xl bg-muted/50 flex items-center justify-center mb-4">
+                  <Calendar className="h-10 w-10 text-muted-foreground/30" />
+                </div>
+                <p className="text-muted-foreground text-base">
+                  Nessun evento disponibile
+                </p>
+              </div>
+            ) : null}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <SafeArea className="min-h-screen bg-background flex flex-col">

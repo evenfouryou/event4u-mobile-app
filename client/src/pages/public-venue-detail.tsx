@@ -3,7 +3,9 @@ import { Link, useParams, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { motion, AnimatePresence } from "framer-motion";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { 
   MapPin, 
   Clock, 
@@ -14,7 +16,8 @@ import {
   ChevronRight,
   Phone,
   Globe,
-  Navigation
+  Navigation,
+  ExternalLink
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -94,6 +97,7 @@ const scaleIn = {
 export default function PublicVenueDetail() {
   const params = useParams<{ id: string }>();
   const [, setLocation] = useLocation();
+  const isMobile = useIsMobile();
 
   const { data: venue, isLoading, error } = useQuery<VenueDetail>({
     queryKey: ["/api/public/venues", params.id],
@@ -191,6 +195,171 @@ export default function PublicVenueDetail() {
     );
   }
 
+  // Desktop version
+  if (!isMobile) {
+    return (
+      <div className="min-h-screen bg-background" data-testid="page-venue-detail-desktop">
+        <div className="container mx-auto px-6 py-8 max-w-6xl">
+          <div className="mb-6">
+            <Button 
+              variant="ghost" 
+              onClick={handleBack}
+              className="gap-2"
+              data-testid="button-back"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Torna ai locali
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+            <div className="lg:col-span-2 space-y-6">
+              <Card className="overflow-hidden">
+                <div className="relative h-[300px] w-full">
+                  {venue.heroImageUrl ? (
+                    <img 
+                      src={venue.heroImageUrl} 
+                      alt={venue.name}
+                      className="w-full h-full object-cover"
+                    />
+                  ) : (
+                    <div className="w-full h-full bg-gradient-to-br from-primary/30 via-primary/20 to-primary/10 flex items-center justify-center">
+                      <Building2 className="w-20 h-20 text-primary/40" />
+                    </div>
+                  )}
+                  <div className="absolute inset-0 bg-gradient-to-t from-background/90 via-background/40 to-transparent" />
+                  <div className="absolute bottom-0 left-0 right-0 p-6">
+                    {venue.city && (
+                      <Badge className="bg-primary/90 text-primary-foreground border-0 mb-3">
+                        <MapPin className="w-3 h-3 mr-1" />
+                        {venue.city}
+                      </Badge>
+                    )}
+                    <h1 className="text-3xl font-bold text-foreground" data-testid="text-venue-name">
+                      {venue.name}
+                    </h1>
+                  </div>
+                </div>
+                
+                {venue.shortDescription && (
+                  <CardContent className="pt-6">
+                    <p className="text-muted-foreground leading-relaxed" data-testid="text-description">
+                      {venue.shortDescription}
+                    </p>
+                  </CardContent>
+                )}
+              </Card>
+
+              <Card>
+                <CardHeader>
+                  <div className="flex items-center justify-between gap-4">
+                    <CardTitle className="flex items-center gap-2">
+                      <Calendar className="w-5 h-5 text-primary" />
+                      Prossimi Eventi
+                    </CardTitle>
+                    <Badge variant="secondary">
+                      {venue.upcomingEvents.length}
+                    </Badge>
+                  </div>
+                </CardHeader>
+                <CardContent>
+                  {venue.upcomingEvents.length === 0 ? (
+                    <div className="py-12 text-center">
+                      <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                        <Calendar className="w-8 h-8 text-muted-foreground" />
+                      </div>
+                      <h3 className="text-lg font-semibold text-foreground mb-2">Nessun evento</h3>
+                      <p className="text-muted-foreground text-sm">
+                        Non ci sono eventi in programma.
+                      </p>
+                    </div>
+                  ) : (
+                    <div className="space-y-3">
+                      {venue.upcomingEvents.map((event) => (
+                        <DesktopEventCard key={event.id} event={event} />
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </div>
+
+            <div className="space-y-6">
+              {venue.address && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Navigation className="w-4 h-4 text-primary" />
+                      Indirizzo
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-foreground font-medium" data-testid="text-venue-address">{venue.address}</p>
+                    {venue.city && (
+                      <p className="text-muted-foreground text-sm">{venue.city}</p>
+                    )}
+                    <Button 
+                      variant="outline" 
+                      className="w-full mt-4"
+                      onClick={handleOpenMaps}
+                      data-testid="button-open-maps"
+                    >
+                      <ExternalLink className="w-4 h-4 mr-2" />
+                      Apri in Google Maps
+                    </Button>
+                  </CardContent>
+                </Card>
+              )}
+
+              {venue.openingHours && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Clock className="w-4 h-4 text-primary" />
+                      Orari
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-foreground font-medium" data-testid="text-hours">{venue.openingHours}</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              {venue.capacity && (
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-base flex items-center gap-2">
+                      <Ticket className="w-4 h-4 text-primary" />
+                      Capacità
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <p className="text-foreground font-medium">{venue.capacity} posti</p>
+                  </CardContent>
+                </Card>
+              )}
+
+              <Card className="bg-primary/5 border-primary/20">
+                <CardContent className="pt-6">
+                  <Link href="/acquista">
+                    <Button 
+                      className="w-full"
+                      data-testid="button-all-events"
+                    >
+                      <Ticket className="w-4 h-4 mr-2" />
+                      Scopri tutti gli eventi
+                    </Button>
+                  </Link>
+                </CardContent>
+              </Card>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Mobile version
   return (
     <div className="fixed inset-0 bg-background flex flex-col overflow-hidden">
       <motion.div 
@@ -444,5 +613,84 @@ function EventCard({ event, index }: { event: VenueEvent; index: number }) {
         </motion.div>
       </Link>
     </motion.div>
+  );
+}
+
+function DesktopEventCard({ event }: { event: VenueEvent }) {
+  const eventDate = new Date(event.eventStart);
+
+  return (
+    <Link href={`/acquista/${event.id}`}>
+      <div 
+        className="bg-card border border-border rounded-md overflow-hidden hover-elevate transition-colors cursor-pointer"
+        data-testid={`card-event-${event.id}`}
+      >
+        <div className="p-4">
+          <div className="flex items-start gap-4">
+            <div className="w-14 h-14 rounded-md bg-gradient-to-br from-primary/20 to-primary/10 flex flex-col items-center justify-center shrink-0">
+              <span className="text-xl font-bold text-primary leading-none">
+                {format(eventDate, "d")}
+              </span>
+              <span className="text-[10px] text-muted-foreground uppercase font-medium">
+                {format(eventDate, "MMM", { locale: it })}
+              </span>
+            </div>
+            
+            <div className="flex-1 min-w-0">
+              <h3 className="text-base font-semibold text-foreground truncate mb-1" data-testid={`text-event-name-${event.id}`}>
+                {event.eventName}
+              </h3>
+              <p className="text-muted-foreground text-sm flex items-center gap-1.5">
+                <Clock className="w-3.5 h-3.5 shrink-0" />
+                {format(eventDate, "EEEE d MMMM • HH:mm", { locale: it })}
+              </p>
+              
+              {event.sectors.length > 0 && (
+                <div className="flex flex-wrap gap-1.5 mt-2">
+                  {event.sectors.slice(0, 4).map((sector) => (
+                    <Badge 
+                      key={sector.id}
+                      variant="outline" 
+                      className="border-border text-muted-foreground text-xs"
+                    >
+                      {sector.name}
+                    </Badge>
+                  ))}
+                  {event.sectors.length > 4 && (
+                    <Badge 
+                      variant="outline" 
+                      className="border-border text-muted-foreground text-xs"
+                    >
+                      +{event.sectors.length - 4}
+                    </Badge>
+                  )}
+                </div>
+              )}
+            </div>
+            
+            <div className="text-right shrink-0 flex flex-col items-end gap-2">
+              {event.minPrice !== null && (
+                <div>
+                  <p className="text-xs text-muted-foreground uppercase">Da</p>
+                  <p className="text-xl font-bold text-primary">
+                    €{event.minPrice.toFixed(0)}
+                  </p>
+                </div>
+              )}
+              {event.requiresNominative && (
+                <Badge className="bg-purple-500/20 text-purple-400 border-0 text-xs">
+                  Nominativo
+                </Badge>
+              )}
+            </div>
+          </div>
+        </div>
+        
+        <div className="px-4 py-3 bg-primary/5 border-t border-border flex items-center justify-between">
+          <span className="text-sm font-medium text-primary">Acquista biglietti</span>
+          <ChevronRight className="w-4 h-4 text-primary" />
+        </div>
+      </div>
+    </Link>
   );
 }

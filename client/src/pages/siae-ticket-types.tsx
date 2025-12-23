@@ -3,6 +3,7 @@ import { useParams, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Button } from "@/components/ui/button";
@@ -75,7 +76,15 @@ import {
   Link2,
   Copy,
   ExternalLink,
+  ChevronRight,
 } from "lucide-react";
+import {
+  MobileAppLayout,
+  MobileHeader,
+  HapticButton,
+  BottomSheet,
+  triggerHaptic,
+} from "@/components/mobile-primitives";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -110,9 +119,13 @@ const statusLabelOptions = [
 export default function SiaeTicketTypes() {
   const { eventId } = useParams<{ eventId: string }>();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [editingSector, setEditingSector] = useState<SiaeEventSector | null>(null);
+  const [isEditSheetOpen, setIsEditSheetOpen] = useState(false);
   const [deletingSector, setDeletingSector] = useState<SiaeEventSector | null>(null);
+  const [isDeleteSheetOpen, setIsDeleteSheetOpen] = useState(false);
 
   const { data: ticketedEvent, isLoading: isLoadingEvent } = useQuery<SiaeTicketedEvent>({
     queryKey: ["/api/siae/ticketed-events", eventId],
@@ -335,6 +348,26 @@ export default function SiaeTicketTypes() {
     );
   }
 
+  const openMobileEditSheet = (sector: SiaeEventSector) => {
+    setEditingSector(sector);
+    editForm.reset({
+      name: sector.name,
+      sectorCode: sector.sectorCode,
+      capacity: sector.capacity,
+      priceIntero: Number(sector.priceIntero),
+      priceRidotto: sector.priceRidotto ? Number(sector.priceRidotto) : null,
+      priceOmaggio: sector.priceOmaggio ? Number(sector.priceOmaggio) : 0,
+      prevendita: sector.prevendita ? Number(sector.prevendita) : 0,
+      ivaRate: sector.ivaRate ? Number(sector.ivaRate) : 22,
+      statusLabel: (sector.statusLabel as SectorFormData["statusLabel"]) || "available",
+      customStatusText: sector.customStatusText || "",
+      availabilityStart: sector.availabilityStart ? format(new Date(sector.availabilityStart), "yyyy-MM-dd'T'HH:mm") : "",
+      availabilityEnd: sector.availabilityEnd ? format(new Date(sector.availabilityEnd), "yyyy-MM-dd'T'HH:mm") : "",
+      sortOrder: sector.sortOrder || 0,
+    });
+    setIsEditSheetOpen(true);
+  };
+
   const SectorFormFields = ({ form, isEdit = false, hasSoldTickets = false }: { form: ReturnType<typeof useForm<SectorFormData>>; isEdit?: boolean; hasSoldTickets?: boolean }) => (
     <div className="space-y-4">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -556,8 +589,10 @@ export default function SiaeTicketTypes() {
     </div>
   );
 
-  return (
-    <div className="container mx-auto py-6 px-4 space-y-6">
+  // Desktop version
+  if (!isMobile) {
+    return (
+      <div className="container mx-auto py-6 px-4 space-y-6" data-testid="page-siae-ticket-types">
       <div className="flex items-center justify-between flex-wrap gap-4">
         <div className="flex items-center gap-4">
           <Link href={`/event-hub/${ticketedEvent?.eventId}`}>
@@ -906,6 +941,366 @@ export default function SiaeTicketTypes() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-    </div>
+      </div>
+    );
+  }
+
+  // Mobile version
+  return (
+    <MobileAppLayout
+      header={
+        <MobileHeader
+          title="Tipologie Biglietti"
+          subtitle={parentEvent?.name}
+          leftAction={
+            <Link href={`/event-hub/${ticketedEvent?.eventId}`}>
+              <HapticButton variant="ghost" size="icon" data-testid="btn-back-mobile">
+                <ArrowLeft className="h-5 w-5" />
+              </HapticButton>
+            </Link>
+          }
+          rightAction={
+            <HapticButton 
+              size="icon" 
+              onClick={() => {
+                triggerHaptic('light');
+                setIsCreateSheetOpen(true);
+              }}
+              data-testid="btn-create-sector-mobile"
+            >
+              <Plus className="h-5 w-5" />
+            </HapticButton>
+          }
+        />
+      }
+    >
+      <div className="p-4 space-y-4" data-testid="page-siae-ticket-types-mobile">
+        {/* Event Settings Card */}
+        <div className="rounded-xl border border-border bg-card p-4 space-y-4">
+          <div className="flex items-center gap-2 text-sm font-medium">
+            <Settings className="h-4 w-4 text-amber-400" />
+            Impostazioni Vendita
+          </div>
+          
+          <div className="space-y-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                {parentEvent?.isPublic ? (
+                  <Eye className="h-4 w-4 text-purple-400" />
+                ) : (
+                  <EyeOff className="h-4 w-4 text-muted-foreground" />
+                )}
+                <span className="text-sm">Visibilità Evento</span>
+              </div>
+              <Switch
+                checked={parentEvent?.isPublic ?? false}
+                onCheckedChange={(checked) => {
+                  triggerHaptic('light');
+                  toggleEventVisibilityMutation.mutate(checked);
+                }}
+                disabled={toggleEventVisibilityMutation.isPending || !ticketedEvent?.eventId}
+                data-testid="toggle-event-visibility-mobile"
+              />
+            </div>
+            
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Ticket className="h-4 w-4 text-emerald-400" />
+                <span className="text-sm">Vendita Biglietti</span>
+              </div>
+              <Select
+                value={ticketedEvent?.ticketingStatus ?? 'draft'}
+                onValueChange={(value) => {
+                  triggerHaptic('light');
+                  updateTicketingStatusMutation.mutate(value);
+                }}
+                disabled={updateTicketingStatusMutation.isPending || !eventId}
+              >
+                <SelectTrigger className="w-[120px] h-8" data-testid="select-ticketing-status-mobile">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="draft">Bozza</SelectItem>
+                  <SelectItem value="active">Attiva</SelectItem>
+                  <SelectItem value="suspended">Sospesa</SelectItem>
+                  <SelectItem value="closed">Chiusa</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          
+          {parentEvent && (
+            <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/30">
+              <Link2 className="h-4 w-4 text-primary shrink-0" />
+              <span className="font-mono text-xs flex-1 truncate">
+                {`${window.location.origin}/e/${parentEvent.id.slice(0, 8)}`}
+              </span>
+              <HapticButton 
+                variant="ghost" 
+                size="icon"
+                className="h-7 w-7"
+                onClick={() => {
+                  triggerHaptic('success');
+                  navigator.clipboard.writeText(`${window.location.origin}/e/${parentEvent.id.slice(0, 8)}`);
+                  toast({ title: "Link copiato!" });
+                }}
+                data-testid="btn-copy-event-link-mobile"
+              >
+                <Copy className="h-3.5 w-3.5" />
+              </HapticButton>
+            </div>
+          )}
+          
+          <div className="flex flex-wrap gap-1.5">
+            {parentEvent?.isPublic ? (
+              <Badge className="bg-purple-600 text-xs"><Eye className="h-3 w-3 mr-1" />Pubblico</Badge>
+            ) : (
+              <Badge variant="outline" className="text-xs"><EyeOff className="h-3 w-3 mr-1" />Nascosto</Badge>
+            )}
+            {ticketedEvent?.ticketingStatus === 'active' ? (
+              <Badge className="bg-emerald-600 text-xs"><CheckCircle2 className="h-3 w-3 mr-1" />Attiva</Badge>
+            ) : ticketedEvent?.ticketingStatus === 'suspended' ? (
+              <Badge className="bg-amber-600 text-xs"><AlertCircle className="h-3 w-3 mr-1" />Sospesa</Badge>
+            ) : ticketedEvent?.ticketingStatus === 'closed' ? (
+              <Badge className="bg-rose-600 text-xs"><XCircle className="h-3 w-3 mr-1" />Chiusa</Badge>
+            ) : (
+              <Badge variant="secondary" className="text-xs"><Clock className="h-3 w-3 mr-1" />Bozza</Badge>
+            )}
+          </div>
+        </div>
+
+        {/* Sectors List */}
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 text-sm font-medium px-1">
+            <Users className="h-4 w-4 text-blue-400" />
+            Tipologie ({sectors.length})
+          </div>
+          
+          {sectors.length === 0 ? (
+            <div className="text-center py-12 rounded-xl border border-dashed border-border">
+              <Ticket className="h-10 w-10 mx-auto mb-3 text-muted-foreground opacity-50" />
+              <p className="text-sm text-muted-foreground mb-4">Nessuna tipologia configurata</p>
+              <HapticButton 
+                onClick={() => {
+                  triggerHaptic('light');
+                  setIsCreateSheetOpen(true);
+                }}
+                data-testid="btn-create-sector-empty-mobile"
+              >
+                <Plus className="h-4 w-4 mr-2" />
+                Crea tipologia
+              </HapticButton>
+            </div>
+          ) : (
+            <div className="space-y-2">
+              {sectors.map((sector) => {
+                const soldCount = sector.capacity - sector.availableSeats;
+                return (
+                  <div 
+                    key={sector.id}
+                    className="rounded-xl border border-border bg-card p-4 active:bg-muted/50 transition-colors"
+                    onClick={() => {
+                      triggerHaptic('light');
+                      openMobileEditSheet(sector);
+                    }}
+                    data-testid={`card-sector-${sector.id}`}
+                  >
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="font-medium truncate">{sector.name}</span>
+                          <Badge variant="outline" className="text-xs">{sector.sectorCode}</Badge>
+                        </div>
+                        
+                        <div className="text-sm text-muted-foreground space-y-0.5">
+                          <div className="flex items-center gap-1">
+                            <Euro className="h-3 w-3" />
+                            <span>€{Number(sector.priceIntero).toFixed(2)}</span>
+                            {sector.priceRidotto && (
+                              <span className="text-xs">/ Rid. €{Number(sector.priceRidotto).toFixed(2)}</span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-1">
+                            <Users className="h-3 w-3" />
+                            <span className="text-blue-400 font-medium">{soldCount}</span>
+                            <span>/ {sector.capacity}</span>
+                          </div>
+                        </div>
+                        
+                        <div className="flex flex-wrap gap-1.5 mt-2">
+                          {getStatusBadge(sector)}
+                          {!sector.active && (
+                            <Badge variant="secondary" className="text-xs">Disattivo</Badge>
+                          )}
+                        </div>
+                      </div>
+                      
+                      <div className="flex items-center gap-2">
+                        <Switch
+                          checked={sector.active}
+                          onCheckedChange={(checked) => {
+                            triggerHaptic('light');
+                            toggleActiveMutation.mutate({ id: sector.id, active: checked });
+                          }}
+                          disabled={toggleActiveMutation.isPending}
+                          onClick={(e) => e.stopPropagation()}
+                          data-testid={`toggle-active-mobile-${sector.id}`}
+                        />
+                        <ChevronRight className="h-5 w-5 text-muted-foreground" />
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Create Bottom Sheet */}
+      <BottomSheet
+        open={isCreateSheetOpen}
+        onClose={() => setIsCreateSheetOpen(false)}
+        title="Nuova Tipologia"
+      >
+        <div className="p-4 pb-8 max-h-[70vh] overflow-y-auto">
+          <Form {...createForm}>
+            <form onSubmit={createForm.handleSubmit((data) => {
+              triggerHaptic('success');
+              createMutation.mutate(data);
+              setIsCreateSheetOpen(false);
+              createForm.reset();
+            })} className="space-y-4">
+              <SectorFormFields form={createForm} />
+              <div className="flex gap-3 pt-4">
+                <HapticButton 
+                  type="button" 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => setIsCreateSheetOpen(false)}
+                  data-testid="btn-cancel-create-mobile"
+                >
+                  Annulla
+                </HapticButton>
+                <HapticButton 
+                  type="submit" 
+                  className="flex-1"
+                  disabled={createMutation.isPending}
+                  data-testid="btn-submit-create-mobile"
+                >
+                  {createMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Crea
+                </HapticButton>
+              </div>
+            </form>
+          </Form>
+        </div>
+      </BottomSheet>
+
+      {/* Edit Bottom Sheet */}
+      <BottomSheet
+        open={isEditSheetOpen}
+        onClose={() => {
+          setIsEditSheetOpen(false);
+          setEditingSector(null);
+        }}
+        title={`Modifica ${editingSector?.name || ''}`}
+      >
+        <div className="p-4 pb-8 max-h-[70vh] overflow-y-auto">
+          <Form {...editForm}>
+            <form onSubmit={editForm.handleSubmit((data) => {
+              if (editingSector) {
+                triggerHaptic('success');
+                updateMutation.mutate({ id: editingSector.id, data });
+                setIsEditSheetOpen(false);
+                setEditingSector(null);
+              }
+            })} className="space-y-4">
+              <SectorFormFields form={editForm} isEdit={true} hasSoldTickets={!canEditPrices(editingSector || {} as SiaeEventSector)} />
+              <div className="flex gap-3 pt-4">
+                <HapticButton 
+                  type="button" 
+                  variant="outline" 
+                  className="flex-1"
+                  onClick={() => {
+                    setIsEditSheetOpen(false);
+                    setEditingSector(null);
+                  }}
+                  data-testid="btn-cancel-edit-mobile"
+                >
+                  Annulla
+                </HapticButton>
+                <HapticButton 
+                  type="submit" 
+                  className="flex-1"
+                  disabled={updateMutation.isPending}
+                  data-testid="btn-submit-edit-mobile"
+                >
+                  {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                  Salva
+                </HapticButton>
+              </div>
+              {editingSector && (editingSector.ticketsSold || 0) === 0 && (
+                <HapticButton
+                  type="button"
+                  variant="destructive"
+                  className="w-full mt-2"
+                  onClick={() => {
+                    triggerHaptic('heavy');
+                    setIsDeleteSheetOpen(true);
+                  }}
+                  data-testid="btn-delete-sector-mobile"
+                >
+                  <Trash2 className="h-4 w-4 mr-2" />
+                  Elimina Tipologia
+                </HapticButton>
+              )}
+            </form>
+          </Form>
+        </div>
+      </BottomSheet>
+
+      {/* Delete Confirmation Sheet */}
+      <BottomSheet
+        open={isDeleteSheetOpen}
+        onClose={() => setIsDeleteSheetOpen(false)}
+        title="Conferma Eliminazione"
+      >
+        <div className="p-4 pb-8 space-y-4">
+          <p className="text-sm text-muted-foreground">
+            Sei sicuro di voler eliminare la tipologia "{editingSector?.name}"? 
+            Questa azione non può essere annullata.
+          </p>
+          <div className="flex gap-3">
+            <HapticButton 
+              variant="outline" 
+              className="flex-1"
+              onClick={() => setIsDeleteSheetOpen(false)}
+              data-testid="btn-cancel-delete-mobile"
+            >
+              Annulla
+            </HapticButton>
+            <HapticButton
+              variant="destructive"
+              className="flex-1"
+              onClick={() => {
+                if (editingSector) {
+                  triggerHaptic('error');
+                  deleteMutation.mutate(editingSector.id);
+                  setIsDeleteSheetOpen(false);
+                  setIsEditSheetOpen(false);
+                  setEditingSector(null);
+                }
+              }}
+              disabled={deleteMutation.isPending}
+              data-testid="btn-confirm-delete-mobile"
+            >
+              {deleteMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+              Elimina
+            </HapticButton>
+          </div>
+        </div>
+      </BottomSheet>
+    </MobileAppLayout>
   );
 }

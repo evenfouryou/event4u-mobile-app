@@ -3,6 +3,7 @@ import { Route, Switch, useLocation, Link } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import { useAuth } from "@/hooks/useAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { queryClient } from "@/lib/queryClient";
 import AccountHome from "@/pages/account-home";
 import AccountProfile from "@/pages/account-profile";
@@ -13,6 +14,8 @@ import AccountWallet from "@/pages/account-wallet";
 import AccountResales from "@/pages/account-resales";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { Card, CardContent } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import {
   MobileAppLayout,
   MobileHeader,
@@ -72,6 +75,7 @@ const scaleIn = {
 export default function AccountPage() {
   const [location, navigate] = useLocation();
   const { user } = useAuth();
+  const isMobile = useIsMobile();
 
   useEffect(() => {
     if (user && (user as any).role === 'scanner') {
@@ -131,6 +135,16 @@ export default function AccountPage() {
     (location.includes('/name-change') || /\/account\/tickets\/[^/]+$/.test(location));
 
   if (isLoading) {
+    if (!isMobile) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <Loader2 className="w-12 h-12 text-primary mx-auto animate-spin" />
+            <p className="text-muted-foreground text-lg">Caricamento...</p>
+          </div>
+        </div>
+      );
+    }
     return (
       <MobileAppLayout className="bg-background">
         <motion.div 
@@ -159,7 +173,16 @@ export default function AccountPage() {
   }
 
   if (isError || !customer) {
-    // Show loading while redirect is happening
+    if (!isMobile) {
+      return (
+        <div className="min-h-screen bg-background flex items-center justify-center">
+          <div className="text-center space-y-4">
+            <Loader2 className="w-12 h-12 text-primary mx-auto animate-spin" />
+            <p className="text-muted-foreground text-lg">Reindirizzamento al login...</p>
+          </div>
+        </div>
+      );
+    }
     return (
       <MobileAppLayout className="bg-background">
         <motion.div 
@@ -261,6 +284,95 @@ export default function AccountPage() {
       })}
     </MobileBottomBar>
   );
+
+  if (!isMobile) {
+    return (
+      <div className="min-h-screen bg-background" data-testid="page-account">
+        <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur-xl">
+          <div className="container mx-auto px-6 h-16 flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <Link href="/acquista">
+                <div 
+                  className="flex items-center gap-2 cursor-pointer"
+                  data-testid="link-logo"
+                >
+                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
+                    <Sparkles className="w-4 h-4 text-primary-foreground" />
+                  </div>
+                  <span className="font-semibold text-lg">Event4U</span>
+                </div>
+              </Link>
+            </div>
+
+            <nav className="flex items-center gap-1">
+              {navItems.map((item) => {
+                const isActive = location === item.href || 
+                  (item.href !== "/account/home" && location.startsWith(item.href));
+                const Icon = item.icon;
+                return (
+                  <Button
+                    key={item.href}
+                    variant={isActive ? "secondary" : "ghost"}
+                    size="sm"
+                    onClick={() => navigate(item.href)}
+                    className="gap-2"
+                    data-testid={`nav-${item.label.toLowerCase()}`}
+                  >
+                    <Icon className="w-4 h-4" />
+                    {item.label}
+                  </Button>
+                );
+              })}
+            </nav>
+
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+              <Link href="/account/profile">
+                <Avatar 
+                  className="w-10 h-10 bg-primary/20 border-2 border-primary/30 cursor-pointer" 
+                  data-testid="button-avatar"
+                >
+                  <AvatarFallback className="bg-transparent text-primary font-semibold text-sm">
+                    {getInitials()}
+                  </AvatarFallback>
+                </Avatar>
+              </Link>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={handleLogout}
+                data-testid="button-logout"
+              >
+                <LogOut className="w-4 h-4" />
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-6 py-8">
+          <AnimatePresence mode="wait">
+            <motion.div
+              key={location}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={springTransition}
+            >
+              <Switch>
+                <Route path="/account/home" component={AccountHome} />
+                <Route path="/account/profile" component={AccountProfile} />
+                <Route path="/account/tickets/:id/name-change" component={AccountNameChange} />
+                <Route path="/account/tickets/:id" component={AccountTicketDetail} />
+                <Route path="/account/tickets" component={AccountTickets} />
+                <Route path="/account/wallet" component={AccountWallet} />
+                <Route path="/account/resales" component={AccountResales} />
+              </Switch>
+            </motion.div>
+          </AnimatePresence>
+        </main>
+      </div>
+    );
+  }
 
   return (
     <MobileAppLayout

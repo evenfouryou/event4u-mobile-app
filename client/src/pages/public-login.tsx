@@ -3,10 +3,12 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle, Mail, Ticket, Eye, EyeOff, Lock, ArrowLeft } from "lucide-react";
 import { Link, useSearch } from "wouter";
 import { apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { motion } from "framer-motion";
 import { triggerHaptic } from "@/components/mobile-primitives";
 
@@ -16,6 +18,7 @@ export default function PublicLoginPage() {
   const searchString = useSearch();
   const params = new URLSearchParams(searchString);
   const redirectTo = params.get("redirect") || "/account";
+  const isMobile = useIsMobile();
   
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -80,6 +83,153 @@ export default function PublicLoginPage() {
     triggerHaptic('light');
   };
 
+  // Desktop version
+  if (!isMobile) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center p-6" data-testid="page-public-login-desktop">
+        <div className="absolute -top-32 -left-32 w-80 h-80 rounded-full opacity-20 pointer-events-none" style={{ background: "radial-gradient(circle, rgba(255,215,0,0.3) 0%, transparent 70%)" }} />
+        <div className="absolute -bottom-32 -right-32 w-96 h-96 rounded-full opacity-15 pointer-events-none" style={{ background: "radial-gradient(circle, rgba(0,206,209,0.3) 0%, transparent 70%)" }} />
+        
+        <div className="w-full max-w-md relative z-10">
+          <div className="text-center mb-8">
+            <Link href="/events" className="inline-flex flex-col items-center gap-4">
+              <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-amber-500 flex items-center justify-center shadow-xl shadow-primary/30">
+                <Ticket className="h-10 w-10 text-black" />
+              </div>
+              <span className="text-2xl font-bold tracking-tight">
+                Event<span className="text-primary">4</span>U
+              </span>
+            </Link>
+          </div>
+
+          <Card className="border-white/10 bg-card/50 backdrop-blur-xl">
+            <CardHeader className="text-center pb-2">
+              <CardTitle className="text-2xl">Bentornato</CardTitle>
+              <CardDescription>Accedi per gestire i tuoi biglietti</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <form onSubmit={handleSubmit} className="space-y-4">
+                {error && (
+                  <Alert variant="destructive" data-testid="alert-error-desktop" className="border-destructive/50 bg-destructive/10">
+                    <AlertCircle className="h-4 w-4" />
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
+
+                {showResendVerification && (
+                  <Alert data-testid="alert-resend-verification-desktop" className="border-primary/50 bg-primary/10">
+                    <Mail className="h-4 w-4 text-primary" />
+                    <AlertDescription>
+                      <div className="space-y-3">
+                        <p className="text-sm">La tua email non è stata ancora verificata.</p>
+                        <Button 
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={handleResendVerification}
+                          disabled={isResending}
+                          className="w-full border-primary/30"
+                          data-testid="button-resend-verification-desktop"
+                        >
+                          {isResending ? "Invio in corso..." : "Rinvia Email di Verifica"}
+                        </Button>
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
+                <div className="space-y-2">
+                  <Label htmlFor="email-desktop">Email</Label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="email-desktop"
+                      type="email"
+                      placeholder="tua@email.com"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      autoComplete="email"
+                      className="pl-10 bg-white/5 border-white/10 focus:border-primary"
+                      data-testid="input-public-email-desktop"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="password-desktop">Password</Label>
+                  <div className="relative">
+                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      id="password-desktop"
+                      type={showPassword ? "text" : "password"}
+                      placeholder="••••••••"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      autoComplete="current-password"
+                      className="pl-10 pr-10 bg-white/5 border-white/10 focus:border-primary"
+                      data-testid="input-public-password-desktop"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
+                      data-testid="button-toggle-password-desktop"
+                    >
+                      {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                </div>
+
+                <div className="flex justify-end">
+                  <Link 
+                    href="/public-forgot-password" 
+                    className="text-sm text-primary hover:underline"
+                    data-testid="link-public-forgot-password-desktop"
+                  >
+                    Password dimenticata?
+                  </Link>
+                </div>
+
+                <Button
+                  type="submit"
+                  className="w-full gradient-golden text-black font-semibold"
+                  disabled={isLoading}
+                  data-testid="button-public-submit-desktop"
+                >
+                  {isLoading ? "Accesso in corso..." : "Accedi"}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          <div className="mt-6 text-center space-y-4">
+            <p className="text-sm text-muted-foreground">
+              Non hai un account?{" "}
+              <Link href="/register" className="text-primary font-semibold hover:underline" data-testid="link-public-register-desktop">
+                Registrati gratis
+              </Link>
+            </p>
+            <Link 
+              href="/events" 
+              className="text-sm text-muted-foreground hover:text-foreground inline-flex items-center gap-2"
+              data-testid="link-back-to-events-desktop"
+            >
+              <ArrowLeft className="h-4 w-4" />
+              Torna agli eventi
+            </Link>
+          </div>
+
+          <p className="mt-8 text-center text-xs text-muted-foreground/60">
+            © {new Date().getFullYear()} Event Four You
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  // Mobile version
   return (
     <div 
       className="min-h-screen h-screen bg-background flex flex-col relative overflow-hidden"

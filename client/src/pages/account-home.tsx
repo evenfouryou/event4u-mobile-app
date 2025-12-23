@@ -3,9 +3,11 @@ import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { motion } from "framer-motion";
+import { useIsMobile } from "@/hooks/use-mobile";
 import {
   Wallet,
   Ticket,
@@ -87,6 +89,7 @@ const scaleIn = {
 };
 
 export default function AccountHome() {
+  const isMobile = useIsMobile();
   const { data: customer, isLoading: customerLoading } = useQuery<Customer>({
     queryKey: ["/api/public/customers/me"],
   });
@@ -130,6 +133,164 @@ export default function AccountHome() {
     if (!customer) return "U";
     return `${customer.firstName?.[0] || ''}${customer.lastName?.[0] || ''}`.toUpperCase();
   };
+
+  if (!isMobile) {
+    return (
+      <div className="container mx-auto p-6 space-y-6" data-testid="page-account-home-desktop">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Avatar className="w-16 h-16 border-2 border-primary/30">
+              <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-xl font-bold">
+                {getInitials()}
+              </AvatarFallback>
+            </Avatar>
+            <div>
+              <h1 className="text-2xl font-bold text-foreground" data-testid="text-greeting-desktop">
+                {getGreeting()}, {customer?.firstName}!
+              </h1>
+              <p className="text-muted-foreground">{customer?.email}</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-4 gap-4">
+          <Link href="/acquista">
+            <Card className="hover-elevate cursor-pointer h-full">
+              <CardContent className="pt-6 flex flex-col items-center gap-3">
+                <div className="w-14 h-14 rounded-full bg-primary/15 flex items-center justify-center">
+                  <ShoppingBag className="w-7 h-7 text-primary" />
+                </div>
+                <span className="font-semibold text-foreground text-center">Acquista Biglietti</span>
+              </CardContent>
+            </Card>
+          </Link>
+          
+          <Link href="/account/tickets">
+            <Card className="hover-elevate cursor-pointer h-full">
+              <CardContent className="pt-6 flex flex-col items-center gap-3">
+                <div className="w-14 h-14 rounded-full bg-emerald-500/15 flex items-center justify-center">
+                  <QrCode className="w-7 h-7 text-emerald-500" />
+                </div>
+                <span className="font-semibold text-foreground text-center">I Miei QR</span>
+              </CardContent>
+            </Card>
+          </Link>
+          
+          <Link href="/account/wallet">
+            <Card className="hover-elevate cursor-pointer h-full">
+              <CardContent className="pt-6 flex flex-col items-center gap-3">
+                <div className="w-14 h-14 rounded-full bg-blue-500/15 flex items-center justify-center">
+                  <CreditCard className="w-7 h-7 text-blue-500" />
+                </div>
+                <span className="font-semibold text-foreground text-center">Ricarica Wallet</span>
+              </CardContent>
+            </Card>
+          </Link>
+          
+          <Link href="/account/resales">
+            <Card className="hover-elevate cursor-pointer h-full">
+              <CardContent className="pt-6 flex flex-col items-center gap-3">
+                <div className="w-14 h-14 rounded-full bg-purple-500/15 flex items-center justify-center">
+                  <RefreshCw className="w-7 h-7 text-purple-500" />
+                </div>
+                <span className="font-semibold text-foreground text-center">Rivendi Biglietti</span>
+              </CardContent>
+            </Card>
+          </Link>
+        </div>
+
+        <Card className="bg-gradient-to-br from-primary/10 via-primary/5 to-card border-primary/20">
+          <CardContent className="pt-6">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-full bg-primary/20 flex items-center justify-center">
+                  <Wallet className="w-7 h-7 text-primary" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Il Mio Wallet</h3>
+                  <p className="text-muted-foreground">Saldo disponibile</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-4">
+                <p className="text-4xl font-bold text-foreground tabular-nums" data-testid="text-wallet-balance-desktop">
+                  {balance.toFixed(2)} €
+                </p>
+                <Link href="/account/wallet">
+                  <Button className="gap-2" data-testid="button-topup-desktop">
+                    <Plus className="w-4 h-4" />
+                    Ricarica
+                  </Button>
+                </Link>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between gap-4">
+              <CardTitle className="flex items-center gap-2">
+                <Ticket className="w-5 h-5 text-primary" />
+                Prossimi Eventi
+              </CardTitle>
+              <Link href="/account/tickets">
+                <Button variant="ghost" className="gap-1" data-testid="button-view-tickets-desktop">
+                  Tutti ({totalTickets})
+                  <ChevronRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent>
+            {upcomingTickets.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mx-auto mb-4">
+                  <Ticket className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <p className="text-muted-foreground mb-4">Nessun biglietto in programma</p>
+                <Link href="/acquista">
+                  <Button className="gap-2">
+                    <ShoppingBag className="w-4 h-4" />
+                    Esplora Eventi
+                  </Button>
+                </Link>
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {upcomingTickets.map((ticket) => (
+                  <Link key={ticket.id} href={`/account/tickets/${ticket.id}`}>
+                    <div 
+                      className="flex items-center gap-4 p-4 rounded-lg hover-elevate cursor-pointer"
+                      data-testid={`ticket-preview-desktop-${ticket.id}`}
+                    >
+                      <div className="w-12 h-12 rounded-lg bg-primary/15 flex items-center justify-center flex-shrink-0">
+                        <Calendar className="w-6 h-6 text-primary" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <h4 className="font-semibold text-foreground truncate">{ticket.eventName}</h4>
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground mt-1">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5" />
+                            {format(new Date(ticket.eventStart), "d MMM yyyy", { locale: it })}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <MapPin className="w-3.5 h-3.5" />
+                            {ticket.locationName}
+                          </span>
+                        </div>
+                      </div>
+                      <Badge variant="outline">{ticket.sectorName}</Badge>
+                      <ChevronRight className="w-5 h-5 text-muted-foreground" />
+                    </div>
+                  </Link>
+                ))}
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <motion.div 

@@ -3,8 +3,9 @@ import { useParams, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -23,8 +24,17 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import { ArrowLeft, Plus, Minus, Package, Upload, Download, History, MapPin } from "lucide-react";
+import { ArrowLeft, Plus, Minus, Package, Upload, Download, History, MapPin, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Event, Product, Station } from "@shared/schema";
 
@@ -56,8 +66,11 @@ type DirectStockSummary = {
 export default function EventDirectStock() {
   const { id } = useParams();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
 
   const [selectedStationId, setSelectedStationId] = useState<string>("_all");
+  const [isLoadDialogOpen, setIsLoadDialogOpen] = useState(false);
+  const [isConsumeDialogOpen, setIsConsumeDialogOpen] = useState(false);
   
   const [loadProductId, setLoadProductId] = useState<string>("");
   const [loadQuantity, setLoadQuantity] = useState<string>("");
@@ -118,6 +131,7 @@ export default function EventDirectStock() {
       setLoadProductId("");
       setLoadQuantity("");
       setLoadReason("");
+      setIsLoadDialogOpen(false);
       toast({
         title: "Carico registrato",
         description: "Prodotto caricato con successo",
@@ -142,6 +156,7 @@ export default function EventDirectStock() {
       setConsumeProductId("");
       setConsumeQuantity("");
       setConsumeReason("");
+      setIsConsumeDialogOpen(false);
       toast({
         title: "Consumo registrato",
         description: "Prodotto consumato con successo",
@@ -226,6 +241,428 @@ export default function EventDirectStock() {
     );
   }
 
+  // Desktop version
+  if (!isMobile) {
+    return (
+      <div className="container mx-auto p-6 space-y-6" data-testid="page-event-direct-stock">
+        <div className="flex items-center justify-between gap-4">
+          <div className="flex items-center gap-4">
+            <Button
+              asChild
+              variant="ghost"
+              size="icon"
+              data-testid="button-back-desktop"
+            >
+              <Link href={`/events/${id}`}>
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold" data-testid="text-title-desktop">Carico/Scarico Diretto</h1>
+              <p className="text-muted-foreground">{event.name}</p>
+            </div>
+          </div>
+          <div className="flex gap-2">
+            <Dialog open={isLoadDialogOpen} onOpenChange={setIsLoadDialogOpen}>
+              <DialogTrigger asChild>
+                <Button data-testid="button-open-load-dialog">
+                  <Upload className="w-4 h-4 mr-2" />
+                  Carico Diretto
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Upload className="h-5 w-5 text-teal" />
+                    Carico Diretto
+                  </DialogTitle>
+                  <DialogDescription>
+                    Aggiungi prodotti direttamente allo stock dell'evento
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="load-product-desktop">Prodotto</Label>
+                    <Select
+                      value={loadProductId}
+                      onValueChange={setLoadProductId}
+                      data-testid="select-load-product-desktop"
+                    >
+                      <SelectTrigger id="load-product-desktop">
+                        <SelectValue placeholder="Seleziona prodotto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {products?.map((product) => (
+                          <SelectItem key={product.id} value={product.id}>
+                            {product.name} ({product.unitOfMeasure})
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  {stations && stations.length > 0 && (
+                    <div className="space-y-2">
+                      <Label htmlFor="load-station-desktop">Stazione</Label>
+                      <Select
+                        value={selectedStationId}
+                        onValueChange={setSelectedStationId}
+                      >
+                        <SelectTrigger id="load-station-desktop">
+                          <SelectValue placeholder="Tutte le stazioni" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_all">Tutte le stazioni</SelectItem>
+                          {stations.map((station) => (
+                            <SelectItem key={station.id} value={station.id}>
+                              {station.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="load-quantity-desktop">Quantità</Label>
+                    <Input
+                      id="load-quantity-desktop"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0"
+                      value={loadQuantity}
+                      onChange={(e) => setLoadQuantity(e.target.value)}
+                      data-testid="input-load-quantity-desktop"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="load-reason-desktop">Note (opzionale)</Label>
+                    <Input
+                      id="load-reason-desktop"
+                      placeholder="Es: Acquisto fornitore XYZ"
+                      value={loadReason}
+                      onChange={(e) => setLoadReason(e.target.value)}
+                      data-testid="input-load-reason-desktop"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsLoadDialogOpen(false)}>
+                    Annulla
+                  </Button>
+                  <Button
+                    onClick={handleLoad}
+                    disabled={loadMutation.isPending}
+                    data-testid="button-confirm-load-desktop"
+                  >
+                    {loadMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Caricamento...
+                      </>
+                    ) : (
+                      <>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Carica Prodotto
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+
+            <Dialog open={isConsumeDialogOpen} onOpenChange={setIsConsumeDialogOpen}>
+              <DialogTrigger asChild>
+                <Button variant="outline" data-testid="button-open-consume-dialog">
+                  <Download className="w-4 h-4 mr-2" />
+                  Scarico / Consumo
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <Download className="h-5 w-5 text-amber-500" />
+                    Scarico / Consumo
+                  </DialogTitle>
+                  <DialogDescription>
+                    Registra il consumo di prodotti dall'evento
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4 py-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="consume-product-desktop">Prodotto</Label>
+                    <Select
+                      value={consumeProductId}
+                      onValueChange={setConsumeProductId}
+                      data-testid="select-consume-product-desktop"
+                    >
+                      <SelectTrigger id="consume-product-desktop">
+                        <SelectValue placeholder="Seleziona prodotto" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {directStock?.filter(s => s.available > 0).map((stock) => (
+                          <SelectItem key={stock.productId} value={stock.productId}>
+                            {stock.productName} (Disp: {stock.available.toFixed(2)})
+                          </SelectItem>
+                        ))}
+                        {(!directStock || directStock.filter(s => s.available > 0).length === 0) && (
+                          <SelectItem value="_empty" disabled>
+                            Nessun prodotto disponibile
+                          </SelectItem>
+                        )}
+                      </SelectContent>
+                    </Select>
+                    {consumeProductId && (
+                      <p className="text-xs text-muted-foreground">
+                        Disponibile: {getAvailableForConsume(consumeProductId).toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                  {stations && stations.length > 0 && (
+                    <div className="space-y-2">
+                      <Label htmlFor="consume-station-desktop">Stazione</Label>
+                      <Select
+                        value={selectedStationId}
+                        onValueChange={setSelectedStationId}
+                      >
+                        <SelectTrigger id="consume-station-desktop">
+                          <SelectValue placeholder="Tutte le stazioni" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="_all">Tutte le stazioni</SelectItem>
+                          {stations.map((station) => (
+                            <SelectItem key={station.id} value={station.id}>
+                              {station.name}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                  )}
+                  <div className="space-y-2">
+                    <Label htmlFor="consume-quantity-desktop">Quantità</Label>
+                    <Input
+                      id="consume-quantity-desktop"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="0"
+                      value={consumeQuantity}
+                      onChange={(e) => setConsumeQuantity(e.target.value)}
+                      data-testid="input-consume-quantity-desktop"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="consume-reason-desktop">Note (opzionale)</Label>
+                    <Input
+                      id="consume-reason-desktop"
+                      placeholder="Es: Consumo serata"
+                      value={consumeReason}
+                      onChange={(e) => setConsumeReason(e.target.value)}
+                      data-testid="input-consume-reason-desktop"
+                    />
+                  </div>
+                </div>
+                <DialogFooter>
+                  <Button variant="outline" onClick={() => setIsConsumeDialogOpen(false)}>
+                    Annulla
+                  </Button>
+                  <Button
+                    onClick={handleConsume}
+                    disabled={consumeMutation.isPending || !consumeProductId}
+                    variant="secondary"
+                    data-testid="button-confirm-consume-desktop"
+                  >
+                    {consumeMutation.isPending ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Registrazione...
+                      </>
+                    ) : (
+                      <>
+                        <Minus className="h-4 w-4 mr-2" />
+                        Registra Consumo
+                      </>
+                    )}
+                  </Button>
+                </DialogFooter>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+
+        {stations && stations.length > 0 && (
+          <Card>
+            <CardContent className="pt-6">
+              <div className="flex items-center gap-3">
+                <MapPin className="h-5 w-5 text-primary" />
+                <div className="flex-1 max-w-xs">
+                  <Label htmlFor="station-filter-desktop" className="text-sm text-muted-foreground">
+                    Filtra per Stazione
+                  </Label>
+                  <Select
+                    value={selectedStationId}
+                    onValueChange={setSelectedStationId}
+                    data-testid="select-station-desktop"
+                  >
+                    <SelectTrigger id="station-filter-desktop">
+                      <SelectValue placeholder="Tutte le stazioni" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="_all">Tutte le stazioni</SelectItem>
+                      {stations.map((station) => (
+                        <SelectItem key={station.id} value={station.id}>
+                          {station.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
+        <div className="grid grid-cols-4 gap-4">
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-2xl font-bold text-teal">{summary?.totalLoaded?.toFixed(2) || '0.00'}</div>
+              <p className="text-sm text-muted-foreground">Totale Caricato</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-2xl font-bold text-amber-500">{summary?.totalConsumed?.toFixed(2) || '0.00'}</div>
+              <p className="text-sm text-muted-foreground">Totale Consumato</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-2xl font-bold">{directStock?.length || 0}</div>
+              <p className="text-sm text-muted-foreground">Prodotti</p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardContent className="pt-6">
+              <div className="text-2xl font-bold">{summary?.movements?.length || 0}</div>
+              <p className="text-sm text-muted-foreground">Movimenti</p>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Package className="h-5 w-5" />
+              Riepilogo Stock Diretto
+            </CardTitle>
+            <CardDescription>
+              Visualizza lo stato attuale dello stock per questo evento
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {stockLoading ? (
+              <Skeleton className="h-32 w-full rounded-xl" />
+            ) : directStock && directStock.length > 0 ? (
+              <Table data-testid="table-direct-stock-desktop">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Prodotto</TableHead>
+                    <TableHead>Codice</TableHead>
+                    <TableHead className="text-right">Caricato</TableHead>
+                    <TableHead className="text-right">Consumato</TableHead>
+                    <TableHead className="text-right">Disponibile</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {directStock.map((stock) => (
+                    <TableRow key={stock.productId} data-testid={`row-stock-desktop-${stock.productId}`}>
+                      <TableCell className="font-medium">{stock.productName}</TableCell>
+                      <TableCell className="text-muted-foreground">{stock.productCode}</TableCell>
+                      <TableCell className="text-right text-teal">{stock.loaded.toFixed(2)}</TableCell>
+                      <TableCell className="text-right text-amber-500">{stock.consumed.toFixed(2)}</TableCell>
+                      <TableCell className="text-right font-semibold">
+                        <Badge variant={stock.available > 0 ? "default" : "secondary"}>
+                          {stock.available.toFixed(2)} {stock.unitOfMeasure}
+                        </Badge>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="p-12 text-center text-muted-foreground">
+                <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Nessun prodotto caricato direttamente</p>
+                <p className="text-sm mt-1">Usa il pulsante "Carico Diretto" per aggiungere prodotti</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <History className="h-5 w-5" />
+              Ultimi Movimenti
+            </CardTitle>
+            <CardDescription>
+              Storico delle operazioni di carico e scarico
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {summaryLoading ? (
+              <Skeleton className="h-32 w-full rounded-xl" />
+            ) : summary?.movements && summary.movements.length > 0 ? (
+              <Table data-testid="table-movements-desktop">
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Data</TableHead>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Prodotto</TableHead>
+                    <TableHead className="text-right">Quantità</TableHead>
+                    <TableHead>Note</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {summary.movements.map((mov) => (
+                    <TableRow key={mov.id} data-testid={`row-movement-desktop-${mov.id}`}>
+                      <TableCell className="text-muted-foreground">
+                        {mov.createdAt ? new Date(mov.createdAt).toLocaleString('it-IT', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          hour: '2-digit',
+                          minute: '2-digit',
+                        }) : '-'}
+                      </TableCell>
+                      <TableCell>
+                        <Badge variant={mov.type === 'DIRECT_LOAD' ? 'default' : 'secondary'}>
+                          {mov.type === 'DIRECT_LOAD' ? 'Carico' : 'Consumo'}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="font-medium">{mov.productName}</TableCell>
+                      <TableCell className={`text-right ${mov.type === 'DIRECT_LOAD' ? 'text-teal' : 'text-amber-500'}`}>
+                        {mov.type === 'DIRECT_LOAD' ? '+' : '-'}{parseFloat(mov.quantity).toFixed(2)}
+                      </TableCell>
+                      <TableCell className="text-muted-foreground max-w-[200px] truncate">
+                        {mov.reason || '-'}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            ) : (
+              <div className="p-12 text-center text-muted-foreground">
+                <History className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>Nessun movimento registrato</p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
+
+  // Mobile version
   return (
     <div className="p-3 sm:p-4 md:p-6 max-w-7xl mx-auto pb-24 md:pb-8">
       <motion.div

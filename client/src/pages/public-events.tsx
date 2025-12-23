@@ -11,6 +11,7 @@ import { Link } from "wouter";
 import { motion } from "framer-motion";
 import { useState, useRef } from "react";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface PublicEvent {
   id: string;
@@ -243,6 +244,7 @@ export default function PublicEventsPage() {
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
   const { isAuthenticated } = useCustomerAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
+  const isMobile = useIsMobile();
 
   const { data: events, isLoading, error } = useQuery<PublicEvent[]>({
     queryKey: ["/api/public/events"],
@@ -289,6 +291,162 @@ export default function PublicEventsPage() {
     )
     .filter((event) => filterEvents([event], activeFilter).length > 0);
 
+  // Desktop version
+  if (!isMobile) {
+    return (
+      <div className="min-h-screen bg-background" data-testid="page-public-events-desktop">
+        <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/90 border-b border-border">
+          <div className="container mx-auto px-6 py-4">
+            <div className="flex items-center justify-between gap-6">
+              <Link href="/">
+                <div className="flex items-center gap-3 cursor-pointer">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-yellow-600 flex items-center justify-center shadow-lg shadow-yellow-500/20">
+                    <Sparkles className="w-5 h-5 text-black" />
+                  </div>
+                  <span className="text-xl font-bold text-foreground">Event4U</span>
+                </div>
+              </Link>
+
+              <div className="flex-1 max-w-xl">
+                <div className="relative">
+                  <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                  <Input
+                    placeholder="Cerca eventi, luoghi..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-12 h-12 bg-muted/50 border-border text-foreground placeholder:text-muted-foreground focus:border-primary focus:ring-2 focus:ring-primary/20 text-base rounded-xl"
+                    data-testid="input-search-desktop"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Link href="/carrello">
+                  <Button
+                    variant="outline"
+                    size="icon"
+                    className="w-10 h-10 rounded-xl border-border"
+                    data-testid="button-cart-desktop"
+                  >
+                    <ShoppingBag className="w-5 h-5" />
+                  </Button>
+                </Link>
+                {isAuthenticated ? (
+                  <Link href="/account">
+                    <Avatar className="h-10 w-10 cursor-pointer ring-2 ring-primary/20" data-testid="avatar-user-desktop">
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        <User className="h-5 w-5" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </Link>
+                ) : (
+                  <Link href="/accedi">
+                    <Button className="h-10 px-5 rounded-xl font-semibold" data-testid="button-login-desktop">
+                      Accedi
+                    </Button>
+                  </Link>
+                )}
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-6 py-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-foreground mb-2">Eventi in Programma</h1>
+            <p className="text-muted-foreground">Scopri gli eventi e acquista i tuoi biglietti</p>
+          </div>
+
+          <div className="flex flex-wrap gap-3 mb-8">
+            <FilterPill
+              label="Tutti"
+              active={activeFilter === 'all'}
+              onClick={() => setActiveFilter('all')}
+              testId="filter-all-desktop"
+            />
+            <FilterPill
+              label="Stasera"
+              icon={<Star className="w-4 h-4" />}
+              active={activeFilter === 'today'}
+              onClick={() => setActiveFilter('today')}
+              testId="filter-tonight-desktop"
+            />
+            <FilterPill
+              label="Weekend"
+              active={activeFilter === 'weekend'}
+              onClick={() => setActiveFilter('weekend')}
+              testId="filter-weekend-desktop"
+            />
+            <FilterPill
+              label="Questo Mese"
+              icon={<Calendar className="w-4 h-4" />}
+              active={activeFilter === 'month'}
+              onClick={() => setActiveFilter('month')}
+              testId="filter-month-desktop"
+            />
+          </div>
+
+          {error && (
+            <Card className="p-6 text-center bg-red-500/10 border-red-500/20 rounded-2xl mb-6">
+              <p className="text-red-400">Errore nel caricamento degli eventi. Riprova più tardi.</p>
+            </Card>
+          )}
+
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {[...Array(6)].map((_, i) => (
+                <EventCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : filteredEvents && filteredEvents.length > 0 ? (
+            <motion.div
+              variants={staggerContainer}
+              initial="hidden"
+              animate="show"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6"
+              data-testid="grid-events-desktop"
+            >
+              {filteredEvents.map((event) => (
+                <EventCard key={event.id} event={event} />
+              ))}
+            </motion.div>
+          ) : (
+            <Card className="p-12 text-center bg-muted/50 border-border rounded-2xl">
+              <div className="w-20 h-20 mx-auto mb-4 rounded-full bg-muted flex items-center justify-center">
+                <Ticket className="w-10 h-10 text-muted-foreground" />
+              </div>
+              <h3 className="text-xl font-semibold text-foreground mb-2">Nessun evento</h3>
+              <p className="text-muted-foreground text-sm">
+                {searchQuery
+                  ? "Nessun evento corrisponde alla tua ricerca."
+                  : activeFilter !== 'all'
+                  ? "Nessun evento per questo periodo."
+                  : "Al momento non ci sono eventi in vendita."}
+              </p>
+            </Card>
+          )}
+        </main>
+
+        <footer className="border-t border-border py-8 px-6 bg-background mt-auto">
+          <div className="container mx-auto flex flex-col md:flex-row items-center justify-between gap-4">
+            <div className="flex items-center gap-2">
+              <Sparkles className="w-4 h-4 text-primary" />
+              <span className="text-sm text-muted-foreground">
+                © {new Date().getFullYear()} Event4U. Tutti i diritti riservati.
+              </span>
+            </div>
+            <div className="flex gap-6 text-sm text-muted-foreground">
+              <a href="#" className="hover:text-foreground transition-colors">Privacy</a>
+              <a href="#" className="hover:text-foreground transition-colors">Termini</a>
+              <a href="#" className="hover:text-foreground transition-colors">Contatti</a>
+            </div>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  // Mobile version
   return (
     <div 
       className="min-h-screen bg-background flex flex-col"

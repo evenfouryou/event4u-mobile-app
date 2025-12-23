@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
@@ -89,6 +90,7 @@ interface EventCashierAllocationsProps {
 export function EventCashierAllocations({ eventId, siaeEventId }: EventCashierAllocationsProps) {
   const { user } = useAuth();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [editingAllocation, setEditingAllocation] = useState<CashierAllocationWithDetails | null>(null);
@@ -243,6 +245,295 @@ export function EventCashierAllocations({ eventId, siaeEventId }: EventCashierAl
 
   const activeCashiers = cashiers?.filter(c => c.isActive) || [];
 
+  // Shared dialog components for both desktop and mobile
+  const allocationDialog = (
+    <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+      <DialogContent className="sm:max-w-[450px]" data-testid="dialog-allocation-form">
+        <DialogHeader>
+          <DialogTitle>
+            {editingAllocation ? "Modifica Assegnazione" : "Nuova Assegnazione"}
+          </DialogTitle>
+          <DialogDescription>
+            {editingAllocation
+              ? "Modifica la quota assegnata al cassiere"
+              : "Assegna un cassiere a un settore con una quota biglietti"}
+          </DialogDescription>
+        </DialogHeader>
+
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
+            {!editingAllocation && (
+              <>
+                <FormField
+                  control={form.control}
+                  name="cashierId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Cassiere</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-cashier">
+                            <SelectValue placeholder="Seleziona cassiere..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {activeCashiers.map((cashier) => (
+                            <SelectItem key={cashier.id} value={cashier.id}>
+                              {cashier.name} ({cashier.username})
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="sectorId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Settore</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-sector">
+                            <SelectValue placeholder="Seleziona settore..." />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          {sectors?.map((sector) => (
+                            <SelectItem key={sector.id} value={sector.id}>
+                              {sector.name} - €{Number(sector.priceIntero || 0).toFixed(2)}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </>
+            )}
+
+            <FormField
+              control={form.control}
+              name="quotaQuantity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Quota Biglietti</FormLabel>
+                  <FormControl>
+                    <Input 
+                      type="number" 
+                      min="1"
+                      {...field}
+                      data-testid="input-quota"
+                    />
+                  </FormControl>
+                  <FormDescription>
+                    Numero massimo di biglietti che il cassiere può emettere
+                  </FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter>
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsDialogOpen(false)}
+                data-testid="button-cancel"
+              >
+                Annulla
+              </Button>
+              <Button
+                type="submit"
+                disabled={createAllocationMutation.isPending || updateAllocationMutation.isPending}
+                data-testid="button-save"
+              >
+                {(createAllocationMutation.isPending || updateAllocationMutation.isPending) && (
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                )}
+                {editingAllocation ? "Salva" : "Assegna"}
+              </Button>
+            </DialogFooter>
+          </form>
+        </Form>
+      </DialogContent>
+    </Dialog>
+  );
+
+  const deleteAlertDialog = (
+    <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+      <AlertDialogContent data-testid="dialog-delete-allocation">
+        <AlertDialogHeader>
+          <AlertDialogTitle>Rimuovere questa assegnazione?</AlertDialogTitle>
+          <AlertDialogDescription>
+            Stai per rimuovere l'assegnazione per{" "}
+            <strong>
+              {allocationToDelete?.cashierName || "questo cassiere"}
+            </strong>.
+            L'azione non può essere annullata.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel data-testid="button-cancel-delete">
+            Annulla
+          </AlertDialogCancel>
+          <AlertDialogAction
+            onClick={handleDeleteConfirm}
+            className="bg-red-500 hover:bg-red-600"
+            data-testid="button-confirm-delete"
+          >
+            {deleteAllocationMutation.isPending && (
+              <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+            )}
+            Rimuovi
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
+  );
+
+  // Desktop version
+  if (!isMobile) {
+    return (
+      <div className="container mx-auto" data-testid="page-cashier-allocations-desktop">
+        <Card data-testid="card-cashier-allocations">
+          <CardHeader className="flex flex-row items-center justify-between gap-4">
+            <div>
+              <CardTitle className="flex items-center gap-2">
+                <Store className="w-5 h-5 text-[#FFD700]" />
+                Assegnazioni Cassieri
+              </CardTitle>
+              <CardDescription>
+                Gestisci le quote biglietti assegnate ai cassieri per questo evento
+              </CardDescription>
+            </div>
+            <Button onClick={() => handleOpenDialog()} data-testid="button-add-allocation">
+              <Plus className="w-4 h-4 mr-2" />
+              Nuova Assegnazione
+            </Button>
+          </CardHeader>
+          <CardContent>
+            {allocationsLoading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center gap-4">
+                    <Skeleton className="h-12 w-12 rounded-full" />
+                    <div className="space-y-2 flex-1">
+                      <Skeleton className="h-4 w-48" />
+                      <Skeleton className="h-3 w-full max-w-md" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : !allocations || allocations.length === 0 ? (
+              <div className="text-center py-12">
+                <Users className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+                <h3 className="text-xl font-semibold">Nessuna Assegnazione</h3>
+                <p className="text-muted-foreground mt-2 mb-6 max-w-md mx-auto">
+                  Assegna cassieri a questo evento per abilitarli all'emissione biglietti
+                </p>
+                <Button onClick={() => handleOpenDialog()} data-testid="button-add-allocation-empty">
+                  <UserPlus className="w-4 h-4 mr-2" />
+                  Assegna Cassiere
+                </Button>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Cassiere</TableHead>
+                    <TableHead>Settore</TableHead>
+                    <TableHead>Quota</TableHead>
+                    <TableHead>Utilizzo</TableHead>
+                    <TableHead>Rimanenti</TableHead>
+                    <TableHead className="text-right">Azioni</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {allocations.map((allocation) => {
+                    const percentage = getQuotaPercentage(allocation.quotaUsed, allocation.quotaQuantity);
+                    const remaining = allocation.quotaQuantity - allocation.quotaUsed;
+                    
+                    return (
+                      <TableRow key={allocation.id} data-testid={`row-allocation-${allocation.id}`}>
+                        <TableCell className="font-medium">
+                          {allocation.cashierName || getCashierName(allocation.cashierId)}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline">
+                            {allocation.sectorName || (allocation.sectorId ? getSectorName(allocation.sectorId) : "Non assegnato")}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <Ticket className="w-4 h-4 text-muted-foreground" />
+                            <span className="font-medium">{allocation.quotaQuantity}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="space-y-1 w-32">
+                            <div className="flex items-center justify-between text-sm">
+                              <span>{allocation.quotaUsed} / {allocation.quotaQuantity}</span>
+                              <span className="text-muted-foreground">{percentage}%</span>
+                            </div>
+                            <Progress 
+                              value={percentage} 
+                              className={`h-2 ${percentage > 90 ? "[&>div]:bg-red-500" : percentage > 75 ? "[&>div]:bg-yellow-500" : ""}`}
+                            />
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant={remaining <= 0 ? "destructive" : remaining <= 5 ? "secondary" : "outline"}
+                            className={remaining <= 5 && remaining > 0 ? "bg-yellow-500/20 text-yellow-500 border-yellow-500/30" : ""}
+                          >
+                            {remaining}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleOpenDialog(allocation)}
+                              data-testid={`button-edit-allocation-${allocation.id}`}
+                            >
+                              <Edit className="w-4 h-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setAllocationToDelete(allocation);
+                                setIsDeleteDialogOpen(true);
+                              }}
+                              className="text-red-500 hover:text-red-600 hover:bg-red-500/10"
+                              data-testid={`button-delete-allocation-${allocation.id}`}
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        {allocationDialog}
+        {deleteAlertDialog}
+      </div>
+    );
+  }
+
+  // Mobile version
   return (
     <Card className="glass-card" data-testid="card-cashier-allocations">
       <CardHeader className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 sm:p-4 md:p-6">
@@ -372,151 +663,8 @@ export function EventCashierAllocations({ eventId, siaeEventId }: EventCashierAl
         )}
       </CardContent>
 
-      <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
-        <DialogContent className="sm:max-w-[450px]" data-testid="dialog-allocation-form">
-          <DialogHeader>
-            <DialogTitle>
-              {editingAllocation ? "Modifica Assegnazione" : "Nuova Assegnazione"}
-            </DialogTitle>
-            <DialogDescription>
-              {editingAllocation
-                ? "Modifica la quota assegnata al cassiere"
-                : "Assegna un cassiere a un settore con una quota biglietti"}
-            </DialogDescription>
-          </DialogHeader>
-
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-4">
-              {!editingAllocation && (
-                <>
-                  <FormField
-                    control={form.control}
-                    name="cashierId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Cassiere</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-cashier">
-                              <SelectValue placeholder="Seleziona cassiere..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {activeCashiers.map((cashier) => (
-                              <SelectItem key={cashier.id} value={cashier.id}>
-                                {cashier.name} ({cashier.username})
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-
-                  <FormField
-                    control={form.control}
-                    name="sectorId"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Settore</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-sector">
-                              <SelectValue placeholder="Seleziona settore..." />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            {sectors?.map((sector) => (
-                              <SelectItem key={sector.id} value={sector.id}>
-                                {sector.name} - €{Number(sector.priceIntero || 0).toFixed(2)}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                </>
-              )}
-
-              <FormField
-                control={form.control}
-                name="quotaQuantity"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Quota Biglietti</FormLabel>
-                    <FormControl>
-                      <Input 
-                        type="number" 
-                        min="1"
-                        {...field}
-                        data-testid="input-quota"
-                      />
-                    </FormControl>
-                    <FormDescription>
-                      Numero massimo di biglietti che il cassiere può emettere
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <DialogFooter>
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={() => setIsDialogOpen(false)}
-                  data-testid="button-cancel"
-                >
-                  Annulla
-                </Button>
-                <Button
-                  type="submit"
-                  disabled={createAllocationMutation.isPending || updateAllocationMutation.isPending}
-                  data-testid="button-save"
-                >
-                  {(createAllocationMutation.isPending || updateAllocationMutation.isPending) && (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  )}
-                  {editingAllocation ? "Salva" : "Assegna"}
-                </Button>
-              </DialogFooter>
-            </form>
-          </Form>
-        </DialogContent>
-      </Dialog>
-
-      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent data-testid="dialog-delete-allocation">
-          <AlertDialogHeader>
-            <AlertDialogTitle>Rimuovere questa assegnazione?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Stai per rimuovere l'assegnazione per{" "}
-              <strong>
-                {allocationToDelete?.cashierName || "questo cassiere"}
-              </strong>.
-              L'azione non può essere annullata.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel data-testid="button-cancel-delete">
-              Annulla
-            </AlertDialogCancel>
-            <AlertDialogAction
-              onClick={handleDeleteConfirm}
-              className="bg-red-500 hover:bg-red-600"
-              data-testid="button-confirm-delete"
-            >
-              {deleteAllocationMutation.isPending && (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-              )}
-              Rimuovi
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {allocationDialog}
+      {deleteAlertDialog}
     </Card>
   );
 }

@@ -19,11 +19,22 @@ import {
 } from "lucide-react";
 import { HapticButton, triggerHaptic } from "@/components/mobile-primitives";
 import { Input } from "@/components/ui/input";
+import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { loadStripe, StripeElementsOptions } from "@stripe/stripe-js";
 import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
 import {
   Dialog,
   DialogContent,
@@ -221,6 +232,7 @@ const fadeInUp = {
 };
 
 export default function AccountWallet() {
+  const isMobile = useIsMobile();
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
   const [customAmount, setCustomAmount] = useState("");
   const [showPaymentDialog, setShowPaymentDialog] = useState(false);
@@ -335,6 +347,184 @@ export default function AccountWallet() {
   const balance = parseFloat(wallet?.balance || "0");
   const transactions = transactionsData?.transactions || [];
 
+  // Desktop version
+  if (!isMobile) {
+    return (
+      <div className="container mx-auto p-6 space-y-6" data-testid="page-account-wallet">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Wallet</h1>
+            <p className="text-muted-foreground">Gestisci il tuo portafoglio digitale</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <Card className="lg:col-span-1">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Wallet className="w-5 h-5" />
+                Saldo Disponibile
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-4xl font-bold text-primary" data-testid="text-balance-desktop">
+                €{balance.toFixed(2)}
+              </p>
+              {wallet?.currency && wallet.currency !== "EUR" && (
+                <p className="text-sm text-muted-foreground">{wallet.currency}</p>
+              )}
+            </CardContent>
+          </Card>
+
+          <Card className="lg:col-span-2">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Plus className="w-5 h-5" />
+                Ricarica Wallet
+              </CardTitle>
+              <CardDescription>Seleziona un importo o inserisci un valore personalizzato</CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="flex flex-wrap gap-2">
+                {quickAmounts.map((amount) => (
+                  <Button
+                    key={amount}
+                    variant={selectedAmount === amount ? "default" : "outline"}
+                    onClick={() => handleQuickAmountSelect(amount)}
+                    data-testid={`button-amount-desktop-${amount}`}
+                  >
+                    €{amount}
+                  </Button>
+                ))}
+              </div>
+              <div className="flex gap-4">
+                <div className="relative flex-1">
+                  <div className="absolute left-3 top-1/2 -translate-y-1/2 text-xl font-semibold text-muted-foreground">
+                    €
+                  </div>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Altro importo"
+                    value={customAmount}
+                    onChange={(e) => handleCustomAmountChange(e.target.value)}
+                    className="pl-8"
+                    data-testid="input-custom-amount-desktop"
+                  />
+                </div>
+                <Button
+                  disabled={currentAmount <= 0 || createTopupMutation.isPending}
+                  onClick={handleRecharge}
+                  data-testid="button-recharge-desktop"
+                >
+                  {createTopupMutation.isPending ? (
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  ) : (
+                    <CreditCard className="w-4 h-4 mr-2" />
+                  )}
+                  {createTopupMutation.isPending ? "Caricamento..." : `Ricarica €${currentAmount > 0 ? currentAmount : "0"}`}
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <RefreshCw className="w-5 h-5" />
+              Storico Transazioni
+            </CardTitle>
+            <CardDescription>Le tue transazioni recenti</CardDescription>
+          </CardHeader>
+          <CardContent>
+            {transactions.length === 0 ? (
+              <div className="text-center py-12">
+                <Wallet className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
+                <p className="text-lg font-medium">Nessuna transazione</p>
+                <p className="text-muted-foreground">Le tue transazioni appariranno qui</p>
+              </div>
+            ) : (
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>Tipo</TableHead>
+                    <TableHead>Descrizione</TableHead>
+                    <TableHead>Data</TableHead>
+                    <TableHead className="text-right">Importo</TableHead>
+                    <TableHead className="text-right">Saldo</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {transactions.map((tx) => {
+                    const Icon = transactionIcons[tx.type] || Wallet;
+                    const amount = parseFloat(tx.amount || "0");
+                    const isPositive = tx.type === "credit" || tx.type === "release" || tx.type === "refund";
+                    const transactionDate = new Date(tx.createdAt);
+
+                    return (
+                      <TableRow key={tx.id} data-testid={`transaction-desktop-${tx.id}`}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <div className={cn(
+                              "w-8 h-8 rounded-lg flex items-center justify-center",
+                              isPositive ? "bg-green-500/20" : "bg-red-500/20"
+                            )}>
+                              <Icon className={cn("w-4 h-4", isPositive ? "text-green-500" : "text-red-500")} />
+                            </div>
+                            <span className="font-medium">{transactionLabels[tx.type] || tx.type}</span>
+                          </div>
+                        </TableCell>
+                        <TableCell className="text-muted-foreground">
+                          {tx.description || "-"}
+                        </TableCell>
+                        <TableCell>
+                          {format(transactionDate, "d MMM yyyy, HH:mm", { locale: it })}
+                        </TableCell>
+                        <TableCell className={cn("text-right font-semibold", isPositive ? "text-green-500" : "text-red-500")}>
+                          {isPositive ? "+" : "-"}€{Math.abs(amount).toFixed(2)}
+                        </TableCell>
+                        <TableCell className="text-right text-muted-foreground">
+                          €{parseFloat(tx.balanceAfter || "0").toFixed(2)}
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+                </TableBody>
+              </Table>
+            )}
+          </CardContent>
+        </Card>
+
+        <Dialog open={showPaymentDialog} onOpenChange={setShowPaymentDialog}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <CreditCard className="w-5 h-5" />
+                Pagamento Sicuro
+              </DialogTitle>
+            </DialogHeader>
+            {elementsOptions && stripeLoaded && paymentIntentId ? (
+              <Elements stripe={stripeLoaded} options={elementsOptions}>
+                <StripePaymentForm
+                  amount={currentAmount}
+                  paymentIntentId={paymentIntentId}
+                  onSuccess={handlePaymentSuccess}
+                  onCancel={handlePaymentCancel}
+                />
+              </Elements>
+            ) : (
+              <div className="flex items-center justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-primary" />
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
+  // Mobile version
   return (
     <div 
       className="min-h-screen bg-background pb-24"

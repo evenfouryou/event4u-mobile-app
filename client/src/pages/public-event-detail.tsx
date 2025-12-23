@@ -1,13 +1,23 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams, Link, useLocation } from "wouter";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { triggerHaptic } from "@/components/mobile-primitives";
 import {
@@ -532,7 +542,9 @@ export default function PublicEventDetailPage() {
   const params = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const isMobile = useIsMobile();
   const [isAdding, setIsAdding] = useState(false);
+  const [isPurchaseDialogOpen, setIsPurchaseDialogOpen] = useState(false);
   const [cartCount, setCartCount] = useState(0);
   const [selectedZoneId, setSelectedZoneId] = useState<string | null>(null);
   const [highlightedSectorCode, setHighlightedSectorCode] = useState<string | null>(null);
@@ -695,6 +707,434 @@ export default function PublicEventDetailPage() {
     );
   }
 
+  // Desktop version
+  if (!isMobile) {
+    return (
+      <div className="min-h-screen bg-background" data-testid="page-public-event-detail">
+        <div className="container mx-auto px-6 py-8 max-w-6xl">
+          {/* Header with back button */}
+          <div className="mb-6">
+            <Link href="/acquista">
+              <Button variant="ghost" data-testid="button-back">
+                <ChevronLeft className="w-5 h-5 mr-2" />
+                Torna agli eventi
+              </Button>
+            </Link>
+          </div>
+
+          {isLoading ? (
+            <div className="space-y-6">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <div className="lg:col-span-2">
+                  <Skeleton className="h-96 rounded-2xl" />
+                </div>
+                <div>
+                  <Skeleton className="h-64 rounded-2xl" />
+                </div>
+              </div>
+              <Skeleton className="h-32 rounded-2xl" />
+            </div>
+          ) : event ? (
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+              {/* Main content - left side */}
+              <div className="lg:col-span-2 space-y-6">
+                {/* Hero image */}
+                <Card className="overflow-hidden">
+                  <div className="relative aspect-video">
+                    {event.eventImageUrl ? (
+                      <img
+                        src={event.eventImageUrl}
+                        alt={event.eventName}
+                        className="absolute inset-0 w-full h-full object-cover"
+                        data-testid="img-event-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 bg-gradient-to-br from-indigo-900/60 via-purple-900/50 to-pink-900/40 flex items-center justify-center">
+                        <Music className="w-24 h-24 text-white/20" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
+                    <div className="absolute bottom-4 left-4 right-4">
+                      <div className="flex flex-wrap gap-2 mb-3">
+                        {event.ticketingStatus === "active" && (
+                          <Badge className="bg-emerald-500/90 text-white border-0">
+                            <Zap className="w-3 h-3 mr-1" />
+                            In Vendita
+                          </Badge>
+                        )}
+                        {event.requiresNominative && (
+                          <Badge className="bg-purple-500/90 text-white border-0">
+                            Nominativo
+                          </Badge>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                  <CardContent className="p-6">
+                    <h1 className="text-3xl font-bold text-foreground mb-4" data-testid="text-event-name">
+                      {event.eventName}
+                    </h1>
+                    <div className="flex flex-wrap gap-4 mb-4">
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Calendar className="w-5 h-5 text-primary" />
+                        <span data-testid="text-event-date">
+                          {format(new Date(event.eventStart), "EEEE d MMMM yyyy", { locale: it })}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Clock className="w-5 h-5 text-primary" />
+                        <span data-testid="text-event-time">
+                          {format(new Date(event.eventStart), "HH:mm")} - {format(new Date(event.eventEnd), "HH:mm")}
+                        </span>
+                      </div>
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <MapPin className="w-5 h-5 text-primary" />
+                        <span data-testid="text-event-location">{event.locationName}</span>
+                      </div>
+                    </div>
+                    {event.eventDescription && (
+                      <div className="prose prose-sm dark:prose-invert max-w-none">
+                        <p className="text-muted-foreground whitespace-pre-line" data-testid="text-event-description">
+                          {event.eventDescription}
+                        </p>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Floor plan if available */}
+                {floorPlan && floorPlan.zones && floorPlan.zones.length > 0 && (
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2">
+                        <Map className="w-5 h-5 text-primary" />
+                        Mappa della Venue
+                      </CardTitle>
+                      <CardDescription>
+                        Clicca una zona per selezionarla
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <FloorPlanViewer
+                        floorPlan={floorPlan}
+                        sectors={event.sectors}
+                        selectedZoneId={selectedZoneId}
+                        selectedSeatIds={selectedSeatIds}
+                        onZoneClick={handleZoneClick}
+                        onSeatClick={handleSeatClick}
+                      />
+                    </CardContent>
+                  </Card>
+                )}
+
+                {/* Sectors list */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Ticket className="w-5 h-5 text-primary" />
+                      Biglietti disponibili
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4" data-testid="grid-sectors">
+                    {event.sectors.length === 0 ? (
+                      <div className="text-center py-8">
+                        <Ticket className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+                        <h3 className="text-lg font-semibold text-foreground mb-2">Nessun biglietto</h3>
+                        <p className="text-sm text-muted-foreground">
+                          I biglietti non sono ancora disponibili.
+                        </p>
+                      </div>
+                    ) : (
+                      event.sectors.map((sector) => {
+                        const sectorPrice = ticketType === "ridotto" && sector.priceRidotto
+                          ? Number(sector.priceRidotto)
+                          : Number(sector.priceIntero);
+                        const isSelectedSector = selectedSectorId === sector.id;
+                        
+                        return (
+                          <div
+                            key={sector.id}
+                            onClick={() => {
+                              if (sector.availableSeats > 0) {
+                                setSelectedSectorId(sector.id);
+                              }
+                            }}
+                            className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                              isSelectedSector
+                                ? "border-primary bg-primary/5 ring-2 ring-primary"
+                                : sector.availableSeats > 0
+                                ? "border-border hover-elevate"
+                                : "border-border opacity-50 cursor-not-allowed"
+                            }`}
+                            data-testid={`card-sector-${sector.id}`}
+                            data-sector-code={sector.sectorCode}
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-yellow-400 to-orange-500 flex items-center justify-center">
+                                  <Ticket className="w-5 h-5 text-black" />
+                                </div>
+                                <div>
+                                  <h3 className="font-semibold text-foreground" data-testid={`text-sector-name-${sector.id}`}>
+                                    {sector.name}
+                                  </h3>
+                                  <p className="text-sm text-muted-foreground">
+                                    {sector.availableSeats} posti disponibili
+                                  </p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                {sector.availableSeats > 0 ? (
+                                  <>
+                                    <div className="text-2xl font-bold text-primary" data-testid={`text-sector-price-${sector.id}`}>
+                                      €{sectorPrice.toFixed(2)}
+                                    </div>
+                                    {sector.priceRidotto && Number(sector.priceRidotto) > 0 && (
+                                      <p className="text-xs text-muted-foreground">Ridotto: €{Number(sector.priceRidotto).toFixed(2)}</p>
+                                    )}
+                                  </>
+                                ) : (
+                                  <Badge variant="destructive">Esaurito</Badge>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Expanded content when selected */}
+                            {isSelectedSector && sector.availableSeats > 0 && (
+                              <div className="mt-4 pt-4 border-t border-border space-y-4">
+                                {/* Ticket type selection */}
+                                {sector.priceRidotto && Number(sector.priceRidotto) > 0 && (
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Tipo Biglietto</Label>
+                                    <RadioGroup value={ticketType} onValueChange={setTicketType} className="flex gap-3">
+                                      <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); setTicketType("intero"); }}
+                                        className={`flex-1 p-3 rounded-xl border transition-all ${
+                                          ticketType === "intero" ? "border-primary bg-primary/10" : "border-border"
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <RadioGroupItem value="intero" id={`desktop-intero-${sector.id}`} />
+                                          <Label htmlFor={`desktop-intero-${sector.id}`} className="cursor-pointer font-medium">
+                                            Intero
+                                          </Label>
+                                        </div>
+                                        <p className="text-primary font-bold mt-1">€{Number(sector.priceIntero).toFixed(2)}</p>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        onClick={(e) => { e.stopPropagation(); setTicketType("ridotto"); }}
+                                        className={`flex-1 p-3 rounded-xl border transition-all ${
+                                          ticketType === "ridotto" ? "border-primary bg-primary/10" : "border-border"
+                                        }`}
+                                      >
+                                        <div className="flex items-center gap-2">
+                                          <RadioGroupItem value="ridotto" id={`desktop-ridotto-${sector.id}`} />
+                                          <Label htmlFor={`desktop-ridotto-${sector.id}`} className="cursor-pointer font-medium">
+                                            Ridotto
+                                          </Label>
+                                        </div>
+                                        <p className="text-primary font-bold mt-1">€{Number(sector.priceRidotto).toFixed(2)}</p>
+                                      </button>
+                                    </RadioGroup>
+                                  </div>
+                                )}
+
+                                {/* Quantity or seat selection */}
+                                {sector.isNumbered ? (
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Seleziona Posto</Label>
+                                    <div className="grid grid-cols-8 gap-2 max-h-40 overflow-y-auto p-3 bg-muted/30 rounded-xl">
+                                      {sector.seats.map((seat) => {
+                                        const isMapSelected = selectedSeatIds.includes(seat.id);
+                                        return (
+                                          <button
+                                            key={seat.id}
+                                            onClick={(e) => { 
+                                              e.stopPropagation(); 
+                                              handleSeatClickFromCard(seat); 
+                                            }}
+                                            disabled={seat.status !== "available"}
+                                            className={`p-2 text-xs rounded-lg font-medium transition-all ${
+                                              seat.status !== "available"
+                                                ? "bg-red-500/20 text-red-400 cursor-not-allowed"
+                                                : isMapSelected || selectedSeat?.id === seat.id
+                                                ? "bg-primary text-primary-foreground"
+                                                : "bg-muted/50 text-foreground hover-elevate"
+                                            }`}
+                                            data-testid={`seat-btn-${seat.id}`}
+                                          >
+                                            {seat.row}{seat.seatNumber}
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                    {selectedSeat && (
+                                      <p className="text-sm text-emerald-500 flex items-center gap-1">
+                                        <Check className="w-4 h-4" />
+                                        Posto: Fila {selectedSeat.row}, Posto {selectedSeat.seatNumber}
+                                      </p>
+                                    )}
+                                  </div>
+                                ) : (
+                                  <div className="space-y-2">
+                                    <Label className="text-sm font-medium">Quantità</Label>
+                                    <div className="flex items-center gap-4">
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={(e) => { e.stopPropagation(); setQuantity(Math.max(1, quantity - 1)); }}
+                                        data-testid={`button-minus-${sector.id}`}
+                                      >
+                                        <Minus className="w-4 h-4" />
+                                      </Button>
+                                      <span className="text-2xl font-bold w-12 text-center" data-testid={`text-quantity-${sector.id}`}>
+                                        {quantity}
+                                      </span>
+                                      <Button
+                                        variant="outline"
+                                        size="icon"
+                                        onClick={(e) => { e.stopPropagation(); setQuantity(Math.min(10, quantity + 1)); }}
+                                        data-testid={`button-plus-${sector.id}`}
+                                      >
+                                        <Plus className="w-4 h-4" />
+                                      </Button>
+                                    </div>
+                                  </div>
+                                )}
+
+                                {/* Nominative fields */}
+                                {event.requiresNominative && (
+                                  <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-2">
+                                      <Label className="text-sm font-medium">Nome</Label>
+                                      <Input
+                                        value={firstName}
+                                        onChange={(e) => setFirstName(e.target.value)}
+                                        placeholder="Mario"
+                                        onClick={(e) => e.stopPropagation()}
+                                        data-testid={`input-firstname-${sector.id}`}
+                                      />
+                                    </div>
+                                    <div className="space-y-2">
+                                      <Label className="text-sm font-medium">Cognome</Label>
+                                      <Input
+                                        value={lastName}
+                                        onChange={(e) => setLastName(e.target.value)}
+                                        placeholder="Rossi"
+                                        onClick={(e) => e.stopPropagation()}
+                                        data-testid={`input-lastname-${sector.id}`}
+                                      />
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        );
+                      })
+                    )}
+                  </CardContent>
+                </Card>
+              </div>
+
+              {/* Sidebar - right side */}
+              <div className="lg:col-span-1">
+                <div className="sticky top-8 space-y-4">
+                  {/* Nominative warning */}
+                  {event.requiresNominative && (
+                    <Card className="bg-purple-500/10 border-purple-500/20">
+                      <CardContent className="p-4 flex items-start gap-3">
+                        <AlertCircle className="w-5 h-5 text-purple-400 shrink-0 mt-0.5" />
+                        <div>
+                          <h4 className="font-semibold text-purple-300 text-sm">Biglietti Nominativi</h4>
+                          <p className="text-xs text-purple-200/70">
+                            Inserisci nome e cognome per ogni partecipante.
+                            {event.allowsChangeName && " Il cambio nominativo è consentito."}
+                          </p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Purchase card */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Riepilogo ordine</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                      {selectedSector ? (
+                        <>
+                          <div className="space-y-2">
+                            <div className="flex justify-between text-sm">
+                              <span className="text-muted-foreground">{selectedSector.name}</span>
+                              <span>
+                                {selectedSector.isNumbered ? 1 : quantity} x €{price?.toFixed(2)}
+                              </span>
+                            </div>
+                            {selectedSeat && (
+                              <div className="text-sm text-muted-foreground">
+                                Fila {selectedSeat.row}, Posto {selectedSeat.seatNumber}
+                              </div>
+                            )}
+                          </div>
+                          <div className="border-t border-border pt-4">
+                            <div className="flex justify-between items-center">
+                              <span className="font-semibold">Totale</span>
+                              <span className="text-2xl font-bold text-primary">
+                                €{totalPrice.toFixed(2)}
+                              </span>
+                            </div>
+                          </div>
+                          <Button
+                            className="w-full"
+                            size="lg"
+                            onClick={handlePurchase}
+                            disabled={!canPurchase || isAdding}
+                            data-testid="button-purchase"
+                          >
+                            {isAdding ? (
+                              <div className="w-5 h-5 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
+                            ) : (
+                              <>
+                                <ShoppingCart className="w-5 h-5 mr-2" />
+                                Aggiungi al carrello
+                              </>
+                            )}
+                          </Button>
+                        </>
+                      ) : (
+                        <div className="text-center py-4">
+                          <Ticket className="w-8 h-8 mx-auto mb-2 text-muted-foreground" />
+                          <p className="text-sm text-muted-foreground">
+                            Seleziona un biglietto per continuare
+                          </p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
+                  {/* Cart button */}
+                  <Link href="/carrello">
+                    <Button variant="outline" className="w-full" data-testid="button-view-cart">
+                      <ShoppingCart className="w-4 h-4 mr-2" />
+                      Vai al carrello
+                      {cartCount > 0 && (
+                        <Badge className="ml-2">{cartCount}</Badge>
+                      )}
+                    </Button>
+                  </Link>
+                </div>
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
+    );
+  }
+
+  // Mobile version
   return (
     <div className="fixed inset-0 bg-background flex flex-col">
       <div 

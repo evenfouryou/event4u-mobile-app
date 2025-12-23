@@ -1,11 +1,17 @@
 import { useQuery } from "@tanstack/react-query";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   MapPin, 
@@ -14,13 +20,16 @@ import {
   Search,
   ArrowRight,
   Building2,
-  User
+  User,
+  Clock,
+  Users
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
+import { useIsMobile } from "@/hooks/use-mobile";
 
 interface VenueEvent {
   id: string;
@@ -75,7 +84,10 @@ const cardVariants = {
 
 export default function PublicVenues() {
   const [searchCity, setSearchCity] = useState("");
+  const [selectedVenue, setSelectedVenue] = useState<Venue | null>(null);
+  const [isVenueDialogOpen, setIsVenueDialogOpen] = useState(false);
   const { isAuthenticated } = useCustomerAuth();
+  const isMobile = useIsMobile();
 
   const { data: venues, isLoading, error } = useQuery<Venue[]>({
     queryKey: ["/api/public/venues", searchCity],
@@ -87,6 +99,282 @@ export default function PublicVenues() {
       return res.json();
     },
   });
+
+  const handleVenueClick = (venue: Venue) => {
+    setSelectedVenue(venue);
+    setIsVenueDialogOpen(true);
+  };
+
+  if (!isMobile) {
+    return (
+      <div className="min-h-screen bg-background" data-testid="page-public-venues">
+        <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border">
+          <div className="container mx-auto px-6 py-4">
+            <div className="flex items-center justify-between gap-4">
+              <Link href="/">
+                <div className="flex items-center gap-3 cursor-pointer">
+                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
+                    <Building2 className="h-5 w-5 text-primary-foreground" />
+                  </div>
+                  <span className="text-xl font-bold text-foreground">
+                    Event<span className="text-primary">4</span>U
+                  </span>
+                </div>
+              </Link>
+
+              <div className="flex-1 max-w-md">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Cerca per città..."
+                    value={searchCity}
+                    onChange={(e) => setSearchCity(e.target.value)}
+                    className="pl-10 h-10"
+                    data-testid="input-search-city"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center gap-3">
+                <Link href="/acquista">
+                  <Button variant="ghost" data-testid="button-events">
+                    <Ticket className="w-4 h-4 mr-2" />
+                    Eventi
+                  </Button>
+                </Link>
+                {isAuthenticated ? (
+                  <Link href="/account">
+                    <Avatar className="h-9 w-9 cursor-pointer ring-2 ring-primary/20" data-testid="avatar-user">
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        <User className="h-4 w-4" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </Link>
+                ) : (
+                  <Link href="/accedi">
+                    <Button variant="outline" data-testid="button-login">
+                      <User className="w-4 h-4 mr-2" />
+                      Accedi
+                    </Button>
+                  </Link>
+                )}
+                <ThemeToggle />
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="container mx-auto px-6 py-8">
+          <div className="mb-8">
+            <h1 className="text-3xl font-bold text-foreground mb-2" data-testid="text-page-title">
+              Scopri i <span className="text-primary">Club</span>
+            </h1>
+            <p className="text-muted-foreground">
+              I migliori locali della tua città
+            </p>
+          </div>
+
+          {isLoading ? (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {[1, 2, 3, 4, 5, 6].map((i) => (
+                <Card key={i} className="overflow-hidden">
+                  <Skeleton className="h-48 w-full" />
+                  <CardContent className="p-4 space-y-3">
+                    <Skeleton className="h-6 w-3/4" />
+                    <Skeleton className="h-4 w-1/2" />
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          ) : error ? (
+            <Card className="p-8 text-center bg-red-500/10 border-red-500/20">
+              <p className="text-red-400">Errore nel caricamento dei locali</p>
+            </Card>
+          ) : venues?.length === 0 ? (
+            <Card className="p-12 text-center">
+              <Building2 className="w-16 h-16 mx-auto mb-4 text-muted-foreground" />
+              <h3 className="text-xl font-semibold text-foreground mb-2">Nessun locale trovato</h3>
+              <p className="text-muted-foreground">
+                {searchCity 
+                  ? `Non ci sono locali a "${searchCity}"`
+                  : "Non ci sono locali disponibili"}
+              </p>
+            </Card>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+              {venues?.map((venue) => (
+                <Card 
+                  key={venue.id} 
+                  className="overflow-hidden hover-elevate cursor-pointer"
+                  onClick={() => handleVenueClick(venue)}
+                  data-testid={`card-venue-${venue.id}`}
+                >
+                  <div className="relative h-48 overflow-hidden">
+                    {venue.heroImageUrl ? (
+                      <img 
+                        src={venue.heroImageUrl} 
+                        alt={venue.name}
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-full bg-gradient-to-br from-primary/20 via-primary/10 to-primary/20 flex items-center justify-center">
+                        <Building2 className="w-16 h-16 text-primary/50" />
+                      </div>
+                    )}
+                    <div className="absolute inset-0 bg-gradient-to-t from-card via-card/20 to-transparent" />
+                    
+                    {venue.city && (
+                      <Badge 
+                        className="absolute top-3 left-3 bg-black/60 backdrop-blur-sm text-white border-0"
+                        data-testid={`badge-city-${venue.id}`}
+                      >
+                        <MapPin className="w-3 h-3 mr-1" />
+                        {venue.city}
+                      </Badge>
+                    )}
+                    
+                    {venue.eventCount > 0 && (
+                      <Badge 
+                        className="absolute top-3 right-3 bg-primary text-primary-foreground border-0"
+                        data-testid={`badge-events-${venue.id}`}
+                      >
+                        {venue.eventCount} {venue.eventCount === 1 ? "evento" : "eventi"}
+                      </Badge>
+                    )}
+                    
+                    <div className="absolute bottom-3 left-3 right-3">
+                      <h3 className="text-lg font-bold text-white drop-shadow-lg" data-testid={`text-venue-name-${venue.id}`}>
+                        {venue.name}
+                      </h3>
+                    </div>
+                  </div>
+
+                  <CardContent className="p-4">
+                    {venue.address && (
+                      <p className="text-muted-foreground text-sm flex items-center gap-1.5 mb-2">
+                        <MapPin className="w-3.5 h-3.5 flex-shrink-0" />
+                        <span className="truncate">{venue.address}</span>
+                      </p>
+                    )}
+                    {venue.shortDescription && (
+                      <p className="text-muted-foreground text-sm line-clamp-2">
+                        {venue.shortDescription}
+                      </p>
+                    )}
+                    {venue.capacity && (
+                      <div className="flex items-center gap-1.5 text-sm text-muted-foreground mt-2">
+                        <Users className="w-3.5 h-3.5" />
+                        <span>Capienza: {venue.capacity}</span>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </main>
+
+        <Dialog open={isVenueDialogOpen} onOpenChange={setIsVenueDialogOpen}>
+          <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+            {selectedVenue && (
+              <>
+                <DialogHeader>
+                  <DialogTitle className="text-xl">{selectedVenue.name}</DialogTitle>
+                </DialogHeader>
+                
+                <div className="space-y-4">
+                  {selectedVenue.heroImageUrl && (
+                    <div className="relative h-64 rounded-lg overflow-hidden">
+                      <img 
+                        src={selectedVenue.heroImageUrl} 
+                        alt={selectedVenue.name}
+                        className="w-full h-full object-cover"
+                      />
+                    </div>
+                  )}
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {selectedVenue.city && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <MapPin className="w-4 h-4" />
+                        <span>{selectedVenue.city}</span>
+                      </div>
+                    )}
+                    {selectedVenue.capacity && (
+                      <div className="flex items-center gap-2 text-muted-foreground">
+                        <Users className="w-4 h-4" />
+                        <span>Capienza: {selectedVenue.capacity}</span>
+                      </div>
+                    )}
+                    {selectedVenue.openingHours && (
+                      <div className="flex items-center gap-2 text-muted-foreground col-span-2">
+                        <Clock className="w-4 h-4" />
+                        <span>{selectedVenue.openingHours}</span>
+                      </div>
+                    )}
+                  </div>
+
+                  {selectedVenue.address && (
+                    <p className="text-muted-foreground">
+                      {selectedVenue.address}
+                    </p>
+                  )}
+
+                  {selectedVenue.shortDescription && (
+                    <p className="text-foreground">
+                      {selectedVenue.shortDescription}
+                    </p>
+                  )}
+
+                  {selectedVenue.upcomingEvents.length > 0 && (
+                    <div className="border-t border-border pt-4">
+                      <h4 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-3">
+                        Prossimi Eventi
+                      </h4>
+                      <div className="space-y-2">
+                        {selectedVenue.upcomingEvents.map((event) => (
+                          <Link key={event.id} href={`/acquista/${event.id}`}>
+                            <div 
+                              className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
+                              data-testid={`link-event-${event.id}`}
+                            >
+                              <div className="flex-1 min-w-0">
+                                <p className="text-foreground font-medium truncate">{event.eventName}</p>
+                                <p className="text-muted-foreground text-sm flex items-center gap-1.5 mt-0.5">
+                                  <Calendar className="w-3.5 h-3.5" />
+                                  {format(new Date(event.eventStart), "d MMM yyyy", { locale: it })}
+                                </p>
+                              </div>
+                              {event.minPrice !== null && (
+                                <div className="text-right ml-3">
+                                  <p className="text-primary font-semibold">
+                                    da €{event.minPrice.toFixed(0)}
+                                  </p>
+                                </div>
+                              )}
+                            </div>
+                          </Link>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  <div className="flex gap-3 pt-2">
+                    <Link href={`/locali/${selectedVenue.id}`} className="flex-1">
+                      <Button className="w-full" data-testid={`button-view-venue-${selectedVenue.id}`}>
+                        Scopri di più
+                        <ArrowRight className="w-4 h-4 ml-2" />
+                      </Button>
+                    </Link>
+                  </div>
+                </div>
+              </>
+            )}
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
 
   return (
     <div 

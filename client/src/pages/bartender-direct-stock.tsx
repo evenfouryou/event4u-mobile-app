@@ -3,8 +3,9 @@ import { useParams, Link, useSearch } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useIsMobile } from "@/hooks/use-mobile";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -23,7 +24,15 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
-import { ArrowLeft, Minus, Plus, Package, Search, MapPin, History } from "lucide-react";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { ArrowLeft, Minus, Plus, Package, Search, MapPin, History, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 import type { Event, Station, Product } from "@shared/schema";
 import { useAuth } from "@/hooks/useAuth";
@@ -58,6 +67,7 @@ export default function BartenderDirectStock() {
   const searchString = useSearch();
   const { toast } = useToast();
   const { user, isLoading: authLoading } = useAuth();
+  const isMobile = useIsMobile();
 
   const urlParams = new URLSearchParams(searchString);
   const urlStationId = urlParams.get('stationId') || '';
@@ -278,6 +288,324 @@ export default function BartenderDirectStock() {
     );
   }
 
+  // Desktop version
+  if (!isMobile) {
+    return (
+      <div className="container mx-auto p-6 space-y-6" data-testid="page-bartender-direct-stock-desktop">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <Button asChild variant="ghost" size="icon" data-testid="button-back-desktop">
+              <Link href={`/events/${id}`}>
+                <ArrowLeft className="h-5 w-5" />
+              </Link>
+            </Button>
+            <div>
+              <h1 className="text-3xl font-bold">Carico/Scarico Diretto</h1>
+              <p className="text-muted-foreground">{event.name}</p>
+            </div>
+          </div>
+          <div className="flex items-center gap-4">
+            {myStations.length > 1 ? (
+              <Select value={selectedStationId} onValueChange={setSelectedStationId}>
+                <SelectTrigger className="w-64" data-testid="trigger-station-select-desktop">
+                  <MapPin className="h-4 w-4 mr-2 text-primary" />
+                  <SelectValue placeholder="Seleziona stazione" />
+                </SelectTrigger>
+                <SelectContent>
+                  {myStations.map((station) => (
+                    <SelectItem key={station.id} value={station.id}>
+                      {station.name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            ) : currentStation && (
+              <Badge variant="outline" className="text-sm py-2 px-4">
+                <MapPin className="h-4 w-4 mr-2 text-primary" />
+                {currentStation.name}
+              </Badge>
+            )}
+            {summary && (
+              <Badge variant="secondary" className="text-sm py-2 px-4">
+                <History className="h-4 w-4 mr-2" />
+                Consumato: {summary.totalConsumed.toFixed(0)}
+              </Badge>
+            )}
+          </div>
+        </div>
+
+        {!activeStationId && myStations.length === 0 ? (
+          <Card>
+            <CardContent className="p-12 text-center">
+              <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+              <p className="text-muted-foreground text-lg">Non sei assegnato a nessuna stazione</p>
+              <p className="text-sm text-muted-foreground mt-1">Contatta l'organizzatore</p>
+            </CardContent>
+          </Card>
+        ) : (
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            {/* Scarica (Unload) Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Minus className="h-5 w-5 text-destructive" />
+                  Scarica Prodotti
+                </CardTitle>
+                <CardDescription>Prodotti disponibili per lo scarico</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Cerca prodotto..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                    data-testid="input-search-unload-desktop"
+                  />
+                </div>
+
+                {stockLoading ? (
+                  <div className="space-y-2">
+                    {[1,2,3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+                  </div>
+                ) : filteredStock.length > 0 ? (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Codice</TableHead>
+                          <TableHead>Prodotto</TableHead>
+                          <TableHead className="text-right">Disponibile</TableHead>
+                          <TableHead className="text-right">Azione</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredStock.map((stock) => (
+                          <TableRow key={stock.productId} data-testid={`row-stock-${stock.productId}`}>
+                            <TableCell>
+                              <Badge variant="secondary">{stock.productCode}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <div>
+                                <p className="font-medium">{stock.productName}</p>
+                                <p className="text-xs text-muted-foreground">{stock.unitOfMeasure}</p>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Badge variant="default">{stock.available.toFixed(2)}</Badge>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => openUnloadDialog(stock)}
+                                data-testid={`button-unload-desktop-${stock.productId}`}
+                              >
+                                <Minus className="h-4 w-4 mr-1" />
+                                Scarica
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Package className="h-10 w-10 text-muted-foreground mx-auto mb-2 opacity-50" />
+                    <p className="text-muted-foreground">
+                      {searchQuery ? "Nessun prodotto trovato" : "Nessun prodotto da scaricare"}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Carica (Load) Section */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Plus className="h-5 w-5 text-primary" />
+                  Carica Prodotti
+                </CardTitle>
+                <CardDescription>Aggiungi prodotti allo stock</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Cerca prodotto..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                    data-testid="input-search-load-desktop"
+                  />
+                </div>
+
+                {filteredProducts.length > 0 ? (
+                  <div className="rounded-md border">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Codice</TableHead>
+                          <TableHead>Prodotto</TableHead>
+                          <TableHead className="text-right">In Stock</TableHead>
+                          <TableHead className="text-right">Azione</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredProducts.map((product) => {
+                          const stockInfo = directStock?.find(s => s.productId === product.id);
+                          return (
+                            <TableRow key={product.id} data-testid={`row-product-${product.id}`}>
+                              <TableCell>
+                                <Badge variant="secondary">{product.code}</Badge>
+                              </TableCell>
+                              <TableCell>
+                                <div>
+                                  <p className="font-medium">{product.name}</p>
+                                  <p className="text-xs text-muted-foreground">{product.unitOfMeasure}</p>
+                                </div>
+                              </TableCell>
+                              <TableCell className="text-right">
+                                {stockInfo ? (
+                                  <Badge variant="outline">{stockInfo.available.toFixed(2)}</Badge>
+                                ) : (
+                                  <span className="text-muted-foreground text-sm">-</span>
+                                )}
+                              </TableCell>
+                              <TableCell className="text-right">
+                                <Button
+                                  size="sm"
+                                  onClick={() => openLoadDialog(product)}
+                                  data-testid={`button-load-desktop-${product.id}`}
+                                >
+                                  <Plus className="h-4 w-4 mr-1" />
+                                  Carica
+                                </Button>
+                              </TableCell>
+                            </TableRow>
+                          );
+                        })}
+                      </TableBody>
+                    </Table>
+                  </div>
+                ) : (
+                  <div className="text-center py-8">
+                    <Package className="h-10 w-10 text-muted-foreground mx-auto mb-2 opacity-50" />
+                    <p className="text-muted-foreground">
+                      {searchQuery ? "Nessun prodotto trovato" : "Nessun prodotto disponibile"}
+                    </p>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Desktop Dialog */}
+        <Dialog open={actionDialogOpen} onOpenChange={setActionDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                {actionType === "load" ? (
+                  <>
+                    <Plus className="h-5 w-5 text-primary" />
+                    Carica Prodotto
+                  </>
+                ) : (
+                  <>
+                    <Minus className="h-5 w-5 text-destructive" />
+                    Scarica Prodotto
+                  </>
+                )}
+              </DialogTitle>
+            </DialogHeader>
+
+            {selectedProduct && (
+              <div className="space-y-4">
+                <div className="bg-muted/50 rounded-lg p-4">
+                  <p className="font-medium text-lg">{selectedProduct.name}</p>
+                  <p className="text-sm text-muted-foreground">{selectedProduct.unit}</p>
+                  {actionType === "unload" && selectedProduct.available !== undefined && (
+                    <p className="text-sm text-primary mt-2">
+                      Disponibile: {selectedProduct.available.toFixed(2)}
+                    </p>
+                  )}
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium mb-2">Quantità rapida</p>
+                  <div className="flex gap-2">
+                    {quickQuantities.map((q) => (
+                      <Button
+                        key={q}
+                        variant={quantity === String(q) ? "default" : "outline"}
+                        size="sm"
+                        onClick={() => setQuantity(String(q))}
+                        className="flex-1"
+                        data-testid={`button-qty-desktop-${q}`}
+                      >
+                        {q}
+                      </Button>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium mb-2">Quantità personalizzata</p>
+                  <Input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    placeholder="0"
+                    value={quantity}
+                    onChange={(e) => setQuantity(e.target.value)}
+                    className="text-lg"
+                    data-testid="input-quantity-desktop"
+                  />
+                </div>
+
+                <div>
+                  <p className="text-sm font-medium mb-2">Note (opzionale)</p>
+                  <Input
+                    placeholder={actionType === "load" ? "Es: Acquisto fornitore" : "Es: Tavolo 5"}
+                    value={reason}
+                    onChange={(e) => setReason(e.target.value)}
+                    data-testid="input-reason-desktop"
+                  />
+                </div>
+              </div>
+            )}
+
+            <DialogFooter className="gap-2">
+              <Button variant="outline" onClick={closeDialog} data-testid="button-cancel-desktop">
+                Annulla
+              </Button>
+              <Button
+                onClick={handleSubmit}
+                disabled={loadMutation.isPending || consumeMutation.isPending || !quantity}
+                variant={actionType === "load" ? "default" : "destructive"}
+                data-testid="button-confirm-desktop"
+              >
+                {loadMutation.isPending || consumeMutation.isPending ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Elaborazione...
+                  </>
+                ) : (
+                  "Conferma"
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </div>
+    );
+  }
+
+  // Mobile version
   return (
     <div className="min-h-screen pb-24">
       <div className="sticky top-0 z-10 bg-background/95 backdrop-blur-sm border-b border-border">
