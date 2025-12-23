@@ -138,6 +138,41 @@ export const userFeaturesRelations = relations(userFeatures, ({ one }) => ({
   }),
 }));
 
+// User Companies table - Many-to-many relationship between users and companies
+// Allows a gestore to manage multiple companies
+export const userCompanies = pgTable("user_companies", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  role: varchar("role", { length: 50 }).default('owner'), // owner, manager, viewer
+  isDefault: boolean("is_default").notNull().default(false), // Default company for user
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_user_companies_user").on(table.userId),
+  index("idx_user_companies_company").on(table.companyId),
+]);
+
+export const userCompaniesRelations = relations(userCompanies, ({ one }) => ({
+  user: one(users, {
+    fields: [userCompanies.userId],
+    references: [users.id],
+  }),
+  company: one(companies, {
+    fields: [userCompanies.companyId],
+    references: [companies.id],
+  }),
+}));
+
+export const insertUserCompanySchema = createInsertSchema(userCompanies).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertUserCompany = z.infer<typeof insertUserCompanySchema>;
+export type UserCompany = typeof userCompanies.$inferSelect;
+
 // Locations table
 export const locations = pgTable("locations", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -4212,15 +4247,6 @@ export type InsertEventScanner = z.infer<typeof insertEventScannerSchema>;
 export type UpdateEventScanner = z.infer<typeof updateEventScannerSchema>;
 
 // ==================== TABELLE PER COMPATIBILITÀ PRODUZIONE ====================
-
-// User Companies - Associazione utenti a più company
-export const userCompanies = pgTable("user_companies", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id),
-  companyId: varchar("company_id").notNull().references(() => companies.id),
-  role: varchar("role", { length: 50 }).default('member'),
-  createdAt: timestamp("created_at").defaultNow(),
-});
 
 // SIAE Custom Ticket Prices - Prezzi personalizzati biglietti
 export const siaeCustomTicketPrices = pgTable("siae_custom_ticket_prices", {
