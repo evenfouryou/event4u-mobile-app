@@ -23,7 +23,8 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Music, MapPin, Ticket, Briefcase, XCircle, Loader2, Percent } from "lucide-react";
+import { Plus, Pencil, Music, MapPin, Ticket, Briefcase, XCircle, Loader2, Percent, Download, FileText } from "lucide-react";
+import jsPDF from "jspdf";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -521,24 +522,211 @@ function CancellationReasonsTab() {
   );
 }
 
+// Helper functions for export
+function exportToCSV(data: any[], filename: string, columns: { key: string; label: string }[]) {
+  const headers = columns.map(c => c.label).join(',');
+  const rows = data.map(item => 
+    columns.map(col => {
+      const value = item[col.key];
+      // Handle special cases
+      if (value === null || value === undefined) return '';
+      if (typeof value === 'boolean') return value ? 'Sì' : 'No';
+      if (typeof value === 'string' && value.includes(',')) return `"${value}"`;
+      return value;
+    }).join(',')
+  );
+  const csv = [headers, ...rows].join('\n');
+  const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${filename}.csv`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
+function exportToPDF(data: any[], title: string, filename: string, columns: { key: string; label: string }[]) {
+  const doc = new jsPDF();
+  const pageWidth = doc.internal.pageSize.getWidth();
+  
+  // Title
+  doc.setFontSize(16);
+  doc.text(title, pageWidth / 2, 20, { align: 'center' });
+  
+  // Date
+  doc.setFontSize(10);
+  doc.text(`Generato il: ${new Date().toLocaleDateString('it-IT')}`, pageWidth / 2, 28, { align: 'center' });
+  
+  // Table
+  const startY = 40;
+  const cellPadding = 3;
+  const colWidth = (pageWidth - 20) / columns.length;
+  
+  // Headers
+  doc.setFontSize(9);
+  doc.setFont('helvetica', 'bold');
+  columns.forEach((col, i) => {
+    doc.text(col.label, 10 + i * colWidth + cellPadding, startY);
+  });
+  
+  // Draw header line
+  doc.line(10, startY + 3, pageWidth - 10, startY + 3);
+  
+  // Rows
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(8);
+  let y = startY + 10;
+  
+  data.forEach((item, rowIdx) => {
+    // Check if we need a new page
+    if (y > doc.internal.pageSize.getHeight() - 20) {
+      doc.addPage();
+      y = 20;
+    }
+    
+    columns.forEach((col, i) => {
+      let value = item[col.key];
+      if (value === null || value === undefined) value = '-';
+      else if (typeof value === 'boolean') value = value ? 'Sì' : 'No';
+      else value = String(value);
+      
+      // Truncate long text
+      if (value.length > 20) value = value.substring(0, 17) + '...';
+      
+      doc.text(value, 10 + i * colWidth + cellPadding, y);
+    });
+    y += 7;
+  });
+  
+  doc.save(`${filename}.pdf`);
+}
+
 export default function SiaeTablesPage() {
   const isMobile = useIsMobile();
+  const { toast } = useToast();
+  const [activeTab, setActiveTab] = useState("genres");
+
+  // Queries for all tables to enable export
+  const { data: genres = [] } = useQuery<SiaeEventGenre[]>({ queryKey: ['/api/siae/event-genres'] });
+  const { data: sectors = [] } = useQuery<SiaeSectorCode[]>({ queryKey: ['/api/siae/sector-codes'] });
+  const { data: ticketTypes = [] } = useQuery<SiaeTicketType[]>({ queryKey: ['/api/siae/ticket-types'] });
+  const { data: services = [] } = useQuery<SiaeServiceCode[]>({ queryKey: ['/api/siae/service-codes'] });
+  const { data: cancellationReasons = [] } = useQuery<SiaeCancellationReason[]>({ queryKey: ['/api/siae/cancellation-reasons'] });
+
+  const getExportData = () => {
+    switch (activeTab) {
+      case 'genres':
+        return { 
+          data: genres, 
+          title: 'TAB.1 - Generi Manifestazione', 
+          filename: 'siae_generi_manifestazione',
+          columns: [
+            { key: 'code', label: 'Codice' },
+            { key: 'name', label: 'Nome' },
+            { key: 'taxType', label: 'Tipo Imposta' },
+            { key: 'vatRate', label: 'IVA %' },
+            { key: 'active', label: 'Attivo' },
+          ]
+        };
+      case 'sectors':
+        return { 
+          data: sectors, 
+          title: 'TAB.2 - Codici Settore', 
+          filename: 'siae_codici_settore',
+          columns: [
+            { key: 'code', label: 'Codice' },
+            { key: 'name', label: 'Nome' },
+            { key: 'maxCapacity', label: 'Capienza Max' },
+            { key: 'active', label: 'Attivo' },
+          ]
+        };
+      case 'ticket-types':
+        return { 
+          data: ticketTypes, 
+          title: 'TAB.3 - Tipologie Titolo', 
+          filename: 'siae_tipologie_titolo',
+          columns: [
+            { key: 'code', label: 'Codice' },
+            { key: 'name', label: 'Nome' },
+            { key: 'isNominal', label: 'Nominativo' },
+            { key: 'requiresDocument', label: 'Documento' },
+            { key: 'active', label: 'Attivo' },
+          ]
+        };
+      case 'services':
+        return { 
+          data: services, 
+          title: 'TAB.4 - Codici Prestazione', 
+          filename: 'siae_codici_prestazione',
+          columns: [
+            { key: 'code', label: 'Codice' },
+            { key: 'name', label: 'Nome' },
+            { key: 'category', label: 'Categoria' },
+            { key: 'active', label: 'Attivo' },
+          ]
+        };
+      case 'cancellations':
+        return { 
+          data: cancellationReasons, 
+          title: 'TAB.5 - Causali Annullamento', 
+          filename: 'siae_causali_annullamento',
+          columns: [
+            { key: 'code', label: 'Codice' },
+            { key: 'name', label: 'Nome' },
+            { key: 'requiresRefund', label: 'Rimborso' },
+            { key: 'active', label: 'Attivo' },
+          ]
+        };
+      default:
+        return { data: [], title: '', filename: '', columns: [] };
+    }
+  };
+
+  const handleExportCSV = () => {
+    const { data, filename, columns } = getExportData();
+    if (data.length === 0) {
+      toast({ title: "Nessun dato da esportare", variant: "destructive" });
+      return;
+    }
+    exportToCSV(data, filename, columns);
+    toast({ title: "Export CSV completato" });
+  };
+
+  const handleExportPDF = () => {
+    const { data, title, filename, columns } = getExportData();
+    if (data.length === 0) {
+      toast({ title: "Nessun dato da esportare", variant: "destructive" });
+      return;
+    }
+    exportToPDF(data, title, filename, columns);
+    toast({ title: "Export PDF completato" });
+  };
 
   if (!isMobile) {
     return (
       <div className="container mx-auto p-6 space-y-6" data-testid="page-siae-tables">
-        <div className="flex items-center justify-between">
+        <div className="flex items-center justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold">Tabelle SIAE</h1>
             <p className="text-muted-foreground">
               Gestione tabelle di sistema secondo Decreto 23/07/2001 e Provvedimento 356768/2025
             </p>
           </div>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleExportCSV} data-testid="button-export-csv">
+              <Download className="w-4 h-4 mr-2" />
+              Esporta CSV
+            </Button>
+            <Button variant="outline" onClick={handleExportPDF} data-testid="button-export-pdf">
+              <FileText className="w-4 h-4 mr-2" />
+              Esporta PDF
+            </Button>
+          </div>
         </div>
 
         <Card data-testid="card-tables">
           <CardContent className="p-6">
-            <Tabs defaultValue="genres" className="w-full" data-testid="tabs-siae">
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" data-testid="tabs-siae">
               <TabsList className="grid w-full grid-cols-5 mb-6" data-testid="tabs-list">
                 <TabsTrigger value="genres" className="flex items-center gap-2" data-testid="tab-genres">
                   <Music className="w-4 h-4" />
@@ -594,15 +782,23 @@ export default function SiaeTablesPage() {
       contentClassName="pb-24"
     >
       <div className="p-4 md:p-6 space-y-6 overflow-auto h-full pb-24 md:pb-8" data-testid="page-siae-tables">
-        <div>
-          <p className="text-muted-foreground text-sm md:text-base" data-testid="description-page">
-            Gestione tabelle di sistema secondo Decreto 23/07/2001 e Provvedimento 356768/2025
+        <div className="flex items-center justify-between gap-2">
+          <p className="text-muted-foreground text-sm flex-1" data-testid="description-page">
+            Tabelle di sistema SIAE
           </p>
+          <div className="flex gap-1">
+            <Button variant="outline" size="sm" onClick={handleExportCSV} data-testid="button-export-csv-mobile">
+              <Download className="w-4 h-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExportPDF} data-testid="button-export-pdf-mobile">
+              <FileText className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
 
       <Card className="glass-card" data-testid="card-tables">
         <CardContent className="p-4 md:p-6">
-          <Tabs defaultValue="genres" className="w-full" data-testid="tabs-siae">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full" data-testid="tabs-siae">
             <TabsList className="grid w-full grid-cols-5 mb-6" data-testid="tabs-list">
               <TabsTrigger value="genres" className="flex items-center gap-2" data-testid="tab-genres">
                 <Music className="w-4 h-4" />
