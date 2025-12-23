@@ -95,15 +95,9 @@ export function AppSidebar() {
         group: "Sistema",
       },
       {
-        title: "Aziende",
-        icon: Building2,
-        url: "/companies",
-        group: "Sistema",
-      },
-      {
-        title: "Utenti",
+        title: "Gestori",
         icon: Users,
-        url: "/users",
+        url: "/admin/gestori",
         group: "Sistema",
       },
       {

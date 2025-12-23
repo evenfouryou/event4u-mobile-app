@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
-import { format } from "date-fns";
+import { format, getMonth } from "date-fns";
 import { it } from "date-fns/locale";
 import {
   Dialog,
@@ -77,6 +77,8 @@ interface UserCompanyAssociation {
   companyVatNumber?: string;
 }
 
+type EventGroupingMode = "mese" | "stagione" | "giorno";
+
 const springTransition = { type: "spring", stiffness: 400, damping: 30 };
 
 const cardVariants = {
@@ -92,6 +94,19 @@ const cardVariants = {
   }),
 };
 
+function getSeasonFromMonth(month: number, year: number): string {
+  if (month === 11 || month === 0 || month === 1) {
+    const seasonYear = month === 11 ? year : year - 1;
+    return `Inverno ${seasonYear + 1}`;
+  } else if (month >= 2 && month <= 4) {
+    return `Primavera ${year}`;
+  } else if (month >= 5 && month <= 7) {
+    return `Estate ${year}`;
+  } else {
+    return `Autunno ${year}`;
+  }
+}
+
 export default function AdminGestori() {
   const { toast } = useToast();
   const [, setLocation] = useLocation();
@@ -100,12 +115,14 @@ export default function AdminGestori() {
   const [selectedGestore, setSelectedGestore] = useState<User | null>(null);
   const [companiesDialogOpen, setCompaniesDialogOpen] = useState(false);
   const [eventsDialogOpen, setEventsDialogOpen] = useState(false);
+  const [usersDialogOpen, setUsersDialogOpen] = useState(false);
   const [addCompanyDialogOpen, setAddCompanyDialogOpen] = useState(false);
   const [deleteAssociationId, setDeleteAssociationId] = useState<string | null>(null);
   const [newCompanyId, setNewCompanyId] = useState<string>("");
   const [newCompanyRole, setNewCompanyRole] = useState<string>("owner");
   const [newCompanyIsDefault, setNewCompanyIsDefault] = useState<boolean>(false);
   const [eventStatusFilter, setEventStatusFilter] = useState<string>("tutti");
+  const [eventGroupingMode, setEventGroupingMode] = useState<EventGroupingMode>("mese");
 
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
@@ -128,6 +145,22 @@ export default function AdminGestori() {
   const gestori = useMemo(() => {
     return users?.filter((user) => user.role === "gestore") || [];
   }, [users]);
+
+  const gestoreCompanyIds = useMemo(() => {
+    if (!selectedGestore || !gestoreCompanies) return [];
+    const companyIds = gestoreCompanies.map((gc) => gc.companyId);
+    if (selectedGestore.companyId && !companyIds.includes(selectedGestore.companyId)) {
+      companyIds.push(selectedGestore.companyId);
+    }
+    return companyIds;
+  }, [selectedGestore, gestoreCompanies]);
+
+  const gestoreUsers = useMemo(() => {
+    if (!users || gestoreCompanyIds.length === 0) return [];
+    return users.filter((user) => 
+      user.companyId && gestoreCompanyIds.includes(user.companyId) && user.id !== selectedGestore?.id
+    );
+  }, [users, gestoreCompanyIds, selectedGestore]);
 
   const getCompanyName = (companyId: string | null) => {
     if (!companyId) return "Nessuna azienda";
@@ -154,19 +187,33 @@ export default function AdminGestori() {
 
   const groupedEvents = useMemo(() => {
     const groups: Record<string, Event[]> = {};
+    
     filteredEvents.forEach((event) => {
       const date = new Date(event.startDatetime);
-      const monthKey = format(date, "MMMM yyyy", { locale: it });
-      if (!groups[monthKey]) groups[monthKey] = [];
-      groups[monthKey].push(event);
+      let groupKey: string;
+      
+      if (eventGroupingMode === "mese") {
+        groupKey = format(date, "MMMM yyyy", { locale: it });
+      } else if (eventGroupingMode === "stagione") {
+        const month = getMonth(date);
+        const year = date.getFullYear();
+        groupKey = getSeasonFromMonth(month, year);
+      } else {
+        groupKey = format(date, "EEEE d MMMM yyyy", { locale: it });
+      }
+      
+      if (!groups[groupKey]) groups[groupKey] = [];
+      groups[groupKey].push(event);
     });
+    
     Object.keys(groups).forEach((key) => {
       groups[key].sort(
         (a, b) => new Date(b.startDatetime).getTime() - new Date(a.startDatetime).getTime()
       );
     });
+    
     return groups;
-  }, [filteredEvents]);
+  }, [filteredEvents, eventGroupingMode]);
 
   const createAssociationMutation = useMutation({
     mutationFn: async (data: { userId: string; companyId: string; role: string; isDefault: boolean }) => {
@@ -251,6 +298,12 @@ export default function AdminGestori() {
     setEventsDialogOpen(true);
   };
 
+  const handleViewUsers = (gestore: User) => {
+    triggerHaptic("medium");
+    setSelectedGestore(gestore);
+    setUsersDialogOpen(true);
+  };
+
   const handleAddCompany = () => {
     if (!selectedGestore || !newCompanyId) return;
     createAssociationMutation.mutate({
@@ -266,6 +319,54 @@ export default function AdminGestori() {
     const associatedIds = new Set(gestoreCompanies.map((gc) => gc.companyId));
     return companies.filter((c) => !associatedIds.has(c.id));
   }, [companies, gestoreCompanies]);
+
+  const formatEventDateRange = (startDatetime: string | Date, endDatetime: string | Date) => {
+    const start = new Date(startDatetime);
+    const end = new Date(endDatetime);
+    const startFormatted = format(start, "d MMMM yyyy, HH:mm", { locale: it });
+    const endFormatted = format(end, "d MMMM yyyy, HH:mm", { locale: it });
+    
+    if (format(start, "yyyy-MM-dd") === format(end, "yyyy-MM-dd")) {
+      return `${format(start, "d MMMM yyyy, HH:mm", { locale: it })} - ${format(end, "HH:mm")}`;
+    }
+    return `${startFormatted} - ${endFormatted}`;
+  };
+
+  const getRoleBadgeVariant = (role: string) => {
+    switch (role) {
+      case "gestore":
+        return "default";
+      case "capo_staff":
+        return "secondary";
+      case "pr":
+        return "outline";
+      default:
+        return "secondary";
+    }
+  };
+
+  const getRoleLabel = (role: string) => {
+    switch (role) {
+      case "gestore":
+        return "Gestore";
+      case "gestore_covisione":
+        return "Gestore Co-visione";
+      case "capo_staff":
+        return "Capo Staff";
+      case "pr":
+        return "PR";
+      case "warehouse":
+        return "Magazzino";
+      case "bartender":
+        return "Bartender";
+      case "cassiere":
+        return "Cassiere";
+      case "cliente":
+        return "Cliente";
+      default:
+        return role;
+    }
+  };
 
   const renderGestoreCard = (gestore: User, index: number) => {
     const initials = `${gestore.firstName?.[0] || ""}${gestore.lastName?.[0] || ""}`.toUpperCase();
@@ -313,6 +414,15 @@ export default function AdminGestori() {
               >
                 <Building2 className="h-4 w-4 mr-1" />
                 Aziende
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleViewUsers(gestore)}
+                data-testid={`button-view-users-${gestore.id}`}
+              >
+                <Users className="h-4 w-4 mr-1" />
+                Utenti
               </Button>
               <Button
                 variant="outline"
@@ -373,6 +483,15 @@ export default function AdminGestori() {
                     >
                       <Building2 className="h-4 w-4 mr-1" />
                       Aziende
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      onClick={() => handleViewUsers(gestore)}
+                      data-testid={`button-view-users-${gestore.id}`}
+                    >
+                      <Users className="h-4 w-4 mr-1" />
+                      Utenti
                     </Button>
                     <Button
                       variant="outline"
@@ -485,6 +604,58 @@ export default function AdminGestori() {
     </DialogContent>
   );
 
+  const usersDialogContent = (
+    <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
+      <DialogHeader>
+        <DialogTitle className="flex items-center gap-2">
+          <Users className="h-5 w-5" />
+          Utenti di {selectedGestore?.firstName} {selectedGestore?.lastName}
+        </DialogTitle>
+        <DialogDescription>
+          Utenti appartenenti alle aziende associate a questo gestore
+        </DialogDescription>
+      </DialogHeader>
+      <div className="mt-4">
+        {gestoreUsers.length > 0 ? (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Nome</TableHead>
+                <TableHead>Email</TableHead>
+                <TableHead>Ruolo</TableHead>
+                <TableHead>Azienda</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {gestoreUsers.map((user) => (
+                <TableRow key={user.id} data-testid={`row-user-${user.id}`}>
+                  <TableCell className="font-medium" data-testid={`text-user-name-${user.id}`}>
+                    {user.firstName} {user.lastName}
+                  </TableCell>
+                  <TableCell data-testid={`text-user-email-${user.id}`}>
+                    {user.email}
+                  </TableCell>
+                  <TableCell data-testid={`text-user-role-${user.id}`}>
+                    <Badge variant={getRoleBadgeVariant(user.role)}>
+                      {getRoleLabel(user.role)}
+                    </Badge>
+                  </TableCell>
+                  <TableCell data-testid={`text-user-company-${user.id}`}>
+                    {getCompanyName(user.companyId)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        ) : (
+          <div className="text-center py-8 text-muted-foreground">
+            Nessun utente trovato nelle aziende associate
+          </div>
+        )}
+      </div>
+    </DialogContent>
+  );
+
   const eventsDialogContent = (
     <DialogContent className="max-w-3xl max-h-[80vh] overflow-y-auto">
       <DialogHeader>
@@ -497,84 +668,100 @@ export default function AdminGestori() {
         </DialogDescription>
       </DialogHeader>
       <div className="mt-4">
-        <Tabs value={eventStatusFilter} onValueChange={setEventStatusFilter}>
-          <TabsList className="mb-4">
-            <TabsTrigger value="tutti" data-testid="tab-events-all">
-              Tutti ({gestoreEvents.length})
-            </TabsTrigger>
-            <TabsTrigger value="in_corso" data-testid="tab-events-ongoing">
-              In corso
-            </TabsTrigger>
-            <TabsTrigger value="passati" data-testid="tab-events-past">
-              Passati
-            </TabsTrigger>
-          </TabsList>
-          <TabsContent value={eventStatusFilter}>
-            {Object.keys(groupedEvents).length > 0 ? (
-              <Accordion type="multiple" className="space-y-2">
-                {Object.entries(groupedEvents).map(([month, events]) => (
-                  <AccordionItem key={month} value={month} className="border rounded-lg px-4">
-                    <AccordionTrigger className="hover:no-underline">
-                      <span className="font-medium capitalize">{month}</span>
-                      <Badge variant="secondary" className="ml-2">
-                        {events.length}
-                      </Badge>
-                    </AccordionTrigger>
-                    <AccordionContent>
-                      <div className="space-y-2 py-2">
-                        {events.map((event) => (
-                          <div
-                            key={event.id}
-                            className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
-                            data-testid={`event-item-${event.id}`}
-                          >
-                            <div>
-                              <h4 className="font-medium">{event.name}</h4>
-                              <p className="text-sm text-muted-foreground">
-                                {format(new Date(event.startDatetime), "d MMMM yyyy, HH:mm", { locale: it })}
-                              </p>
-                            </div>
-                            <div className="flex items-center gap-2">
-                              <Badge
-                                variant={
-                                  event.status === "ongoing"
-                                    ? "default"
-                                    : event.status === "scheduled"
-                                    ? "secondary"
-                                    : "outline"
-                                }
-                              >
-                                {event.status === "ongoing"
-                                  ? "In corso"
-                                  : event.status === "scheduled"
-                                  ? "Programmato"
-                                  : event.status === "closed"
-                                  ? "Chiuso"
-                                  : event.status}
-                              </Badge>
-                              <Button
-                                variant="ghost"
-                                size="icon"
-                                onClick={() => setLocation(`/events/${event.id}/hub`)}
-                                data-testid={`button-view-event-${event.id}`}
-                              >
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </div>
+        <div className="flex items-center justify-between gap-4 mb-4">
+          <Tabs value={eventStatusFilter} onValueChange={setEventStatusFilter} className="flex-1">
+            <TabsList>
+              <TabsTrigger value="tutti" data-testid="tab-events-all">
+                Tutti ({gestoreEvents.length})
+              </TabsTrigger>
+              <TabsTrigger value="in_corso" data-testid="tab-events-ongoing">
+                In corso
+              </TabsTrigger>
+              <TabsTrigger value="passati" data-testid="tab-events-past">
+                Passati
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-muted-foreground whitespace-nowrap">Raggruppa per:</span>
+            <Select value={eventGroupingMode} onValueChange={(v) => setEventGroupingMode(v as EventGroupingMode)}>
+              <SelectTrigger className="w-32" data-testid="select-event-grouping">
+                <SelectValue />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="mese" data-testid="select-grouping-mese">Mese</SelectItem>
+                <SelectItem value="stagione" data-testid="select-grouping-stagione">Stagione</SelectItem>
+                <SelectItem value="giorno" data-testid="select-grouping-giorno">Giorno</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <div>
+          {Object.keys(groupedEvents).length > 0 ? (
+            <Accordion type="multiple" className="space-y-2">
+              {Object.entries(groupedEvents).map(([groupKey, events]) => (
+                <AccordionItem key={groupKey} value={groupKey} className="border rounded-lg px-4">
+                  <AccordionTrigger className="hover:no-underline">
+                    <span className="font-medium capitalize">{groupKey}</span>
+                    <Badge variant="secondary" className="ml-2">
+                      {events.length}
+                    </Badge>
+                  </AccordionTrigger>
+                  <AccordionContent>
+                    <div className="space-y-2 py-2">
+                      {events.map((event) => (
+                        <div
+                          key={event.id}
+                          className="flex items-center justify-between p-3 bg-muted/50 rounded-lg"
+                          data-testid={`event-item-${event.id}`}
+                        >
+                          <div>
+                            <h4 className="font-medium" data-testid={`text-event-name-${event.id}`}>{event.name}</h4>
+                            <p className="text-sm text-muted-foreground" data-testid={`text-event-dates-${event.id}`}>
+                              {formatEventDateRange(event.startDatetime, event.endDatetime)}
+                            </p>
                           </div>
-                        ))}
-                      </div>
-                    </AccordionContent>
-                  </AccordionItem>
-                ))}
-              </Accordion>
-            ) : (
-              <div className="text-center py-8 text-muted-foreground">
-                Nessun evento trovato
-              </div>
-            )}
-          </TabsContent>
-        </Tabs>
+                          <div className="flex items-center gap-2">
+                            <Badge
+                              variant={
+                                event.status === "ongoing"
+                                  ? "default"
+                                  : event.status === "scheduled"
+                                  ? "secondary"
+                                  : "outline"
+                              }
+                              data-testid={`badge-event-status-${event.id}`}
+                            >
+                              {event.status === "ongoing"
+                                ? "In corso"
+                                : event.status === "scheduled"
+                                ? "Programmato"
+                                : event.status === "closed"
+                                ? "Chiuso"
+                                : event.status}
+                            </Badge>
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => setLocation(`/events/${event.id}/hub`)}
+                              data-testid={`button-view-event-${event.id}`}
+                            >
+                              <Eye className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </AccordionContent>
+                </AccordionItem>
+              ))}
+            </Accordion>
+          ) : (
+            <div className="text-center py-8 text-muted-foreground">
+              Nessun evento trovato
+            </div>
+          )}
+        </div>
       </div>
     </DialogContent>
   );
@@ -682,6 +869,10 @@ export default function AdminGestori() {
           {companiesDialogContent}
         </Dialog>
 
+        <Dialog open={usersDialogOpen} onOpenChange={setUsersDialogOpen}>
+          {usersDialogContent}
+        </Dialog>
+
         <Dialog open={eventsDialogOpen} onOpenChange={setEventsDialogOpen}>
           {eventsDialogContent}
         </Dialog>
@@ -749,6 +940,10 @@ export default function AdminGestori() {
 
       <Dialog open={companiesDialogOpen} onOpenChange={setCompaniesDialogOpen}>
         {companiesDialogContent}
+      </Dialog>
+
+      <Dialog open={usersDialogOpen} onOpenChange={setUsersDialogOpen}>
+        {usersDialogContent}
       </Dialog>
 
       <Dialog open={eventsDialogOpen} onOpenChange={setEventsDialogOpen}>
