@@ -2014,6 +2014,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.get('/api/events', isAuthenticated, async (req: any, res) => {
     try {
+      const userId = getCurrentUserId(req);
+      const currentUser = await storage.getUser(userId);
+      
+      // Super admin can pass companyId as query param to view specific company's events
+      if (currentUser?.role === 'super_admin' && req.query.companyId) {
+        const events = await storage.getEventsByCompany(req.query.companyId as string);
+        return res.json(events);
+      }
+      
       const companyId = await getUserCompanyId(req);
       if (!companyId) {
         return res.status(403).json({ message: "No company associated" });
