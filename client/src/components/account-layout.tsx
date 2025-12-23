@@ -12,9 +12,9 @@ import {
   Wallet,
   RefreshCw,
   LogOut,
-  Sparkles,
   Home,
 } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 
 interface Customer {
   id: number;
@@ -39,12 +39,7 @@ function SidebarContent({ customer, onLogout }: { customer: Customer | null; onL
     <div className="flex flex-col h-full bg-sidebar border-r border-border">
       <div className="p-6 border-b border-border">
         <Link href="/acquista">
-          <div className="flex items-center gap-3 cursor-pointer">
-            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-              <Sparkles className="w-5 h-5 text-primary-foreground" />
-            </div>
-            <span className="text-xl font-bold text-foreground">Event4U</span>
-          </div>
+          <BrandLogo variant="horizontal" className="h-10 w-auto" />
         </Link>
       </div>
 
@@ -139,13 +134,8 @@ export function AccountLayout({ children }: AccountLayoutProps) {
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
         <header className="shrink-0 flex items-center justify-between px-4 py-3 bg-card/95 backdrop-blur-xl border-b border-border z-30">
-          <Link href="/acquista">
-            <div className="flex items-center gap-2 cursor-pointer" data-testid="link-logo">
-              <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <span className="text-lg font-bold text-foreground">Event4U</span>
-            </div>
+          <Link href="/acquista" data-testid="link-logo">
+            <BrandLogo variant="horizontal" className="h-9 w-auto" />
           </Link>
           
           <div className="flex items-center gap-2">

@@ -31,10 +31,10 @@ import {
   Wallet,
   RefreshCw,
   Home,
-  Sparkles,
   LogOut,
   ChevronLeft,
 } from "lucide-react";
+import { BrandLogo } from "@/components/brand-logo";
 
 interface Customer {
   id: number;
@@ -226,17 +226,8 @@ export default function AccountPage() {
             <ChevronLeft className="w-6 h-6" />
           </HapticButton>
         ) : (
-          <Link href="/acquista">
-            <motion.div 
-              className="flex items-center gap-2 cursor-pointer min-h-[44px] min-w-[44px] px-1"
-              whileTap={{ scale: 0.95 }}
-              onClick={() => triggerHaptic('light')}
-              data-testid="link-logo"
-            >
-              <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-primary-foreground" />
-              </div>
-            </motion.div>
+          <Link href="/acquista" data-testid="link-logo">
+            <BrandLogo variant="monogram" className="h-9 w-auto" />
           </Link>
         )
       }
@@ -291,16 +282,8 @@ export default function AccountPage() {
         <header className="sticky top-0 z-50 border-b bg-card/95 backdrop-blur-xl">
           <div className="container mx-auto px-6 h-16 flex items-center justify-between gap-4">
             <div className="flex items-center gap-4">
-              <Link href="/acquista">
-                <div 
-                  className="flex items-center gap-2 cursor-pointer"
-                  data-testid="link-logo"
-                >
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-primary/60 flex items-center justify-center">
-                    <Sparkles className="w-4 h-4 text-primary-foreground" />
-                  </div>
-                  <span className="font-semibold text-lg">Event4U</span>
-                </div>
+              <Link href="/acquista" data-testid="link-logo">
+                <BrandLogo variant="horizontal" className="h-10 w-auto" />
               </Link>
             </div>
 

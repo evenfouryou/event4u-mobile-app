@@ -20,7 +20,6 @@ import {
   Calendar,
   MapPin,
   Clock,
-  Sparkles,
   ChevronRight,
   QrCode,
   Copy,
@@ -31,6 +30,7 @@ import { it } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { BrandLogo } from "@/components/brand-logo";
 
 interface TicketData {
   id: string;
@@ -228,12 +228,7 @@ export default function PublicCheckoutSuccessPage() {
         <header className="border-b border-border">
           <div className="container mx-auto px-6 py-4">
             <Link href="/">
-              <div className="flex items-center gap-2 cursor-pointer">
-                <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-                  <Sparkles className="w-4 h-4 text-primary-foreground" />
-                </div>
-                <span className="text-lg font-bold text-foreground">Event4U</span>
-              </div>
+              <BrandLogo variant="horizontal" className="h-10 w-auto" />
             </Link>
           </div>
         </header>
@@ -411,12 +406,7 @@ export default function PublicCheckoutSuccessPage() {
       <header className="border-b border-border">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <Link href="/">
-            <div className="flex items-center gap-2 cursor-pointer">
-              <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-                <Sparkles className="w-4 h-4 text-primary-foreground" />
-              </div>
-              <span className="text-lg font-bold text-foreground">Event4U</span>
-            </div>
+            <BrandLogo variant="horizontal" className="h-9 w-auto" />
           </Link>
         </div>
       </header>
