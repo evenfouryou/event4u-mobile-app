@@ -668,6 +668,11 @@ export default function EventHub() {
   const [cancelReason, setCancelReason] = useState("01");
   const [cancelNote, setCancelNote] = useState("");
 
+  // Biglietti drill-down state
+  const [selectedSectorId, setSelectedSectorId] = useState<string | null>(null);
+  const [selectedTicketForDetail, setSelectedTicketForDetail] = useState<SiaeTicket | null>(null);
+  const [showTicketDetailSheet, setShowTicketDetailSheet] = useState(false);
+
   // Transazioni state
   const [transactionPaymentMethodFilter, setTransactionPaymentMethodFilter] = useState<string>("all");
   const [transactionStatusFilter, setTransactionStatusFilter] = useState<string>("all");
@@ -717,7 +722,7 @@ export default function EventHub() {
     enabled: !!id,
   });
 
-  const { data: siaeTransactions = [] } = useQuery<SiaeTransaction[]>({
+  const { data: siaeTransactions = [], isLoading: transactionsLoading } = useQuery<SiaeTransaction[]>({
     queryKey: ['/api/siae/ticketed-events', ticketedEvent?.id, 'transactions'],
     enabled: !!ticketedEvent?.id,
   });
@@ -1801,10 +1806,6 @@ export default function EventHub() {
               <Euro className="h-4 w-4 mr-2" />
               Finanza
             </TabsTrigger>
-            <TabsTrigger value="report" data-testid="tab-report">
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Report
-            </TabsTrigger>
           </TabsList>
 
           {/* Overview Tab */}
@@ -1943,94 +1944,190 @@ export default function EventHub() {
               </TabsList>
 
               <TabsContent value="biglietti">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between gap-4">
-                    <div>
-                      <CardTitle>Biglietti Emessi</CardTitle>
-                      <CardDescription>Gestione biglietteria SIAE</CardDescription>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <Select value={ticketSectorFilter} onValueChange={setTicketSectorFilter}>
-                        <SelectTrigger className="w-40" data-testid="select-sector-filter">
-                          <SelectValue placeholder="Tutti i settori" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Tutti i settori</SelectItem>
-                          {ticketedEvent?.sectors?.map(sector => (
-                            <SelectItem key={sector.id} value={sector.id}>{sector.name}</SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <Select value={ticketStatusFilter} onValueChange={setTicketStatusFilter}>
-                        <SelectTrigger className="w-32" data-testid="select-status-filter">
-                          <SelectValue placeholder="Stato" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="all">Tutti</SelectItem>
-                          <SelectItem value="valid">Validi</SelectItem>
-                          <SelectItem value="used">Usati</SelectItem>
-                          <SelectItem value="cancelled">Annullati</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <Button onClick={() => navigate(`/siae/box-office?eventId=${id}`)} data-testid="button-box-office">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Nuovo Biglietto
-                      </Button>
-                    </div>
-                  </CardHeader>
-                  <CardContent>
-                    {siaeTickets.length === 0 ? (
-                      <div className="text-center py-12 text-muted-foreground">
-                        <Ticket className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                        <p>Nessun biglietto emesso</p>
+                {!selectedSectorId ? (
+                  <div className="space-y-6">
+                    <Card>
+                      <CardHeader className="flex flex-row items-center justify-between gap-4">
+                        <div>
+                          <CardTitle>Settori e Tipologie</CardTitle>
+                          <CardDescription>Seleziona un settore per visualizzare i biglietti emessi</CardDescription>
+                        </div>
+                        <Button onClick={() => navigate(`/siae/box-office?eventId=${id}`)} data-testid="button-box-office">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Nuovo Biglietto
+                        </Button>
+                      </CardHeader>
+                      <CardContent>
+                        {!ticketedEvent?.sectors || ticketedEvent.sectors.length === 0 ? (
+                          <div className="text-center py-12 text-muted-foreground">
+                            <Ticket className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                            <p>Nessun settore configurato</p>
+                            <p className="text-sm mt-2">Configura i settori dalla gestione biglietteria</p>
+                          </div>
+                        ) : (
+                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                            {ticketedEvent.sectors.map(sector => {
+                              const soldCount = sector.capacity - sector.availableSeats;
+                              const sectorTickets = siaeTickets.filter(t => t.sectorId === sector.id);
+                              const minPrice = Math.min(Number(sector.priceIntero), sector.priceRidotto ? Number(sector.priceRidotto) : Infinity);
+                              const maxPrice = Math.max(Number(sector.priceIntero), sector.priceRidotto ? Number(sector.priceRidotto) : 0);
+                              
+                              return (
+                                <Card 
+                                  key={sector.id} 
+                                  className="cursor-pointer hover-elevate transition-all" 
+                                  onClick={() => setSelectedSectorId(sector.id)}
+                                  data-testid={`sector-card-${sector.id}`}
+                                >
+                                  <CardHeader className="pb-2">
+                                    <div className="flex items-start justify-between gap-2">
+                                      <CardTitle className="text-lg">{sector.name}</CardTitle>
+                                      <Badge variant={sector.active ? 'default' : 'secondary'}>
+                                        {sector.active ? 'Attivo' : 'Disattivato'}
+                                      </Badge>
+                                    </div>
+                                    <CardDescription>
+                                      {minPrice === maxPrice ? `€${minPrice.toFixed(2)}` : `€${minPrice.toFixed(2)} - €${maxPrice.toFixed(2)}`}
+                                    </CardDescription>
+                                  </CardHeader>
+                                  <CardContent>
+                                    <div className="space-y-3">
+                                      <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">Venduti</span>
+                                        <span className="font-semibold text-blue-400">{soldCount}</span>
+                                      </div>
+                                      <div className="flex justify-between text-sm">
+                                        <span className="text-muted-foreground">Capacità</span>
+                                        <span className="font-medium">{sector.capacity}</span>
+                                      </div>
+                                      <Progress value={sector.capacity > 0 ? (soldCount / sector.capacity) * 100 : 0} className="h-2" />
+                                      <div className="flex items-center justify-between pt-2">
+                                        <span className="text-xs text-muted-foreground">{sectorTickets.length} biglietti</span>
+                                        <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                      </div>
+                                    </div>
+                                  </CardContent>
+                                </Card>
+                              );
+                            })}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                ) : (
+                  <Card>
+                    <CardHeader className="flex flex-row items-center justify-between gap-4">
+                      <div className="flex items-center gap-4">
+                        <Button variant="ghost" size="icon" onClick={() => setSelectedSectorId(null)} data-testid="button-back-to-sectors">
+                          <ArrowLeft className="h-4 w-4" />
+                        </Button>
+                        <div>
+                          <CardTitle>{getSectorName(selectedSectorId)}</CardTitle>
+                          <CardDescription>Biglietti emessi per questo settore</CardDescription>
+                        </div>
                       </div>
-                    ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Numero</TableHead>
-                            <TableHead>Settore</TableHead>
-                            <TableHead>Tipo</TableHead>
-                            <TableHead>Prezzo</TableHead>
-                            <TableHead>Stato</TableHead>
-                            <TableHead>Data</TableHead>
-                            <TableHead className="w-12"></TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {displayedTickets.map(ticket => (
-                            <TableRow key={ticket.id} data-testid={`row-ticket-${ticket.id}`}>
-                              <TableCell className="font-mono">{ticket.progressiveNumber}</TableCell>
-                              <TableCell>{getSectorName(ticket.sectorId)}</TableCell>
-                              <TableCell>
-                                <Badge variant="secondary">{ticket.ticketTypeCode === '01' ? 'Intero' : 'Ridotto'}</Badge>
-                              </TableCell>
-                              <TableCell>€{Number(ticket.grossAmount).toFixed(2)}</TableCell>
-                              <TableCell>{getTicketStatusBadge(ticket.status)}</TableCell>
-                              <TableCell className="text-muted-foreground">
-                                {ticket.emissionDate ? format(new Date(ticket.emissionDate), 'dd/MM HH:mm') : '-'}
-                              </TableCell>
-                              <TableCell>
-                                {ticket.status === 'valid' && (
-                                  <Button variant="ghost" size="icon" onClick={() => handleCancelTicket(ticket)} data-testid={`button-cancel-ticket-${ticket.id}`}>
-                                    <X className="h-4 w-4" />
-                                  </Button>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
-                    )}
-                    {filteredTickets.length > ticketsDisplayLimit && (
-                      <div className="text-center mt-4">
-                        <Button variant="outline" onClick={() => setTicketsDisplayLimit(prev => prev + 20)}>
-                          Carica altri
+                      <div className="flex items-center gap-2">
+                        <Select value={ticketStatusFilter} onValueChange={setTicketStatusFilter}>
+                          <SelectTrigger className="w-32" data-testid="select-status-filter">
+                            <SelectValue placeholder="Stato" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">Tutti</SelectItem>
+                            <SelectItem value="valid">Validi</SelectItem>
+                            <SelectItem value="used">Usati</SelectItem>
+                            <SelectItem value="cancelled">Annullati</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <Button onClick={() => navigate(`/siae/box-office?eventId=${id}`)} data-testid="button-box-office-sector">
+                          <Plus className="h-4 w-4 mr-2" />
+                          Nuovo
                         </Button>
                       </div>
-                    )}
-                  </CardContent>
-                </Card>
+                    </CardHeader>
+                    <CardContent>
+                      {(() => {
+                        const sectorTickets = siaeTickets.filter(t => t.sectorId === selectedSectorId);
+                        const filteredSectorTickets = ticketStatusFilter === 'all' 
+                          ? sectorTickets 
+                          : sectorTickets.filter(t => t.status === ticketStatusFilter);
+                        const displayedSectorTickets = filteredSectorTickets.slice(0, ticketsDisplayLimit);
+                        
+                        if (sectorTickets.length === 0) {
+                          return (
+                            <div className="text-center py-12 text-muted-foreground">
+                              <Ticket className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                              <p>Nessun biglietto emesso per questo settore</p>
+                            </div>
+                          );
+                        }
+                        
+                        return (
+                          <>
+                            <Table>
+                              <TableHeader>
+                                <TableRow>
+                                  <TableHead>Numero</TableHead>
+                                  <TableHead>Partecipante</TableHead>
+                                  <TableHead>Tipo</TableHead>
+                                  <TableHead>Prezzo</TableHead>
+                                  <TableHead>Stato</TableHead>
+                                  <TableHead>Data</TableHead>
+                                  <TableHead className="w-24"></TableHead>
+                                </TableRow>
+                              </TableHeader>
+                              <TableBody>
+                                {displayedSectorTickets.map(ticket => (
+                                  <TableRow 
+                                    key={ticket.id} 
+                                    className="cursor-pointer" 
+                                    onClick={() => { setSelectedTicketForDetail(ticket); setShowTicketDetailSheet(true); }}
+                                    data-testid={`row-ticket-${ticket.id}`}
+                                  >
+                                    <TableCell className="font-mono">{ticket.progressiveNumber}</TableCell>
+                                    <TableCell>
+                                      {ticket.participantFirstName || ticket.participantLastName 
+                                        ? `${ticket.participantFirstName || ''} ${ticket.participantLastName || ''}`.trim()
+                                        : <span className="text-muted-foreground">-</span>
+                                      }
+                                    </TableCell>
+                                    <TableCell>
+                                      <Badge variant="secondary">{ticket.ticketTypeCode === '01' ? 'Intero' : 'Ridotto'}</Badge>
+                                    </TableCell>
+                                    <TableCell>€{Number(ticket.grossAmount).toFixed(2)}</TableCell>
+                                    <TableCell>{getTicketStatusBadge(ticket.status)}</TableCell>
+                                    <TableCell className="text-muted-foreground">
+                                      {ticket.emissionDate ? format(new Date(ticket.emissionDate), 'dd/MM HH:mm') : '-'}
+                                    </TableCell>
+                                    <TableCell>
+                                      <div className="flex items-center gap-1">
+                                        <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); setSelectedTicketForDetail(ticket); setShowTicketDetailSheet(true); }} data-testid={`button-view-ticket-${ticket.id}`}>
+                                          <Eye className="h-4 w-4" />
+                                        </Button>
+                                        {ticket.status === 'valid' && (
+                                          <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleCancelTicket(ticket); }} data-testid={`button-cancel-ticket-${ticket.id}`}>
+                                            <X className="h-4 w-4" />
+                                          </Button>
+                                        )}
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                ))}
+                              </TableBody>
+                            </Table>
+                            {filteredSectorTickets.length > ticketsDisplayLimit && (
+                              <div className="text-center mt-4">
+                                <Button variant="outline" onClick={() => setTicketsDisplayLimit(prev => prev + 20)}>
+                                  Carica altri ({filteredSectorTickets.length - ticketsDisplayLimit} rimanenti)
+                                </Button>
+                              </div>
+                            )}
+                          </>
+                        );
+                      })()}
+                    </CardContent>
+                  </Card>
+                )}
               </TabsContent>
 
               <TabsContent value="transazioni" data-testid="subtab-transazioni-content">
@@ -2067,7 +2164,11 @@ export default function EventHub() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    {filteredTransactions.length === 0 ? (
+                    {transactionsLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : filteredTransactions.length === 0 ? (
                       <div className="text-center py-12 text-muted-foreground">
                         <Banknote className="h-12 w-12 mx-auto mb-4 opacity-50" />
                         <p>Nessuna transazione registrata</p>
@@ -2746,36 +2847,6 @@ export default function EventHub() {
               </Card>
             </div>
           </TabsContent>
-
-          {/* Report Tab */}
-          <TabsContent value="report" className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Report SIAE</CardTitle>
-                <CardDescription>Genera e scarica report ufficiali</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-2 gap-4">
-                  <Button variant="outline" onClick={() => handleReportC1('giornaliero')} disabled={!ticketedEvent} data-testid="button-report-c1">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Registro C1 Giornaliero
-                  </Button>
-                  <Button variant="outline" onClick={() => handleReportC1('mensile')} disabled={!ticketedEvent} data-testid="button-report-c1-monthly">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Registro C1 Mensile
-                  </Button>
-                  <Button variant="outline" onClick={handleReportC2} disabled={!ticketedEvent} data-testid="button-report-c2">
-                    <FileText className="h-4 w-4 mr-2" />
-                    Registro C2
-                  </Button>
-                  <Button variant="outline" onClick={handleExportXML} disabled={!ticketedEvent || reportLoading} data-testid="button-export-xml">
-                    {reportLoading ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : <Download className="h-4 w-4 mr-2" />}
-                    Esporta XML
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
         </Tabs>
 
         {/* Dialogs - same as mobile version */}
@@ -2854,6 +2925,98 @@ export default function EventHub() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Ticket Detail Sheet */}
+        <Sheet open={showTicketDetailSheet} onOpenChange={setShowTicketDetailSheet}>
+          <SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-[85vh] rounded-t-2xl" : ""}>
+            <SheetHeader>
+              <SheetTitle className="flex items-center gap-2">
+                <Ticket className="h-5 w-5 text-blue-400" />
+                Dettaglio Biglietto
+              </SheetTitle>
+            </SheetHeader>
+            {selectedTicketForDetail && (
+              <div className="space-y-6 mt-6">
+                <div className="p-4 rounded-xl bg-muted/50 border">
+                  <div className="text-center mb-4">
+                    <div className="text-3xl font-mono font-bold text-blue-400">
+                      #{selectedTicketForDetail.progressiveNumber}
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      {selectedTicketForDetail.fiscalSealCode || 'N/A'}
+                    </div>
+                  </div>
+                  <div className="flex justify-center">
+                    {getTicketStatusBadge(selectedTicketForDetail.status)}
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Settore</span>
+                    <span className="font-medium">{getSectorName(selectedTicketForDetail.sectorId)}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Tipo</span>
+                    <Badge variant="secondary">{selectedTicketForDetail.ticketTypeCode === '01' ? 'Intero' : 'Ridotto'}</Badge>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Prezzo</span>
+                    <span className="font-bold text-emerald-400">€{Number(selectedTicketForDetail.grossAmount).toFixed(2)}</span>
+                  </div>
+                  {(selectedTicketForDetail.participantFirstName || selectedTicketForDetail.participantLastName) && (
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span className="text-muted-foreground">Partecipante</span>
+                      <span className="font-medium">
+                        {`${selectedTicketForDetail.participantFirstName || ''} ${selectedTicketForDetail.participantLastName || ''}`.trim()}
+                      </span>
+                    </div>
+                  )}
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Emissione</span>
+                    <span className="font-medium">
+                      {selectedTicketForDetail.emissionDate 
+                        ? format(new Date(selectedTicketForDetail.emissionDate), 'dd/MM/yyyy HH:mm') 
+                        : '-'}
+                    </span>
+                  </div>
+                  {selectedTicketForDetail.usedAt && (
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span className="text-muted-foreground">Utilizzato</span>
+                      <span className="font-medium">
+                        {format(new Date(selectedTicketForDetail.usedAt), 'dd/MM/yyyy HH:mm')}
+                      </span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  {selectedTicketForDetail.status === 'valid' && (
+                    <Button 
+                      variant="destructive" 
+                      className="flex-1"
+                      onClick={() => {
+                        setShowTicketDetailSheet(false);
+                        handleCancelTicket(selectedTicketForDetail);
+                      }}
+                      data-testid="button-cancel-ticket-detail"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Annulla Biglietto
+                    </Button>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => setShowTicketDetailSheet(false)}
+                  >
+                    Chiudi
+                  </Button>
+                </div>
+              </div>
+            )}
+          </SheetContent>
+        </Sheet>
 
         {/* Create List Dialog */}
         <Dialog open={showCreateListDialog} onOpenChange={setShowCreateListDialog}>
@@ -3621,82 +3784,183 @@ export default function EventHub() {
                   </CardContent>
                 </Card>
 
-                {/* Elenco Biglietti (Sectors) */}
-                <Card className="glass-card">
-                  <CardHeader className="flex flex-row items-center justify-between gap-2 px-4">
-                    <CardTitle className="flex items-center gap-2 text-lg">
-                      <FileText className="h-5 w-5 text-cyan-400" />
-                      Tipologie Biglietti
-                    </CardTitle>
-                    <HapticButton
-                      variant="outline"
-                      size="sm"
-                      onClick={() => navigate(`/siae/ticket-types/${ticketedEvent?.id}`)}
-                      data-testid="btn-manage-ticket-types"
-                      className="min-h-[44px]"
-                    >
-                      <Settings className="h-4 w-4 mr-2" />
-                      Gestisci
-                    </HapticButton>
-                  </CardHeader>
-                  <CardContent className="px-4">
-                    {ticketedEvent.sectors && ticketedEvent.sectors.length > 0 ? (
-                      <div className="space-y-3">
-                        {ticketedEvent.sectors.map((sector) => {
-                          const soldCount = sector.capacity - sector.availableSeats;
-                          return (
-                            <motion.div 
-                              key={sector.id} 
-                              className="flex items-center justify-between p-4 rounded-xl bg-background/50 border gap-4"
-                              data-testid={`ticket-row-${sector.id}`}
-                              whileTap={{ scale: 0.98 }}
-                              transition={springConfig}
-                            >
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap">
-                                  <h4 className="font-medium text-base truncate">{sector.name}</h4>
-                                  <Badge variant={sector.active ? 'default' : 'secondary'} className="text-xs">
-                                    {sector.active ? 'Attivo' : 'Disattivato'}
-                                  </Badge>
-                                </div>
-                                <div className="flex items-center gap-3 mt-1 text-sm text-muted-foreground flex-wrap">
-                                  <span>€{Number(sector.priceIntero).toFixed(2)}</span>
-                                  {sector.priceRidotto && <span>Ridotto: €{Number(sector.priceRidotto).toFixed(2)}</span>}
-                                  {sector.prevendita && Number(sector.prevendita) > 0 && <span>DDP: €{Number(sector.prevendita).toFixed(2)}</span>}
-                                </div>
-                              </div>
-                              <div className="flex items-center gap-4">
-                                <div className="text-right">
-                                  <div className="text-sm">
-                                    <span className="font-bold text-blue-400">{soldCount}</span>
-                                    <span className="text-muted-foreground">/{sector.capacity}</span>
-                                  </div>
-                                  <div className="text-xs text-muted-foreground">
-                                    {sector.availableSeats} disponibili
-                                  </div>
-                                </div>
-                                <Switch
-                                  checked={sector.active}
-                                  onCheckedChange={(checked) => {
+                {!selectedSectorId ? (
+                  <>
+                    {/* Sector Cards for Drill-down */}
+                    <Card className="glass-card">
+                      <CardHeader className="flex flex-row items-center justify-between gap-2 px-4">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <FileText className="h-5 w-5 text-cyan-400" />
+                          Settori Biglietti
+                        </CardTitle>
+                        <HapticButton
+                          variant="outline"
+                          size="sm"
+                          onClick={() => navigate(`/siae/box-office?eventId=${id}`)}
+                          data-testid="btn-new-ticket-mobile"
+                          className="min-h-[44px]"
+                        >
+                          <Plus className="h-4 w-4 mr-2" />
+                          Nuovo
+                        </HapticButton>
+                      </CardHeader>
+                      <CardContent className="px-4">
+                        {ticketedEvent.sectors && ticketedEvent.sectors.length > 0 ? (
+                          <div className="space-y-3">
+                            {ticketedEvent.sectors.map((sector) => {
+                              const soldCount = sector.capacity - sector.availableSeats;
+                              const sectorTickets = siaeTickets.filter(t => t.sectorId === sector.id);
+                              const minPrice = Math.min(Number(sector.priceIntero), sector.priceRidotto ? Number(sector.priceRidotto) : Infinity);
+                              const maxPrice = Math.max(Number(sector.priceIntero), sector.priceRidotto ? Number(sector.priceRidotto) : 0);
+                              
+                              return (
+                                <motion.div 
+                                  key={sector.id} 
+                                  className="p-4 rounded-xl bg-background/50 border cursor-pointer"
+                                  data-testid={`sector-card-mobile-${sector.id}`}
+                                  whileTap={{ scale: 0.98 }}
+                                  transition={springConfig}
+                                  onClick={() => {
                                     triggerHaptic('light');
-                                    toggleSectorMutation.mutate({ sectorId: sector.id, active: checked });
+                                    setSelectedSectorId(sector.id);
                                   }}
-                                  disabled={toggleSectorMutation.isPending}
-                                  data-testid={`toggle-sector-${sector.id}`}
-                                />
+                                >
+                                  <div className="flex items-center justify-between gap-4 mb-3">
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                      <h4 className="font-medium text-base">{sector.name}</h4>
+                                      <Badge variant={sector.active ? 'default' : 'secondary'} className="text-xs">
+                                        {sector.active ? 'Attivo' : 'Disattivato'}
+                                      </Badge>
+                                    </div>
+                                    <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                                  </div>
+                                  <div className="flex items-center gap-3 text-sm text-muted-foreground mb-2">
+                                    <span>{minPrice === maxPrice ? `€${minPrice.toFixed(2)}` : `€${minPrice.toFixed(2)} - €${maxPrice.toFixed(2)}`}</span>
+                                  </div>
+                                  <Progress value={sector.capacity > 0 ? (soldCount / sector.capacity) * 100 : 0} className="h-2 mb-2" />
+                                  <div className="flex items-center justify-between text-sm">
+                                    <span className="text-muted-foreground">
+                                      <span className="font-semibold text-blue-400">{soldCount}</span>/{sector.capacity} venduti
+                                    </span>
+                                    <span className="text-xs text-muted-foreground">{sectorTickets.length} biglietti</span>
+                                  </div>
+                                </motion.div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className="text-center py-8 text-muted-foreground">
+                            <Ticket className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                            <p>Nessun settore configurato</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </>
+                ) : (
+                  <>
+                    {/* Ticket List for Selected Sector - Mobile */}
+                    <Card className="glass-card">
+                      <CardHeader className="px-4">
+                        <div className="flex items-center gap-3">
+                          <HapticButton
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => {
+                              triggerHaptic('light');
+                              setSelectedSectorId(null);
+                            }}
+                            data-testid="button-back-to-sectors-mobile"
+                          >
+                            <ArrowLeft className="h-5 w-5" />
+                          </HapticButton>
+                          <div>
+                            <CardTitle className="text-lg">{getSectorName(selectedSectorId)}</CardTitle>
+                            <CardDescription>Biglietti emessi</CardDescription>
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="px-4">
+                        <div className="flex items-center gap-2 mb-4">
+                          <Select value={ticketStatusFilter} onValueChange={setTicketStatusFilter}>
+                            <SelectTrigger className="flex-1" data-testid="select-status-filter-mobile">
+                              <SelectValue placeholder="Filtra stato" />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="all">Tutti gli stati</SelectItem>
+                              <SelectItem value="valid">Validi</SelectItem>
+                              <SelectItem value="used">Usati</SelectItem>
+                              <SelectItem value="cancelled">Annullati</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        {(() => {
+                          const sectorTickets = siaeTickets.filter(t => t.sectorId === selectedSectorId);
+                          const filteredSectorTickets = ticketStatusFilter === 'all' 
+                            ? sectorTickets 
+                            : sectorTickets.filter(t => t.status === ticketStatusFilter);
+                          const displayedSectorTickets = filteredSectorTickets.slice(0, ticketsDisplayLimit);
+                          
+                          if (sectorTickets.length === 0) {
+                            return (
+                              <div className="text-center py-8 text-muted-foreground">
+                                <Ticket className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                <p>Nessun biglietto emesso</p>
                               </div>
-                            </motion.div>
+                            );
+                          }
+                          
+                          return (
+                            <div className="space-y-2">
+                              {displayedSectorTickets.map(ticket => (
+                                <motion.div
+                                  key={ticket.id}
+                                  className="p-3 rounded-lg bg-background/50 border cursor-pointer"
+                                  whileTap={{ scale: 0.98 }}
+                                  transition={springConfig}
+                                  onClick={() => {
+                                    triggerHaptic('light');
+                                    setSelectedTicketForDetail(ticket);
+                                    setShowTicketDetailSheet(true);
+                                  }}
+                                  data-testid={`ticket-row-mobile-${ticket.id}`}
+                                >
+                                  <div className="flex items-center justify-between gap-2">
+                                    <div className="flex-1 min-w-0">
+                                      <div className="flex items-center gap-2">
+                                        <span className="font-mono font-medium">#{ticket.progressiveNumber}</span>
+                                        {getTicketStatusBadge(ticket.status)}
+                                      </div>
+                                      <div className="text-sm text-muted-foreground mt-1">
+                                        {ticket.participantFirstName || ticket.participantLastName 
+                                          ? `${ticket.participantFirstName || ''} ${ticket.participantLastName || ''}`.trim()
+                                          : 'Partecipante non specificato'
+                                        }
+                                      </div>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                      <span className="font-medium text-emerald-400">€{Number(ticket.grossAmount).toFixed(2)}</span>
+                                      <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                    </div>
+                                  </div>
+                                </motion.div>
+                              ))}
+                              {filteredSectorTickets.length > ticketsDisplayLimit && (
+                                <HapticButton
+                                  variant="outline"
+                                  className="w-full mt-4"
+                                  onClick={() => setTicketsDisplayLimit(prev => prev + 20)}
+                                >
+                                  Carica altri ({filteredSectorTickets.length - ticketsDisplayLimit} rimanenti)
+                                </HapticButton>
+                              )}
+                            </div>
                           );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-center py-8 text-muted-foreground">
-                        <Ticket className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                        <p>Nessun biglietto configurato</p>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
+                        })()}
+                      </CardContent>
+                    </Card>
+                  </>
+                )}
 
                 {/* Pulsanti Report */}
                 <Card className="glass-card">
@@ -3975,7 +4239,11 @@ export default function EventHub() {
                       </Select>
                     </div>
 
-                    {filteredTransactions.length === 0 ? (
+                    {transactionsLoading ? (
+                      <div className="flex items-center justify-center py-12">
+                        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                      </div>
+                    ) : filteredTransactions.length === 0 ? (
                       <div className="text-center py-12 text-muted-foreground">
                         <Banknote className="h-12 w-12 mx-auto mb-4 opacity-50" />
                         <p>Nessuna transazione registrata</p>
@@ -5137,289 +5405,6 @@ export default function EventHub() {
                     Apri Report
                   </Button>
                 </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="report" className="space-y-4 sm:space-y-6">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4">
-              <div 
-                className="p-2 sm:p-3 md:p-4 rounded-lg bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30"
-                data-testid="stats-total-checkins"
-              >
-                <div className="text-lg sm:text-2xl md:text-3xl font-bold text-amber-400">
-                  {e4uReport?.overview?.totalCheckIns || 0}
-                </div>
-                <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">Ingressi</div>
-              </div>
-              <div 
-                className="p-2 sm:p-3 md:p-4 rounded-lg bg-gradient-to-br from-orange-500/20 to-red-500/20 border border-orange-500/30"
-                data-testid="stats-checkin-rate"
-              >
-                <div className="text-lg sm:text-2xl md:text-3xl font-bold text-orange-400">
-                  {e4uReport?.overview?.checkInRate || 0}%
-                </div>
-                <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">Check-in</div>
-              </div>
-              <div 
-                className="p-2 sm:p-3 md:p-4 rounded-lg bg-background/50 border"
-                data-testid="stats-list-revenue"
-              >
-                <div className="text-lg sm:text-xl md:text-2xl font-bold text-cyan-400">
-                  €{(e4uReport?.overview?.listRevenue || 0).toFixed(0)}
-                </div>
-                <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">Liste</div>
-              </div>
-              <div 
-                className="p-2 sm:p-3 md:p-4 rounded-lg bg-background/50 border"
-                data-testid="stats-table-revenue"
-              >
-                <div className="text-lg sm:text-xl md:text-2xl font-bold text-purple-400">
-                  €{(e4uReport?.overview?.tableRevenue || 0).toFixed(0)}
-                </div>
-                <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">Tavoli</div>
-              </div>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-3 sm:gap-4 md:gap-6">
-              <Card className="glass-card" data-testid="table-staff-performance">
-                <CardHeader className="px-3 sm:px-4 md:px-6">
-                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                    <Users className="h-4 w-4 sm:h-5 sm:w-5 text-amber-400" />
-                    <span className="hidden sm:inline">Performance</span> Staff
-                  </CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">Statistiche staff</CardDescription>
-                </CardHeader>
-                <CardContent className="px-3 sm:px-4 md:px-6">
-                  {e4uReport?.staffPerformance && e4uReport.staffPerformance.length > 0 ? (
-                    <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-                      <table className="w-full text-xs sm:text-sm min-w-[400px] sm:min-w-[500px]">
-                        <thead>
-                          <tr className="border-b border-border">
-                            <th className="text-left py-1.5 sm:py-2 px-1 sm:px-2 font-medium text-muted-foreground whitespace-nowrap">Staff</th>
-                            <th className="text-center py-1.5 sm:py-2 px-1 sm:px-2 font-medium text-muted-foreground whitespace-nowrap">Liste</th>
-                            <th className="text-center py-1.5 sm:py-2 px-1 sm:px-2 font-medium text-muted-foreground whitespace-nowrap">Pers.</th>
-                            <th className="text-center py-1.5 sm:py-2 px-1 sm:px-2 font-medium text-muted-foreground whitespace-nowrap hidden sm:table-cell">T.Prop.</th>
-                            <th className="text-center py-1.5 sm:py-2 px-1 sm:px-2 font-medium text-muted-foreground whitespace-nowrap hidden sm:table-cell">T.Appr.</th>
-                            <th className="text-center py-1.5 sm:py-2 px-1 sm:px-2 font-medium text-muted-foreground whitespace-nowrap">Check</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {e4uReport.staffPerformance.map((staff: any) => (
-                            <tr key={staff.staffId} className="border-b border-border/50 hover:bg-white/5">
-                              <td className="py-1.5 sm:py-2 px-1 sm:px-2 font-medium text-xs sm:text-sm truncate max-w-[80px] sm:max-w-none">{staff.staffName}</td>
-                              <td className="text-center py-1.5 sm:py-2 px-1 sm:px-2">
-                                <Badge variant="secondary" className="bg-cyan-500/20 text-cyan-400 text-[10px] sm:text-xs px-1 sm:px-2">
-                                  {staff.listsCreated}
-                                </Badge>
-                              </td>
-                              <td className="text-center py-1.5 sm:py-2 px-1 sm:px-2">
-                                <Badge variant="secondary" className="bg-blue-500/20 text-blue-400 text-[10px] sm:text-xs px-1 sm:px-2">
-                                  {staff.entriesAdded}
-                                </Badge>
-                              </td>
-                              <td className="text-center py-1.5 sm:py-2 px-1 sm:px-2 hidden sm:table-cell">
-                                <Badge variant="secondary" className="bg-purple-500/20 text-purple-400 text-[10px] sm:text-xs px-1 sm:px-2">
-                                  {staff.tablesProposed}
-                                </Badge>
-                              </td>
-                              <td className="text-center py-1.5 sm:py-2 px-1 sm:px-2 hidden sm:table-cell">
-                                <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-400 text-[10px] sm:text-xs px-1 sm:px-2">
-                                  {staff.tablesApproved}
-                                </Badge>
-                              </td>
-                              <td className="text-center py-1.5 sm:py-2 px-1 sm:px-2">
-                                <Badge variant="secondary" className="bg-amber-500/20 text-amber-400 text-[10px] sm:text-xs px-1 sm:px-2">
-                                  {staff.prCheckIns}
-                                </Badge>
-                              </td>
-                            </tr>
-                          ))}
-                          <tr className="bg-white/5 font-semibold">
-                            <td className="py-1.5 sm:py-2 px-1 sm:px-2 text-xs sm:text-sm">Tot.</td>
-                            <td className="text-center py-1.5 sm:py-2 px-1 sm:px-2">
-                              <Badge className="bg-cyan-500/30 text-cyan-300 text-[10px] sm:text-xs px-1 sm:px-2">
-                                {e4uReport.staffPerformance.reduce((acc: number, s: any) => acc + s.listsCreated, 0)}
-                              </Badge>
-                            </td>
-                            <td className="text-center py-1.5 sm:py-2 px-1 sm:px-2">
-                              <Badge className="bg-blue-500/30 text-blue-300 text-[10px] sm:text-xs px-1 sm:px-2">
-                                {e4uReport.staffPerformance.reduce((acc: number, s: any) => acc + s.entriesAdded, 0)}
-                              </Badge>
-                            </td>
-                            <td className="text-center py-1.5 sm:py-2 px-1 sm:px-2 hidden sm:table-cell">
-                              <Badge className="bg-purple-500/30 text-purple-300 text-[10px] sm:text-xs px-1 sm:px-2">
-                                {e4uReport.staffPerformance.reduce((acc: number, s: any) => acc + s.tablesProposed, 0)}
-                              </Badge>
-                            </td>
-                            <td className="text-center py-1.5 sm:py-2 px-1 sm:px-2 hidden sm:table-cell">
-                              <Badge className="bg-emerald-500/30 text-emerald-300 text-[10px] sm:text-xs px-1 sm:px-2">
-                                {e4uReport.staffPerformance.reduce((acc: number, s: any) => acc + s.tablesApproved, 0)}
-                              </Badge>
-                            </td>
-                            <td className="text-center py-1.5 sm:py-2 px-1 sm:px-2">
-                              <Badge className="bg-amber-500/30 text-amber-300 text-[10px] sm:text-xs px-1 sm:px-2">
-                                {e4uReport.staffPerformance.reduce((acc: number, s: any) => acc + s.prCheckIns, 0)}
-                              </Badge>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 sm:py-8">
-                      <Users className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 text-muted-foreground opacity-50" />
-                      <p className="text-xs sm:text-sm text-muted-foreground">Nessuno staff assegnato</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-
-              <Card className="glass-card" data-testid="table-pr-performance">
-                <CardHeader className="px-3 sm:px-4 md:px-6">
-                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                    <Megaphone className="h-4 w-4 sm:h-5 sm:w-5 text-orange-400" />
-                    <span className="hidden sm:inline">Performance</span> PR
-                  </CardTitle>
-                  <CardDescription className="text-xs sm:text-sm">Statistiche PR</CardDescription>
-                </CardHeader>
-                <CardContent className="px-3 sm:px-4 md:px-6">
-                  {e4uReport?.prPerformance && e4uReport.prPerformance.length > 0 ? (
-                    <div className="overflow-x-auto -mx-3 px-3 sm:mx-0 sm:px-0">
-                      <table className="w-full text-xs sm:text-sm min-w-[350px] sm:min-w-[500px]">
-                        <thead>
-                          <tr className="border-b border-border">
-                            <th className="text-left py-1.5 sm:py-2 px-1 sm:px-2 font-medium text-muted-foreground whitespace-nowrap">PR</th>
-                            <th className="text-left py-1.5 sm:py-2 px-1 sm:px-2 font-medium text-muted-foreground whitespace-nowrap hidden sm:table-cell">Staff</th>
-                            <th className="text-center py-1.5 sm:py-2 px-1 sm:px-2 font-medium text-muted-foreground whitespace-nowrap">Lista</th>
-                            <th className="text-center py-1.5 sm:py-2 px-1 sm:px-2 font-medium text-muted-foreground whitespace-nowrap">Ingr.</th>
-                            <th className="text-center py-1.5 sm:py-2 px-1 sm:px-2 font-medium text-muted-foreground whitespace-nowrap hidden sm:table-cell">T.Prop.</th>
-                            <th className="text-center py-1.5 sm:py-2 px-1 sm:px-2 font-medium text-muted-foreground whitespace-nowrap hidden sm:table-cell">T.Appr.</th>
-                          </tr>
-                        </thead>
-                        <tbody>
-                          {e4uReport.prPerformance.map((pr: any) => (
-                            <tr key={pr.prId} className="border-b border-border/50 hover:bg-white/5">
-                              <td className="py-1.5 sm:py-2 px-1 sm:px-2 font-medium text-xs sm:text-sm truncate max-w-[80px] sm:max-w-none">{pr.prName}</td>
-                              <td className="py-1.5 sm:py-2 px-1 sm:px-2 text-muted-foreground text-[10px] sm:text-xs hidden sm:table-cell">{pr.staffName}</td>
-                              <td className="text-center py-1.5 sm:py-2 px-1 sm:px-2">
-                                <Badge variant="secondary" className="bg-cyan-500/20 text-cyan-400 text-[10px] sm:text-xs px-1 sm:px-2">
-                                  {pr.entriesAdded}
-                                </Badge>
-                              </td>
-                              <td className="text-center py-1.5 sm:py-2 px-1 sm:px-2">
-                                <Badge variant="secondary" className="bg-emerald-500/20 text-emerald-400 text-[10px] sm:text-xs px-1 sm:px-2">
-                                  {pr.checkIns}
-                                </Badge>
-                              </td>
-                              <td className="text-center py-1.5 sm:py-2 px-1 sm:px-2 hidden sm:table-cell">
-                                <Badge variant="secondary" className="bg-purple-500/20 text-purple-400 text-[10px] sm:text-xs px-1 sm:px-2">
-                                  {pr.tablesProposed}
-                                </Badge>
-                              </td>
-                              <td className="text-center py-1.5 sm:py-2 px-1 sm:px-2 hidden sm:table-cell">
-                                <Badge variant="secondary" className="bg-amber-500/20 text-amber-400 text-[10px] sm:text-xs px-1 sm:px-2">
-                                  {pr.tablesApproved}
-                                </Badge>
-                              </td>
-                            </tr>
-                          ))}
-                          <tr className="bg-white/5 font-semibold">
-                            <td className="py-1.5 sm:py-2 px-1 sm:px-2 text-xs sm:text-sm">Tot.</td>
-                            <td className="py-1.5 sm:py-2 px-1 sm:px-2 hidden sm:table-cell">-</td>
-                            <td className="text-center py-1.5 sm:py-2 px-1 sm:px-2">
-                              <Badge className="bg-cyan-500/30 text-cyan-300 text-[10px] sm:text-xs px-1 sm:px-2">
-                                {e4uReport.prPerformance.reduce((acc: number, p: any) => acc + p.entriesAdded, 0)}
-                              </Badge>
-                            </td>
-                            <td className="text-center py-1.5 sm:py-2 px-1 sm:px-2">
-                              <Badge className="bg-emerald-500/30 text-emerald-300 text-[10px] sm:text-xs px-1 sm:px-2">
-                                {e4uReport.prPerformance.reduce((acc: number, p: any) => acc + p.checkIns, 0)}
-                              </Badge>
-                            </td>
-                            <td className="text-center py-1.5 sm:py-2 px-1 sm:px-2 hidden sm:table-cell">
-                              <Badge className="bg-purple-500/30 text-purple-300 text-[10px] sm:text-xs px-1 sm:px-2">
-                                {e4uReport.prPerformance.reduce((acc: number, p: any) => acc + p.tablesProposed, 0)}
-                              </Badge>
-                            </td>
-                            <td className="text-center py-1.5 sm:py-2 px-1 sm:px-2 hidden sm:table-cell">
-                              <Badge className="bg-amber-500/30 text-amber-300 text-[10px] sm:text-xs px-1 sm:px-2">
-                                {e4uReport.prPerformance.reduce((acc: number, p: any) => acc + p.tablesApproved, 0)}
-                              </Badge>
-                            </td>
-                          </tr>
-                        </tbody>
-                      </table>
-                    </div>
-                  ) : (
-                    <div className="text-center py-6 sm:py-8">
-                      <Megaphone className="h-10 w-10 sm:h-12 sm:w-12 mx-auto mb-3 sm:mb-4 text-muted-foreground opacity-50" />
-                      <p className="text-xs sm:text-sm text-muted-foreground">Nessun PR assegnato</p>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-
-            <Card className="glass-card">
-              <CardHeader className="px-3 sm:px-4 md:px-6">
-                <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                  <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-amber-400" />
-                  <span className="hidden sm:inline">Check-in per Ora</span>
-                  <span className="sm:hidden">Check-in/Ora</span>
-                </CardTitle>
-                <CardDescription className="text-xs sm:text-sm">Distribuzione ingressi</CardDescription>
-              </CardHeader>
-              <CardContent className="px-3 sm:px-4 md:px-6">
-                {e4uReport?.hourlyCheckIns && e4uReport.hourlyCheckIns.length > 0 ? (
-                  <div className="h-[150px] sm:h-[200px]">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <AreaChart data={e4uReport.hourlyCheckIns} margin={{ top: 5, right: 5, left: 0, bottom: 0 }}>
-                        <defs>
-                          <linearGradient id="checkInsGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="5%" stopColor="#f59e0b" stopOpacity={0.3} />
-                            <stop offset="95%" stopColor="#f59e0b" stopOpacity={0} />
-                          </linearGradient>
-                        </defs>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.3} />
-                        <XAxis 
-                          dataKey="hour" 
-                          stroke="hsl(var(--muted-foreground))" 
-                          fontSize={11}
-                          tickLine={false}
-                        />
-                        <YAxis 
-                          stroke="hsl(var(--muted-foreground))" 
-                          fontSize={11}
-                          tickLine={false}
-                          axisLine={false}
-                        />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: 'hsl(var(--card))',
-                            border: '1px solid hsl(var(--border))',
-                            borderRadius: '8px',
-                            fontSize: '12px',
-                          }}
-                          labelStyle={{ color: 'hsl(var(--foreground))' }}
-                        />
-                        <Area
-                          type="monotone"
-                          dataKey="checkIns"
-                          stroke="#f59e0b"
-                          strokeWidth={2}
-                          fill="url(#checkInsGradient)"
-                          name="Check-in"
-                        />
-                      </AreaChart>
-                    </ResponsiveContainer>
-                  </div>
-                ) : (
-                  <div className="text-center py-8">
-                    <TrendingUp className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                    <p className="text-sm text-muted-foreground">Nessun dato sui check-in disponibile</p>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </TabsContent>
