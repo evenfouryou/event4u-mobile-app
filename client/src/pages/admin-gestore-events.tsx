@@ -219,7 +219,7 @@ export default function AdminGestoreEvents() {
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => setLocation(`/events/${event.id}/hub`)}
+              onClick={() => setLocation(`/admin/gestori/${gestoreId}/events/${event.id}`)}
               data-testid={`button-view-event-${event.id}`}
             >
               <Eye className="h-4 w-4" />
@@ -317,7 +317,7 @@ export default function AdminGestoreEvents() {
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => setLocation(`/events/${event.id}/hub`)}
+                              onClick={() => setLocation(`/admin/gestori/${gestoreId}/events/${event.id}`)}
                               data-testid={`button-view-event-${event.id}`}
                             >
                               <Eye className="h-4 w-4" />

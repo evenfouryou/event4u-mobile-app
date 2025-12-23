@@ -42,12 +42,16 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import {
   Building2,
   ChevronLeft,
   Plus,
   Trash2,
   Star,
+  Link as LinkIcon,
 } from "lucide-react";
 import {
   MobileAppLayout,
@@ -95,6 +99,10 @@ export default function AdminGestoreCompanies() {
   const [newCompanyId, setNewCompanyId] = useState<string>("");
   const [newCompanyRole, setNewCompanyRole] = useState<string>("owner");
   const [newCompanyIsDefault, setNewCompanyIsDefault] = useState<boolean>(false);
+  const [dialogTab, setDialogTab] = useState<"associate" | "create">("associate");
+  const [newCompanyName, setNewCompanyName] = useState<string>("");
+  const [newCompanyVatNumber, setNewCompanyVatNumber] = useState<string>("");
+  const [newCompanyAddress, setNewCompanyAddress] = useState<string>("");
 
   const { data: users } = useQuery<User[]>({
     queryKey: ["/api/users"],
@@ -192,6 +200,44 @@ export default function AdminGestoreCompanies() {
     },
   });
 
+  const createCompanyMutation = useMutation({
+    mutationFn: async (data: { name: string; vatNumber?: string; address?: string }) => {
+      const response = await apiRequest("POST", "/api/companies", data);
+      return response.json();
+    },
+    onSuccess: async (newCompany: Company) => {
+      if (gestoreId) {
+        await apiRequest("POST", "/api/user-companies", {
+          userId: gestoreId,
+          companyId: newCompany.id,
+          role: "owner",
+          isDefault: newCompanyIsDefault || !gestoreCompanies?.length,
+        });
+      }
+      queryClient.invalidateQueries({ queryKey: ["/api/companies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/users", gestoreId, "companies"] });
+      setAddCompanyDialogOpen(false);
+      setNewCompanyName("");
+      setNewCompanyVatNumber("");
+      setNewCompanyAddress("");
+      setNewCompanyIsDefault(false);
+      setDialogTab("associate");
+      triggerHaptic("success");
+      toast({
+        title: "Successo",
+        description: "Azienda creata e associata con successo",
+      });
+    },
+    onError: (error: any) => {
+      triggerHaptic("error");
+      toast({
+        title: "Errore",
+        description: error?.message || "Impossibile creare l'azienda",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleAddCompany = () => {
     if (!gestoreId || !newCompanyId) return;
     createAssociationMutation.mutate({
@@ -200,6 +246,25 @@ export default function AdminGestoreCompanies() {
       role: newCompanyRole,
       isDefault: newCompanyIsDefault,
     });
+  };
+
+  const handleCreateCompany = () => {
+    if (!newCompanyName.trim()) return;
+    createCompanyMutation.mutate({
+      name: newCompanyName.trim(),
+      vatNumber: newCompanyVatNumber.trim() || undefined,
+      address: newCompanyAddress.trim() || undefined,
+    });
+  };
+
+  const resetDialogState = () => {
+    setNewCompanyId("");
+    setNewCompanyRole("owner");
+    setNewCompanyIsDefault(false);
+    setNewCompanyName("");
+    setNewCompanyVatNumber("");
+    setNewCompanyAddress("");
+    setDialogTab("associate");
   };
 
   const renderCompanyCard = (assoc: UserCompanyAssociation, index: number) => (
@@ -267,7 +332,6 @@ export default function AdminGestoreCompanies() {
         </div>
         <Button
           onClick={() => setAddCompanyDialogOpen(true)}
-          disabled={availableCompanies.length === 0}
           data-testid="button-add-company"
         >
           <Plus className="h-4 w-4 mr-1" />
@@ -341,69 +405,151 @@ export default function AdminGestoreCompanies() {
   );
 
   const addCompanyDialog = (
-    <Dialog open={addCompanyDialogOpen} onOpenChange={setAddCompanyDialogOpen}>
-      <DialogContent>
+    <Dialog open={addCompanyDialogOpen} onOpenChange={(open) => {
+      setAddCompanyDialogOpen(open);
+      if (!open) resetDialogState();
+    }}>
+      <DialogContent className="max-w-lg">
         <DialogHeader>
-          <DialogTitle>Aggiungi Azienda</DialogTitle>
+          <DialogTitle>Gestione Aziende</DialogTitle>
           <DialogDescription>
-            Associa una nuova azienda a {gestore?.firstName} {gestore?.lastName}
+            Associa un'azienda esistente o creane una nuova per {gestore?.firstName} {gestore?.lastName}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4 mt-4">
-          <div>
-            <label className="text-sm font-medium">Azienda</label>
-            <Select value={newCompanyId} onValueChange={setNewCompanyId}>
-              <SelectTrigger data-testid="select-company">
-                <SelectValue placeholder="Seleziona azienda" />
-              </SelectTrigger>
-              <SelectContent>
-                {availableCompanies.map((company) => (
-                  <SelectItem key={company.id} value={company.id}>
-                    {company.name}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-          <div>
-            <label className="text-sm font-medium">Ruolo</label>
-            <Select value={newCompanyRole} onValueChange={setNewCompanyRole}>
-              <SelectTrigger data-testid="select-role">
-                <SelectValue placeholder="Seleziona ruolo" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="owner">Owner</SelectItem>
-                <SelectItem value="manager">Manager</SelectItem>
-                <SelectItem value="viewer">Viewer</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          <div className="flex items-center gap-2">
-            <input
-              type="checkbox"
-              id="isDefault"
-              checked={newCompanyIsDefault}
-              onChange={(e) => setNewCompanyIsDefault(e.target.checked)}
-              className="h-4 w-4"
-              data-testid="checkbox-is-default"
-            />
-            <label htmlFor="isDefault" className="text-sm">
-              Imposta come azienda predefinita
-            </label>
-          </div>
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setAddCompanyDialogOpen(false)}>
-            Annulla
-          </Button>
-          <Button
-            onClick={handleAddCompany}
-            disabled={!newCompanyId || createAssociationMutation.isPending}
-            data-testid="button-confirm-add-company"
-          >
-            {createAssociationMutation.isPending ? "Salvataggio..." : "Aggiungi"}
-          </Button>
-        </DialogFooter>
+        
+        <Tabs value={dialogTab} onValueChange={(v) => setDialogTab(v as "associate" | "create")} className="mt-4">
+          <TabsList className="grid w-full grid-cols-2">
+            <TabsTrigger value="associate" className="flex items-center gap-2">
+              <LinkIcon className="h-4 w-4" />
+              Associa Esistente
+            </TabsTrigger>
+            <TabsTrigger value="create" className="flex items-center gap-2">
+              <Plus className="h-4 w-4" />
+              Crea Nuova
+            </TabsTrigger>
+          </TabsList>
+          
+          <TabsContent value="associate" className="space-y-4 mt-4">
+            {availableCompanies.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <Building2 className="h-10 w-10 mx-auto mb-2 opacity-50" />
+                <p>Nessuna azienda disponibile da associare.</p>
+                <p className="text-sm mt-1">Puoi creare una nuova azienda nella tab "Crea Nuova".</p>
+              </div>
+            ) : (
+              <>
+                <div>
+                  <Label>Azienda</Label>
+                  <Select value={newCompanyId} onValueChange={setNewCompanyId}>
+                    <SelectTrigger data-testid="select-company">
+                      <SelectValue placeholder="Seleziona azienda" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableCompanies.map((company) => (
+                        <SelectItem key={company.id} value={company.id}>
+                          {company.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <Label>Ruolo</Label>
+                  <Select value={newCompanyRole} onValueChange={setNewCompanyRole}>
+                    <SelectTrigger data-testid="select-role">
+                      <SelectValue placeholder="Seleziona ruolo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="owner">Owner</SelectItem>
+                      <SelectItem value="manager">Manager</SelectItem>
+                      <SelectItem value="viewer">Viewer</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="isDefaultAssoc"
+                    checked={newCompanyIsDefault}
+                    onChange={(e) => setNewCompanyIsDefault(e.target.checked)}
+                    className="h-4 w-4"
+                    data-testid="checkbox-is-default"
+                  />
+                  <Label htmlFor="isDefaultAssoc" className="cursor-pointer">
+                    Imposta come azienda predefinita
+                  </Label>
+                </div>
+                <div className="flex justify-end gap-2 pt-2">
+                  <Button variant="outline" onClick={() => setAddCompanyDialogOpen(false)}>
+                    Annulla
+                  </Button>
+                  <Button
+                    onClick={handleAddCompany}
+                    disabled={!newCompanyId || createAssociationMutation.isPending}
+                    data-testid="button-confirm-add-company"
+                  >
+                    {createAssociationMutation.isPending ? "Salvataggio..." : "Associa"}
+                  </Button>
+                </div>
+              </>
+            )}
+          </TabsContent>
+          
+          <TabsContent value="create" className="space-y-4 mt-4">
+            <div>
+              <Label>Nome Azienda *</Label>
+              <Input
+                value={newCompanyName}
+                onChange={(e) => setNewCompanyName(e.target.value)}
+                placeholder="Es: EventiFuturi S.r.l."
+                data-testid="input-company-name"
+              />
+            </div>
+            <div>
+              <Label>Partita IVA</Label>
+              <Input
+                value={newCompanyVatNumber}
+                onChange={(e) => setNewCompanyVatNumber(e.target.value)}
+                placeholder="Es: IT12345678901"
+                data-testid="input-company-vat"
+              />
+            </div>
+            <div>
+              <Label>Indirizzo</Label>
+              <Input
+                value={newCompanyAddress}
+                onChange={(e) => setNewCompanyAddress(e.target.value)}
+                placeholder="Es: Via Roma 1, Milano"
+                data-testid="input-company-address"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <input
+                type="checkbox"
+                id="isDefaultCreate"
+                checked={newCompanyIsDefault}
+                onChange={(e) => setNewCompanyIsDefault(e.target.checked)}
+                className="h-4 w-4"
+                data-testid="checkbox-is-default-create"
+              />
+              <Label htmlFor="isDefaultCreate" className="cursor-pointer">
+                Imposta come azienda predefinita
+              </Label>
+            </div>
+            <div className="flex justify-end gap-2 pt-2">
+              <Button variant="outline" onClick={() => setAddCompanyDialogOpen(false)}>
+                Annulla
+              </Button>
+              <Button
+                onClick={handleCreateCompany}
+                disabled={!newCompanyName.trim() || createCompanyMutation.isPending}
+                data-testid="button-create-company"
+              >
+                {createCompanyMutation.isPending ? "Creazione..." : "Crea e Associa"}
+              </Button>
+            </div>
+          </TabsContent>
+        </Tabs>
       </DialogContent>
     </Dialog>
   );
@@ -452,7 +598,6 @@ export default function AdminGestoreCompanies() {
                 variant="ghost"
                 size="icon"
                 onClick={() => setAddCompanyDialogOpen(true)}
-                disabled={availableCompanies.length === 0}
                 data-testid="button-add-company"
               >
                 <Plus className="h-5 w-5" />
