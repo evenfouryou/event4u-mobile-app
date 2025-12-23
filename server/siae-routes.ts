@@ -3157,8 +3157,264 @@ router.get('/smart-card/verify-emission', requireAuth, async (req: Request, res:
 
 // ==================== SIAE Reports ====================
 
-// C1 Report - Daily/Monthly Register (Registro Giornaliero/Mensile)
-// VERSIONE SEMPLIFICATA - senza campi 2025 problematici
+// Helper function per costruire i dati del report C1 (Quadri A/B/C)
+// Usata sia dall'endpoint GET che dall'endpoint POST per garantire consistenza
+interface C1ReportOptions {
+  isMonthly: boolean;
+  referenceDate?: string; // Data di riferimento per report giornaliero (default: oggi)
+}
+
+function buildC1ReportData(
+  event: any, 
+  company: any, 
+  sectors: any[], 
+  allTickets: any[],
+  options: C1ReportOptions
+) {
+  const { isMonthly, referenceDate } = options;
+  const today = referenceDate || new Date().toISOString().split('T')[0];
+  
+  // Helper function to get ticket price with fallback
+  const getTicketPrice = (t: any) => Number(t.ticketPrice) || Number(t.grossAmount) || Number(t.priceAtPurchase) || 0;
+  
+  // Helper function to derive ticketType with fallback from ticketTypeCode
+  const getTicketType = (t: any): 'intero' | 'ridotto' | 'omaggio' => {
+    if (t.ticketType === 'intero' || t.ticketType === 'ridotto' || t.ticketType === 'omaggio') {
+      return t.ticketType;
+    }
+    if (t.ticketTypeCode === 'INT') return 'intero';
+    if (t.ticketTypeCode === 'RID') return 'ridotto';
+    if (t.ticketTypeCode === 'OMG' || t.ticketTypeCode === 'OMA') return 'omaggio';
+    return 'intero';
+  };
+  
+  // For daily report: filter tickets by today's emission date
+  // For monthly report: show ALL tickets for the event
+  let tickets = allTickets;
+  let cancelledTickets = allTickets.filter(t => t.status === 'cancelled');
+  
+  if (!isMonthly) {
+    // Daily report: only tickets emitted today
+    tickets = allTickets.filter(t => {
+      if (!t.emissionDate) return false;
+      const ticketDate = new Date(t.emissionDate).toISOString().split('T')[0];
+      return ticketDate === today;
+    });
+    // Also filter cancelled tickets for today
+    cancelledTickets = allTickets.filter(t => {
+      if (t.status !== 'cancelled') return false;
+      if (t.cancellationDate) {
+        const cancelDate = new Date(t.cancellationDate).toISOString().split('T')[0];
+        return cancelDate === today;
+      }
+      return false;
+    });
+  }
+  
+  // Filter only active/emitted tickets for sales calculations
+  const activeTickets = tickets.filter(t => t.status !== 'cancelled');
+
+  const salesByDate: Record<string, { 
+    date: string; 
+    ticketsSold: number; 
+    totalAmount: number;
+    byTicketType: Record<string, { name: string; quantity: number; amount: number }>;
+    bySector: Record<string, { name: string; quantity: number; amount: number }>;
+  }> = {};
+
+  // Process ALL tickets (including those without transactions - cashier tickets)
+  for (const ticket of activeTickets) {
+    const dateStr = ticket.emissionDate 
+      ? new Date(ticket.emissionDate).toISOString().split('T')[0] 
+      : 'N/D';
+    
+    if (!salesByDate[dateStr]) {
+      salesByDate[dateStr] = {
+        date: dateStr,
+        ticketsSold: 0,
+        totalAmount: 0,
+        byTicketType: {},
+        bySector: {},
+      };
+    }
+    
+    const price = getTicketPrice(ticket);
+    salesByDate[dateStr].ticketsSold += 1;
+    salesByDate[dateStr].totalAmount += price;
+
+    const ticketType = getTicketType(ticket);
+    if (!salesByDate[dateStr].byTicketType[ticketType]) {
+      salesByDate[dateStr].byTicketType[ticketType] = { 
+        name: ticketType === 'intero' ? 'Intero' : ticketType === 'ridotto' ? 'Ridotto' : 'Omaggio', 
+        quantity: 0, 
+        amount: 0 
+      };
+    }
+    salesByDate[dateStr].byTicketType[ticketType].quantity += 1;
+    salesByDate[dateStr].byTicketType[ticketType].amount += price;
+
+    const sector = sectors.find(s => s.id === ticket.sectorId);
+    const sectorName = sector?.name || 'Sconosciuto';
+    if (!salesByDate[dateStr].bySector[sectorName]) {
+      salesByDate[dateStr].bySector[sectorName] = { name: sectorName, quantity: 0, amount: 0 };
+    }
+    salesByDate[dateStr].bySector[sectorName].quantity += 1;
+    salesByDate[dateStr].bySector[sectorName].amount += price;
+  }
+
+  const dailySales = Object.values(salesByDate).sort((a, b) => a.date.localeCompare(b.date));
+  
+  // Calculate totals
+  const totalTicketsSold = activeTickets.length;
+  const totalRevenue = activeTickets.reduce((sum, t) => sum + getTicketPrice(t), 0);
+  
+  // Calculate VAT
+  const vatRate = event.vatRate || 10;
+  const vatAmount = totalRevenue * (vatRate / (100 + vatRate));
+  const netRevenue = totalRevenue - vatAmount;
+
+  // Calcola totali per tipologia biglietto
+  const ticketsByType = {
+    intero: activeTickets.filter(t => getTicketType(t) === 'intero'),
+    ridotto: activeTickets.filter(t => getTicketType(t) === 'ridotto'),
+    omaggio: activeTickets.filter(t => getTicketType(t) === 'omaggio')
+  };
+
+  // Calcola imposta intrattenimenti (se applicabile - tipicamente 16.5% per intrattenimenti)
+  const isIntrattenimento = event.eventType === 'intrattenimento';
+  const impostaIntrattenimentiRate = isIntrattenimento ? 16.5 : 0;
+  const impostaIntrattenimenti = isIntrattenimento ? (netRevenue * impostaIntrattenimentiRate / 100) : 0;
+
+  // Capienza totale
+  const capienzaTotale = sectors.reduce((sum, s) => sum + (s.capacity || 0), 0);
+
+  // QUADRO A - Dati Identificativi (conforme normativa SIAE)
+  const quadroA = {
+    // Dati Organizzatore
+    denominazioneOrganizzatore: company?.name || 'N/D',
+    codiceFiscale: company?.fiscalCode || company?.vatNumber || company?.taxCode || 'N/D',
+    partitaIVA: company?.vatNumber || 'N/D',
+    
+    // Dati Locale/Venue
+    codiceLocale: event.siaeLocationCode || event.venueCode || 'N/D', // Codice BA
+    denominazioneLocale: event.venueName || 'N/D',
+    indirizzoLocale: event.venueAddress || 'N/D',
+    capienza: capienzaTotale,
+    
+    // Dati Evento
+    denominazioneEvento: event.eventName || event.name || 'N/D',
+    codiceEvento: event.eventCode || event.code || 'N/D',
+    dataEvento: event.eventDate,
+    oraEvento: event.eventTime || 'N/D',
+    tipologiaEvento: event.eventType || 'spettacolo', // spettacolo o intrattenimento
+    genereEvento: event.genreCode || event.genre || 'N/D',
+    
+    // Periodo report
+    periodoRiferimento: isMonthly ? 'Mensile' : 'Giornaliero',
+    dataRiferimento: isMonthly ? null : today,
+  };
+
+  // QUADRO B - Dettaglio Titoli di Accesso per Ordine/Settore
+  const settori = sectors.map((s, index) => {
+    const sectorActiveTickets = activeTickets.filter(t => t.sectorId === s.id);
+    const sectorCancelledTickets = cancelledTickets.filter(t => t.sectorId === s.id);
+    const sectorIntero = sectorActiveTickets.filter(t => getTicketType(t) === 'intero');
+    const sectorRidotto = sectorActiveTickets.filter(t => getTicketType(t) === 'ridotto');
+    const sectorOmaggio = sectorActiveTickets.filter(t => getTicketType(t) === 'omaggio');
+    
+    return {
+      ordinePosto: index + 1, // 1°, 2°, 3° ordine
+      codiceSettore: s.sectorCode || `SET${index + 1}`,
+      denominazione: s.name,
+      capienza: s.capacity || 0,
+      
+      // Dettaglio per tipologia
+      interi: {
+        quantita: sectorIntero.length,
+        prezzoUnitario: Number(s.priceIntero) || 0,
+        totale: sectorIntero.reduce((sum, t) => sum + getTicketPrice(t), 0)
+      },
+      ridotti: {
+        quantita: sectorRidotto.length,
+        prezzoUnitario: Number(s.priceRidotto) || 0,
+        totale: sectorRidotto.reduce((sum, t) => sum + getTicketPrice(t), 0)
+      },
+      omaggi: {
+        quantita: sectorOmaggio.length,
+        totale: 0 // Omaggi non generano incasso
+      },
+      
+      // Totali settore
+      totaleVenduti: sectorActiveTickets.length,
+      totaleAnnullati: sectorCancelledTickets.length,
+      totaleIncasso: sectorActiveTickets.reduce((sum, t) => sum + getTicketPrice(t), 0)
+    };
+  });
+
+  const quadroB = {
+    settori,
+    
+    // Riepilogo per tipologia biglietto
+    riepilogoTipologie: {
+      interi: {
+        quantita: ticketsByType.intero.length,
+        totale: ticketsByType.intero.reduce((s, t) => s + getTicketPrice(t), 0)
+      },
+      ridotti: {
+        quantita: ticketsByType.ridotto.length,
+        totale: ticketsByType.ridotto.reduce((s, t) => s + getTicketPrice(t), 0)
+      },
+      omaggi: {
+        quantita: ticketsByType.omaggio.length,
+        totale: 0
+      }
+    },
+    
+    // Totali generali QUADRO B
+    totaleBigliettiVenduti: totalTicketsSold,
+    totaleBigliettiAnnullati: cancelledTickets.length,
+    totaleIncassoLordo: totalRevenue
+  };
+
+  // QUADRO C - Riepilogo Imposte e Contributi
+  const quadroC = {
+    // Base imponibile
+    incassoLordo: totalRevenue,
+    
+    // IVA
+    aliquotaIVA: vatRate,
+    baseImponibileIVA: netRevenue,
+    importoIVA: vatAmount,
+    
+    // Imposta Intrattenimenti (solo per attività di intrattenimento)
+    isIntrattenimento: isIntrattenimento,
+    aliquotaImpostaIntrattenimenti: impostaIntrattenimentiRate,
+    baseImponibileIntrattenimenti: isIntrattenimento ? netRevenue : 0,
+    importoImpostaIntrattenimenti: impostaIntrattenimenti,
+    
+    // Diritto d'autore SIAE (se applicabile)
+    dirittoAutore: 0, // Da calcolare se applicabile
+    
+    // Totali
+    totaleImposte: vatAmount + impostaIntrattenimenti,
+    incassoNetto: netRevenue - impostaIntrattenimenti
+  };
+
+  return {
+    quadroA,
+    quadroB,
+    quadroC,
+    dailySales,
+    // Dati aggiuntivi per compatibilità
+    activeTicketsCount: activeTickets.length,
+    cancelledTicketsCount: cancelledTickets.length,
+    totalRevenue,
+    today
+  };
+}
+
+// C1 Report - Modello conforme normativa SIAE
+// STRUTTURA: QUADRO A (dati identificativi), QUADRO B (dettaglio biglietti), QUADRO C (imposte)
 // Query param: type=giornaliero (default) or type=mensile
 router.get('/api/siae/ticketed-events/:id/reports/c1', requireAuth, async (req: Request, res: Response) => {
   try {
@@ -3171,158 +3427,43 @@ router.get('/api/siae/ticketed-events/:id/reports/c1', requireAuth, async (req: 
       return res.status(404).json({ message: "Evento non trovato" });
     }
 
+    // Ottieni dati company per QUADRO A
+    const company = event.companyId ? await storage.getCompany(event.companyId) : null;
     const sectors = await siaeStorage.getSiaeEventSectors(id);
     const allTickets = await siaeStorage.getSiaeTicketsByEvent(id);
     
-    // Get today's date in YYYY-MM-DD format
-    const today = new Date().toISOString().split('T')[0];
-    
-    // For daily report: filter tickets by today's emission date
-    // For monthly report: show ALL tickets for the event
-    let tickets = allTickets;
-    let cancelledTickets = allTickets.filter(t => t.status === 'cancelled');
-    
-    if (!isMonthly) {
-      // Daily report: only tickets emitted today
-      tickets = allTickets.filter(t => {
-        if (!t.emissionDate) return false;
-        const ticketDate = new Date(t.emissionDate).toISOString().split('T')[0];
-        return ticketDate === today;
-      });
-      // Also filter cancelled tickets for today
-      cancelledTickets = allTickets.filter(t => {
-        if (t.status !== 'cancelled') return false;
-        if (t.cancellationDate) {
-          const cancelDate = new Date(t.cancellationDate).toISOString().split('T')[0];
-          return cancelDate === today;
-        }
-        return false;
-      });
-    }
-    
-    // Filter only active/emitted tickets for sales calculations
-    const activeTickets = tickets.filter(t => t.status !== 'cancelled');
+    // Usa la funzione helper per costruire i dati del report
+    const reportData = buildC1ReportData(event, company, sectors, allTickets, { isMonthly });
 
-    const salesByDate: Record<string, { 
-      date: string; 
-      ticketsSold: number; 
-      totalAmount: number;
-      byTicketType: Record<string, { name: string; quantity: number; amount: number }>;
-      bySector: Record<string, { name: string; quantity: number; amount: number }>;
-    }> = {};
-
-    // Helper function to get ticket price with fallback
-    const getTicketPrice = (t: typeof activeTickets[0]) => Number(t.ticketPrice) || Number(t.grossAmount) || 0;
-    
-    // Helper function to derive ticketType with fallback from ticketTypeCode
-    const getTicketType = (t: typeof activeTickets[0]) => {
-      if (t.ticketType) return t.ticketType;
-      if (t.ticketTypeCode === 'INT') return 'intero';
-      if (t.ticketTypeCode === 'RID') return 'ridotto';
-      if (t.ticketTypeCode === 'OMG' || t.ticketTypeCode === 'OMA') return 'omaggio';
-      return 'intero';
-    };
-
-    // Process ALL tickets (including those without transactions - cashier tickets)
-    for (const ticket of activeTickets) {
-      const dateStr = ticket.emissionDate 
-        ? new Date(ticket.emissionDate).toISOString().split('T')[0] 
-        : 'N/D';
-      
-      if (!salesByDate[dateStr]) {
-        salesByDate[dateStr] = {
-          date: dateStr,
-          ticketsSold: 0,
-          totalAmount: 0,
-          byTicketType: {},
-          bySector: {},
-        };
-      }
-      
-      const price = getTicketPrice(ticket);
-      salesByDate[dateStr].ticketsSold += 1;
-      salesByDate[dateStr].totalAmount += price;
-
-      const ticketType = getTicketType(ticket);
-      if (!salesByDate[dateStr].byTicketType[ticketType]) {
-        salesByDate[dateStr].byTicketType[ticketType] = { 
-          name: ticketType === 'intero' ? 'Intero' : ticketType === 'ridotto' ? 'Ridotto' : ticketType === 'omaggio' ? 'Omaggio' : ticketType, 
-          quantity: 0, 
-          amount: 0 
-        };
-      }
-      salesByDate[dateStr].byTicketType[ticketType].quantity += 1;
-      salesByDate[dateStr].byTicketType[ticketType].amount += price;
-
-      const sector = sectors.find(s => s.id === ticket.sectorId);
-      const sectorName = sector?.name || 'Sconosciuto';
-      if (!salesByDate[dateStr].bySector[sectorName]) {
-        salesByDate[dateStr].bySector[sectorName] = { name: sectorName, quantity: 0, amount: 0 };
-      }
-      salesByDate[dateStr].bySector[sectorName].quantity += 1;
-      salesByDate[dateStr].bySector[sectorName].amount += price;
-    }
-
-    const dailySales = Object.values(salesByDate).sort((a, b) => a.date.localeCompare(b.date));
-    
-    // Calculate totals
-    const totalTicketsSold = activeTickets.length;
-    const totalRevenue = activeTickets.reduce((sum, t) => sum + getTicketPrice(t), 0);
-    
-    // Calculate VAT
-    const vatRate = event.vatRate || 10;
-    const vatAmount = totalRevenue * (vatRate / (100 + vatRate));
-    const netRevenue = totalRevenue - vatAmount;
-
-    // Risposta semplificata senza campi 2025 problematici
+    // Risposta conforme al modello C1 SIAE - strutturata in Quadri
     res.json({
+      // Metadata report
       reportType: isMonthly ? 'mensile' : 'giornaliero',
-      reportName: isMonthly ? 'Riepilogo Mensile' : 'Registro Giornaliero',
-      reportDate: isMonthly ? null : today,
-      eventId: id,
-      eventName: event.eventName,
-      eventCode: event.eventCode,
-      eventDate: event.eventDate,
-      eventTime: event.eventTime,
-      venueName: event.venueName,
+      reportName: isMonthly ? 'MODELLO C.1 - Riepilogo Mensile Titoli di Accesso' : 'MODELLO C.1 - Registro Giornaliero Titoli di Accesso',
       generatedAt: new Date().toISOString(),
-      totalTicketsSold,
-      totalRevenue,
-      vatRate,
-      vatAmount,
-      netRevenue,
-      cancelledTicketsCount: cancelledTickets.length,
-      dailySales,
-      sectors: sectors.map(s => {
-        const sectorActiveTickets = activeTickets.filter(t => t.sectorId === s.id);
-        const sectorCancelledTickets = cancelledTickets.filter(t => t.sectorId === s.id);
-        return {
-          id: s.id,
-          name: s.name,
-          sectorCode: s.sectorCode,
-          capacity: s.capacity,
-          availableSeats: s.availableSeats,
-          soldCount: sectorActiveTickets.length,
-          priceIntero: Number(s.priceIntero) || 0,
-          priceRidotto: Number(s.priceRidotto) || 0,
-          revenue: sectorActiveTickets.reduce((sum, t) => sum + getTicketPrice(t), 0),
-          cancelledCount: sectorCancelledTickets.length,
-        };
-      }),
-      ticketTypes: {
-        intero: {
-          count: activeTickets.filter(t => getTicketType(t) === 'intero').length,
-          amount: activeTickets.filter(t => getTicketType(t) === 'intero').reduce((s, t) => s + getTicketPrice(t), 0)
-        },
-        ridotto: {
-          count: activeTickets.filter(t => getTicketType(t) === 'ridotto').length,
-          amount: activeTickets.filter(t => getTicketType(t) === 'ridotto').reduce((s, t) => s + getTicketPrice(t), 0)
-        },
-        omaggio: {
-          count: activeTickets.filter(t => getTicketType(t) === 'omaggio').length,
-          amount: 0
-        }
-      }
+
+      // QUADRO A - Dati Identificativi (conforme normativa SIAE)
+      // Mantieni backward compatibility con i nomi dei campi esistenti
+      quadroA: {
+        ...reportData.quadroA,
+        // Alias per backward compatibility
+        codiceFiscaleOrganizzatore: reportData.quadroA.codiceFiscale,
+        partitaIvaOrganizzatore: reportData.quadroA.partitaIVA,
+      },
+
+      // QUADRO B - Dettaglio Titoli di Accesso per Ordine/Settore
+      quadroB: {
+        ...reportData.quadroB,
+        // Alias per backward compatibility
+        totaleBigliettiEmessi: reportData.quadroB.totaleBigliettiVenduti,
+      },
+
+      // QUADRO C - Riepilogo Imposte e Contributi
+      quadroC: reportData.quadroC,
+
+      // Dati legacy per compatibilità
+      eventId: id,
+      dailySales: reportData.dailySales
     });
   } catch (error: any) {
     console.error('[C1 Report] Error:', error);
@@ -3330,7 +3471,8 @@ router.get('/api/siae/ticketed-events/:id/reports/c1', requireAuth, async (req: 
   }
 });
 
-// C1 Report - Send to SIAE Transmissions
+// C1 Report - Send to SIAE Transmissions (Struttura Quadri A/B/C conforme normativa SIAE)
+// Usa la stessa funzione helper buildC1ReportData per garantire consistenza con l'endpoint GET
 router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -3343,56 +3485,93 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
       return res.status(404).json({ message: "Evento non trovato" });
     }
 
-    // Get tickets and sectors for C1 report data
-    const tickets = await siaeStorage.getSiaeTickets(id);
+    // Get company data for Quadro A
+    const company = await storage.getCompany(event.companyId);
+
+    // Get tickets and sectors for C1 report data (usa stesse funzioni del GET)
+    const allTickets = await siaeStorage.getSiaeTicketsByEvent(id);
     const sectors = await siaeStorage.getSiaeEventSectors(id);
     
-    const activeTickets = tickets.filter(t => t.status !== 'cancelled');
-    const cancelledTickets = tickets.filter(t => t.status === 'cancelled');
+    // Usa la funzione helper condivisa per costruire i dati del report
+    // Questo garantisce che GET e POST usino gli stessi calcoli
+    const reportData = buildC1ReportData(event, company, sectors, allTickets, { isMonthly });
+    const { quadroA, quadroB, quadroC } = reportData;
 
-    const getTicketPrice = (t: any) => Number(t.ticketPrice) || Number(t.priceAtPurchase) || 0;
-    const totalRevenue = activeTickets.reduce((sum, t) => sum + getTicketPrice(t), 0);
-    const vatRate = event.vatRate || 10;
-
-    // Build C1 XML content
+    // Build C1 XML content with Quadri structure - genera XML direttamente dai dati del report
     const eventDate = event.eventDate ? new Date(event.eventDate) : new Date();
     const dateStr = eventDate.toISOString().split('T')[0].replace(/-/g, '');
     const fileName = `C1_${event.code || id}_${dateStr}.xml`;
     
-    const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
-<ReportC1>
-  <Intestazione>
-    <TipoReport>C1</TipoReport>
-    <DataGenerazione>${new Date().toISOString()}</DataGenerazione>
-    <VersioneTracciato>2025.1</VersioneTracciato>
-  </Intestazione>
-  <Evento>
-    <DenominazioneEvento>${event.name || 'N/D'}</DenominazioneEvento>
-    <CodiceEvento>${event.code || 'N/D'}</CodiceEvento>
-    <DataEvento>${eventDate.toISOString().split('T')[0]}</DataEvento>
-    <Location>${event.venueName || 'N/D'}</Location>
-  </Evento>
-  <Riepilogo>
-    <TotaleBigliettiVenduti>${activeTickets.length}</TotaleBigliettiVenduti>
-    <TotaleBigliettiAnnullati>${cancelledTickets.length}</TotaleBigliettiAnnullati>
-    <TotaleIncassoLordo>${totalRevenue.toFixed(2)}</TotaleIncassoLordo>
-    <AliquotaIVA>${vatRate}</AliquotaIVA>
-  </Riepilogo>
-  <Settori>
-${sectors.map(s => {
-  const sectorActiveTickets = activeTickets.filter(t => t.sectorId === s.id);
-  const sectorCancelledTickets = cancelledTickets.filter(t => t.sectorId === s.id);
-  const sectorRevenue = sectorActiveTickets.reduce((sum, t) => sum + getTicketPrice(t), 0);
-  return `    <Settore>
-      <Nome>${s.name}</Nome>
-      <Codice>${s.sectorCode || 'N/D'}</Codice>
-      <BigliettiVenduti>${sectorActiveTickets.length}</BigliettiVenduti>
-      <BigliettiAnnullati>${sectorCancelledTickets.length}</BigliettiAnnullati>
-      <IncassoLordo>${sectorRevenue.toFixed(2)}</IncassoLordo>
+    // Genera XML per i settori dal quadroB
+    const settoriXml = quadroB.settori.map((s) => {
+      return `    <Settore ordinePosto="${s.ordinePosto}">
+      <CodiceSettore>${s.codiceSettore}</CodiceSettore>
+      <Denominazione>${s.denominazione}</Denominazione>
+      <Capienza>${s.capienza}</Capienza>
+      <Interi quantita="${s.interi.quantita}" prezzoUnitario="${s.interi.prezzoUnitario.toFixed(2)}" totale="${s.interi.totale.toFixed(2)}" />
+      <Ridotti quantita="${s.ridotti.quantita}" prezzoUnitario="${s.ridotti.prezzoUnitario.toFixed(2)}" totale="${s.ridotti.totale.toFixed(2)}" />
+      <Omaggi quantita="${s.omaggi.quantita}" prezzoUnitario="0.00" totale="0.00" />
+      <TotaleVenduti>${s.totaleVenduti}</TotaleVenduti>
+      <TotaleAnnullati>${s.totaleAnnullati}</TotaleAnnullati>
+      <TotaleIncasso>${s.totaleIncasso.toFixed(2)}</TotaleIncasso>
     </Settore>`;
-}).join('\n')}
-  </Settori>
-</ReportC1>`;
+    }).join('\n');
+
+    const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<ModelloC1 versione="2025.1">
+  <Intestazione>
+    <TipoModello>C1</TipoModello>
+    <DataGenerazione>${new Date().toISOString()}</DataGenerazione>
+    <TipoRiepilogo>${isMonthly ? 'mensile' : 'giornaliero'}</TipoRiepilogo>
+    <DataPeriodo>${eventDate.toISOString().split('T')[0]}</DataPeriodo>
+  </Intestazione>
+  
+  <QuadroA>
+    <DenominazioneOrganizzatore>${quadroA.denominazioneOrganizzatore}</DenominazioneOrganizzatore>
+    <CodiceFiscale>${quadroA.codiceFiscale}</CodiceFiscale>
+    <PartitaIVA>${quadroA.partitaIVA}</PartitaIVA>
+    <CodiceLocale>${quadroA.codiceLocale}</CodiceLocale>
+    <DenominazioneLocale>${quadroA.denominazioneLocale}</DenominazioneLocale>
+    <IndirizzoLocale>${quadroA.indirizzoLocale}</IndirizzoLocale>
+    <DenominazioneEvento>${quadroA.denominazioneEvento}</DenominazioneEvento>
+    <CodiceEvento>${quadroA.codiceEvento}</CodiceEvento>
+    <GenereEvento>${quadroA.genereEvento}</GenereEvento>
+    <DataEvento>${quadroA.dataEvento || eventDate.toISOString().split('T')[0]}</DataEvento>
+    <OraEvento>${quadroA.oraEvento}</OraEvento>
+    <TipologiaEvento>${quadroA.tipologiaEvento}</TipologiaEvento>
+    <Capienza>${quadroA.capienza}</Capienza>
+    <PeriodoRiferimento>${quadroA.periodoRiferimento}</PeriodoRiferimento>
+    <DataRiferimento>${quadroA.dataRiferimento || ''}</DataRiferimento>
+  </QuadroA>
+
+  <QuadroB>
+    <Settori>
+${settoriXml}
+    </Settori>
+    <RiepilogoTipologie>
+      <Interi quantita="${quadroB.riepilogoTipologie.interi.quantita}" totale="${quadroB.riepilogoTipologie.interi.totale.toFixed(2)}" />
+      <Ridotti quantita="${quadroB.riepilogoTipologie.ridotti.quantita}" totale="${quadroB.riepilogoTipologie.ridotti.totale.toFixed(2)}" />
+      <Omaggi quantita="${quadroB.riepilogoTipologie.omaggi.quantita}" totale="0.00" />
+    </RiepilogoTipologie>
+    <TotaleBigliettiVenduti>${quadroB.totaleBigliettiVenduti}</TotaleBigliettiVenduti>
+    <TotaleBigliettiAnnullati>${quadroB.totaleBigliettiAnnullati}</TotaleBigliettiAnnullati>
+    <TotaleIncassoLordo>${quadroB.totaleIncassoLordo.toFixed(2)}</TotaleIncassoLordo>
+  </QuadroB>
+
+  <QuadroC>
+    <IncassoLordo>${quadroC.incassoLordo.toFixed(2)}</IncassoLordo>
+    <AliquotaIVA>${quadroC.aliquotaIVA}</AliquotaIVA>
+    <BaseImponibileIVA>${quadroC.baseImponibileIVA.toFixed(2)}</BaseImponibileIVA>
+    <ImportoIVA>${quadroC.importoIVA.toFixed(2)}</ImportoIVA>
+    <IsIntrattenimento>${quadroC.isIntrattenimento}</IsIntrattenimento>
+    <AliquotaImpostaIntrattenimenti>${quadroC.aliquotaImpostaIntrattenimenti}</AliquotaImpostaIntrattenimenti>
+    <BaseImponibileIntrattenimenti>${quadroC.baseImponibileIntrattenimenti.toFixed(2)}</BaseImponibileIntrattenimenti>
+    <ImportoImpostaIntrattenimenti>${quadroC.importoImpostaIntrattenimenti.toFixed(2)}</ImportoImpostaIntrattenimenti>
+    <DirittoAutore>${quadroC.dirittoAutore.toFixed(2)}</DirittoAutore>
+    <TotaleImposte>${quadroC.totaleImposte.toFixed(2)}</TotaleImposte>
+    <IncassoNetto>${quadroC.incassoNetto.toFixed(2)}</IncassoNetto>
+  </QuadroC>
+</ModelloC1>`;
 
     // Create transmission record - pass periodDate as ISO string for schema compatibility
     const transmission = await siaeStorage.createSiaeTransmission({
@@ -3402,23 +3581,22 @@ ${sectors.map(s => {
       fileName: fileName,
       fileContent: xmlContent,
       status: 'pending',
-      ticketsCount: activeTickets.length,
-      ticketsCancelled: cancelledTickets.length,
-      totalAmount: totalRevenue.toFixed(2),
+      ticketsCount: reportData.activeTicketsCount,
+      ticketsCancelled: reportData.cancelledTicketsCount,
+      totalAmount: reportData.totalRevenue.toFixed(2),
     });
 
     // Optionally send email
     if (toEmail) {
       const { sendSiaeTransmissionEmail } = await import('./email-service');
-      const company = await storage.getCompany(event.companyId);
       
       await sendSiaeTransmissionEmail({
         to: toEmail,
         companyName: company?.name || 'N/A',
-        transmissionType: 'daily',
+        transmissionType: isMonthly ? 'monthly' : 'daily',
         periodDate: eventDate,
-        ticketsCount: activeTickets.length,
-        totalAmount: totalRevenue.toFixed(2),
+        ticketsCount: reportData.activeTicketsCount,
+        totalAmount: reportData.totalRevenue.toFixed(2),
         xmlContent: xmlContent,
         transmissionId: transmission.id,
       });

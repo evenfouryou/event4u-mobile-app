@@ -1,242 +1,58 @@
 # Event4U Management System
 
 ## Overview
-Event4U is an event management and inventory tracking system for event organizers. It provides multi-role management of events, inventory, and stations, with real-time consumption tracking. The system features a company-centric hierarchy, role-based access control, email verification, AI-powered analytics, intelligent purchase order management, and multi-bartender station assignments. Its purpose is to streamline event logistics, optimize inventory, and deliver actionable business intelligence.
+Event4U is an event management and inventory tracking system designed for event organizers. It facilitates multi-role management of events, inventory, and stations, complete with real-time consumption tracking. The system is built around a company-centric hierarchy and features role-based access control, email verification, AI-powered analytics, intelligent purchase order management, and multi-bartender station assignments. Its primary goal is to streamline event logistics, optimize inventory, and provide actionable business intelligence. The project aims to improve efficiency and decision-making for event organizers.
 
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
-## Recent Changes (2025-12-23)
-
-### Stripe Mode Detection Dinamica
-**Feature**: La pagina Stripe Admin ora rileva automaticamente la modalità (production/sandbox) basandosi sulle chiavi API configurate.
-
-**Problema Risolto**: `isProduction` era hardcoded a `false`, quindi mostrava sempre "Modalità Sandbox" anche con chiavi live.
-
-**Implementazione:**
-- Nuovo endpoint `GET /api/public/stripe-mode` che verifica il prefisso della publishable key (`pk_live_` = production)
-- `stripe-admin.tsx` usa useQuery per ottenere il modo dinamicamente
-- Badge e URL dashboard si aggiornano automaticamente in base al modo rilevato
-
-**Files Modificati:**
-- `server/public-routes.ts` - Nuovo endpoint stripe-mode
-- `client/src/pages/stripe-admin.tsx` - Query dinamica invece di valore hardcoded
-
----
-
-### Mappa Posti Interattiva - Fix Visibilità e Click
-**Feature**: Corretta la visualizzazione e interazione con i posti numerati sulla mappa venue.
-
-**Problema Risolto**: I posti apparivano come "maschera grande" invece di singoli puntini cliccabili.
-
-**Implementazione:**
-- Aumentato raggio posti da `r=1.2` a `r=2.5` per maggiore visibilità
-- Cambiato `preserveAspectRatio` da "none" a "xMidYMid meet" per proporzioni corrette
-- Aggiunto stroke bianco ai posti per contrasto migliore
-- Separati layer SVG (zones-layer e seats-layer) per gestione z-index corretta
-- I posti ora intercettano correttamente i click con `stopPropagation`
-
-**Files Modificati:**
-- `client/src/pages/public-event-detail.tsx` - Rendering SVG migliorato
-
----
-
-### Super Admin Company Selector for SIAE Pages
-**Feature**: Added company selector dropdown for super_admin users in SIAE Audit Logs and SIAE Transmissions pages.
-
-**Problem Solved**: Super admin users have `companyId=null` by default, which prevented them from viewing company-specific SIAE data. Now they can select which company's data to view.
-
-**Implementation:**
-- Both desktop and mobile views updated
-- `selectedCompanyId` state with `isSuperAdmin` check
-- Conditional `companyId = isSuperAdmin ? selectedCompanyId : user?.companyId`
-- Companies dropdown with Building2 icon label
-- Placeholder card shown when no company selected
-- Action buttons disabled until company is selected
-
-**Files Modified:**
-- `client/src/pages/siae-audit-logs.tsx` - Desktop + Mobile company selector
-- `client/src/pages/siae-transmissions.tsx` - Desktop + Mobile company selector
-
----
-
-### CAPTCHA Integration for Ticket Purchase (Normativa SIAE)
-**Feature**: Added CAPTCHA protection to the public ticket checkout flow as required by Italian SIAE regulations.
-
-**Implementation:**
-1. Backend endpoints in `server/public-routes.ts`:
-   - `GET /api/public/captcha/generate` - Generates SVG CAPTCHA using admin-configured parameters
-   - `POST /api/public/captcha/validate` - Validates CAPTCHA text (marks as validated, doesn't delete)
-   - Modified `POST /api/public/checkout/create-payment-intent` - Requires validated CAPTCHA token
-
-2. Frontend integration in `client/src/pages/public-checkout.tsx`:
-   - CAPTCHA image display with refresh button
-   - Input field for code entry
-   - "Verifica Codice" button to validate before payment
-   - Success state shows checkmark when validated
-   - Works on both mobile and desktop layouts
-
-3. CAPTCHA parameters configurable via Admin (`/siae/config`):
-   - `captchaEnabled` - Enable/disable CAPTCHA
-   - `captchaMinChars` - Number of characters (4-8)
-   - `captchaImageWidth/Height` - Image dimensions
-   - `captchaDistortion` - Difficulty level (low/medium/high)
-   - `captchaAudioEnabled` - Accessibility option
-
-**Flow:**
-1. User adds tickets to cart → proceeds to checkout
-2. CAPTCHA is displayed (if enabled in admin config)
-3. User enters code and clicks "Verifica Codice"
-4. On successful validation, payment form appears
-5. User completes payment with Stripe
-
-**Files Modified:**
-- `server/public-routes.ts` - CAPTCHA endpoints and payment intent validation
-- `client/src/pages/public-checkout.tsx` - CAPTCHA UI and flow integration
-
----
-
-## Changes (2025-12-21)
-
-### Scanner Account Loading Loop - FIXED
-**Problem**: Scanner accounts were stuck in infinite loading loop when accessing account page.
-**Root Cause**: In `account.tsx`, the query for customer data (`/api/public/customers/me`) was being executed for all users, including scanners. When scanners tried to access account page, they would:
-1. Try to fetch customer data
-2. Get error (scanners aren't customers)
-3. Redirect to login
-4. Enter infinite redirect loop
-
-**Solution Applied**:
-- Modified `account.tsx` to disable the customer query for scanner users (`enabled: !isScanner`)
-- Added check in second useEffect to skip redirect logic if user is scanner
-- Scanners now redirect directly to `/scanner` without triggering the problematic query
-
-**Files Modified**:
-- `client/src/pages/account.tsx` - Added isScanner variable, made query conditional, updated useEffect dependencies
-
-### Outstanding Issues
-- **Gestore "Page not found" error**: Gestore users see "Page not found" when accessing. Need to clarify which URL causes this (is it "/" home or a specific route?).
-
 ## System Architecture
 
 ### Frontend
-Built with React 18, TypeScript, and Vite, using Wouter for routing and Shadcn UI (Radix UI, Tailwind CSS) following Material Design 3. State management is handled by TanStack Query v5, and form management uses React Hook Form with Zod. The design features a dark, nightclub-themed UI with glass-morphism effects, Framer Motion animations, card-based layouts, responsive grids, and fixed sidebar navigation.
+The frontend is developed using React 18, TypeScript, and Vite. It utilizes Wouter for routing and Shadcn UI (built on Radix UI and Tailwind CSS) for UI components, adhering to Material Design 3 principles. State management is handled by TanStack Query v5, and form management employs React Hook Form with Zod for validation. The design aesthetic is a dark, nightclub-themed UI featuring glass-morphism effects, Framer Motion animations, card-based layouts, responsive grids, and fixed sidebar navigation. The system also supports Progressive Web App (PWA) functionality with a `manifest.json` and a Service Worker (`sw.js`) for caching and offline support.
 
 ### Backend
-Developed with Node.js and Express.js (TypeScript, ESM) for RESTful APIs. It includes centralized error handling and session-based authentication. Drizzle ORM is used for type-safe PostgreSQL operations via Neon's serverless driver, following a schema-first approach and a repository pattern. The system maintains a monorepo structure with separate development and production environments.
+The backend is built with Node.js and Express.js, written in TypeScript with ESM. It provides RESTful APIs, incorporates centralized error handling, and uses session-based authentication. Drizzle ORM is utilized for type-safe PostgreSQL operations via Neon's serverless driver, following a schema-first approach and a repository pattern. The project maintains a monorepo structure with distinct development and production environments.
 
 ### Authentication & Authorization
-Supports Replit OAuth and email/password registration (BCrypt hashing, email verification). Session management uses `express-session` with a PostgreSQL store. Authorization is role-based (RBAC) with `super_admin`, `gestore`, `organizer`, `warehouse`, and `bartender` roles. Security features include HTTP-only secure cookies, encrypted sessions, API middleware role checks, and company-scoped data access for multi-tenancy.
+The system supports Replit OAuth and email/password registration, with BCrypt hashing for passwords and email verification. Session management is handled by `express-session` with a PostgreSQL store. Authorization is role-based (RBAC), encompassing `super_admin`, `gestore`, `organizer`, `warehouse`, and `bartender` roles. Security measures include HTTP-only secure cookies, encrypted sessions, API middleware for role checks, and company-scoped data access to ensure multi-tenancy.
 
 ### Data Model & Business Logic
-The data model links Companies to Users, Locations, Events, Products, and Price Lists. Events contain Stations with inventory tracking via Stocks and Stock Movements. The stock workflow covers loading, transfer, allocation, consumption, and returns. Events progress through `draft`, `scheduled`, `ongoing`, and `closed` states. Features include email verification, AI analytics for low stock and consumption, a step-by-step event creation wizard, and purchase order management.
+The core data model connects Companies to Users, Locations, Events, Products, and Price Lists. Events include Stations with inventory tracking through Stocks and Stock Movements, covering loading, transfer, allocation, consumption, and returns. Events transition through `draft`, `scheduled`, `ongoing`, and `closed` states. Key features include email verification, AI analytics for inventory and consumption, a step-by-step event creation wizard, and purchase order management.
 
 ### SIAE Ticketing Module
-A SIAE-compliant ticketing and fiscal management system for Italian clubs, adhering to Italian fiscal regulations. It includes 18+ database tables for reference data, fiscal compliance, customer management, ticketing, transactions, and operations. API endpoints (`/api/siae/*`) provide CRUD for reference data, activation cards, customer registration, ticket emission with fiscal seals, transaction processing, and XML transmission tracking. Frontend pages (`/siae/*`) offer comprehensive management for all module functionalities. All fiscal seal generation is server-side and mandatory for ticket emission, using a Desktop Bridge Relay System to interact with physical smart cards. The module is disabled by default and can be enabled per `gestore` user by a Super Admin.
+This module provides a SIAE-compliant ticketing and fiscal management system tailored for Italian clubs, adhering to Italian fiscal regulations. It includes a comprehensive database schema for reference data, fiscal compliance, customer management, ticketing, transactions, and operations. API endpoints manage CRUD operations for reference data, activation cards, customer registration, ticket emission with fiscal seals, transaction processing, and XML transmission tracking. The frontend offers extensive management for all module functionalities. Fiscal seal generation is server-side and mandatory for ticket emission, utilizing a Desktop Bridge Relay System for interaction with physical smart cards. This module is disabled by default and can be enabled per `gestore` user by a Super Admin. It also includes CAPTCHA integration for ticket purchases to comply with SIAE regulations.
 
 ### Event Command Center (Event Hub)
-A real-time dashboard (`/events/:id/hub`) for event operations, featuring tabbed navigation for Overview (KPIs, activity log, entrance charts, venue map), Ticketing, Guest Lists, Tables, Staff, Inventory, and Finance. Key components include `KPICard` for real-time metrics, `EntranceChart`, `VenueMap`, `ActivityLogEntry`, `AlertBanner`, and `QuickActionButton` for rapid actions. Real-time updates are powered by WebSockets.
+A real-time dashboard (`/events/:id/hub`) for event operations, providing tabbed navigation for Overview (KPIs, activity log, entrance charts, venue map), Ticketing, Guest Lists, Tables, Staff, Inventory, and Finance. It features `KPICard` for real-time metrics, `EntranceChart`, `VenueMap`, `ActivityLogEntry`, `AlertBanner`, and `QuickActionButton` for rapid actions, with real-time updates powered by WebSockets.
 
 ### Desktop Bridge Relay System
-A WebSocket relay system enabling remote smart card reader access from a desktop Electron app to the web application. It involves a server relay (`/ws/bridge`), an Electron desktop app, and a frontend `SmartCardService`. Authentication is token-based for desktop apps and session-based for web clients, with company-scoped message routing.
-
-### Progressive Web App (PWA)
-The system is an installable PWA with a `manifest.json` for metadata, a Service Worker (`sw.js`) for caching and offline support, and native installation prompts.
+A WebSocket relay system designed to enable remote smart card reader access from a desktop Electron app to the web application. It comprises a server relay (`/ws/bridge`), an Electron desktop application, and a frontend `SmartCardService`. Authentication is token-based for desktop apps and session-based for web clients, with company-scoped message routing.
 
 ### Scanner Management Module
-A dedicated management system for event scanner operators, accessible via "Scanner" in the sidebar (for gestore/super_admin users). Features include:
-- **Scanner Account Creation**: Simplified form with only required fields (first name, last name, email as username, password)
-- **Mobile-Optimized UI**: Search bar for filtering scanners, responsive card layout
-- **Event Assignment**: Dialog to assign scanners to specific events with granular permissions:
-  - List scanning permission (guest lists)
-  - Table scanning permission (reservations)
-  - Ticket scanning permission (SIAE tickets)
-  - Selection of allowed ticket sectors/types for ticket scanning
-- **Security**: Company-scoped data access, sanitized API responses (no password hashes exposed)
-- **API Endpoints**: 
-  - `GET /api/users/scanners` - Returns scanner users with safe fields only
-  - `GET /api/e4u/scanners/assignments` - Returns scanner event assignments scoped to company
-  - `POST /api/e4u/scanners/assign` - Creates scanner event assignments
+A dedicated system for managing event scanner operators, accessible to `gestore`/`super_admin` users. It supports scanner account creation with minimal fields, offers a mobile-optimized UI, and allows granular event assignment with permissions for list, table, and ticket scanning (including specific sectors/types). Security includes company-scoped data access and sanitized API responses.
 
 ### School Badge Manager Module
-A digital badge creation system for schools and organizations, accessible via "Badge Scuole" in the sidebar (for gestore/admin users). Database schema includes 3 tables: `schoolBadgeLandings` (organization landing pages), `schoolBadgeRequests` (badge applications), and `schoolBadges` (generated badges with QR codes). Features include:
-- **Landing Page Creation**: Custom branded pages with school name, description, logo upload (base64), email domain validation, and primary color
-- **Public Badge Request Flow**: `/badge/:slug` public landing where users submit name/email/phone for badge request
-- **Email Verification**: 24-hour verification tokens sent via SMTP with automatic expiration
-- **QR Code Generation**: Uses `qrcode` library to generate QR codes (data URLs) pointing to `/badge/view/:code`
-- **Badge View Page**: Public page at `/badge/view/:code` showing badge holder info, school branding, and QR code for verification
-- **Error Handling**: `/badge-error` page for invalid/expired/used verification tokens
-- **Activation Control**: Landing pages can be activated/deactivated by organizers
-- **Custom Domain**: Set `CUSTOM_DOMAIN` env var (e.g., `manage.eventfouryou.com`) for badge URLs
-- **Organizer Management**: Dashboard showing all landings with request counts and badge statistics
+A digital badge creation system for schools and organizations, accessible to `gestore`/`admin` users. It allows creation of custom branded landing pages for badge applications, email verification, QR code generation for unique badges, and a public view page for generated badges. Organizers can manage and activate/deactivate landing pages, and the module supports custom domains.
 
 ## External Dependencies
 
 ### Third-Party Services
-- **Neon Database**: Serverless PostgreSQL hosting.
-- **Google Fonts CDN**: Typography.
-- **SMTP Email**: Email verification and password reset.
-- **Replit OAuth**: Optional authentication.
-- **OpenAI API**: AI analytics (`gpt-4o-mini`).
-- **MSG91 OTP**: SMS OTP verification for customer phone validation (requires `MSG91_AUTHKEY` and `MSG91_TEMPLATE_ID` secrets).
+-   **Neon Database**: Serverless PostgreSQL hosting.
+-   **Google Fonts CDN**: For typography.
+-   **SMTP Email**: For email verification and password reset functionalities.
+-   **Replit OAuth**: Optional authentication integration.
+-   **OpenAI API**: For AI analytics (`gpt-4o-mini`).
+-   **MSG91 OTP**: For SMS OTP verification for customer phone validation.
 
 ### Key NPM Packages
-- **UI Components**: `@radix-ui/*`, `shadcn/ui`.
-- **Forms & Validation**: `react-hook-form`, `zod`, `@hookform/resolvers`.
-- **Data Fetching**: `@tanstack/react-query`.
-- **Database**: `drizzle-orm`, `drizzle-kit`, `@neondatabase/serverless`.
-- **Authentication**: `passport`, `openid-client`, `express-session`, `bcryptjs`.
-- **Charts**: `recharts`.
-- **File Processing**: `papaparse` (CSV), `jspdf` (PDF), `exceljs` (Excel).
-- **QR Code**: `qrcode` for generating QR code data URLs.
-- **Build Tools**: `vite`, `esbuild`, `typescript`, `tsx`.
-- **Mobile App**: `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios` for iOS native app packaging.
-
-## iOS App Build Instructions
-
-The project is configured with Capacitor to build a native iOS app. Follow these steps:
-
-### Prerequisites
-- Mac with Xcode installed (required for iOS builds)
-- Apple Developer Account ($99/year for App Store publishing)
-- Node.js 18+
-
-### Build Steps
-
-1. **Build the web app**:
-   ```bash
-   npm run build
-   ```
-
-2. **Add iOS platform** (first time only):
-   ```bash
-   npx cap add ios
-   ```
-
-3. **Sync web assets to iOS**:
-   ```bash
-   npx cap sync ios
-   ```
-
-4. **Open in Xcode**:
-   ```bash
-   npx cap open ios
-   ```
-
-5. **In Xcode**:
-   - Select your Team in Signing & Capabilities
-   - Set Bundle Identifier (e.g., `com.event4u.app`)
-   - Add app icons in Assets.xcassets
-   - Run on simulator or device with the Play button
-   - For App Store: Product → Archive → Distribute App
-
-### Configuration
-- App ID: `com.event4u.app` (change in `capacitor.config.ts`)
-- App Name: `Event4U`
-- Web Directory: `dist/public`
-
-### Updating the App
-After making changes to the web app:
-```bash
-npm run build && npx cap sync ios
-```
+-   **UI Components**: `@radix-ui/*`, `shadcn/ui`.
+-   **Forms & Validation**: `react-hook-form`, `zod`, `@hookform/resolvers`.
+-   **Data Fetching**: `@tanstack/react-query`.
+-   **Database**: `drizzle-orm`, `drizzle-kit`, `@neondatabase/serverless`.
+-   **Authentication**: `passport`, `openid-client`, `express-session`, `bcryptjs`.
+-   **Charts**: `recharts`.
+-   **File Processing**: `papaparse` (CSV), `jspdf` (PDF), `exceljs` (Excel).
+-   **QR Code**: `qrcode` for generating QR code data URLs.
+-   **Build Tools**: `vite`, `esbuild`, `typescript`, `tsx`.
+-   **Mobile App**: `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios` for iOS native app packaging.

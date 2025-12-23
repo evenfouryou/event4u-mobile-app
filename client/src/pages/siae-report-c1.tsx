@@ -16,46 +16,76 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 
-// Interfaccia semplificata - versione stabile senza campi 2025 problematici
+// Interfaccia conforme al modello C1 SIAE con Quadri A, B, C
 interface C1ReportData {
   reportType: string;
   reportName: string;
-  reportDate: string | null;
-  eventId: string;
-  eventName: string;
-  eventCode: string;
-  eventDate: string;
-  eventTime: string;
-  venueName: string;
   generatedAt: string;
-  totalTicketsSold: number;
-  totalRevenue: number;
-  vatRate: number;
-  vatAmount: number;
-  netRevenue: number;
-  cancelledTicketsCount: number;
+  eventId: string;
+  
+  // QUADRO A - Dati Identificativi
+  quadroA: {
+    denominazioneOrganizzatore: string;
+    codiceFiscaleOrganizzatore: string;
+    partitaIvaOrganizzatore: string;
+    codiceLocale: string;
+    denominazioneLocale: string;
+    indirizzoLocale: string;
+    capienza: number;
+    denominazioneEvento: string;
+    codiceEvento: string;
+    dataEvento: string;
+    oraEvento: string;
+    tipologiaEvento: string;
+    genereEvento: string;
+    periodoRiferimento: string;
+    dataRiferimento: string | null;
+  };
+  
+  // QUADRO B - Dettaglio Titoli
+  quadroB: {
+    settori: Array<{
+      ordinePosto: number;
+      codiceSettore: string;
+      denominazione: string;
+      capienza: number;
+      interi: { quantita: number; prezzoUnitario: number; totale: number };
+      ridotti: { quantita: number; prezzoUnitario: number; totale: number };
+      omaggi: { quantita: number; totale: number };
+      totaleVenduti: number;
+      totaleAnnullati: number;
+      totaleIncasso: number;
+    }>;
+    riepilogoTipologie: {
+      interi: { quantita: number; totale: number };
+      ridotti: { quantita: number; totale: number };
+      omaggi: { quantita: number; totale: number };
+    };
+    totaleBigliettiEmessi: number;
+    totaleBigliettiAnnullati: number;
+    totaleIncassoLordo: number;
+  };
+  
+  // QUADRO C - Imposte
+  quadroC: {
+    incassoLordo: number;
+    aliquotaIVA: number;
+    baseImponibileIVA: number;
+    importoIVA: number;
+    isIntrattenimento: boolean;
+    aliquotaImpostaIntrattenimenti: number;
+    baseImponibileIntrattenimenti: number;
+    importoImpostaIntrattenimenti: number;
+    dirittoAutore: number;
+    totaleImposte: number;
+    incassoNetto: number;
+  };
+  
   dailySales: Array<{
     date: string;
     ticketsSold: number;
     totalAmount: number;
   }>;
-  sectors: Array<{
-    id: string;
-    name: string;
-    sectorCode: string;
-    capacity: number;
-    availableSeats: number;
-    soldCount: number;
-    priceIntero: number;
-    priceRidotto: number;
-    revenue: number;
-    cancelledCount: number;
-  }>;
-  ticketTypes: {
-    intero: { count: number; amount: number };
-    ridotto: { count: number; amount: number };
-    omaggio: { count: number; amount: number };
-  };
 }
 
 export default function SiaeReportC1() {
@@ -140,18 +170,20 @@ export default function SiaeReportC1() {
     );
   }
 
-  const eventDate = report.eventDate ? new Date(report.eventDate) : new Date();
-  // For daily report use today's date (reportDate), for monthly use event date
-  const reportDisplayDate = report.reportDate ? new Date(report.reportDate) : eventDate;
+  // Estrai dati dai Quadri
+  const { quadroA, quadroB, quadroC } = report;
+  
+  const eventDate = quadroA.dataEvento ? new Date(quadroA.dataEvento) : new Date();
+  const reportDisplayDate = quadroA.dataRiferimento ? new Date(quadroA.dataRiferimento) : eventDate;
   const formattedDate = reportDisplayDate.toLocaleDateString('it-IT');
   const transmissionDate = new Date().toLocaleDateString('it-IT');
   const monthName = eventDate.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
 
-  const totalCapacity = report.sectors.reduce((sum, s) => sum + s.capacity, 0);
-  const totalEmessi = report.totalTicketsSold;
-  const totalRicavoLordo = report.totalRevenue;
-  const imponibileIva = report.netRevenue;
-  const ivaLorda = report.vatAmount;
+  const totalCapacity = quadroA.capienza;
+  const totalEmessi = quadroB.totaleBigliettiEmessi;
+  const totalRicavoLordo = quadroB.totaleIncassoLordo;
+  const imponibileIva = quadroC.baseImponibileIVA;
+  const ivaLorda = quadroC.importoIVA;
 
   // Desktop version
   if (!isMobile) {
@@ -182,7 +214,7 @@ export default function SiaeReportC1() {
             </Button>
             <div>
               <h1 className="text-3xl font-bold">Report C1 - Riepilogo Titoli</h1>
-              <p className="text-muted-foreground">{report.eventName} - {formattedDate}</p>
+              <p className="text-muted-foreground">{quadroA.denominazioneEvento} - {formattedDate}</p>
             </div>
           </div>
           <div className="flex gap-2">
@@ -265,7 +297,7 @@ export default function SiaeReportC1() {
 
           <div className="flex gap-4 mb-4 text-xs">
             <span>Dal giorno <span className="border-b border-black px-2">{formattedDate}</span></span>
-            <span>alle ore <span className="border-b border-black px-2">{report.eventTime || "21:00"}</span></span>
+            <span>alle ore <span className="border-b border-black px-2">{quadroA.oraEvento || "21:00"}</span></span>
             <span>al giorno <span className="border-b border-black px-2">{formattedDate}</span></span>
             <span>alle ore <span className="border-b border-black px-2">06:00</span></span>
           </div>
@@ -276,35 +308,54 @@ export default function SiaeReportC1() {
 
           <div className="border border-black mb-4">
             <div className="bg-gray-100 px-2 py-1 font-bold border-b border-black">
-              QUADRO A - EVENTO
+              QUADRO A - DATI IDENTIFICATIVI
             </div>
             <table className="w-full text-xs">
               <tbody>
                 <tr>
-                  <td className="border border-black p-1 w-1/4 font-semibold">DENOMINAZIONE EVENTO</td>
-                  <td className="border border-black p-1" colSpan={3}>{report.eventName}</td>
+                  <td className="border border-black p-1 w-1/4 font-semibold">ORGANIZZATORE</td>
+                  <td className="border border-black p-1" colSpan={3}>{quadroA.denominazioneOrganizzatore}</td>
+                </tr>
+                <tr>
+                  <td className="border border-black p-1 font-semibold">CODICE FISCALE</td>
+                  <td className="border border-black p-1">{quadroA.codiceFiscaleOrganizzatore}</td>
+                  <td className="border border-black p-1 font-semibold">PARTITA IVA</td>
+                  <td className="border border-black p-1">{quadroA.partitaIvaOrganizzatore}</td>
+                </tr>
+                <tr>
+                  <td className="border border-black p-1 font-semibold">CODICE LOCALE (BA)</td>
+                  <td className="border border-black p-1">{quadroA.codiceLocale}</td>
+                  <td className="border border-black p-1 font-semibold">DENOMINAZIONE LOCALE</td>
+                  <td className="border border-black p-1">{quadroA.denominazioneLocale}</td>
+                </tr>
+                <tr>
+                  <td className="border border-black p-1 font-semibold">DENOMINAZIONE EVENTO</td>
+                  <td className="border border-black p-1" colSpan={3}>{quadroA.denominazioneEvento}</td>
                 </tr>
                 <tr>
                   <td className="border border-black p-1 font-semibold">CODICE EVENTO</td>
-                  <td className="border border-black p-1">{report.eventCode || 'N/D'}</td>
-                  <td className="border border-black p-1 font-semibold">LOCATION</td>
-                  <td className="border border-black p-1">{report.venueName || 'N/D'}</td>
+                  <td className="border border-black p-1">{quadroA.codiceEvento}</td>
+                  <td className="border border-black p-1 font-semibold">GENERE</td>
+                  <td className="border border-black p-1">{quadroA.genereEvento}</td>
                 </tr>
                 <tr>
                   <td className="border border-black p-1 font-semibold">DATA EVENTO</td>
                   <td className="border border-black p-1">{formattedDate}</td>
                   <td className="border border-black p-1 font-semibold">ORA INIZIO</td>
-                  <td className="border border-black p-1">{report.eventTime || '21:00'}</td>
+                  <td className="border border-black p-1">{quadroA.oraEvento}</td>
                 </tr>
                 <tr>
-                  <td className="border border-black p-1 font-semibold">TIPO EVENTO</td>
+                  <td className="border border-black p-1 font-semibold">TIPOLOGIA</td>
                   <td className="border border-black p-1">
                     <label className="flex items-center gap-1">
-                      <input type="checkbox" checked readOnly className="w-3 h-3" /> Spettacolo
+                      <input type="checkbox" checked={quadroA.tipologiaEvento === 'spettacolo'} readOnly className="w-3 h-3" /> Spettacolo
+                    </label>
+                    <label className="flex items-center gap-1 ml-2">
+                      <input type="checkbox" checked={quadroA.tipologiaEvento === 'intrattenimento'} readOnly className="w-3 h-3" /> Intrattenimento
                     </label>
                   </td>
-                  <td className="border border-black p-1 font-semibold">ALIQUOTA IVA</td>
-                  <td className="border border-black p-1">{report.vatRate}%</td>
+                  <td className="border border-black p-1 font-semibold">CAPIENZA LOCALE</td>
+                  <td className="border border-black p-1">{quadroA.capienza}</td>
                 </tr>
               </tbody>
             </table>
@@ -333,49 +384,49 @@ export default function SiaeReportC1() {
                 </tr>
               </thead>
               <tbody>
-                {report.sectors.map((sector) => {
-                  const sectorVat = sector.revenue * (report.vatRate / (100 + report.vatRate));
-                  const sectorNet = sector.revenue - sectorVat;
+                {quadroB.settori.map((settore) => {
+                  const settoreVat = settore.totaleIncasso * (quadroC.aliquotaIVA / (100 + quadroC.aliquotaIVA));
+                  const settoreNet = settore.totaleIncasso - settoreVat;
                   return (
-                    <tr key={sector.id}>
-                      <td className="border border-black p-1">{sector.name}</td>
-                      <td className="border border-black p-1 text-center">{sector.capacity}</td>
-                      <td className="border border-black p-1 text-center">{sector.sectorCode || 'INT'}</td>
-                      <td className="border border-black p-1 text-right">{sector.priceIntero.toFixed(2)}</td>
-                      <td className="border border-black p-1 text-right">{sector.soldCount}</td>
-                      <td className="border border-black p-1 text-right">{sector.revenue.toFixed(2)}</td>
-                      <td className="border border-black p-1 text-right">0,00</td>
-                      <td className="border border-black p-1 text-right">{sectorNet.toFixed(2)}</td>
-                      <td className="border border-black p-1 text-center">{sector.cancelledCount || 0}</td>
-                      <td className="border border-black p-1 text-right">{sectorVat.toFixed(2)}</td>
+                    <tr key={settore.codiceSettore}>
+                      <td className="border border-black p-1">{settore.denominazione}</td>
+                      <td className="border border-black p-1 text-center">{settore.capienza}</td>
+                      <td className="border border-black p-1 text-center">{settore.codiceSettore}</td>
+                      <td className="border border-black p-1 text-right">{settore.interi.prezzoUnitario.toFixed(2)}</td>
+                      <td className="border border-black p-1 text-right">{settore.totaleVenduti}</td>
+                      <td className="border border-black p-1 text-right">{settore.totaleIncasso.toFixed(2)}</td>
+                      <td className="border border-black p-1 text-right">{quadroC.isIntrattenimento ? (settoreNet * quadroC.aliquotaImpostaIntrattenimenti / 100).toFixed(2) : '0,00'}</td>
+                      <td className="border border-black p-1 text-right">{settoreNet.toFixed(2)}</td>
+                      <td className="border border-black p-1 text-center">{settore.totaleAnnullati}</td>
+                      <td className="border border-black p-1 text-right">{settoreVat.toFixed(2)}</td>
                     </tr>
                   );
                 })}
-                {report.ticketTypes.ridotto.count > 0 && (
+                {quadroB.riepilogoTipologie.ridotti.quantita > 0 && (
                   <tr>
-                    <td className="border border-black p-1">Ridotti</td>
+                    <td className="border border-black p-1">Ridotti (totale)</td>
                     <td className="border border-black p-1 text-center">-</td>
                     <td className="border border-black p-1 text-center">RID</td>
                     <td className="border border-black p-1 text-right">-</td>
-                    <td className="border border-black p-1 text-right">{report.ticketTypes.ridotto.count}</td>
-                    <td className="border border-black p-1 text-right">{report.ticketTypes.ridotto.amount.toFixed(2)}</td>
-                    <td className="border border-black p-1 text-right">0,00</td>
+                    <td className="border border-black p-1 text-right">{quadroB.riepilogoTipologie.ridotti.quantita}</td>
+                    <td className="border border-black p-1 text-right">{quadroB.riepilogoTipologie.ridotti.totale.toFixed(2)}</td>
                     <td className="border border-black p-1 text-right">-</td>
-                    <td className="border border-black p-1 text-center">0</td>
+                    <td className="border border-black p-1 text-right">-</td>
+                    <td className="border border-black p-1 text-center">-</td>
                     <td className="border border-black p-1 text-right">-</td>
                   </tr>
                 )}
-                {report.ticketTypes.omaggio.count > 0 && (
+                {quadroB.riepilogoTipologie.omaggi.quantita > 0 && (
                   <tr>
-                    <td className="border border-black p-1">Omaggi</td>
+                    <td className="border border-black p-1">Omaggi (totale)</td>
                     <td className="border border-black p-1 text-center">-</td>
                     <td className="border border-black p-1 text-center">OMA</td>
                     <td className="border border-black p-1 text-right">0,00</td>
-                    <td className="border border-black p-1 text-right">{report.ticketTypes.omaggio.count}</td>
+                    <td className="border border-black p-1 text-right">{quadroB.riepilogoTipologie.omaggi.quantita}</td>
                     <td className="border border-black p-1 text-right">0,00</td>
                     <td className="border border-black p-1 text-right">0,00</td>
                     <td className="border border-black p-1 text-right">0,00</td>
-                    <td className="border border-black p-1 text-center">0</td>
+                    <td className="border border-black p-1 text-center">-</td>
                     <td className="border border-black p-1 text-right">0,00</td>
                   </tr>
                 )}
@@ -383,9 +434,9 @@ export default function SiaeReportC1() {
                   <td className="border border-black p-1" colSpan={4}>TOTALE</td>
                   <td className="border border-black p-1 text-right">{totalEmessi}</td>
                   <td className="border border-black p-1 text-right">{totalRicavoLordo.toFixed(2)}</td>
-                  <td className="border border-black p-1 text-right">0,00</td>
+                  <td className="border border-black p-1 text-right">{quadroC.importoImpostaIntrattenimenti.toFixed(2)}</td>
                   <td className="border border-black p-1 text-right">{imponibileIva.toFixed(2)}</td>
-                  <td className="border border-black p-1 text-center">{report.cancelledTicketsCount}</td>
+                  <td className="border border-black p-1 text-center">{quadroB.totaleBigliettiAnnullati}</td>
                   <td className="border border-black p-1 text-right">{ivaLorda.toFixed(2)}</td>
                 </tr>
               </tbody>
@@ -400,25 +451,41 @@ export default function SiaeReportC1() {
               <tbody>
                 <tr>
                   <td className="border border-black p-2 w-1/2 font-semibold">Ricavo Lordo</td>
-                  <td className="border border-black p-2 text-right">{totalRicavoLordo.toFixed(2)}</td>
+                  <td className="border border-black p-2 text-right">{quadroC.incassoLordo.toFixed(2)}</td>
                 </tr>
                 <tr>
-                  <td className="border border-black p-2 font-semibold">Imponibile IVA</td>
-                  <td className="border border-black p-2 text-right">{imponibileIva.toFixed(2)}</td>
+                  <td className="border border-black p-2 font-semibold">Base Imponibile IVA</td>
+                  <td className="border border-black p-2 text-right">{quadroC.baseImponibileIVA.toFixed(2)}</td>
                 </tr>
                 <tr>
-                  <td className="border border-black p-2 font-semibold">IVA ({report.vatRate}%)</td>
-                  <td className="border border-black p-2 text-right font-bold">{ivaLorda.toFixed(2)}</td>
+                  <td className="border border-black p-2 font-semibold">IVA ({quadroC.aliquotaIVA}%)</td>
+                  <td className="border border-black p-2 text-right">{quadroC.importoIVA.toFixed(2)}</td>
+                </tr>
+                {quadroC.isIntrattenimento && (
+                  <>
+                    <tr>
+                      <td className="border border-black p-2 font-semibold">Base Imponibile Intrattenimenti</td>
+                      <td className="border border-black p-2 text-right">{quadroC.baseImponibileIntrattenimenti.toFixed(2)}</td>
+                    </tr>
+                    <tr>
+                      <td className="border border-black p-2 font-semibold">Imposta Intrattenimenti ({quadroC.aliquotaImpostaIntrattenimenti}%)</td>
+                      <td className="border border-black p-2 text-right">{quadroC.importoImpostaIntrattenimenti.toFixed(2)}</td>
+                    </tr>
+                  </>
+                )}
+                <tr>
+                  <td className="border border-black p-2 font-semibold">Totale Imposte</td>
+                  <td className="border border-black p-2 text-right font-bold">{quadroC.totaleImposte.toFixed(2)}</td>
                 </tr>
                 <tr className="bg-gray-100">
-                  <td className="border border-black p-2 font-bold">TOTALE GENERALE</td>
-                  <td className="border border-black p-2 text-right font-bold text-lg">{totalRicavoLordo.toFixed(2)}</td>
+                  <td className="border border-black p-2 font-bold">INCASSO NETTO</td>
+                  <td className="border border-black p-2 text-right font-bold text-lg">{quadroC.incassoNetto.toFixed(2)}</td>
                 </tr>
               </tbody>
             </table>
           </div>
 
-          {report.cancelledTicketsCount > 0 && (
+          {quadroB.totaleBigliettiAnnullati > 0 && (
             <div className="border border-black mb-4" data-testid="quadro-annullamenti">
               <div className="bg-gray-100 px-2 py-1 font-bold border-b border-black">
                 QUADRO D - ANNULLAMENTI
@@ -427,7 +494,7 @@ export default function SiaeReportC1() {
                 <tbody>
                   <tr className="bg-gray-100 font-bold">
                     <td className="border border-black p-1">TOTALE BIGLIETTI ANNULLATI</td>
-                    <td className="border border-black p-1 text-right">{report.cancelledTicketsCount}</td>
+                    <td className="border border-black p-1 text-right">{quadroB.totaleBigliettiAnnullati}</td>
                   </tr>
                 </tbody>
               </table>
@@ -535,7 +602,7 @@ export default function SiaeReportC1() {
 
         <div className="flex gap-4 mb-4 text-xs">
           <span>Dal giorno <span className="border-b border-black px-2">{formattedDate}</span></span>
-          <span>alle ore <span className="border-b border-black px-2">{report.eventTime || "21:00"}</span></span>
+          <span>alle ore <span className="border-b border-black px-2">{quadroA.oraEvento || "21:00"}</span></span>
           <span>al giorno <span className="border-b border-black px-2">{formattedDate}</span></span>
           <span>alle ore <span className="border-b border-black px-2">06:00</span></span>
         </div>
@@ -546,35 +613,54 @@ export default function SiaeReportC1() {
 
         <div className="border border-black mb-4">
           <div className="bg-gray-100 px-2 py-1 font-bold border-b border-black">
-            QUADRO A - EVENTO
+            QUADRO A - DATI IDENTIFICATIVI
           </div>
           <table className="w-full text-xs">
             <tbody>
               <tr>
-                <td className="border border-black p-1 w-1/4 font-semibold">DENOMINAZIONE EVENTO</td>
-                <td className="border border-black p-1" colSpan={3}>{report.eventName}</td>
+                <td className="border border-black p-1 w-1/4 font-semibold">ORGANIZZATORE</td>
+                <td className="border border-black p-1" colSpan={3}>{quadroA.denominazioneOrganizzatore}</td>
+              </tr>
+              <tr>
+                <td className="border border-black p-1 font-semibold">CODICE FISCALE</td>
+                <td className="border border-black p-1">{quadroA.codiceFiscaleOrganizzatore}</td>
+                <td className="border border-black p-1 font-semibold">PARTITA IVA</td>
+                <td className="border border-black p-1">{quadroA.partitaIvaOrganizzatore}</td>
+              </tr>
+              <tr>
+                <td className="border border-black p-1 font-semibold">CODICE LOCALE (BA)</td>
+                <td className="border border-black p-1">{quadroA.codiceLocale}</td>
+                <td className="border border-black p-1 font-semibold">LOCALE</td>
+                <td className="border border-black p-1">{quadroA.denominazioneLocale}</td>
+              </tr>
+              <tr>
+                <td className="border border-black p-1 font-semibold">DENOMINAZIONE EVENTO</td>
+                <td className="border border-black p-1" colSpan={3}>{quadroA.denominazioneEvento}</td>
               </tr>
               <tr>
                 <td className="border border-black p-1 font-semibold">CODICE EVENTO</td>
-                <td className="border border-black p-1">{report.eventCode || 'N/D'}</td>
-                <td className="border border-black p-1 font-semibold">LOCATION</td>
-                <td className="border border-black p-1">{report.venueName || 'N/D'}</td>
+                <td className="border border-black p-1">{quadroA.codiceEvento}</td>
+                <td className="border border-black p-1 font-semibold">GENERE</td>
+                <td className="border border-black p-1">{quadroA.genereEvento}</td>
               </tr>
               <tr>
                 <td className="border border-black p-1 font-semibold">DATA EVENTO</td>
                 <td className="border border-black p-1">{formattedDate}</td>
                 <td className="border border-black p-1 font-semibold">ORA INIZIO</td>
-                <td className="border border-black p-1">{report.eventTime || '21:00'}</td>
+                <td className="border border-black p-1">{quadroA.oraEvento}</td>
               </tr>
               <tr>
-                <td className="border border-black p-1 font-semibold">TIPO EVENTO</td>
+                <td className="border border-black p-1 font-semibold">TIPOLOGIA</td>
                 <td className="border border-black p-1">
                   <label className="flex items-center gap-1">
-                    <input type="checkbox" checked readOnly className="w-3 h-3" /> Spettacolo
+                    <input type="checkbox" checked={quadroA.tipologiaEvento === 'spettacolo'} readOnly className="w-3 h-3" /> Spettacolo
+                  </label>
+                  <label className="flex items-center gap-1">
+                    <input type="checkbox" checked={quadroA.tipologiaEvento === 'intrattenimento'} readOnly className="w-3 h-3" /> Intrattenimento
                   </label>
                 </td>
-                <td className="border border-black p-1 font-semibold">ALIQUOTA IVA</td>
-                <td className="border border-black p-1">{report.vatRate}%</td>
+                <td className="border border-black p-1 font-semibold">CAPIENZA</td>
+                <td className="border border-black p-1">{quadroA.capienza}</td>
               </tr>
             </tbody>
           </table>
@@ -603,49 +689,49 @@ export default function SiaeReportC1() {
               </tr>
             </thead>
             <tbody>
-              {report.sectors.map((sector) => {
-                const sectorVat = sector.revenue * (report.vatRate / (100 + report.vatRate));
-                const sectorNet = sector.revenue - sectorVat;
+              {quadroB.settori.map((settore) => {
+                const settoreVat = settore.totaleIncasso * (quadroC.aliquotaIVA / (100 + quadroC.aliquotaIVA));
+                const settoreNet = settore.totaleIncasso - settoreVat;
                 return (
-                  <tr key={sector.id}>
-                    <td className="border border-black p-1">{sector.name}</td>
-                    <td className="border border-black p-1 text-center">{sector.capacity}</td>
-                    <td className="border border-black p-1 text-center">{sector.sectorCode || 'INT'}</td>
-                    <td className="border border-black p-1 text-right">{sector.priceIntero.toFixed(2)}</td>
-                    <td className="border border-black p-1 text-right">{sector.soldCount}</td>
-                    <td className="border border-black p-1 text-right">{sector.revenue.toFixed(2)}</td>
-                    <td className="border border-black p-1 text-right">0,00</td>
-                    <td className="border border-black p-1 text-right">{sectorNet.toFixed(2)}</td>
-                    <td className="border border-black p-1 text-center">{sector.cancelledCount || 0}</td>
-                    <td className="border border-black p-1 text-right">{sectorVat.toFixed(2)}</td>
+                  <tr key={settore.codiceSettore}>
+                    <td className="border border-black p-1">{settore.denominazione}</td>
+                    <td className="border border-black p-1 text-center">{settore.capienza}</td>
+                    <td className="border border-black p-1 text-center">{settore.codiceSettore}</td>
+                    <td className="border border-black p-1 text-right">{settore.interi.prezzoUnitario.toFixed(2)}</td>
+                    <td className="border border-black p-1 text-right">{settore.totaleVenduti}</td>
+                    <td className="border border-black p-1 text-right">{settore.totaleIncasso.toFixed(2)}</td>
+                    <td className="border border-black p-1 text-right">{quadroC.isIntrattenimento ? (settoreNet * quadroC.aliquotaImpostaIntrattenimenti / 100).toFixed(2) : '0,00'}</td>
+                    <td className="border border-black p-1 text-right">{settoreNet.toFixed(2)}</td>
+                    <td className="border border-black p-1 text-center">{settore.totaleAnnullati}</td>
+                    <td className="border border-black p-1 text-right">{settoreVat.toFixed(2)}</td>
                   </tr>
                 );
               })}
-              {report.ticketTypes.ridotto.count > 0 && (
+              {quadroB.riepilogoTipologie.ridotti.quantita > 0 && (
                 <tr>
-                  <td className="border border-black p-1">Ridotti</td>
+                  <td className="border border-black p-1">Ridotti (totale)</td>
                   <td className="border border-black p-1 text-center">-</td>
                   <td className="border border-black p-1 text-center">RID</td>
                   <td className="border border-black p-1 text-right">-</td>
-                  <td className="border border-black p-1 text-right">{report.ticketTypes.ridotto.count}</td>
-                  <td className="border border-black p-1 text-right">{report.ticketTypes.ridotto.amount.toFixed(2)}</td>
-                  <td className="border border-black p-1 text-right">0,00</td>
+                  <td className="border border-black p-1 text-right">{quadroB.riepilogoTipologie.ridotti.quantita}</td>
+                  <td className="border border-black p-1 text-right">{quadroB.riepilogoTipologie.ridotti.totale.toFixed(2)}</td>
                   <td className="border border-black p-1 text-right">-</td>
-                  <td className="border border-black p-1 text-center">0</td>
+                  <td className="border border-black p-1 text-right">-</td>
+                  <td className="border border-black p-1 text-center">-</td>
                   <td className="border border-black p-1 text-right">-</td>
                 </tr>
               )}
-              {report.ticketTypes.omaggio.count > 0 && (
+              {quadroB.riepilogoTipologie.omaggi.quantita > 0 && (
                 <tr>
-                  <td className="border border-black p-1">Omaggi</td>
+                  <td className="border border-black p-1">Omaggi (totale)</td>
                   <td className="border border-black p-1 text-center">-</td>
                   <td className="border border-black p-1 text-center">OMA</td>
                   <td className="border border-black p-1 text-right">0,00</td>
-                  <td className="border border-black p-1 text-right">{report.ticketTypes.omaggio.count}</td>
+                  <td className="border border-black p-1 text-right">{quadroB.riepilogoTipologie.omaggi.quantita}</td>
                   <td className="border border-black p-1 text-right">0,00</td>
                   <td className="border border-black p-1 text-right">0,00</td>
                   <td className="border border-black p-1 text-right">0,00</td>
-                  <td className="border border-black p-1 text-center">0</td>
+                  <td className="border border-black p-1 text-center">-</td>
                   <td className="border border-black p-1 text-right">0,00</td>
                 </tr>
               )}
@@ -653,9 +739,9 @@ export default function SiaeReportC1() {
                 <td className="border border-black p-1" colSpan={4}>TOTALE</td>
                 <td className="border border-black p-1 text-right">{totalEmessi}</td>
                 <td className="border border-black p-1 text-right">{totalRicavoLordo.toFixed(2)}</td>
-                <td className="border border-black p-1 text-right">0,00</td>
+                <td className="border border-black p-1 text-right">{quadroC.importoImpostaIntrattenimenti.toFixed(2)}</td>
                 <td className="border border-black p-1 text-right">{imponibileIva.toFixed(2)}</td>
-                <td className="border border-black p-1 text-center">{report.cancelledTicketsCount}</td>
+                <td className="border border-black p-1 text-center">{quadroB.totaleBigliettiAnnullati}</td>
                 <td className="border border-black p-1 text-right">{ivaLorda.toFixed(2)}</td>
               </tr>
             </tbody>
@@ -670,25 +756,37 @@ export default function SiaeReportC1() {
             <tbody>
               <tr>
                 <td className="border border-black p-2 w-1/2 font-semibold">Ricavo Lordo</td>
-                <td className="border border-black p-2 text-right">{totalRicavoLordo.toFixed(2)}</td>
+                <td className="border border-black p-2 text-right">{quadroC.incassoLordo.toFixed(2)}</td>
               </tr>
               <tr>
-                <td className="border border-black p-2 font-semibold">Imponibile IVA</td>
-                <td className="border border-black p-2 text-right">{imponibileIva.toFixed(2)}</td>
+                <td className="border border-black p-2 font-semibold">Base Imponibile IVA</td>
+                <td className="border border-black p-2 text-right">{quadroC.baseImponibileIVA.toFixed(2)}</td>
               </tr>
               <tr>
-                <td className="border border-black p-2 font-semibold">IVA ({report.vatRate}%)</td>
-                <td className="border border-black p-2 text-right font-bold">{ivaLorda.toFixed(2)}</td>
+                <td className="border border-black p-2 font-semibold">IVA ({quadroC.aliquotaIVA}%)</td>
+                <td className="border border-black p-2 text-right">{quadroC.importoIVA.toFixed(2)}</td>
+              </tr>
+              {quadroC.isIntrattenimento && (
+                <>
+                  <tr>
+                    <td className="border border-black p-2 font-semibold">Imposta Intrattenimenti ({quadroC.aliquotaImpostaIntrattenimenti}%)</td>
+                    <td className="border border-black p-2 text-right">{quadroC.importoImpostaIntrattenimenti.toFixed(2)}</td>
+                  </tr>
+                </>
+              )}
+              <tr>
+                <td className="border border-black p-2 font-semibold">Totale Imposte</td>
+                <td className="border border-black p-2 text-right font-bold">{quadroC.totaleImposte.toFixed(2)}</td>
               </tr>
               <tr className="bg-gray-100">
-                <td className="border border-black p-2 font-bold">TOTALE GENERALE</td>
-                <td className="border border-black p-2 text-right font-bold text-lg">{totalRicavoLordo.toFixed(2)}</td>
+                <td className="border border-black p-2 font-bold">INCASSO NETTO</td>
+                <td className="border border-black p-2 text-right font-bold text-lg">{quadroC.incassoNetto.toFixed(2)}</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        {report.cancelledTicketsCount > 0 && (
+        {quadroB.totaleBigliettiAnnullati > 0 && (
           <div className="border border-black mb-4" data-testid="quadro-annullamenti">
             <div className="bg-gray-100 px-2 py-1 font-bold border-b border-black">
               QUADRO D - ANNULLAMENTI
@@ -697,7 +795,7 @@ export default function SiaeReportC1() {
               <tbody>
                 <tr className="bg-gray-100 font-bold">
                   <td className="border border-black p-1">TOTALE BIGLIETTI ANNULLATI</td>
-                  <td className="border border-black p-1 text-right">{report.cancelledTicketsCount}</td>
+                  <td className="border border-black p-1 text-right">{quadroB.totaleBigliettiAnnullati}</td>
                 </tr>
               </tbody>
             </table>
