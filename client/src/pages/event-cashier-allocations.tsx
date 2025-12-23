@@ -76,7 +76,7 @@ interface CashierAllocationWithDetails extends SiaeCashierAllocation {
 
 const allocationFormSchema = z.object({
   cashierId: z.string().min(1, "Seleziona un cassiere"),
-  sectorId: z.string().min(1, "Seleziona un settore"),
+  sectorId: z.string().optional(),
   quotaQuantity: z.coerce.number().min(1, "La quota deve essere almeno 1"),
 });
 
@@ -124,7 +124,11 @@ export function EventCashierAllocations({ eventId, siaeEventId }: EventCashierAl
 
   const createAllocationMutation = useMutation({
     mutationFn: async (data: AllocationFormValues) => {
-      const response = await apiRequest("POST", `/api/events/${targetEventId}/cashier-allocations`, data);
+      const payload = {
+        ...data,
+        sectorId: data.sectorId === "all" || !data.sectorId ? null : data.sectorId,
+      };
+      const response = await apiRequest("POST", `/api/events/${targetEventId}/cashier-allocations`, payload);
       return response.json();
     },
     onSuccess: () => {
@@ -289,30 +293,33 @@ export function EventCashierAllocations({ eventId, siaeEventId }: EventCashierAl
                   )}
                 />
 
-                <FormField
-                  control={form.control}
-                  name="sectorId"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Settore</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-sector">
-                            <SelectValue placeholder="Seleziona settore..." />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {sectors?.map((sector) => (
-                            <SelectItem key={sector.id} value={sector.id}>
-                              {sector.name} - €{Number(sector.priceIntero || 0).toFixed(2)}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                {sectors && sectors.length > 0 && (
+                  <FormField
+                    control={form.control}
+                    name="sectorId"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Settore</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value || ""}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-sector">
+                              <SelectValue placeholder="Seleziona settore..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="all">Tutti i settori</SelectItem>
+                            {sectors.map((sector) => (
+                              <SelectItem key={sector.id} value={sector.id}>
+                                {sector.name} - €{Number(sector.priceIntero || 0).toFixed(2)}
+                              </SelectItem>
+                            ))}
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
               </>
             )}
 

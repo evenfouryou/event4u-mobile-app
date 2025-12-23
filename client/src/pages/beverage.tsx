@@ -422,8 +422,8 @@ export default function Beverage() {
                     <p className="font-medium">{selectedProduct.category || "N/A"}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Prezzo</p>
-                    <p className="font-medium">€{Number(selectedProduct.price || 0).toFixed(2)}</p>
+                    <p className="text-sm text-muted-foreground">Costo</p>
+                    <p className="font-medium">€{Number(selectedProduct.costPrice || 0).toFixed(2)}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Stock Attuale</p>
@@ -512,16 +512,67 @@ export default function Beverage() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-3 gap-6">
-          <div className="col-span-2 space-y-6">
+        <div className="flex flex-wrap gap-2 pb-4" data-testid="quick-actions-row">
+          <Link href="/warehouse">
+            <Button variant="outline" data-testid="action-magazzino">
+              <Warehouse className="w-4 h-4 mr-2" />
+              Magazzino
+            </Button>
+          </Link>
+          <Link href="/products">
+            <Button variant="outline" data-testid="action-prodotti">
+              <Package className="w-4 h-4 mr-2" />
+              Prodotti
+            </Button>
+          </Link>
+          <Link href="/stations">
+            <Button variant="outline" data-testid="action-postazioni">
+              <MapPin className="w-4 h-4 mr-2" />
+              Postazioni
+            </Button>
+          </Link>
+          <Link href="/suppliers">
+            <Button variant="outline" data-testid="action-fornitori">
+              <Truck className="w-4 h-4 mr-2" />
+              Fornitori
+            </Button>
+          </Link>
+          <Link href="/purchase-orders">
+            <Button variant="outline" data-testid="action-ordini">
+              <ShoppingCart className="w-4 h-4 mr-2" />
+              Ordini
+            </Button>
+          </Link>
+          <Link href="/price-lists">
+            <Button variant="outline" data-testid="action-listini">
+              <Tag className="w-4 h-4 mr-2" />
+              Listini
+            </Button>
+          </Link>
+          <Link href="/reports">
+            <Button variant="outline" data-testid="action-report">
+              <BarChart3 className="w-4 h-4 mr-2" />
+              Report
+            </Button>
+          </Link>
+          <Link href="/ai-analysis">
+            <Button variant="outline" data-testid="action-ai">
+              <Sparkles className="w-4 h-4 mr-2" />
+              Analisi AI
+            </Button>
+          </Link>
+        </div>
+
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
+          <div className="lg:col-span-3 space-y-6">
             <Card>
               <CardHeader>
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                   <div>
                     <CardTitle>Catalogo Prodotti</CardTitle>
                     <CardDescription>Elenco prodotti con stato stock</CardDescription>
                   </div>
-                  <div className="flex gap-2">
+                  <div className="flex flex-wrap gap-2">
                     {CATEGORIES.map((cat) => {
                       const Icon = cat.icon;
                       const isActive = selectedCategory === cat.id;
@@ -549,151 +600,109 @@ export default function Beverage() {
                     <Skeleton className="h-12 w-full" />
                   </div>
                 ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Prodotto</TableHead>
-                        <TableHead>Categoria</TableHead>
-                        <TableHead>Stock</TableHead>
-                        <TableHead>Stato</TableHead>
-                        <TableHead className="text-right">Azioni</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {filteredProducts.length > 0 ? (
-                        filteredProducts.map((product) => {
-                          const stock = stockMap[product.id] || 0;
-                          return (
-                            <TableRow key={product.id} data-testid={`row-product-${product.id}`}>
-                              <TableCell>
-                                <div className="flex items-center gap-3">
-                                  <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center">
-                                    <Wine className="w-5 h-5 text-primary/50" />
-                                  </div>
-                                  <span className="font-medium">{product.name}</span>
-                                </div>
-                              </TableCell>
-                              <TableCell>
-                                <Badge variant="secondary">{product.category || "N/A"}</Badge>
-                              </TableCell>
-                              <TableCell className={getStockColor(stock)}>
-                                {stock} unità
-                              </TableCell>
-                              <TableCell>{getStockBadge(stock)}</TableCell>
-                              <TableCell className="text-right">
-                                <Button 
-                                  variant="ghost" 
-                                  size="sm"
-                                  onClick={() => {
-                                    setSelectedProduct(product);
-                                    setIsProductDialogOpen(true);
-                                  }}
-                                  data-testid={`button-view-${product.id}`}
-                                >
-                                  Dettagli
-                                </Button>
-                              </TableCell>
-                            </TableRow>
-                          );
-                        })
-                      ) : (
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
                         <TableRow>
-                          <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
-                            Nessun prodotto trovato
-                          </TableCell>
+                          <TableHead>Prodotto</TableHead>
+                          <TableHead>Categoria</TableHead>
+                          <TableHead>Stock</TableHead>
+                          <TableHead>Stato</TableHead>
+                          <TableHead className="text-right">Azioni</TableHead>
                         </TableRow>
-                      )}
-                    </TableBody>
-                  </Table>
+                      </TableHeader>
+                      <TableBody>
+                        {filteredProducts.length > 0 ? (
+                          filteredProducts.map((product) => {
+                            const stock = stockMap[product.id] || 0;
+                            return (
+                              <TableRow key={product.id} data-testid={`row-product-${product.id}`}>
+                                <TableCell>
+                                  <div className="flex items-center gap-3">
+                                    <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center flex-shrink-0">
+                                      <Wine className="w-5 h-5 text-primary/50" />
+                                    </div>
+                                    <span className="font-medium">{product.name}</span>
+                                  </div>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary">{product.category || "N/A"}</Badge>
+                                </TableCell>
+                                <TableCell className={getStockColor(stock)}>
+                                  {stock} unità
+                                </TableCell>
+                                <TableCell>{getStockBadge(stock)}</TableCell>
+                                <TableCell className="text-right">
+                                  <Button 
+                                    variant="ghost" 
+                                    size="sm"
+                                    onClick={() => {
+                                      setSelectedProduct(product);
+                                      setIsProductDialogOpen(true);
+                                    }}
+                                    data-testid={`button-view-${product.id}`}
+                                  >
+                                    Dettagli
+                                  </Button>
+                                </TableCell>
+                              </TableRow>
+                            );
+                          })
+                        ) : (
+                          <TableRow>
+                            <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                              Nessun prodotto trovato
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      </TableBody>
+                    </Table>
+                  </div>
                 )}
               </CardContent>
             </Card>
           </div>
 
           <div className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Azioni Rapide</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-2">
-                <Link href="/warehouse">
-                  <Button variant="outline" className="w-full justify-start" data-testid="action-magazzino">
-                    <Warehouse className="w-4 h-4 mr-2" />
-                    Magazzino
-                  </Button>
-                </Link>
-                <Link href="/products">
-                  <Button variant="outline" className="w-full justify-start" data-testid="action-prodotti">
-                    <Package className="w-4 h-4 mr-2" />
-                    Prodotti
-                  </Button>
-                </Link>
-                <Link href="/stations">
-                  <Button variant="outline" className="w-full justify-start" data-testid="action-postazioni">
-                    <MapPin className="w-4 h-4 mr-2" />
-                    Postazioni
-                  </Button>
-                </Link>
-                <Link href="/suppliers">
-                  <Button variant="outline" className="w-full justify-start" data-testid="action-fornitori">
-                    <Truck className="w-4 h-4 mr-2" />
-                    Fornitori
-                  </Button>
-                </Link>
-                <Link href="/purchase-orders">
-                  <Button variant="outline" className="w-full justify-start" data-testid="action-ordini">
-                    <ShoppingCart className="w-4 h-4 mr-2" />
-                    Ordini
-                  </Button>
-                </Link>
-                <Link href="/price-lists">
-                  <Button variant="outline" className="w-full justify-start" data-testid="action-listini">
-                    <Tag className="w-4 h-4 mr-2" />
-                    Listini
-                  </Button>
-                </Link>
-                <Link href="/reports">
-                  <Button variant="outline" className="w-full justify-start" data-testid="action-report">
-                    <BarChart3 className="w-4 h-4 mr-2" />
-                    Report
-                  </Button>
-                </Link>
-                <Link href="/ai-analysis">
-                  <Button variant="outline" className="w-full justify-start" data-testid="action-ai">
-                    <Sparkles className="w-4 h-4 mr-2" />
-                    Analisi AI
-                  </Button>
-                </Link>
-              </CardContent>
-            </Card>
-
             {lowStockProducts.length > 0 && (
               <Card>
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <AlertTriangle className="w-5 h-5 text-amber-500" />
-                    <CardTitle>Scorte Basse</CardTitle>
+                    <CardTitle className="text-base">Scorte Basse</CardTitle>
                   </div>
                   <CardDescription>{lowStockProducts.length} prodotti sotto soglia</CardDescription>
                 </CardHeader>
-                <CardContent className="space-y-2">
-                  {lowStockProducts.slice(0, 5).map((stock) => (
-                    <div
-                      key={stock.productId}
-                      className="flex items-center justify-between p-3 rounded-lg bg-amber-500/10 border border-amber-500/20"
-                      data-testid={`low-stock-${stock.productId}`}
-                    >
-                      <div className="flex items-center gap-2">
-                        <Package className="w-4 h-4 text-amber-500" />
-                        <span className="font-medium text-sm">{stock.productName}</span>
-                      </div>
-                      <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">
-                        {Number(stock.quantity).toFixed(0)}
-                      </Badge>
-                    </div>
-                  ))}
+                <CardContent>
+                  <div className="overflow-x-auto">
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Prodotto</TableHead>
+                          <TableHead className="text-right">Quantità</TableHead>
+                        </TableRow>
+                      </TableHeader>
+                      <TableBody>
+                        {lowStockProducts.slice(0, 8).map((stock) => (
+                          <TableRow key={stock.productId} data-testid={`low-stock-${stock.productId}`}>
+                            <TableCell>
+                              <div className="flex items-center gap-2">
+                                <Package className="w-4 h-4 text-amber-500 flex-shrink-0" />
+                                <span className="font-medium text-sm truncate">{stock.productName}</span>
+                              </div>
+                            </TableCell>
+                            <TableCell className="text-right">
+                              <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">
+                                {Number(stock.quantity).toFixed(0)}
+                              </Badge>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </div>
                   <Link href="/warehouse">
-                    <Button variant="ghost" className="w-full" size="sm">
+                    <Button variant="ghost" className="w-full mt-2" size="sm">
                       Visualizza Tutto
                       <ChevronRight className="w-4 h-4 ml-1" />
                     </Button>
@@ -707,7 +716,7 @@ export default function Beverage() {
                 <CardHeader>
                   <div className="flex items-center gap-2">
                     <Calendar className="w-5 h-5 text-teal-500" />
-                    <CardTitle>Eventi Attivi</CardTitle>
+                    <CardTitle className="text-base">Eventi Attivi</CardTitle>
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-2">
