@@ -23,6 +23,27 @@ export interface SmartCardStatus {
   canEmitRealSeals: boolean;
   demoMode: boolean;
   relayConnected: boolean;
+  pinRetriesLeft: number | null;   // Tentativi PIN rimasti (null se non disponibile)
+  pukRetriesLeft: number | null;   // Tentativi PUK rimasti (null se non disponibile)
+  pinVerified: boolean;            // Se il PIN è stato verificato nella sessione corrente
+  pinBlocked: boolean;             // Se il PIN è bloccato
+}
+
+export interface PinVerifyResult {
+  success: boolean;
+  retriesLeft: number;
+  blocked: boolean;
+  error?: string;
+}
+
+export interface PinChangeResult {
+  success: boolean;
+  error?: string;
+}
+
+export interface PukUnlockResult {
+  success: boolean;
+  error?: string;
 }
 
 export interface FiscalSeal {
@@ -57,6 +78,10 @@ class SmartCardService {
       cardKeyId: null,
       cardType: null,
       lastCheck: new Date(),
+      pinRetriesLeft: null,
+      pukRetriesLeft: null,
+      pinVerified: false,
+      pinBlocked: false,
       error: 'Lettore Smart Card non connesso',
       bridgeConnected: false,
       canEmitRealSeals: false,
@@ -561,6 +586,249 @@ class SmartCardService {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({ type: 'disableDemo' }));
     }
+  }
+
+  /**
+   * Verifica il PIN della smart card
+   * @param pin Il PIN a 4-8 cifre da verificare
+   * @returns Risultato della verifica con tentativi rimasti
+   */
+  public async verifyPin(pin: string): Promise<PinVerifyResult> {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      throw new Error('Connessione al server non disponibile');
+    }
+
+    if (!this.status.cardInserted) {
+      throw new Error('Smart Card non inserita');
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.ws?.removeEventListener('message', handler);
+        reject(new Error('Timeout verifica PIN (15s)'));
+      }, 15000);
+
+      const handler = (event: MessageEvent) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'pinVerifyResponse') {
+            clearTimeout(timeout);
+            this.ws?.removeEventListener('message', handler);
+            
+            const result: PinVerifyResult = {
+              success: msg.success ?? false,
+              retriesLeft: msg.retriesLeft ?? 0,
+              blocked: msg.blocked ?? false,
+              error: msg.error
+            };
+
+            // Update status with retry info
+            this.updateStatus({
+              ...this.status,
+              pinRetriesLeft: result.retriesLeft,
+              pinVerified: result.success,
+              pinBlocked: result.blocked
+            });
+
+            resolve(result);
+          }
+        } catch (e) {
+          console.error('Error parsing PIN verify response:', e);
+        }
+      };
+
+      this.ws!.addEventListener('message', handler);
+      this.ws!.send(JSON.stringify({
+        type: 'verifyPin',
+        data: { pin }
+      }));
+    });
+  }
+
+  /**
+   * Cambia il PIN della smart card
+   * @param oldPin Il PIN corrente
+   * @param newPin Il nuovo PIN (4-8 cifre)
+   * @returns Risultato del cambio PIN
+   */
+  public async changePin(oldPin: string, newPin: string): Promise<PinChangeResult> {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      throw new Error('Connessione al server non disponibile');
+    }
+
+    if (!this.status.cardInserted) {
+      throw new Error('Smart Card non inserita');
+    }
+
+    if (this.status.pinBlocked) {
+      throw new Error('PIN bloccato. Usare il PUK per sbloccare.');
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.ws?.removeEventListener('message', handler);
+        reject(new Error('Timeout cambio PIN (15s)'));
+      }, 15000);
+
+      const handler = (event: MessageEvent) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'pinChangeResponse') {
+            clearTimeout(timeout);
+            this.ws?.removeEventListener('message', handler);
+            
+            const result: PinChangeResult = {
+              success: msg.success ?? false,
+              error: msg.error
+            };
+
+            if (result.success) {
+              this.updateStatus({
+                ...this.status,
+                pinVerified: true,
+                pinBlocked: false
+              });
+            }
+
+            resolve(result);
+          }
+        } catch (e) {
+          console.error('Error parsing PIN change response:', e);
+        }
+      };
+
+      this.ws!.addEventListener('message', handler);
+      this.ws!.send(JSON.stringify({
+        type: 'changePin',
+        data: { oldPin, newPin }
+      }));
+    });
+  }
+
+  /**
+   * Sblocca il PIN usando il PUK
+   * @param puk Il PUK a 8 cifre
+   * @param newPin Il nuovo PIN da impostare (4-8 cifre)
+   * @returns Risultato dello sblocco
+   */
+  public async unlockWithPuk(puk: string, newPin: string): Promise<PukUnlockResult> {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      throw new Error('Connessione al server non disponibile');
+    }
+
+    if (!this.status.cardInserted) {
+      throw new Error('Smart Card non inserita');
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.ws?.removeEventListener('message', handler);
+        reject(new Error('Timeout sblocco PUK (15s)'));
+      }, 15000);
+
+      const handler = (event: MessageEvent) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'pukUnlockResponse') {
+            clearTimeout(timeout);
+            this.ws?.removeEventListener('message', handler);
+            
+            const result: PukUnlockResult = {
+              success: msg.success ?? false,
+              error: msg.error
+            };
+
+            if (result.success) {
+              this.updateStatus({
+                ...this.status,
+                pinVerified: true,
+                pinBlocked: false,
+                pinRetriesLeft: 3, // Reset to default after successful PUK unlock
+                pukRetriesLeft: msg.pukRetriesLeft ?? this.status.pukRetriesLeft
+              });
+            } else {
+              this.updateStatus({
+                ...this.status,
+                pukRetriesLeft: msg.pukRetriesLeft ?? this.status.pukRetriesLeft
+              });
+            }
+
+            resolve(result);
+          }
+        } catch (e) {
+          console.error('Error parsing PUK unlock response:', e);
+        }
+      };
+
+      this.ws!.addEventListener('message', handler);
+      this.ws!.send(JSON.stringify({
+        type: 'unlockWithPuk',
+        data: { puk, newPin }
+      }));
+    });
+  }
+
+  /**
+   * Richiede i tentativi rimasti per PIN e PUK
+   * @returns Aggiorna lo status con i tentativi rimasti
+   */
+  public async getRetriesStatus(): Promise<{ pinRetries: number | null; pukRetries: number | null }> {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      throw new Error('Connessione al server non disponibile');
+    }
+
+    if (!this.status.cardInserted) {
+      throw new Error('Smart Card non inserita');
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.ws?.removeEventListener('message', handler);
+        reject(new Error('Timeout lettura tentativi (10s)'));
+      }, 10000);
+
+      const handler = (event: MessageEvent) => {
+        try {
+          const msg = JSON.parse(event.data);
+          if (msg.type === 'retriesStatusResponse') {
+            clearTimeout(timeout);
+            this.ws?.removeEventListener('message', handler);
+            
+            const pinRetries = msg.pinRetries ?? null;
+            const pukRetries = msg.pukRetries ?? null;
+
+            this.updateStatus({
+              ...this.status,
+              pinRetriesLeft: pinRetries,
+              pukRetriesLeft: pukRetries,
+              pinBlocked: pinRetries === 0
+            });
+
+            resolve({ pinRetries, pukRetries });
+          }
+        } catch (e) {
+          console.error('Error parsing retries status response:', e);
+        }
+      };
+
+      this.ws!.addEventListener('message', handler);
+      this.ws!.send(JSON.stringify({
+        type: 'getRetriesStatus'
+      }));
+    });
+  }
+
+  /**
+   * Resetta lo stato di verifica PIN (quando la carta viene rimossa)
+   */
+  public resetPinState(): void {
+    this.updateStatus({
+      ...this.status,
+      pinVerified: false,
+      pinRetriesLeft: null,
+      pukRetriesLeft: null,
+      pinBlocked: false
+    });
   }
 }
 

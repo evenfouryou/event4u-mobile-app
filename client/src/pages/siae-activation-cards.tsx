@@ -4,6 +4,16 @@ import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Table,
   TableBody,
@@ -12,13 +22,14 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { CreditCard, Building2, Shield, Loader2, Wifi, WifiOff, RefreshCw, Users, Hash, Wallet, Monitor, CheckCircle2, XCircle, Download, ChevronLeft } from "lucide-react";
+import { CreditCard, Building2, Shield, Loader2, Wifi, WifiOff, RefreshCw, Users, Hash, Wallet, Monitor, CheckCircle2, XCircle, Download, ChevronLeft, Lock, Key, KeyRound, AlertTriangle, Eye, EyeOff } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { useSmartCardStatus, smartCardService } from "@/lib/smart-card-service";
-import { MobileAppLayout, MobileHeader, HapticButton, triggerHaptic } from "@/components/mobile-primitives";
+import { MobileAppLayout, MobileHeader, HapticButton, triggerHaptic, BottomSheet } from "@/components/mobile-primitives";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useToast } from "@/hooks/use-toast";
 
 type SiaeActivationCard = {
   id: string;
@@ -55,14 +66,228 @@ export default function SiaeActivationCardsPage() {
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [, navigate] = useLocation();
   const isMobile = useIsMobile();
+  const { toast } = useToast();
   
   const smartCardStatus = useSmartCardStatus();
+
+  const [isPinVerifyOpen, setIsPinVerifyOpen] = useState(false);
+  const [isPinChangeOpen, setIsPinChangeOpen] = useState(false);
+  const [isPukUnlockOpen, setIsPukUnlockOpen] = useState(false);
+  const [isPinSheetOpen, setIsPinSheetOpen] = useState(false);
+  
+  const [pin, setPin] = useState("");
+  const [oldPin, setOldPin] = useState("");
+  const [newPin, setNewPin] = useState("");
+  const [confirmPin, setConfirmPin] = useState("");
+  const [puk, setPuk] = useState("");
+  const [newPinForPuk, setNewPinForPuk] = useState("");
+  const [confirmPinForPuk, setConfirmPinForPuk] = useState("");
+  
+  const [showPin, setShowPin] = useState(false);
+  const [showOldPin, setShowOldPin] = useState(false);
+  const [showNewPin, setShowNewPin] = useState(false);
+  const [showPuk, setShowPuk] = useState(false);
+  
+  const [isPinLoading, setIsPinLoading] = useState(false);
+  const [retriesLoading, setRetriesLoading] = useState(false);
 
   const handleRefreshCard = async () => {
     triggerHaptic('medium');
     setIsRefreshing(true);
     smartCardService.startPolling();
     setTimeout(() => setIsRefreshing(false), 2000);
+  };
+
+  const handleGetRetries = async () => {
+    if (!smartCardStatus.cardInserted) return;
+    
+    setRetriesLoading(true);
+    try {
+      await smartCardService.getRetriesStatus();
+      toast({
+        title: "Stato PIN aggiornato",
+        description: "Tentativi rimasti aggiornati",
+      });
+    } catch (err: any) {
+      toast({
+        title: "Errore",
+        description: err.message || "Impossibile leggere lo stato PIN",
+        variant: "destructive",
+      });
+    } finally {
+      setRetriesLoading(false);
+    }
+  };
+
+  const handleVerifyPin = async () => {
+    if (!pin || pin.length < 4) {
+      toast({
+        title: "PIN non valido",
+        description: "Il PIN deve essere di almeno 4 cifre",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsPinLoading(true);
+    try {
+      const result = await smartCardService.verifyPin(pin);
+      if (result.success) {
+        toast({
+          title: "PIN verificato",
+          description: "PIN corretto - carta sbloccata per le operazioni",
+        });
+        setIsPinVerifyOpen(false);
+        setPin("");
+      } else {
+        toast({
+          title: "PIN errato",
+          description: result.blocked 
+            ? "PIN bloccato! Usare il PUK per sbloccare."
+            : `PIN errato. Tentativi rimasti: ${result.retriesLeft}`,
+          variant: "destructive",
+        });
+        if (result.blocked) {
+          setIsPinVerifyOpen(false);
+          setIsPukUnlockOpen(true);
+        }
+      }
+    } catch (err: any) {
+      toast({
+        title: "Errore verifica PIN",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsPinLoading(false);
+      setPin("");
+    }
+  };
+
+  const handleChangePin = async () => {
+    if (!oldPin || oldPin.length < 4) {
+      toast({
+        title: "PIN attuale non valido",
+        description: "Il PIN deve essere di almeno 4 cifre",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!newPin || newPin.length < 4 || newPin.length > 8) {
+      toast({
+        title: "Nuovo PIN non valido",
+        description: "Il nuovo PIN deve essere di 4-8 cifre",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (newPin !== confirmPin) {
+      toast({
+        title: "PIN non coincidenti",
+        description: "Il nuovo PIN e la conferma non coincidono",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsPinLoading(true);
+    try {
+      const result = await smartCardService.changePin(oldPin, newPin);
+      if (result.success) {
+        toast({
+          title: "PIN cambiato",
+          description: "Il PIN è stato modificato con successo",
+        });
+        setIsPinChangeOpen(false);
+        setOldPin("");
+        setNewPin("");
+        setConfirmPin("");
+      } else {
+        toast({
+          title: "Errore cambio PIN",
+          description: result.error || "Impossibile cambiare il PIN",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Errore cambio PIN",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsPinLoading(false);
+    }
+  };
+
+  const handleUnlockWithPuk = async () => {
+    if (!puk || puk.length !== 8) {
+      toast({
+        title: "PUK non valido",
+        description: "Il PUK deve essere di esattamente 8 cifre",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (!newPinForPuk || newPinForPuk.length < 4 || newPinForPuk.length > 8) {
+      toast({
+        title: "Nuovo PIN non valido",
+        description: "Il nuovo PIN deve essere di 4-8 cifre",
+        variant: "destructive",
+      });
+      return;
+    }
+    if (newPinForPuk !== confirmPinForPuk) {
+      toast({
+        title: "PIN non coincidenti",
+        description: "Il nuovo PIN e la conferma non coincidono",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    setIsPinLoading(true);
+    try {
+      const result = await smartCardService.unlockWithPuk(puk, newPinForPuk);
+      if (result.success) {
+        toast({
+          title: "Carta sbloccata",
+          description: "Il PIN è stato reimpostato con successo",
+        });
+        setIsPukUnlockOpen(false);
+        setPuk("");
+        setNewPinForPuk("");
+        setConfirmPinForPuk("");
+      } else {
+        toast({
+          title: "Errore sblocco PUK",
+          description: result.error || "Impossibile sbloccare la carta",
+          variant: "destructive",
+        });
+      }
+    } catch (err: any) {
+      toast({
+        title: "Errore sblocco PUK",
+        description: err.message,
+        variant: "destructive",
+      });
+    } finally {
+      setIsPinLoading(false);
+    }
+  };
+
+  const resetPinDialogs = () => {
+    setPin("");
+    setOldPin("");
+    setNewPin("");
+    setConfirmPin("");
+    setPuk("");
+    setNewPinForPuk("");
+    setConfirmPinForPuk("");
+    setShowPin(false);
+    setShowOldPin(false);
+    setShowNewPin(false);
+    setShowPuk(false);
   };
 
   const { data: companies = [] } = useQuery<Company[]>({
@@ -372,6 +597,102 @@ export default function SiaeActivationCardsPage() {
           </Card>
         </div>
 
+        {smartCardStatus.cardInserted && (
+          <Card data-testid="card-pin-management">
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Lock className="w-5 h-5" />
+                Gestione PIN/PUK
+              </CardTitle>
+              <CardDescription>
+                Verifica, modifica PIN o sblocca la carta con PUK
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div className="p-3 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                    <Key className="w-3 h-3" /> Tentativi PIN
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className={`font-mono font-bold ${smartCardStatus.pinBlocked ? 'text-red-500' : smartCardStatus.pinRetriesLeft !== null && smartCardStatus.pinRetriesLeft <= 1 ? 'text-amber-500' : 'text-foreground'}`} data-testid="text-pin-retries">
+                      {smartCardStatus.pinRetriesLeft !== null ? smartCardStatus.pinRetriesLeft : '-'}
+                    </span>
+                    {smartCardStatus.pinBlocked && (
+                      <Badge variant="destructive" className="text-xs">Bloccato</Badge>
+                    )}
+                    {smartCardStatus.pinVerified && (
+                      <Badge className="bg-green-500/20 text-green-500 text-xs">Verificato</Badge>
+                    )}
+                  </div>
+                </div>
+                <div className="p-3 rounded-lg bg-muted/30">
+                  <div className="flex items-center gap-2 text-xs text-muted-foreground mb-1">
+                    <KeyRound className="w-3 h-3" /> Tentativi PUK
+                  </div>
+                  <div className="font-mono font-bold" data-testid="text-puk-retries">
+                    {smartCardStatus.pukRetriesLeft !== null ? smartCardStatus.pukRetriesLeft : '-'}
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={handleGetRetries}
+                  disabled={retriesLoading || !smartCardStatus.cardInserted}
+                  data-testid="button-get-retries"
+                >
+                  {retriesLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <RefreshCw className="w-4 h-4 mr-2" />}
+                  Aggiorna Stato
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { resetPinDialogs(); setIsPinVerifyOpen(true); }}
+                  disabled={smartCardStatus.pinBlocked || smartCardStatus.pinVerified}
+                  data-testid="button-verify-pin"
+                >
+                  <Lock className="w-4 h-4 mr-2" />
+                  Verifica PIN
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => { resetPinDialogs(); setIsPinChangeOpen(true); }}
+                  disabled={smartCardStatus.pinBlocked}
+                  data-testid="button-change-pin"
+                >
+                  <Key className="w-4 h-4 mr-2" />
+                  Cambia PIN
+                </Button>
+                <Button
+                  variant={smartCardStatus.pinBlocked ? "default" : "outline"}
+                  size="sm"
+                  onClick={() => { resetPinDialogs(); setIsPukUnlockOpen(true); }}
+                  data-testid="button-unlock-puk"
+                >
+                  <KeyRound className="w-4 h-4 mr-2" />
+                  Sblocca con PUK
+                </Button>
+              </div>
+
+              {smartCardStatus.pinBlocked && (
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 flex items-start gap-3">
+                  <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                  <div>
+                    <p className="text-sm font-medium text-red-500">PIN Bloccato</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Il PIN è stato bloccato dopo troppi tentativi errati. Usa il codice PUK per sbloccare la carta e impostare un nuovo PIN.
+                    </p>
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        )}
+
         {cards.length > 0 && (
           <Card>
             <CardHeader>
@@ -417,6 +738,247 @@ export default function SiaeActivationCardsPage() {
             </CardContent>
           </Card>
         )}
+
+        <Dialog open={isPinVerifyOpen} onOpenChange={(open) => { if (!open) resetPinDialogs(); setIsPinVerifyOpen(open); }}>
+          <DialogContent data-testid="dialog-verify-pin">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Lock className="w-5 h-5" />
+                Verifica PIN
+              </DialogTitle>
+              <DialogDescription>
+                Inserisci il PIN della Smart Card per abilitare le operazioni protette.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="pin">PIN (4-8 cifre)</Label>
+                <div className="relative">
+                  <Input
+                    id="pin"
+                    type={showPin ? "text" : "password"}
+                    value={pin}
+                    onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                    placeholder="Inserisci PIN"
+                    className="pr-10 font-mono"
+                    maxLength={8}
+                    data-testid="input-pin"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full"
+                    onClick={() => setShowPin(!showPin)}
+                    data-testid="button-toggle-pin-visibility"
+                  >
+                    {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </div>
+              {smartCardStatus.pinRetriesLeft !== null && (
+                <p className={`text-sm ${smartCardStatus.pinRetriesLeft <= 1 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                  Tentativi rimasti: {smartCardStatus.pinRetriesLeft}
+                </p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { resetPinDialogs(); setIsPinVerifyOpen(false); }} data-testid="button-cancel-verify">
+                Annulla
+              </Button>
+              <Button onClick={handleVerifyPin} disabled={isPinLoading || pin.length < 4} data-testid="button-confirm-verify">
+                {isPinLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Verifica
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isPinChangeOpen} onOpenChange={(open) => { if (!open) resetPinDialogs(); setIsPinChangeOpen(open); }}>
+          <DialogContent data-testid="dialog-change-pin">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Key className="w-5 h-5" />
+                Cambia PIN
+              </DialogTitle>
+              <DialogDescription>
+                Modifica il PIN della Smart Card inserendo il PIN attuale e il nuovo PIN.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="oldPin">PIN Attuale</Label>
+                <div className="relative">
+                  <Input
+                    id="oldPin"
+                    type={showOldPin ? "text" : "password"}
+                    value={oldPin}
+                    onChange={(e) => setOldPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                    placeholder="PIN attuale"
+                    className="pr-10 font-mono"
+                    maxLength={8}
+                    data-testid="input-old-pin"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full"
+                    onClick={() => setShowOldPin(!showOldPin)}
+                  >
+                    {showOldPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="newPin">Nuovo PIN (4-8 cifre)</Label>
+                <div className="relative">
+                  <Input
+                    id="newPin"
+                    type={showNewPin ? "text" : "password"}
+                    value={newPin}
+                    onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                    placeholder="Nuovo PIN"
+                    className="pr-10 font-mono"
+                    maxLength={8}
+                    data-testid="input-new-pin"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full"
+                    onClick={() => setShowNewPin(!showNewPin)}
+                  >
+                    {showNewPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPin">Conferma Nuovo PIN</Label>
+                <Input
+                  id="confirmPin"
+                  type={showNewPin ? "text" : "password"}
+                  value={confirmPin}
+                  onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  placeholder="Conferma PIN"
+                  className="font-mono"
+                  maxLength={8}
+                  data-testid="input-confirm-pin"
+                />
+                {newPin && confirmPin && newPin !== confirmPin && (
+                  <p className="text-sm text-red-500">I PIN non coincidono</p>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { resetPinDialogs(); setIsPinChangeOpen(false); }} data-testid="button-cancel-change">
+                Annulla
+              </Button>
+              <Button 
+                onClick={handleChangePin} 
+                disabled={isPinLoading || oldPin.length < 4 || newPin.length < 4 || newPin !== confirmPin} 
+                data-testid="button-confirm-change"
+              >
+                {isPinLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Cambia PIN
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isPukUnlockOpen} onOpenChange={(open) => { if (!open) resetPinDialogs(); setIsPukUnlockOpen(open); }}>
+          <DialogContent data-testid="dialog-unlock-puk">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <KeyRound className="w-5 h-5" />
+                Sblocca con PUK
+              </DialogTitle>
+              <DialogDescription>
+                Se il PIN è bloccato, inserisci il PUK per sbloccare la carta e impostare un nuovo PIN.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {smartCardStatus.pinBlocked && (
+                <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center gap-2">
+                  <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                  <p className="text-sm text-red-500">PIN bloccato - Usa il PUK per sbloccare</p>
+                </div>
+              )}
+              <div className="space-y-2">
+                <Label htmlFor="puk">PUK (8 cifre)</Label>
+                <div className="relative">
+                  <Input
+                    id="puk"
+                    type={showPuk ? "text" : "password"}
+                    value={puk}
+                    onChange={(e) => setPuk(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                    placeholder="Inserisci PUK"
+                    className="pr-10 font-mono"
+                    maxLength={8}
+                    data-testid="input-puk"
+                  />
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="icon"
+                    className="absolute right-0 top-0 h-full"
+                    onClick={() => setShowPuk(!showPuk)}
+                  >
+                    {showPuk ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                  </Button>
+                </div>
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="newPinForPuk">Nuovo PIN (4-8 cifre)</Label>
+                <Input
+                  id="newPinForPuk"
+                  type="password"
+                  value={newPinForPuk}
+                  onChange={(e) => setNewPinForPuk(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  placeholder="Nuovo PIN"
+                  className="font-mono"
+                  maxLength={8}
+                  data-testid="input-new-pin-puk"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPinForPuk">Conferma Nuovo PIN</Label>
+                <Input
+                  id="confirmPinForPuk"
+                  type="password"
+                  value={confirmPinForPuk}
+                  onChange={(e) => setConfirmPinForPuk(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  placeholder="Conferma PIN"
+                  className="font-mono"
+                  maxLength={8}
+                  data-testid="input-confirm-pin-puk"
+                />
+                {newPinForPuk && confirmPinForPuk && newPinForPuk !== confirmPinForPuk && (
+                  <p className="text-sm text-red-500">I PIN non coincidono</p>
+                )}
+              </div>
+              {smartCardStatus.pukRetriesLeft !== null && (
+                <p className="text-sm text-muted-foreground">
+                  Tentativi PUK rimasti: {smartCardStatus.pukRetriesLeft}
+                </p>
+              )}
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { resetPinDialogs(); setIsPukUnlockOpen(false); }} data-testid="button-cancel-unlock">
+                Annulla
+              </Button>
+              <Button 
+                onClick={handleUnlockWithPuk} 
+                disabled={isPinLoading || puk.length !== 8 || newPinForPuk.length < 4 || newPinForPuk !== confirmPinForPuk} 
+                data-testid="button-confirm-unlock"
+              >
+                {isPinLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+                Sblocca Carta
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
@@ -814,7 +1376,408 @@ export default function SiaeActivationCardsPage() {
           </Card>
         </motion.div>
 
+        {smartCardStatus.cardInserted && (
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ ...springConfig, delay: 0.25 }}
+          >
+            <Card className="glass-card" data-testid="card-pin-management-mobile">
+              <CardHeader className="pb-3">
+                <CardTitle className="text-base font-semibold flex items-center gap-3">
+                  <div className="p-2 rounded-xl bg-muted">
+                    <Lock className="w-5 h-5" />
+                  </div>
+                  Gestione PIN/PUK
+                </CardTitle>
+                <CardDescription className="text-xs">
+                  Verifica, modifica PIN o sblocca con PUK
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <motion.div 
+                    className="p-4 rounded-2xl bg-muted/30"
+                    whileTap={{ scale: 0.98 }}
+                    transition={springConfig}
+                  >
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                      <Key className="w-4 h-4" /> Tentativi PIN
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <span className={`font-mono font-bold ${smartCardStatus.pinBlocked ? 'text-red-500' : smartCardStatus.pinRetriesLeft !== null && smartCardStatus.pinRetriesLeft <= 1 ? 'text-amber-500' : 'text-foreground'}`} data-testid="text-pin-retries-mobile">
+                        {smartCardStatus.pinRetriesLeft !== null ? smartCardStatus.pinRetriesLeft : '-'}
+                      </span>
+                      {smartCardStatus.pinBlocked && (
+                        <Badge variant="destructive" className="text-xs px-2">Bloccato</Badge>
+                      )}
+                      {smartCardStatus.pinVerified && (
+                        <Badge className="bg-green-500/20 text-green-500 text-xs px-2">OK</Badge>
+                      )}
+                    </div>
+                  </motion.div>
+                  <motion.div 
+                    className="p-4 rounded-2xl bg-muted/30"
+                    whileTap={{ scale: 0.98 }}
+                    transition={springConfig}
+                  >
+                    <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                      <KeyRound className="w-4 h-4" /> Tentativi PUK
+                    </div>
+                    <div className="font-mono font-bold" data-testid="text-puk-retries-mobile">
+                      {smartCardStatus.pukRetriesLeft !== null ? smartCardStatus.pukRetriesLeft : '-'}
+                    </div>
+                  </motion.div>
+                </div>
+
+                {smartCardStatus.pinBlocked && (
+                  <motion.div 
+                    className="p-4 rounded-2xl bg-red-500/10 border border-red-500/30 flex items-start gap-3"
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={springConfig}
+                  >
+                    <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-red-500">PIN Bloccato</p>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Usa il PUK per sbloccare la carta
+                      </p>
+                    </div>
+                  </motion.div>
+                )}
+
+                <HapticButton
+                  variant="outline"
+                  className="w-full h-12"
+                  onClick={() => { triggerHaptic('medium'); setIsPinSheetOpen(true); }}
+                  hapticType="medium"
+                  data-testid="button-open-pin-sheet"
+                >
+                  <Lock className="w-5 h-5 mr-2" />
+                  Gestisci PIN/PUK
+                </HapticButton>
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
+
       </div>
+
+      <BottomSheet
+        isOpen={isPinSheetOpen}
+        onClose={() => setIsPinSheetOpen(false)}
+        title="Gestione PIN/PUK"
+      >
+        <div className="space-y-4 p-4">
+          <div className="grid grid-cols-2 gap-3 mb-4">
+            <div className="p-3 rounded-xl bg-muted/30 text-center">
+              <p className="text-xs text-muted-foreground mb-1">PIN Rimasti</p>
+              <p className={`font-mono font-bold text-lg ${smartCardStatus.pinBlocked ? 'text-red-500' : 'text-foreground'}`}>
+                {smartCardStatus.pinRetriesLeft !== null ? smartCardStatus.pinRetriesLeft : '-'}
+              </p>
+            </div>
+            <div className="p-3 rounded-xl bg-muted/30 text-center">
+              <p className="text-xs text-muted-foreground mb-1">PUK Rimasti</p>
+              <p className="font-mono font-bold text-lg">
+                {smartCardStatus.pukRetriesLeft !== null ? smartCardStatus.pukRetriesLeft : '-'}
+              </p>
+            </div>
+          </div>
+
+          <HapticButton
+            variant="outline"
+            className="w-full h-14"
+            onClick={handleGetRetries}
+            disabled={retriesLoading}
+            hapticType="light"
+            data-testid="button-get-retries-mobile"
+          >
+            {retriesLoading ? <Loader2 className="w-5 h-5 mr-3 animate-spin" /> : <RefreshCw className="w-5 h-5 mr-3" />}
+            Aggiorna Stato PIN/PUK
+          </HapticButton>
+
+          <HapticButton
+            variant="outline"
+            className="w-full h-14"
+            onClick={() => { setIsPinSheetOpen(false); resetPinDialogs(); setIsPinVerifyOpen(true); }}
+            disabled={smartCardStatus.pinBlocked || smartCardStatus.pinVerified}
+            hapticType="medium"
+            data-testid="button-verify-pin-mobile"
+          >
+            <Lock className="w-5 h-5 mr-3" />
+            Verifica PIN
+            {smartCardStatus.pinVerified && (
+              <CheckCircle2 className="w-5 h-5 ml-auto text-green-500" />
+            )}
+          </HapticButton>
+
+          <HapticButton
+            variant="outline"
+            className="w-full h-14"
+            onClick={() => { setIsPinSheetOpen(false); resetPinDialogs(); setIsPinChangeOpen(true); }}
+            disabled={smartCardStatus.pinBlocked}
+            hapticType="medium"
+            data-testid="button-change-pin-mobile"
+          >
+            <Key className="w-5 h-5 mr-3" />
+            Cambia PIN
+          </HapticButton>
+
+          <HapticButton
+            variant={smartCardStatus.pinBlocked ? "default" : "outline"}
+            className="w-full h-14"
+            onClick={() => { setIsPinSheetOpen(false); resetPinDialogs(); setIsPukUnlockOpen(true); }}
+            hapticType="heavy"
+            data-testid="button-unlock-puk-mobile"
+          >
+            <KeyRound className="w-5 h-5 mr-3" />
+            Sblocca con PUK
+            {smartCardStatus.pinBlocked && (
+              <AlertTriangle className="w-5 h-5 ml-auto text-amber-500" />
+            )}
+          </HapticButton>
+
+          {smartCardStatus.pinBlocked && (
+            <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 mt-4">
+              <div className="flex items-start gap-3">
+                <AlertTriangle className="w-5 h-5 text-red-500 flex-shrink-0 mt-0.5" />
+                <div>
+                  <p className="text-sm font-medium text-red-500">PIN Bloccato</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Il PIN è stato bloccato. Usa il PUK per sbloccare la carta e impostare un nuovo PIN.
+                  </p>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+      </BottomSheet>
+
+      <Dialog open={isPinVerifyOpen} onOpenChange={(open) => { if (!open) resetPinDialogs(); setIsPinVerifyOpen(open); }}>
+        <DialogContent data-testid="dialog-verify-pin-mobile">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5" />
+              Verifica PIN
+            </DialogTitle>
+            <DialogDescription>
+              Inserisci il PIN della Smart Card.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="pin-mobile">PIN (4-8 cifre)</Label>
+              <div className="relative">
+                <Input
+                  id="pin-mobile"
+                  type={showPin ? "text" : "password"}
+                  value={pin}
+                  onChange={(e) => setPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  placeholder="Inserisci PIN"
+                  className="pr-10 font-mono h-12 text-lg"
+                  maxLength={8}
+                  inputMode="numeric"
+                  data-testid="input-pin-mobile"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full"
+                  onClick={() => setShowPin(!showPin)}
+                >
+                  {showPin ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </Button>
+              </div>
+            </div>
+            {smartCardStatus.pinRetriesLeft !== null && (
+              <p className={`text-sm ${smartCardStatus.pinRetriesLeft <= 1 ? 'text-amber-500' : 'text-muted-foreground'}`}>
+                Tentativi rimasti: {smartCardStatus.pinRetriesLeft}
+              </p>
+            )}
+          </div>
+          <DialogFooter className="flex-col space-y-2 sm:flex-row sm:space-y-0">
+            <Button variant="outline" onClick={() => { resetPinDialogs(); setIsPinVerifyOpen(false); }} className="w-full sm:w-auto">
+              Annulla
+            </Button>
+            <Button onClick={handleVerifyPin} disabled={isPinLoading || pin.length < 4} className="w-full sm:w-auto">
+              {isPinLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Verifica
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPinChangeOpen} onOpenChange={(open) => { if (!open) resetPinDialogs(); setIsPinChangeOpen(open); }}>
+        <DialogContent data-testid="dialog-change-pin-mobile">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Key className="w-5 h-5" />
+              Cambia PIN
+            </DialogTitle>
+            <DialogDescription>
+              Inserisci il PIN attuale e il nuovo PIN.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            <div className="space-y-2">
+              <Label htmlFor="oldPin-mobile">PIN Attuale</Label>
+              <Input
+                id="oldPin-mobile"
+                type="password"
+                value={oldPin}
+                onChange={(e) => setOldPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                placeholder="PIN attuale"
+                className="font-mono h-12 text-lg"
+                maxLength={8}
+                inputMode="numeric"
+                data-testid="input-old-pin-mobile"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newPin-mobile">Nuovo PIN (4-8 cifre)</Label>
+              <Input
+                id="newPin-mobile"
+                type="password"
+                value={newPin}
+                onChange={(e) => setNewPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                placeholder="Nuovo PIN"
+                className="font-mono h-12 text-lg"
+                maxLength={8}
+                inputMode="numeric"
+                data-testid="input-new-pin-mobile"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPin-mobile">Conferma Nuovo PIN</Label>
+              <Input
+                id="confirmPin-mobile"
+                type="password"
+                value={confirmPin}
+                onChange={(e) => setConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                placeholder="Conferma PIN"
+                className="font-mono h-12 text-lg"
+                maxLength={8}
+                inputMode="numeric"
+                data-testid="input-confirm-pin-mobile"
+              />
+              {newPin && confirmPin && newPin !== confirmPin && (
+                <p className="text-sm text-red-500">I PIN non coincidono</p>
+              )}
+            </div>
+          </div>
+          <DialogFooter className="flex-col space-y-2 sm:flex-row sm:space-y-0">
+            <Button variant="outline" onClick={() => { resetPinDialogs(); setIsPinChangeOpen(false); }} className="w-full sm:w-auto">
+              Annulla
+            </Button>
+            <Button 
+              onClick={handleChangePin} 
+              disabled={isPinLoading || oldPin.length < 4 || newPin.length < 4 || newPin !== confirmPin} 
+              className="w-full sm:w-auto"
+            >
+              {isPinLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Cambia PIN
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPukUnlockOpen} onOpenChange={(open) => { if (!open) resetPinDialogs(); setIsPukUnlockOpen(open); }}>
+        <DialogContent data-testid="dialog-unlock-puk-mobile">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <KeyRound className="w-5 h-5" />
+              Sblocca con PUK
+            </DialogTitle>
+            <DialogDescription>
+              Inserisci il PUK per sbloccare e impostare un nuovo PIN.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-4">
+            {smartCardStatus.pinBlocked && (
+              <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/30 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />
+                <p className="text-sm text-red-500">PIN bloccato</p>
+              </div>
+            )}
+            <div className="space-y-2">
+              <Label htmlFor="puk-mobile">PUK (8 cifre)</Label>
+              <div className="relative">
+                <Input
+                  id="puk-mobile"
+                  type={showPuk ? "text" : "password"}
+                  value={puk}
+                  onChange={(e) => setPuk(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                  placeholder="Inserisci PUK"
+                  className="pr-10 font-mono h-12 text-lg"
+                  maxLength={8}
+                  inputMode="numeric"
+                  data-testid="input-puk-mobile"
+                />
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="absolute right-0 top-0 h-full"
+                  onClick={() => setShowPuk(!showPuk)}
+                >
+                  {showPuk ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                </Button>
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newPinForPuk-mobile">Nuovo PIN (4-8 cifre)</Label>
+              <Input
+                id="newPinForPuk-mobile"
+                type="password"
+                value={newPinForPuk}
+                onChange={(e) => setNewPinForPuk(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                placeholder="Nuovo PIN"
+                className="font-mono h-12 text-lg"
+                maxLength={8}
+                inputMode="numeric"
+                data-testid="input-new-pin-puk-mobile"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPinForPuk-mobile">Conferma Nuovo PIN</Label>
+              <Input
+                id="confirmPinForPuk-mobile"
+                type="password"
+                value={confirmPinForPuk}
+                onChange={(e) => setConfirmPinForPuk(e.target.value.replace(/\D/g, '').slice(0, 8))}
+                placeholder="Conferma PIN"
+                className="font-mono h-12 text-lg"
+                maxLength={8}
+                inputMode="numeric"
+                data-testid="input-confirm-pin-puk-mobile"
+              />
+              {newPinForPuk && confirmPinForPuk && newPinForPuk !== confirmPinForPuk && (
+                <p className="text-sm text-red-500">I PIN non coincidono</p>
+              )}
+            </div>
+            {smartCardStatus.pukRetriesLeft !== null && (
+              <p className="text-sm text-muted-foreground">
+                Tentativi PUK rimasti: {smartCardStatus.pukRetriesLeft}
+              </p>
+            )}
+          </div>
+          <DialogFooter className="flex-col space-y-2 sm:flex-row sm:space-y-0">
+            <Button variant="outline" onClick={() => { resetPinDialogs(); setIsPukUnlockOpen(false); }} className="w-full sm:w-auto">
+              Annulla
+            </Button>
+            <Button 
+              onClick={handleUnlockWithPuk} 
+              disabled={isPinLoading || puk.length !== 8 || newPinForPuk.length < 4 || newPinForPuk !== confirmPinForPuk} 
+              className="w-full sm:w-auto"
+            >
+              {isPinLoading ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : null}
+              Sblocca
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MobileAppLayout>
   );
 }
