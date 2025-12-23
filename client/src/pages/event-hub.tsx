@@ -1643,9 +1643,9 @@ export default function EventHub() {
               <LayoutDashboard className="h-4 w-4 mr-2" />
               Panoramica
             </TabsTrigger>
-            <TabsTrigger value="ticketing" data-testid="tab-ticketing">
+            <TabsTrigger value="biglietteria" data-testid="tab-biglietteria">
               <Ticket className="h-4 w-4 mr-2" />
-              Biglietti
+              Biglietteria
             </TabsTrigger>
             <TabsTrigger value="cashiers" data-testid="tab-cashiers">
               <Banknote className="h-4 w-4 mr-2" />
@@ -1798,96 +1798,164 @@ export default function EventHub() {
             )}
           </TabsContent>
 
-          {/* Ticketing Tab */}
-          <TabsContent value="ticketing" className="space-y-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between gap-4">
-                <div>
-                  <CardTitle>Biglietti Emessi</CardTitle>
-                  <CardDescription>Gestione biglietteria SIAE</CardDescription>
-                </div>
-                <div className="flex items-center gap-2">
-                  <Select value={ticketSectorFilter} onValueChange={setTicketSectorFilter}>
-                    <SelectTrigger className="w-40" data-testid="select-sector-filter">
-                      <SelectValue placeholder="Tutti i settori" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tutti i settori</SelectItem>
-                      {ticketedEvent?.sectors?.map(sector => (
-                        <SelectItem key={sector.id} value={sector.id}>{sector.name}</SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                  <Select value={ticketStatusFilter} onValueChange={setTicketStatusFilter}>
-                    <SelectTrigger className="w-32" data-testid="select-status-filter">
-                      <SelectValue placeholder="Stato" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="all">Tutti</SelectItem>
-                      <SelectItem value="valid">Validi</SelectItem>
-                      <SelectItem value="used">Usati</SelectItem>
-                      <SelectItem value="cancelled">Annullati</SelectItem>
-                    </SelectContent>
-                  </Select>
-                  <Button onClick={() => navigate(`/siae/box-office?eventId=${id}`)} data-testid="button-box-office">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Nuovo Biglietto
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent>
-                {siaeTickets.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Ticket className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Nessun biglietto emesso</p>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Numero</TableHead>
-                        <TableHead>Settore</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Prezzo</TableHead>
-                        <TableHead>Stato</TableHead>
-                        <TableHead>Data</TableHead>
-                        <TableHead className="w-12"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {displayedTickets.map(ticket => (
-                        <TableRow key={ticket.id} data-testid={`row-ticket-${ticket.id}`}>
-                          <TableCell className="font-mono">{ticket.progressiveNumber}</TableCell>
-                          <TableCell>{getSectorName(ticket.sectorId)}</TableCell>
-                          <TableCell>
-                            <Badge variant="secondary">{ticket.ticketTypeCode === '01' ? 'Intero' : 'Ridotto'}</Badge>
-                          </TableCell>
-                          <TableCell>€{Number(ticket.grossAmount).toFixed(2)}</TableCell>
-                          <TableCell>{getTicketStatusBadge(ticket.status)}</TableCell>
-                          <TableCell className="text-muted-foreground">
-                            {ticket.emissionDate ? format(new Date(ticket.emissionDate), 'dd/MM HH:mm') : '-'}
-                          </TableCell>
-                          <TableCell>
-                            {ticket.status === 'valid' && (
-                              <Button variant="ghost" size="icon" onClick={() => handleCancelTicket(ticket)} data-testid={`button-cancel-ticket-${ticket.id}`}>
-                                <X className="h-4 w-4" />
-                              </Button>
-                            )}
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-                {filteredTickets.length > ticketsDisplayLimit && (
-                  <div className="text-center mt-4">
-                    <Button variant="outline" onClick={() => setTicketsDisplayLimit(prev => prev + 20)}>
-                      Carica altri
-                    </Button>
-                  </div>
-                )}
-              </CardContent>
-            </Card>
+          {/* Biglietteria Tab with Sub-tabs */}
+          <TabsContent value="biglietteria" className="space-y-6">
+            <Tabs defaultValue="biglietti" className="w-full">
+              <TabsList className="mb-4">
+                <TabsTrigger value="biglietti" data-testid="subtab-biglietti">
+                  <Ticket className="h-4 w-4 mr-2" />
+                  Biglietti
+                </TabsTrigger>
+                <TabsTrigger value="transazioni" data-testid="subtab-transazioni">
+                  <Banknote className="h-4 w-4 mr-2" />
+                  Transazioni
+                </TabsTrigger>
+                <TabsTrigger value="report" data-testid="subtab-report">
+                  <BarChart3 className="h-4 w-4 mr-2" />
+                  Report
+                </TabsTrigger>
+                <TabsTrigger value="online" data-testid="subtab-online">
+                  <Eye className="h-4 w-4 mr-2" />
+                  Online
+                </TabsTrigger>
+              </TabsList>
+
+              <TabsContent value="biglietti">
+                <Card>
+                  <CardHeader className="flex flex-row items-center justify-between gap-4">
+                    <div>
+                      <CardTitle>Biglietti Emessi</CardTitle>
+                      <CardDescription>Gestione biglietteria SIAE</CardDescription>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Select value={ticketSectorFilter} onValueChange={setTicketSectorFilter}>
+                        <SelectTrigger className="w-40" data-testid="select-sector-filter">
+                          <SelectValue placeholder="Tutti i settori" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tutti i settori</SelectItem>
+                          {ticketedEvent?.sectors?.map(sector => (
+                            <SelectItem key={sector.id} value={sector.id}>{sector.name}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                      <Select value={ticketStatusFilter} onValueChange={setTicketStatusFilter}>
+                        <SelectTrigger className="w-32" data-testid="select-status-filter">
+                          <SelectValue placeholder="Stato" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">Tutti</SelectItem>
+                          <SelectItem value="valid">Validi</SelectItem>
+                          <SelectItem value="used">Usati</SelectItem>
+                          <SelectItem value="cancelled">Annullati</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <Button onClick={() => navigate(`/siae/box-office?eventId=${id}`)} data-testid="button-box-office">
+                        <Plus className="h-4 w-4 mr-2" />
+                        Nuovo Biglietto
+                      </Button>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    {siaeTickets.length === 0 ? (
+                      <div className="text-center py-12 text-muted-foreground">
+                        <Ticket className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                        <p>Nessun biglietto emesso</p>
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Numero</TableHead>
+                            <TableHead>Settore</TableHead>
+                            <TableHead>Tipo</TableHead>
+                            <TableHead>Prezzo</TableHead>
+                            <TableHead>Stato</TableHead>
+                            <TableHead>Data</TableHead>
+                            <TableHead className="w-12"></TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {displayedTickets.map(ticket => (
+                            <TableRow key={ticket.id} data-testid={`row-ticket-${ticket.id}`}>
+                              <TableCell className="font-mono">{ticket.progressiveNumber}</TableCell>
+                              <TableCell>{getSectorName(ticket.sectorId)}</TableCell>
+                              <TableCell>
+                                <Badge variant="secondary">{ticket.ticketTypeCode === '01' ? 'Intero' : 'Ridotto'}</Badge>
+                              </TableCell>
+                              <TableCell>€{Number(ticket.grossAmount).toFixed(2)}</TableCell>
+                              <TableCell>{getTicketStatusBadge(ticket.status)}</TableCell>
+                              <TableCell className="text-muted-foreground">
+                                {ticket.emissionDate ? format(new Date(ticket.emissionDate), 'dd/MM HH:mm') : '-'}
+                              </TableCell>
+                              <TableCell>
+                                {ticket.status === 'valid' && (
+                                  <Button variant="ghost" size="icon" onClick={() => handleCancelTicket(ticket)} data-testid={`button-cancel-ticket-${ticket.id}`}>
+                                    <X className="h-4 w-4" />
+                                  </Button>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                    {filteredTickets.length > ticketsDisplayLimit && (
+                      <div className="text-center mt-4">
+                        <Button variant="outline" onClick={() => setTicketsDisplayLimit(prev => prev + 20)}>
+                          Carica altri
+                        </Button>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="transazioni">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Transazioni</CardTitle>
+                    <CardDescription>Elenco di tutte le transazioni dell'evento</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Banknote className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Transazioni in arrivo</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="report">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Report Vendite</CardTitle>
+                    <CardDescription>Analisi e reportistica dell'evento</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center py-12 text-muted-foreground">
+                      <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Report in arrivo</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="online">
+                <Card>
+                  <CardHeader>
+                    <CardTitle>Visibilità Online</CardTitle>
+                    <CardDescription>Gestione pubblicazione evento</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Eye className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Impostazioni online in arrivo</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
           {/* Cashiers Tab */}
@@ -2819,7 +2887,7 @@ export default function EventHub() {
               <TabsList className="inline-flex h-auto p-1.5 bg-muted/50 rounded-2xl gap-1 min-w-max">
                 {[
                   { id: 'overview', label: 'Panoramica', icon: LayoutDashboard },
-                  { id: 'ticketing', label: 'Biglietti', icon: Ticket },
+                  { id: 'biglietteria', label: 'Biglietteria', icon: Ticket },
                   { id: 'cashiers', label: 'Cassieri', icon: Banknote },
                   { id: 'guests', label: 'Ospiti', icon: Users },
                   { id: 'tables', label: 'Tavoli', icon: Armchair },
@@ -3040,23 +3108,50 @@ export default function EventHub() {
             </div>
           </TabsContent>
 
-          <TabsContent value="ticketing">
-            {ticketedEvent ? (
-              <div className="space-y-6">
-                <Card className="glass-card">
-                  <CardHeader className="px-4">
-                    <div className="flex items-center justify-between flex-wrap gap-2">
-                      <CardTitle className="flex items-center gap-2 text-lg">
-                        <Ticket className="h-5 w-5 text-blue-400" />
-                        Riepilogo Biglietteria
-                      </CardTitle>
-                      <Badge variant={ticketedEvent.ticketingStatus === 'active' ? 'default' : 'secondary'}>
-                        {ticketedEvent.ticketingStatus === 'active' ? 'Attiva' : 
-                         ticketedEvent.ticketingStatus === 'draft' ? 'Bozza' : 
-                         ticketedEvent.ticketingStatus === 'suspended' ? 'Sospesa' : 'Chiusa'}
-                      </Badge>
-                    </div>
-                  </CardHeader>
+          <TabsContent value="biglietteria">
+            <Tabs defaultValue="biglietti" className="w-full">
+              <div className="relative -mx-4 mb-4">
+                <div className="absolute left-0 top-0 bottom-0 w-4 bg-gradient-to-r from-background to-transparent pointer-events-none z-10" />
+                <div className="absolute right-0 top-0 bottom-0 w-4 bg-gradient-to-l from-background to-transparent pointer-events-none z-10" />
+                <div className="overflow-x-auto scrollbar-hide px-4">
+                  <TabsList className="inline-flex h-auto p-1 bg-muted/50 rounded-xl gap-1 min-w-max">
+                    <TabsTrigger value="biglietti" className="flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-lg text-sm" data-testid="subtab-biglietti-mobile">
+                      <Ticket className="h-4 w-4" />
+                      <span>Biglietti</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="transazioni" className="flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-lg text-sm" data-testid="subtab-transazioni-mobile">
+                      <Banknote className="h-4 w-4" />
+                      <span>Transazioni</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="report" className="flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-lg text-sm" data-testid="subtab-report-mobile">
+                      <BarChart3 className="h-4 w-4" />
+                      <span>Report</span>
+                    </TabsTrigger>
+                    <TabsTrigger value="online" className="flex items-center gap-1.5 px-3 py-2 min-h-[40px] rounded-lg text-sm" data-testid="subtab-online-mobile">
+                      <Eye className="h-4 w-4" />
+                      <span>Online</span>
+                    </TabsTrigger>
+                  </TabsList>
+                </div>
+              </div>
+
+              <TabsContent value="biglietti">
+                {ticketedEvent ? (
+                  <div className="space-y-6">
+                    <Card className="glass-card">
+                      <CardHeader className="px-4">
+                        <div className="flex items-center justify-between flex-wrap gap-2">
+                          <CardTitle className="flex items-center gap-2 text-lg">
+                            <Ticket className="h-5 w-5 text-blue-400" />
+                            Riepilogo Biglietteria
+                          </CardTitle>
+                          <Badge variant={ticketedEvent.ticketingStatus === 'active' ? 'default' : 'secondary'}>
+                            {ticketedEvent.ticketingStatus === 'active' ? 'Attiva' : 
+                             ticketedEvent.ticketingStatus === 'draft' ? 'Bozza' : 
+                             ticketedEvent.ticketingStatus === 'suspended' ? 'Sospesa' : 'Chiusa'}
+                          </Badge>
+                        </div>
+                      </CardHeader>
                   <CardContent className="px-4">
                     <div className="grid grid-cols-2 gap-4 mb-4">
                       <div className="p-4 rounded-xl bg-background/50 border" data-testid="stat-sold">
@@ -3339,69 +3434,123 @@ export default function EventHub() {
               </Card>
             )}
 
+                {/* Cancel Ticket Dialog */}
+                <AlertDialog open={cancelTicketDialogOpen} onOpenChange={setCancelTicketDialogOpen}>
+                  <AlertDialogContent className="max-w-[90vw] sm:max-w-md p-4 sm:p-6">
+                    <AlertDialogHeader className="pb-3 sm:pb-4">
+                      <AlertDialogTitle className="text-base sm:text-lg">Annulla Biglietto</AlertDialogTitle>
+                      <AlertDialogDescription className="text-xs sm:text-sm">
+                        Stai per annullare il biglietto{' '}
+                        <span className="font-mono font-semibold">
+                          {ticketToCancel?.fiscalSealCode || ticketToCancel?.progressiveNumber || ticketToCancel?.id.slice(0, 8)}
+                        </span>.
+                        Questa azione non può essere annullata.
+                      </AlertDialogDescription>
+                    </AlertDialogHeader>
+                    <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="cancel-reason" className="text-xs sm:text-sm">Causale Annullamento</Label>
+                        <Select value={cancelReason} onValueChange={setCancelReason}>
+                          <SelectTrigger data-testid="select-cancel-reason">
+                            <SelectValue placeholder="Seleziona causale" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="01">01 - Richiesta cliente</SelectItem>
+                            <SelectItem value="02">02 - Errore emissione</SelectItem>
+                            <SelectItem value="03">03 - Evento annullato</SelectItem>
+                            <SelectItem value="04">04 - Duplicato</SelectItem>
+                            <SelectItem value="99">99 - Altro</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="cancel-note" className="text-xs sm:text-sm">Note aggiuntive (opzionale)</Label>
+                        <Textarea
+                          id="cancel-note"
+                          value={cancelNote}
+                          onChange={(e) => setCancelNote(e.target.value)}
+                          placeholder="Descrivi il motivo dell'annullamento..."
+                          className="resize-none min-h-[80px]"
+                          data-testid="input-cancel-note"
+                        />
+                      </div>
+                    </div>
+                    <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-3">
+                      <AlertDialogCancel data-testid="button-cancel-dialog-close" className="w-full sm:w-auto">Annulla</AlertDialogCancel>
+                      <AlertDialogAction
+                        onClick={confirmCancelTicket}
+                        className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
+                        disabled={cancelTicketMutation.isPending}
+                        data-testid="button-confirm-cancel-ticket"
+                      >
+                        {cancelTicketMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                            Annullamento...
+                          </>
+                        ) : (
+                          'Conferma Annullamento'
+                        )}
+                      </AlertDialogAction>
+                    </AlertDialogFooter>
+                  </AlertDialogContent>
+                </AlertDialog>
+              </TabsContent>
 
+              <TabsContent value="transazioni">
+                <Card className="glass-card">
+                  <CardHeader className="px-4">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Banknote className="h-5 w-5 text-amber-400" />
+                      Transazioni
+                    </CardTitle>
+                    <CardDescription>Elenco di tutte le transazioni dell'evento</CardDescription>
+                  </CardHeader>
+                  <CardContent className="px-4">
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Banknote className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Transazioni in arrivo</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
 
-            {/* Cancel Ticket Dialog */}
-            <AlertDialog open={cancelTicketDialogOpen} onOpenChange={setCancelTicketDialogOpen}>
-              <AlertDialogContent className="max-w-[90vw] sm:max-w-md p-4 sm:p-6">
-                <AlertDialogHeader className="pb-3 sm:pb-4">
-                  <AlertDialogTitle className="text-base sm:text-lg">Annulla Biglietto</AlertDialogTitle>
-                  <AlertDialogDescription className="text-xs sm:text-sm">
-                    Stai per annullare il biglietto{' '}
-                    <span className="font-mono font-semibold">
-                      {ticketToCancel?.fiscalSealCode || ticketToCancel?.progressiveNumber || ticketToCancel?.id.slice(0, 8)}
-                    </span>.
-                    Questa azione non può essere annullata.
-                  </AlertDialogDescription>
-                </AlertDialogHeader>
-                <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="cancel-reason" className="text-xs sm:text-sm">Causale Annullamento</Label>
-                    <Select value={cancelReason} onValueChange={setCancelReason}>
-                      <SelectTrigger data-testid="select-cancel-reason">
-                        <SelectValue placeholder="Seleziona causale" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="01">01 - Richiesta cliente</SelectItem>
-                        <SelectItem value="02">02 - Errore emissione</SelectItem>
-                        <SelectItem value="03">03 - Evento annullato</SelectItem>
-                        <SelectItem value="04">04 - Duplicato</SelectItem>
-                        <SelectItem value="99">99 - Altro</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-                  <div className="space-y-2">
-                    <Label htmlFor="cancel-note" className="text-xs sm:text-sm">Note aggiuntive (opzionale)</Label>
-                    <Textarea
-                      id="cancel-note"
-                      value={cancelNote}
-                      onChange={(e) => setCancelNote(e.target.value)}
-                      placeholder="Descrivi il motivo dell'annullamento..."
-                      className="resize-none min-h-[80px]"
-                      data-testid="input-cancel-note"
-                    />
-                  </div>
-                </div>
-                <AlertDialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-3">
-                  <AlertDialogCancel data-testid="button-cancel-dialog-close" className="w-full sm:w-auto">Annulla</AlertDialogCancel>
-                  <AlertDialogAction
-                    onClick={confirmCancelTicket}
-                    className="bg-red-600 hover:bg-red-700 w-full sm:w-auto"
-                    disabled={cancelTicketMutation.isPending}
-                    data-testid="button-confirm-cancel-ticket"
-                  >
-                    {cancelTicketMutation.isPending ? (
-                      <>
-                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                        Annullamento...
-                      </>
-                    ) : (
-                      'Conferma Annullamento'
-                    )}
-                  </AlertDialogAction>
-                </AlertDialogFooter>
-              </AlertDialogContent>
-            </AlertDialog>
+              <TabsContent value="report">
+                <Card className="glass-card">
+                  <CardHeader className="px-4">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <BarChart3 className="h-5 w-5 text-purple-400" />
+                      Report Vendite
+                    </CardTitle>
+                    <CardDescription>Analisi e reportistica dell'evento</CardDescription>
+                  </CardHeader>
+                  <CardContent className="px-4">
+                    <div className="text-center py-12 text-muted-foreground">
+                      <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Report in arrivo</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+
+              <TabsContent value="online">
+                <Card className="glass-card">
+                  <CardHeader className="px-4">
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <Eye className="h-5 w-5 text-cyan-400" />
+                      Visibilità Online
+                    </CardTitle>
+                    <CardDescription>Gestione pubblicazione evento</CardDescription>
+                  </CardHeader>
+                  <CardContent className="px-4">
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Eye className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Impostazioni online in arrivo</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </TabsContent>
+            </Tabs>
           </TabsContent>
 
           <TabsContent value="cashiers">
