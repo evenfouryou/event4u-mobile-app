@@ -3478,12 +3478,12 @@ function buildC1ReportData(
 
 // C1 Report - Modello conforme normativa SIAE
 // STRUTTURA: QUADRO A (dati identificativi), QUADRO B (dettaglio biglietti), QUADRO C (imposte)
-// Query param: type=giornaliero (default) or type=mensile
+// Query param: type=giornaliero|daily (default) or type=mensile|monthly
 router.get('/api/siae/ticketed-events/:id/reports/c1', requireAuth, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const reportTypeParam = (req.query.type as string) || 'giornaliero';
-    const reportType: 'giornaliero' | 'mensile' = reportTypeParam === 'mensile' ? 'mensile' : 'giornaliero';
+    const reportType: 'giornaliero' | 'mensile' = (reportTypeParam === 'mensile' || reportTypeParam === 'monthly') ? 'mensile' : 'giornaliero';
     
     const event = await siaeStorage.getSiaeTicketedEvent(id);
     if (!event) {
@@ -3537,7 +3537,7 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
   try {
     const { id } = req.params;
     const { toEmail, reportType: reqReportType } = req.body;
-    const reportType: 'giornaliero' | 'mensile' = reqReportType === 'mensile' ? 'mensile' : 'giornaliero';
+    const reportType: 'giornaliero' | 'mensile' = (reqReportType === 'mensile' || reqReportType === 'monthly') ? 'mensile' : 'giornaliero';
     const isMonthly = reportType === 'mensile';
     
     // Get event data
