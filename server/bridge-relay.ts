@@ -555,8 +555,8 @@ export function getCachedBridgeStatus(): any {
     // Desktop app sends { type: 'status', data: {...} }
     const statusData = cachedBridgeStatus.data || cachedBridgeStatus.payload || {};
     return {
-      bridgeConnected: true,
-      ...statusData
+      ...statusData,
+      bridgeConnected: true, // Always true when bridge is connected - must come AFTER spread to prevent override
     };
   }
   

@@ -731,75 +731,44 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             {eventsLoading ? (
-              <div className="space-y-3">
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
-                <Skeleton className="h-12 w-full" />
+              <div className="grid grid-cols-3 gap-4">
+                <Skeleton className="h-32 rounded-xl" />
+                <Skeleton className="h-32 rounded-xl" />
+                <Skeleton className="h-32 rounded-xl" />
               </div>
             ) : recentEvents.length > 0 ? (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {recentEvents.map((event) => {
-                    const eventDate = new Date(event.startDatetime);
-                    const isUpcoming = eventDate >= new Date();
-                    return (
-                      <TableRow key={event.id} data-testid={`event-row-${event.id}`}>
-                        <TableCell className="font-medium">{event.name}</TableCell>
-                        <TableCell>{eventDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}</TableCell>
-                        <TableCell>
-                          <Badge variant={isUpcoming ? "default" : "secondary"}>
-                            {isUpcoming ? 'In arrivo' : 'Passato'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell className="text-right">
-                          <Dialog>
-                            <DialogTrigger asChild>
-                              <Button variant="ghost" size="icon" data-testid={`button-view-event-${event.id}`}>
-                                <Eye className="h-4 w-4" />
-                              </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                              <DialogHeader>
-                                <DialogTitle>{event.name}</DialogTitle>
-                                <DialogDescription>Dettagli evento</DialogDescription>
-                              </DialogHeader>
-                              <div className="space-y-4">
-                                <div>
-                                  <p className="text-sm text-muted-foreground">Data</p>
-                                  <p className="font-medium">{eventDate.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' })}</p>
-                                </div>
-                                <div>
-                                  <p className="text-sm text-muted-foreground">Stato</p>
-                                  <Badge variant={isUpcoming ? "default" : "secondary"}>
-                                    {isUpcoming ? 'In arrivo' : 'Passato'}
-                                  </Badge>
-                                </div>
-                                <Link href={`/events/${event.id}/hub`}>
-                                  <Button className="w-full" data-testid={`button-go-to-event-${event.id}`}>
-                                    Vai all'evento
-                                  </Button>
-                                </Link>
-                              </div>
-                            </DialogContent>
-                          </Dialog>
-                        </TableCell>
-                      </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
+              <div className="grid grid-cols-3 gap-4">
+                {recentEvents.map((event) => {
+                  const eventDate = new Date(event.startDatetime);
+                  const isUpcoming = eventDate >= new Date();
+                  return (
+                    <Link href={`/events/${event.id}/hub`} key={event.id}>
+                      <Card className="hover-elevate cursor-pointer h-full" data-testid={`event-card-${event.id}`}>
+                        <CardContent className="pt-6 space-y-3">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center shrink-0">
+                              <Calendar className="h-6 w-6 text-primary" />
+                            </div>
+                            <Badge variant={isUpcoming ? "default" : "secondary"}>
+                              {isUpcoming ? 'In arrivo' : 'Passato'}
+                            </Badge>
+                          </div>
+                          <div>
+                            <p className="font-semibold text-lg line-clamp-1">{event.name}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {eventDate.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short' })}
+                            </p>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </Link>
+                  );
+                })}
+              </div>
             ) : (
               <div className="text-center py-12">
                 <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-lg text-muted-foreground mb-4">Nessun evento creato</p>
+                <p className="text-lg text-muted-foreground mb-4">Nessun evento recente</p>
                 <Link href="/event-wizard">
                   <Button data-testid="button-create-first-event">
                     <Plus className="h-4 w-4 mr-2" />
