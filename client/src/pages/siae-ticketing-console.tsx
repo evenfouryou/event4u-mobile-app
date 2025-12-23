@@ -7,6 +7,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import ExcelJS from "exceljs";
+import jsPDF from "jspdf";
 import {
   Dialog,
   DialogContent,
@@ -366,20 +368,230 @@ export default function SiaeTicketingConsole() {
     setCurrentLevel(level);
   };
 
-  const handleExportExcel = () => {
+  const handleExportExcel = async () => {
     triggerHaptic("medium");
-    toast({
-      title: "Esportazione Excel",
-      description: "Funzionalità in arrivo",
-    });
+    if (!filteredTickets || filteredTickets.length === 0) {
+      toast({
+        title: "Nessun dato",
+        description: "Non ci sono biglietti da esportare",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const wb = new ExcelJS.Workbook();
+      wb.creator = "Event Four You";
+      wb.created = new Date();
+
+      const ws = wb.addWorksheet("Biglietti SIAE");
+
+      ws.addRow(["Console Biglietteria SIAE - Export Biglietti"]);
+      ws.mergeCells("A1:I1");
+      ws.getCell("A1").font = { bold: true, size: 16 };
+      ws.getCell("A1").alignment = { horizontal: "center" };
+      ws.addRow([]);
+
+      if (selectedGestore) {
+        ws.addRow(["Gestore:", `${selectedGestore.firstName} ${selectedGestore.lastName}`]);
+      }
+      if (selectedEvent) {
+        ws.addRow(["Evento:", selectedEvent.eventName]);
+        if (selectedEvent.eventDate) {
+          ws.addRow(["Data Evento:", format(new Date(selectedEvent.eventDate), "dd/MM/yyyy", { locale: it })]);
+        }
+      }
+      if (selectedSector) {
+        ws.addRow(["Settore:", selectedSector.name]);
+      }
+      ws.addRow(["Data Export:", format(new Date(), "dd/MM/yyyy HH:mm", { locale: it })]);
+      ws.addRow(["Totale Biglietti:", filteredTickets.length.toString()]);
+      ws.addRow([]);
+
+      const headerRow = ws.addRow([
+        "Sistema Emissione",
+        "Progressivo",
+        "Carta Attivazione",
+        "Sigillo Fiscale",
+        "Codice Ordine",
+        "Tipo",
+        "Data Emissione",
+        "Stato",
+        "Prezzo"
+      ]);
+      headerRow.font = { bold: true };
+      headerRow.eachCell((cell) => {
+        cell.fill = {
+          type: "pattern",
+          pattern: "solid",
+          fgColor: { argb: "FF4472C4" },
+        };
+        cell.font = { bold: true, color: { argb: "FFFFFFFF" } };
+        cell.border = {
+          bottom: { style: "thin", color: { argb: "FF000000" } },
+        };
+      });
+
+      filteredTickets.forEach((ticket) => {
+        const statusText = ticket.status === "valid" ? "Valido" : ticket.status === "used" ? "Usato" : "Annullato";
+        ws.addRow([
+          ticket.emissionChannelCode || (ticket.cardCode ? "Automatico" : "Manuale"),
+          ticket.progressiveNumber,
+          getCardName(ticket.cardCode),
+          ticket.fiscalSealCode || "-",
+          ticket.transactionId ? ticket.transactionId.substring(0, 8) : "-",
+          ticket.ticketTypeCode,
+          ticket.emissionDate ? format(new Date(ticket.emissionDate), "dd/MM/yyyy HH:mm") : "-",
+          statusText,
+          ticket.price ? `€${Number(ticket.price).toFixed(2)}` : "-"
+        ]);
+      });
+
+      ws.columns.forEach((col, index) => {
+        col.width = index === 0 ? 18 : index === 2 || index === 3 ? 20 : 15;
+      });
+
+      const buffer = await wb.xlsx.writeBuffer();
+      const blob = new Blob([buffer], { type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `biglietti_siae_${format(new Date(), "yyyyMMdd_HHmm")}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+
+      toast({
+        title: "Esportazione completata",
+        description: `${filteredTickets.length} biglietti esportati in Excel`,
+      });
+    } catch (error) {
+      console.error("Excel export error:", error);
+      toast({
+        title: "Errore esportazione",
+        description: "Si è verificato un errore durante l'esportazione",
+        variant: "destructive",
+      });
+    }
   };
 
   const handleExportPdf = () => {
     triggerHaptic("medium");
-    toast({
-      title: "Esportazione PDF",
-      description: "Funzionalità in arrivo",
-    });
+    if (!filteredTickets || filteredTickets.length === 0) {
+      toast({
+        title: "Nessun dato",
+        description: "Non ci sono biglietti da esportare",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    try {
+      const pdf = new jsPDF({ orientation: "landscape" });
+      const pageWidth = pdf.internal.pageSize.getWidth();
+      const pageHeight = pdf.internal.pageSize.getHeight();
+      const margin = 14;
+      let yPos = margin;
+
+      pdf.setFontSize(18);
+      pdf.setFont("helvetica", "bold");
+      pdf.text("Console Biglietteria SIAE", pageWidth / 2, yPos, { align: "center" });
+      yPos += 10;
+
+      pdf.setFontSize(10);
+      pdf.setFont("helvetica", "normal");
+      
+      if (selectedGestore) {
+        pdf.text(`Gestore: ${selectedGestore.firstName} ${selectedGestore.lastName}`, margin, yPos);
+        yPos += 6;
+      }
+      if (selectedEvent) {
+        pdf.text(`Evento: ${selectedEvent.eventName}`, margin, yPos);
+        yPos += 6;
+        if (selectedEvent.eventDate) {
+          pdf.text(`Data Evento: ${format(new Date(selectedEvent.eventDate), "dd/MM/yyyy", { locale: it })}`, margin, yPos);
+          yPos += 6;
+        }
+      }
+      if (selectedSector) {
+        pdf.text(`Settore: ${selectedSector.name}`, margin, yPos);
+        yPos += 6;
+      }
+      pdf.text(`Data Export: ${format(new Date(), "dd/MM/yyyy HH:mm", { locale: it })}`, margin, yPos);
+      yPos += 6;
+      pdf.text(`Totale Biglietti: ${filteredTickets.length}`, margin, yPos);
+      yPos += 10;
+
+      const headers = ["Sistema", "Progr.", "Carta", "Sigillo", "Ordine", "Tipo", "Data", "Stato", "Prezzo"];
+      const colWidths = [28, 18, 35, 35, 25, 18, 40, 22, 20];
+      
+      pdf.setFillColor(68, 114, 196);
+      pdf.rect(margin, yPos, pageWidth - margin * 2, 8, "F");
+      pdf.setTextColor(255, 255, 255);
+      pdf.setFontSize(9);
+      pdf.setFont("helvetica", "bold");
+      
+      let xPos = margin + 2;
+      headers.forEach((header, i) => {
+        pdf.text(header, xPos, yPos + 5.5);
+        xPos += colWidths[i];
+      });
+      yPos += 10;
+
+      pdf.setTextColor(0, 0, 0);
+      pdf.setFont("helvetica", "normal");
+      pdf.setFontSize(8);
+
+      filteredTickets.forEach((ticket, index) => {
+        if (yPos > pageHeight - 20) {
+          pdf.addPage();
+          yPos = margin;
+        }
+
+        if (index % 2 === 0) {
+          pdf.setFillColor(245, 245, 245);
+          pdf.rect(margin, yPos - 4, pageWidth - margin * 2, 7, "F");
+        }
+
+        const statusText = ticket.status === "valid" ? "Valido" : ticket.status === "used" ? "Usato" : "Annullato";
+        const row = [
+          (ticket.emissionChannelCode || (ticket.cardCode ? "Auto" : "Man")).substring(0, 8),
+          String(ticket.progressiveNumber),
+          getCardName(ticket.cardCode).substring(0, 12),
+          (ticket.fiscalSealCode || "-").substring(0, 12),
+          ticket.transactionId ? ticket.transactionId.substring(0, 8) : "-",
+          ticket.ticketTypeCode,
+          ticket.emissionDate ? format(new Date(ticket.emissionDate), "dd/MM/yy HH:mm") : "-",
+          statusText,
+          ticket.price ? `€${Number(ticket.price).toFixed(2)}` : "-"
+        ];
+
+        xPos = margin + 2;
+        row.forEach((cell, i) => {
+          pdf.text(cell, xPos, yPos);
+          xPos += colWidths[i];
+        });
+        yPos += 7;
+      });
+
+      yPos += 10;
+      pdf.setFontSize(8);
+      pdf.setTextColor(128, 128, 128);
+      pdf.text(`Generato da Event Four You - ${format(new Date(), "dd/MM/yyyy HH:mm")}`, pageWidth / 2, pageHeight - 10, { align: "center" });
+
+      pdf.save(`biglietti_siae_${format(new Date(), "yyyyMMdd_HHmm")}.pdf`);
+
+      toast({
+        title: "Esportazione completata",
+        description: `${filteredTickets.length} biglietti esportati in PDF`,
+      });
+    } catch (error) {
+      console.error("PDF export error:", error);
+      toast({
+        title: "Errore esportazione",
+        description: "Si è verificato un errore durante l'esportazione",
+        variant: "destructive",
+      });
+    }
   };
 
   const ticketCountBySector = useMemo(() => {
