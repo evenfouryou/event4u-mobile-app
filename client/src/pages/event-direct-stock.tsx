@@ -253,7 +253,7 @@ export default function EventDirectStock() {
               size="icon"
               data-testid="button-back-desktop"
             >
-              <Link href={`/events/${id}`}>
+              <Link href={`/events/${id}/hub`}>
                 <ArrowLeft className="h-5 w-5" />
               </Link>
             </Button>
@@ -677,7 +677,7 @@ export default function EventDirectStock() {
           className="rounded-xl"
           data-testid="button-back"
         >
-          <Link href={`/events/${id}`}>
+          <Link href={`/events/${id}/hub`}>
             <ArrowLeft className="h-5 w-5" />
           </Link>
         </Button>

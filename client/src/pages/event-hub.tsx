@@ -1512,7 +1512,7 @@ export default function EventHub() {
                 {currentTransition.label}
               </Button>
             )}
-            <Button variant="outline" onClick={() => navigate(`/events/${id}`)} data-testid="button-edit-event">
+            <Button variant="outline" onClick={() => navigate(`/events/wizard/${id}`)} data-testid="button-edit-event">
               <Edit className="h-4 w-4 mr-2" />
               Modifica
             </Button>
@@ -1748,7 +1748,7 @@ export default function EventHub() {
                       <Armchair className="h-5 w-5" />
                       <span className="text-xs">Tavolo</span>
                     </Button>
-                    <Button variant="outline" onClick={() => navigate(`/events/${id}`)} className="flex flex-col h-auto py-4 gap-2" data-testid="quick-stock">
+                    <Button variant="outline" onClick={() => navigate(`/events/${id}/direct-stock`)} className="flex flex-col h-auto py-4 gap-2" data-testid="quick-stock">
                       <Package className="h-5 w-5" />
                       <span className="text-xs">Stock</span>
                     </Button>
@@ -2180,7 +2180,7 @@ export default function EventHub() {
                   <CardTitle>Stock Evento</CardTitle>
                   <CardDescription>Prodotti e giacenze per l'evento</CardDescription>
                 </div>
-                <Button onClick={() => navigate(`/events/${id}`)} data-testid="button-manage-stock">
+                <Button onClick={() => navigate(`/events/${id}/direct-stock`)} data-testid="button-manage-stock">
                   <Package className="h-4 w-4 mr-2" />
                   Gestisci Stock
                 </Button>
@@ -2675,7 +2675,7 @@ export default function EventHub() {
               label="Trasferisci Stock"
               onClick={() => {
                 setQuickActionsOpen(false);
-                navigate(`/events/${id}`);
+                navigate(`/events/${id}/direct-stock`);
               }}
               testId="quick-action-transfer"
             />
@@ -2922,7 +2922,7 @@ export default function EventHub() {
                       <QuickActionButton
                         icon={Package}
                         label="Stock"
-                        onClick={() => navigate(`/events/${id}`)}
+                        onClick={() => navigate(`/events/${id}/direct-stock`)}
                         testId="overview-stock"
                       />
                       <QuickActionButton
@@ -4121,7 +4121,7 @@ export default function EventHub() {
                     <span className="hidden sm:inline">Inventario Evento</span>
                     <span className="sm:hidden">Inventario</span>
                   </CardTitle>
-                  <Button onClick={() => navigate(`/events/${id}`)} variant="outline" size="sm">
+                  <Button onClick={() => navigate(`/events/${id}/direct-stock`)} variant="outline" size="sm">
                     <span className="hidden sm:inline">Gestisci Stock</span> <ChevronRight className="h-4 w-4 sm:ml-1" />
                   </Button>
                 </div>
@@ -4156,7 +4156,7 @@ export default function EventHub() {
                     <p className="text-sm text-muted-foreground mb-4">
                       Trasferisci prodotti dal magazzino all'evento
                     </p>
-                    <Button onClick={() => navigate(`/events/${id}`)}>
+                    <Button onClick={() => navigate(`/events/${id}/direct-stock`)}>
                       Trasferisci Stock
                     </Button>
                   </div>

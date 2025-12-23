@@ -149,7 +149,7 @@ function RecentEventCard({
       animate={{ opacity: 1, x: 0 }}
       transition={{ ...springConfig, delay }}
     >
-      <Link href={`/events/${event.id}`}>
+      <Link href={`/events/${event.id}/hub`}>
         <div 
           className="glass-card p-5 flex items-center gap-4 active:scale-[0.98] transition-transform min-h-[88px]"
           onClick={() => triggerHaptic('light')}
@@ -782,7 +782,7 @@ export default function Home() {
                                     {isUpcoming ? 'In arrivo' : 'Passato'}
                                   </Badge>
                                 </div>
-                                <Link href={`/events/${event.id}`}>
+                                <Link href={`/events/${event.id}/hub`}>
                                   <Button className="w-full" data-testid={`button-go-to-event-${event.id}`}>
                                     Vai all'evento
                                   </Button>

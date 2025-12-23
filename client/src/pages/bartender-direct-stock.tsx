@@ -295,7 +295,7 @@ export default function BartenderDirectStock() {
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-4">
             <Button asChild variant="ghost" size="icon" data-testid="button-back-desktop">
-              <Link href={`/events/${id}`}>
+              <Link href={`/events/${id}/hub`}>
                 <ArrowLeft className="h-5 w-5" />
               </Link>
             </Button>
@@ -618,7 +618,7 @@ export default function BartenderDirectStock() {
               className="shrink-0"
               data-testid="button-back"
             >
-              <Link href={`/events/${id}`}>
+              <Link href={`/events/${id}/hub`}>
                 <ArrowLeft className="h-5 w-5" />
               </Link>
             </Button>

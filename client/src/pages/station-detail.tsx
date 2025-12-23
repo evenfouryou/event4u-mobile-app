@@ -218,7 +218,7 @@ export default function StationDetail() {
 
   const handleBack = () => {
     triggerHaptic('light');
-    navigate(`/events/${eventId}`);
+    navigate(`/events/${eventId}/hub`);
   };
 
   if (eventLoading || stationLoading) {
