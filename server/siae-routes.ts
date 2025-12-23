@@ -4,7 +4,7 @@ import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
 import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions, siaeCashierAllocations, siaeOtpAttempts, siaeNameChanges, siaeResales, publicCartItems, publicCheckoutSessions, publicCustomerSessions, tableBookings, guestListEntries, siaeTransmissions, companies, siaeEmissionChannels } from "@shared/schema";
-import { eq, and, sql } from "drizzle-orm";
+import { eq, and, sql, desc } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { requestFiscalSeal, isCardReadyForSeals, isBridgeConnected, getCachedBridgeStatus } from "./bridge-relay";
@@ -3644,8 +3644,10 @@ ${settoriXml}
 </ModelloC1>`;
 
     // Create transmission record - pass periodDate as ISO string for schema compatibility
+    // Include ticketedEventId to link transmission to event
     const transmission = await siaeStorage.createSiaeTransmission({
       companyId: event.companyId,
+      ticketedEventId: id, // Collegamento all'evento SIAE
       transmissionType: isMonthly ? 'monthly' : 'daily',
       periodDate: eventDate.toISOString(),
       fileName: fileName,
@@ -3684,6 +3686,41 @@ ${settoriXml}
     });
   } catch (error: any) {
     console.error('[C1 Send] Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// GET /api/siae/ticketed-events/:id/transmissions - Storico trasmissioni per evento
+router.get('/api/siae/ticketed-events/:id/transmissions', requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const eventId = req.params.id;
+    const user = req.user as any;
+    
+    // Verifica che l'evento esista e appartenga all'utente
+    const event = await siaeStorage.getSiaeTicketedEvent(eventId);
+    if (!event) {
+      return res.status(404).json({ message: "Evento non trovato" });
+    }
+    
+    // Per super_admin mostra tutte le trasmissioni, altrimenti filtra per companyId
+    const companyId = user.role === 'super_admin' ? event.companyId : user.companyId;
+    
+    // Verifica accesso all'evento
+    if (user.role !== 'super_admin' && event.companyId !== companyId) {
+      return res.status(403).json({ message: "Accesso non autorizzato a questo evento" });
+    }
+    
+    const transmissions = await db.select()
+      .from(siaeTransmissions)
+      .where(and(
+        eq(siaeTransmissions.ticketedEventId, eventId),
+        eq(siaeTransmissions.companyId, event.companyId)
+      ))
+      .orderBy(desc(siaeTransmissions.createdAt));
+      
+    res.json(transmissions);
+  } catch (error: any) {
+    console.error('[Transmissions History] Error:', error);
     res.status(500).json({ message: error.message });
   }
 });

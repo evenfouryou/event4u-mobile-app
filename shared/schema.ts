@@ -1608,6 +1608,7 @@ export const siaeLogsRelations = relations(siaeLogs, ({ one }) => ({
 export const siaeTransmissions = pgTable("siae_transmissions", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   companyId: varchar("company_id").notNull().references(() => companies.id),
+  ticketedEventId: varchar("ticketed_event_id").references(() => siaeTicketedEvents.id), // Collegamento all'evento SIAE
   transmissionType: varchar("transmission_type", { length: 20 }).notNull(), // daily, monthly, corrective
   periodDate: timestamp("period_date").notNull(), // Data periodo (giorno o mese)
   
@@ -1660,6 +1661,10 @@ export const siaeTransmissionsRelations = relations(siaeTransmissions, ({ one, m
   company: one(companies, {
     fields: [siaeTransmissions.companyId],
     references: [companies.id],
+  }),
+  ticketedEvent: one(siaeTicketedEvents, {
+    fields: [siaeTransmissions.ticketedEventId],
+    references: [siaeTicketedEvents.id],
   }),
   logs: many(siaeLogs),
 }));
