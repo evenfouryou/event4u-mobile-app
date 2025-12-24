@@ -225,8 +225,8 @@ function FloorPlanViewer({
           strokeWidth={isSelected ? 1.5 : 0.8}
           strokeDasharray={isSelected ? 'none' : '2,1'}
           style={{ 
-            cursor: zone.isSelectable && isAvailable ? 'pointer' : isAvailable ? 'default' : 'not-allowed',
-            pointerEvents: 'auto',
+            cursor: isAvailable && linkedSector ? 'pointer' : 'not-allowed',
+            pointerEvents: 'all',
             touchAction: 'manipulation',
             filter: isSelected ? 'drop-shadow(0 0 4px rgba(34, 197, 94, 0.5))' : 'none'
           }}
@@ -234,7 +234,7 @@ function FloorPlanViewer({
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (zone.isSelectable && isAvailable && linkedSector) {
+            if (isAvailable && linkedSector) {
               triggerHaptic('medium');
               onZoneClick(zone.id, linkedSector.sectorCode);
             }
@@ -242,7 +242,7 @@ function FloorPlanViewer({
           onTouchEnd={(e) => {
             e.preventDefault();
             e.stopPropagation();
-            if (zone.isSelectable && isAvailable && linkedSector) {
+            if (isAvailable && linkedSector) {
               triggerHaptic('medium');
               onZoneClick(zone.id, linkedSector.sectorCode);
             }
@@ -307,12 +307,12 @@ function FloorPlanViewer({
             className="absolute inset-0 w-full h-full"
             viewBox="0 0 100 100"
             preserveAspectRatio="xMidYMid meet"
-            style={{ zIndex: 10 }}
+            style={{ zIndex: 10, pointerEvents: 'all', touchAction: 'manipulation' }}
           >
-            <g className="zones-layer">
+            <g className="zones-layer" style={{ pointerEvents: 'all' }}>
               {floorPlan.zones.map(zone => renderZonePolygon(zone))}
             </g>
-            <g className="seats-layer" style={{ pointerEvents: 'auto' }}>
+            <g className="seats-layer" style={{ pointerEvents: 'all' }}>
               {sectors.filter(s => s.isNumbered && s.seats?.length > 0).map(sector => 
                 sector.seats.map(seat => renderSeat(seat, sector.sectorCode))
               )}
