@@ -222,10 +222,22 @@ function FloorPlanViewer({
           strokeWidth="2"
           opacity={isSelected ? 0.7 : (Number(zone.opacity) || 0.4)}
           style={{ 
-            cursor: zone.isSelectable && isAvailable ? 'pointer' : isAvailable ? 'default' : 'not-allowed'
+            cursor: zone.isSelectable && isAvailable ? 'pointer' : isAvailable ? 'default' : 'not-allowed',
+            pointerEvents: 'auto',
+            touchAction: 'manipulation'
           }}
           className={`transition-all duration-200 ${!isAvailable ? 'opacity-20' : ''}`}
-          onClick={() => {
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            if (zone.isSelectable && isAvailable && linkedSector) {
+              triggerHaptic('medium');
+              onZoneClick(zone.id, linkedSector.sectorCode);
+            }
+          }}
+          onTouchEnd={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
             if (zone.isSelectable && isAvailable && linkedSector) {
               triggerHaptic('medium');
               onZoneClick(zone.id, linkedSector.sectorCode);
