@@ -3,7 +3,7 @@ import { Router, Request, Response, NextFunction } from "express";
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
-import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions, siaeCashierAllocations, siaeOtpAttempts, siaeNameChanges, siaeResales, publicCartItems, publicCheckoutSessions, publicCustomerSessions, tableBookings, guestListEntries, siaeTransmissions, companies, siaeEmissionChannels } from "@shared/schema";
+import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions, siaeCashierAllocations, siaeOtpAttempts, siaeNameChanges, siaeResales, publicCartItems, publicCheckoutSessions, publicCustomerSessions, tableBookings, guestListEntries, siaeTransmissions, companies, siaeEmissionChannels, siaeSystemConfig } from "@shared/schema";
 import { eq, and, sql, desc } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -3167,6 +3167,8 @@ interface C1ReportOptions {
 function buildC1ReportData(
   event: any, 
   company: any, 
+  siaeConfig: any,
+  location: any,
   sectors: any[], 
   allTickets: any[],
   options: C1ReportOptions
@@ -3323,9 +3325,10 @@ function buildC1ReportData(
     
     // === TITOLARE SISTEMA DI EMISSIONE (Allegato 3 - campo obbligatorio) ===
     // Può essere diverso dall'organizzatore (es. società che gestisce biglietteria)
-    titolareSistemaEmissione: company?.name || 'N/D',
-    codiceFiscaleTitolareSistema: company?.fiscalCode || company?.vatNumber || company?.taxCode || 'N/D',
-    codiceSistemaEmissione: event.emissionSystemCode || `E4U-${event.companyId?.substring(0, 8).toUpperCase() || 'SYS'}`,
+    // Usa dati da siaeSystemConfig se disponibile, altrimenti fallback su company
+    titolareSistemaEmissione: siaeConfig?.businessName || company?.name || 'N/D',
+    codiceFiscaleTitolareSistema: siaeConfig?.taxId || company?.fiscalCode || 'N/D',
+    codiceSistemaEmissione: siaeConfig?.systemCode || event.emissionSystemCode || 'N/D',
     
     // === MANCATO FUNZIONAMENTO SISTEMA (Allegato 3 - sezione opzionale) ===
     // Da compilare solo in caso di malfunzionamento del sistema automatizzato
@@ -3336,12 +3339,13 @@ function buildC1ReportData(
     oraFineMalfunzionamento: null as string | null,
     
     // === DATI LOCALE/VENUE ===
-    codiceLocale: event.siaeLocationCode || event.venueCode || 'N/D', // Codice BA (Biglietteria Automatizzata)
-    denominazioneLocale: event.venueName || 'N/D',
-    indirizzoLocale: event.venueAddress || 'N/D',
-    comuneLocale: event.venueCity || 'N/D',
-    provinciaLocale: event.venueProvince || 'N/D',
-    capLocale: event.venuePostalCode || event.venueCap || 'N/D',
+    // Usa dati da locations table se disponibile, altrimenti fallback su event
+    codiceLocale: location?.siaeLocationCode || event.siaeLocationCode || 'N/D',
+    denominazioneLocale: location?.name || event.venueName || 'N/D',
+    indirizzoLocale: location?.address || event.venueAddress || 'N/D',
+    comuneLocale: location?.city || event.venueCity || 'N/D',
+    provinciaLocale: 'N/D', // locations table non ha provincia
+    capLocale: 'N/D', // locations table non ha CAP
     capienza: capienzaTotale,
     
     // === DATI EVENTO ===
@@ -3600,13 +3604,23 @@ router.get('/api/siae/ticketed-events/:id/reports/c1', requireAuth, async (req: 
       return res.status(404).json({ message: "Evento non trovato" });
     }
 
-    // Ottieni dati company per QUADRO A
+    // Ottieni dati company per QUADRO A - Organizzatore
     const company = event.companyId ? await storage.getCompany(event.companyId) : null;
+    
+    // Ottieni siaeSystemConfig per QUADRO A - Titolare Sistema Emissione
+    const siaeConfigResult = event.companyId 
+      ? await db.select().from(siaeSystemConfig).where(eq(siaeSystemConfig.companyId, event.companyId)).limit(1)
+      : [];
+    const siaeConfig = siaeConfigResult[0] || null;
+    
+    // Ottieni location per QUADRO A - Dati Locale
+    const location = event.locationId ? await storage.getLocation(event.locationId) : null;
+    
     const sectors = await siaeStorage.getSiaeEventSectors(id);
     const allTickets = await siaeStorage.getSiaeTicketsByEvent(id);
     
     // Usa la funzione helper per costruire i dati del report
-    const reportData = buildC1ReportData(event, company, sectors, allTickets, { 
+    const reportData = buildC1ReportData(event, company, siaeConfig, location, sectors, allTickets, { 
       reportType,
       reportDate: new Date()
     });
@@ -3657,8 +3671,17 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
       return res.status(404).json({ message: "Evento non trovato" });
     }
 
-    // Get company data for Quadro A
+    // Get company data for Quadro A - Organizzatore
     const company = await storage.getCompany(event.companyId);
+    
+    // Ottieni siaeSystemConfig per QUADRO A - Titolare Sistema Emissione
+    const siaeConfigResult = event.companyId 
+      ? await db.select().from(siaeSystemConfig).where(eq(siaeSystemConfig.companyId, event.companyId)).limit(1)
+      : [];
+    const siaeConfig = siaeConfigResult[0] || null;
+    
+    // Ottieni location per QUADRO A - Dati Locale
+    const location = event.locationId ? await storage.getLocation(event.locationId) : null;
 
     // Get tickets and sectors for C1 report data (usa stesse funzioni del GET)
     const allTickets = await siaeStorage.getSiaeTicketsByEvent(id);
@@ -3666,7 +3689,7 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     
     // Usa la funzione helper condivisa per costruire i dati del report
     // Questo garantisce che GET e POST usino gli stessi calcoli
-    const reportData = buildC1ReportData(event, company, sectors, allTickets, { 
+    const reportData = buildC1ReportData(event, company, siaeConfig, location, sectors, allTickets, { 
       reportType,
       reportDate: new Date()
     });
@@ -3845,8 +3868,18 @@ router.get('/api/siae/ticketed-events/:id/reports/c2', requireAuth, async (req: 
       return res.status(404).json({ message: "Evento non trovato" });
     }
 
-    // Ottieni company per QUADRO A
+    // Ottieni dati company per QUADRO A - Organizzatore
     const company = event.companyId ? await storage.getCompany(event.companyId) : null;
+    
+    // Ottieni siaeSystemConfig per QUADRO A - Titolare Sistema Emissione
+    const siaeConfigResult = event.companyId 
+      ? await db.select().from(siaeSystemConfig).where(eq(siaeSystemConfig.companyId, event.companyId)).limit(1)
+      : [];
+    const siaeConfig = siaeConfigResult[0] || null;
+    
+    // Ottieni location per QUADRO A - Dati Locale
+    const location = event.locationId ? await storage.getLocation(event.locationId) : null;
+    
     const sectors = await siaeStorage.getSiaeEventSectors(id);
     const transactions = await siaeStorage.getSiaeTransactionsByEvent(id);
     
@@ -3915,17 +3948,19 @@ router.get('/api/siae/ticketed-events/:id/reports/c2', requireAuth, async (req: 
       capOrganizzatore: company?.postalCode || company?.cap || 'N/D',
       
       // Titolare Sistema di Emissione
-      titolareSistemaEmissione: company?.name || 'N/D',
-      codiceFiscaleTitolareSistema: company?.fiscalCode || company?.vatNumber || company?.taxCode || 'N/D',
-      codiceSistemaEmissione: event.emissionSystemCode || `E4U-${event.companyId?.substring(0, 8).toUpperCase() || 'SYS'}`,
+      // Usa dati da siaeSystemConfig se disponibile, altrimenti fallback su company
+      titolareSistemaEmissione: siaeConfig?.businessName || company?.name || 'N/D',
+      codiceFiscaleTitolareSistema: siaeConfig?.taxId || company?.fiscalCode || 'N/D',
+      codiceSistemaEmissione: siaeConfig?.systemCode || event.emissionSystemCode || 'N/D',
       
       // Dati Locale
-      codiceLocale: event.siaeLocationCode || event.venueCode || 'N/D',
-      denominazioneLocale: event.venueName || 'N/D',
-      indirizzoLocale: event.venueAddress || 'N/D',
-      comuneLocale: event.venueCity || 'N/D',
-      provinciaLocale: event.venueProvince || 'N/D',
-      capLocale: event.venuePostalCode || event.venueCap || 'N/D',
+      // Usa dati da locations table se disponibile, altrimenti fallback su event
+      codiceLocale: location?.siaeLocationCode || event.siaeLocationCode || 'N/D',
+      denominazioneLocale: location?.name || event.venueName || 'N/D',
+      indirizzoLocale: location?.address || event.venueAddress || 'N/D',
+      comuneLocale: location?.city || event.venueCity || 'N/D',
+      provinciaLocale: 'N/D', // locations table non ha provincia
+      capLocale: 'N/D', // locations table non ha CAP
       capienza: capienzaTotale,
       
       // Periodo riferimento
