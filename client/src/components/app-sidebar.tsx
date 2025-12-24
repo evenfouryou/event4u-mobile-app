@@ -304,6 +304,12 @@ export function AppSidebar() {
 
     menuItems.push(
       {
+        title: "Aziende",
+        icon: Building2,
+        url: "/companies",
+        group: "Gestione",
+      },
+      {
         title: "Cassa Biglietti",
         icon: Store,
         url: "/cassa-biglietti",
