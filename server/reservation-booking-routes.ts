@@ -40,7 +40,9 @@ function requireAuth(req: Request, res: Response, next: NextFunction) {
 }
 
 function requireGestore(req: Request, res: Response, next: NextFunction) {
-  const user = req.user as any;
+  // Get user from req.user or session.passport.user (fallback for session issues)
+  const passportUser = (req.session as any)?.passport?.user;
+  const user = req.user || passportUser;
   if (!user || !['gestore', 'super_admin'].includes(user.role)) {
     return res.status(403).json({ error: "Accesso negato. Richiesto ruolo Gestore." });
   }
@@ -383,10 +385,11 @@ router.delete("/api/reservations/pr-profiles/:id/permanent", requireAuth, requir
 router.post("/api/reservations/pr-profiles/:id/impersonate", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const user = req.user as any;
     
-    // Debug: log full user object structure
-    console.log(`[PR-IMPERSONATE] req.user full object:`, JSON.stringify(user, null, 2));
+    // Get user from session.passport.user (Passport stores user data here)
+    const passportUser = (req.session as any)?.passport?.user;
+    const user = req.user || passportUser;
+    
     console.log(`[PR-IMPERSONATE] Starting impersonation for PR ${id} by user ${user?.id} (company: ${user?.companyId})`);
     
     // Verify PR belongs to gestore's company
@@ -405,6 +408,11 @@ router.post("/api/reservations/pr-profiles/:id/impersonate", requireAuth, requir
     if (!profile.isActive) {
       console.log(`[PR-IMPERSONATE] PR ${id} is inactive`);
       return res.status(400).json({ error: "Il PR è disattivato" });
+    }
+    
+    if (!user?.id || !user?.companyId) {
+      console.error("[PR-IMPERSONATE] User data incomplete in session");
+      return res.status(401).json({ error: "Sessione non valida. Effettua nuovamente il login." });
     }
     
     // Set PR session (impersonation)
