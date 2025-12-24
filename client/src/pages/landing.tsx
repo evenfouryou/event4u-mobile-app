@@ -8,6 +8,7 @@ import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { triggerHaptic } from "@/components/mobile-primitives";
 import { BrandLogo } from "@/components/brand-logo";
+import { ThemeToggle } from "@/components/theme-toggle";
 
 const springConfig = { type: "spring" as const, stiffness: 400, damping: 30 };
 
@@ -113,6 +114,7 @@ export default function Landing() {
                 <Link href="/locali" className="text-muted-foreground hover-elevate px-3 py-2 rounded-md" data-testid="link-nav-venues">
                   Locali
                 </Link>
+                <ThemeToggle />
                 {isAuthenticated ? (
                   <Link href="/account">
                     <Avatar className="h-10 w-10 cursor-pointer ring-2 ring-primary/40" data-testid="avatar-user-desktop">
@@ -388,29 +390,32 @@ export default function Landing() {
           <div className="flex items-center justify-between">
             <BrandLogo variant="horizontal" className="h-10 w-auto" />
             
-            {isAuthenticated ? (
-              <Link href="/account" onClick={handleLinkPress}>
+            <div className="flex items-center gap-3">
+              <ThemeToggle />
+              {isAuthenticated ? (
+                <Link href="/account" onClick={handleLinkPress}>
+                  <motion.div whileTap={{ scale: 0.95 }} transition={springConfig}>
+                    <Avatar className="h-14 w-14 cursor-pointer ring-2 ring-primary/40" data-testid="avatar-user">
+                      <AvatarFallback className="bg-primary/10 text-primary">
+                        <User className="h-6 w-6" />
+                      </AvatarFallback>
+                    </Avatar>
+                  </motion.div>
+                </Link>
+              ) : (
                 <motion.div whileTap={{ scale: 0.95 }} transition={springConfig}>
-                  <Avatar className="h-14 w-14 cursor-pointer ring-2 ring-primary/40" data-testid="avatar-user">
-                    <AvatarFallback className="bg-primary/10 text-primary">
-                      <User className="h-6 w-6" />
-                    </AvatarFallback>
-                  </Avatar>
+                  <Button
+                    variant="ghost"
+                    className="h-14 px-6 text-lg font-medium min-w-[80px]"
+                    asChild
+                    data-testid="button-login"
+                    onClick={handleLinkPress}
+                  >
+                    <Link href="/login">Accedi</Link>
+                  </Button>
                 </motion.div>
-              </Link>
-            ) : (
-              <motion.div whileTap={{ scale: 0.95 }} transition={springConfig}>
-                <Button
-                  variant="ghost"
-                  className="h-14 px-6 text-lg font-medium min-w-[80px]"
-                  asChild
-                  data-testid="button-login"
-                  onClick={handleLinkPress}
-                >
-                  <Link href="/login">Accedi</Link>
-                </Button>
-              </motion.div>
-            )}
+              )}
+            </div>
           </div>
         </motion.header>
 
