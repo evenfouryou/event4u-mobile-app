@@ -1345,20 +1345,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Create a new user-company association
   app.post('/api/user-companies', isAuthenticated, async (req: any, res) => {
     try {
-      console.log("[user-companies] POST request body:", JSON.stringify(req.body));
-      
       const currentUserId = getCurrentUserId(req);
       const currentUser = await storage.getUser(currentUserId);
       
-      console.log("[user-companies] Current user:", currentUser?.id, "role:", currentUser?.role);
-      
       if (!currentUser || currentUser.role !== 'super_admin') {
-        console.log("[user-companies] Forbidden - not super_admin");
         return res.status(403).json({ message: "Only super admin can create associations" });
       }
 
       const validated = insertUserCompanySchema.parse(req.body);
-      console.log("[user-companies] Validated data:", JSON.stringify(validated));
       
       // Check if association already exists
       const existing = await db.select()
@@ -1367,8 +1361,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           eq(userCompanies.userId, validated.userId),
           eq(userCompanies.companyId, validated.companyId)
         ));
-      
-      console.log("[user-companies] Existing associations found:", existing.length);
       
       if (existing.length > 0) {
         return res.status(400).json({ message: "Association already exists" });
@@ -1381,15 +1373,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
           .where(eq(userCompanies.userId, validated.userId));
       }
 
-      console.log("[user-companies] Inserting new association...");
       const [association] = await db.insert(userCompanies)
         .values(validated)
         .returning();
       
-      console.log("[user-companies] Created association:", JSON.stringify(association));
       res.json(association);
     } catch (error: any) {
-      console.error("[user-companies] Error creating association:", error);
+      console.error("Error creating user-company association:", error);
       res.status(400).json({ message: error.message || "Failed to create association" });
     }
   });
