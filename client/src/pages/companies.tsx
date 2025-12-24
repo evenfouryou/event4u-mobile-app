@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useAuth } from "@/hooks/useAuth";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import {
   AlertDialog,
@@ -85,6 +86,9 @@ export default function Companies() {
   const [deleteCompanyId, setDeleteCompanyId] = useState<string | null>(null);
   const { toast } = useToast();
   const isMobile = useIsMobile();
+  const { user } = useAuth();
+  
+  const isSuperAdmin = user?.role === 'super_admin';
 
   const { data: companies, isLoading } = useQuery<Company[]>({
     queryKey: ['/api/companies'],
@@ -258,12 +262,16 @@ export default function Companies() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Aziende</h1>
-            <p className="text-muted-foreground">Gestione delle aziende nel sistema</p>
+            <p className="text-muted-foreground">
+              {isSuperAdmin ? 'Gestione delle aziende nel sistema' : 'Le tue aziende associate'}
+            </p>
           </div>
-          <Button onClick={handleFabClick} data-testid="button-create-company">
-            <Plus className="w-4 h-4 mr-2" />
-            Nuova Azienda
-          </Button>
+          {isSuperAdmin && (
+            <Button onClick={handleFabClick} data-testid="button-create-company">
+              <Plus className="w-4 h-4 mr-2" />
+              Nuova Azienda
+            </Button>
+          )}
         </div>
 
         <Card>
@@ -334,15 +342,17 @@ export default function Companies() {
                           >
                             <Edit className="h-4 w-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleDeleteClick(company.id)}
-                            className="text-destructive hover:text-destructive"
-                            data-testid={`button-delete-company-${company.id}`}
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </Button>
+                          {isSuperAdmin && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleDeleteClick(company.id)}
+                              className="text-destructive hover:text-destructive"
+                              data-testid={`button-delete-company-${company.id}`}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -354,11 +364,15 @@ export default function Companies() {
                 <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
                   <Building2 className="h-8 w-8 text-muted-foreground" />
                 </div>
-                <p className="text-muted-foreground mb-4">Nessuna azienda presente</p>
-                <Button onClick={handleFabClick} data-testid="button-create-first-company">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Crea Prima Azienda
-                </Button>
+                <p className="text-muted-foreground mb-4">
+                  {isSuperAdmin ? 'Nessuna azienda presente' : 'Nessuna azienda associata al tuo account'}
+                </p>
+                {isSuperAdmin && (
+                  <Button onClick={handleFabClick} data-testid="button-create-first-company">
+                    <Plus className="h-4 w-4 mr-2" />
+                    Crea Prima Azienda
+                  </Button>
+                )}
               </div>
             )}
           </CardContent>
@@ -565,15 +579,17 @@ export default function Companies() {
                     <Edit className="h-4 w-4" />
                     Modifica
                   </HapticButton>
-                  <HapticButton
-                    variant="outline"
-                    onClick={() => handleDeleteClick(company.id)}
-                    className="h-12 w-12 rounded-xl text-destructive hover:text-destructive"
-                    data-testid={`button-delete-company-${company.id}`}
-                    hapticType="medium"
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </HapticButton>
+                  {isSuperAdmin && (
+                    <HapticButton
+                      variant="outline"
+                      onClick={() => handleDeleteClick(company.id)}
+                      className="h-12 w-12 rounded-xl text-destructive hover:text-destructive"
+                      data-testid={`button-delete-company-${company.id}`}
+                      hapticType="medium"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </HapticButton>
+                  )}
                 </div>
               </motion.div>
             ))}
@@ -593,27 +609,33 @@ export default function Companies() {
             >
               <Building2 className="h-10 w-10 text-muted-foreground" />
             </motion.div>
-            <p className="text-muted-foreground text-lg mb-6">Nessuna azienda presente</p>
-            <HapticButton 
-              onClick={handleFabClick} 
-              className="gradient-golden text-black font-semibold h-12 px-6 rounded-xl"
-              data-testid="button-create-first-company"
-              hapticType="medium"
-            >
-              <Plus className="h-5 w-5 mr-2" />
-              Crea Prima Azienda
-            </HapticButton>
+            <p className="text-muted-foreground text-lg mb-6">
+              {isSuperAdmin ? 'Nessuna azienda presente' : 'Nessuna azienda associata al tuo account'}
+            </p>
+            {isSuperAdmin && (
+              <HapticButton 
+                onClick={handleFabClick} 
+                className="gradient-golden text-black font-semibold h-12 px-6 rounded-xl"
+                data-testid="button-create-first-company"
+                hapticType="medium"
+              >
+                <Plus className="h-5 w-5 mr-2" />
+                Crea Prima Azienda
+              </HapticButton>
+            )}
           </motion.div>
         )}
       </div>
 
-      <FloatingActionButton
-        onClick={handleFabClick}
-        className="gradient-golden"
-        data-testid="button-create-company"
-      >
-        <Plus className="h-6 w-6 text-black" />
-      </FloatingActionButton>
+      {isSuperAdmin && (
+        <FloatingActionButton
+          onClick={handleFabClick}
+          className="gradient-golden"
+          data-testid="button-create-company"
+        >
+          <Plus className="h-6 w-6 text-black" />
+        </FloatingActionButton>
+      )}
 
       <BottomSheet
         open={dialogOpen}

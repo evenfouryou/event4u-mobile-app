@@ -1111,11 +1111,27 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // ===== COMPANIES =====
   app.get('/api/companies', isAuthenticated, async (req: any, res) => {
     try {
-      if (!(await isSuperAdmin(req))) {
-        return res.status(403).json({ message: "Forbidden" });
+      // Super admin sees all companies
+      if (await isSuperAdmin(req)) {
+        const allCompanies = await storage.getAllCompanies();
+        return res.json(allCompanies);
       }
-      const companies = await storage.getAllCompanies();
-      res.json(companies);
+      
+      // Gestore and other roles see only their associated companies
+      const userId = getCurrentUserId(req);
+      const associations = await db.select({
+        id: companies.id,
+        name: companies.name,
+        taxId: companies.taxId,
+        address: companies.address,
+        active: companies.active,
+        createdAt: companies.createdAt,
+      })
+        .from(userCompanies)
+        .innerJoin(companies, eq(userCompanies.companyId, companies.id))
+        .where(eq(userCompanies.userId, userId));
+      
+      res.json(associations);
     } catch (error) {
       console.error("Error fetching companies:", error);
       res.status(500).json({ message: "Failed to fetch companies" });
@@ -1155,10 +1171,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
   app.patch('/api/companies/:id', isAuthenticated, async (req: any, res) => {
     try {
+      const companyId = req.params.id;
+      
+      // Super admin can update any company
       if (!(await isSuperAdmin(req))) {
-        return res.status(403).json({ message: "Forbidden" });
+        // Check if user is associated with this company
+        const userId = getCurrentUserId(req);
+        const association = await db.select()
+          .from(userCompanies)
+          .where(and(
+            eq(userCompanies.userId, userId),
+            eq(userCompanies.companyId, companyId)
+          ))
+          .limit(1);
+        
+        if (association.length === 0) {
+          return res.status(403).json({ message: "Forbidden" });
+        }
       }
-      const company = await storage.updateCompany(req.params.id, req.body);
+      
+      const company = await storage.updateCompany(companyId, req.body);
       if (!company) {
         return res.status(404).json({ message: "Company not found" });
       }
@@ -1205,7 +1237,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isDefault: userCompanies.isDefault,
         createdAt: userCompanies.createdAt,
         companyName: companies.name,
-        companyVatNumber: companies.vatNumber,
+        companyTaxId: companies.taxId,
       })
         .from(userCompanies)
         .leftJoin(companies, eq(userCompanies.companyId, companies.id))
@@ -1297,7 +1329,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         isDefault: userCompanies.isDefault,
         createdAt: userCompanies.createdAt,
         companyName: companies.name,
-        companyVatNumber: companies.vatNumber,
+        companyTaxId: companies.taxId,
       })
         .from(userCompanies)
         .leftJoin(companies, eq(userCompanies.companyId, companies.id))
