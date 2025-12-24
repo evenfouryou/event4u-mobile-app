@@ -2856,13 +2856,13 @@ export default function EventWizard() {
         />
       }
       footer={
-        <div className="border-t bg-background/95 backdrop-blur-sm p-4">
+        <div className="border-t bg-background p-4" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
           <div className="flex gap-3">
             <HapticButton
               type="button"
               variant="outline"
               size="lg"
-              className="flex-1 h-14 text-base"
+              className="flex-1 h-12 text-base"
               onClick={prevStep}
               disabled={currentStep === 1}
               data-testid="button-prev-step"
@@ -2875,7 +2875,7 @@ export default function EventWizard() {
               <HapticButton
                 type="button"
                 size="lg"
-                className="flex-1 h-14 text-base"
+                className="flex-1 h-12 text-base"
                 onClick={nextStep}
                 data-testid="button-next-step"
               >
@@ -2886,7 +2886,7 @@ export default function EventWizard() {
               <HapticButton
                 type="button"
                 size="lg"
-                className="flex-1 h-14 text-base"
+                className="flex-1 h-12 text-base"
                 hapticType="success"
                 disabled={publishMutation.isPending}
                 onClick={form.handleSubmit(onSubmit)}
