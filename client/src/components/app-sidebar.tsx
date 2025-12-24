@@ -310,12 +310,6 @@ export function AppSidebar() {
         group: "Gestione",
       },
       {
-        title: "Cassa Biglietti",
-        icon: Store,
-        url: "/cassa-biglietti",
-        group: "Gestione",
-      },
-      {
         title: "Location",
         icon: MapPin,
         url: "/locations",
@@ -328,42 +322,70 @@ export function AppSidebar() {
         group: "Gestione",
       },
       {
-        title: "Gestione Scanner",
-        icon: ScanLine,
-        url: "/scanner-management",
-        group: "Gestione",
-      },
-      {
-        title: "Gestione PR",
-        icon: UserPlus,
-        url: "/pr-management",
-        group: "Gestione",
-      },
-      {
-        title: "Scanner QR",
-        icon: QrCode,
-        url: "/scanner",
-        group: "Operazioni",
-      },
-      {
-        title: "Badge Scuola",
-        icon: GraduationCap,
-        url: "/school-badges",
-        group: "Gestione",
-      },
-      {
         title: "Stampante",
         icon: Printer,
         url: "/printer-settings",
         group: "Gestione",
-      },
-      {
+      }
+    );
+
+    // Cassa Biglietti Module
+    if (userFeatures?.cassaBigliettiEnabled === true) {
+      menuItems.push({
+        title: "Cassa Biglietti",
+        icon: Store,
+        url: "/cassa-biglietti",
+        group: "Gestione",
+      });
+    }
+
+    // Scanner Module
+    if (userFeatures?.scannerEnabled === true) {
+      menuItems.push(
+        {
+          title: "Gestione Scanner",
+          icon: ScanLine,
+          url: "/scanner-management",
+          group: "Gestione",
+        },
+        {
+          title: "Scanner QR",
+          icon: QrCode,
+          url: "/scanner",
+          group: "Operazioni",
+        }
+      );
+    }
+
+    // PR Module
+    if (userFeatures?.prEnabled === true) {
+      menuItems.push({
+        title: "Gestione PR",
+        icon: UserPlus,
+        url: "/pr-management",
+        group: "Gestione",
+      });
+    }
+
+    // Badge Scuola Module
+    if (userFeatures?.badgesEnabled === true) {
+      menuItems.push({
+        title: "Badge Scuola",
+        icon: GraduationCap,
+        url: "/school-badges",
+        group: "Gestione",
+      });
+    }
+
+    // Template Digitali Module
+    if (userFeatures?.templateEnabled === true) {
+      menuItems.push({
         title: "Template Digitali",
         icon: QrCode,
         url: "/digital-template-builder",
         group: "Gestione",
-      }
-    );
+      });
+    }
 
     // SIAE Ticketing Module for Gestore (only if enabled)
     if (userFeatures?.siaeEnabled === true) {
