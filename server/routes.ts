@@ -108,6 +108,7 @@ import {
 } from "@shared/schema";
 import { setupBridgeRelay, isBridgeConnected, getCachedBridgeStatus } from "./bridge-relay";
 import { setupPrintRelay } from "./print-relay";
+import { siaeStorage } from "./siae-storage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup passport for classic email/password authentication (no Replit OAuth)
@@ -2018,6 +2019,289 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error deleting zone mapping:", error);
       res.status(500).json({ message: "Impossibile eliminare la mappatura" });
+    }
+  });
+
+  // ========== EVENT PAGE 3.0 ADMIN API ==========
+
+  // GET - Recupera configurazione pagina per evento (admin)
+  app.get("/api/siae/ticketed-events/:id/page-config", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const event = await siaeStorage.getSiaeTicketedEvent(id);
+      if (!event) return res.status(404).json({ message: "Evento non trovato" });
+      
+      // Verifica accesso
+      const userCompanyId = await getUserCompanyId(req);
+      if (req.user?.role !== 'super_admin' && event.companyId !== userCompanyId) {
+        return res.status(403).json({ message: "Accesso negato" });
+      }
+      
+      const [config] = await db.select().from(eventPageConfigs)
+        .where(eq(eventPageConfigs.ticketedEventId, id));
+      
+      const blocks = await db.select().from(eventPageBlocks)
+        .where(eq(eventPageBlocks.ticketedEventId, id))
+        .orderBy(eventPageBlocks.position);
+      
+      const artists = await db.select().from(eventLineupArtists)
+        .where(eq(eventLineupArtists.ticketedEventId, id))
+        .orderBy(eventLineupArtists.position);
+      
+      const timeline = await db.select().from(eventTimelineItems)
+        .where(eq(eventTimelineItems.ticketedEventId, id))
+        .orderBy(eventTimelineItems.position);
+      
+      const faq = await db.select().from(eventFaqItems)
+        .where(eq(eventFaqItems.ticketedEventId, id))
+        .orderBy(eventFaqItems.position);
+      
+      res.json({ config: config || null, blocks, artists, timeline, faq });
+    } catch (error) {
+      console.error("Error fetching page config:", error);
+      res.status(500).json({ message: "Errore nel recupero della configurazione" });
+    }
+  });
+
+  // PUT - Salva/aggiorna configurazione pagina
+  app.put("/api/siae/ticketed-events/:id/page-config", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const event = await siaeStorage.getSiaeTicketedEvent(id);
+      if (!event) return res.status(404).json({ message: "Evento non trovato" });
+      
+      const userCompanyId = await getUserCompanyId(req);
+      if (req.user?.role !== 'super_admin' && event.companyId !== userCompanyId) {
+        return res.status(403).json({ message: "Accesso negato" });
+      }
+      
+      const { config } = req.body;
+      
+      // Upsert config
+      const [existing] = await db.select().from(eventPageConfigs)
+        .where(eq(eventPageConfigs.ticketedEventId, id));
+      
+      if (existing) {
+        await db.update(eventPageConfigs)
+          .set({ ...config, updatedAt: new Date() })
+          .where(eq(eventPageConfigs.ticketedEventId, id));
+      } else {
+        await db.insert(eventPageConfigs).values({ ...config, ticketedEventId: id });
+      }
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error saving page config:", error);
+      res.status(500).json({ message: "Errore nel salvataggio" });
+    }
+  });
+
+  // ===== LINEUP ARTISTS =====
+
+  // POST - Aggiungi artista
+  app.post("/api/siae/ticketed-events/:id/lineup", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const event = await siaeStorage.getSiaeTicketedEvent(id);
+      if (!event) return res.status(404).json({ message: "Evento non trovato" });
+      
+      const userCompanyId = await getUserCompanyId(req);
+      if (req.user?.role !== 'super_admin' && event.companyId !== userCompanyId) {
+        return res.status(403).json({ message: "Accesso negato" });
+      }
+      
+      // Get max position
+      const artists = await db.select().from(eventLineupArtists)
+        .where(eq(eventLineupArtists.ticketedEventId, id));
+      const maxPos = Math.max(0, ...artists.map(a => a.position));
+      
+      const [artist] = await db.insert(eventLineupArtists)
+        .values({ ...req.body, ticketedEventId: id, position: maxPos + 1 })
+        .returning();
+      
+      res.json(artist);
+    } catch (error) {
+      console.error("Error adding artist:", error);
+      res.status(500).json({ message: "Errore nell'aggiunta artista" });
+    }
+  });
+
+  // PUT - Aggiorna artista
+  app.put("/api/siae/ticketed-events/:eventId/lineup/:artistId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId, artistId } = req.params;
+      const event = await siaeStorage.getSiaeTicketedEvent(eventId);
+      if (!event) return res.status(404).json({ message: "Evento non trovato" });
+      
+      const userCompanyId = await getUserCompanyId(req);
+      if (req.user?.role !== 'super_admin' && event.companyId !== userCompanyId) {
+        return res.status(403).json({ message: "Accesso negato" });
+      }
+      
+      await db.update(eventLineupArtists)
+        .set(req.body)
+        .where(eq(eventLineupArtists.id, artistId));
+      
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating artist:", error);
+      res.status(500).json({ message: "Errore nell'aggiornamento" });
+    }
+  });
+
+  // DELETE - Rimuovi artista
+  app.delete("/api/siae/ticketed-events/:eventId/lineup/:artistId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId, artistId } = req.params;
+      const event = await siaeStorage.getSiaeTicketedEvent(eventId);
+      if (!event) return res.status(404).json({ message: "Evento non trovato" });
+      
+      const userCompanyId = await getUserCompanyId(req);
+      if (req.user?.role !== 'super_admin' && event.companyId !== userCompanyId) {
+        return res.status(403).json({ message: "Accesso negato" });
+      }
+      
+      await db.delete(eventLineupArtists).where(eq(eventLineupArtists.id, artistId));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting artist:", error);
+      res.status(500).json({ message: "Errore nella rimozione" });
+    }
+  });
+
+  // ===== TIMELINE ITEMS =====
+
+  // POST - Aggiungi timeline item
+  app.post("/api/siae/ticketed-events/:id/timeline", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const event = await siaeStorage.getSiaeTicketedEvent(id);
+      if (!event) return res.status(404).json({ message: "Evento non trovato" });
+      
+      const userCompanyId = await getUserCompanyId(req);
+      if (req.user?.role !== 'super_admin' && event.companyId !== userCompanyId) {
+        return res.status(403).json({ message: "Accesso negato" });
+      }
+      
+      const items = await db.select().from(eventTimelineItems)
+        .where(eq(eventTimelineItems.ticketedEventId, id));
+      const maxPos = Math.max(0, ...items.map(i => i.position));
+      
+      const [item] = await db.insert(eventTimelineItems)
+        .values({ ...req.body, ticketedEventId: id, position: maxPos + 1 })
+        .returning();
+      res.json(item);
+    } catch (error) {
+      console.error("Error adding timeline item:", error);
+      res.status(500).json({ message: "Errore nell'aggiunta timeline" });
+    }
+  });
+
+  // PUT - Aggiorna timeline item
+  app.put("/api/siae/ticketed-events/:eventId/timeline/:itemId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId, itemId } = req.params;
+      const event = await siaeStorage.getSiaeTicketedEvent(eventId);
+      if (!event) return res.status(404).json({ message: "Evento non trovato" });
+      
+      const userCompanyId = await getUserCompanyId(req);
+      if (req.user?.role !== 'super_admin' && event.companyId !== userCompanyId) {
+        return res.status(403).json({ message: "Accesso negato" });
+      }
+      
+      await db.update(eventTimelineItems).set(req.body).where(eq(eventTimelineItems.id, itemId));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating timeline item:", error);
+      res.status(500).json({ message: "Errore nell'aggiornamento" });
+    }
+  });
+
+  // DELETE - Rimuovi timeline item
+  app.delete("/api/siae/ticketed-events/:eventId/timeline/:itemId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId, itemId } = req.params;
+      const event = await siaeStorage.getSiaeTicketedEvent(eventId);
+      if (!event) return res.status(404).json({ message: "Evento non trovato" });
+      
+      const userCompanyId = await getUserCompanyId(req);
+      if (req.user?.role !== 'super_admin' && event.companyId !== userCompanyId) {
+        return res.status(403).json({ message: "Accesso negato" });
+      }
+      
+      await db.delete(eventTimelineItems).where(eq(eventTimelineItems.id, itemId));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting timeline item:", error);
+      res.status(500).json({ message: "Errore nella rimozione" });
+    }
+  });
+
+  // ===== FAQ ITEMS =====
+
+  // POST - Aggiungi FAQ item
+  app.post("/api/siae/ticketed-events/:id/faq", isAuthenticated, async (req: any, res) => {
+    try {
+      const { id } = req.params;
+      const event = await siaeStorage.getSiaeTicketedEvent(id);
+      if (!event) return res.status(404).json({ message: "Evento non trovato" });
+      
+      const userCompanyId = await getUserCompanyId(req);
+      if (req.user?.role !== 'super_admin' && event.companyId !== userCompanyId) {
+        return res.status(403).json({ message: "Accesso negato" });
+      }
+      
+      const items = await db.select().from(eventFaqItems)
+        .where(eq(eventFaqItems.ticketedEventId, id));
+      const maxPos = Math.max(0, ...items.map(i => i.position));
+      
+      const [item] = await db.insert(eventFaqItems)
+        .values({ ...req.body, ticketedEventId: id, position: maxPos + 1 })
+        .returning();
+      res.json(item);
+    } catch (error) {
+      console.error("Error adding FAQ item:", error);
+      res.status(500).json({ message: "Errore nell'aggiunta FAQ" });
+    }
+  });
+
+  // PUT - Aggiorna FAQ item
+  app.put("/api/siae/ticketed-events/:eventId/faq/:itemId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId, itemId } = req.params;
+      const event = await siaeStorage.getSiaeTicketedEvent(eventId);
+      if (!event) return res.status(404).json({ message: "Evento non trovato" });
+      
+      const userCompanyId = await getUserCompanyId(req);
+      if (req.user?.role !== 'super_admin' && event.companyId !== userCompanyId) {
+        return res.status(403).json({ message: "Accesso negato" });
+      }
+      
+      await db.update(eventFaqItems).set(req.body).where(eq(eventFaqItems.id, itemId));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error updating FAQ item:", error);
+      res.status(500).json({ message: "Errore nell'aggiornamento" });
+    }
+  });
+
+  // DELETE - Rimuovi FAQ item
+  app.delete("/api/siae/ticketed-events/:eventId/faq/:itemId", isAuthenticated, async (req: any, res) => {
+    try {
+      const { eventId, itemId } = req.params;
+      const event = await siaeStorage.getSiaeTicketedEvent(eventId);
+      if (!event) return res.status(404).json({ message: "Evento non trovato" });
+      
+      const userCompanyId = await getUserCompanyId(req);
+      if (req.user?.role !== 'super_admin' && event.companyId !== userCompanyId) {
+        return res.status(403).json({ message: "Accesso negato" });
+      }
+      
+      await db.delete(eventFaqItems).where(eq(eventFaqItems.id, itemId));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting FAQ item:", error);
+      res.status(500).json({ message: "Errore nella rimozione" });
     }
   });
 

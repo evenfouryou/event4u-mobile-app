@@ -107,6 +107,7 @@ import {
   Send,
   History,
   CalendarDays,
+  Palette,
 } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1707,6 +1708,13 @@ export default function SiaeTicketedEventsPage() {
                               Chiudi Vendite
                             </DropdownMenuItem>
                           )}
+                          <DropdownMenuSeparator />
+                          <Link href={`/siae/ticketed-events/${ticketedEvent.id}/page-editor`}>
+                            <DropdownMenuItem data-testid={`menu-page-editor-${ticketedEvent.id}`}>
+                              <Palette className="w-4 h-4 mr-2" />
+                              Editor Pagina
+                            </DropdownMenuItem>
+                          </Link>
                         </DropdownMenuContent>
                       </DropdownMenu>
                     </div>

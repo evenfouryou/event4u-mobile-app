@@ -55,6 +55,7 @@ import SiaeActivationCards from "@/pages/siae-activation-cards";
 import SiaeSystemConfig from "@/pages/siae-system-config";
 import SiaeCustomers from "@/pages/siae-customers";
 import SiaeTicketedEvents from "@/pages/siae-ticketed-events";
+import EventPageEditor from "@/pages/event-page-editor";
 import SiaeTickets from "@/pages/siae-tickets";
 import SiaeTicketTypes from "@/pages/siae-ticket-types";
 import SiaeTransactions from "@/pages/siae-transactions";
@@ -303,6 +304,7 @@ function Router() {
               <Route path="/siae/customers" component={SiaeCustomers} />
               <Route path="/siae/ticketed-events/:id" component={SiaeTicketedEvents} />
               <Route path="/siae/ticketed-events" component={SiaeTicketedEvents} />
+              <Route path="/siae/ticketed-events/:id/page-editor" component={EventPageEditor} />
               <Route path="/siae/tickets/:eventId" component={SiaeTickets} />
               <Route path="/siae/ticket-types/:eventId" component={SiaeTicketTypes} />
               <Route path="/siae/transactions/:eventId" component={SiaeTransactions} />

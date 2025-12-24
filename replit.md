@@ -26,6 +26,29 @@ This module provides a SIAE-compliant ticketing and fiscal management system tai
 ### Event Command Center (Event Hub)
 A real-time dashboard (`/events/:id/hub`) for event operations, providing tabbed navigation for Overview (KPIs, activity log, entrance charts, venue map), Ticketing, Guest Lists, Tables, Staff, Inventory, and Finance. It features `KPICard` for real-time metrics, `EntranceChart`, `VenueMap`, `ActivityLogEntry`, `AlertBanner`, and `QuickActionButton` for rapid actions, with real-time updates powered by WebSockets.
 
+### Event Page 3.0 Editor
+An admin tool (`/siae/ticketed-events/:id/page-editor`) for customizing public event pages with modular blocks:
+
+**Database Tables**:
+- `event_page_configs`: Main configuration (hero video/image, overlay opacity, early bird countdown, theme, dress code, min age, parking info)
+- `event_lineup_artists`: DJ/performer lineup with name, role, photo URL, set time, position ordering
+- `event_timeline_items`: Event schedule with time, label, description, position ordering
+- `event_faq_items`: FAQ with question, answer, position ordering
+- `event_page_blocks`: Modular blocks for future extensibility (JSONB content, visibility flags)
+
+**Frontend Components** (`client/src/pages/event-page-editor.tsx`):
+- Tabs: Hero, Info Rapide, Line-up, Orari, FAQ
+- Dialog-based CRUD for lineup artists, timeline items, and FAQ
+- Sensible defaults with proper null-handling via useEffect
+
+**API Endpoints** (`server/routes.ts` - with company ownership checks):
+- GET/PUT `/api/siae/ticketed-events/:id/page-config`
+- POST/PUT/DELETE `/api/siae/ticketed-events/:id/lineup`
+- POST/PUT/DELETE `/api/siae/ticketed-events/:id/timeline`
+- POST/PUT/DELETE `/api/siae/ticketed-events/:id/faq`
+
+**Access**: Via "Editor Pagina" menu item in SIAE ticketed events dropdown (Palette icon)
+
 ### Desktop Bridge Relay System
 A WebSocket relay system designed to enable remote smart card reader access from a desktop Electron app to the web application. It comprises a server relay (`/ws/bridge`), an Electron desktop application, and a frontend `SmartCardService`. Authentication is token-based for desktop apps and session-based for web clients, with company-scoped message routing.
 
