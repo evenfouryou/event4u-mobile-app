@@ -88,6 +88,7 @@ import PrStaff from "@/pages/pr-staff";
 import PrMyEvents from "@/pages/pr-my-events";
 import PrEvents from "@/pages/pr-events";
 import PrWallet from "@/pages/pr-wallet";
+import PrLogin from "@/pages/pr-login";
 import DownloadSmartCardApp from "@/pages/download-smart-card-app";
 import SchoolBadgeManager from "@/pages/school-badge-manager";
 import SchoolBadgeLanding from "@/pages/school-badge-landing";
@@ -113,6 +114,7 @@ import CassaBiglietti from "@/pages/cassa-biglietti";
 import CashierManagement from "@/pages/cashier-management";
 import CashierDashboard from "@/pages/cashier-dashboard";
 import ScannerManagement from "@/pages/scanner-management";
+import PrManagement from "@/pages/pr-management";
 import EventShortLink from "@/pages/event-short-link";
 import AdminSiteSettings from "@/pages/admin-site-settings";
 import AdminBillingPlans from "@/pages/admin-billing-plans";
@@ -171,6 +173,8 @@ function Router() {
         <Route path="/locali/:id" component={PublicVenueDetail} />
         <Route path="/locali" component={PublicVenues} />
         <Route path="/download-smart-card" component={DownloadSmartCardApp} />
+        <Route path="/pr/login" component={PrLogin} />
+        <Route path="/pr/wallet" component={PrWallet} />
         <Route path="/badge-error" component={SchoolBadgeError} />
         <Route path="/badge/verify" component={SchoolBadgeVerify} />
         <Route path="/badge/view/:code" component={SchoolBadgeView} />
@@ -360,6 +364,7 @@ function Router() {
               <Route path="/cashier/management" component={CashierManagement} />
               <Route path="/cashier/dashboard" component={CashierDashboard} />
               <Route path="/scanner-management" component={ScannerManagement} />
+              <Route path="/pr-management" component={PrManagement} />
               <Route path="/e/:shortId" component={EventShortLink} />
               <Route path="/accedi">
                 <Redirect to="/" />

@@ -387,8 +387,8 @@ router.post("/api/pr/login", async (req: Request, res: Response) => {
       })
       .where(eq(prProfiles.id, profile.id));
     
-    // Set PR session
-    (req.session as any).prProfile = {
+    // Regenerate session for security (prevents session fixation)
+    const prProfileData = {
       id: profile.id,
       companyId: profile.companyId,
       firstName: profile.firstName,
@@ -398,22 +398,39 @@ router.post("/api/pr/login", async (req: Request, res: Response) => {
       email: profile.email
     };
     
-    res.json({
-      success: true,
-      profile: {
-        id: profile.id,
-        firstName: profile.firstName,
-        lastName: profile.lastName,
-        prCode: profile.prCode,
-        displayName: profile.displayName,
-        phone: profile.phone,
-        email: profile.email,
-        commissionType: profile.commissionType,
-        commissionValue: profile.commissionValue,
-        totalEarnings: profile.totalEarnings,
-        pendingEarnings: profile.pendingEarnings,
-        paidEarnings: profile.paidEarnings
+    req.session.regenerate((err) => {
+      if (err) {
+        console.error("Error regenerating session:", err);
+        return res.status(500).json({ error: "Errore durante il login" });
       }
+      
+      // Set PR session after regeneration
+      (req.session as any).prProfile = prProfileData;
+      
+      req.session.save((saveErr) => {
+        if (saveErr) {
+          console.error("Error saving session:", saveErr);
+          return res.status(500).json({ error: "Errore durante il login" });
+        }
+        
+        res.json({
+          success: true,
+          profile: {
+            id: profile.id,
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+            prCode: profile.prCode,
+            displayName: profile.displayName,
+            phone: profile.phone,
+            email: profile.email,
+            commissionType: profile.commissionType,
+            commissionValue: profile.commissionValue,
+            totalEarnings: profile.totalEarnings,
+            pendingEarnings: profile.pendingEarnings,
+            paidEarnings: profile.paidEarnings
+          }
+        });
+      });
     });
   } catch (error: any) {
     console.error("Error in PR login:", error);
@@ -463,8 +480,13 @@ router.get("/api/pr/me", async (req: Request, res: Response) => {
 
 // PR Logout
 router.post("/api/pr/logout", (req: Request, res: Response) => {
-  delete (req.session as any).prProfile;
-  res.json({ success: true });
+  // Regenerate session on logout for security
+  req.session.regenerate((err) => {
+    if (err) {
+      console.error("Error regenerating session on logout:", err);
+    }
+    res.json({ success: true });
+  });
 });
 
 // PR Update own profile (add email, update displayName)
@@ -556,6 +578,170 @@ router.post("/api/pr/change-password", async (req: Request, res: Response) => {
     res.json({ success: true, message: "Password aggiornata con successo" });
   } catch (error: any) {
     console.error("Error changing PR password:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== PR Wallet APIs (for PR session) ====================
+
+// Get PR wallet data (for PR session, not gestore)
+router.get("/api/pr/wallet", async (req: Request, res: Response) => {
+  try {
+    const prSession = (req.session as any).prProfile;
+    
+    if (!prSession) {
+      return res.status(401).json({ error: "Non autenticato" });
+    }
+    
+    const prId = prSession.id;
+    
+    // Get profile data
+    const [profile] = await db.select()
+      .from(prProfiles)
+      .where(eq(prProfiles.id, prId));
+    
+    if (!profile) {
+      return res.status(404).json({ error: "Profilo non trovato" });
+    }
+    
+    // Calculate this month's stats
+    const now = new Date();
+    const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    
+    const monthReservations = await db.select({
+      count: sql<number>`count(*)::int`,
+      total: sql<string>`COALESCE(SUM(${reservationPayments.prCommissionAmount}), 0)`,
+    })
+      .from(reservationPayments)
+      .where(and(
+        eq(reservationPayments.prProfileId, prId),
+        gte(reservationPayments.createdAt, startOfMonth)
+      ));
+    
+    // Get recent payouts
+    const recentPayouts = await db.select()
+      .from(prPayouts)
+      .where(eq(prPayouts.prProfileId, prId))
+      .orderBy(desc(prPayouts.createdAt))
+      .limit(10);
+    
+    res.json({
+      pendingEarnings: parseFloat(profile.pendingEarnings) || 0,
+      paidEarnings: parseFloat(profile.paidEarnings) || 0,
+      totalEarnings: parseFloat(profile.totalEarnings) || 0,
+      availableForPayout: parseFloat(profile.pendingEarnings) || 0,
+      thisMonthReservations: monthReservations[0]?.count || 0,
+      thisMonthEarnings: parseFloat(monthReservations[0]?.total) || 0,
+      recentPayouts,
+    });
+  } catch (error: any) {
+    console.error("Error getting PR wallet:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get PR reservations (for PR session)
+router.get("/api/pr/reservations", async (req: Request, res: Response) => {
+  try {
+    const prSession = (req.session as any).prProfile;
+    
+    if (!prSession) {
+      return res.status(401).json({ error: "Non autenticato" });
+    }
+    
+    const reservations = await db.select({
+      reservation: reservationPayments,
+      event: {
+        id: events.id,
+        name: events.name,
+        date: events.date,
+      }
+    })
+      .from(reservationPayments)
+      .leftJoin(events, eq(reservationPayments.eventId, events.id))
+      .where(eq(reservationPayments.prProfileId, prSession.id))
+      .orderBy(desc(reservationPayments.createdAt))
+      .limit(50);
+    
+    res.json(reservations.map(r => ({
+      ...r.reservation,
+      event: r.event
+    })));
+  } catch (error: any) {
+    console.error("Error getting PR reservations:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Request payout (for PR session)
+router.post("/api/pr/payouts", async (req: Request, res: Response) => {
+  try {
+    const prSession = (req.session as any).prProfile;
+    
+    if (!prSession) {
+      return res.status(401).json({ error: "Non autenticato" });
+    }
+    
+    // Get profile to check available balance
+    const [profile] = await db.select()
+      .from(prProfiles)
+      .where(eq(prProfiles.id, prSession.id));
+    
+    if (!profile) {
+      return res.status(404).json({ error: "Profilo non trovato" });
+    }
+    
+    const availableAmount = parseFloat(profile.pendingEarnings) || 0;
+    
+    if (availableAmount <= 0) {
+      return res.status(400).json({ error: "Nessun importo disponibile per il prelievo" });
+    }
+    
+    // Count pending reservations for this payout
+    const pendingReservations = await db.select({
+      count: sql<number>`count(*)::int`,
+    })
+      .from(reservationPayments)
+      .where(and(
+        eq(reservationPayments.prProfileId, prSession.id),
+        eq(reservationPayments.prCommissionPaid, false),
+        sql`${reservationPayments.prCommissionAmount} > 0`
+      ));
+    
+    // Create payout request
+    const [payout] = await db.insert(prPayouts).values({
+      prProfileId: prSession.id,
+      companyId: prSession.companyId,
+      amount: profile.pendingEarnings,
+      status: 'pending',
+      requestedAt: new Date(),
+      reservationCount: pendingReservations[0]?.count || 0,
+    }).returning();
+    
+    res.status(201).json(payout);
+  } catch (error: any) {
+    console.error("Error requesting payout:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get PR payouts (for PR session)
+router.get("/api/pr/payouts", async (req: Request, res: Response) => {
+  try {
+    const prSession = (req.session as any).prProfile;
+    
+    if (!prSession) {
+      return res.status(401).json({ error: "Non autenticato" });
+    }
+    
+    const payouts = await db.select()
+      .from(prPayouts)
+      .where(eq(prPayouts.prProfileId, prSession.id))
+      .orderBy(desc(prPayouts.createdAt));
+    
+    res.json(payouts);
+  } catch (error: any) {
+    console.error("Error getting PR payouts:", error);
     res.status(500).json({ error: error.message });
   }
 });

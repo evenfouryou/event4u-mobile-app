@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { useAuth } from "@/hooks/useAuth";
+import { useLocation } from "wouter";
+import { usePrAuth } from "@/hooks/usePrAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -44,7 +45,14 @@ import {
   ChevronRight,
   AlertCircle,
   Banknote,
+  Mail,
+  Lock,
+  LogOut,
+  User,
+  Settings,
 } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -95,22 +103,93 @@ const formatCurrency = (amount: number) => {
 };
 
 export default function PrWalletPage() {
-  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const { prProfile, isLoading: authLoading, isAuthenticated, logout, isLoggingOut, updateProfile, isUpdatingProfile, changePassword, isChangingPassword } = usePrAuth();
   const isMobile = useIsMobile();
   const { toast } = useToast();
   const [isPayoutDialogOpen, setIsPayoutDialogOpen] = useState(false);
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      setLocation("/pr/login");
+    }
+  }, [authLoading, isAuthenticated, setLocation]);
+
+  const handleAddEmail = () => {
+    if (!newEmail) return;
+    triggerHaptic('medium');
+    updateProfile({ email: newEmail }, {
+      onSuccess: () => {
+        toast({
+          title: "Email aggiunta",
+          description: "La tua email è stata aggiunta con successo.",
+        });
+        setIsEmailDialogOpen(false);
+        setNewEmail("");
+      },
+      onError: (error: Error) => {
+        toast({
+          title: "Errore",
+          description: error.message || "Impossibile aggiungere l'email.",
+          variant: "destructive",
+        });
+      },
+    });
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Errore",
+        description: "Le password non corrispondono.",
+        variant: "destructive",
+      });
+      return;
+    }
+    triggerHaptic('medium');
+    try {
+      await changePassword({ currentPassword, newPassword });
+      toast({
+        title: "Password cambiata",
+        description: "La tua password è stata cambiata con successo.",
+      });
+      setIsPasswordDialogOpen(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile cambiare la password.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleLogout = () => {
+    triggerHaptic('medium');
+    logout();
+  };
 
   const { data: wallet, isLoading, refetch, isRefetching } = useQuery<WalletData>({
-    queryKey: ["/api/reservations/my-wallet"],
+    queryKey: ["/api/pr/wallet"],
+    enabled: isAuthenticated,
   });
 
   const { data: allPayouts = [], isLoading: loadingPayouts } = useQuery<Payout[]>({
-    queryKey: ["/api/reservations/my-payouts"],
+    queryKey: ["/api/pr/payouts"],
+    enabled: isAuthenticated,
   });
 
   const requestPayoutMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", "/api/reservations/request-payout");
+      const response = await apiRequest("POST", "/api/pr/payouts");
       return response.json();
     },
     onSuccess: () => {
@@ -119,8 +198,8 @@ export default function PrWalletPage() {
         title: "Richiesta inviata",
         description: "La tua richiesta di pagamento è stata inviata con successo.",
       });
-      queryClient.invalidateQueries({ queryKey: ["/api/reservations/my-wallet"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/reservations/my-payouts"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pr/wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pr/payouts"] });
       setIsPayoutDialogOpen(false);
     },
     onError: (error: Error) => {
@@ -132,6 +211,21 @@ export default function PrWalletPage() {
       });
     },
   });
+
+  if (authLoading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+          <p className="text-muted-foreground mt-4">Caricamento...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return null;
+  }
 
   const handleRefresh = () => {
     triggerHaptic('medium');
@@ -293,6 +387,82 @@ export default function PrWalletPage() {
     </div>
   );
 
+  const ProfileCard = () => (
+    <motion.div
+      variants={cardVariants}
+      initial="hidden"
+      animate="visible"
+      transition={{ delay: 0.25 }}
+    >
+      <Card className="bg-card/80 backdrop-blur-sm border-border/50">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Settings className="w-5 h-5 text-primary" />
+            Profilo e Impostazioni
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/30">
+            <div className="flex items-center gap-3">
+              <User className="w-5 h-5 text-muted-foreground" />
+              <div>
+                <p className="font-medium text-foreground" data-testid="text-pr-name">
+                  {prProfile?.firstName} {prProfile?.lastName}
+                </p>
+                <p className="text-xs text-muted-foreground" data-testid="text-pr-phone">
+                  {prProfile?.phone}
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <div className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/30">
+            <div className="flex items-center gap-3">
+              <Mail className="w-5 h-5 text-muted-foreground" />
+              <div>
+                <p className="text-sm text-foreground">Email</p>
+                <p className="text-xs text-muted-foreground" data-testid="text-pr-email">
+                  {prProfile?.email || "Non impostata"}
+                </p>
+              </div>
+            </div>
+            {!prProfile?.email && (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsEmailDialogOpen(true)}
+                data-testid="button-add-email"
+              >
+                Aggiungi
+              </Button>
+            )}
+          </div>
+
+          <Button
+            variant="outline"
+            className="w-full gap-2"
+            onClick={() => setIsPasswordDialogOpen(true)}
+            data-testid="button-change-password"
+          >
+            <Lock className="w-4 h-4" />
+            Cambia Password
+          </Button>
+
+          <Button
+            variant="destructive"
+            className="w-full gap-2"
+            onClick={handleLogout}
+            disabled={isLoggingOut}
+            data-testid="button-logout"
+          >
+            <LogOut className="w-4 h-4" />
+            {isLoggingOut ? "Disconnessione..." : "Esci"}
+          </Button>
+        </CardContent>
+      </Card>
+    </motion.div>
+  );
+
   const PayoutsList = ({ payouts }: { payouts: Payout[] }) => (
     <motion.div
       variants={cardVariants}
@@ -380,9 +550,113 @@ export default function PrWalletPage() {
           <>
             <WalletBalanceCard />
             <StatsCards />
+            <ProfileCard />
             <PayoutsList payouts={allPayouts} />
           </>
         )}
+
+        <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+          <DialogContent className="mx-4" data-testid="dialog-add-email">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Mail className="w-5 h-5 text-primary" />
+                Aggiungi Email
+              </DialogTitle>
+              <DialogDescription>
+                Aggiungi un indirizzo email al tuo profilo PR.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  placeholder="tua@email.com"
+                  value={newEmail}
+                  onChange={(e) => setNewEmail(e.target.value)}
+                  data-testid="input-new-email"
+                />
+              </div>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsEmailDialogOpen(false)}
+                disabled={isUpdatingProfile}
+              >
+                Annulla
+              </Button>
+              <Button
+                onClick={handleAddEmail}
+                disabled={isUpdatingProfile || !newEmail}
+              >
+                {isUpdatingProfile ? "Salvataggio..." : "Salva"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+          <DialogContent className="mx-4" data-testid="dialog-change-password">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Lock className="w-5 h-5 text-primary" />
+                Cambia Password
+              </DialogTitle>
+              <DialogDescription>
+                Inserisci la password attuale e la nuova password.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="py-4 space-y-4">
+              <div className="space-y-2">
+                <Label htmlFor="currentPassword">Password Attuale</Label>
+                <Input
+                  id="currentPassword"
+                  type="password"
+                  value={currentPassword}
+                  onChange={(e) => setCurrentPassword(e.target.value)}
+                  data-testid="input-current-password"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="newPassword">Nuova Password</Label>
+                <Input
+                  id="newPassword"
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  data-testid="input-new-password"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="confirmPassword">Conferma Password</Label>
+                <Input
+                  id="confirmPassword"
+                  type="password"
+                  value={confirmPassword}
+                  onChange={(e) => setConfirmPassword(e.target.value)}
+                  data-testid="input-confirm-password"
+                />
+              </div>
+            </div>
+            <DialogFooter className="gap-2">
+              <Button
+                variant="outline"
+                onClick={() => setIsPasswordDialogOpen(false)}
+                disabled={isChangingPassword}
+              >
+                Annulla
+              </Button>
+              <Button
+                onClick={handleChangePassword}
+                disabled={isChangingPassword || !currentPassword || !newPassword || !confirmPassword}
+              >
+                {isChangingPassword ? "Salvataggio..." : "Cambia Password"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         <Dialog open={isPayoutDialogOpen} onOpenChange={setIsPayoutDialogOpen} data-testid="dialog-request-payout">
           <DialogContent className="mx-4">
@@ -531,7 +805,7 @@ export default function PrWalletPage() {
             </Card>
           </div>
 
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-3 gap-4">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
@@ -557,6 +831,43 @@ export default function PrWalletPage() {
                       {formatCurrency(wallet?.thisMonthEarnings || 0)}
                     </div>
                     <p className="text-sm text-muted-foreground">Guadagni Questo Mese</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center">
+                    <User className="w-6 h-6 text-primary" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-semibold text-foreground truncate" data-testid="text-pr-name-desktop">
+                      {prProfile?.firstName} {prProfile?.lastName}
+                    </div>
+                    <p className="text-sm text-muted-foreground truncate" data-testid="text-pr-phone-desktop">
+                      {prProfile?.phone}
+                    </p>
+                  </div>
+                  <div className="flex gap-2">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={() => setIsPasswordDialogOpen(true)}
+                      data-testid="button-change-password-desktop"
+                    >
+                      <Lock className="w-4 h-4" />
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      onClick={handleLogout}
+                      disabled={isLoggingOut}
+                      data-testid="button-logout-desktop"
+                    >
+                      <LogOut className="w-4 h-4" />
+                    </Button>
                   </div>
                 </div>
               </CardContent>
@@ -627,6 +938,109 @@ export default function PrWalletPage() {
           </Card>
         </>
       )}
+
+      <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+        <DialogContent data-testid="dialog-add-email-desktop">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="w-5 h-5 text-primary" />
+              Aggiungi Email
+            </DialogTitle>
+            <DialogDescription>
+              Aggiungi un indirizzo email al tuo profilo PR.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="email-desktop">Email</Label>
+              <Input
+                id="email-desktop"
+                type="email"
+                placeholder="tua@email.com"
+                value={newEmail}
+                onChange={(e) => setNewEmail(e.target.value)}
+                data-testid="input-new-email-desktop"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsEmailDialogOpen(false)}
+              disabled={isUpdatingProfile}
+            >
+              Annulla
+            </Button>
+            <Button
+              onClick={handleAddEmail}
+              disabled={isUpdatingProfile || !newEmail}
+            >
+              {isUpdatingProfile ? "Salvataggio..." : "Salva"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+        <DialogContent data-testid="dialog-change-password-desktop">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5 text-primary" />
+              Cambia Password
+            </DialogTitle>
+            <DialogDescription>
+              Inserisci la password attuale e la nuova password.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div className="space-y-2">
+              <Label htmlFor="currentPassword-desktop">Password Attuale</Label>
+              <Input
+                id="currentPassword-desktop"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                data-testid="input-current-password-desktop"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newPassword-desktop">Nuova Password</Label>
+              <Input
+                id="newPassword-desktop"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                data-testid="input-new-password-desktop"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword-desktop">Conferma Password</Label>
+              <Input
+                id="confirmPassword-desktop"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                data-testid="input-confirm-password-desktop"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setIsPasswordDialogOpen(false)}
+              disabled={isChangingPassword}
+            >
+              Annulla
+            </Button>
+            <Button
+              onClick={handleChangePassword}
+              disabled={isChangingPassword || !currentPassword || !newPassword || !confirmPassword}
+            >
+              {isChangingPassword ? "Salvataggio..." : "Cambia Password"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={isPayoutDialogOpen} onOpenChange={setIsPayoutDialogOpen}>
         <DialogContent data-testid="dialog-request-payout">

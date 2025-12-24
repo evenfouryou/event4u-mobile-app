@@ -328,6 +328,12 @@ export function AppSidebar() {
         group: "Gestione",
       },
       {
+        title: "Gestione PR",
+        icon: UserPlus,
+        url: "/pr-management",
+        group: "Gestione",
+      },
+      {
         title: "Scanner QR",
         icon: QrCode,
         url: "/scanner",
