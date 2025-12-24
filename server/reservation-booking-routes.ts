@@ -385,7 +385,9 @@ router.post("/api/reservations/pr-profiles/:id/impersonate", requireAuth, requir
     const { id } = req.params;
     const user = req.user as any;
     
-    console.log(`[PR-IMPERSONATE] Starting impersonation for PR ${id} by user ${user.id} (company: ${user.companyId})`);
+    // Debug: log full user object structure
+    console.log(`[PR-IMPERSONATE] req.user full object:`, JSON.stringify(user, null, 2));
+    console.log(`[PR-IMPERSONATE] Starting impersonation for PR ${id} by user ${user?.id} (company: ${user?.companyId})`);
     
     // Verify PR belongs to gestore's company
     const [profile] = await db.select()
