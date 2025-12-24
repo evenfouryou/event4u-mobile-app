@@ -1,5 +1,5 @@
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useState } from "react";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocation } from "wouter";
 import { motion } from "framer-motion";
@@ -15,12 +15,30 @@ import {
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import {
   Users,
   Building2,
   Calendar,
   ChevronLeft,
   Mail,
+  Settings,
+  Wine,
+  Calculator,
+  UserCheck,
+  Receipt,
+  FileText,
+  Ticket,
+  Loader2,
 } from "lucide-react";
 import {
   MobileAppLayout,
@@ -28,7 +46,25 @@ import {
   HapticButton,
   triggerHaptic,
 } from "@/components/mobile-primitives";
-import type { User, Company } from "@shared/schema";
+import { queryClient, apiRequest } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import type { User, Company, UserFeatures } from "@shared/schema";
+
+interface FeatureConfig {
+  key: keyof Omit<UserFeatures, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'canCreateProducts'>;
+  label: string;
+  description: string;
+  icon: React.ReactNode;
+}
+
+const featuresList: FeatureConfig[] = [
+  { key: 'beverageEnabled', label: 'Beverage', description: 'Gestione stock bevande e consumi', icon: <Wine className="h-4 w-4" /> },
+  { key: 'contabilitaEnabled', label: 'Contabilità', description: 'Costi fissi, extra e manutenzioni', icon: <Calculator className="h-4 w-4" /> },
+  { key: 'personaleEnabled', label: 'Personale', description: 'Anagrafica staff e pagamenti', icon: <UserCheck className="h-4 w-4" /> },
+  { key: 'cassaEnabled', label: 'Cassa', description: 'Settori, postazioni e fondi cassa', icon: <Receipt className="h-4 w-4" /> },
+  { key: 'nightFileEnabled', label: 'File della Serata', description: 'Documento integrato per evento', icon: <FileText className="h-4 w-4" /> },
+  { key: 'siaeEnabled', label: 'SIAE Biglietteria', description: 'Gestione biglietti, cassieri e lettore fiscale SIAE', icon: <Ticket className="h-4 w-4" /> },
+];
 
 const springTransition = { type: "spring", stiffness: 400, damping: 30 };
 
@@ -48,6 +84,18 @@ const cardVariants = {
 export default function AdminGestori() {
   const [, setLocation] = useLocation();
   const isMobile = useIsMobile();
+  const { toast } = useToast();
+
+  const [featuresDialogOpen, setFeaturesDialogOpen] = useState(false);
+  const [selectedGestore, setSelectedGestore] = useState<User | null>(null);
+  const [featureValues, setFeatureValues] = useState<Record<string, boolean>>({
+    beverageEnabled: true,
+    contabilitaEnabled: false,
+    personaleEnabled: false,
+    cassaEnabled: false,
+    nightFileEnabled: false,
+    siaeEnabled: false,
+  });
 
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
     queryKey: ["/api/users"],
@@ -56,6 +104,39 @@ export default function AdminGestori() {
   const { data: companies } = useQuery<Company[]>({
     queryKey: ["/api/companies"],
   });
+
+  const { data: selectedUserFeatures, isLoading: featuresLoading } = useQuery<UserFeatures>({
+    queryKey: ["/api/user-features", selectedGestore?.id],
+    enabled: !!selectedGestore?.id && featuresDialogOpen,
+  });
+
+  const updateFeaturesMutation = useMutation({
+    mutationFn: async (data: { userId: string; features: Record<string, boolean> }) => {
+      return apiRequest("PATCH", `/api/user-features/${data.userId}`, data.features);
+    },
+    onSuccess: () => {
+      toast({ title: "Funzionalità aggiornate", description: "Le impostazioni sono state salvate." });
+      queryClient.invalidateQueries({ queryKey: ["/api/user-features"] });
+      setFeaturesDialogOpen(false);
+    },
+    onError: () => {
+      toast({ title: "Errore", description: "Impossibile salvare le impostazioni.", variant: "destructive" });
+    },
+  });
+
+  // Update feature values when fetched
+  useMemo(() => {
+    if (selectedUserFeatures) {
+      setFeatureValues({
+        beverageEnabled: selectedUserFeatures.beverageEnabled ?? true,
+        contabilitaEnabled: selectedUserFeatures.contabilitaEnabled ?? false,
+        personaleEnabled: selectedUserFeatures.personaleEnabled ?? false,
+        cassaEnabled: selectedUserFeatures.cassaEnabled ?? false,
+        nightFileEnabled: selectedUserFeatures.nightFileEnabled ?? false,
+        siaeEnabled: selectedUserFeatures.siaeEnabled ?? false,
+      });
+    }
+  }, [selectedUserFeatures]);
 
   const gestori = useMemo(() => {
     return users?.filter((user) => user.role === "gestore") || [];
@@ -80,6 +161,20 @@ export default function AdminGestori() {
   const handleViewUsers = (gestore: User) => {
     triggerHaptic("medium");
     setLocation(`/admin/gestori/${gestore.id}/users`);
+  };
+
+  const handleOpenFeatures = (gestore: User) => {
+    triggerHaptic("medium");
+    setSelectedGestore(gestore);
+    setFeaturesDialogOpen(true);
+  };
+
+  const handleSaveFeatures = () => {
+    if (!selectedGestore) return;
+    updateFeaturesMutation.mutate({
+      userId: selectedGestore.id,
+      features: featureValues,
+    });
   };
 
   const renderGestoreCard = (gestore: User, index: number) => {
@@ -120,6 +215,15 @@ export default function AdminGestori() {
               </div>
             </div>
             <div className="flex flex-wrap gap-2 mt-4">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleOpenFeatures(gestore)}
+                data-testid={`button-features-${gestore.id}`}
+              >
+                <Settings className="h-4 w-4 mr-1" />
+                Moduli
+              </Button>
               <Button
                 variant="outline"
                 size="sm"
@@ -192,6 +296,15 @@ export default function AdminGestori() {
                     <Button
                       variant="outline"
                       size="sm"
+                      onClick={() => handleOpenFeatures(gestore)}
+                      data-testid={`button-features-${gestore.id}`}
+                    >
+                      <Settings className="h-4 w-4 mr-1" />
+                      Moduli
+                    </Button>
+                    <Button
+                      variant="outline"
+                      size="sm"
                       onClick={() => handleViewCompanies(gestore)}
                       data-testid={`button-view-companies-${gestore.id}`}
                     >
@@ -231,74 +344,144 @@ export default function AdminGestori() {
     </Card>
   );
 
+  const featuresDialog = (
+    <Dialog open={featuresDialogOpen} onOpenChange={setFeaturesDialogOpen}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <Settings className="h-5 w-5" />
+            Moduli Attivi
+          </DialogTitle>
+          <DialogDescription>
+            Gestisci i moduli abilitati per {selectedGestore?.firstName} {selectedGestore?.lastName}
+          </DialogDescription>
+        </DialogHeader>
+        
+        {featuresLoading ? (
+          <div className="flex items-center justify-center py-8">
+            <Loader2 className="h-6 w-6 animate-spin" />
+          </div>
+        ) : (
+          <div className="space-y-4 py-4">
+            {featuresList.map((feature) => (
+              <div key={feature.key} className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/50">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-md bg-primary/10 text-primary">
+                    {feature.icon}
+                  </div>
+                  <div>
+                    <Label htmlFor={feature.key} className="font-medium">
+                      {feature.label}
+                    </Label>
+                    <p className="text-xs text-muted-foreground">{feature.description}</p>
+                  </div>
+                </div>
+                <Switch
+                  id={feature.key}
+                  checked={featureValues[feature.key] ?? false}
+                  onCheckedChange={(checked) => 
+                    setFeatureValues(prev => ({ ...prev, [feature.key]: checked }))
+                  }
+                  data-testid={`switch-${feature.key}`}
+                />
+              </div>
+            ))}
+          </div>
+        )}
+        
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setFeaturesDialogOpen(false)}>
+            Annulla
+          </Button>
+          <Button 
+            onClick={handleSaveFeatures} 
+            disabled={updateFeaturesMutation.isPending}
+            data-testid="button-save-features"
+          >
+            {updateFeaturesMutation.isPending ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : null}
+            Salva
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (isMobile) {
     return (
-      <MobileAppLayout
-        header={
-          <MobileHeader
-            title="Gestori"
-            leftAction={
-              <HapticButton
-                variant="ghost"
-                size="icon"
-                onClick={() => setLocation("/")}
-                data-testid="button-back"
-              >
-                <ChevronLeft className="h-5 w-5" />
-              </HapticButton>
-            }
-          />
-        }
-      >
-        <div className="py-4 space-y-3">
-          {usersLoading ? (
-            Array.from({ length: 3 }).map((_, i) => (
-              <Skeleton key={i} className="h-32 w-full rounded-xl" />
-            ))
-          ) : gestori.length > 0 ? (
-            gestori.map((gestore, index) => renderGestoreCard(gestore, index))
-          ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              Nessun gestore trovato
-            </div>
-          )}
-        </div>
-      </MobileAppLayout>
+      <>
+        <MobileAppLayout
+          header={
+            <MobileHeader
+              title="Gestori"
+              leftAction={
+                <HapticButton
+                  variant="ghost"
+                  size="icon"
+                  onClick={() => setLocation("/")}
+                  data-testid="button-back"
+                >
+                  <ChevronLeft className="h-5 w-5" />
+                </HapticButton>
+              }
+            />
+          }
+        >
+          <div className="py-4 space-y-3">
+            {usersLoading ? (
+              Array.from({ length: 3 }).map((_, i) => (
+                <Skeleton key={i} className="h-32 w-full rounded-xl" />
+              ))
+            ) : gestori.length > 0 ? (
+              gestori.map((gestore, index) => renderGestoreCard(gestore, index))
+            ) : (
+              <div className="text-center py-12 text-muted-foreground">
+                Nessun gestore trovato
+              </div>
+            )}
+          </div>
+        </MobileAppLayout>
+        {featuresDialog}
+      </>
     );
   }
 
   return (
-    <div className="p-6 max-w-7xl mx-auto">
-      <div className="flex items-center gap-4 mb-6">
-        <Button
-          variant="ghost"
-          size="icon"
-          onClick={() => setLocation("/")}
-          data-testid="button-back"
-        >
-          <ChevronLeft className="h-5 w-5" />
-        </Button>
-        <div>
-          <h1 className="text-2xl font-bold">Gestione Gestori</h1>
-          <p className="text-muted-foreground">
-            Gestisci i gestori e le loro associazioni con le aziende
-          </p>
+    <>
+      <div className="p-6 max-w-7xl mx-auto">
+        <div className="flex items-center gap-4 mb-6">
+          <Button
+            variant="ghost"
+            size="icon"
+            onClick={() => setLocation("/")}
+            data-testid="button-back"
+          >
+            <ChevronLeft className="h-5 w-5" />
+          </Button>
+          <div>
+            <h1 className="text-2xl font-bold">Gestione Gestori</h1>
+            <p className="text-muted-foreground">
+              Gestisci i gestori e le loro associazioni con le aziende
+            </p>
+          </div>
         </div>
-      </div>
 
-      {usersLoading ? (
-        <Card>
-          <CardContent className="p-6">
-            <div className="space-y-4">
-              {Array.from({ length: 5 }).map((_, i) => (
-                <Skeleton key={i} className="h-12 w-full" />
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      ) : (
-        renderDesktopTable()
-      )}
-    </div>
+        {usersLoading ? (
+          <Card>
+            <CardContent className="p-6">
+              <div className="space-y-4">
+                {Array.from({ length: 5 }).map((_, i) => (
+                  <Skeleton key={i} className="h-12 w-full" />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        ) : (
+          renderDesktopTable()
+        )}
+      </div>
+      {featuresDialog}
+    </>
   );
 }
