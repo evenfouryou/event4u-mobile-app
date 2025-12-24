@@ -114,9 +114,17 @@ export default function AdminGestori() {
     mutationFn: async (data: { userId: string; features: Record<string, boolean> }) => {
       return apiRequest("PATCH", `/api/user-features/${data.userId}`, data.features);
     },
-    onSuccess: () => {
+    onSuccess: (_data, variables) => {
       toast({ title: "Funzionalità aggiornate", description: "Le impostazioni sono state salvate." });
-      queryClient.invalidateQueries({ queryKey: ["/api/user-features"] });
+      // Invalidate all user-features related queries to ensure UI updates everywhere
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey[0];
+          return typeof key === 'string' && key.startsWith('/api/user-features');
+        }
+      });
+      // Also specifically invalidate the edited user's features
+      queryClient.invalidateQueries({ queryKey: ["/api/user-features", variables.userId] });
       setFeaturesDialogOpen(false);
     },
     onError: () => {
