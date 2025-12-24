@@ -428,35 +428,37 @@ export default function PrManagement() {
       </div>
 
       <Card>
-        <CardHeader>
-          <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div>
-              <CardTitle>Profili PR</CardTitle>
-              <CardDescription>Gestisci i profili PR della tua azienda</CardDescription>
-            </div>
-            <div className="flex items-center gap-2">
-              <div className="relative flex-1 md:w-64">
-                <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-                <Input
-                  placeholder="Cerca per nome, telefono..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-9"
-                  data-testid="input-search-pr"
-                />
+        <CardHeader className="pb-3">
+          <div className="flex flex-col gap-3">
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="text-lg md:text-xl">Profili PR</CardTitle>
+                {!isMobile && <CardDescription>Gestisci i profili PR della tua azienda</CardDescription>}
               </div>
-              <Button
-                variant="outline"
-                size="icon"
-                onClick={() => refetch()}
-                data-testid="button-refresh-pr"
-              >
-                <RefreshCw className="h-4 w-4" />
-              </Button>
-              <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-pr">
-                <Plus className="w-4 h-4 mr-2" />
-                Nuovo PR
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  variant="outline"
+                  size="icon"
+                  onClick={() => refetch()}
+                  data-testid="button-refresh-pr"
+                >
+                  <RefreshCw className="h-4 w-4" />
+                </Button>
+                <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create-pr" size={isMobile ? "sm" : "default"}>
+                  <Plus className="w-4 h-4 mr-1" />
+                  {isMobile ? "Nuovo" : "Nuovo PR"}
+                </Button>
+              </div>
+            </div>
+            <div className="relative w-full">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Cerca per nome, telefono..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9"
+                data-testid="input-search-pr"
+              />
             </div>
           </div>
         </CardHeader>
@@ -468,6 +470,120 @@ export default function PrManagement() {
               <p className="text-muted-foreground">
                 {searchQuery ? "Nessun risultato per la ricerca" : "Crea il tuo primo profilo PR"}
               </p>
+            </div>
+          ) : isMobile ? (
+            <div className="space-y-3">
+              {filteredProfiles.map((pr) => (
+                <Card key={pr.id} data-testid={`card-pr-${pr.id}`} className="overflow-hidden">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-3">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-2">
+                          <span className="font-semibold truncate">{getPrName(pr)}</span>
+                          {pr.isActive ? (
+                            <Badge className="bg-green-500/10 text-green-500 border-green-500/20 text-xs shrink-0">
+                              Attivo
+                            </Badge>
+                          ) : (
+                            <Badge className="bg-red-500/10 text-red-500 border-red-500/20 text-xs shrink-0">
+                              Disattivato
+                            </Badge>
+                          )}
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 text-sm">
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <Phone className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">{pr.phone}</span>
+                          </div>
+                          <Badge variant="outline" className="font-mono text-xs w-fit">
+                            <Hash className="h-3 w-3 mr-1" />
+                            {pr.prCode}
+                          </Badge>
+                          <div className="flex items-center gap-1 text-muted-foreground">
+                            {pr.commissionType === 'percentage' ? (
+                              <Percent className="h-3.5 w-3.5" />
+                            ) : (
+                              <Euro className="h-3.5 w-3.5" />
+                            )}
+                            <span>{getCommissionLabel(pr.commissionType, pr.commissionValue)}</span>
+                          </div>
+                          <div className="flex items-center gap-1 font-medium text-primary">
+                            <Euro className="h-3.5 w-3.5" />
+                            <span>{toNumber(pr.totalEarnings).toFixed(2)}</span>
+                          </div>
+                        </div>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="shrink-0" data-testid={`button-pr-actions-${pr.id}`}>
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem
+                            onClick={() => impersonatePrMutation.mutate(pr.id)}
+                            disabled={impersonatePrMutation.isPending || !pr.isActive}
+                            data-testid={`button-impersonate-pr-${pr.id}`}
+                          >
+                            <LogIn className="h-4 w-4 mr-2" />
+                            Entra come PR
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => resendSmsMutation.mutate(pr.id)}
+                            disabled={resendSmsMutation.isPending}
+                            data-testid={`button-resend-sms-${pr.id}`}
+                          >
+                            <MessageSquare className="h-4 w-4 mr-2" />
+                            Reinvia SMS
+                          </DropdownMenuItem>
+                          <DropdownMenuItem
+                            onClick={() => handleEdit(pr)}
+                            data-testid={`button-edit-pr-${pr.id}`}
+                          >
+                            <Edit className="h-4 w-4 mr-2" />
+                            Modifica
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          {pr.isActive ? (
+                            <DropdownMenuItem
+                              onClick={() => deactivatePrMutation.mutate(pr.id)}
+                              disabled={deactivatePrMutation.isPending}
+                              className="text-amber-500"
+                              data-testid={`button-deactivate-pr-${pr.id}`}
+                            >
+                              <UserX className="h-4 w-4 mr-2" />
+                              Disattiva
+                            </DropdownMenuItem>
+                          ) : (
+                            <DropdownMenuItem
+                              onClick={() => reactivatePrMutation.mutate(pr.id)}
+                              disabled={reactivatePrMutation.isPending}
+                              className="text-green-500"
+                              data-testid={`button-reactivate-pr-${pr.id}`}
+                            >
+                              <RotateCcw className="h-4 w-4 mr-2" />
+                              Riattiva
+                            </DropdownMenuItem>
+                          )}
+                          <DropdownMenuItem
+                            onClick={() => {
+                              if (confirm("Sei sicuro di voler eliminare permanentemente questo PR? Questa azione non può essere annullata.")) {
+                                deletePrMutation.mutate(pr.id);
+                              }
+                            }}
+                            disabled={deletePrMutation.isPending}
+                            className="text-destructive"
+                            data-testid={`button-delete-pr-${pr.id}`}
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Elimina
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
             </div>
           ) : (
             <div className="rounded-md border overflow-x-auto">
