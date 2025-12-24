@@ -126,3 +126,88 @@ export function isMSG91Configured(): boolean {
   const templateId = getMSG91TemplateId();
   return !!(authkey && templateId);
 }
+
+// ==================== PR Registration SMS ====================
+// Template ID: 64c4bc88d6fc05193a102042
+// Variables: ##name##, ##password##, ##access##
+
+const PR_REGISTRATION_TEMPLATE_ID = "64c4bc88d6fc05193a102042";
+
+interface SendPrCredentialsResult {
+  success: boolean;
+  message: string;
+  requestId?: string;
+}
+
+export async function sendPrCredentialsSMS(
+  phone: string,
+  name: string,
+  password: string,
+  accessLink: string
+): Promise<SendPrCredentialsResult> {
+  const authkey = getMSG91Authkey();
+  
+  console.log(`[MSG91] sendPrCredentialsSMS called for ${name} to ${phone}`);
+  console.log(`[MSG91] AUTHKEY configured: ${!!authkey}`);
+  
+  if (!authkey) {
+    console.error("[MSG91] Missing AUTHKEY");
+    return { success: false, message: "Configurazione MSG91 mancante" };
+  }
+
+  const formattedPhone = formatPhoneNumber(phone);
+  
+  const payload = {
+    flow_id: PR_REGISTRATION_TEMPLATE_ID,
+    recipients: [
+      {
+        mobiles: formattedPhone,
+        name: name,
+        password: password,
+        access: accessLink
+      }
+    ]
+  };
+
+  console.log(`[MSG91] Sending PR credentials SMS to ${formattedPhone}`);
+
+  try {
+    const response = await fetch(MSG91_FLOW_URL, {
+      method: 'POST',
+      headers: {
+        'authkey': authkey,
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
+    });
+
+    const data: MSG91Response = await response.json();
+    console.log(`[MSG91] PR credentials SMS response:`, data);
+
+    if (data.type === 'success') {
+      return { 
+        success: true, 
+        message: "Credenziali inviate via SMS",
+        requestId: data.message
+      };
+    } else {
+      return { 
+        success: false, 
+        message: data.message || "Errore nell'invio SMS" 
+      };
+    }
+  } catch (error: any) {
+    console.error("[MSG91] PR credentials SMS error:", error);
+    return { success: false, message: "Errore di connessione al servizio SMS" };
+  }
+}
+
+export function generatePrPassword(): string {
+  // Genera password alfanumerica di 8 caratteri
+  const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+  let password = '';
+  for (let i = 0; i < 8; i++) {
+    password += chars.charAt(Math.floor(Math.random() * chars.length));
+  }
+  return password;
+}

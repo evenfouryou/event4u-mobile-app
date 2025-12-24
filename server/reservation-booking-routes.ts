@@ -2,10 +2,12 @@
 // NOTA LEGALE: Questo è un "servizio di prenotazione", NON biglietteria SIAE
 import { Router, Request, Response, NextFunction } from "express";
 import { db } from "./db";
-import { eq, and, desc, sql, gte, lte, sum } from "drizzle-orm";
+import { eq, and, desc, sql, gte, lte, sum, or } from "drizzle-orm";
 import { z } from "zod";
 import crypto from "crypto";
 import QRCode from "qrcode";
+import bcrypt from "bcryptjs";
+import { sendPrCredentialsSMS, generatePrPassword } from "./msg91-service";
 import {
   prProfiles,
   reservationPayments,
@@ -17,6 +19,7 @@ import {
   tableReservations,
   insertPrProfileSchema,
   updatePrProfileSchema,
+  createPrByGestoreSchema,
   insertReservationPaymentSchema,
   updateReservationPaymentSchema,
   insertPrPayoutSchema,
@@ -170,10 +173,25 @@ router.get("/api/reservations/my-profile", requireAuth, requirePrOrHigher, async
   }
 });
 
-// Create PR profile
+// Create PR profile (by Gestore) - sends SMS with credentials
 router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
+    
+    // Validate input with gestore schema
+    const validated = createPrByGestoreSchema.parse(req.body);
+    
+    // Check if phone already exists
+    const [existingPhone] = await db.select()
+      .from(prProfiles)
+      .where(and(
+        eq(prProfiles.phone, validated.phone),
+        eq(prProfiles.companyId, user.companyId)
+      ));
+    
+    if (existingPhone) {
+      return res.status(400).json({ error: "Questo numero di telefono è già registrato come PR" });
+    }
     
     // Generate unique PR code
     let prCode = generatePrCode();
@@ -185,14 +203,47 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
       attempts++;
     }
     
-    const validated = insertPrProfileSchema.parse({
-      ...req.body,
-      companyId: user.companyId,
-      prCode,
-    });
+    // Generate password and hash it
+    const password = generatePrPassword();
+    const passwordHash = await bcrypt.hash(password, 10);
     
-    const [profile] = await db.insert(prProfiles).values(validated).returning();
-    res.status(201).json(profile);
+    // Create PR profile
+    const [profile] = await db.insert(prProfiles).values({
+      companyId: user.companyId,
+      firstName: validated.firstName,
+      lastName: validated.lastName,
+      phone: validated.phone,
+      displayName: `${validated.firstName} ${validated.lastName}`,
+      prCode,
+      passwordHash,
+      commissionType: validated.commissionType,
+      commissionValue: validated.commissionValue,
+      defaultListCommission: validated.defaultListCommission || '0',
+      defaultTableCommission: validated.defaultTableCommission || '0',
+    }).returning();
+    
+    // Build access link
+    const baseUrl = process.env.CUSTOM_DOMAIN 
+      ? `https://${process.env.CUSTOM_DOMAIN}` 
+      : process.env.PUBLIC_URL || 'https://eventfouryou.com';
+    const accessLink = `${baseUrl}/pr/login`;
+    
+    // Send SMS with credentials
+    const smsResult = await sendPrCredentialsSMS(
+      validated.phone,
+      validated.firstName,
+      password,
+      accessLink
+    );
+    
+    console.log(`[PR] Created PR ${profile.id} for ${validated.firstName} ${validated.lastName}, SMS: ${smsResult.success ? 'sent' : 'failed'}`);
+    
+    res.status(201).json({
+      ...profile,
+      passwordHash: undefined, // Don't return hash
+      smsSent: smsResult.success,
+      smsMessage: smsResult.message
+    });
   } catch (error: any) {
     console.error("Error creating PR profile:", error);
     if (error instanceof z.ZodError) {
@@ -244,6 +295,267 @@ router.delete("/api/reservations/pr-profiles/:id", requireAuth, requireGestore, 
     res.status(204).send();
   } catch (error: any) {
     console.error("Error deleting PR profile:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Resend PR credentials SMS
+router.post("/api/reservations/pr-profiles/:id/resend-sms", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    
+    const [profile] = await db.select()
+      .from(prProfiles)
+      .where(eq(prProfiles.id, id));
+    
+    if (!profile) {
+      return res.status(404).json({ error: "Profilo PR non trovato" });
+    }
+    
+    // Generate new password
+    const password = generatePrPassword();
+    const passwordHash = await bcrypt.hash(password, 10);
+    
+    // Update password hash
+    await db.update(prProfiles)
+      .set({ passwordHash, updatedAt: new Date() })
+      .where(eq(prProfiles.id, id));
+    
+    // Build access link
+    const baseUrl = process.env.CUSTOM_DOMAIN 
+      ? `https://${process.env.CUSTOM_DOMAIN}` 
+      : process.env.PUBLIC_URL || 'https://eventfouryou.com';
+    const accessLink = `${baseUrl}/pr/login`;
+    
+    // Send SMS
+    const smsResult = await sendPrCredentialsSMS(
+      profile.phone,
+      profile.firstName,
+      password,
+      accessLink
+    );
+    
+    res.json({ 
+      success: smsResult.success, 
+      message: smsResult.message 
+    });
+  } catch (error: any) {
+    console.error("Error resending PR credentials:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== PR Authentication APIs ====================
+
+// PR Login via phone + password
+router.post("/api/pr/login", async (req: Request, res: Response) => {
+  try {
+    const { phone, password } = req.body;
+    
+    if (!phone || !password) {
+      return res.status(400).json({ error: "Telefono e password richiesti" });
+    }
+    
+    // Find PR by phone
+    const [profile] = await db.select()
+      .from(prProfiles)
+      .where(eq(prProfiles.phone, phone));
+    
+    if (!profile) {
+      return res.status(401).json({ error: "Credenziali non valide" });
+    }
+    
+    if (!profile.isActive) {
+      return res.status(401).json({ error: "Account disattivato" });
+    }
+    
+    if (!profile.passwordHash) {
+      return res.status(401).json({ error: "Account non configurato. Contatta il gestore." });
+    }
+    
+    // Verify password
+    const isValid = await bcrypt.compare(password, profile.passwordHash);
+    if (!isValid) {
+      return res.status(401).json({ error: "Credenziali non valide" });
+    }
+    
+    // Update last login
+    await db.update(prProfiles)
+      .set({ 
+        lastLoginAt: new Date(),
+        phoneVerified: true 
+      })
+      .where(eq(prProfiles.id, profile.id));
+    
+    // Set PR session
+    (req.session as any).prProfile = {
+      id: profile.id,
+      companyId: profile.companyId,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      prCode: profile.prCode,
+      phone: profile.phone,
+      email: profile.email
+    };
+    
+    res.json({
+      success: true,
+      profile: {
+        id: profile.id,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        prCode: profile.prCode,
+        displayName: profile.displayName,
+        phone: profile.phone,
+        email: profile.email,
+        commissionType: profile.commissionType,
+        commissionValue: profile.commissionValue,
+        totalEarnings: profile.totalEarnings,
+        pendingEarnings: profile.pendingEarnings,
+        paidEarnings: profile.paidEarnings
+      }
+    });
+  } catch (error: any) {
+    console.error("Error in PR login:", error);
+    res.status(500).json({ error: "Errore durante il login" });
+  }
+});
+
+// Get current PR session
+router.get("/api/pr/me", async (req: Request, res: Response) => {
+  try {
+    const prSession = (req.session as any).prProfile;
+    
+    if (!prSession) {
+      return res.status(401).json({ error: "Non autenticato" });
+    }
+    
+    // Get fresh profile data
+    const [profile] = await db.select()
+      .from(prProfiles)
+      .where(eq(prProfiles.id, prSession.id));
+    
+    if (!profile || !profile.isActive) {
+      delete (req.session as any).prProfile;
+      return res.status(401).json({ error: "Sessione non valida" });
+    }
+    
+    res.json({
+      id: profile.id,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      prCode: profile.prCode,
+      displayName: profile.displayName,
+      phone: profile.phone,
+      email: profile.email,
+      commissionType: profile.commissionType,
+      commissionValue: profile.commissionValue,
+      totalEarnings: profile.totalEarnings,
+      pendingEarnings: profile.pendingEarnings,
+      paidEarnings: profile.paidEarnings,
+      companyId: profile.companyId
+    });
+  } catch (error: any) {
+    console.error("Error getting PR profile:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PR Logout
+router.post("/api/pr/logout", (req: Request, res: Response) => {
+  delete (req.session as any).prProfile;
+  res.json({ success: true });
+});
+
+// PR Update own profile (add email, update displayName)
+router.patch("/api/pr/me", async (req: Request, res: Response) => {
+  try {
+    const prSession = (req.session as any).prProfile;
+    
+    if (!prSession) {
+      return res.status(401).json({ error: "Non autenticato" });
+    }
+    
+    const { email, displayName, bio } = req.body;
+    
+    const updateData: any = { updatedAt: new Date() };
+    if (email !== undefined) updateData.email = email;
+    if (displayName !== undefined) updateData.displayName = displayName;
+    if (bio !== undefined) updateData.bio = bio;
+    
+    const [updated] = await db.update(prProfiles)
+      .set(updateData)
+      .where(eq(prProfiles.id, prSession.id))
+      .returning();
+    
+    if (!updated) {
+      return res.status(404).json({ error: "Profilo non trovato" });
+    }
+    
+    // Update session
+    (req.session as any).prProfile = {
+      ...prSession,
+      email: updated.email
+    };
+    
+    res.json({
+      id: updated.id,
+      firstName: updated.firstName,
+      lastName: updated.lastName,
+      prCode: updated.prCode,
+      displayName: updated.displayName,
+      phone: updated.phone,
+      email: updated.email
+    });
+  } catch (error: any) {
+    console.error("Error updating PR profile:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// PR Change password
+router.post("/api/pr/change-password", async (req: Request, res: Response) => {
+  try {
+    const prSession = (req.session as any).prProfile;
+    
+    if (!prSession) {
+      return res.status(401).json({ error: "Non autenticato" });
+    }
+    
+    const { currentPassword, newPassword } = req.body;
+    
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({ error: "Password attuale e nuova password richieste" });
+    }
+    
+    if (newPassword.length < 6) {
+      return res.status(400).json({ error: "La nuova password deve avere almeno 6 caratteri" });
+    }
+    
+    // Get current profile
+    const [profile] = await db.select()
+      .from(prProfiles)
+      .where(eq(prProfiles.id, prSession.id));
+    
+    if (!profile || !profile.passwordHash) {
+      return res.status(400).json({ error: "Account non configurato" });
+    }
+    
+    // Verify current password
+    const isValid = await bcrypt.compare(currentPassword, profile.passwordHash);
+    if (!isValid) {
+      return res.status(401).json({ error: "Password attuale non corretta" });
+    }
+    
+    // Hash and update new password
+    const newPasswordHash = await bcrypt.hash(newPassword, 10);
+    await db.update(prProfiles)
+      .set({ passwordHash: newPasswordHash, updatedAt: new Date() })
+      .where(eq(prProfiles.id, prSession.id));
+    
+    res.json({ success: true, message: "Password aggiornata con successo" });
+  } catch (error: any) {
+    console.error("Error changing PR password:", error);
     res.status(500).json({ error: error.message });
   }
 });

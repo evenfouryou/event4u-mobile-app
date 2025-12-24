@@ -4794,10 +4794,24 @@ export type UpdateEventZoneMapping = z.infer<typeof updateEventZoneMappingSchema
 // NOTA LEGALE: Si tratta di "servizio di prenotazione", NON biglietteria
 
 // PR Profiles - Profili PR con commissioni
+// Il PR viene registrato dal gestore con nome, cognome, telefono
+// Riceve SMS con password e link di accesso
+// Può aggiungere email successivamente al login
 export const prProfiles = pgTable("pr_profiles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  userId: varchar("user_id").notNull().references(() => users.id).unique(),
+  userId: varchar("user_id").references(() => users.id).unique(), // Opzionale - collegato dopo se necessario
   companyId: varchar("company_id").notNull().references(() => companies.id),
+  
+  // Dati anagrafici PR (registrazione via gestore)
+  firstName: varchar("first_name", { length: 100 }).notNull(),
+  lastName: varchar("last_name", { length: 100 }).notNull(),
+  phone: varchar("phone", { length: 20 }).notNull(),
+  email: varchar("email", { length: 255 }), // Opzionale - aggiunto dal PR dopo login
+  
+  // Autenticazione PR (login via telefono + password)
+  passwordHash: varchar("password_hash", { length: 255 }), // Hash della password inviata via SMS
+  phoneVerified: boolean("phone_verified").notNull().default(false),
+  
   prCode: varchar("pr_code", { length: 20 }).notNull().unique(), // Codice univoco per link/tracking
   displayName: varchar("display_name", { length: 100 }),
   bio: text("bio"),
@@ -4810,9 +4824,13 @@ export const prProfiles = pgTable("pr_profiles", {
   pendingEarnings: decimal("pending_earnings", { precision: 12, scale: 2 }).notNull().default('0'),
   paidEarnings: decimal("paid_earnings", { precision: 12, scale: 2 }).notNull().default('0'),
   isActive: boolean("is_active").notNull().default(true),
+  lastLoginAt: timestamp("last_login_at"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
-});
+}, (table) => [
+  index("idx_pr_profiles_phone").on(table.phone),
+  index("idx_pr_profiles_company").on(table.companyId),
+]);
 
 export const prProfilesRelations = relations(prProfiles, ({ one, many }) => ({
   user: one(users, {
@@ -4995,13 +5013,28 @@ export const eventReservationSettingsRelations = relations(eventReservationSetti
 
 export const insertPrProfileSchema = createInsertSchema(prProfiles).omit({
   id: true,
+  passwordHash: true,
+  phoneVerified: true,
   totalEarnings: true,
   pendingEarnings: true,
   paidEarnings: true,
+  lastLoginAt: true,
   createdAt: true,
   updatedAt: true,
 });
-export const updatePrProfileSchema = insertPrProfileSchema.partial().omit({ userId: true, companyId: true });
+export const updatePrProfileSchema = insertPrProfileSchema.partial().omit({ userId: true, companyId: true, phone: true });
+
+// Schema specifico per creazione PR da gestore (solo campi essenziali)
+export const createPrByGestoreSchema = z.object({
+  firstName: z.string().min(1, "Nome richiesto"),
+  lastName: z.string().min(1, "Cognome richiesto"),
+  phone: z.string().min(10, "Telefono non valido"),
+  commissionType: z.enum(['percentage', 'fixed']).default('percentage'),
+  commissionValue: z.string().default('10'),
+  defaultListCommission: z.string().optional(),
+  defaultTableCommission: z.string().optional(),
+});
+export type CreatePrByGestore = z.infer<typeof createPrByGestoreSchema>;
 
 export const insertReservationPaymentSchema = createInsertSchema(reservationPayments).omit({
   id: true,
