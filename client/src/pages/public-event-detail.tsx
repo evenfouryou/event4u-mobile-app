@@ -969,7 +969,7 @@ export default function PublicEventDetailPage() {
     (!event?.requiresNominative || (firstName && lastName));
 
   const handlePurchase = async () => {
-    if (!canPurchase || !selectedSector || !event) return;
+    if (!canPurchase || !selectedSector || !event || isAdding) return;
 
     triggerHaptic('medium');
     setIsAdding(true);
