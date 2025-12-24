@@ -1,0 +1,104 @@
+Sì Jonathan, dal punto di vista legale è assolutamente possibile offrire solo la prenotazione a pagamento tramite app, senza emettere un biglietto, a patto che il modello sia impostato correttamente.
+Ti spiego in modo chiaro e “a prova di controlli”.
+
+⸻
+
+🔹 Prenotazione a pagamento ≠ Biglietto
+
+La prenotazione e il biglietto di ingresso sono due cose giuridicamente diverse.
+
+✅ È lecito:
+	•	Far pagare un servizio di prenotazione
+	•	Usare QR code solo come titolo di prenotazione
+	•	Consentire l’accesso solo dopo verifica all’ingresso
+	•	Decidere l’accesso al momento del check-in
+
+👉 In questo caso non stai vendendo un evento, ma un servizio digitale di prenotazione/accesso prioritario.
+
+⸻
+
+🔹 Come deve essere strutturato (punto chiave)
+
+Per essere in regola, devi chiarire contrattualmente e comunicativamente che:
+
+❗ Il pagamento riguarda esclusivamente il servizio di prenotazione
+❗ L’accesso resta soggetto a verifica all’ingresso
+
+Esempio corretto di dicitura:
+
+“Il pagamento si riferisce esclusivamente al servizio di prenotazione e gestione dell’accesso.
+L’ingresso è subordinato al rispetto delle condizioni del locale e alla verifica in fase di accreditamento.”
+
+Questa frase ti tutela legalmente.
+
+⸻
+
+🔹 QR Code: come usarlo correttamente
+
+Il QR code NON deve essere presentato come biglietto.
+
+✅ Il QR code serve a:
+	•	Identificare la prenotazione
+	•	Verificare:
+	•	Nome
+	•	Lista
+	•	Orario
+	•	Stato pagamento
+	•	Consentire o negare l’accesso in tempo reale
+
+👉 È perfetto il modello che stai già pensando con scanner + validazione all’ingresso.
+
+⸻
+
+🔹 Quando SERVE il biglietto (caso opposto)
+
+Il biglietto diventa necessario solo se:
+	•	L’evento è spettacolo pubblico (concerti, teatro, eventi SIAE)
+	•	Il pagamento garantisce l’ingresso
+	•	Il QR code è presentato come titolo di accesso definitivo
+
+In quel caso:
+	•	Serve biglietteria
+	•	Serve gestione fiscale specifica
+	•	Spesso entra in gioco SIAE
+
+👉 Non è il tuo modello.
+
+⸻
+
+🔹 Il tuo modello (Event Four You) è LEGALMENTE SOLIDO
+
+Nel tuo caso:
+	•	App = piattaforma di prenotazione
+	•	Pagamento = servizio digitale
+	•	Accesso = decisione del locale
+	•	QR code = strumento di controllo, non biglietto
+
+✔️ Modello usato da:
+	•	Club privati
+	•	Discoteche
+	•	Eventi su lista
+	•	Accessi selezionati
+
+⸻
+
+🔹 Consiglio finale (importante)
+
+Ti consiglio di inserire ovunque (app + termini):
+	•	“Prenotazione”
+	•	“Servizio”
+	•	“Accesso soggetto a verifica”
+
+❌ Evita parole come:
+	•	Biglietto
+	•	Ticket
+	•	Ingresso garantito
+
+⸻
+
+Se vuoi, nel prossimo messaggio posso:
+	•	Scriverti i Termini & Condizioni perfetti
+	•	Prepararti la dicitura ufficiale da mettere in app
+	•	Validare il flusso QR + pagamento + accesso come farebbe un avvocato 💼
+
+Dimmi tu 👍
