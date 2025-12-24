@@ -361,6 +361,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         await storage.updateUser(user.id, { companyId: finalCompanyId });
       }
 
+      // Create user_companies association if user has a company
+      if (finalCompanyId) {
+        await db.insert(userCompanies).values({
+          userId: user.id,
+          companyId: finalCompanyId,
+          role: 'owner',
+          isDefault: true,
+        }).onConflictDoNothing({ target: [userCompanies.userId, userCompanies.companyId] });
+      }
+
       // Send welcome email with verification link
       // Priority: CUSTOM_DOMAIN > PUBLIC_URL (production) > REPLIT_DEV_DOMAIN (development) > localhost
       const baseUrl = process.env.CUSTOM_DOMAIN 
@@ -1592,7 +1602,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  app.put('/api/user-features/:userId', isAuthenticated, async (req: any, res) => {
+  // Handler for updating user features (shared by PUT and PATCH)
+  const handleUpdateUserFeatures = async (req: any, res: any) => {
     try {
       const isSuperAdminUser = await isSuperAdmin(req);
       const isGestoreUser = await isGestore(req);
@@ -1631,7 +1642,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.error("Error updating user features:", error);
       res.status(500).json({ message: "Failed to update user features" });
     }
-  });
+  };
+
+  app.put('/api/user-features/:userId', isAuthenticated, handleUpdateUserFeatures);
+  app.patch('/api/user-features/:userId', isAuthenticated, handleUpdateUserFeatures);
 
   // ===== LOCATIONS =====
   app.get('/api/locations', isAuthenticated, async (req: any, res) => {
@@ -3907,6 +3921,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         phone: phone || null,
         emailVerified: true, // Admin-created users are auto-verified
       });
+
+      // Create user_companies association if user has a company
+      if (targetCompanyId) {
+        await db.insert(userCompanies).values({
+          userId: newUser.id,
+          companyId: targetCompanyId,
+          role: role === 'gestore' ? 'owner' : 'member',
+          isDefault: true,
+        }).onConflictDoNothing({ target: [userCompanies.userId, userCompanies.companyId] });
+      }
 
       // Get company name for email
       let companyName = "Event Four You";
