@@ -820,15 +820,13 @@ export default function Home() {
             gradient="from-indigo-500 to-purple-600"
             delay={0.1}
           />
-          {(userFeatures?.beverageEnabled !== false) && (
-            <MobileStatsCard 
-              icon={Ticket} 
-              label="Biglietti Venduti" 
-              value="--"
-              gradient="from-amber-500 to-orange-600"
-              delay={0.15}
-            />
-          )}
+          <MobileStatsCard 
+            icon={Ticket} 
+            label="Biglietti Venduti" 
+            value="--"
+            gradient="from-amber-500 to-orange-600"
+            delay={0.15}
+          />
           <MobileStatsCard 
             icon={Euro} 
             label="Incasso Oggi" 
