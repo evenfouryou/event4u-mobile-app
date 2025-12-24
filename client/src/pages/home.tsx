@@ -48,7 +48,16 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { Badge } from "@/components/ui/badge";
-import type { Company, Event } from "@shared/schema";
+import type { Company, Event, UserFeatures } from "@shared/schema";
+import { 
+  Users, 
+  MapPin, 
+  Package, 
+  UserPlus,
+  GraduationCap,
+  Store,
+  ScanLine,
+} from "lucide-react";
 
 const springConfig = { type: "spring", stiffness: 400, damping: 30 };
 
@@ -239,6 +248,13 @@ export default function Home() {
   const { data: events = [], isLoading: eventsLoading } = useQuery<Event[]>({
     queryKey: ['/api/events'],
     enabled: !isSuperAdmin && !isBartender && !isWarehouse && !isCassiere,
+  });
+
+  // Fetch user features for quick actions filtering (gestore only)
+  const isGestore = user?.role === 'gestore';
+  const { data: userFeatures } = useQuery<UserFeatures>({
+    queryKey: ['/api/user-features/current/my'],
+    enabled: isGestore,
   });
 
   const recentEvents = events.slice(0, 3);
@@ -836,28 +852,107 @@ export default function Home() {
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
             Azioni Rapide
           </h2>
-          <div className="grid grid-cols-3 gap-4">
-            <QuickActionButton
-              icon={Plus}
-              label="Nuovo Evento"
-              href="/events/new"
-              gradient="from-indigo-500 to-purple-600"
-              delay={0.35}
-            />
-            <QuickActionButton
-              icon={QrCode}
-              label="Scanner"
-              href="/scanner"
-              gradient="from-teal-500 to-emerald-600"
-              delay={0.4}
-            />
-            <QuickActionButton
-              icon={Wine}
-              label="Beverage"
-              href="/beverage"
-              gradient="from-amber-500 to-orange-600"
-              delay={0.45}
-            />
+          <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
+            <div className="flex-shrink-0 w-[110px]">
+              <QuickActionButton
+                icon={Plus}
+                label="Nuovo Evento"
+                href="/events/new"
+                gradient="from-indigo-500 to-purple-600"
+                delay={0.35}
+              />
+            </div>
+            {(userFeatures?.scannerEnabled !== false) && (
+              <div className="flex-shrink-0 w-[110px]">
+                <QuickActionButton
+                  icon={ScanLine}
+                  label="Scanner"
+                  href="/scanner"
+                  gradient="from-teal-500 to-emerald-600"
+                  delay={0.4}
+                />
+              </div>
+            )}
+            {(userFeatures?.beverageEnabled !== false) && (
+              <div className="flex-shrink-0 w-[110px]">
+                <QuickActionButton
+                  icon={Wine}
+                  label="Beverage"
+                  href="/beverage"
+                  gradient="from-amber-500 to-orange-600"
+                  delay={0.45}
+                />
+              </div>
+            )}
+            <div className="flex-shrink-0 w-[110px]">
+              <QuickActionButton
+                icon={Users}
+                label="Utenti"
+                href="/users"
+                gradient="from-blue-500 to-cyan-600"
+                delay={0.5}
+              />
+            </div>
+            <div className="flex-shrink-0 w-[110px]">
+              <QuickActionButton
+                icon={MapPin}
+                label="Location"
+                href="/locations"
+                gradient="from-rose-500 to-pink-600"
+                delay={0.55}
+              />
+            </div>
+            <div className="flex-shrink-0 w-[110px]">
+              <QuickActionButton
+                icon={Building2}
+                label="Aziende"
+                href="/companies"
+                gradient="from-violet-500 to-purple-600"
+                delay={0.6}
+              />
+            </div>
+            {(userFeatures?.prEnabled !== false) && (
+              <div className="flex-shrink-0 w-[110px]">
+                <QuickActionButton
+                  icon={UserPlus}
+                  label="Gestione PR"
+                  href="/pr-management"
+                  gradient="from-fuchsia-500 to-pink-600"
+                  delay={0.65}
+                />
+              </div>
+            )}
+            {(userFeatures?.badgesEnabled !== false) && (
+              <div className="flex-shrink-0 w-[110px]">
+                <QuickActionButton
+                  icon={GraduationCap}
+                  label="Badge Scuola"
+                  href="/school-badges"
+                  gradient="from-sky-500 to-blue-600"
+                  delay={0.7}
+                />
+              </div>
+            )}
+            {(userFeatures?.cassaBigliettiEnabled !== false) && (
+              <div className="flex-shrink-0 w-[110px]">
+                <QuickActionButton
+                  icon={Store}
+                  label="Cassa Biglietti"
+                  href="/cassa-biglietti"
+                  gradient="from-lime-500 to-green-600"
+                  delay={0.75}
+                />
+              </div>
+            )}
+            <div className="flex-shrink-0 w-[110px]">
+              <QuickActionButton
+                icon={Package}
+                label="Prodotti"
+                href="/products"
+                gradient="from-orange-500 to-red-600"
+                delay={0.8}
+              />
+            </div>
           </div>
         </motion.div>
 
