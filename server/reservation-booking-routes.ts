@@ -385,6 +385,8 @@ router.post("/api/reservations/pr-profiles/:id/impersonate", requireAuth, requir
     const { id } = req.params;
     const user = req.user as any;
     
+    console.log(`[PR-IMPERSONATE] Starting impersonation for PR ${id} by user ${user.id} (company: ${user.companyId})`);
+    
     // Verify PR belongs to gestore's company
     const [profile] = await db.select()
       .from(prProfiles)
@@ -394,10 +396,12 @@ router.post("/api/reservations/pr-profiles/:id/impersonate", requireAuth, requir
       ));
     
     if (!profile) {
+      console.log(`[PR-IMPERSONATE] PR ${id} not found for company ${user.companyId}`);
       return res.status(404).json({ error: "Profilo PR non trovato" });
     }
     
     if (!profile.isActive) {
+      console.log(`[PR-IMPERSONATE] PR ${id} is inactive`);
       return res.status(400).json({ error: "Il PR è disattivato" });
     }
     
@@ -417,11 +421,11 @@ router.post("/api/reservations/pr-profiles/:id/impersonate", requireAuth, requir
     
     req.session.save((saveErr) => {
       if (saveErr) {
-        console.error("Error saving session:", saveErr);
+        console.error("[PR-IMPERSONATE] Error saving session:", saveErr);
         return res.status(500).json({ error: "Errore durante l'impersonazione" });
       }
       
-      console.log(`[PR] User ${user.id} impersonating PR ${profile.id}`);
+      console.log(`[PR-IMPERSONATE] Success - User ${user.id} now impersonating PR ${profile.id}`);
       
       res.json({ 
         success: true, 
@@ -430,7 +434,7 @@ router.post("/api/reservations/pr-profiles/:id/impersonate", requireAuth, requir
       });
     });
   } catch (error: any) {
-    console.error("Error impersonating PR:", error);
+    console.error("[PR-IMPERSONATE] Error:", error);
     res.status(500).json({ error: error.message });
   }
 });
@@ -588,7 +592,10 @@ router.get("/api/pr/me", async (req: Request, res: Response) => {
   try {
     const prSession = (req.session as any).prProfile;
     
+    console.log(`[PR-ME] Checking PR session - exists: ${!!prSession}, sessionId: ${req.session?.id?.substring(0,8)}...`);
+    
     if (!prSession) {
+      console.log(`[PR-ME] No prProfile in session`);
       return res.status(401).json({ error: "Non autenticato" });
     }
     
