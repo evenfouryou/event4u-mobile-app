@@ -100,6 +100,11 @@ import {
   insertVenueFloorPlanSchema,
   insertFloorPlanZoneSchema,
   insertEventZoneMappingSchema,
+  eventPageConfigs,
+  eventPageBlocks,
+  eventLineupArtists,
+  eventTimelineItems,
+  eventFaqItems,
 } from "@shared/schema";
 import { setupBridgeRelay, isBridgeConnected, getCachedBridgeStatus } from "./bridge-relay";
 import { setupPrintRelay } from "./print-relay";
@@ -146,6 +151,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Health check endpoint for Replit Deploy
   app.get('/api/health', (_req, res) => {
     res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+  });
+
+  // GET /api/public/ticketed-events/:id/page-config
+  // Ritorna configurazione pagina, blocchi, artisti, timeline, FAQ
+  app.get("/api/public/ticketed-events/:id/page-config", async (req, res) => {
+    try {
+      const { id } = req.params;
+      
+      // Fetch page config
+      const [config] = await db.select().from(eventPageConfigs)
+        .where(eq(eventPageConfigs.ticketedEventId, id));
+      
+      // Fetch enabled blocks ordered by position
+      const blocks = await db.select().from(eventPageBlocks)
+        .where(and(
+          eq(eventPageBlocks.ticketedEventId, id),
+          eq(eventPageBlocks.isEnabled, true)
+        ))
+        .orderBy(eventPageBlocks.position);
+      
+      // Fetch lineup artists
+      const artists = await db.select().from(eventLineupArtists)
+        .where(eq(eventLineupArtists.ticketedEventId, id))
+        .orderBy(eventLineupArtists.position);
+      
+      // Fetch timeline items  
+      const timeline = await db.select().from(eventTimelineItems)
+        .where(eq(eventTimelineItems.ticketedEventId, id))
+        .orderBy(eventTimelineItems.position);
+      
+      // Fetch FAQ items
+      const faq = await db.select().from(eventFaqItems)
+        .where(eq(eventFaqItems.ticketedEventId, id))
+        .orderBy(eventFaqItems.position);
+      
+      res.json({
+        config: config || null,
+        blocks,
+        artists,
+        timeline,
+        faq,
+      });
+    } catch (error) {
+      console.error("Error fetching page config:", error);
+      res.status(500).json({ message: "Errore nel recupero della configurazione" });
+    }
   });
 
   // Public objects route - serves uploaded images from object storage (no auth required)

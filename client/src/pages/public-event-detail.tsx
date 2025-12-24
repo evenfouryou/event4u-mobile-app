@@ -16,6 +16,12 @@ import {
   DialogTrigger,
   DialogFooter,
 } from "@/components/ui/dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -36,11 +42,12 @@ import {
   Map,
   Info,
   Flame,
+  HelpCircle,
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import { PublicReservationSection } from "@/components/public-reservation-section";
 
 interface Seat {
@@ -115,6 +122,249 @@ interface EventDetail {
   locationAddress: string;
   locationCapacity: number;
   sectors: Sector[];
+}
+
+interface PageConfig {
+  config: {
+    heroVideoUrl?: string;
+    heroImageUrl?: string;
+    heroOverlayOpacity?: number;
+    showLiveViewers?: boolean;
+    showRemainingTickets?: boolean;
+    urgencyThreshold?: number;
+    earlyBirdEndDate?: string;
+    earlyBirdLabel?: string;
+    themeKey?: string;
+    dressCode?: string;
+    minAge?: number;
+    parkingInfo?: string;
+  } | null;
+  blocks: Array<{
+    id: string;
+    blockType: string;
+    position: number;
+    title?: string;
+    config?: any;
+  }>;
+  artists: Array<{
+    id: string;
+    name: string;
+    role?: string;
+    photoUrl?: string;
+    setTime?: string;
+    socialLinks?: { instagram?: string; spotify?: string };
+  }>;
+  timeline: Array<{
+    id: string;
+    time: string;
+    label: string;
+    description?: string;
+    icon?: string;
+  }>;
+  faq: Array<{
+    id: string;
+    question: string;
+    answer: string;
+  }>;
+}
+
+function EarlyBirdCountdown({ endDate, label }: { endDate: string; label?: string }) {
+  const [timeLeft, setTimeLeft] = useState({ days: 0, hours: 0, minutes: 0, seconds: 0 });
+  
+  useEffect(() => {
+    const calculateTimeLeft = () => {
+      const end = new Date(endDate).getTime();
+      const now = Date.now();
+      const diff = end - now;
+      if (diff <= 0) {
+        return { days: 0, hours: 0, minutes: 0, seconds: 0 };
+      }
+      return {
+        days: Math.floor(diff / (1000 * 60 * 60 * 24)),
+        hours: Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)),
+        minutes: Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60)),
+        seconds: Math.floor((diff % (1000 * 60)) / 1000),
+      };
+    };
+    
+    setTimeLeft(calculateTimeLeft());
+    
+    const timer = setInterval(() => {
+      const newTimeLeft = calculateTimeLeft();
+      setTimeLeft(newTimeLeft);
+      if (newTimeLeft.days === 0 && newTimeLeft.hours === 0 && newTimeLeft.minutes === 0 && newTimeLeft.seconds === 0) {
+        clearInterval(timer);
+      }
+    }, 1000);
+    
+    return () => clearInterval(timer);
+  }, [endDate]);
+  
+  if (new Date(endDate).getTime() <= Date.now()) {
+    return null;
+  }
+  
+  return (
+    <div className="bg-gradient-to-r from-amber-500/20 to-orange-500/20 border border-amber-500/30 rounded-lg p-3" data-testid="early-bird-countdown">
+      <div className="text-xs text-amber-400 mb-1">{label || "Prezzo Early Bird termina tra:"}</div>
+      <div className="flex gap-2 text-center">
+        <div><span className="text-xl font-bold text-white">{timeLeft.days}</span><span className="text-xs text-gray-400 block">giorni</span></div>
+        <span className="text-amber-500">:</span>
+        <div><span className="text-xl font-bold text-white">{timeLeft.hours}</span><span className="text-xs text-gray-400 block">ore</span></div>
+        <span className="text-amber-500">:</span>
+        <div><span className="text-xl font-bold text-white">{timeLeft.minutes}</span><span className="text-xs text-gray-400 block">min</span></div>
+        <span className="text-amber-500">:</span>
+        <div><span className="text-xl font-bold text-white">{timeLeft.seconds}</span><span className="text-xs text-gray-400 block">sec</span></div>
+      </div>
+    </div>
+  );
+}
+
+function LineupBlock({ artists }: { artists: Array<any> }) {
+  if (!artists?.length) return null;
+  return (
+    <section className="py-8" data-testid="lineup-section">
+      <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+        <Music className="w-6 h-6 text-amber-400" />
+        Line-Up
+      </h2>
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+        {artists.map((artist) => (
+          <Card key={artist.id} className="bg-black/40 border-white/10 overflow-hidden group" data-testid={`artist-card-${artist.id}`}>
+            <div className="aspect-square relative">
+              {artist.photoUrl ? (
+                <img src={artist.photoUrl} alt={artist.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+              ) : (
+                <div className="w-full h-full bg-gradient-to-br from-amber-500/20 to-purple-500/20 flex items-center justify-center">
+                  <Music className="w-12 h-12 text-white/30" />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-3">
+                <div className="font-bold text-white">{artist.name}</div>
+                {artist.role && <div className="text-xs text-amber-400">{artist.role}</div>}
+                {artist.setTime && <div className="text-xs text-gray-400 mt-1">{artist.setTime}</div>}
+              </div>
+            </div>
+          </Card>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function TimelineBlock({ items }: { items: Array<any> }) {
+  if (!items?.length) return null;
+  return (
+    <section className="py-8" data-testid="timeline-section">
+      <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+        <Clock className="w-6 h-6 text-amber-400" />
+        Programma
+      </h2>
+      <div className="relative">
+        <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gradient-to-b from-amber-500 via-purple-500 to-teal-500" />
+        <div className="space-y-6">
+          {items.map((item) => (
+            <div key={item.id} className="flex gap-4 ml-4" data-testid={`timeline-item-${item.id}`}>
+              <div className="relative">
+                <div className="w-3 h-3 rounded-full bg-amber-500 border-2 border-black -ml-[7px]" />
+              </div>
+              <div className="flex-1 pb-2">
+                <div className="text-amber-400 font-bold text-lg">{item.time}</div>
+                <div className="text-white font-medium">{item.label}</div>
+                {item.description && <div className="text-gray-400 text-sm mt-1">{item.description}</div>}
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function QuickInfoBlock({ config }: { config: any }) {
+  const infoItems = [
+    config?.dressCode && { icon: "shirt", label: "Dress Code", value: config.dressCode },
+    config?.minAge && { icon: "user", label: "Età Minima", value: `${config.minAge}+` },
+    config?.parkingInfo && { icon: "car", label: "Parcheggio", value: config.parkingInfo },
+  ].filter(Boolean);
+  
+  if (!infoItems.length) return null;
+  
+  return (
+    <section className="py-8" data-testid="quick-info-section">
+      <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+        <Info className="w-6 h-6 text-amber-400" />
+        Info Utili
+      </h2>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {infoItems.map((item: any, i) => (
+          <Card key={i} className="bg-black/40 border-white/10 p-4" data-testid={`quick-info-item-${i}`}>
+            <div className="text-gray-400 text-sm">{item.label}</div>
+            <div className="text-white font-medium mt-1">{item.value}</div>
+          </Card>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+function FaqBlock({ items }: { items: Array<any> }) {
+  if (!items?.length) return null;
+  return (
+    <section className="py-8" data-testid="faq-section">
+      <h2 className="text-2xl font-bold text-white mb-6 flex items-center gap-2">
+        <HelpCircle className="w-6 h-6 text-amber-400" />
+        Domande Frequenti
+      </h2>
+      <Accordion type="single" collapsible className="space-y-2">
+        {items.map((item) => (
+          <AccordionItem key={item.id} value={item.id} className="bg-black/40 border border-white/10 rounded-lg px-4" data-testid={`faq-item-${item.id}`}>
+            <AccordionTrigger className="text-white hover:text-amber-400 text-left">
+              {item.question}
+            </AccordionTrigger>
+            <AccordionContent className="text-gray-400">
+              {item.answer}
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </section>
+  );
+}
+
+function ModularBlocksRenderer({ pageConfig }: { pageConfig: PageConfig | undefined }) {
+  if (!pageConfig) return null;
+  
+  return (
+    <div className="mt-8 space-y-4">
+      {pageConfig.blocks?.length > 0 ? (
+        pageConfig.blocks
+          .sort((a, b) => a.position - b.position)
+          .map((block) => {
+            switch (block.blockType) {
+              case 'lineup':
+                return <LineupBlock key={block.id} artists={pageConfig.artists} />;
+              case 'timeline':
+                return <TimelineBlock key={block.id} items={pageConfig.timeline} />;
+              case 'info':
+                return <QuickInfoBlock key={block.id} config={pageConfig.config} />;
+              case 'faq':
+                return <FaqBlock key={block.id} items={pageConfig.faq} />;
+              default:
+                return null;
+            }
+          })
+      ) : (
+        <>
+          {pageConfig.artists && pageConfig.artists.length > 0 && <LineupBlock artists={pageConfig.artists} />}
+          {pageConfig.timeline && pageConfig.timeline.length > 0 && <TimelineBlock items={pageConfig.timeline} />}
+          {pageConfig.config && <QuickInfoBlock config={pageConfig.config} />}
+          {pageConfig.faq && pageConfig.faq.length > 0 && <FaqBlock items={pageConfig.faq} />}
+        </>
+      )}
+    </div>
+  );
 }
 
 const springTransition = {
@@ -644,6 +894,26 @@ export default function PublicEventDetailPage() {
     retry: false,
   });
 
+  const { data: pageConfig } = useQuery<PageConfig>({
+    queryKey: ['/api/public/ticketed-events', params.id, 'page-config'],
+    queryFn: async () => {
+      const res = await fetch(`/api/public/ticketed-events/${params.id}/page-config`, {
+        credentials: "include",
+      });
+      if (res.status === 404) {
+        return null;
+      }
+      if (!res.ok) {
+        return null;
+      }
+      return res.json();
+    },
+    enabled: !!params.id,
+    retry: false,
+  });
+
+  const liveViewersCount = useMemo(() => Math.floor(Math.random() * 50) + 30, [params.id]);
+
   const selectedSector = event?.sectors.find(s => s.id === selectedSectorId) || event?.sectors[0];
   const selectedSeat = selectedSector?.seats.find(s => selectedSeatIds.includes(s.id)) || null;
 
@@ -795,12 +1065,23 @@ export default function PublicEventDetailPage() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               {/* Main content - left side */}
               <div className="lg:col-span-2 space-y-6">
-                {/* Hero image */}
+                {/* Hero image/video */}
                 <Card className="overflow-hidden">
                   <div className="relative aspect-video">
-                    {event.eventImageUrl ? (
+                    {pageConfig?.config?.heroVideoUrl ? (
+                      <video
+                        autoPlay
+                        muted
+                        loop
+                        playsInline
+                        className="absolute inset-0 w-full h-full object-cover"
+                        data-testid="video-hero-background-desktop"
+                      >
+                        <source src={pageConfig.config.heroVideoUrl} type="video/mp4" />
+                      </video>
+                    ) : event.eventImageUrl ? (
                       <img
-                        src={event.eventImageUrl}
+                        src={pageConfig?.config?.heroImageUrl || event.eventImageUrl}
                         alt={event.eventName}
                         className="absolute inset-0 w-full h-full object-cover"
                         data-testid="img-event-cover"
@@ -810,7 +1091,10 @@ export default function PublicEventDetailPage() {
                         <Music className="w-24 h-24 text-white/20" />
                       </div>
                     )}
-                    <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent" />
+                    <div 
+                      className="absolute inset-0 bg-gradient-to-t from-background/80 via-transparent to-transparent"
+                      style={{ opacity: pageConfig?.config?.heroOverlayOpacity ?? 1 }}
+                    />
                     <div className="absolute bottom-4 left-4 right-4">
                       <div className="flex flex-wrap gap-2 mb-3">
                         {event.ticketingStatus === "active" && (
@@ -822,6 +1106,12 @@ export default function PublicEventDetailPage() {
                         {event.requiresNominative && (
                           <Badge className="bg-purple-500/90 text-white border-0">
                             Nominativo
+                          </Badge>
+                        )}
+                        {pageConfig?.config?.showLiveViewers && (
+                          <Badge className="bg-amber-500/90 text-white border-0 flex items-center gap-1" data-testid="badge-live-viewers-desktop">
+                            <span className="animate-pulse w-2 h-2 bg-white rounded-full" />
+                            {liveViewersCount} stanno guardando
                           </Badge>
                         )}
                       </div>
@@ -883,6 +1173,15 @@ export default function PublicEventDetailPage() {
                         <p className="text-muted-foreground whitespace-pre-line" data-testid="text-event-description">
                           {event.eventDescription}
                         </p>
+                      </div>
+                    )}
+
+                    {pageConfig?.config?.earlyBirdEndDate && (
+                      <div className="mt-4">
+                        <EarlyBirdCountdown 
+                          endDate={pageConfig.config.earlyBirdEndDate} 
+                          label={pageConfig.config.earlyBirdLabel}
+                        />
                       </div>
                     )}
                   </CardContent>
@@ -1147,6 +1446,9 @@ export default function PublicEventDetailPage() {
                 {event && (
                   <PublicReservationSection eventId={event.id} />
                 )}
+
+                {/* Blocchi Modulari Event Page 3.0 */}
+                <ModularBlocksRenderer pageConfig={pageConfig} />
               </div>
 
               {/* Sidebar - right side */}
@@ -1261,9 +1563,20 @@ export default function PublicEventDetailPage() {
         ) : event ? (
           <>
             <div className="relative w-full aspect-[3/4]">
-              {event.eventImageUrl ? (
+              {pageConfig?.config?.heroVideoUrl ? (
+                <video
+                  autoPlay
+                  muted
+                  loop
+                  playsInline
+                  className="absolute inset-0 w-full h-full object-cover"
+                  data-testid="video-hero-background"
+                >
+                  <source src={pageConfig.config.heroVideoUrl} type="video/mp4" />
+                </video>
+              ) : event.eventImageUrl ? (
                 <img
-                  src={event.eventImageUrl}
+                  src={pageConfig?.config?.heroImageUrl || event.eventImageUrl}
                   alt={event.eventName}
                   className="absolute inset-0 w-full h-full object-cover"
                   data-testid="img-event-cover"
@@ -1274,7 +1587,10 @@ export default function PublicEventDetailPage() {
                 </div>
               )}
               
-              <div className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent" />
+              <div 
+                className="absolute inset-0 bg-gradient-to-t from-background via-background/40 to-transparent"
+                style={{ opacity: pageConfig?.config?.heroOverlayOpacity ?? 1 }}
+              />
               
               <Link href="/acquista">
                 <motion.button
@@ -1335,6 +1651,12 @@ export default function PublicEventDetailPage() {
                       Nominativo
                     </Badge>
                   )}
+                  {pageConfig?.config?.showLiveViewers && (
+                    <Badge className="bg-amber-500/90 text-white border-0 px-3 py-1 flex items-center gap-1" data-testid="badge-live-viewers">
+                      <span className="animate-pulse w-2 h-2 bg-white rounded-full" />
+                      {liveViewersCount} stanno guardando
+                    </Badge>
+                  )}
                 </div>
                 
                 <h1 
@@ -1384,6 +1706,18 @@ export default function PublicEventDetailPage() {
             </div>
 
             <div className="px-4 py-6 space-y-5 -mt-4 relative z-10">
+              {pageConfig?.config?.earlyBirdEndDate && (
+                <motion.div
+                  {...fadeInUp}
+                  transition={{ ...springTransition, delay: 0.15 }}
+                >
+                  <EarlyBirdCountdown 
+                    endDate={pageConfig.config.earlyBirdEndDate} 
+                    label={pageConfig.config.earlyBirdLabel}
+                  />
+                </motion.div>
+              )}
+
               {event.eventDescription && (
                 <motion.div
                   {...fadeInUp}
@@ -1491,6 +1825,9 @@ export default function PublicEventDetailPage() {
               {event && (
                 <PublicReservationSection eventId={event.id} />
               )}
+
+              {/* Blocchi Modulari Event Page 3.0 */}
+              <ModularBlocksRenderer pageConfig={pageConfig} />
             </div>
           </>
         ) : null}

@@ -5086,3 +5086,135 @@ export type UpdatePrPayout = z.infer<typeof updatePrPayoutSchema>;
 export type EventReservationSettings = typeof eventReservationSettings.$inferSelect;
 export type InsertEventReservationSettings = z.infer<typeof insertEventReservationSettingsSchema>;
 export type UpdateEventReservationSettings = z.infer<typeof updateEventReservationSettingsSchema>;
+
+// ========== EVENT PAGE 3.0 - Configurazione Pagina Evento ==========
+
+// Configurazione generale pagina evento
+export const eventPageConfigs = pgTable("event_page_configs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketedEventId: varchar("ticketed_event_id").notNull().references(() => siaeTicketedEvents.id).unique(),
+  
+  // Hero Section
+  heroVideoUrl: text("hero_video_url"), // Video loop 3-6s
+  heroImageUrl: text("hero_image_url"), // Fallback image
+  heroOverlayOpacity: integer("hero_overlay_opacity").default(60), // 0-100
+  
+  // Urgency/Social Proof
+  showLiveViewers: boolean("show_live_viewers").default(false),
+  showRemainingTickets: boolean("show_remaining_tickets").default(true),
+  urgencyThreshold: integer("urgency_threshold").default(50), // Mostra urgenza sotto X biglietti
+  
+  // Early Bird Countdown
+  earlyBirdEndDate: timestamp("early_bird_end_date"),
+  earlyBirdLabel: varchar("early_bird_label", { length: 100 }),
+  
+  // Theme
+  themeKey: varchar("theme_key", { length: 50 }).default("club_neon"), // club_neon, luxury_gold, festival_vibrant
+  
+  // Info Rapide
+  dressCode: varchar("dress_code", { length: 255 }),
+  minAge: integer("min_age"),
+  parkingInfo: text("parking_info"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+// Blocchi modulari della pagina (ordinabili)
+export const eventPageBlocks = pgTable("event_page_blocks", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketedEventId: varchar("ticketed_event_id").notNull().references(() => siaeTicketedEvents.id),
+  blockType: varchar("block_type", { length: 50 }).notNull(), // lineup, timeline, info, location, faq, vip_upgrade
+  position: integer("position").notNull().default(0),
+  isEnabled: boolean("is_enabled").default(true),
+  title: varchar("title", { length: 255 }),
+  config: jsonb("config"), // Configurazione specifica per tipo blocco
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Artisti per blocco Line-up
+export const eventLineupArtists = pgTable("event_lineup_artists", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketedEventId: varchar("ticketed_event_id").notNull().references(() => siaeTicketedEvents.id),
+  name: varchar("name", { length: 255 }).notNull(),
+  role: varchar("role", { length: 100 }), // DJ, Live Act, Vocalist, etc.
+  photoUrl: text("photo_url"),
+  setTime: varchar("set_time", { length: 20 }), // "00:00 - 02:00"
+  position: integer("position").notNull().default(0),
+  socialLinks: jsonb("social_links"), // { instagram, spotify, soundcloud }
+});
+
+// Orari per Timeline
+export const eventTimelineItems = pgTable("event_timeline_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketedEventId: varchar("ticketed_event_id").notNull().references(() => siaeTicketedEvents.id),
+  time: varchar("time", { length: 10 }).notNull(), // "22:00"
+  label: varchar("label", { length: 255 }).notNull(), // "Apertura Porte"
+  description: text("description"),
+  icon: varchar("icon", { length: 50 }), // lucide icon name
+  position: integer("position").notNull().default(0),
+});
+
+// FAQ per Accordion
+export const eventFaqItems = pgTable("event_faq_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketedEventId: varchar("ticketed_event_id").notNull().references(() => siaeTicketedEvents.id),
+  question: text("question").notNull(),
+  answer: text("answer").notNull(),
+  position: integer("position").notNull().default(0),
+});
+
+// Relations
+export const eventPageConfigsRelations = relations(eventPageConfigs, ({ one }) => ({
+  ticketedEvent: one(siaeTicketedEvents, {
+    fields: [eventPageConfigs.ticketedEventId],
+    references: [siaeTicketedEvents.id],
+  }),
+}));
+
+export const eventPageBlocksRelations = relations(eventPageBlocks, ({ one }) => ({
+  ticketedEvent: one(siaeTicketedEvents, {
+    fields: [eventPageBlocks.ticketedEventId],
+    references: [siaeTicketedEvents.id],
+  }),
+}));
+
+export const eventLineupArtistsRelations = relations(eventLineupArtists, ({ one }) => ({
+  ticketedEvent: one(siaeTicketedEvents, {
+    fields: [eventLineupArtists.ticketedEventId],
+    references: [siaeTicketedEvents.id],
+  }),
+}));
+
+export const eventTimelineItemsRelations = relations(eventTimelineItems, ({ one }) => ({
+  ticketedEvent: one(siaeTicketedEvents, {
+    fields: [eventTimelineItems.ticketedEventId],
+    references: [siaeTicketedEvents.id],
+  }),
+}));
+
+export const eventFaqItemsRelations = relations(eventFaqItems, ({ one }) => ({
+  ticketedEvent: one(siaeTicketedEvents, {
+    fields: [eventFaqItems.ticketedEventId],
+    references: [siaeTicketedEvents.id],
+  }),
+}));
+
+// Insert schemas
+export const insertEventPageConfigSchema = createInsertSchema(eventPageConfigs).omit({ id: true, createdAt: true, updatedAt: true });
+export const insertEventPageBlockSchema = createInsertSchema(eventPageBlocks).omit({ id: true, createdAt: true });
+export const insertEventLineupArtistSchema = createInsertSchema(eventLineupArtists).omit({ id: true });
+export const insertEventTimelineItemSchema = createInsertSchema(eventTimelineItems).omit({ id: true });
+export const insertEventFaqItemSchema = createInsertSchema(eventFaqItems).omit({ id: true });
+
+// Types
+export type EventPageConfig = typeof eventPageConfigs.$inferSelect;
+export type InsertEventPageConfig = z.infer<typeof insertEventPageConfigSchema>;
+export type EventPageBlock = typeof eventPageBlocks.$inferSelect;
+export type InsertEventPageBlock = z.infer<typeof insertEventPageBlockSchema>;
+export type EventLineupArtist = typeof eventLineupArtists.$inferSelect;
+export type InsertEventLineupArtist = z.infer<typeof insertEventLineupArtistSchema>;
+export type EventTimelineItem = typeof eventTimelineItems.$inferSelect;
+export type InsertEventTimelineItem = z.infer<typeof insertEventTimelineItemSchema>;
+export type EventFaqItem = typeof eventFaqItems.$inferSelect;
+export type InsertEventFaqItem = z.infer<typeof insertEventFaqItemSchema>;
