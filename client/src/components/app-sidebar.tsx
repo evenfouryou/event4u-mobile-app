@@ -388,20 +388,25 @@ export function AppSidebar() {
     }
 
     // SIAE Ticketing Module for Gestore (only if enabled)
-    // Gestore vede solo Gestione Cassieri e Clienti (il resto è nell'Hub Evento)
     if (userFeatures?.siaeEnabled === true) {
       menuItems.push(
+          {
+            title: "Eventi Biglietteria",
+            icon: Ticket,
+            url: "/siae/ticketed-events",
+            group: "Biglietteria",
+          },
           {
             title: "Gestione Cassieri",
             icon: UserPlus,
             url: "/cashier/management",
-            group: "Gestione",
+            group: "Biglietteria",
           },
           {
             title: "Clienti SIAE",
             icon: Users,
             url: "/siae/customers",
-            group: "Gestione",
+            group: "Biglietteria",
           }
       );
     }
