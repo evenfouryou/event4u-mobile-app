@@ -687,6 +687,11 @@ export default function EventHub() {
     queryKey: ['/api/events', id],
   });
 
+  const { data: userFeatures } = useQuery<{ beverageEnabled?: boolean }>({
+    queryKey: ['/api/user-features/current/my'],
+    enabled: !!user,
+  });
+
   const { data: location } = useQuery<LocationType>({
     queryKey: ['/api/locations', event?.locationId],
     enabled: !!event?.locationId,
@@ -1798,10 +1803,12 @@ export default function EventHub() {
               <QrCode className="h-4 w-4 mr-2" />
               Accessi
             </TabsTrigger>
-            <TabsTrigger value="inventory" data-testid="tab-inventory">
-              <Package className="h-4 w-4 mr-2" />
-              Stock
-            </TabsTrigger>
+            {(userFeatures?.beverageEnabled !== false) && (
+              <TabsTrigger value="inventory" data-testid="tab-inventory">
+                <Package className="h-4 w-4 mr-2" />
+                Stock
+              </TabsTrigger>
+            )}
             <TabsTrigger value="finance" data-testid="tab-finance">
               <Euro className="h-4 w-4 mr-2" />
               Finanza
@@ -2786,45 +2793,47 @@ export default function EventHub() {
           </TabsContent>
 
           {/* Inventory Tab */}
-          <TabsContent value="inventory" className="space-y-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between gap-4">
-                <div>
-                  <CardTitle>Stock Evento</CardTitle>
-                  <CardDescription>Prodotti e giacenze per l'evento</CardDescription>
-                </div>
-                <Button onClick={() => navigate(`/events/${id}/direct-stock`)} data-testid="button-manage-stock">
-                  <Package className="h-4 w-4 mr-2" />
-                  Gestisci Stock
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {eventStocks.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Nessun prodotto assegnato all'evento</p>
+          {(userFeatures?.beverageEnabled !== false) && (
+            <TabsContent value="inventory" className="space-y-6">
+              <Card>
+                <CardHeader className="flex flex-row items-center justify-between gap-4">
+                  <div>
+                    <CardTitle>Stock Evento</CardTitle>
+                    <CardDescription>Prodotti e giacenze per l'evento</CardDescription>
                   </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Prodotto</TableHead>
-                        <TableHead>Quantità</TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {eventStocks.slice(0, 10).map(stock => (
-                        <TableRow key={stock.id} data-testid={`row-stock-${stock.id}`}>
-                          <TableCell>Prodotto #{stock.productId}</TableCell>
-                          <TableCell>{stock.quantity}</TableCell>
+                  <Button onClick={() => navigate(`/events/${id}/direct-stock`)} data-testid="button-manage-stock">
+                    <Package className="h-4 w-4 mr-2" />
+                    Gestisci Stock
+                  </Button>
+                </CardHeader>
+                <CardContent>
+                  {eventStocks.length === 0 ? (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <Package className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                      <p>Nessun prodotto assegnato all'evento</p>
+                    </div>
+                  ) : (
+                    <Table>
+                      <TableHeader>
+                        <TableRow>
+                          <TableHead>Prodotto</TableHead>
+                          <TableHead>Quantità</TableHead>
                         </TableRow>
-                      ))}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                      </TableHeader>
+                      <TableBody>
+                        {eventStocks.slice(0, 10).map(stock => (
+                          <TableRow key={stock.id} data-testid={`row-stock-${stock.id}`}>
+                            <TableCell>Prodotto #{stock.productId}</TableCell>
+                            <TableCell>{stock.quantity}</TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           {/* Finance Tab */}
           <TabsContent value="finance" className="space-y-6">
@@ -3501,7 +3510,7 @@ export default function EventHub() {
                   { id: 'staff', label: 'Staff', icon: Shield },
                   { id: 'pr', label: 'PR', icon: Megaphone },
                   { id: 'access', label: 'Accessi', icon: QrCode },
-                  { id: 'inventory', label: 'Stock', icon: Package },
+                  ...(userFeatures?.beverageEnabled !== false ? [{ id: 'inventory', label: 'Stock', icon: Package }] : []),
                   { id: 'finance', label: 'Finanza', icon: Euro },
                   { id: 'report', label: 'Report', icon: BarChart3 },
                 ].map(tab => (
@@ -3594,12 +3603,14 @@ export default function EventHub() {
                         onClick={() => navigate(`/pr/tables?eventId=${id}`)}
                         testId="overview-table"
                       />
-                      <QuickActionButton
-                        icon={Package}
-                        label="Stock"
-                        onClick={() => navigate(`/events/${id}/direct-stock`)}
-                        testId="overview-stock"
-                      />
+                      {(userFeatures?.beverageEnabled !== false) && (
+                        <QuickActionButton
+                          icon={Package}
+                          label="Stock"
+                          onClick={() => navigate(`/events/${id}/direct-stock`)}
+                          testId="overview-stock"
+                        />
+                      )}
                       <QuickActionButton
                         icon={BarChart3}
                         label="Report"
@@ -5238,58 +5249,60 @@ export default function EventHub() {
             </div>
           </TabsContent>
 
-          <TabsContent value="inventory">
-            <Card className="glass-card">
-              <CardHeader className="px-3 sm:px-4 md:px-6">
-                <div className="flex items-center justify-between gap-2 flex-wrap">
-                  <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                    <Package className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-400" />
-                    <span className="hidden sm:inline">Inventario Evento</span>
-                    <span className="sm:hidden">Inventario</span>
-                  </CardTitle>
-                  <Button onClick={() => navigate(`/events/${id}/direct-stock`)} variant="outline" size="sm">
-                    <span className="hidden sm:inline">Gestisci Stock</span> <ChevronRight className="h-4 w-4 sm:ml-1" />
-                  </Button>
-                </div>
-              </CardHeader>
-              <CardContent className="px-3 sm:px-4 md:px-6">
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-3 sm:mb-4 md:mb-6">
-                  <div className="p-2 sm:p-3 md:p-4 rounded-lg bg-background/50 border text-center">
-                    <div className="text-lg sm:text-2xl md:text-3xl font-bold text-indigo-400">{eventStocks.length}</div>
-                    <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">Prodotti</div>
-                  </div>
-                  <div className="p-2 sm:p-3 md:p-4 rounded-lg bg-background/50 border text-center">
-                    <div className="text-lg sm:text-2xl md:text-3xl font-bold text-emerald-400">{eventStations.length}</div>
-                    <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">Postazioni</div>
-                  </div>
-                  <div className="p-2 sm:p-3 md:p-4 rounded-lg bg-background/50 border text-center">
-                    <div className="text-lg sm:text-2xl md:text-3xl font-bold text-amber-400">
-                      {eventStocks.reduce((acc, s) => acc + Number(s.quantity || 0), 0).toFixed(0)}
-                    </div>
-                    <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">Unità</div>
-                  </div>
-                  <div className="p-2 sm:p-3 md:p-4 rounded-lg bg-background/50 border text-center">
-                    <div className="text-lg sm:text-2xl md:text-3xl font-bold text-cyan-400">
-                      {new Set(eventStations.flatMap(s => s.bartenderIds || [])).size}
-                    </div>
-                    <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">Baristi</div>
-                  </div>
-                </div>
-                {eventStocks.length === 0 && (
-                  <div className="text-center py-8">
-                    <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                    <h3 className="font-semibold mb-2">Nessun Prodotto</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Trasferisci prodotti dal magazzino all'evento
-                    </p>
-                    <Button onClick={() => navigate(`/events/${id}/direct-stock`)}>
-                      Trasferisci Stock
+          {(userFeatures?.beverageEnabled !== false) && (
+            <TabsContent value="inventory">
+              <Card className="glass-card">
+                <CardHeader className="px-3 sm:px-4 md:px-6">
+                  <div className="flex items-center justify-between gap-2 flex-wrap">
+                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
+                      <Package className="h-4 w-4 sm:h-5 sm:w-5 text-indigo-400" />
+                      <span className="hidden sm:inline">Inventario Evento</span>
+                      <span className="sm:hidden">Inventario</span>
+                    </CardTitle>
+                    <Button onClick={() => navigate(`/events/${id}/direct-stock`)} variant="outline" size="sm">
+                      <span className="hidden sm:inline">Gestisci Stock</span> <ChevronRight className="h-4 w-4 sm:ml-1" />
                     </Button>
                   </div>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
+                </CardHeader>
+                <CardContent className="px-3 sm:px-4 md:px-6">
+                  <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-3 md:gap-4 mb-3 sm:mb-4 md:mb-6">
+                    <div className="p-2 sm:p-3 md:p-4 rounded-lg bg-background/50 border text-center">
+                      <div className="text-lg sm:text-2xl md:text-3xl font-bold text-indigo-400">{eventStocks.length}</div>
+                      <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">Prodotti</div>
+                    </div>
+                    <div className="p-2 sm:p-3 md:p-4 rounded-lg bg-background/50 border text-center">
+                      <div className="text-lg sm:text-2xl md:text-3xl font-bold text-emerald-400">{eventStations.length}</div>
+                      <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">Postazioni</div>
+                    </div>
+                    <div className="p-2 sm:p-3 md:p-4 rounded-lg bg-background/50 border text-center">
+                      <div className="text-lg sm:text-2xl md:text-3xl font-bold text-amber-400">
+                        {eventStocks.reduce((acc, s) => acc + Number(s.quantity || 0), 0).toFixed(0)}
+                      </div>
+                      <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">Unità</div>
+                    </div>
+                    <div className="p-2 sm:p-3 md:p-4 rounded-lg bg-background/50 border text-center">
+                      <div className="text-lg sm:text-2xl md:text-3xl font-bold text-cyan-400">
+                        {new Set(eventStations.flatMap(s => s.bartenderIds || [])).size}
+                      </div>
+                      <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">Baristi</div>
+                    </div>
+                  </div>
+                  {eventStocks.length === 0 && (
+                    <div className="text-center py-8">
+                      <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                      <h3 className="font-semibold mb-2">Nessun Prodotto</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Trasferisci prodotti dal magazzino all'evento
+                      </p>
+                      <Button onClick={() => navigate(`/events/${id}/direct-stock`)}>
+                        Trasferisci Stock
+                      </Button>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
 
           <TabsContent value="finance">
             <Card className="glass-card">

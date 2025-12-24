@@ -345,6 +345,92 @@ router.post("/api/reservations/pr-profiles/:id/resend-sms", requireAuth, require
   }
 });
 
+// Permanently delete PR profile
+router.delete("/api/reservations/pr-profiles/:id/permanent", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = req.user as any;
+    
+    // Verify PR belongs to gestore's company
+    const [profile] = await db.select()
+      .from(prProfiles)
+      .where(and(
+        eq(prProfiles.id, id),
+        eq(prProfiles.companyId, user.companyId)
+      ));
+    
+    if (!profile) {
+      return res.status(404).json({ error: "Profilo PR non trovato" });
+    }
+    
+    // Delete PR profile permanently
+    await db.delete(prProfiles).where(eq(prProfiles.id, id));
+    
+    console.log(`[PR] Permanently deleted PR ${id} by user ${user.id}`);
+    
+    res.status(204).send();
+  } catch (error: any) {
+    console.error("Error permanently deleting PR profile:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Impersonate PR (gestore logs in as PR)
+router.post("/api/reservations/pr-profiles/:id/impersonate", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = req.user as any;
+    
+    // Verify PR belongs to gestore's company
+    const [profile] = await db.select()
+      .from(prProfiles)
+      .where(and(
+        eq(prProfiles.id, id),
+        eq(prProfiles.companyId, user.companyId)
+      ));
+    
+    if (!profile) {
+      return res.status(404).json({ error: "Profilo PR non trovato" });
+    }
+    
+    if (!profile.isActive) {
+      return res.status(400).json({ error: "Il PR è disattivato" });
+    }
+    
+    // Set PR session (impersonation)
+    const prProfileData = {
+      id: profile.id,
+      companyId: profile.companyId,
+      firstName: profile.firstName,
+      lastName: profile.lastName,
+      prCode: profile.prCode,
+      phone: profile.phone,
+      email: profile.email,
+      impersonatedBy: user.id // Track who impersonated
+    };
+    
+    (req.session as any).prProfile = prProfileData;
+    
+    req.session.save((saveErr) => {
+      if (saveErr) {
+        console.error("Error saving session:", saveErr);
+        return res.status(500).json({ error: "Errore durante l'impersonazione" });
+      }
+      
+      console.log(`[PR] User ${user.id} impersonating PR ${profile.id}`);
+      
+      res.json({ 
+        success: true, 
+        message: "Impersonazione attivata",
+        prProfile: prProfileData
+      });
+    });
+  } catch (error: any) {
+    console.error("Error impersonating PR:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== PR Authentication APIs ====================
 
 // PR Login via phone + password

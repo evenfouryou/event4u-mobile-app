@@ -352,7 +352,7 @@ export function AppSidebar() {
           title: "Scanner QR",
           icon: QrCode,
           url: "/scanner",
-          group: "Operazioni",
+          group: "Gestione",
         }
       );
     }
@@ -395,7 +395,7 @@ export function AppSidebar() {
             title: "Gestione Cassieri",
             icon: UserPlus,
             url: "/cashier/management",
-            group: "Biglietteria SIAE",
+            group: "Gestione",
           },
           {
             title: "Clienti SIAE",

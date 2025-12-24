@@ -73,6 +73,9 @@ import {
   Percent,
   Hash,
   Wallet,
+  Trash2,
+  LogIn,
+  RotateCcw,
 } from "lucide-react";
 import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 
@@ -247,6 +250,69 @@ export default function PrManagement() {
       toast({
         title: "Errore",
         description: error.message || "Errore durante l'invio dell'SMS",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const deletePrMutation = useMutation({
+    mutationFn: async (id: string) => {
+      await apiRequest("DELETE", `/api/reservations/pr-profiles/${id}/permanent`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reservations/pr-profiles"] });
+      toast({
+        title: "PR Eliminato",
+        description: "Il profilo PR è stato eliminato permanentemente",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Errore durante l'eliminazione",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const reactivatePrMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("PATCH", `/api/reservations/pr-profiles/${id}`, { isActive: true });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/reservations/pr-profiles"] });
+      toast({
+        title: "PR Riattivato",
+        description: "Il profilo PR è stato riattivato",
+      });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Errore durante la riattivazione",
+        variant: "destructive",
+      });
+    },
+  });
+
+  const impersonatePrMutation = useMutation({
+    mutationFn: async (id: string) => {
+      const response = await apiRequest("POST", `/api/reservations/pr-profiles/${id}/impersonate`);
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Impersonazione attivata",
+        description: "Stai ora operando come questo PR",
+      });
+      // Redirect to PR wallet
+      window.location.href = "/pr/wallet";
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error.message || "Errore durante l'impersonazione",
         variant: "destructive",
       });
     },
@@ -468,6 +534,14 @@ export default function PrManagement() {
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end">
                             <DropdownMenuItem
+                              onClick={() => impersonatePrMutation.mutate(pr.id)}
+                              disabled={impersonatePrMutation.isPending || !pr.isActive}
+                              data-testid={`button-impersonate-pr-${pr.id}`}
+                            >
+                              <LogIn className="h-4 w-4 mr-2" />
+                              Entra come PR
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
                               onClick={() => resendSmsMutation.mutate(pr.id)}
                               disabled={resendSmsMutation.isPending}
                               data-testid={`button-resend-sms-${pr.id}`}
@@ -483,17 +557,40 @@ export default function PrManagement() {
                               Modifica
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            {pr.isActive && (
+                            {pr.isActive ? (
                               <DropdownMenuItem
                                 onClick={() => deactivatePrMutation.mutate(pr.id)}
                                 disabled={deactivatePrMutation.isPending}
-                                className="text-destructive"
+                                className="text-amber-500"
                                 data-testid={`button-deactivate-pr-${pr.id}`}
                               >
                                 <UserX className="h-4 w-4 mr-2" />
                                 Disattiva
                               </DropdownMenuItem>
+                            ) : (
+                              <DropdownMenuItem
+                                onClick={() => reactivatePrMutation.mutate(pr.id)}
+                                disabled={reactivatePrMutation.isPending}
+                                className="text-green-500"
+                                data-testid={`button-reactivate-pr-${pr.id}`}
+                              >
+                                <RotateCcw className="h-4 w-4 mr-2" />
+                                Riattiva
+                              </DropdownMenuItem>
                             )}
+                            <DropdownMenuItem
+                              onClick={() => {
+                                if (confirm("Sei sicuro di voler eliminare permanentemente questo PR? Questa azione non può essere annullata.")) {
+                                  deletePrMutation.mutate(pr.id);
+                                }
+                              }}
+                              disabled={deletePrMutation.isPending}
+                              className="text-destructive"
+                              data-testid={`button-delete-pr-${pr.id}`}
+                            >
+                              <Trash2 className="h-4 w-4 mr-2" />
+                              Elimina
+                            </DropdownMenuItem>
                           </DropdownMenuContent>
                         </DropdownMenu>
                       </TableCell>
