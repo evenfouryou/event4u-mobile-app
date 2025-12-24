@@ -97,7 +97,7 @@ const userFormSchema = z.object({
   password: z.string().optional(),
   firstName: z.string().min(1, "Nome richiesto"),
   lastName: z.string().min(1, "Cognome richiesto"),
-  role: z.enum(['super_admin', 'gestore', 'gestore_covisione', 'capo_staff', 'pr', 'warehouse', 'bartender', 'cassiere']),
+  role: z.enum(['super_admin', 'gestore', 'gestore_covisione', 'capo_staff', 'warehouse', 'bartender', 'cassiere']),
   companyId: z.string().optional().nullable(),
   phone: z.string().optional(),
   isEditing: z.boolean().optional(),
@@ -121,7 +121,6 @@ const roleLabels: Record<string, string> = {
   gestore: 'Gestore',
   gestore_covisione: 'Gestore Covisione',
   capo_staff: 'Capo Staff',
-  pr: 'PR',
   warehouse: 'Magazzino',
   bartender: 'Bartender',
   cassiere: 'Cassiere',
@@ -133,7 +132,6 @@ const roleGradients: Record<string, string> = {
   gestore: 'from-amber-500 to-orange-600',
   gestore_covisione: 'from-amber-400 to-orange-500',
   capo_staff: 'from-teal-500 to-cyan-600',
-  pr: 'from-pink-500 to-rose-600',
   warehouse: 'from-blue-500 to-cyan-600',
   bartender: 'from-teal-500 to-emerald-600',
   cassiere: 'from-green-500 to-emerald-600',
@@ -371,7 +369,7 @@ export default function UsersPage() {
   const isCapoStaff = currentUser?.role === 'capo_staff';
 
   const getDefaultRole = () => {
-    if (isCapoStaff) return 'pr';
+    if (isCapoStaff) return 'bartender';
     if (isAdmin) return 'warehouse';
     return 'gestore';
   };
@@ -416,7 +414,7 @@ export default function UsersPage() {
   const availableRoles = useMemo(() => {
     if (!users) return [];
     const roles = new Set(users.map(u => u.role));
-    const roleOrder = ['super_admin', 'gestore', 'gestore_covisione', 'capo_staff', 'pr', 'warehouse', 'bartender', 'cassiere', 'scanner'];
+    const roleOrder = ['super_admin', 'gestore', 'gestore_covisione', 'capo_staff', 'warehouse', 'bartender', 'cassiere', 'scanner'];
     return roleOrder.filter(role => roles.has(role));
   }, [users]);
 
@@ -1044,7 +1042,6 @@ export default function UsersPage() {
                               <SelectItem value="gestore">Gestore</SelectItem>
                               <SelectItem value="gestore_covisione">Gestore Covisione</SelectItem>
                               <SelectItem value="capo_staff">Capo Staff</SelectItem>
-                              <SelectItem value="pr">PR</SelectItem>
                               <SelectItem value="warehouse">Magazzino</SelectItem>
                               <SelectItem value="bartender">Bartender</SelectItem>
                               <SelectItem value="cassiere">Cassiere</SelectItem>
@@ -1054,14 +1051,13 @@ export default function UsersPage() {
                             <>
                               <SelectItem value="gestore_covisione">Gestore Covisione</SelectItem>
                               <SelectItem value="capo_staff">Capo Staff</SelectItem>
-                              <SelectItem value="pr">PR</SelectItem>
                               <SelectItem value="warehouse">Magazzino</SelectItem>
                               <SelectItem value="bartender">Bartender</SelectItem>
                               <SelectItem value="cassiere">Cassiere</SelectItem>
                             </>
                           )}
                           {isCapoStaff && (
-                            <SelectItem value="pr">PR</SelectItem>
+                            <SelectItem value="bartender">Bartender</SelectItem>
                           )}
                         </SelectContent>
                       </Select>
@@ -1069,21 +1065,6 @@ export default function UsersPage() {
                     </FormItem>
                   )}
                 />
-                {watchRole === 'pr' && (
-                  <FormField
-                    control={form.control}
-                    name="phone"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Telefono</FormLabel>
-                        <FormControl>
-                          <Input placeholder="+39..." {...field} data-testid="input-user-phone" />
-                        </FormControl>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
-                )}
                 {isSuperAdmin && (
                   <FormField
                     control={form.control}
@@ -1513,7 +1494,6 @@ export default function UsersPage() {
                             <SelectItem value="gestore">Gestore</SelectItem>
                             <SelectItem value="gestore_covisione">Gestore Covisione</SelectItem>
                             <SelectItem value="capo_staff">Capo Staff</SelectItem>
-                            <SelectItem value="pr">PR</SelectItem>
                             <SelectItem value="warehouse">Magazzino</SelectItem>
                             <SelectItem value="bartender">Bartender</SelectItem>
                             <SelectItem value="cassiere">Cassiere</SelectItem>
@@ -1523,14 +1503,13 @@ export default function UsersPage() {
                           <>
                             <SelectItem value="gestore_covisione">Gestore Covisione</SelectItem>
                             <SelectItem value="capo_staff">Capo Staff</SelectItem>
-                            <SelectItem value="pr">PR</SelectItem>
                             <SelectItem value="warehouse">Magazzino</SelectItem>
                             <SelectItem value="bartender">Bartender</SelectItem>
                             <SelectItem value="cassiere">Cassiere</SelectItem>
                           </>
                         )}
                         {isCapoStaff && (
-                          <SelectItem value="pr">PR</SelectItem>
+                          <SelectItem value="bartender">Bartender</SelectItem>
                         )}
                       </SelectContent>
                     </Select>
@@ -1538,21 +1517,6 @@ export default function UsersPage() {
                   </FormItem>
                 )}
               />
-              {watchRole === 'pr' && (
-                <FormField
-                  control={form.control}
-                  name="phone"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Telefono</FormLabel>
-                      <FormControl>
-                        <Input className="h-12" placeholder="+39..." {...field} data-testid="input-user-phone" />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              )}
               {isSuperAdmin && (
                 <FormField
                   control={form.control}

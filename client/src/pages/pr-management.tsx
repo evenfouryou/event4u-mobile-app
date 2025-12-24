@@ -103,8 +103,6 @@ const createPrFormSchema = z.object({
   firstName: z.string().min(1, "Nome richiesto"),
   lastName: z.string().min(1, "Cognome richiesto"),
   phone: z.string().min(10, "Telefono non valido").regex(/^\+?[0-9]+$/, "Formato telefono non valido"),
-  commissionType: z.enum(["percentage", "fixed"], { required_error: "Seleziona tipo commissione" }),
-  commissionValue: z.coerce.number().min(0, "Valore deve essere positivo"),
 });
 
 const editPrFormSchema = z.object({
@@ -148,8 +146,6 @@ export default function PrManagement() {
       firstName: "",
       lastName: "",
       phone: "",
-      commissionType: "percentage",
-      commissionValue: 10,
     },
   });
 
@@ -551,48 +547,9 @@ export default function PrManagement() {
                   </FormItem>
                 )}
               />
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={createForm.control}
-                  name="commissionType"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Tipo Commissione</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-commission-type">
-                            <SelectValue placeholder="Seleziona" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="percentage">Percentuale</SelectItem>
-                          <SelectItem value="fixed">Fisso (€)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={createForm.control}
-                  name="commissionValue"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Valore</FormLabel>
-                      <FormControl>
-                        <Input
-                          type="number"
-                          min="0"
-                          step="0.01"
-                          {...field}
-                          data-testid="input-commission-value"
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
+              <p className="text-sm text-muted-foreground">
+                Le commissioni possono essere configurate successivamente modificando il profilo PR.
+              </p>
               <DialogFooter>
                 <Button
                   type="button"
