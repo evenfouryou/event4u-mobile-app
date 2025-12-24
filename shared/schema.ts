@@ -1212,6 +1212,7 @@ export const siaeTicketedEvents = pgTable("siae_ticketed_events", {
   ticketsSold: integer("tickets_sold").notNull().default(0),
   ticketsCancelled: integer("tickets_cancelled").notNull().default(0),
   totalRevenue: decimal("total_revenue", { precision: 12, scale: 2 }).default('0'),
+  autoSendReports: boolean("auto_send_reports").notNull().default(true),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
