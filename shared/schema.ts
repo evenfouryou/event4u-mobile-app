@@ -4788,3 +4788,256 @@ export type UpdateFloorPlanSeat = z.infer<typeof updateFloorPlanSeatSchema>;
 export type EventZoneMapping = typeof eventZoneMappings.$inferSelect;
 export type InsertEventZoneMapping = z.infer<typeof insertEventZoneMappingSchema>;
 export type UpdateEventZoneMapping = z.infer<typeof updateEventZoneMappingSchema>;
+
+// ==================== SISTEMA PRENOTAZIONI LISTE/TAVOLI (Non-ticketing) ====================
+// Questo modulo gestisce prenotazioni a pagamento per liste e tavoli
+// NOTA LEGALE: Si tratta di "servizio di prenotazione", NON biglietteria
+
+// PR Profiles - Profili PR con commissioni
+export const prProfiles = pgTable("pr_profiles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id).unique(),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  prCode: varchar("pr_code", { length: 20 }).notNull().unique(), // Codice univoco per link/tracking
+  displayName: varchar("display_name", { length: 100 }),
+  bio: text("bio"),
+  profileImageUrl: text("profile_image_url"),
+  commissionType: varchar("commission_type", { length: 20 }).notNull().default('percentage'), // 'percentage' | 'fixed'
+  commissionValue: decimal("commission_value", { precision: 10, scale: 2 }).notNull().default('10'), // 10% or €10
+  defaultListCommission: decimal("default_list_commission", { precision: 10, scale: 2 }).default('0'), // Commissione per ingresso lista
+  defaultTableCommission: decimal("default_table_commission", { precision: 10, scale: 2 }).default('0'), // Commissione per prenotazione tavolo
+  totalEarnings: decimal("total_earnings", { precision: 12, scale: 2 }).notNull().default('0'),
+  pendingEarnings: decimal("pending_earnings", { precision: 12, scale: 2 }).notNull().default('0'),
+  paidEarnings: decimal("paid_earnings", { precision: 12, scale: 2 }).notNull().default('0'),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const prProfilesRelations = relations(prProfiles, ({ one, many }) => ({
+  user: one(users, {
+    fields: [prProfiles.userId],
+    references: [users.id],
+  }),
+  company: one(companies, {
+    fields: [prProfiles.companyId],
+    references: [companies.id],
+  }),
+  reservations: many(reservationPayments),
+}));
+
+// Reservation Payments - Pagamenti prenotazioni (liste e tavoli)
+// NOTA: Questo NON è un biglietto, è un servizio di prenotazione
+export const reservationPayments = pgTable("reservation_payments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  eventId: varchar("event_id").notNull().references(() => events.id),
+  
+  // Tipo prenotazione
+  reservationType: varchar("reservation_type", { length: 20 }).notNull(), // 'list' | 'table'
+  listEntryId: varchar("list_entry_id").references(() => listEntries.id),
+  tableReservationId: varchar("table_reservation_id").references(() => tableReservations.id),
+  
+  // Dati cliente
+  customerFirstName: varchar("customer_first_name", { length: 100 }).notNull(),
+  customerLastName: varchar("customer_last_name", { length: 100 }).notNull(),
+  customerEmail: varchar("customer_email", { length: 255 }),
+  customerPhone: varchar("customer_phone", { length: 20 }),
+  customerUserId: varchar("customer_user_id").references(() => users.id),
+  
+  // QR Code per check-in (NON è un biglietto)
+  qrToken: varchar("qr_token", { length: 100 }).notNull().unique(),
+  qrCodeUrl: text("qr_code_url"),
+  
+  // Pagamento
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default('EUR'),
+  paymentStatus: varchar("payment_status", { length: 20 }).notNull().default('pending'), // 'pending' | 'paid' | 'failed' | 'refunded'
+  stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 100 }),
+  stripeChargeId: varchar("stripe_charge_id", { length: 100 }),
+  paidAt: timestamp("paid_at"),
+  
+  // PR Tracking
+  prProfileId: varchar("pr_profile_id").references(() => prProfiles.id),
+  prCode: varchar("pr_code", { length: 20 }), // Codice PR al momento della prenotazione
+  prCommissionAmount: decimal("pr_commission_amount", { precision: 10, scale: 2 }).default('0'),
+  prCommissionPaid: boolean("pr_commission_paid").notNull().default(false),
+  prCommissionPaidAt: timestamp("pr_commission_paid_at"),
+  
+  // Check-in
+  checkedIn: boolean("checked_in").notNull().default(false),
+  checkedInAt: timestamp("checked_in_at"),
+  checkedInBy: varchar("checked_in_by").references(() => users.id),
+  accessDenied: boolean("access_denied").notNull().default(false), // Accesso negato all'ingresso
+  accessDeniedReason: text("access_denied_reason"),
+  
+  // Metadata
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_reservation_payments_event").on(table.eventId),
+  index("idx_reservation_payments_pr").on(table.prProfileId),
+  index("idx_reservation_payments_qr").on(table.qrToken),
+]);
+
+export const reservationPaymentsRelations = relations(reservationPayments, ({ one }) => ({
+  company: one(companies, {
+    fields: [reservationPayments.companyId],
+    references: [companies.id],
+  }),
+  event: one(events, {
+    fields: [reservationPayments.eventId],
+    references: [events.id],
+  }),
+  listEntry: one(listEntries, {
+    fields: [reservationPayments.listEntryId],
+    references: [listEntries.id],
+  }),
+  tableReservation: one(tableReservations, {
+    fields: [reservationPayments.tableReservationId],
+    references: [tableReservations.id],
+  }),
+  prProfile: one(prProfiles, {
+    fields: [reservationPayments.prProfileId],
+    references: [prProfiles.id],
+  }),
+  customerUser: one(users, {
+    fields: [reservationPayments.customerUserId],
+    references: [users.id],
+  }),
+  checkedInByUser: one(users, {
+    fields: [reservationPayments.checkedInBy],
+    references: [users.id],
+  }),
+}));
+
+// PR Payouts - Pagamenti commissioni ai PR
+export const prPayouts = pgTable("pr_payouts", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  prProfileId: varchar("pr_profile_id").notNull().references(() => prProfiles.id),
+  
+  amount: decimal("amount", { precision: 10, scale: 2 }).notNull(),
+  currency: varchar("currency", { length: 3 }).notNull().default('EUR'),
+  status: varchar("status", { length: 20 }).notNull().default('pending'), // 'pending' | 'processing' | 'paid' | 'failed'
+  
+  // Periodo coperto
+  periodStart: timestamp("period_start").notNull(),
+  periodEnd: timestamp("period_end").notNull(),
+  
+  // Dettagli
+  reservationCount: integer("reservation_count").notNull().default(0),
+  paymentMethod: varchar("payment_method", { length: 50 }), // 'bank_transfer' | 'cash' | 'stripe'
+  paymentReference: varchar("payment_reference", { length: 100 }),
+  paidAt: timestamp("paid_at"),
+  paidBy: varchar("paid_by").references(() => users.id),
+  
+  notes: text("notes"),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const prPayoutsRelations = relations(prPayouts, ({ one }) => ({
+  company: one(companies, {
+    fields: [prPayouts.companyId],
+    references: [companies.id],
+  }),
+  prProfile: one(prProfiles, {
+    fields: [prPayouts.prProfileId],
+    references: [prProfiles.id],
+  }),
+  paidByUser: one(users, {
+    fields: [prPayouts.paidBy],
+    references: [users.id],
+  }),
+}));
+
+// Event Reservation Settings - Impostazioni prenotazioni per evento
+export const eventReservationSettings = pgTable("event_reservation_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  eventId: varchar("event_id").notNull().references(() => events.id).unique(),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  
+  // Abilitazione
+  listsEnabled: boolean("lists_enabled").notNull().default(true),
+  tablesEnabled: boolean("tables_enabled").notNull().default(true),
+  paidReservationsEnabled: boolean("paid_reservations_enabled").notNull().default(false),
+  
+  // Prezzi prenotazione lista (servizio, non biglietto)
+  listReservationFee: decimal("list_reservation_fee", { precision: 10, scale: 2 }).default('0'), // Costo servizio prenotazione
+  listReservationFeeDescription: text("list_reservation_fee_description").default('Servizio di prenotazione prioritaria'),
+  
+  // Termini legali
+  termsAndConditions: text("terms_and_conditions"),
+  accessDisclaimer: text("access_disclaimer").default('L\'accesso è subordinato al rispetto delle condizioni del locale e alla verifica in fase di accreditamento.'),
+  
+  // Orari
+  reservationsOpenAt: timestamp("reservations_open_at"),
+  reservationsCloseAt: timestamp("reservations_close_at"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const eventReservationSettingsRelations = relations(eventReservationSettings, ({ one }) => ({
+  event: one(events, {
+    fields: [eventReservationSettings.eventId],
+    references: [events.id],
+  }),
+  company: one(companies, {
+    fields: [eventReservationSettings.companyId],
+    references: [companies.id],
+  }),
+}));
+
+// ==================== SCHEMAS PRENOTAZIONI ====================
+
+export const insertPrProfileSchema = createInsertSchema(prProfiles).omit({
+  id: true,
+  totalEarnings: true,
+  pendingEarnings: true,
+  paidEarnings: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updatePrProfileSchema = insertPrProfileSchema.partial().omit({ userId: true, companyId: true });
+
+export const insertReservationPaymentSchema = createInsertSchema(reservationPayments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateReservationPaymentSchema = insertReservationPaymentSchema.partial();
+
+export const insertPrPayoutSchema = createInsertSchema(prPayouts).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updatePrPayoutSchema = insertPrPayoutSchema.partial();
+
+export const insertEventReservationSettingsSchema = createInsertSchema(eventReservationSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateEventReservationSettingsSchema = insertEventReservationSettingsSchema.partial().omit({ eventId: true, companyId: true });
+
+// ==================== TYPES PRENOTAZIONI ====================
+
+export type PrProfile = typeof prProfiles.$inferSelect;
+export type InsertPrProfile = z.infer<typeof insertPrProfileSchema>;
+export type UpdatePrProfile = z.infer<typeof updatePrProfileSchema>;
+
+export type ReservationPayment = typeof reservationPayments.$inferSelect;
+export type InsertReservationPayment = z.infer<typeof insertReservationPaymentSchema>;
+export type UpdateReservationPayment = z.infer<typeof updateReservationPaymentSchema>;
+
+export type PrPayout = typeof prPayouts.$inferSelect;
+export type InsertPrPayout = z.infer<typeof insertPrPayoutSchema>;
+export type UpdatePrPayout = z.infer<typeof updatePrPayoutSchema>;
+
+export type EventReservationSettings = typeof eventReservationSettings.$inferSelect;
+export type InsertEventReservationSettings = z.infer<typeof insertEventReservationSettingsSchema>;
+export type UpdateEventReservationSettings = z.infer<typeof updateEventReservationSettingsSchema>;
