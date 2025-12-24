@@ -213,20 +213,24 @@ function FloorPlanViewer({
       ? Number(zone.eventMapping.customPrice) 
       : (linkedSector ? Number(linkedSector.priceIntero) : null);
     
+    const centerX = coords.reduce((sum, p) => sum + p.x, 0) / coords.length;
+    const centerY = coords.reduce((sum, p) => sum + p.y, 0) / coords.length;
+    
     return (
-      <g key={zone.id}>
+      <g key={zone.id} className="zone-group">
         <polygon
           points={points}
-          fill={isSelected ? '#22c55e' : (zone.fillColor || '#3b82f6')}
-          stroke={isSelected ? '#16a34a' : (zone.strokeColor || '#1d4ed8')}
-          strokeWidth="2"
-          opacity={isSelected ? 0.7 : (Number(zone.opacity) || 0.4)}
+          fill={isSelected ? 'rgba(34, 197, 94, 0.25)' : 'transparent'}
+          stroke={isSelected ? '#22c55e' : (isAvailable ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.15)')}
+          strokeWidth={isSelected ? 1.5 : 0.8}
+          strokeDasharray={isSelected ? 'none' : '2,1'}
           style={{ 
             cursor: zone.isSelectable && isAvailable ? 'pointer' : isAvailable ? 'default' : 'not-allowed',
             pointerEvents: 'auto',
-            touchAction: 'manipulation'
+            touchAction: 'manipulation',
+            filter: isSelected ? 'drop-shadow(0 0 4px rgba(34, 197, 94, 0.5))' : 'none'
           }}
-          className={`transition-all duration-200 ${!isAvailable ? 'opacity-20' : ''}`}
+          className={`transition-all duration-300 ${!isAvailable ? 'opacity-30' : 'hover:stroke-white/60'}`}
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
@@ -245,31 +249,30 @@ function FloorPlanViewer({
           }}
           data-testid={`zone-polygon-${zone.id}`}
         />
-        <text
-          x={coords.reduce((sum, p) => sum + p.x, 0) / coords.length}
-          y={coords.reduce((sum, p) => sum + p.y, 0) / coords.length}
-          fill="white"
-          fontSize="10"
-          textAnchor="middle"
-          dominantBaseline="middle"
-          className="pointer-events-none font-semibold"
-          style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}
-        >
-          {zone.name}
-        </text>
-        {displayPrice !== null && (
-          <text
-            x={coords.reduce((sum, p) => sum + p.x, 0) / coords.length}
-            y={coords.reduce((sum, p) => sum + p.y, 0) / coords.length + 12}
-            fill="rgba(255,255,255,0.8)"
-            fontSize="8"
-            textAnchor="middle"
-            dominantBaseline="middle"
-            className="pointer-events-none"
-            style={{ textShadow: '1px 1px 2px rgba(0,0,0,0.8)' }}
-          >
-            €{displayPrice.toFixed(0)}
-          </text>
+        {isSelected && displayPrice !== null && (
+          <g className="pointer-events-none">
+            <rect
+              x={centerX - 18}
+              y={centerY - 10}
+              width={36}
+              height={20}
+              rx={4}
+              fill="rgba(0,0,0,0.75)"
+              stroke="#22c55e"
+              strokeWidth={0.5}
+            />
+            <text
+              x={centerX}
+              y={centerY + 1}
+              fill="#22c55e"
+              fontSize="8"
+              fontWeight="bold"
+              textAnchor="middle"
+              dominantBaseline="middle"
+            >
+              €{displayPrice.toFixed(0)}
+            </text>
+          </g>
         )}
       </g>
     );
