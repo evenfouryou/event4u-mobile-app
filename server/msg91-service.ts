@@ -30,12 +30,43 @@ interface VerifyOTPResult {
 function formatPhoneNumber(phone: string): string {
   let cleaned = phone.replace(/\D/g, '');
   
+  // Remove leading 00 (international format)
   if (cleaned.startsWith('00')) {
     cleaned = cleaned.substring(2);
   }
   
-  if (!cleaned.startsWith('39') && cleaned.length === 10) {
+  // Italian mobile numbers:
+  // - 10 digits starting with 3 (e.g., 3381234567)
+  // - With country code: 12 digits starting with 39 (e.g., 393381234567)
+  
+  // If 12 digits starting with 39, assume it's already formatted correctly
+  if (cleaned.startsWith('39') && cleaned.length === 12) {
+    console.log(`[MSG91] Phone already has country code (12 digits): ${cleaned}`);
+    return cleaned;
+  }
+  
+  // If 10 digits starting with 3 (Italian mobile), add country code
+  if (cleaned.startsWith('3') && cleaned.length === 10) {
     cleaned = '39' + cleaned;
+    console.log(`[MSG91] Added 39 prefix to 10-digit mobile: ${cleaned}`);
+    return cleaned;
+  }
+  
+  // If 10 digits starting with 39, this is likely incorrect input
+  // (user entered 39 + 8 digit number instead of 10 digit number)
+  if (cleaned.startsWith('39') && cleaned.length === 10) {
+    // Try to fix: remove 39 and check if remaining starts with 3
+    const withoutPrefix = cleaned.substring(2);
+    if (withoutPrefix.startsWith('3')) {
+      // This looks like user entered 39 + partial number, can't fix reliably
+      console.warn(`[MSG91] Ambiguous phone number: ${cleaned}. Only 8 digits after country code.`);
+    }
+  }
+  
+  // For other lengths, just add 39 if not present
+  if (!cleaned.startsWith('39')) {
+    cleaned = '39' + cleaned;
+    console.log(`[MSG91] Added 39 prefix: ${cleaned}`);
   }
   
   return cleaned;
