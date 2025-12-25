@@ -40,6 +40,8 @@ An admin tool (`/siae/ticketed-events/:id/page-editor`) for customizing public e
 
 ### Desktop Bridge Relay System
 A WebSocket relay system (`/ws/bridge`) enabling remote smart card reader access from a desktop Electron app to the web application. Uses token-based authentication for desktop apps and session-based for web clients, with company-scoped message routing.
+-   **Digital Signature**: Supports XML-DSig digital signatures for SIAE C1 reports using the smart card's PKI functionality. Flow: `REQUEST_XML_SIGNATURE` message → Desktop app → `SIGN_XML` command → C# bridge with `SignML()` function → SHA-1 hash + RSA signature + X509 certificate embedding.
+-   **SIAE Report Transmission**: Signed XML reports are sent via email to SIAE test environment (`servertest2@batest.siae.it`) with manual confirmation for status updates.
 
 ### Scanner Management Module
 Manages event scanner operators for `gestore`/`super_admin` users. Supports scanner account creation, a mobile-optimized UI, and granular event assignment with permissions for list, table, and ticket scanning (including specific sectors/types). Ensures company-scoped data access and sanitized API responses.
