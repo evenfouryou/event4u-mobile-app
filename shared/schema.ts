@@ -4799,6 +4799,270 @@ export type EventZoneMapping = typeof eventZoneMappings.$inferSelect;
 export type InsertEventZoneMapping = z.infer<typeof insertEventZoneMappingSchema>;
 export type UpdateEventZoneMapping = z.infer<typeof updateEventZoneMappingSchema>;
 
+// ==================== SEAT HOLD SYSTEM (Lock distribuito per biglietteria) ====================
+// Sistema di prenotazione temporanea posti con TTL per gestire concorrenza acquisti
+
+// Holds attivi sui posti (con scadenza automatica)
+export const seatHolds = pgTable("seat_holds", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketedEventId: varchar("ticketed_event_id").notNull().references(() => siaeTicketedEvents.id, { onDelete: 'cascade' }),
+  sectorId: varchar("sector_id").references(() => siaeEventSectors.id, { onDelete: 'cascade' }),
+  seatId: varchar("seat_id").references(() => floorPlanSeats.id, { onDelete: 'cascade' }), // Per posti numerati
+  zoneId: varchar("zone_id").references(() => floorPlanZones.id, { onDelete: 'cascade' }), // Per zone/tavoli
+  
+  // Chi detiene l'opzione
+  sessionId: varchar("session_id", { length: 255 }).notNull(), // Session ID browser (anonimo)
+  customerId: varchar("customer_id").references(() => siaeCustomers.id), // Cliente registrato (opzionale)
+  userId: varchar("user_id").references(() => users.id), // Operatore/staff (opzionale)
+  
+  // Dettagli hold
+  holdType: varchar("hold_type", { length: 20 }).notNull().default('cart'), // 'cart' | 'checkout' | 'staff_reserve'
+  quantity: integer("quantity").notNull().default(1), // Per settori non numerati
+  priceSnapshot: decimal("price_snapshot", { precision: 10, scale: 2 }), // Prezzo bloccato al momento dell'hold
+  
+  // Timing
+  expiresAt: timestamp("expires_at").notNull(), // Scadenza automatica
+  extendedCount: integer("extended_count").notNull().default(0), // Numero estensioni concesse
+  
+  // Stato
+  status: varchar("status", { length: 20 }).notNull().default('active'), // 'active' | 'converted' | 'expired' | 'released'
+  convertedToOrderId: varchar("converted_to_order_id"), // ID ordine se convertito
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_seat_holds_event").on(table.ticketedEventId),
+  index("idx_seat_holds_seat").on(table.seatId),
+  index("idx_seat_holds_zone").on(table.zoneId),
+  index("idx_seat_holds_session").on(table.sessionId),
+  index("idx_seat_holds_expires").on(table.expiresAt),
+  index("idx_seat_holds_status").on(table.status),
+]);
+
+export const seatHoldsRelations = relations(seatHolds, ({ one }) => ({
+  ticketedEvent: one(siaeTicketedEvents, {
+    fields: [seatHolds.ticketedEventId],
+    references: [siaeTicketedEvents.id],
+  }),
+  sector: one(siaeEventSectors, {
+    fields: [seatHolds.sectorId],
+    references: [siaeEventSectors.id],
+  }),
+  seat: one(floorPlanSeats, {
+    fields: [seatHolds.seatId],
+    references: [floorPlanSeats.id],
+  }),
+  zone: one(floorPlanZones, {
+    fields: [seatHolds.zoneId],
+    references: [floorPlanZones.id],
+  }),
+  customer: one(siaeCustomers, {
+    fields: [seatHolds.customerId],
+    references: [siaeCustomers.id],
+  }),
+  user: one(users, {
+    fields: [seatHolds.userId],
+    references: [users.id],
+  }),
+}));
+
+// Log eventi hold (per audit e analytics)
+export const seatHoldEvents = pgTable("seat_hold_events", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  holdId: varchar("hold_id").notNull().references(() => seatHolds.id, { onDelete: 'cascade' }),
+  eventType: varchar("event_type", { length: 30 }).notNull(), // 'created' | 'extended' | 'converted' | 'expired' | 'released'
+  previousStatus: varchar("previous_status", { length: 20 }),
+  newStatus: varchar("new_status", { length: 20 }),
+  metadata: jsonb("metadata"), // Dati aggiuntivi (es. motivo release, ID ordine)
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const seatHoldEventsRelations = relations(seatHoldEvents, ({ one }) => ({
+  hold: one(seatHolds, {
+    fields: [seatHoldEvents.holdId],
+    references: [seatHolds.id],
+  }),
+}));
+
+// Stato posti per evento (cache denormalizzata per performance)
+export const eventSeatStatus = pgTable("event_seat_status", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketedEventId: varchar("ticketed_event_id").notNull().references(() => siaeTicketedEvents.id, { onDelete: 'cascade' }),
+  seatId: varchar("seat_id").references(() => floorPlanSeats.id, { onDelete: 'cascade' }),
+  zoneId: varchar("zone_id").references(() => floorPlanZones.id, { onDelete: 'cascade' }),
+  sectorId: varchar("sector_id").references(() => siaeEventSectors.id, { onDelete: 'cascade' }),
+  
+  // Stato corrente
+  status: varchar("status", { length: 20 }).notNull().default('available'), // 'available' | 'held' | 'sold' | 'blocked' | 'reserved'
+  currentHoldId: varchar("current_hold_id").references(() => seatHolds.id, { onDelete: 'set null' }),
+  holdExpiresAt: timestamp("hold_expires_at"),
+  
+  // Contatori per zone non numerate
+  availableQuantity: integer("available_quantity"), // Posti disponibili nella zona
+  heldQuantity: integer("held_quantity").default(0), // Posti in hold
+  soldQuantity: integer("sold_quantity").default(0), // Posti venduti
+  
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_event_seat_status_event").on(table.ticketedEventId),
+  index("idx_event_seat_status_seat").on(table.seatId),
+  index("idx_event_seat_status_zone").on(table.zoneId),
+]);
+
+// ==================== FLOOR PLAN EDITOR (Versioning e Assets) ====================
+
+// Versioni planimetrie (bozza vs pubblicata)
+export const floorPlanVersions = pgTable("floor_plan_versions", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  floorPlanId: varchar("floor_plan_id").notNull().references(() => venueFloorPlans.id, { onDelete: 'cascade' }),
+  version: integer("version").notNull(),
+  status: varchar("status", { length: 20 }).notNull().default('draft'), // 'draft' | 'published' | 'archived'
+  
+  // Snapshot completo della planimetria (zones + seats come JSON)
+  zonesSnapshot: jsonb("zones_snapshot").notNull(), // Array di zone con coordinate
+  seatsSnapshot: jsonb("seats_snapshot"), // Array di posti (opzionale)
+  
+  // Metadati
+  publishedAt: timestamp("published_at"),
+  publishedBy: varchar("published_by").references(() => users.id),
+  notes: text("notes"), // Note sulla versione
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  createdBy: varchar("created_by").references(() => users.id),
+}, (table) => [
+  index("idx_floor_plan_versions_plan").on(table.floorPlanId),
+  index("idx_floor_plan_versions_status").on(table.status),
+]);
+
+// Assets planimetria (immagini di sfondo, icone custom)
+export const floorPlanAssets = pgTable("floor_plan_assets", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  floorPlanId: varchar("floor_plan_id").notNull().references(() => venueFloorPlans.id, { onDelete: 'cascade' }),
+  assetType: varchar("asset_type", { length: 30 }).notNull(), // 'background' | 'overlay' | 'icon' | 'logo'
+  fileName: varchar("file_name", { length: 255 }).notNull(),
+  fileUrl: text("file_url").notNull(),
+  mimeType: varchar("mime_type", { length: 100 }),
+  fileSize: integer("file_size"), // bytes
+  
+  // Posizionamento (per overlay)
+  posX: decimal("pos_x", { precision: 10, scale: 4 }),
+  posY: decimal("pos_y", { precision: 10, scale: 4 }),
+  width: decimal("width", { precision: 10, scale: 4 }),
+  height: decimal("height", { precision: 10, scale: 4 }),
+  opacity: decimal("opacity", { precision: 3, scale: 2 }).default('1'),
+  zIndex: integer("z_index").default(0),
+  
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  uploadedBy: varchar("uploaded_by").references(() => users.id),
+});
+
+// ==================== ZONE METRICS (Heatmap e Analytics) ====================
+
+// Metriche aggregate per zona (cache per heatmap e analytics)
+export const zoneMetrics = pgTable("zone_metrics", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketedEventId: varchar("ticketed_event_id").notNull().references(() => siaeTicketedEvents.id, { onDelete: 'cascade' }),
+  zoneId: varchar("zone_id").notNull().references(() => floorPlanZones.id, { onDelete: 'cascade' }),
+  sectorId: varchar("sector_id").references(() => siaeEventSectors.id, { onDelete: 'cascade' }),
+  
+  // Capacità e disponibilità
+  totalCapacity: integer("total_capacity").notNull().default(0),
+  availableCount: integer("available_count").notNull().default(0),
+  heldCount: integer("held_count").notNull().default(0),
+  soldCount: integer("sold_count").notNull().default(0),
+  blockedCount: integer("blocked_count").notNull().default(0),
+  
+  // Percentuali calcolate
+  occupancyPercent: decimal("occupancy_percent", { precision: 5, scale: 2 }).default('0'),
+  
+  // Analytics
+  viewCount: integer("view_count").notNull().default(0), // Quante volte la zona è stata visualizzata
+  clickCount: integer("click_count").notNull().default(0), // Click sulla zona
+  conversionRate: decimal("conversion_rate", { precision: 5, scale: 2 }).default('0'), // Click -> acquisto
+  averageSellTime: integer("average_sell_time"), // Tempo medio vendita in secondi
+  
+  // Popularità (0-100)
+  popularityScore: integer("popularity_score").default(50),
+  
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_zone_metrics_event").on(table.ticketedEventId),
+  index("idx_zone_metrics_zone").on(table.zoneId),
+]);
+
+// Log suggerimenti smart assist (per migliorare algoritmo)
+export const recommendationLogs = pgTable("recommendation_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  ticketedEventId: varchar("ticketed_event_id").notNull().references(() => siaeTicketedEvents.id, { onDelete: 'cascade' }),
+  sessionId: varchar("session_id", { length: 255 }).notNull(),
+  
+  // Input richiesta
+  partySize: integer("party_size"), // Numero persone
+  preferAccessible: boolean("prefer_accessible").default(false),
+  preferredZoneType: varchar("preferred_zone_type", { length: 50 }), // 'table' | 'sector' | 'vip'
+  maxPrice: decimal("max_price", { precision: 10, scale: 2 }),
+  
+  // Output suggerimento
+  suggestedZoneIds: jsonb("suggested_zone_ids"), // Array di zone suggerite
+  suggestedSeatIds: jsonb("suggested_seat_ids"), // Array di posti suggeriti
+  
+  // Risultato
+  wasAccepted: boolean("was_accepted"), // L'utente ha accettato il suggerimento?
+  selectedZoneId: varchar("selected_zone_id"),
+  selectedSeatIds: jsonb("selected_seat_ids"),
+  
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+// Schemas validazione HOLD
+export const insertSeatHoldSchema = createInsertSchema(seatHolds).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateSeatHoldSchema = insertSeatHoldSchema.partial();
+
+export const insertFloorPlanVersionSchema = createInsertSchema(floorPlanVersions).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertFloorPlanAssetSchema = createInsertSchema(floorPlanAssets).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertZoneMetricsSchema = createInsertSchema(zoneMetrics).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export const insertRecommendationLogSchema = createInsertSchema(recommendationLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+// Types
+export type SeatHold = typeof seatHolds.$inferSelect;
+export type InsertSeatHold = z.infer<typeof insertSeatHoldSchema>;
+export type UpdateSeatHold = z.infer<typeof updateSeatHoldSchema>;
+
+export type SeatHoldEvent = typeof seatHoldEvents.$inferSelect;
+export type EventSeatStatus = typeof eventSeatStatus.$inferSelect;
+
+export type FloorPlanVersion = typeof floorPlanVersions.$inferSelect;
+export type InsertFloorPlanVersion = z.infer<typeof insertFloorPlanVersionSchema>;
+
+export type FloorPlanAsset = typeof floorPlanAssets.$inferSelect;
+export type InsertFloorPlanAsset = z.infer<typeof insertFloorPlanAssetSchema>;
+
+export type ZoneMetrics = typeof zoneMetrics.$inferSelect;
+export type InsertZoneMetrics = z.infer<typeof insertZoneMetricsSchema>;
+
+export type RecommendationLog = typeof recommendationLogs.$inferSelect;
+export type InsertRecommendationLog = z.infer<typeof insertRecommendationLogSchema>;
+
 // ==================== SISTEMA PRENOTAZIONI LISTE/TAVOLI (Non-ticketing) ====================
 // Questo modulo gestisce prenotazioni a pagamento per liste e tavoli
 // NOTA LEGALE: Si tratta di "servizio di prenotazione", NON biglietteria
