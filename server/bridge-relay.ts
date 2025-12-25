@@ -259,6 +259,19 @@ export function setupBridgeRelay(server: Server): void {
             if (message.toCompanyId) {
               forwardToClients(message.toCompanyId as string, message);
             }
+          } else if (message.type === 'SIGNATURE_RESPONSE') {
+            // Handle XML signature response from desktop app (for digital signing)
+            console.log(`[Bridge] XML Signature response received: requestId=${message.requestId}`);
+            handleSignatureResponse(
+              message.requestId || '',
+              message.payload?.success ?? false,
+              message.payload?.signatureData,
+              message.payload?.error
+            );
+            // Also forward to clients if there's a toCompanyId
+            if (message.toCompanyId) {
+              forwardToClients(message.toCompanyId as string, message);
+            }
           } else if (message.toCompanyId) {
             // Response to specific client request
             forwardToClients(message.toCompanyId as string, message);
@@ -850,4 +863,118 @@ export function handleSealResponse(requestId: string, success: boolean, seal?: a
 // Get pending seal requests count (for monitoring)
 export function getPendingSealRequestsCount(): number {
   return pendingSealRequests.size;
+}
+
+// ==================== XML SIGNATURE BROKER ====================
+// Pending XML signature requests waiting for response from desktop bridge
+interface PendingSignatureRequest {
+  resolve: (signedXml: XmlSignatureData) => void;
+  reject: (error: Error) => void;
+  timeout: NodeJS.Timeout;
+  createdAt: Date;
+}
+
+export interface XmlSignatureData {
+  signedXml: string;
+  signatureValue: string;
+  certificateData: string;
+  signedAt: string;
+}
+
+const pendingSignatureRequests = new Map<string, PendingSignatureRequest>();
+
+const SIGNATURE_REQUEST_TIMEOUT = 30000; // 30 seconds for XML signature
+
+// Generate UUID for signature request tracking
+function generateSignatureRequestId(): string {
+  return `sig_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+}
+
+// Request XML digital signature from the desktop bridge (SIAE smart card)
+export async function requestXmlSignature(xmlContent: string): Promise<XmlSignatureData> {
+  console.log(`[Bridge] requestXmlSignature called, XML length=${xmlContent.length}`);
+  
+  // Check if bridge is connected
+  if (!globalBridge || globalBridge.ws.readyState !== WebSocket.OPEN) {
+    console.log(`[Bridge] ERROR: Bridge not connected for XML signature`);
+    throw new Error('SIGNATURE_BRIDGE_OFFLINE: App desktop Event4U non connessa. Impossibile firmare XML.');
+  }
+  
+  // Check if card is ready
+  const cardReady = isCardReadyForSeals();
+  console.log(`[Bridge] Card ready check for signature: ${JSON.stringify(cardReady)}`);
+  if (!cardReady.ready) {
+    throw new Error(`SIGNATURE_CARD_NOT_READY: ${cardReady.error}`);
+  }
+  
+  const requestId = generateSignatureRequestId();
+  
+  console.log(`[Bridge] Requesting XML signature: requestId=${requestId}`);
+  
+  return new Promise<XmlSignatureData>((resolve, reject) => {
+    // Set timeout
+    const timeout = setTimeout(() => {
+      pendingSignatureRequests.delete(requestId);
+      console.log(`[Bridge] XML signature request timeout: requestId=${requestId}`);
+      reject(new Error('SIGNATURE_TIMEOUT: Timeout firma digitale XML. Riprovare.'));
+    }, SIGNATURE_REQUEST_TIMEOUT);
+    
+    // Store pending request
+    pendingSignatureRequests.set(requestId, {
+      resolve,
+      reject,
+      timeout,
+      createdAt: new Date()
+    });
+    
+    // Send request to bridge
+    try {
+      const signatureMessage = {
+        type: 'REQUEST_XML_SIGNATURE',
+        requestId,
+        payload: {
+          xmlContent,
+          timestamp: new Date().toISOString()
+        }
+      };
+      console.log(`[Bridge] Sending XML signature request to bridge: requestId=${requestId}`);
+      globalBridge!.ws.send(JSON.stringify(signatureMessage));
+      console.log(`[Bridge] XML signature request sent successfully, waiting for response...`);
+    } catch (sendError: any) {
+      console.log(`[Bridge] ERROR sending XML signature request: ${sendError.message}`);
+      clearTimeout(timeout);
+      pendingSignatureRequests.delete(requestId);
+      reject(new Error('SIGNATURE_SEND_ERROR: Errore invio richiesta firma'));
+    }
+  });
+}
+
+// Handle signature response from bridge (called when bridge sends SIGNATURE_RESPONSE)
+export function handleSignatureResponse(requestId: string, success: boolean, signatureData?: any, error?: string): void {
+  const pending = pendingSignatureRequests.get(requestId);
+  if (!pending) {
+    console.log(`[Bridge] No pending request for signature response: requestId=${requestId}`);
+    return;
+  }
+  
+  clearTimeout(pending.timeout);
+  pendingSignatureRequests.delete(requestId);
+  
+  if (success && signatureData) {
+    console.log(`[Bridge] XML signature request completed: requestId=${requestId}`);
+    pending.resolve({
+      signedXml: signatureData.signedXml,
+      signatureValue: signatureData.signatureValue || '',
+      certificateData: signatureData.certificateData || '',
+      signedAt: signatureData.signedAt || new Date().toISOString()
+    });
+  } else {
+    console.log(`[Bridge] XML signature request failed: requestId=${requestId}, error=${error}`);
+    pending.reject(new Error(`SIGNATURE_ERROR: ${error || 'Errore firma digitale XML'}`));
+  }
+}
+
+// Get pending signature requests count (for monitoring)
+export function getPendingSignatureRequestsCount(): number {
+  return pendingSignatureRequests.size;
 }

@@ -7,7 +7,7 @@ import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions,
 import { eq, and, sql, desc } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { requestFiscalSeal, isCardReadyForSeals, isBridgeConnected, getCachedBridgeStatus } from "./bridge-relay";
+import { requestFiscalSeal, isCardReadyForSeals, isBridgeConnected, getCachedBridgeStatus, requestXmlSignature } from "./bridge-relay";
 import { sendPrintJobToAgent, getConnectedAgents } from "./print-relay";
 import { generateTicketHtml } from "./template-routes";
 import { sendOTP as sendMSG91OTP, verifyOTP as verifyMSG91OTP, resendOTP as resendMSG91OTP, isMSG91Configured } from "./msg91-service";
@@ -3779,6 +3779,51 @@ ${settoriXml}
   </QuadroC>
 </ModelloC1>`;
 
+    // Check if digital signature is requested via smart card
+    const { signWithSmartCard } = req.body;
+    let finalXmlContent = xmlContent;
+    let signatureData: { signatureValue: string; certificateData: string; signedAt: string } | null = null;
+    
+    if (signWithSmartCard) {
+      console.log('[C1 Send] Digital signature requested via smart card');
+      
+      try {
+        // Check if bridge is connected
+        if (!isBridgeConnected()) {
+          return res.status(400).json({ 
+            message: "App desktop Event4U non connessa. Impossibile firmare il report.",
+            code: "BRIDGE_NOT_CONNECTED"
+          });
+        }
+        
+        // Check if card is ready
+        const cardReady = isCardReadyForSeals();
+        if (!cardReady.ready) {
+          return res.status(400).json({ 
+            message: cardReady.error || "Smart Card SIAE non pronta",
+            code: "CARD_NOT_READY"
+          });
+        }
+        
+        // Request digital signature from smart card
+        const signature = await requestXmlSignature(xmlContent);
+        finalXmlContent = signature.signedXml;
+        signatureData = {
+          signatureValue: signature.signatureValue,
+          certificateData: signature.certificateData,
+          signedAt: signature.signedAt
+        };
+        console.log('[C1 Send] XML signed successfully at', signature.signedAt);
+        
+      } catch (signError: any) {
+        console.error('[C1 Send] Signature error:', signError.message);
+        return res.status(400).json({ 
+          message: `Errore firma digitale: ${signError.message}`,
+          code: "SIGNATURE_ERROR"
+        });
+      }
+    }
+
     // Create transmission record - pass periodDate as Date object
     // Include ticketedEventId to link transmission to event
     const transmission = await siaeStorage.createSiaeTransmission({
@@ -3787,7 +3832,7 @@ ${settoriXml}
       transmissionType: isMonthly ? 'monthly' : 'daily',
       periodDate: eventDate,
       fileName: fileName,
-      fileContent: xmlContent,
+      fileContent: finalXmlContent, // Use signed XML if signature was requested
       status: 'pending',
       ticketsCount: reportData.activeTicketsCount,
       ticketsCancelled: reportData.cancelledTicketsCount,
@@ -3805,7 +3850,7 @@ ${settoriXml}
         periodDate: eventDate,
         ticketsCount: reportData.activeTicketsCount,
         totalAmount: reportData.totalRevenue.toFixed(2),
-        xmlContent: xmlContent,
+        xmlContent: finalXmlContent, // Use signed XML if signature was requested
         transmissionId: transmission.id,
       });
 
@@ -3818,7 +3863,13 @@ ${settoriXml}
     res.status(201).json({ 
       success: true, 
       transmissionId: transmission.id,
-      message: toEmail ? "Report C1 inviato con successo" : "Report C1 salvato come trasmissione"
+      signed: signWithSmartCard && signatureData ? true : false,
+      signedAt: signatureData?.signedAt || null,
+      message: signWithSmartCard && signatureData 
+        ? "Report C1 firmato digitalmente e salvato con successo"
+        : toEmail 
+          ? "Report C1 inviato con successo" 
+          : "Report C1 salvato come trasmissione"
     });
   } catch (error: any) {
     console.error('[C1 Send] Error:', error);
@@ -3940,12 +3991,12 @@ router.get('/api/siae/ticketed-events/:id/reports/c2', requireAuth, async (req: 
     const quadroA = {
       // Dati Organizzatore
       denominazioneOrganizzatore: company?.name || 'N/D',
-      codiceFiscaleOrganizzatore: company?.fiscalCode || company?.vatNumber || company?.taxCode || 'N/D',
-      partitaIvaOrganizzatore: company?.vatNumber || 'N/D',
+      codiceFiscaleOrganizzatore: company?.fiscalCode || company?.taxId || 'N/D',
+      partitaIvaOrganizzatore: company?.taxId || 'N/D',
       indirizzoOrganizzatore: company?.address || 'N/D',
       comuneOrganizzatore: company?.city || 'N/D',
       provinciaOrganizzatore: company?.province || 'N/D',
-      capOrganizzatore: company?.postalCode || company?.cap || 'N/D',
+      capOrganizzatore: company?.postalCode || 'N/D',
       
       // Titolare Sistema di Emissione
       // Usa dati da siaeSystemConfig se disponibile, altrimenti fallback su company

@@ -19,12 +19,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Printer, RefreshCw, Send, CheckCircle, Loader2, FileText, Euro, Ticket, Building2, Calendar, History, Eye } from "lucide-react";
+import { ArrowLeft, Printer, RefreshCw, Send, CheckCircle, Loader2, FileText, Euro, Ticket, Building2, Calendar, History, Eye, Shield, CreditCard } from "lucide-react";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
+import { useSmartCardStatus } from "@/lib/smart-card-service";
 
 // Interfaccia conforme al modello C1 SIAE - Allegato 3 G.U. n.188 12/08/2004
 interface C1ReportData {
@@ -176,6 +179,11 @@ export default function SiaeReportC1() {
   const defaultType = urlParams.get('type') || 'giornaliero';
   const [reportType, setReportType] = useState<'giornaliero' | 'mensile'>(defaultType as 'giornaliero' | 'mensile');
   const isMonthly = reportType === 'mensile';
+  
+  // Smart Card status for digital signature
+  const smartCardStatus = useSmartCardStatus();
+  const [signWithSmartCard, setSignWithSmartCard] = useState(false);
+  const isSmartCardReady = smartCardStatus.bridgeConnected && smartCardStatus.readerDetected && smartCardStatus.cardInserted;
 
   // Update URL when report type changes
   useEffect(() => {
@@ -219,15 +227,18 @@ export default function SiaeReportC1() {
 
   const sendToSiaeMutation = useMutation({
     mutationFn: async () => {
-      console.log('[SIAE C1] Invio report in corso...', { id, reportType });
-      const res = await apiRequest('POST', `/api/siae/ticketed-events/${id}/reports/c1/send`, { reportType });
+      console.log('[SIAE C1] Invio report in corso...', { id, reportType, signWithSmartCard });
+      const res = await apiRequest('POST', `/api/siae/ticketed-events/${id}/reports/c1/send`, { 
+        reportType,
+        signWithSmartCard 
+      });
       console.log('[SIAE C1] Risposta ricevuta:', res);
       return res.json();
     },
     onSuccess: (data: any) => {
       console.log('[SIAE C1] Invio completato con successo:', data);
       toast({
-        title: "Report inviato",
+        title: data.signed ? "Report firmato e inviato" : "Report inviato",
         description: data.message || "Il report C1 è stato salvato come trasmissione SIAE",
       });
       queryClient.invalidateQueries({ queryKey: ['/api/siae'] });
@@ -392,7 +403,7 @@ export default function SiaeReportC1() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-3 gap-4 no-print">
+        <div className="grid grid-cols-4 gap-4 no-print">
           <Card className="col-span-1">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
@@ -415,6 +426,39 @@ export default function SiaeReportC1() {
                   ? "Report cumulativo per l'intero mese" 
                   : "Report per singola giornata"}
               </p>
+            </CardContent>
+          </Card>
+
+          <Card className="col-span-1">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Shield className="w-4 h-4" />
+                Firma Digitale
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center space-x-2">
+                <Switch
+                  id="sign-with-smartcard"
+                  checked={signWithSmartCard}
+                  onCheckedChange={setSignWithSmartCard}
+                  disabled={!isSmartCardReady}
+                  data-testid="switch-sign-smartcard"
+                />
+                <Label htmlFor="sign-with-smartcard" className="text-sm">
+                  Firma con Smart Card
+                </Label>
+              </div>
+              <div className="mt-2 flex items-center gap-2">
+                <CreditCard className={`w-4 h-4 ${isSmartCardReady ? 'text-green-500' : 'text-muted-foreground'}`} />
+                <span className={`text-xs ${isSmartCardReady ? 'text-green-600' : 'text-muted-foreground'}`}>
+                  {isSmartCardReady 
+                    ? 'Smart Card pronta' 
+                    : smartCardStatus.bridgeConnected 
+                      ? 'Inserire Smart Card' 
+                      : 'Bridge non connesso'}
+                </span>
+              </div>
             </CardContent>
           </Card>
 
@@ -800,6 +844,24 @@ export default function SiaeReportC1() {
             </Button>
           </div>
         </div>
+        <div className="flex items-center justify-between py-2 px-1">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="sign-mobile"
+              checked={signWithSmartCard}
+              onCheckedChange={setSignWithSmartCard}
+              disabled={!isSmartCardReady}
+              data-testid="switch-sign-smartcard-mobile"
+            />
+            <Label htmlFor="sign-mobile" className="text-sm">Firma digitale</Label>
+          </div>
+          <div className="flex items-center gap-1">
+            <CreditCard className={`w-4 h-4 ${isSmartCardReady ? 'text-green-500' : 'text-muted-foreground'}`} />
+            <span className={`text-xs ${isSmartCardReady ? 'text-green-600' : 'text-muted-foreground'}`}>
+              {isSmartCardReady ? 'Pronta' : 'Non disponibile'}
+            </span>
+          </div>
+        </div>
         <Button 
           className="w-full"
           onClick={() => sendToSiaeMutation.mutate()} 
@@ -808,6 +870,8 @@ export default function SiaeReportC1() {
         >
           {sendToSiaeMutation.isPending ? (
             <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Invio in corso...</>
+          ) : signWithSmartCard ? (
+            <><Shield className="w-4 h-4 mr-2" /> Firma e Invia a SIAE</>
           ) : (
             <><Send className="w-4 h-4 mr-2" /> Invia a SIAE</>
           )}

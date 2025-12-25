@@ -536,6 +536,75 @@ class SmartCardService {
     return { ready: true, error: null };
   }
 
+  /**
+   * Richiede la firma digitale di un documento XML tramite la smart card SIAE
+   * @param xmlContent Il contenuto XML da firmare
+   * @returns Dati della firma digitale (XML firmato, valore firma, certificato)
+   */
+  public async requestXmlSignature(xmlContent: string): Promise<{
+    signedXml: string;
+    signatureValue: string;
+    certificateData: string;
+    signedAt: string;
+  }> {
+    if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+      throw new Error('Connessione al server non disponibile. Verificare la connessione.');
+    }
+
+    if (!this.status.connected || !this.status.bridgeConnected) {
+      throw new Error('App desktop Event4U non connessa. Avviare l\'applicazione sul PC.');
+    }
+
+    if (!this.status.readerDetected) {
+      throw new Error('Lettore Smart Card non rilevato. Collegare il MiniLector EVO.');
+    }
+
+    if (!this.status.cardInserted) {
+      throw new Error('Smart Card SIAE non inserita. Inserire la carta sigilli.');
+    }
+
+    return new Promise((resolve, reject) => {
+      const timeout = setTimeout(() => {
+        this.ws?.removeEventListener('message', handler);
+        reject(new Error('Timeout firma digitale XML (30s). Riprovare.'));
+      }, 30000);
+
+      const handler = (event: MessageEvent) => {
+        try {
+          const msg = JSON.parse(event.data);
+          // Match server bridge relay message type (SIGNATURE_RESPONSE)
+          if (msg.type === 'SIGNATURE_RESPONSE') {
+            clearTimeout(timeout);
+            this.ws?.removeEventListener('message', handler);
+            
+            if (msg.success && msg.signatureData) {
+              resolve({
+                signedXml: msg.signatureData.signedXml,
+                signatureValue: msg.signatureData.signatureValue || '',
+                certificateData: msg.signatureData.certificateData || '',
+                signedAt: msg.signatureData.signedAt || new Date().toISOString()
+              });
+            } else {
+              reject(new Error(msg.error || 'Errore firma digitale XML'));
+            }
+          }
+        } catch (e) {
+          console.error('Error parsing signature response:', e);
+        }
+      };
+
+      this.ws!.addEventListener('message', handler);
+      // Send request with uppercase type to match server convention
+      this.ws!.send(JSON.stringify({
+        type: 'REQUEST_XML_SIGNATURE',
+        data: { 
+          xmlContent,
+          timestamp: new Date().toISOString() 
+        }
+      }));
+    });
+  }
+
   public sendCommand(type: string, data?: any): void {
     if (this.ws && this.ws.readyState === WebSocket.OPEN) {
       this.ws.send(JSON.stringify({ type, data }));
