@@ -1379,6 +1379,117 @@ async function handleRelayCommand(msg) {
         sendRelayResponse('retriesStatusResponse', { success: false, error: err.message });
       }
       break;
+    
+    case 'REQUEST_XML_SIGNATURE':
+      // Digital signature request for SIAE C1 reports
+      // Uses the PKI functionality of the SIAE smart card
+      try {
+        const signRequestId = msg.requestId;
+        const payload = msg.payload || {};
+        const xmlContent = payload.xmlContent || '';
+        
+        log.info(`[SIGNATURE] XML signature request: requestId=${signRequestId}, xmlLength=${xmlContent.length}`);
+        
+        // Check if bridge is ready
+        if (!bridgeProcess || !currentStatus.readerConnected) {
+          log.error(`[SIGNATURE] Bridge not ready: bridge=${!!bridgeProcess}, reader=${currentStatus.readerConnected}`);
+          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            relayWs.send(JSON.stringify({
+              type: 'SIGNATURE_RESPONSE',
+              requestId: signRequestId,
+              payload: { 
+                success: false, 
+                error: 'App desktop Event4U non connessa o lettore non disponibile' 
+              }
+            }));
+          }
+          return;
+        }
+        
+        if (!currentStatus.cardInserted) {
+          log.error(`[SIGNATURE] No card inserted for signature request`);
+          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            relayWs.send(JSON.stringify({
+              type: 'SIGNATURE_RESPONSE',
+              requestId: signRequestId,
+              payload: { 
+                success: false, 
+                error: 'Smart Card SIAE non inserita' 
+              }
+            }));
+          }
+          return;
+        }
+        
+        // PIN must be verified for signature operations
+        if (!pinVerified || !lastVerifiedPin) {
+          log.error(`[SIGNATURE] PIN not verified for signature request`);
+          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            relayWs.send(JSON.stringify({
+              type: 'SIGNATURE_RESPONSE',
+              requestId: signRequestId,
+              payload: { 
+                success: false, 
+                error: 'PIN non verificato. Inserire il PIN prima di firmare.' 
+              }
+            }));
+          }
+          return;
+        }
+        
+        // Execute signature command
+        const signPayload = { 
+          xmlContent,
+          pin: lastVerifiedPin 
+        };
+        log.info(`[SIGNATURE] Sending SIGN_XML command...`);
+        const result = await sendBridgeCommand(`SIGN_XML:${JSON.stringify(signPayload)}`);
+        
+        if (result.success && result.signature) {
+          log.info(`[SIGNATURE] XML signed successfully`);
+          
+          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            relayWs.send(JSON.stringify({
+              type: 'SIGNATURE_RESPONSE',
+              requestId: signRequestId,
+              payload: {
+                success: true,
+                signatureData: {
+                  signedXml: result.signature.signedXml,
+                  signatureValue: result.signature.signatureValue,
+                  certificateData: result.signature.certificateData,
+                  signedAt: result.signature.signedAt
+                }
+              }
+            }));
+          }
+        } else {
+          log.error(`[SIGNATURE] Signature failed: ${result.error || 'Unknown error'}`);
+          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            relayWs.send(JSON.stringify({
+              type: 'SIGNATURE_RESPONSE',
+              requestId: signRequestId,
+              payload: { 
+                success: false, 
+                error: result.error || 'Errore firma digitale' 
+              }
+            }));
+          }
+        }
+      } catch (err) {
+        log.error(`[SIGNATURE] Exception in signature request: ${err.message}`);
+        if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+          relayWs.send(JSON.stringify({
+            type: 'SIGNATURE_RESPONSE',
+            requestId: msg.requestId,
+            payload: { 
+              success: false, 
+              error: err.message 
+            }
+          }));
+        }
+      }
+      break;
       
     default:
       log.warn('Unknown relay command:', msg.type);

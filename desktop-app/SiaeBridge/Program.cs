@@ -169,6 +169,7 @@ namespace SiaeBridge
                 if (cmd.StartsWith("CHANGE_PIN:")) return ChangePin(cmd.Substring(11));
                 if (cmd.StartsWith("UNLOCK_PUK:")) return UnlockPuk(cmd.Substring(11));
                 if (cmd.StartsWith("COMPUTE_SIGILLO:")) return ComputeSigillo(cmd.Substring(16));
+                if (cmd.StartsWith("SIGN_XML:")) return SignXml(cmd.Substring(9));
                 return ERR($"Comando sconosciuto: {cmd}");
             }
             catch (DllNotFoundException ex)
@@ -944,6 +945,204 @@ namespace SiaeBridge
             {
                 if (tx) try { EndTransactionML(_slot); } catch { }
             }
+        }
+
+        // ============================================================
+        // SIGN XML - Firma digitale XML usando la chiave PKI della smart card SIAE
+        // Usato per i report C1 da inviare a SIAE
+        // ============================================================
+        static string SignXml(string json)
+        {
+            if (_slot < 0) return ERR("Nessuna carta rilevata - prima fai CHECK_READER");
+
+            bool tx = false;
+            try
+            {
+                dynamic req = JsonConvert.DeserializeObject(json);
+                string xmlContent = req.xmlContent;
+                string pin = req.pin;
+
+                if (string.IsNullOrEmpty(xmlContent))
+                {
+                    return ERR("Contenuto XML mancante");
+                }
+
+                Log($"SignXml: slot={_slot}, xmlLength={xmlContent?.Length ?? 0}");
+
+                int state = isCardIn(_slot);
+                if (!IsCardPresent(state))
+                {
+                    _slot = -1;
+                    return ERR("Carta rimossa");
+                }
+
+                // Initialize and begin transaction
+                int finRes = FinalizeML(_slot);
+                Log($"  FinalizeML = {finRes}");
+                
+                int init = Initialize(_slot);
+                Log($"  Initialize = {init}");
+
+                int txResult = BeginTransactionML(_slot);
+                Log($"  BeginTransactionML = {txResult}");
+                tx = (txResult == 0);
+
+                // Select DF PKI (0x1111) for signature operations
+                int sel0000 = LibSiae.SelectML(0x0000, _slot);
+                Log($"  SelectML(0x0000 root) = {sel0000} (0x{sel0000:X4})");
+                
+                int sel1111 = LibSiae.SelectML(0x1111, _slot);
+                Log($"  SelectML(0x1111 DF PKI) = {sel1111} (0x{sel1111:X4})");
+
+                // Verify PIN if provided
+                if (!string.IsNullOrEmpty(pin))
+                {
+                    pin = new string(pin.Where(char.IsDigit).ToArray());
+                    int pinResult = VerifyPINML(1, pin, _slot);
+                    Log($"  VerifyPINML(nPIN=1) = {pinResult} (0x{pinResult:X4})");
+                    
+                    if (pinResult != 0)
+                    {
+                        if (pinResult == 0x6983)
+                            return ERR("PIN bloccato - troppi tentativi errati");
+                        else if (pinResult == 0x6982)
+                            return ERR("PIN errato - autenticazione fallita");
+                        else if (pinResult >= 0x63C0 && pinResult <= 0x63CF)
+                            return ERR($"PIN errato - tentativi rimasti: {pinResult & 0x0F}");
+                        else
+                            return ERR($"Verifica PIN fallita: 0x{pinResult:X4}");
+                    }
+                    Log($"  ✓ PIN verified successfully for signature");
+                }
+                else
+                {
+                    Log($"  WARNING: No PIN provided for signature operation");
+                }
+
+                // Calculate SHA-1 hash of the XML content
+                byte[] xmlBytes = Encoding.UTF8.GetBytes(xmlContent);
+                byte[] hash = new byte[20]; // SHA-1 produces 20 bytes
+                
+                int hashResult = LibSiae.Hash(1, xmlBytes, xmlBytes.Length, hash); // 1 = SHA-1
+                Log($"  Hash(SHA-1) = {hashResult}, hashLen={hash.Length}");
+                
+                if (hashResult != 0)
+                {
+                    return ERR($"Calcolo hash fallito: 0x{hashResult:X4}");
+                }
+
+                // Sign the hash using the card's private key
+                byte[] signature = new byte[256]; // RSA signature
+                int signResult = LibSiae.SignML(0, hash, signature, _slot); // keyIndex 0 for default signing key
+                Log($"  SignML(keyIndex=0) = {signResult} (0x{signResult:X4})");
+                
+                if (signResult != 0)
+                {
+                    return ERR($"Firma fallita: 0x{signResult:X4}");
+                }
+
+                // Get the certificate for inclusion in signed XML
+                byte[] cert = new byte[2048];
+                int certLen = cert.Length;
+                int certResult = LibSiae.GetCertificateML(cert, ref certLen, _slot);
+                Log($"  GetCertificateML = {certResult}, certLen={certLen}");
+                
+                string certificateData = "";
+                if (certResult == 0 && certLen > 0)
+                {
+                    byte[] actualCert = new byte[certLen];
+                    Array.Copy(cert, actualCert, certLen);
+                    certificateData = Convert.ToBase64String(actualCert);
+                }
+
+                // Create signed XML with embedded signature
+                string signatureValue = Convert.ToBase64String(signature);
+                string signedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz");
+                
+                // For SIAE C1 reports, we embed the signature in XML-DSig format
+                string signedXml = CreateSignedXml(xmlContent, signatureValue, certificateData, signedAt);
+
+                return JsonConvert.SerializeObject(new
+                {
+                    success = true,
+                    signature = new
+                    {
+                        signedXml = signedXml,
+                        signatureValue = signatureValue,
+                        certificateData = certificateData,
+                        signedAt = signedAt
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                Log($"SignXml error: {ex.Message}");
+                return ERR(ex.Message);
+            }
+            finally
+            {
+                if (tx)
+                {
+                    try
+                    {
+                        EndTransactionML(_slot);
+                        Log("  EndTransactionML done");
+                    }
+                    catch { }
+                }
+            }
+        }
+
+        // ============================================================
+        // Helper: Create XML-DSig signed document
+        // ============================================================
+        static string CreateSignedXml(string xmlContent, string signatureValue, string certificateData, string signedAt)
+        {
+            // Find the position before the closing root tag to insert the signature
+            // For SIAE C1 reports, the root tag is typically <flussi>
+            int closingTagPos = xmlContent.LastIndexOf("</");
+            
+            if (closingTagPos < 0)
+            {
+                // If no closing tag found, append signature at the end
+                return xmlContent + CreateSignatureBlock(signatureValue, certificateData, signedAt);
+            }
+
+            // Insert XML-DSig signature before the closing root tag
+            string signatureBlock = CreateSignatureBlock(signatureValue, certificateData, signedAt);
+            return xmlContent.Substring(0, closingTagPos) + signatureBlock + xmlContent.Substring(closingTagPos);
+        }
+
+        static string CreateSignatureBlock(string signatureValue, string certificateData, string signedAt)
+        {
+            // XML Digital Signature (XML-DSig) format
+            return $@"
+  <Signature xmlns=""http://www.w3.org/2000/09/xmldsig#"">
+    <SignedInfo>
+      <CanonicalizationMethod Algorithm=""http://www.w3.org/TR/2001/REC-xml-c14n-20010315""/>
+      <SignatureMethod Algorithm=""http://www.w3.org/2000/09/xmldsig#rsa-sha1""/>
+      <Reference URI="""">
+        <Transforms>
+          <Transform Algorithm=""http://www.w3.org/2000/09/xmldsig#enveloped-signature""/>
+        </Transforms>
+        <DigestMethod Algorithm=""http://www.w3.org/2000/09/xmldsig#sha1""/>
+        <DigestValue></DigestValue>
+      </Reference>
+    </SignedInfo>
+    <SignatureValue>{signatureValue}</SignatureValue>
+    <KeyInfo>
+      <X509Data>
+        <X509Certificate>{certificateData}</X509Certificate>
+      </X509Data>
+    </KeyInfo>
+    <Object>
+      <SignatureProperties>
+        <SignatureProperty Target=""#signature"">
+          <SigningTime>{signedAt}</SigningTime>
+        </SignatureProperty>
+      </SignatureProperties>
+    </Object>
+  </Signature>";
         }
     }
 }
