@@ -3949,7 +3949,12 @@ router.get('/api/siae/ticketed-events/:id/reports/c2', requireAuth, async (req: 
       // Titolare Sistema di Emissione
       // Usa dati da siaeSystemConfig se disponibile, altrimenti fallback su company
       titolareSistemaEmissione: siaeConfig?.businessName || company?.name || 'N/D',
-      codiceFiscaleTitolareSistema: siaeConfig?.taxId || company?.fiscalCode || 'N/D',
+      codiceFiscaleTitolareSistema: siaeConfig?.taxId || 'N/D',
+      partitaIvaTitolareSistema: siaeConfig?.vatNumber || 'N/D',
+      indirizzoTitolareSistema: siaeConfig?.businessAddress || 'N/D',
+      comuneTitolareSistema: siaeConfig?.businessCity || 'N/D',
+      provinciaTitolareSistema: siaeConfig?.businessProvince || 'N/D',
+      capTitolareSistema: siaeConfig?.businessPostalCode || 'N/D',
       codiceSistemaEmissione: siaeConfig?.systemCode || event.emissionSystemCode || 'N/D',
       
       // Dati Locale
