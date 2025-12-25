@@ -51,8 +51,10 @@ import {
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { motion, AnimatePresence } from "framer-motion";
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { PublicReservationSection } from "@/components/public-reservation-section";
+import { useSeatHolds, type SeatStatusUpdate } from "@/hooks/use-ticketing-websocket";
+import { HoldCountdownTimer } from "@/components/hold-countdown-timer";
 
 interface Seat {
   id: string;
@@ -383,6 +385,15 @@ const fadeInUp = {
   transition: springTransition,
 };
 
+interface SeatHoldInfo {
+  seatId?: string;
+  zoneId?: string;
+  status: 'available' | 'held' | 'sold' | 'blocked';
+  holdId?: string;
+  expiresAt?: string;
+  sessionId?: string;
+}
+
 function FloorPlanViewer({
   floorPlan,
   sectors,
@@ -390,6 +401,8 @@ function FloorPlanViewer({
   selectedSeatIds,
   onZoneClick,
   onSeatClick,
+  seatStatuses,
+  mySessionId,
 }: {
   floorPlan: FloorPlan;
   sectors: Sector[];
@@ -397,6 +410,8 @@ function FloorPlanViewer({
   selectedSeatIds: string[];
   onZoneClick: (zoneId: string, sectorCode: string | null) => void;
   onSeatClick: (seatId: string, seat: Seat) => void;
+  seatStatuses?: Map<string, SeatHoldInfo>;
+  mySessionId?: string | null;
 }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const [scale, setScale] = useState(1);
@@ -633,16 +648,27 @@ function FloorPlanViewer({
     }
   };
 
-  const getSeatColor = (status: string, isSelected: boolean, isAccessible?: boolean) => {
+  const getSeatColor = (status: string, isSelected: boolean, isAccessible?: boolean, isMyHold?: boolean) => {
     if (isSelected) return '#22c55e';
-    if (isAccessible) return '#3b82f6';
+    if (isMyHold) return '#3b82f6'; // Blue pulsante per i miei hold
+    if (isAccessible && status === 'available') return '#60a5fa';
     switch (status) {
       case 'available': return '#10b981';
+      case 'held': return '#f97316'; // Arancione per hold di altri
       case 'sold': return '#ef4444';
       case 'reserved': return '#f59e0b';
       case 'blocked': return '#6b7280';
       default: return '#9ca3af';
     }
+  };
+
+  const getRealtimeStatus = (seatId: string, originalStatus: string): { status: string; isMyHold: boolean } => {
+    const holdInfo = seatStatuses?.get(seatId);
+    if (holdInfo) {
+      const isMyHold = holdInfo.sessionId === mySessionId;
+      return { status: holdInfo.status, isMyHold };
+    }
+    return { status: originalStatus, isMyHold: false };
   };
 
   const getZoneColor = (linkedSector: Sector | undefined, isAvailable: boolean) => {
@@ -660,7 +686,9 @@ function FloorPlanViewer({
     const x = Number(seat.posX);
     const y = Number(seat.posY);
     const isSelected = selectedSeatIds.includes(seat.id);
-    const isAvailable = seat.status === 'available';
+    const { status: realtimeStatus, isMyHold } = getRealtimeStatus(seat.id, seat.status);
+    const isAvailable = realtimeStatus === 'available';
+    const canSelect = isAvailable || isMyHold;
     const seatRadius = scale > 2 ? 3.5 : 2.5;
     
     return (
@@ -669,19 +697,30 @@ function FloorPlanViewer({
           cx={x}
           cy={y}
           r={seatRadius}
-          fill={getSeatColor(seat.status, isSelected, seat.isAccessible)}
-          stroke={isSelected ? '#16a34a' : 'rgba(255,255,255,0.6)'}
-          strokeWidth={isSelected ? 0.6 : 0.3}
-          style={{ cursor: isAvailable ? 'pointer' : 'not-allowed', pointerEvents: 'auto' }}
+          fill={getSeatColor(realtimeStatus, isSelected, seat.isAccessible, isMyHold)}
+          stroke={isSelected ? '#16a34a' : isMyHold ? '#3b82f6' : 'rgba(255,255,255,0.6)'}
+          strokeWidth={isSelected ? 0.6 : isMyHold ? 0.5 : 0.3}
+          style={{ cursor: canSelect ? 'pointer' : 'not-allowed', pointerEvents: 'auto' }}
           onClick={(e) => {
             e.stopPropagation();
-            if (isAvailable) {
+            if (canSelect) {
               triggerHaptic('medium');
               onSeatClick(seat.id, seat);
             }
           }}
           data-testid={`seat-${seat.id}`}
         />
+        {isMyHold && !isSelected && (
+          <circle
+            cx={x}
+            cy={y}
+            r={seatRadius + 1.2}
+            fill="none"
+            stroke="#3b82f6"
+            strokeWidth={0.3}
+            className="pointer-events-none animate-pulse"
+          />
+        )}
         {isSelected && (
           <circle
             cx={x}
@@ -693,7 +732,7 @@ function FloorPlanViewer({
             className="pointer-events-none animate-pulse"
           />
         )}
-        {scale > 2.5 && isAvailable && (
+        {scale > 2.5 && canSelect && (
           <text
             x={x}
             y={y + 0.5}
@@ -1354,6 +1393,23 @@ export default function PublicEventDetailPage() {
 
   const liveViewersCount = useMemo(() => Math.floor(Math.random() * 50) + 30, [params.id]);
 
+  const { seatStatuses, clientId: mySessionId, isConnected: wsConnected } = useSeatHolds(event?.id || '');
+
+  const seatStatusMap = useMemo(() => {
+    const statusMap = new globalThis.Map<string, SeatHoldInfo>();
+    seatStatuses.forEach((update, key) => {
+      statusMap.set(key, {
+        seatId: update.seatId,
+        zoneId: update.zoneId,
+        status: update.status,
+        holdId: update.holdId,
+        expiresAt: update.expiresAt,
+        sessionId: update.sessionId,
+      });
+    });
+    return statusMap;
+  }, [seatStatuses]);
+
   const selectedSector = event?.sectors.find(s => s.id === selectedSectorId) || event?.sectors[0];
   const selectedSeat = selectedSector?.seats.find(s => selectedSeatIds.includes(s.id)) || null;
 
@@ -1651,6 +1707,8 @@ export default function PublicEventDetailPage() {
                         selectedSeatIds={selectedSeatIds}
                         onZoneClick={handleZoneClick}
                         onSeatClick={handleSeatClick}
+                        seatStatuses={seatStatusMap}
+                        mySessionId={mySessionId}
                       />
                     </CardContent>
                   </Card>
@@ -1936,6 +1994,19 @@ export default function PublicEventDetailPage() {
                                 Fila {selectedSeat.row}, Posto {selectedSeat.seatNumber}
                               </div>
                             )}
+                            {selectedSeat && (() => {
+                              const holdInfo = seatStatusMap.get(selectedSeat.id);
+                              if (holdInfo && holdInfo.status === 'held' && holdInfo.sessionId === mySessionId && holdInfo.expiresAt) {
+                                return (
+                                  <HoldCountdownTimer
+                                    expiresAt={holdInfo.expiresAt}
+                                    compact
+                                    className="mt-2"
+                                  />
+                                );
+                              }
+                              return null;
+                            })()}
                           </div>
                           <div className="border-t border-border pt-4">
                             <div className="flex justify-between items-center">
@@ -2205,6 +2276,8 @@ export default function PublicEventDetailPage() {
                   selectedSeatIds={selectedSeatIds}
                   onZoneClick={handleZoneClick}
                   onSeatClick={handleSeatClick}
+                  seatStatuses={seatStatusMap}
+                  mySessionId={mySessionId}
                 />
               )}
 
@@ -2299,9 +2372,21 @@ export default function PublicEventDetailPage() {
                     <p className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent" data-testid="text-cta-total">
                       €{totalPrice.toFixed(2)}
                     </p>
+                    {selectedSeat && (() => {
+                      const holdInfo = seatStatusMap.get(selectedSeat.id);
+                      if (holdInfo && holdInfo.status === 'held' && holdInfo.sessionId === mySessionId && holdInfo.expiresAt) {
+                        return (
+                          <HoldCountdownTimer
+                            expiresAt={holdInfo.expiresAt}
+                            compact
+                          />
+                        );
+                      }
+                      return null;
+                    })()}
                     {(() => {
                       const remaining = event.totalCapacity - event.ticketsSold;
-                      if (remaining < 20) {
+                      if (remaining < 20 && !selectedSeat) {
                         return (
                           <span 
                             className="text-xs font-semibold text-orange-400 flex items-center gap-1"

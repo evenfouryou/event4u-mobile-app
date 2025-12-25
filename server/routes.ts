@@ -19,6 +19,9 @@ import templateRoutes from "./template-routes";
 import billingRoutes from "./billing-routes";
 import digitalTemplateRoutes from "./digital-template-routes";
 import reservationBookingRoutes from "./reservation-booking-routes";
+import ticketingRoutes from "./ticketing-routes";
+import { setupTicketingWebSocket } from "./ticketing-websocket";
+import { startHoldCleanupJob } from "./hold-service";
 import {
   insertCompanySchema,
   insertLocationSchema,
@@ -148,6 +151,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register reservation booking routes (prenotazioni liste/tavoli a pagamento)
   app.use(reservationBookingRoutes);
+  
+  // Register ticketing routes (sistema HOLD, heatmap, recommendations)
+  app.use(ticketingRoutes);
 
   // Health check endpoint for Replit Deploy
   app.get('/api/health', (_req, res) => {
@@ -7750,6 +7756,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Setup WebSocket print relay (thermal printers)
   setupPrintRelay(httpServer);
+  
+  // Setup WebSocket ticketing relay (seat status realtime)
+  setupTicketingWebSocket(httpServer);
+  
+  // Start hold cleanup job (every 30 seconds)
+  startHoldCleanupJob(30000);
   
   return httpServer;
 }

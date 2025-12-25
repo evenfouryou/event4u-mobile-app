@@ -5023,6 +5023,17 @@ export const insertSeatHoldSchema = createInsertSchema(seatHolds).omit({
 });
 export const updateSeatHoldSchema = insertSeatHoldSchema.partial();
 
+export const insertSeatHoldEventSchema = createInsertSchema(seatHoldEvents).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertEventSeatStatusSchema = createInsertSchema(eventSeatStatus).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
 export const insertFloorPlanVersionSchema = createInsertSchema(floorPlanVersions).omit({
   id: true,
   createdAt: true,
@@ -5049,7 +5060,10 @@ export type InsertSeatHold = z.infer<typeof insertSeatHoldSchema>;
 export type UpdateSeatHold = z.infer<typeof updateSeatHoldSchema>;
 
 export type SeatHoldEvent = typeof seatHoldEvents.$inferSelect;
+export type InsertSeatHoldEvent = z.infer<typeof insertSeatHoldEventSchema>;
+
 export type EventSeatStatus = typeof eventSeatStatus.$inferSelect;
+export type InsertEventSeatStatus = z.infer<typeof insertEventSeatStatusSchema>;
 
 export type FloorPlanVersion = typeof floorPlanVersions.$inferSelect;
 export type InsertFloorPlanVersion = z.infer<typeof insertFloorPlanVersionSchema>;
