@@ -381,6 +381,35 @@ export default function Locations() {
                   />
                 </div>
 
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="province"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Provincia (Sigla)</FormLabel>
+                        <FormControl>
+                          <Input {...field} value={field.value || ''} placeholder="es. MI, RM" maxLength={2} data-testid="input-location-province-desktop" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={form.control}
+                    name="postalCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CAP</FormLabel>
+                        <FormControl>
+                          <Input {...field} value={field.value || ''} placeholder="es. 20100" data-testid="input-location-cap-desktop" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
                 <FormField
                   control={form.control}
                   name="address"
