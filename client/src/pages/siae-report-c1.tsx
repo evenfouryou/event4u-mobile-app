@@ -47,6 +47,11 @@ interface C1ReportData {
     // Titolare Sistema di Emissione (campo obbligatorio Allegato 3)
     titolareSistemaEmissione: string;
     codiceFiscaleTitolareSistema: string;
+    partitaIvaTitolareSistema: string;
+    indirizzoTitolareSistema: string;
+    comuneTitolareSistema: string;
+    provinciaTitolareSistema: string;
+    capTitolareSistema: string;
     codiceSistemaEmissione: string;
     
     // Mancato funzionamento sistema (sezione opzionale)
@@ -518,9 +523,19 @@ export default function SiaeReportC1() {
                 </tr>
                 <tr>
                   <td className="border border-black p-1 font-semibold">C.F. TITOLARE SISTEMA</td>
-                  <td className="border border-black p-1">{quadroA.codiceFiscaleTitolareSistema || quadroA.codiceFiscaleOrganizzatore}</td>
+                  <td className="border border-black p-1">{quadroA.codiceFiscaleTitolareSistema || 'N/D'}</td>
+                  <td className="border border-black p-1 font-semibold">P.IVA TITOLARE SISTEMA</td>
+                  <td className="border border-black p-1">{quadroA.partitaIvaTitolareSistema || 'N/D'}</td>
+                </tr>
+                <tr>
+                  <td className="border border-black p-1 font-semibold">INDIRIZZO TITOLARE</td>
+                  <td className="border border-black p-1">{quadroA.indirizzoTitolareSistema || 'N/D'}</td>
+                  <td className="border border-black p-1 font-semibold">COMUNE TITOLARE</td>
+                  <td className="border border-black p-1">{quadroA.comuneTitolareSistema || 'N/D'} ({quadroA.provinciaTitolareSistema || ''}) - {quadroA.capTitolareSistema || ''}</td>
+                </tr>
+                <tr>
                   <td className="border border-black p-1 font-semibold">CODICE SISTEMA EMISSIONE</td>
-                  <td className="border border-black p-1">{quadroA.codiceSistemaEmissione || 'E4U-SYS'}</td>
+                  <td className="border border-black p-1" colSpan={3}>{quadroA.codiceSistemaEmissione || 'E4U-SYS'}</td>
                 </tr>
                 <tr>
                   <td className="border border-black p-1 font-semibold">CODICE LOCALE (BA)</td>

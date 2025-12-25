@@ -69,6 +69,11 @@ interface C2ReportData {
     // Titolare Sistema di Emissione
     titolareSistemaEmissione: string;
     codiceFiscaleTitolareSistema: string;
+    partitaIvaTitolareSistema: string;
+    indirizzoTitolareSistema: string;
+    comuneTitolareSistema: string;
+    provinciaTitolareSistema: string;
+    capTitolareSistema: string;
     codiceSistemaEmissione: string;
     
     // Dati Locale
@@ -276,14 +281,26 @@ export default function SiaeReportC2() {
                   <TableCell>{report.quadroA?.codiceFiscaleTitolareSistema || 'N/D'}</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-medium">Codice Sistema di Emissione</TableCell>
-                  <TableCell>{report.quadroA?.codiceSistemaEmissione || `E4U-${report.eventId?.substring(0, 8).toUpperCase()}`}</TableCell>
-                  <TableCell className="font-medium">Codice Locale (BA)</TableCell>
-                  <TableCell>{report.quadroA?.codiceLocale || 'N/D'}</TableCell>
+                  <TableCell className="font-medium">P.IVA Titolare Sistema</TableCell>
+                  <TableCell>{report.quadroA?.partitaIvaTitolareSistema || 'N/D'}</TableCell>
+                  <TableCell className="font-medium">Indirizzo Titolare</TableCell>
+                  <TableCell>{report.quadroA?.indirizzoTitolareSistema || 'N/D'}</TableCell>
                 </TableRow>
                 <TableRow>
-                  <TableCell className="font-medium">Locale</TableCell>
+                  <TableCell className="font-medium">Comune Titolare</TableCell>
+                  <TableCell>{report.quadroA?.comuneTitolareSistema || 'N/D'} ({report.quadroA?.provinciaTitolareSistema || ''}) - {report.quadroA?.capTitolareSistema || ''}</TableCell>
+                  <TableCell className="font-medium">Codice Sistema di Emissione</TableCell>
+                  <TableCell>{report.quadroA?.codiceSistemaEmissione || `E4U-${report.eventId?.substring(0, 8).toUpperCase()}`}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Codice Locale (BA)</TableCell>
+                  <TableCell>{report.quadroA?.codiceLocale || 'N/D'}</TableCell>
+                  <TableCell className="font-medium">Denominazione Locale</TableCell>
                   <TableCell>{report.quadroA?.denominazioneLocale || 'N/D'}</TableCell>
+                </TableRow>
+                <TableRow>
+                  <TableCell className="font-medium">Indirizzo Locale</TableCell>
+                  <TableCell>{report.quadroA?.indirizzoLocale || 'N/D'}</TableCell>
                   <TableCell className="font-medium">Capienza</TableCell>
                   <TableCell>{report.quadroA?.capienza || 0}</TableCell>
                 </TableRow>
