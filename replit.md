@@ -26,6 +26,27 @@ This module provides a SIAE-compliant ticketing and fiscal management system tai
 ### Event Command Center (Event Hub)
 A real-time dashboard (`/events/:id/hub`) for event operations, providing tabbed navigation for Overview (KPIs, activity log, entrance charts, venue map), Ticketing, Guest Lists, Tables, Staff, Inventory, and Finance. It features `KPICard` for real-time metrics, `EntranceChart`, `VenueMap`, `ActivityLogEntry`, `AlertBanner`, and `QuickActionButton` for rapid actions, with real-time updates powered by WebSockets.
 
+### Interactive Floor Plan Viewer
+The public event detail page (`/public/event/:id`) features a professional interactive floor plan viewer for seat/sector selection:
+
+**Features**:
+- Mouse wheel zoom centered on cursor position (pointer-centered scaling)
+- Pinch-to-zoom on mobile centered on pinch centroid
+- Drag-to-pan when zoomed in with translation clamping to prevent off-screen movement
+- Zoom controls (+/-) and reset button with percentage indicator
+- Hover tooltip (desktop) showing zone name, price, and available seats
+- Auto-zoom to zone on click for numbered sectors
+- Progressive seat visibility: opacity 0.3 at normal zoom, full opacity at 1.5x+, seat numbers visible at 2.5x+
+
+**Technical Implementation**:
+- `touch-action: none` to disable native browser scroll/zoom
+- `useRef` for drag state (`dragStartRef`, `translateRef`, `throttleRef`) to reduce re-renders
+- 60fps throttling (16ms) on mouse/touch move events
+- Content-space math for zoom transformations to maintain pointer focus
+- `clampTranslate()` function enforces viewport bounds
+
+**Component**: `FloorPlanViewer` in `client/src/pages/public-event-detail.tsx`
+
 ### Event Page 3.0 Editor
 An admin tool (`/siae/ticketed-events/:id/page-editor`) for customizing public event pages with modular blocks:
 
