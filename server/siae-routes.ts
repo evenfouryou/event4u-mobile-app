@@ -3328,6 +3328,11 @@ function buildC1ReportData(
     // Usa dati da siaeSystemConfig se disponibile, altrimenti fallback su company
     titolareSistemaEmissione: siaeConfig?.businessName || company?.name || 'N/D',
     codiceFiscaleTitolareSistema: siaeConfig?.taxId || company?.fiscalCode || 'N/D',
+    partitaIvaTitolareSistema: siaeConfig?.vatNumber || company?.vatNumber || 'N/D',
+    indirizzoTitolareSistema: siaeConfig?.businessAddress || company?.address || 'N/D',
+    comuneTitolareSistema: siaeConfig?.businessCity || company?.city || 'N/D',
+    provinciaTitolareSistema: siaeConfig?.businessProvince || company?.province || 'N/D',
+    capTitolareSistema: siaeConfig?.businessPostalCode || company?.postalCode || 'N/D',
     codiceSistemaEmissione: siaeConfig?.systemCode || event.emissionSystemCode || 'N/D',
     
     // === MANCATO FUNZIONAMENTO SISTEMA (Allegato 3 - sezione opzionale) ===
