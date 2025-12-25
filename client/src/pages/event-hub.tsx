@@ -3603,6 +3603,7 @@ export default function EventHub() {
                   ...(userFeatures?.beverageEnabled !== false ? [{ id: 'inventory', label: 'Stock', icon: Package }] : []),
                   { id: 'finance', label: 'Finanza', icon: Euro },
                   { id: 'report', label: 'Report', icon: BarChart3 },
+                  ...(ticketedEvent ? [{ id: 'page-editor', label: 'Pagina', icon: Palette }] : []),
                 ].map(tab => (
                   <TabsTrigger
                     key={tab.id}
@@ -5444,6 +5445,89 @@ export default function EventHub() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Page Editor Tab - Mobile */}
+          {ticketedEvent && (
+            <TabsContent value="page-editor">
+              <Card className="glass-card">
+                <CardHeader className="px-4">
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Palette className="h-5 w-5 text-primary" />
+                    Editor Pagina Pubblica
+                  </CardTitle>
+                  <CardDescription>
+                    Personalizza la pagina pubblica dell'evento
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="px-4 space-y-4">
+                  <div className="space-y-3">
+                    <div className="p-4 rounded-lg bg-muted/50 border">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Anteprima Pubblica</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Visualizza come appare la pagina ai visitatori
+                      </p>
+                      <Link href={`/acquista/${id}`}>
+                        <HapticButton variant="outline" className="w-full min-h-[44px]">
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Apri Pagina Pubblica
+                        </HapticButton>
+                      </Link>
+                    </div>
+                    <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Edit className="h-4 w-4 text-primary" />
+                        <span className="font-medium">Modifica Contenuti</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Configura hero, lineup, timeline e FAQ
+                      </p>
+                      <Link href={`/siae/ticketed-events/${ticketedEvent.id}/page-editor`}>
+                        <HapticButton className="w-full min-h-[44px]">
+                          <Palette className="h-4 w-4 mr-2" />
+                          Apri Editor
+                        </HapticButton>
+                      </Link>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="text-sm text-muted-foreground">
+                    <p className="font-medium mb-2">Sezioni configurabili:</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                        <span>Hero video/immagine</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                        <span>Info rapide</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                        <span>Line-up artisti</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                        <span>Timeline orari</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                        <span>FAQ</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                        <span>Countdown</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
       </div>
 

@@ -795,7 +795,7 @@ function TicketTypeCard({
             <Button
               variant="ghost"
               size="icon"
-              onClick={() => { triggerHaptic('light'); setQuantity(Math.max(1, quantity - 1)); }}
+              onClick={() => { triggerHaptic('light'); setQuantity(Math.max(0, quantity - 1)); }}
               className="h-14 w-14 rounded-full text-foreground"
               data-testid={`button-minus-${sector.id}`}
             >
@@ -858,10 +858,16 @@ export default function PublicEventDetailPage() {
   const [selectedSeatIds, setSelectedSeatIds] = useState<string[]>([]);
   
   const [selectedSectorId, setSelectedSectorId] = useState<string | null>(null);
-  const [quantity, setQuantity] = useState(1);
-  const [ticketType, setTicketType] = useState("intero");
+  const [sectorQuantities, setSectorQuantities] = useState<Record<string, number>>({});
+  const [sectorTicketTypes, setSectorTicketTypes] = useState<Record<string, string>>({});
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
+  
+  // Helper functions for per-sector quantity/type
+  const getQuantity = (sectorId: string) => sectorQuantities[sectorId] ?? 0;
+  const setQuantity = (sectorId: string, q: number) => setSectorQuantities(prev => ({ ...prev, [sectorId]: q }));
+  const getTicketType = (sectorId: string) => sectorTicketTypes[sectorId] ?? "intero";
+  const setTicketType = (sectorId: string, t: string) => setSectorTicketTypes(prev => ({ ...prev, [sectorId]: t }));
 
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -957,15 +963,19 @@ export default function PublicEventDetailPage() {
     }
   };
 
-  const price = selectedSector && (ticketType === "ridotto" && selectedSector.priceRidotto
+  const selectedTicketType = selectedSector ? getTicketType(selectedSector.id) : "intero";
+  const selectedQuantity = selectedSector ? getQuantity(selectedSector.id) : 0;
+  
+  const price = selectedSector && (selectedTicketType === "ridotto" && selectedSector.priceRidotto
     ? Number(selectedSector.priceRidotto)
     : Number(selectedSector.priceIntero));
 
-  const totalPrice = price ? price * (selectedSector?.isNumbered ? 1 : quantity) : 0;
+  const totalPrice = price ? price * (selectedSector?.isNumbered ? 1 : selectedQuantity) : 0;
 
   const canPurchase = selectedSector && 
     selectedSector.availableSeats > 0 &&
     (!selectedSector.isNumbered || selectedSeat) &&
+    (selectedSector.isNumbered || selectedQuantity > 0) &&
     (!event?.requiresNominative || (firstName && lastName));
 
   const handlePurchase = async () => {
@@ -979,18 +989,18 @@ export default function PublicEventDetailPage() {
         ticketedEventId: event.id,
         sectorId: selectedSector.id,
         seatId: selectedSeat?.id,
-        quantity: selectedSector.isNumbered ? 1 : quantity,
-        ticketType,
+        quantity: selectedSector.isNumbered ? 1 : selectedQuantity,
+        ticketType: selectedTicketType,
         participantFirstName: firstName,
         participantLastName: lastName,
       });
       
-      setCartCount(prev => prev + (selectedSector.isNumbered ? 1 : quantity));
+      setCartCount(prev => prev + (selectedSector.isNumbered ? 1 : selectedQuantity));
       triggerHaptic('success');
       
       toast({
         title: "Aggiunto al carrello!",
-        description: `${selectedSector.isNumbered ? 1 : quantity} biglietto/i aggiunto/i`,
+        description: `${selectedSector.isNumbered ? 1 : selectedQuantity} biglietto/i aggiunto/i`,
       });
       
       queryClient.invalidateQueries({ queryKey: ["/api/public/cart"] });
@@ -1231,7 +1241,9 @@ export default function PublicEventDetailPage() {
                       </div>
                     ) : (
                       event.sectors.map((sector) => {
-                        const sectorPrice = ticketType === "ridotto" && sector.priceRidotto
+                        const thisSectorTicketType = getTicketType(sector.id);
+                        const thisSectorQuantity = getQuantity(sector.id);
+                        const sectorPrice = thisSectorTicketType === "ridotto" && sector.priceRidotto
                           ? Number(sector.priceRidotto)
                           : Number(sector.priceIntero);
                         const isSelectedSector = selectedSectorId === sector.id;
@@ -1311,12 +1323,12 @@ export default function PublicEventDetailPage() {
                                 {sector.priceRidotto && Number(sector.priceRidotto) > 0 && (
                                   <div className="space-y-2">
                                     <Label className="text-sm font-medium">Tipo Biglietto</Label>
-                                    <RadioGroup value={ticketType} onValueChange={setTicketType} className="flex gap-3">
+                                    <RadioGroup value={thisSectorTicketType} onValueChange={(t) => setTicketType(sector.id, t)} className="flex gap-3">
                                       <button
                                         type="button"
-                                        onClick={(e) => { e.stopPropagation(); setTicketType("intero"); }}
+                                        onClick={(e) => { e.stopPropagation(); setTicketType(sector.id, "intero"); }}
                                         className={`flex-1 p-3 rounded-xl border transition-all ${
-                                          ticketType === "intero" ? "border-primary bg-primary/10" : "border-border"
+                                          thisSectorTicketType === "intero" ? "border-primary bg-primary/10" : "border-border"
                                         }`}
                                       >
                                         <div className="flex items-center gap-2">
@@ -1329,9 +1341,9 @@ export default function PublicEventDetailPage() {
                                       </button>
                                       <button
                                         type="button"
-                                        onClick={(e) => { e.stopPropagation(); setTicketType("ridotto"); }}
+                                        onClick={(e) => { e.stopPropagation(); setTicketType(sector.id, "ridotto"); }}
                                         className={`flex-1 p-3 rounded-xl border transition-all ${
-                                          ticketType === "ridotto" ? "border-primary bg-primary/10" : "border-border"
+                                          thisSectorTicketType === "ridotto" ? "border-primary bg-primary/10" : "border-border"
                                         }`}
                                       >
                                         <div className="flex items-center gap-2">
@@ -1389,18 +1401,18 @@ export default function PublicEventDetailPage() {
                                       <Button
                                         variant="outline"
                                         size="icon"
-                                        onClick={(e) => { e.stopPropagation(); setQuantity(Math.max(1, quantity - 1)); }}
+                                        onClick={(e) => { e.stopPropagation(); setQuantity(sector.id, Math.max(0, thisSectorQuantity - 1)); }}
                                         data-testid={`button-minus-${sector.id}`}
                                       >
                                         <Minus className="w-4 h-4" />
                                       </Button>
                                       <span className="text-2xl font-bold w-12 text-center" data-testid={`text-quantity-${sector.id}`}>
-                                        {quantity}
+                                        {thisSectorQuantity}
                                       </span>
                                       <Button
                                         variant="outline"
                                         size="icon"
-                                        onClick={(e) => { e.stopPropagation(); setQuantity(Math.min(10, quantity + 1)); }}
+                                        onClick={(e) => { e.stopPropagation(); setQuantity(sector.id, Math.min(10, thisSectorQuantity + 1)); }}
                                         data-testid={`button-plus-${sector.id}`}
                                       >
                                         <Plus className="w-4 h-4" />
@@ -1482,7 +1494,7 @@ export default function PublicEventDetailPage() {
                             <div className="flex justify-between text-sm">
                               <span className="text-muted-foreground">{selectedSector.name}</span>
                               <span>
-                                {selectedSector.isNumbered ? 1 : quantity} x €{price?.toFixed(2)}
+                                {selectedSector.isNumbered ? 1 : selectedQuantity} x €{price?.toFixed(2)}
                               </span>
                             </div>
                             {selectedSeat && (
@@ -1792,10 +1804,10 @@ export default function PublicEventDetailPage() {
                     >
                       <TicketTypeCard
                         sector={sector}
-                        quantity={quantity}
-                        setQuantity={setQuantity}
-                        ticketType={ticketType}
-                        setTicketType={setTicketType}
+                        quantity={getQuantity(sector.id)}
+                        setQuantity={(q) => setQuantity(sector.id, q)}
+                        ticketType={getTicketType(sector.id)}
+                        setTicketType={(t) => setTicketType(sector.id, t)}
                         firstName={firstName}
                         setFirstName={setFirstName}
                         lastName={lastName}
