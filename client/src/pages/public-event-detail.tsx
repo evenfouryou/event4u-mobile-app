@@ -43,6 +43,10 @@ import {
   Info,
   Flame,
   HelpCircle,
+  ZoomIn,
+  ZoomOut,
+  RotateCcw,
+  Move,
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -394,6 +398,241 @@ function FloorPlanViewer({
   onZoneClick: (zoneId: string, sectorCode: string | null) => void;
   onSeatClick: (seatId: string, seat: Seat) => void;
 }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const [scale, setScale] = useState(1);
+  const [translate, setTranslate] = useState({ x: 0, y: 0 });
+  const [isDragging, setIsDragging] = useState(false);
+  const [hoveredZone, setHoveredZone] = useState<FloorPlanZone | null>(null);
+  const [tooltipPos, setTooltipPos] = useState({ x: 0, y: 0 });
+  
+  const dragStartRef = useRef({ x: 0, y: 0 });
+  const translateRef = useRef({ x: 0, y: 0 });
+  const lastTouchDistance = useRef<number | null>(null);
+  const throttleRef = useRef<number>(0);
+  const isMobile = useIsMobile();
+  
+  const MIN_SCALE = 1;
+  const MAX_SCALE = 4;
+
+  const clampTranslate = (tx: number, ty: number, currentScale: number) => {
+    if (currentScale <= 1) return { x: 0, y: 0 };
+    const containerWidth = containerRef.current?.clientWidth || 300;
+    const containerHeight = containerRef.current?.clientHeight || 200;
+    const maxX = 0;
+    const minX = containerWidth - (containerWidth * currentScale);
+    const maxY = 0;
+    const minY = containerHeight - (containerHeight * currentScale);
+    return {
+      x: Math.min(maxX, Math.max(minX, tx)),
+      y: Math.min(maxY, Math.max(minY, ty)),
+    };
+  };
+
+  const handleZoomIn = () => {
+    setScale(prev => {
+      const newScale = Math.min(MAX_SCALE, prev * 1.3);
+      const clamped = clampTranslate(translate.x, translate.y, newScale);
+      setTranslate(clamped);
+      translateRef.current = clamped;
+      return newScale;
+    });
+    triggerHaptic('light');
+  };
+
+  const handleZoomOut = () => {
+    setScale(prev => {
+      const newScale = Math.max(MIN_SCALE, prev / 1.3);
+      if (newScale === MIN_SCALE) {
+        setTranslate({ x: 0, y: 0 });
+        translateRef.current = { x: 0, y: 0 };
+      } else {
+        const clamped = clampTranslate(translate.x, translate.y, newScale);
+        setTranslate(clamped);
+        translateRef.current = clamped;
+      }
+      return newScale;
+    });
+    triggerHaptic('light');
+  };
+
+  const handleReset = () => {
+    setScale(1);
+    setTranslate({ x: 0, y: 0 });
+    translateRef.current = { x: 0, y: 0 };
+    triggerHaptic('medium');
+  };
+
+  const zoomToZone = (zone: FloorPlanZone) => {
+    const coords = zone.coordinates;
+    if (!coords || coords.length < 3) return;
+    
+    const centerX = coords.reduce((sum, p) => sum + p.x, 0) / coords.length;
+    const centerY = coords.reduce((sum, p) => sum + p.y, 0) / coords.length;
+    
+    const newScale = 2.5;
+    const containerWidth = containerRef.current?.clientWidth || 300;
+    const containerHeight = containerRef.current?.clientHeight || 200;
+    
+    let newTranslateX = (containerWidth / 2) - (centerX / 100 * containerWidth * newScale);
+    let newTranslateY = (containerHeight / 2) - (centerY / 100 * containerHeight * newScale);
+    
+    const clamped = clampTranslate(newTranslateX, newTranslateY, newScale);
+    
+    setScale(newScale);
+    setTranslate(clamped);
+    translateRef.current = clamped;
+  };
+
+  const handleWheel = (e: React.WheelEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return;
+    
+    const mouseX = e.clientX - rect.left;
+    const mouseY = e.clientY - rect.top;
+    
+    const delta = e.deltaY > 0 ? 0.9 : 1.1;
+    
+    setScale(prev => {
+      const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, prev * delta));
+      
+      if (newScale === MIN_SCALE) {
+        setTranslate({ x: 0, y: 0 });
+        translateRef.current = { x: 0, y: 0 };
+      } else {
+        const pointXInContent = (mouseX - translate.x) / prev;
+        const pointYInContent = (mouseY - translate.y) / prev;
+        
+        const newTranslateX = mouseX - pointXInContent * newScale;
+        const newTranslateY = mouseY - pointYInContent * newScale;
+        
+        const clamped = clampTranslate(newTranslateX, newTranslateY, newScale);
+        setTranslate(clamped);
+        translateRef.current = clamped;
+      }
+      return newScale;
+    });
+  };
+
+  const handleMouseDown = (e: React.MouseEvent) => {
+    if (scale > 1) {
+      setIsDragging(true);
+      dragStartRef.current = { x: e.clientX - translate.x, y: e.clientY - translate.y };
+    }
+  };
+
+  const handleMouseMove = (e: React.MouseEvent) => {
+    if (isDragging && scale > 1) {
+      const now = Date.now();
+      if (now - throttleRef.current < 16) return;
+      throttleRef.current = now;
+      
+      const newX = e.clientX - dragStartRef.current.x;
+      const newY = e.clientY - dragStartRef.current.y;
+      const clamped = clampTranslate(newX, newY, scale);
+      translateRef.current = clamped;
+      setTranslate(clamped);
+    }
+  };
+
+  const handleMouseUp = () => {
+    setIsDragging(false);
+  };
+
+  const lastPinchCenter = useRef<{ x: number; y: number } | null>(null);
+
+  const handleTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const distance = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      lastTouchDistance.current = distance;
+      
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (rect) {
+        lastPinchCenter.current = {
+          x: ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left,
+          y: ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top,
+        };
+      }
+    } else if (e.touches.length === 1 && scale > 1) {
+      e.preventDefault();
+      setIsDragging(true);
+      dragStartRef.current = {
+        x: e.touches[0].clientX - translate.x,
+        y: e.touches[0].clientY - translate.y,
+      };
+    }
+  };
+
+  const handleTouchMove = (e: React.TouchEvent) => {
+    if (e.touches.length === 2 && lastTouchDistance.current && lastPinchCenter.current) {
+      e.preventDefault();
+      
+      const distance = Math.hypot(
+        e.touches[0].clientX - e.touches[1].clientX,
+        e.touches[0].clientY - e.touches[1].clientY
+      );
+      const scaleFactor = distance / lastTouchDistance.current;
+      
+      const rect = containerRef.current?.getBoundingClientRect();
+      if (!rect) return;
+      
+      const centerX = ((e.touches[0].clientX + e.touches[1].clientX) / 2) - rect.left;
+      const centerY = ((e.touches[0].clientY + e.touches[1].clientY) / 2) - rect.top;
+      
+      setScale(prev => {
+        const newScale = Math.max(MIN_SCALE, Math.min(MAX_SCALE, prev * scaleFactor));
+        
+        if (newScale === MIN_SCALE) {
+          setTranslate({ x: 0, y: 0 });
+          translateRef.current = { x: 0, y: 0 };
+        } else {
+          const pointXInContent = (centerX - translate.x) / prev;
+          const pointYInContent = (centerY - translate.y) / prev;
+          
+          const newTranslateX = centerX - pointXInContent * newScale;
+          const newTranslateY = centerY - pointYInContent * newScale;
+          
+          const clamped = clampTranslate(newTranslateX, newTranslateY, newScale);
+          setTranslate(clamped);
+          translateRef.current = clamped;
+        }
+        return newScale;
+      });
+      
+      lastTouchDistance.current = distance;
+      lastPinchCenter.current = { x: centerX, y: centerY };
+    } else if (e.touches.length === 1 && isDragging && scale > 1) {
+      e.preventDefault();
+      
+      const now = Date.now();
+      if (now - throttleRef.current < 16) return;
+      throttleRef.current = now;
+      
+      const newX = e.touches[0].clientX - dragStartRef.current.x;
+      const newY = e.touches[0].clientY - dragStartRef.current.y;
+      const clamped = clampTranslate(newX, newY, scale);
+      translateRef.current = clamped;
+      setTranslate(clamped);
+    }
+  };
+
+  const handleTouchEnd = (e: React.TouchEvent) => {
+    e.preventDefault();
+    lastTouchDistance.current = null;
+    lastPinchCenter.current = null;
+    setIsDragging(false);
+    if (scale <= MIN_SCALE) {
+      setTranslate({ x: 0, y: 0 });
+      translateRef.current = { x: 0, y: 0 };
+    }
+  };
+
   const getSeatColor = (status: string, isSelected: boolean, isAccessible?: boolean) => {
     if (isSelected) return '#22c55e';
     if (isAccessible) return '#3b82f6';
@@ -406,6 +645,15 @@ function FloorPlanViewer({
     }
   };
 
+  const getZoneColor = (linkedSector: Sector | undefined, isAvailable: boolean) => {
+    if (!linkedSector || !isAvailable) return 'rgba(100, 100, 100, 0.2)';
+    const price = Number(linkedSector.priceIntero);
+    if (price >= 50) return 'rgba(168, 85, 247, 0.35)';
+    if (price >= 30) return 'rgba(59, 130, 246, 0.35)';
+    if (price >= 15) return 'rgba(34, 197, 94, 0.35)';
+    return 'rgba(251, 191, 36, 0.35)';
+  };
+
   const renderSeat = (seat: Seat, sectorCode: string) => {
     if (!seat.posX || !seat.posY) return null;
     
@@ -413,13 +661,14 @@ function FloorPlanViewer({
     const y = Number(seat.posY);
     const isSelected = selectedSeatIds.includes(seat.id);
     const isAvailable = seat.status === 'available';
+    const seatRadius = scale > 2 ? 3.5 : 2.5;
     
     return (
       <g key={seat.id} style={{ pointerEvents: 'auto' }}>
         <circle
           cx={x}
           cy={y}
-          r={2.5}
+          r={seatRadius}
           fill={getSeatColor(seat.status, isSelected, seat.isAccessible)}
           stroke={isSelected ? '#16a34a' : 'rgba(255,255,255,0.6)'}
           strokeWidth={isSelected ? 0.6 : 0.3}
@@ -437,12 +686,26 @@ function FloorPlanViewer({
           <circle
             cx={x}
             cy={y}
-            r={3.5}
+            r={seatRadius + 1.5}
             fill="none"
             stroke="#22c55e"
             strokeWidth={0.4}
             className="pointer-events-none animate-pulse"
           />
+        )}
+        {scale > 2.5 && isAvailable && (
+          <text
+            x={x}
+            y={y + 0.5}
+            fill="white"
+            fontSize="1.8"
+            fontWeight="bold"
+            textAnchor="middle"
+            dominantBaseline="middle"
+            className="pointer-events-none"
+          >
+            {seat.seatNumber}
+          </text>
         )}
       </g>
     );
@@ -454,6 +717,7 @@ function FloorPlanViewer({
     
     const points = coords.map(p => `${p.x},${p.y}`).join(' ');
     const isSelected = selectedZoneId === zone.id;
+    const isHovered = hoveredZone?.id === zone.id;
     
     const sectorId = zone.eventMapping?.sectorId;
     const linkedSector = sectorId 
@@ -468,61 +732,100 @@ function FloorPlanViewer({
     const centerX = coords.reduce((sum, p) => sum + p.x, 0) / coords.length;
     const centerY = coords.reduce((sum, p) => sum + p.y, 0) / coords.length;
     
+    const baseColor = getZoneColor(linkedSector, isAvailable);
+    const fillColor = isSelected 
+      ? 'rgba(34, 197, 94, 0.4)' 
+      : isHovered 
+        ? 'rgba(255, 255, 255, 0.25)' 
+        : baseColor;
+    
     return (
       <g key={zone.id} className="zone-group">
         <polygon
           points={points}
-          fill={isSelected ? 'rgba(34, 197, 94, 0.3)' : 'rgba(255, 255, 255, 0.05)'}
-          stroke={isSelected ? '#22c55e' : (isAvailable ? 'rgba(255,255,255,0.5)' : 'rgba(255,255,255,0.2)')}
-          strokeWidth={isSelected ? 2 : 1}
-          strokeDasharray={isSelected ? 'none' : '4,2'}
+          fill={fillColor}
+          stroke={isSelected ? '#22c55e' : isHovered ? '#ffffff' : (isAvailable ? 'rgba(255,255,255,0.6)' : 'rgba(255,255,255,0.2)')}
+          strokeWidth={isSelected ? 2 : isHovered ? 1.5 : 1}
           style={{ 
             cursor: isAvailable && linkedSector ? 'pointer' : 'not-allowed',
-            pointerEvents: 'painted',
+            pointerEvents: isDragging ? 'none' : 'painted',
             touchAction: 'manipulation',
-            filter: isSelected ? 'drop-shadow(0 0 6px rgba(34, 197, 94, 0.6))' : 'none'
+            filter: isSelected ? 'drop-shadow(0 0 8px rgba(34, 197, 94, 0.7))' : isHovered ? 'drop-shadow(0 0 4px rgba(255,255,255,0.4))' : 'none',
+            transition: 'all 0.2s ease'
           }}
-          className={`transition-all duration-300 ${!isAvailable ? 'opacity-30' : ''}`}
+          className={`${!isAvailable ? 'opacity-30' : ''}`}
           onClick={(e) => {
+            if (isDragging) return;
             e.preventDefault();
             e.stopPropagation();
-            console.log('[FloorPlan] Zone clicked:', zone.id, 'linkedSector:', linkedSector?.sectorCode, 'isAvailable:', isAvailable);
             if (isAvailable && linkedSector) {
               triggerHaptic('medium');
               onZoneClick(zone.id, linkedSector.sectorCode);
+              if (linkedSector.isNumbered) {
+                zoomToZone(zone);
+              }
             }
+          }}
+          onMouseEnter={(e) => {
+            if (!isMobile && isAvailable) {
+              setHoveredZone(zone);
+              const rect = containerRef.current?.getBoundingClientRect();
+              if (rect) {
+                setTooltipPos({
+                  x: e.clientX - rect.left,
+                  y: e.clientY - rect.top - 60,
+                });
+              }
+            }
+          }}
+          onMouseMove={(e) => {
+            if (!isMobile && hoveredZone?.id === zone.id) {
+              const rect = containerRef.current?.getBoundingClientRect();
+              if (rect) {
+                setTooltipPos({
+                  x: e.clientX - rect.left,
+                  y: e.clientY - rect.top - 60,
+                });
+              }
+            }
+          }}
+          onMouseLeave={() => {
+            setHoveredZone(null);
           }}
           onTouchStart={(e) => {
             e.stopPropagation();
           }}
           onTouchEnd={(e) => {
+            if (isDragging) return;
             e.preventDefault();
             e.stopPropagation();
-            console.log('[FloorPlan] Zone touch:', zone.id, 'linkedSector:', linkedSector?.sectorCode, 'isAvailable:', isAvailable);
             if (isAvailable && linkedSector) {
               triggerHaptic('medium');
               onZoneClick(zone.id, linkedSector.sectorCode);
+              if (linkedSector.isNumbered) {
+                zoomToZone(zone);
+              }
             }
           }}
           data-testid={`zone-polygon-${zone.id}`}
         />
-        {isSelected && displayPrice !== null && (
+        {displayPrice !== null && scale < 2 && (
           <g className="pointer-events-none">
             <rect
-              x={centerX - 18}
-              y={centerY - 10}
-              width={36}
-              height={20}
-              rx={4}
-              fill="rgba(0,0,0,0.75)"
-              stroke="#22c55e"
+              x={centerX - 14}
+              y={centerY - 8}
+              width={28}
+              height={16}
+              rx={3}
+              fill="rgba(0,0,0,0.8)"
+              stroke={isAvailable ? 'rgba(255,255,255,0.4)' : 'rgba(255,255,255,0.2)'}
               strokeWidth={0.5}
             />
             <text
               x={centerX}
               y={centerY + 1}
-              fill="#22c55e"
-              fontSize="8"
+              fill={isAvailable ? '#ffffff' : '#666666'}
+              fontSize="7"
               fontWeight="bold"
               textAnchor="middle"
               dominantBaseline="middle"
@@ -531,64 +834,195 @@ function FloorPlanViewer({
             </text>
           </g>
         )}
+        {isSelected && (
+          <g className="pointer-events-none">
+            <rect
+              x={centerX - 20}
+              y={centerY - 10}
+              width={40}
+              height={20}
+              rx={4}
+              fill="rgba(34, 197, 94, 0.9)"
+            />
+            <text
+              x={centerX}
+              y={centerY + 1}
+              fill="#ffffff"
+              fontSize="8"
+              fontWeight="bold"
+              textAnchor="middle"
+              dominantBaseline="middle"
+            >
+              €{displayPrice?.toFixed(0) || '0'}
+            </text>
+          </g>
+        )}
       </g>
     );
   };
 
+  const hoveredSector = hoveredZone ? (
+    hoveredZone.eventMapping?.sectorId 
+      ? sectors.find(s => s.id === hoveredZone.eventMapping?.sectorId)
+      : sectors.find(s => s.sectorCode === hoveredZone.defaultSectorCode)
+  ) : null;
+
   return (
     <motion.div {...fadeInUp} transition={{ ...springTransition, delay: 0.35 }}>
       <div className="bg-card/50 border border-border p-4 rounded-2xl backdrop-blur-sm">
-        <div className="flex items-center gap-2 mb-3">
-          <Map className="w-5 h-5 text-primary" />
-          <h3 className="text-base font-semibold text-foreground">Mappa della Venue</h3>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Map className="w-5 h-5 text-primary" />
+            <h3 className="text-base font-semibold text-foreground">Mappa Interattiva</h3>
+          </div>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleZoomOut}
+              disabled={scale <= MIN_SCALE}
+              className="h-8 w-8"
+              data-testid="button-zoom-out"
+            >
+              <ZoomOut className="w-4 h-4" />
+            </Button>
+            <span className="text-xs text-muted-foreground w-12 text-center">
+              {Math.round(scale * 100)}%
+            </span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleZoomIn}
+              disabled={scale >= MAX_SCALE}
+              className="h-8 w-8"
+              data-testid="button-zoom-in"
+            >
+              <ZoomIn className="w-4 h-4" />
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={handleReset}
+              disabled={scale === 1 && translate.x === 0 && translate.y === 0}
+              className="h-8 w-8"
+              data-testid="button-reset-zoom"
+            >
+              <RotateCcw className="w-4 h-4" />
+            </Button>
+          </div>
         </div>
-        <p className="text-sm text-muted-foreground mb-4">
-          Tocca una zona per selezionarla
+        
+        <p className="text-sm text-muted-foreground mb-3">
+          {isMobile ? 'Pizzica per zoomare • Tocca una zona' : 'Scroll per zoomare • Clicca una zona • Trascina per muoverti'}
         </p>
         
-        <div className="relative w-full aspect-video bg-muted/30 rounded-xl overflow-hidden">
-          {floorPlan.imageUrl ? (
-            <img 
-              src={floorPlan.imageUrl} 
-              alt={floorPlan.name}
-              className="absolute inset-0 w-full h-full object-contain"
-              draggable={false}
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-purple-900/30 to-blue-900/30">
-              <Map className="w-16 h-16 text-muted-foreground" />
+        <div 
+          ref={containerRef}
+          className="relative w-full aspect-video bg-gradient-to-br from-slate-900 to-slate-800 rounded-xl overflow-hidden select-none"
+          onWheel={handleWheel}
+          onMouseDown={handleMouseDown}
+          onMouseMove={handleMouseMove}
+          onMouseUp={handleMouseUp}
+          onMouseLeave={handleMouseUp}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          style={{ 
+            cursor: scale > 1 ? (isDragging ? 'grabbing' : 'grab') : 'default',
+            touchAction: 'none',
+          }}
+        >
+          <div
+            style={{
+              transform: `translate(${translate.x}px, ${translate.y}px) scale(${scale})`,
+              transformOrigin: '0 0',
+              transition: isDragging ? 'none' : 'transform 0.3s ease-out',
+              width: '100%',
+              height: '100%',
+            }}
+          >
+            {floorPlan.imageUrl ? (
+              <img 
+                src={floorPlan.imageUrl} 
+                alt={floorPlan.name}
+                className="absolute inset-0 w-full h-full object-contain"
+                draggable={false}
+              />
+            ) : (
+              <div className="absolute inset-0 flex items-center justify-center">
+                <Map className="w-16 h-16 text-muted-foreground/30" />
+              </div>
+            )}
+            
+            <svg
+              className="absolute inset-0 w-full h-full"
+              viewBox="0 0 100 100"
+              preserveAspectRatio="xMidYMid meet"
+              style={{ zIndex: 10, pointerEvents: isDragging ? 'none' : 'all' }}
+            >
+              <g className="zones-layer">
+                {floorPlan.zones.map(zone => renderZonePolygon(zone))}
+              </g>
+              <g className="seats-layer" style={{ opacity: scale > 1.5 ? 1 : 0.3, transition: 'opacity 0.3s' }}>
+                {sectors.filter(s => s.isNumbered && s.seats?.length > 0).map(sector => 
+                  sector.seats.map(seat => renderSeat(seat, sector.sectorCode))
+                )}
+              </g>
+            </svg>
+          </div>
+
+          {hoveredZone && hoveredSector && !isMobile && (
+            <div
+              className="absolute z-50 pointer-events-none"
+              style={{
+                left: tooltipPos.x,
+                top: tooltipPos.y,
+                transform: 'translateX(-50%)',
+              }}
+            >
+              <div className="bg-background/95 backdrop-blur-md border border-border rounded-lg px-3 py-2 shadow-xl">
+                <p className="font-semibold text-sm text-foreground">{hoveredZone.name || hoveredSector.name}</p>
+                <div className="flex items-center gap-3 mt-1">
+                  <span className="text-primary font-bold">€{Number(hoveredSector.priceIntero).toFixed(2)}</span>
+                  <span className="text-xs text-muted-foreground">
+                    {hoveredSector.availableSeats} disponibili
+                  </span>
+                </div>
+                {hoveredSector.isNumbered && (
+                  <p className="text-xs text-muted-foreground mt-1">Clicca per scegliere il posto</p>
+                )}
+              </div>
             </div>
           )}
-          
-          <svg
-            className="absolute inset-0 w-full h-full"
-            viewBox="0 0 100 100"
-            preserveAspectRatio="xMidYMid meet"
-            style={{ zIndex: 10, pointerEvents: 'all', touchAction: 'manipulation' }}
-          >
-            <g className="zones-layer" style={{ pointerEvents: 'all' }}>
-              {floorPlan.zones.map(zone => renderZonePolygon(zone))}
-            </g>
-            <g className="seats-layer" style={{ pointerEvents: 'all' }}>
-              {sectors.filter(s => s.isNumbered && s.seats?.length > 0).map(sector => 
-                sector.seats.map(seat => renderSeat(seat, sector.sectorCode))
-              )}
-            </g>
-          </svg>
+
+          {scale > 1 && (
+            <div className="absolute bottom-2 left-2 bg-background/80 backdrop-blur-sm rounded-lg px-2 py-1 text-xs text-muted-foreground flex items-center gap-1">
+              <Move className="w-3 h-3" />
+              Trascina per muoverti
+            </div>
+          )}
         </div>
 
-        <div className="flex flex-wrap gap-3 mt-4">
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#10b981' }} />
-            <span>Disponibile</span>
+        <div className="flex flex-wrap items-center gap-4 mt-4">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded" style={{ backgroundColor: 'rgba(251, 191, 36, 0.6)' }} />
+            <span className="text-xs text-muted-foreground">&lt;€15</span>
           </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded" style={{ backgroundColor: 'rgba(34, 197, 94, 0.6)' }} />
+            <span className="text-xs text-muted-foreground">€15-30</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded" style={{ backgroundColor: 'rgba(59, 130, 246, 0.6)' }} />
+            <span className="text-xs text-muted-foreground">€30-50</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <div className="w-4 h-4 rounded" style={{ backgroundColor: 'rgba(168, 85, 247, 0.6)' }} />
+            <span className="text-xs text-muted-foreground">&gt;€50</span>
+          </div>
+          <div className="flex items-center gap-2">
             <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#22c55e', boxShadow: '0 0 4px #22c55e' }} />
-            <span>Selezionato</span>
-          </div>
-          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-            <div className="w-3 h-3 rounded-full" style={{ backgroundColor: '#ef4444' }} />
-            <span>Venduto</span>
+            <span className="text-xs text-muted-foreground">Selezionato</span>
           </div>
         </div>
       </div>
