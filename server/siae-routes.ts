@@ -3349,8 +3349,8 @@ function buildC1ReportData(
     denominazioneLocale: location?.name || event.venueName || 'N/D',
     indirizzoLocale: location?.address || event.venueAddress || 'N/D',
     comuneLocale: location?.city || event.venueCity || 'N/D',
-    provinciaLocale: 'N/D', // locations table non ha provincia
-    capLocale: 'N/D', // locations table non ha CAP
+    provinciaLocale: location?.province || 'N/D', 
+    capLocale: location?.postalCode || location?.cap || 'N/D',
     capienza: capienzaTotale,
     
     // === DATI EVENTO ===
