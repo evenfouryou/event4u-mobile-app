@@ -391,22 +391,16 @@ export function AppSidebar() {
     if (userFeatures?.siaeEnabled === true) {
       menuItems.push(
           {
-            title: "Eventi Biglietteria",
-            icon: Ticket,
-            url: "/siae/ticketed-events",
-            group: "Biglietteria",
-          },
-          {
             title: "Gestione Cassieri",
             icon: UserPlus,
             url: "/cashier/management",
-            group: "Biglietteria",
+            group: "Gestione",
           },
           {
             title: "Clienti SIAE",
             icon: Users,
             url: "/siae/customers",
-            group: "Biglietteria",
+            group: "Gestione",
           }
       );
     }

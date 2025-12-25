@@ -109,6 +109,7 @@ import {
   Banknote,
   Send,
   Upload,
+  Palette,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -1813,6 +1814,12 @@ export default function EventHub() {
               <Euro className="h-4 w-4 mr-2" />
               Finanza
             </TabsTrigger>
+            {ticketedEvent && (
+              <TabsTrigger value="page-editor" data-testid="tab-page-editor">
+                <Palette className="h-4 w-4 mr-2" />
+                Pagina Pubblica
+              </TabsTrigger>
+            )}
           </TabsList>
 
           {/* Overview Tab */}
@@ -2858,6 +2865,89 @@ export default function EventHub() {
               </Card>
             </div>
           </TabsContent>
+
+          {/* Page Editor Tab */}
+          {ticketedEvent && (
+            <TabsContent value="page-editor" className="space-y-6">
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <Palette className="h-5 w-5 text-primary" />
+                    Editor Pagina Pubblica
+                  </CardTitle>
+                  <CardDescription>
+                    Personalizza la pagina pubblica dell'evento con hero, lineup DJ, orari e FAQ
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div className="p-4 rounded-lg bg-muted/50 border">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                        <span className="font-medium">Anteprima Pubblica</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Visualizza come appare la pagina ai visitatori
+                      </p>
+                      <Link href={`/acquista/${id}`}>
+                        <Button variant="outline" className="w-full">
+                          <ExternalLink className="h-4 w-4 mr-2" />
+                          Apri Pagina Pubblica
+                        </Button>
+                      </Link>
+                    </div>
+                    <div className="p-4 rounded-lg bg-primary/10 border border-primary/20">
+                      <div className="flex items-center gap-2 mb-2">
+                        <Edit className="h-4 w-4 text-primary" />
+                        <span className="font-medium">Modifica Contenuti</span>
+                      </div>
+                      <p className="text-sm text-muted-foreground mb-3">
+                        Configura hero, lineup, timeline e FAQ
+                      </p>
+                      <Link href={`/siae/ticketed-events/${ticketedEvent.id}/page-editor`}>
+                        <Button className="w-full">
+                          <Palette className="h-4 w-4 mr-2" />
+                          Apri Editor
+                        </Button>
+                      </Link>
+                    </div>
+                  </div>
+                  
+                  <Separator />
+                  
+                  <div className="text-sm text-muted-foreground">
+                    <p className="font-medium mb-2">Sezioni configurabili:</p>
+                    <ul className="grid grid-cols-2 gap-2">
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                        Hero con video/immagine
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                        Info rapide evento
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                        Line-up artisti/DJ
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                        Timeline orari
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                        FAQ personalizzate
+                      </li>
+                      <li className="flex items-center gap-2">
+                        <CheckCircle2 className="h-4 w-4 text-primary" />
+                        Countdown Early Bird
+                      </li>
+                    </ul>
+                  </div>
+                </CardContent>
+              </Card>
+            </TabsContent>
+          )}
         </Tabs>
 
         {/* Dialogs - same as mobile version */}
