@@ -3697,87 +3697,182 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     });
     const { quadroA, quadroB, quadroC } = reportData;
 
-    // Build C1 XML content with Quadri structure - genera XML direttamente dai dati del report
+    // Build C1 XML content - SIAE Official Format (Provvedimento 356768/2025)
     const eventDate = event.eventDate ? new Date(event.eventDate) : new Date();
-    const dateStr = eventDate.toISOString().split('T')[0].replace(/-/g, '');
-    const fileName = `C1_${event.code || id}_${dateStr}.xml`;
+    const now = new Date();
     
-    // Genera XML per i settori dal quadroB
-    const settoriXml = quadroB.settori.map((s) => {
-      return `    <Settore ordinePosto="${s.ordinePosto}">
-      <CodiceSettore>${s.codiceSettore}</CodiceSettore>
-      <Denominazione>${s.denominazione}</Denominazione>
-      <Capienza>${s.capienza}</Capienza>
-      <Interi quantita="${s.interi.quantita}" prezzoUnitario="${s.interi.prezzoUnitario.toFixed(2)}" totale="${s.interi.totale.toFixed(2)}" />
-      <Ridotti quantita="${s.ridotti.quantita}" prezzoUnitario="${s.ridotti.prezzoUnitario.toFixed(2)}" totale="${s.ridotti.totale.toFixed(2)}" />
-      <Omaggi quantita="${s.omaggi.quantita}" prezzoUnitario="${s.omaggi.prezzoUnitario.toFixed(2)}" totale="${s.omaggi.totale.toFixed(2)}" />
-      <TotaleVenduti>${s.totaleVenduti}</TotaleVenduti>
-      <TotaleAnnullati>${s.totaleAnnullati}</TotaleAnnullati>
-      <TotaleIncasso>${s.totaleIncasso.toFixed(2)}</TotaleIncasso>
-    </Settore>`;
+    // Format dates for SIAE XML (YYYYMMDD format)
+    const dataEvento = eventDate.toISOString().split('T')[0].replace(/-/g, '');
+    const dataGenerazione = now.toISOString().split('T')[0].replace(/-/g, '');
+    const oraGenerazione = now.toTimeString().slice(0, 8).replace(/:/g, '');
+    const oraEvento = event.eventTime ? event.eventTime.replace(':', '') : '2100';
+    
+    // Get progressive number for this transmission
+    const transmissionCount = await siaeStorage.getSiaeTransmissionCount(event.companyId);
+    const progressivoGenerazione = transmissionCount + 1;
+    
+    const fileName = `C1_${event.code || id}_${dataEvento}.xml`;
+    
+    // Determine event type (spettacolo vs intrattenimento) and tax type
+    const isIntrattenimento = event.eventType === 'intrattenimento';
+    const tipoTassazione = isIntrattenimento ? 'I' : 'S'; // I=Intrattenimento, S=Spettacolo
+    const tipoGenere = event.siaeGenreCode || '61'; // Default to 61 (discoteca)
+    
+    // Group tickets by sector and ticket type for proper SIAE OrdineDiPosto structure
+    // Each OrdineDiPosto should contain TitoliAccesso grouped by ticket type
+    const ticketsBySector: Map<string, { 
+      sectorCode: string;
+      capacity: number;
+      ticketsByType: Map<string, { quantity: number; grossAmount: number; vatAmount: number }>;
+    }> = new Map();
+    
+    // Process all tickets to build proper groupings
+    const soldTickets = allTickets.filter(t => t.status === 'emitted' || t.status === 'used');
+    for (const ticket of soldTickets) {
+      const sectorCode = ticket.sectorCode || 'A0';
+      const ticketTypeCode = ticket.ticketTypeCode || 'FD'; // SIAE ticket type code
+      
+      if (!ticketsBySector.has(sectorCode)) {
+        const sector = sectors.find(s => s.sectorCode === sectorCode);
+        ticketsBySector.set(sectorCode, {
+          sectorCode,
+          capacity: sector?.capacity || 0,
+          ticketsByType: new Map()
+        });
+      }
+      
+      const sectorData = ticketsBySector.get(sectorCode)!;
+      // Get VAT rate (default 10% for entertainment/spectacles)
+      const ivaRate = Number((ticket as any).ivaRate || (ticket as any).vatRate) || 10;
+      const ticketPriceNet = Number(ticket.price) || 0;
+      const ticketTotalPrice = Number((ticket as any).totalPrice) || 0;
+      const ticketVatAmountStored = Number((ticket as any).vatAmount) || 0;
+      
+      // Calculate gross and VAT correctly based on available data
+      let ticketPriceGross: number;
+      let ticketVatAmount: number;
+      
+      if (ticketTotalPrice > 0) {
+        // We have totalPrice (gross) - this is the preferred path
+        ticketPriceGross = ticketTotalPrice;
+        if (ticketVatAmountStored > 0) {
+          ticketVatAmount = ticketVatAmountStored;
+        } else if (ticketPriceNet > 0 && ticketTotalPrice > ticketPriceNet) {
+          // VAT = gross - net (most accurate when both are available)
+          ticketVatAmount = ticketTotalPrice - ticketPriceNet;
+        } else {
+          // Calculate VAT from gross using rate
+          ticketVatAmount = ticketTotalPrice * ivaRate / (100 + ivaRate);
+        }
+      } else {
+        // Only net price available - calculate gross and VAT from net
+        // IVA = net * rate / 100, Gross = net + IVA
+        ticketVatAmount = ticketPriceNet * ivaRate / 100;
+        ticketPriceGross = ticketPriceNet + ticketVatAmount;
+      }
+      
+      if (!sectorData.ticketsByType.has(ticketTypeCode)) {
+        sectorData.ticketsByType.set(ticketTypeCode, { quantity: 0, grossAmount: 0, vatAmount: 0 });
+      }
+      const typeData = sectorData.ticketsByType.get(ticketTypeCode)!;
+      typeData.quantity++;
+      typeData.grossAmount += ticketPriceGross; // Use gross for CorrispettivoLordo
+      typeData.vatAmount += ticketVatAmount;
+    }
+    
+    // Also add sectors with no tickets (capacity only)
+    for (const sector of sectors) {
+      const sectorCode = sector.sectorCode || 'A0';
+      if (!ticketsBySector.has(sectorCode)) {
+        ticketsBySector.set(sectorCode, {
+          sectorCode,
+          capacity: sector.capacity || 0,
+          ticketsByType: new Map()
+        });
+      }
+    }
+    
+    // Generate OrdineDiPosto XML for each sector
+    const ordiniDiPostoXml = Array.from(ticketsBySector.entries()).map(([sectorCode, sectorData]) => {
+      // Generate TitoliAccesso entries for each ticket type in this sector
+      const titoliAccessoXml = Array.from(sectorData.ticketsByType.entries()).map(([tipoTitolo, typeData]) => {
+        // Convert amounts to cents (SIAE format uses integer cents)
+        const corrispettivoLordoCents = Math.round(typeData.grossAmount * 100);
+        // Use actual accumulated VAT from tickets (supports both 10% and 22% rates)
+        const ivaCents = Math.round(typeData.vatAmount * 100);
+        
+        return `                <TitoliAccesso>
+                    <TipoTitolo>${tipoTitolo}</TipoTitolo>
+                    <Quantita>${typeData.quantity}</Quantita>
+                    <CorrispettivoLordo>${corrispettivoLordoCents}</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>${ivaCents}</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                    <ImportoPrestazione>0</ImportoPrestazione>
+                </TitoliAccesso>`;
+      }).join('\n');
+      
+      if (sectorData.ticketsByType.size > 0) {
+        return `            <OrdineDiPosto>
+                <CodiceOrdine>${sectorCode}</CodiceOrdine>
+                <Capienza>${sectorData.capacity}</Capienza>
+${titoliAccessoXml}
+                <IVAEccedenteOmaggi>0</IVAEccedenteOmaggi>
+            </OrdineDiPosto>`;
+      } else {
+        return `            <OrdineDiPosto>
+                <CodiceOrdine>${sectorCode}</CodiceOrdine>
+                <Capienza>${sectorData.capacity}</Capienza>
+                <IVAEccedenteOmaggi>0</IVAEccedenteOmaggi>
+            </OrdineDiPosto>`;
+      }
     }).join('\n');
+    
+    // Get Titolare data from siaeSystemConfig
+    const titolareDenominazione = siaeConfig?.businessName || company?.name || '';
+    const titolareCodiceFiscale = siaeConfig?.taxId || company?.fiscalCode || '';
+    const sistemaEmissione = siaeConfig?.systemCode || event.emissionSystemCode || '';
+    
+    // Get Organizzatore data
+    const organizzatoreDenominazione = company?.name || '';
+    const organizzatoreCodiceFiscale = company?.fiscalCode || company?.taxId || '';
+    
+    // Get Locale data
+    const localeDenominazione = location?.name || event.venueName || '';
+    const codiceLocale = location?.siaeLocationCode || event.siaeLocationCode || '';
 
     const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
-<ModelloC1 versione="2025.1">
-  <Intestazione>
-    <TipoModello>C1</TipoModello>
-    <DataGenerazione>${new Date().toISOString()}</DataGenerazione>
-    <TipoRiepilogo>${reportType}</TipoRiepilogo>
-    <DataPeriodo>${eventDate.toISOString().split('T')[0]}</DataPeriodo>
-  </Intestazione>
-  
-  <QuadroA>
-    <DenominazioneOrganizzatore>${quadroA.denominazioneOrganizzatore}</DenominazioneOrganizzatore>
-    <CodiceFiscaleOrganizzatore>${quadroA.codiceFiscaleOrganizzatore}</CodiceFiscaleOrganizzatore>
-    <PartitaIvaOrganizzatore>${quadroA.partitaIvaOrganizzatore}</PartitaIvaOrganizzatore>
-    <IndirizzoOrganizzatore>${quadroA.indirizzoOrganizzatore}</IndirizzoOrganizzatore>
-    <ComuneOrganizzatore>${quadroA.comuneOrganizzatore}</ComuneOrganizzatore>
-    <ProvinciaOrganizzatore>${quadroA.provinciaOrganizzatore}</ProvinciaOrganizzatore>
-    <CapOrganizzatore>${quadroA.capOrganizzatore}</CapOrganizzatore>
-    <CodiceLocale>${quadroA.codiceLocale}</CodiceLocale>
-    <DenominazioneLocale>${quadroA.denominazioneLocale}</DenominazioneLocale>
-    <IndirizzoLocale>${quadroA.indirizzoLocale}</IndirizzoLocale>
-    <ComuneLocale>${quadroA.comuneLocale}</ComuneLocale>
-    <ProvinciaLocale>${quadroA.provinciaLocale}</ProvinciaLocale>
-    <CapLocale>${quadroA.capLocale}</CapLocale>
-    <DenominazioneEvento>${quadroA.denominazioneEvento}</DenominazioneEvento>
-    <CodiceEvento>${quadroA.codiceEvento}</CodiceEvento>
-    <GenereEvento>${quadroA.genereEvento}</GenereEvento>
-    <DataEvento>${quadroA.dataEvento || eventDate.toISOString().split('T')[0]}</DataEvento>
-    <OraEvento>${quadroA.oraEvento}</OraEvento>
-    <TipologiaEvento>${quadroA.tipologiaEvento}</TipologiaEvento>
-    <Capienza>${quadroA.capienza}</Capienza>
-  </QuadroA>
-
-  <QuadroB>
-    <Settori>
-${settoriXml}
-    </Settori>
-    <RiepilogoTipologie>
-      <Interi quantita="${quadroB.riepilogoTipologie.interi.quantita}" prezzoUnitario="${quadroB.riepilogoTipologie.interi.prezzoUnitario.toFixed(2)}" totale="${quadroB.riepilogoTipologie.interi.totale.toFixed(2)}" />
-      <Ridotti quantita="${quadroB.riepilogoTipologie.ridotti.quantita}" prezzoUnitario="${quadroB.riepilogoTipologie.ridotti.prezzoUnitario.toFixed(2)}" totale="${quadroB.riepilogoTipologie.ridotti.totale.toFixed(2)}" />
-      <Omaggi quantita="${quadroB.riepilogoTipologie.omaggi.quantita}" prezzoUnitario="0.00" totale="0.00" />
-    </RiepilogoTipologie>
-    <ProgressivoEmissione>${quadroB.progressivoEmissione}</ProgressivoEmissione>
-    <TotaleBigliettiVenduti>${quadroB.totaleBigliettiVenduti}</TotaleBigliettiVenduti>
-    <TotaleBigliettiAnnullati>${quadroB.totaleBigliettiAnnullati}</TotaleBigliettiAnnullati>
-    <TotaleIncassoLordo>${quadroB.totaleIncassoLordo.toFixed(2)}</TotaleIncassoLordo>
-  </QuadroB>
-
-  <QuadroC>
-    <IncassoLordo>${quadroC.incassoLordo.toFixed(2)}</IncassoLordo>
-    <AliquotaIVA>${quadroC.aliquotaIVA}</AliquotaIVA>
-    <BaseImponibileIVA>${quadroC.baseImponibileIVA.toFixed(2)}</BaseImponibileIVA>
-    <ImportoIVA>${quadroC.importoIVA.toFixed(2)}</ImportoIVA>
-    <IsIntrattenimento>${quadroC.isIntrattenimento}</IsIntrattenimento>
-    <AliquotaImpostaIntrattenimenti>${quadroC.aliquotaImpostaIntrattenimenti}</AliquotaImpostaIntrattenimenti>
-    <BaseImponibileIntrattenimenti>${quadroC.baseImponibileIntrattenimenti.toFixed(2)}</BaseImponibileIntrattenimenti>
-    <ImportoImpostaIntrattenimenti>${quadroC.importoImpostaIntrattenimenti.toFixed(2)}</ImportoImpostaIntrattenimenti>
-    <DirittoAutore>${quadroC.dirittoAutore.toFixed(2)}</DirittoAutore>
-    <TotaleImposte>${quadroC.totaleImposte.toFixed(2)}</TotaleImposte>
-    <IncassoNetto>${quadroC.incassoNetto.toFixed(2)}</IncassoNetto>
-  </QuadroC>
-</ModelloC1>`;
+<RiepilogoGiornaliero Data="${dataEvento}" DataGenerazione="${dataGenerazione}" OraGenerazione="${oraGenerazione}" ProgressivoGenerazione="${progressivoGenerazione}" Sostituzione="N">
+    <Titolare>
+        <Denominazione>${escapeXml(titolareDenominazione)}</Denominazione>
+        <CodiceFiscale>${titolareCodiceFiscale}</CodiceFiscale>
+        <SistemaEmissione>${sistemaEmissione}</SistemaEmissione>
+    </Titolare>
+    <Organizzatore>
+        <Denominazione>${escapeXml(organizzatoreDenominazione)}</Denominazione>
+        <CodiceFiscale>${organizzatoreCodiceFiscale}</CodiceFiscale>
+        <TipoOrganizzatore valore="G"/>
+        <Evento>
+            <Intrattenimento>
+                <TipoTassazione valore="${tipoTassazione}"/>
+            </Intrattenimento>
+            <Locale>
+                <Denominazione>${escapeXml(localeDenominazione)}</Denominazione>
+                <CodiceLocale>${codiceLocale}</CodiceLocale>
+            </Locale>
+            <DataEvento>${dataEvento}</DataEvento>
+            <OraEvento>${oraEvento}</OraEvento>
+            <MultiGenere>
+                <TipoGenere>${tipoGenere}</TipoGenere>
+                <IncidenzaGenere>0</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>${escapeXml(event.name || quadroA.denominazioneEvento)}</Titolo>
+                </TitoliOpere>
+            </MultiGenere>
+${ordiniDiPostoXml}
+        </Evento>
+    </Organizzatore>
+</RiepilogoGiornaliero>`;
 
     // Check if digital signature is requested via smart card
     const { signWithSmartCard } = req.body;
