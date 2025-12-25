@@ -92,7 +92,7 @@ import {
   type InsertSiaeWalletTransaction,
 } from "@shared/schema";
 import { db } from "./db";
-import { eq, and, desc, sql, lt, gt, isNull, count } from "drizzle-orm";
+import { eq, and, desc, sql, lt, gt, isNull, count, inArray } from "drizzle-orm";
 import { users, events, companies, locations } from "@shared/schema";
 
 export interface ISiaeStorage {
@@ -919,50 +919,20 @@ export class SiaeStorage implements ISiaeStorage {
   
   async getSiaeTicketsByCompany(companyId: string): Promise<SiaeTicket[]> {
     // Join through ticketed events to get tickets for a company
-    return await db.select({
-      id: siaeTickets.id,
-      ticketedEventId: siaeTickets.ticketedEventId,
-      sectorId: siaeTickets.sectorId,
-      seatId: siaeTickets.seatId,
-      customerId: siaeTickets.customerId,
-      transactionId: siaeTickets.transactionId,
-      fiscalSealId: siaeTickets.fiscalSealId,
-      fiscalSealCode: siaeTickets.fiscalSealCode,
-      fiscalSeal: siaeTickets.fiscalSeal,
-      ticketTypeCode: siaeTickets.ticketTypeCode,
-      serviceCode: siaeTickets.serviceCode,
-      emissionChannelCode: siaeTickets.emissionChannelCode,
-      progressiveNumber: siaeTickets.progressiveNumber,
-      holderFirstName: siaeTickets.holderFirstName,
-      holderLastName: siaeTickets.holderLastName,
-      holderFiscalCode: siaeTickets.holderFiscalCode,
-      holderDocumentType: siaeTickets.holderDocumentType,
-      holderDocumentNumber: siaeTickets.holderDocumentNumber,
-      grossPrice: siaeTickets.grossPrice,
-      netPrice: siaeTickets.netPrice,
-      vatRate: siaeTickets.vatRate,
-      vatAmount: siaeTickets.vatAmount,
-      siaeFee: siaeTickets.siaeFee,
-      emissionDate: siaeTickets.emissionDate,
-      eventDate: siaeTickets.eventDate,
-      qrCode: siaeTickets.qrCode,
-      barcode: siaeTickets.barcode,
-      status: siaeTickets.status,
-      usedAt: siaeTickets.usedAt,
-      usedByScannerId: siaeTickets.usedByScannerId,
-      cancellationReasonCode: siaeTickets.cancellationReasonCode,
-      cancellationDate: siaeTickets.cancellationDate,
-      cancelledByUserId: siaeTickets.cancelledByUserId,
-      refundAmount: siaeTickets.refundAmount,
-      pdfUrl: siaeTickets.pdfUrl,
-      sentToCustomer: siaeTickets.sentToCustomer,
-      sentAt: siaeTickets.sentAt,
-      createdAt: siaeTickets.createdAt,
-      updatedAt: siaeTickets.updatedAt,
-    })
+    // Use a subquery to get event IDs for this company, then filter tickets
+    const companyEvents = await db.select({ id: siaeTicketedEvents.id })
+      .from(siaeTicketedEvents)
+      .where(eq(siaeTicketedEvents.companyId, companyId));
+    
+    const eventIds = companyEvents.map(e => e.id);
+    
+    if (eventIds.length === 0) {
+      return [];
+    }
+    
+    return await db.select()
       .from(siaeTickets)
-      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
-      .where(eq(siaeTicketedEvents.companyId, companyId))
+      .where(inArray(siaeTickets.ticketedEventId, eventIds))
       .orderBy(desc(siaeTickets.emissionDate));
   }
   

@@ -293,12 +293,15 @@ export default function SiaeTransmissionsPage() {
         description: `Trovate ${data.totalEmails} email SIAE, aggiornate ${data.updatedTransmissions} trasmissioni.`,
       });
     },
-    onError: (error: Error) => {
+    onError: (error: Error & { code?: string }) => {
       triggerHaptic('error');
+      const isPermissionError = error.message?.includes('permessi') || error.message?.includes('GMAIL_PERMISSION');
       toast({
-        title: "Errore",
-        description: error.message,
-        variant: "destructive",
+        title: isPermissionError ? "Lettura Email Non Disponibile" : "Errore",
+        description: isPermissionError 
+          ? "L'integrazione Gmail attuale non supporta la lettura delle email. Usa la conferma manuale del protocollo SIAE."
+          : error.message,
+        variant: isPermissionError ? "default" : "destructive",
       });
     },
   });

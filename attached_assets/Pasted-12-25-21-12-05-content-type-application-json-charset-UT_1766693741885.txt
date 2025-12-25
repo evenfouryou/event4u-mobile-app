@@ -1,0 +1,68 @@
+12-25 21:12:05
+'content-type': 'application/json; charset=UTF-8',
+12-25 21:12:05
+config: {
+12-25 21:12:05
+'Accept-Encoding': 'gzip',
+12-25 21:12:05
+at Gaxios._request (/home/runner/workspace/node_modules/gaxios/build/src/gaxios.js:142:23)
+12-25 21:12:05
+},
+12-25 21:12:05
+date: 'Thu, 25 Dec 2025 20:12:05 GMT',
+12-25 21:12:05
+retryConfig: {
+12-25 21:12:05
+apiVersion: '',
+12-25 21:12:05
+paramsSerializer: [Function (anonymous)],
+12-25 21:12:05
+timeOfFirstRequest: 1766693525990,
+12-25 21:12:05
+}
+12-25 21:12:05
+[Gmail] Error fetching SIAE responses: GaxiosError: Insufficient Permission
+12-25 21:12:05
+url: 'https://gmail.googleapis.com/gmail/v1/users/me/messages?q=from%3Asiae.it%20OR%20from%3Abatest.siae.it%20after%3A2025%2F12%2F18&maxResults=50',
+12-25 21:12:05
+userAgentDirectives: [ [Object] ],
+12-25 21:12:05
+url: 'https://gmail.googleapis.com/gmail/v1/users/me/messages?q=from%3Asiae.it%20OR%20from%3Abatest.siae.it%20after%3A2025%2F12%2F18&maxResults=50',
+12-25 21:12:05
+userAgentDirectives: [Array],
+12-25 21:12:05
+}
+12-25 21:12:05
+maxRetryDelay: 9007199254740991,
+12-25 21:12:05
+validateStatus: [Function (anonymous)],
+12-25 21:12:05
+currentRetryAttempt: 0,
+12-25 21:12:05
+params: {
+12-25 21:12:05
+retry: 3,
+12-25 21:12:49
+at file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:708:19
+12-25 21:12:49
+at Object.startActiveSpan (file:///home/runner/workspace/node_modules/drizzle-orm/tracing.js:8:14)
+12-25 21:12:49
+at orderSelectedFields (file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:53:33)
+12-25 21:12:49
+at orderSelectedFields (file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:53:17)
+12-25 21:12:49
+at file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:684:26
+12-25 21:12:49
+at PgSelectBase._prepare (file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:683:19)
+12-25 21:12:49
+at Array.reduce ()
+12-25 21:12:49
+at Object.startActiveSpan (file:///home/runner/workspace/node_modules/drizzle-orm/tracing.js:8:14)
+12-25 21:12:49
+[SIAE-ROUTES] Failed to send daily transmission: TypeError: Cannot convert undefined or null to object
+12-25 21:12:49
+at file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:63:22
+12-25 21:12:49
+at Function.entries ()
+Wrap
+Col

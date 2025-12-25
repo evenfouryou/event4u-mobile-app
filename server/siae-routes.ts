@@ -2273,6 +2273,22 @@ router.post("/api/siae/transmissions/check-responses", requireAuth, requireGesto
     });
   } catch (error: any) {
     console.error('[SIAE-ROUTES] Failed to check SIAE responses:', error);
+    
+    // Check for Gmail permission errors
+    if (error.message?.includes('Insufficient Permission') || error.code === 403) {
+      return res.status(403).json({ 
+        message: "L'integrazione Gmail non ha i permessi per leggere le email. Usa la conferma manuale del protocollo per registrare le risposte SIAE.",
+        code: 'GMAIL_PERMISSION_DENIED'
+      });
+    }
+    
+    if (error.message?.includes('Gmail not connected')) {
+      return res.status(400).json({ 
+        message: "Gmail non è connesso. Configura l'integrazione Gmail nelle impostazioni o usa la conferma manuale del protocollo.",
+        code: 'GMAIL_NOT_CONNECTED'
+      });
+    }
+    
     res.status(500).json({ message: error.message });
   }
 });
