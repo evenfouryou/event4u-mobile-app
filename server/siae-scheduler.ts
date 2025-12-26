@@ -75,34 +75,100 @@ async function generateC1ReportData(ticketedEvent: any, reportType: 'giornaliero
 }
 
 function generateXMLContent(reportData: any): string {
-  const { ticketedEvent, company, reportType, reportDate, activeTicketsCount, cancelledTicketsCount, totalRevenue } = reportData;
+  const { ticketedEvent, company, eventRecord, sectors, reportType, reportDate, activeTicketsCount, cancelledTicketsCount, totalRevenue, filteredTickets } = reportData;
   const isMonthly = reportType === 'mensile';
-  const dateStr = reportDate.toISOString().split('T')[0];
   
+  const now = new Date();
+  const meseAttr = isMonthly 
+    ? `${reportDate.getFullYear()}${String(reportDate.getMonth() + 1).padStart(2, '0')}`
+    : reportDate.toISOString().split('T')[0].replace(/-/g, '');
+  const dataGen = now.toISOString().split('T')[0].replace(/-/g, '');
+  const oraGen = now.toTimeString().split(' ')[0].replace(/:/g, '');
+  
+  // Converti importo in centesimi (formato SIAE)
+  const totalRevenueInCents = Math.round(totalRevenue * 100);
+  const ivaAmount = Math.round(totalRevenueInCents * 0.10); // IVA 10% per spettacoli
+  
+  // Data evento
+  const eventDate = eventRecord?.startDatetime 
+    ? new Date(eventRecord.startDatetime).toISOString().split('T')[0].replace(/-/g, '')
+    : reportDate.toISOString().split('T')[0].replace(/-/g, '');
+  const eventTime = eventRecord?.startDatetime
+    ? new Date(eventRecord.startDatetime).toTimeString().split(' ')[0].replace(/:/g, '').substring(0, 4)
+    : '2000';
+
+  // Genera sezioni OrdineDiPosto per i settori
+  let ordiniDiPostoXml = '';
+  if (sectors && sectors.length > 0) {
+    for (const sector of sectors) {
+      ordiniDiPostoXml += `
+            <OrdineDiPosto>
+                <CodiceOrdine>${sector.orderCode || 'A0'}</CodiceOrdine>
+                <Capienza>${sector.capacity || 0}</Capienza>
+                <IVAEccedenteOmaggi>0</IVAEccedenteOmaggi>
+            </OrdineDiPosto>`;
+    }
+  } else {
+    ordiniDiPostoXml = `
+            <OrdineDiPosto>
+                <CodiceOrdine>A0</CodiceOrdine>
+                <Capienza>100</Capienza>
+                <IVAEccedenteOmaggi>0</IVAEccedenteOmaggi>
+            </OrdineDiPosto>`;
+  }
+
+  const rootElement = isMonthly ? 'RiepilogoMensile' : 'RiepilogoGiornaliero';
+  const meseAttrName = isMonthly ? 'Mese' : 'Giorno';
+
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<SIAEReport xmlns="http://www.siae.it/report/c1">
-  <Header>
-    <ReportType>${isMonthly ? 'MENSILE' : 'GIORNALIERO'}</ReportType>
-    <ReportDate>${dateStr}</ReportDate>
-    <GeneratedAt>${new Date().toISOString()}</GeneratedAt>
-    <Version>2025.1</Version>
-  </Header>
-  <Organizer>
-    <CompanyName>${company?.name || 'N/A'}</CompanyName>
-    <TaxId>${company?.taxId || 'N/A'}</TaxId>
-  </Organizer>
-  <Event>
-    <EventCode>${ticketedEvent.siaeEventCode || 'N/A'}</EventCode>
-    <LocationCode>${ticketedEvent.siaeLocationCode || 'N/A'}</LocationCode>
-    <GenreCode>${ticketedEvent.genreCode}</GenreCode>
-    <TaxType>${ticketedEvent.taxType}</TaxType>
-  </Event>
-  <Summary>
-    <TicketsIssued>${activeTicketsCount}</TicketsIssued>
-    <TicketsCancelled>${cancelledTicketsCount}</TicketsCancelled>
-    <TotalRevenue>${totalRevenue.toFixed(2)}</TotalRevenue>
-  </Summary>
-</SIAEReport>`;
+<${rootElement} ${meseAttrName}="${meseAttr}" DataGenerazione="${dataGen}" OraGenerazione="${oraGen}" ProgressivoGenerazione="1" Sostituzione="N">
+    <Titolare>
+        <Denominazione>${company?.name || 'N/A'}</Denominazione>
+        <CodiceFiscale>${company?.taxId || 'XXXXXXXXXXXXXXXX'}</CodiceFiscale>
+        <SistemaEmissione>${ticketedEvent.systemCode || 'EVENT4U'}</SistemaEmissione>
+    </Titolare>
+    <Organizzatore>
+        <Denominazione>${company?.name || 'N/A'}</Denominazione>
+        <CodiceFiscale>${company?.taxId || 'XXXXXXXXXXXXXXXX'}</CodiceFiscale>
+        <TipoOrganizzatore valore="${ticketedEvent.organizerType || 'G'}"/>
+        <Evento>
+            <Intrattenimento>
+                <TipoTassazione valore="${ticketedEvent.taxType || 'I'}"/>
+                <Incidenza>${ticketedEvent.entertainmentIncidence || 100}</Incidenza>
+                <ImponibileIntrattenimenti>0</ImponibileIntrattenimenti>
+            </Intrattenimento>
+            <Locale>
+                <Denominazione>${ticketedEvent.eventLocation || eventRecord?.locationId || 'Locale'}</Denominazione>
+                <CodiceLocale>${ticketedEvent.siaeLocationCode || 'XXXXXX'}</CodiceLocale>
+            </Locale>
+            <DataEvento>${eventDate}</DataEvento>
+            <OraEvento>${eventTime}</OraEvento>
+            <MultiGenere>
+                <TipoGenere>${ticketedEvent.genreCode || '61'}</TipoGenere>
+                <IncidenzaGenere>0</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>${eventRecord?.name || ticketedEvent.eventTitle || 'Evento'}</Titolo>
+                </TitoliOpere>
+            </MultiGenere>${ordiniDiPostoXml}
+        </Evento>
+        <TitoliIngresso>
+            <TitoliEmessi>
+                <Quantita>${activeTicketsCount}</Quantita>
+                <CorrispettivoLordo>${totalRevenueInCents}</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>${ivaAmount}</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </TitoliEmessi>
+            <TitoliAnnullati>
+                <Quantita>${cancelledTicketsCount}</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </TitoliAnnullati>
+        </TitoliIngresso>
+    </Organizzatore>
+</${rootElement}>`;
   
   return xml;
 }
