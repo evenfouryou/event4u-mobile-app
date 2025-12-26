@@ -2025,7 +2025,7 @@ router.patch("/api/siae/transmissions/:id", requireAuth, requireGestore, async (
   }
 });
 
-// Send XML transmission via email
+// Send XML transmission via email (with optional digital signature)
 router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
@@ -2047,6 +2047,30 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     const company = await storage.getCompany(transmission.companyId);
     const companyName = company?.name || 'N/A';
     
+    // Try to digitally sign the XML using smart card
+    let xmlToSend = transmission.fileContent;
+    let signatureInfo = '';
+    
+    try {
+      if (isBridgeConnected()) {
+        console.log(`[SIAE-ROUTES] Bridge connected, attempting digital signature...`);
+        const signatureResult = await requestXmlSignature(transmission.fileContent);
+        xmlToSend = signatureResult.signedXml;
+        signatureInfo = ' (firmato digitalmente)';
+        console.log(`[SIAE-ROUTES] XML signed successfully at ${signatureResult.signedAt}`);
+        
+        // Update transmission with signed content
+        await siaeStorage.updateSiaeTransmission(id, {
+          fileContent: xmlToSend,
+        });
+      } else {
+        console.log(`[SIAE-ROUTES] Bridge not connected, sending unsigned XML`);
+      }
+    } catch (signError: any) {
+      console.warn(`[SIAE-ROUTES] Digital signature failed, sending unsigned: ${signError.message}`);
+      // Continue without signature - not a blocking error
+    }
+    
     // Import email service
     const { sendSiaeTransmissionEmail } = await import('./email-service');
     
@@ -2059,11 +2083,11 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
       periodDate: new Date(transmission.periodDate),
       ticketsCount: transmission.ticketsCount || 0,
       totalAmount: transmission.totalAmount || '0',
-      xmlContent: transmission.fileContent,
+      xmlContent: xmlToSend,
       transmissionId: transmission.id,
     });
     
-    console.log(`[SIAE-ROUTES] Transmission sent to: ${destinationEmail} (Test mode: ${SIAE_TEST_MODE})`);
+    console.log(`[SIAE-ROUTES] Transmission sent to: ${destinationEmail}${signatureInfo} (Test mode: ${SIAE_TEST_MODE})`);
     
     // Update transmission status to sent
     await siaeStorage.updateSiaeTransmission(id, {
@@ -2071,7 +2095,7 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
       sentDate: new Date(),
     });
     
-    res.json({ success: true, message: "Email inviata con successo" });
+    res.json({ success: true, message: `Email inviata con successo${signatureInfo}` });
   } catch (error: any) {
     console.error('[SIAE-ROUTES] Failed to send transmission email:', error);
     res.status(500).json({ message: error.message });

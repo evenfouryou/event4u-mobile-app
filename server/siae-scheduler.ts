@@ -4,6 +4,7 @@ import { eq, and, sql, gte, lt, desc } from "drizzle-orm";
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { sendSiaeTransmissionEmail } from "./email-service";
+import { isBridgeConnected, requestXmlSignature } from "./bridge-relay";
 
 // Configurazione SIAE
 const SIAE_TEST_MODE = process.env.SIAE_TEST_MODE === 'true';
@@ -245,6 +246,29 @@ async function sendDailyReports() {
 
         log(`Evento ${ticketedEvent.id} (${event.name}) - Report giornaliero creato: ${fileName}`);
 
+        // Tenta firma digitale se il bridge è connesso
+        let xmlToSend = xmlContent;
+        let signatureInfo = '';
+        
+        try {
+          if (isBridgeConnected()) {
+            log(`Bridge connesso, tentativo firma digitale...`);
+            const signatureResult = await requestXmlSignature(xmlContent);
+            xmlToSend = signatureResult.signedXml;
+            signatureInfo = ' (firmato digitalmente)';
+            log(`XML firmato con successo alle ${signatureResult.signedAt}`);
+            
+            // Aggiorna trasmissione con contenuto firmato
+            await siaeStorage.updateSiaeTransmission(transmission.id, {
+              fileContent: xmlToSend,
+            });
+          } else {
+            log(`Bridge non connesso, invio XML non firmato`);
+          }
+        } catch (signError: any) {
+          log(`ATTENZIONE: Firma digitale fallita, invio non firmato: ${signError.message}`);
+        }
+
         // Invio automatico email a SIAE
         try {
           await sendSiaeTransmissionEmail({
@@ -254,7 +278,7 @@ async function sendDailyReports() {
             periodDate: yesterday,
             ticketsCount: reportData.activeTicketsCount,
             totalAmount: reportData.totalRevenue.toFixed(2),
-            xmlContent,
+            xmlContent: xmlToSend,
             transmissionId: transmission.id,
           });
 
@@ -263,7 +287,7 @@ async function sendDailyReports() {
             status: 'sent',
             sentAt: new Date(),
           });
-          log(`Evento ${ticketedEvent.id} - Email inviata a ${SIAE_TEST_EMAIL}, status aggiornato a 'sent'`);
+          log(`Evento ${ticketedEvent.id} - Email inviata a ${SIAE_TEST_EMAIL}${signatureInfo}, status aggiornato a 'sent'`);
         } catch (emailError: any) {
           log(`ERRORE invio email per evento ${ticketedEvent.id}: ${emailError.message}`);
           await siaeStorage.updateSiaeTransmission(transmission.id, {
@@ -333,6 +357,29 @@ async function sendMonthlyReports() {
 
         log(`Evento ${ticketedEvent.id} - Report mensile creato: ${fileName}`);
 
+        // Tenta firma digitale se il bridge è connesso
+        let xmlToSend = xmlContent;
+        let signatureInfo = '';
+        
+        try {
+          if (isBridgeConnected()) {
+            log(`Bridge connesso, tentativo firma digitale per report mensile...`);
+            const signatureResult = await requestXmlSignature(xmlContent);
+            xmlToSend = signatureResult.signedXml;
+            signatureInfo = ' (firmato digitalmente)';
+            log(`XML mensile firmato con successo alle ${signatureResult.signedAt}`);
+            
+            // Aggiorna trasmissione con contenuto firmato
+            await siaeStorage.updateSiaeTransmission(transmission.id, {
+              fileContent: xmlToSend,
+            });
+          } else {
+            log(`Bridge non connesso, invio XML mensile non firmato`);
+          }
+        } catch (signError: any) {
+          log(`ATTENZIONE: Firma digitale report mensile fallita, invio non firmato: ${signError.message}`);
+        }
+
         // Invio automatico email a SIAE
         try {
           await sendSiaeTransmissionEmail({
@@ -342,7 +389,7 @@ async function sendMonthlyReports() {
             periodDate: previousMonth,
             ticketsCount: reportData.activeTicketsCount,
             totalAmount: reportData.totalRevenue.toFixed(2),
-            xmlContent,
+            xmlContent: xmlToSend,
             transmissionId: transmission.id,
           });
 
@@ -351,7 +398,7 @@ async function sendMonthlyReports() {
             status: 'sent',
             sentAt: new Date(),
           });
-          log(`Evento ${ticketedEvent.id} - Email mensile inviata a ${SIAE_TEST_EMAIL}, status aggiornato a 'sent'`);
+          log(`Evento ${ticketedEvent.id} - Email mensile inviata a ${SIAE_TEST_EMAIL}${signatureInfo}, status aggiornato a 'sent'`);
         } catch (emailError: any) {
           log(`ERRORE invio email mensile per evento ${ticketedEvent.id}: ${emailError.message}`);
           await siaeStorage.updateSiaeTransmission(transmission.id, {
