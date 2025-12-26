@@ -850,10 +850,42 @@ export default function SiaeReportC1() {
                 <td className="border border-black p-1">{quadroA.partitaIvaOrganizzatore}</td>
               </tr>
               <tr>
+                <td className="border border-black p-1 font-semibold">INDIRIZZO</td>
+                <td className="border border-black p-1">{quadroA.indirizzoOrganizzatore || 'N/D'}</td>
+                <td className="border border-black p-1 font-semibold">COMUNE</td>
+                <td className="border border-black p-1">{quadroA.comuneOrganizzatore || 'N/D'} ({quadroA.provinciaOrganizzatore || ''}) - {quadroA.capOrganizzatore || ''}</td>
+              </tr>
+              <tr className="bg-gray-50">
+                <td className="border border-black p-1 font-semibold">TITOLARE SISTEMA EMISSIONE</td>
+                <td className="border border-black p-1" colSpan={3}>{quadroA.titolareSistemaEmissione || quadroA.denominazioneOrganizzatore}</td>
+              </tr>
+              <tr>
+                <td className="border border-black p-1 font-semibold">C.F. TITOLARE SISTEMA</td>
+                <td className="border border-black p-1">{quadroA.codiceFiscaleTitolareSistema || 'N/D'}</td>
+                <td className="border border-black p-1 font-semibold">P.IVA TITOLARE SISTEMA</td>
+                <td className="border border-black p-1">{quadroA.partitaIvaTitolareSistema || 'N/D'}</td>
+              </tr>
+              <tr>
+                <td className="border border-black p-1 font-semibold">INDIRIZZO TITOLARE</td>
+                <td className="border border-black p-1">{quadroA.indirizzoTitolareSistema || 'N/D'}</td>
+                <td className="border border-black p-1 font-semibold">COMUNE TITOLARE</td>
+                <td className="border border-black p-1">{quadroA.comuneTitolareSistema || 'N/D'} ({quadroA.provinciaTitolareSistema || ''}) - {quadroA.capTitolareSistema || ''}</td>
+              </tr>
+              <tr>
+                <td className="border border-black p-1 font-semibold">CODICE SISTEMA EMISSIONE</td>
+                <td className="border border-black p-1" colSpan={3}>{quadroA.codiceSistemaEmissione || 'E4U-SYS'}</td>
+              </tr>
+              <tr>
                 <td className="border border-black p-1 font-semibold">CODICE LOCALE (BA)</td>
                 <td className="border border-black p-1">{quadroA.codiceLocale}</td>
-                <td className="border border-black p-1 font-semibold">LOCALE</td>
+                <td className="border border-black p-1 font-semibold">DENOMINAZIONE LOCALE</td>
                 <td className="border border-black p-1">{quadroA.denominazioneLocale}</td>
+              </tr>
+              <tr>
+                <td className="border border-black p-1 font-semibold">INDIRIZZO LOCALE</td>
+                <td className="border border-black p-1">{quadroA.indirizzoLocale || 'N/D'}</td>
+                <td className="border border-black p-1 font-semibold">COMUNE LOCALE</td>
+                <td className="border border-black p-1">{quadroA.comuneLocale || 'N/D'} ({quadroA.provinciaLocale || ''}) - {quadroA.capLocale || ''}</td>
               </tr>
               <tr>
                 <td className="border border-black p-1 font-semibold">DENOMINAZIONE EVENTO</td>
@@ -868,8 +900,8 @@ export default function SiaeReportC1() {
               <tr>
                 <td className="border border-black p-1 font-semibold">DATA EVENTO</td>
                 <td className="border border-black p-1">{formattedDate}</td>
-                <td className="border border-black p-1 font-semibold">ORA INIZIO</td>
-                <td className="border border-black p-1">{quadroA.oraEvento}</td>
+                <td className="border border-black p-1 font-semibold">ORA INIZIO / FINE</td>
+                <td className="border border-black p-1">{quadroA.oraEvento} - {quadroA.oraFineEvento || '06:00'}</td>
               </tr>
               <tr>
                 <td className="border border-black p-1 font-semibold">TIPOLOGIA</td>
@@ -881,11 +913,23 @@ export default function SiaeReportC1() {
                     <input type="checkbox" checked={quadroA.tipologiaEvento === 'intrattenimento'} readOnly className="w-3 h-3" /> Intrattenimento
                   </label>
                 </td>
-                <td className="border border-black p-1 font-semibold">CAPIENZA</td>
+                <td className="border border-black p-1 font-semibold">CAPIENZA LOCALE</td>
                 <td className="border border-black p-1">{quadroA.capienza}</td>
               </tr>
             </tbody>
           </table>
+          
+          {quadroA.sistemaFunzionante === false && (
+            <div className="border-t border-black bg-yellow-50 p-2">
+              <div className="font-semibold text-xs mb-1">MANCATO FUNZIONAMENTO DEL SISTEMA DI EMISSIONE:</div>
+              <div className="text-xs">
+                Dal giorno <span className="border-b border-black px-2">{quadroA.dataInizioMalfunzionamento || '__/__/____'}</span> 
+                alle ore <span className="border-b border-black px-2">{quadroA.oraInizioMalfunzionamento || '__:__'}</span> 
+                al giorno <span className="border-b border-black px-2">{quadroA.dataFineMalfunzionamento || '__/__/____'}</span> 
+                alle ore <span className="border-b border-black px-2">{quadroA.oraFineMalfunzionamento || '__:__'}</span>
+              </div>
+            </div>
+          )}
         </div>
 
         <div className="border border-black mb-4">
