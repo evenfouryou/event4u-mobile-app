@@ -236,10 +236,12 @@ export default function SiaeTransmissionsPage() {
     onSuccess: (data) => {
       queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.includes('transmissions') || false });
       setIsSendDailySheetOpen(false);
+      setIsSendDailyDialogOpen(false);
       triggerHaptic('success');
+      const tipoLabel = c1Type === 'monthly' ? 'mensile' : 'giornaliera';
       toast({
-        title: "Trasmissione Inviata",
-        description: `Trasmissione giornaliera inviata con ${data.transmission?.ticketsCount || 0} biglietti.`,
+        title: "Trasmissione C1 Inviata",
+        description: `Trasmissione ${tipoLabel} inviata con ${data.transmission?.ticketsCount || 0} biglietti.`,
       });
     },
     onError: (error: Error) => {
