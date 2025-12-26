@@ -4028,6 +4028,10 @@ router.get('/api/siae/ticketed-events/:id/reports/c1', requireAuth, async (req: 
     const reportTypeParam = (req.query.type as string) || 'giornaliero';
     const reportType: 'giornaliero' | 'mensile' = (reportTypeParam === 'mensile' || reportTypeParam === 'monthly') ? 'mensile' : 'giornaliero';
     
+    // Accetta parametro date per selezionare data/mese di riferimento
+    const dateParam = req.query.date as string;
+    const reportDate = dateParam ? new Date(dateParam) : new Date();
+    
     const event = await siaeStorage.getSiaeTicketedEvent(id);
     if (!event) {
       return res.status(404).json({ message: "Evento non trovato" });
@@ -4051,7 +4055,7 @@ router.get('/api/siae/ticketed-events/:id/reports/c1', requireAuth, async (req: 
     // Usa la funzione helper per costruire i dati del report
     const reportData = buildC1ReportData(event, company, siaeConfig, location, sectors, allTickets, { 
       reportType,
-      reportDate: new Date()
+      reportDate: reportDate
     });
 
     // Risposta conforme al modello C1 SIAE - strutturata in Quadri

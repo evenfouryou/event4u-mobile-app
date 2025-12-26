@@ -173,19 +173,21 @@ export default function SiaeReportC1() {
   // Get report type from query string and use as state
   const urlParams = new URLSearchParams(window.location.search);
   const defaultType = urlParams.get('type') || 'giornaliero';
+  const defaultDate = urlParams.get('date') || new Date().toISOString().split('T')[0];
   const [reportType, setReportType] = useState<'giornaliero' | 'mensile'>(defaultType as 'giornaliero' | 'mensile');
+  const [reportDate, setReportDate] = useState<string>(defaultDate);
   const isMonthly = reportType === 'mensile';
 
-  // Update URL when report type changes
+  // Update URL when report type or date changes
   useEffect(() => {
-    const newUrl = `${window.location.pathname}?type=${reportType}`;
+    const newUrl = `${window.location.pathname}?type=${reportType}&date=${reportDate}`;
     window.history.replaceState({}, '', newUrl);
-  }, [reportType]);
+  }, [reportType, reportDate]);
 
   const { data: report, isLoading, error, isFetching } = useQuery<C1ReportData>({
-    queryKey: ['/api/siae/ticketed-events', id, 'reports', 'c1', reportType],
+    queryKey: ['/api/siae/ticketed-events', id, 'reports', 'c1', reportType, reportDate],
     queryFn: async () => {
-      const res = await fetch(`/api/siae/ticketed-events/${id}/reports/c1?type=${reportType}`, {
+      const res = await fetch(`/api/siae/ticketed-events/${id}/reports/c1?type=${reportType}&date=${reportDate}`, {
         credentials: 'include',
       });
       if (!res.ok) {
@@ -349,32 +351,49 @@ export default function SiaeReportC1() {
         </div>
 
         <div className="grid grid-cols-4 gap-4 no-print">
-          <Card className="col-span-1">
+          <Card className="col-span-2">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <Calendar className="w-4 h-4" />
-                Tipo Report
+                Tipo e Periodo Report
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <Select value={reportType} onValueChange={(value: 'giornaliero' | 'mensile') => setReportType(value)}>
-                <SelectTrigger data-testid="select-report-type">
-                  <SelectValue placeholder="Seleziona tipo" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="giornaliero">Giornaliero</SelectItem>
-                  <SelectItem value="mensile">Mensile</SelectItem>
-                </SelectContent>
-              </Select>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Tipo</label>
+                  <Select value={reportType} onValueChange={(value: 'giornaliero' | 'mensile') => setReportType(value)}>
+                    <SelectTrigger data-testid="select-report-type">
+                      <SelectValue placeholder="Seleziona tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="giornaliero">Giornaliero</SelectItem>
+                      <SelectItem value="mensile">Mensile</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">
+                    {isMonthly ? 'Mese' : 'Data'}
+                  </label>
+                  <input
+                    type={isMonthly ? 'month' : 'date'}
+                    value={isMonthly ? reportDate.substring(0, 7) : reportDate}
+                    onChange={(e) => setReportDate(isMonthly ? `${e.target.value}-01` : e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    data-testid="input-report-date"
+                  />
+                </div>
+              </div>
               <p className="text-xs text-muted-foreground mt-2">
                 {isMonthly 
-                  ? "Report cumulativo per l'intero mese" 
-                  : "Report per singola giornata"}
+                  ? "Report cumulativo per l'intero mese selezionato" 
+                  : "Report dettagliato per la data selezionata"}
               </p>
             </CardContent>
           </Card>
 
-          <Card className="col-span-3">
+          <Card className="col-span-2">
             <CardHeader className="pb-3">
               <CardTitle className="text-base flex items-center gap-2">
                 <History className="w-4 h-4" />
@@ -757,20 +776,31 @@ export default function SiaeReportC1() {
           </div>
         </div>
         
-        <div className="flex items-center gap-3">
-          <span className="text-sm font-medium flex items-center gap-2">
-            <Calendar className="w-4 h-4" />
-            Tipo Report:
-          </span>
-          <Select value={reportType} onValueChange={(value: 'giornaliero' | 'mensile') => setReportType(value)}>
-            <SelectTrigger className="flex-1" data-testid="select-report-type-mobile">
-              <SelectValue placeholder="Seleziona tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="giornaliero">Giornaliero (dettaglio)</SelectItem>
-              <SelectItem value="mensile">Mensile (riepilogo)</SelectItem>
-            </SelectContent>
-          </Select>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">Tipo Report</label>
+            <Select value={reportType} onValueChange={(value: 'giornaliero' | 'mensile') => setReportType(value)}>
+              <SelectTrigger data-testid="select-report-type-mobile">
+                <SelectValue placeholder="Seleziona tipo" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="giornaliero">Giornaliero</SelectItem>
+                <SelectItem value="mensile">Mensile</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <label className="text-xs text-muted-foreground mb-1 block">
+              {isMonthly ? 'Mese' : 'Data'}
+            </label>
+            <input
+              type={isMonthly ? 'month' : 'date'}
+              value={isMonthly ? reportDate.substring(0, 7) : reportDate}
+              onChange={(e) => setReportDate(isMonthly ? `${e.target.value}-01` : e.target.value)}
+              className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+              data-testid="input-report-date-mobile"
+            />
+          </div>
         </div>
       </div>
 
