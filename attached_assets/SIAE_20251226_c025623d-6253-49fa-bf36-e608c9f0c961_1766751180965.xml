@@ -1,0 +1,18 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<ComunicazioneDatiTitoli xmlns="urn:siae:biglietteria:2025">
+  <Intestazione>
+    <CodiceFiscaleEmittente></CodiceFiscaleEmittente>
+    <NumeroCarta>4130313238343837</NumeroCarta>
+    <DataRiferimento>2025-12-26</DataRiferimento>
+    <DataOraGenerazione>2025-12-26T12:11:39.267Z</DataOraGenerazione>
+    <TipoTrasmissione>ORDINARIA</TipoTrasmissione>
+  </Intestazione>
+  <ElencoTitoli>
+  </ElencoTitoli>
+  <Riepilogo>
+    <TotaleTitoli>0</TotaleTitoli>
+    <TotaleImportoLordo>0.00</TotaleImportoLordo>
+    <TotaleDiritti>0.00</TotaleDiritti>
+    <TotaleIVA>0.00</TotaleIVA>
+  </Riepilogo>
+</ComunicazioneDatiTitoli>
