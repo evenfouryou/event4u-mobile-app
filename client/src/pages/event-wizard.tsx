@@ -36,6 +36,16 @@ interface TicketConfig {
   quantity: number;
 }
 
+interface SubscriptionTypeConfig {
+  id: string;
+  name: string;
+  description: string;
+  turnType: 'F' | 'L';
+  eventsCount: number;
+  price: string;
+  maxQuantity?: number;
+}
+
 interface UserCompanyAssociation {
   id: string;
   userId: string;
@@ -55,7 +65,7 @@ const BASE_STEPS = [
 
 const SIAE_STEPS = [
   { id: 4, title: "SIAE", icon: Ticket, fullTitle: "Biglietteria SIAE" },
-  { id: 5, title: "Biglietti", icon: Euro, fullTitle: "Biglietti" },
+  { id: 5, title: "Biglietti", icon: Euro, fullTitle: "Biglietti e Abbonamenti" },
 ];
 
 const FINAL_STEP = { id: 6, title: "Riepilogo", icon: CheckCircle2, fullTitle: "Riepilogo" };
@@ -151,11 +161,8 @@ export default function EventWizard() {
   const [siaeTaxType, setSiaeTaxType] = useState<string>('S');
   const [siaeRequiresNominative, setSiaeRequiresNominative] = useState(true);
   const [siaeMaxTicketsPerUser, setSiaeMaxTicketsPerUser] = useState(10);
-  const [siaeSubscriptionsEnabled, setSiaeSubscriptionsEnabled] = useState(false);
-  const [siaeSubscriptionTurnType, setSiaeSubscriptionTurnType] = useState<'F' | 'L'>('F');
-  const [siaeSubscriptionEventsCount, setSiaeSubscriptionEventsCount] = useState(5);
-  const [siaeSubscriptionPrice, setSiaeSubscriptionPrice] = useState('100.00');
   const [siaeSectors, setSiaeSectors] = useState<SectorConfig[]>([]);
+  const [siaeSubscriptionTypes, setSiaeSubscriptionTypes] = useState<SubscriptionTypeConfig[]>([]);
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
   
   const STEPS = getSteps(siaeEnabled);
@@ -459,23 +466,19 @@ export default function EventWizard() {
             }
             
             // Handle subscription types for existing events
-            if (ticketedEventId && siaeSubscriptionsEnabled) {
-              // Check if subscription types already exist
-              const existingTypesResponse = await apiRequest('GET', `/api/siae/ticketed-events/${ticketedEventId}/subscription-types`);
-              const existingTypes = await existingTypesResponse.json();
+            if (ticketedEventId && siaeSubscriptionTypes.length > 0) {
+              const selectedGenre = siaeGenres?.find(g => g.code === siaeGenreCode);
+              const genreVatRate = selectedGenre?.vatRate || '22';
               
-              if (!existingTypes || existingTypes.length === 0) {
-                // Create new subscription type
-                const selectedGenre = siaeGenres?.find(g => g.code === siaeGenreCode);
-                const genreVatRate = selectedGenre?.vatRate || '22';
-                
+              for (const subType of siaeSubscriptionTypes) {
                 await apiRequest('POST', `/api/siae/ticketed-events/${ticketedEventId}/subscription-types`, {
-                  name: `Abbonamento ${siaeSubscriptionEventsCount} ingressi`,
-                  description: siaeSubscriptionTurnType === 'F' ? 'Turno Fisso' : 'Turno Libero',
-                  turnType: siaeSubscriptionTurnType,
-                  eventsCount: siaeSubscriptionEventsCount,
-                  price: siaeSubscriptionPrice,
+                  name: subType.name,
+                  description: subType.description,
+                  turnType: subType.turnType,
+                  eventsCount: subType.eventsCount,
+                  price: subType.price,
                   ivaRate: genreVatRate,
+                  maxQuantity: subType.maxQuantity,
                 });
               }
             }
@@ -510,19 +513,22 @@ export default function EventWizard() {
               }
             }
             
-            // Create subscription type if enabled
-            if (siaeEvent?.id && siaeSubscriptionsEnabled) {
+            // Create subscription types if any
+            if (siaeEvent?.id && siaeSubscriptionTypes.length > 0) {
               const selectedGenre = siaeGenres?.find(g => g.code === siaeGenreCode);
               const genreVatRate = selectedGenre?.vatRate || '22';
               
-              await apiRequest('POST', `/api/siae/ticketed-events/${siaeEvent.id}/subscription-types`, {
-                name: `Abbonamento ${siaeSubscriptionEventsCount} ingressi`,
-                description: siaeSubscriptionTurnType === 'F' ? 'Turno Fisso' : 'Turno Libero',
-                turnType: siaeSubscriptionTurnType,
-                eventsCount: siaeSubscriptionEventsCount,
-                price: siaeSubscriptionPrice,
-                ivaRate: genreVatRate,
-              });
+              for (const subType of siaeSubscriptionTypes) {
+                await apiRequest('POST', `/api/siae/ticketed-events/${siaeEvent.id}/subscription-types`, {
+                  name: subType.name,
+                  description: subType.description,
+                  turnType: subType.turnType,
+                  eventsCount: subType.eventsCount,
+                  price: subType.price,
+                  ivaRate: genreVatRate,
+                  maxQuantity: subType.maxQuantity,
+                });
+              }
             }
             
             toast({
@@ -1412,88 +1418,6 @@ export default function EventWizard() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between rounded-2xl border-2 p-5">
-                <div className="flex items-center gap-4">
-                  <div className="p-3 rounded-xl bg-muted">
-                    <Ticket className="h-6 w-6" />
-                  </div>
-                  <div>
-                    <Label className="text-base font-medium">Vendita Abbonamenti</Label>
-                    <p className="text-sm text-muted-foreground mt-0.5">
-                      Dalla cassa
-                    </p>
-                  </div>
-                </div>
-                <Switch
-                  checked={siaeSubscriptionsEnabled}
-                  onCheckedChange={(checked) => {
-                    triggerHaptic('light');
-                    setSiaeSubscriptionsEnabled(checked);
-                  }}
-                  className="scale-125"
-                  data-testid="switch-subscriptions-enabled"
-                />
-              </div>
-
-              <AnimatePresence>
-                {siaeSubscriptionsEnabled && (
-                  <motion.div 
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={springTransition}
-                    className="space-y-5 rounded-2xl border bg-muted/30 p-5"
-                  >
-                    <div className="space-y-3">
-                      <Label className="text-base font-medium">Tipo Turno</Label>
-                      <Select 
-                        value={siaeSubscriptionTurnType} 
-                        onValueChange={(v) => setSiaeSubscriptionTurnType(v as 'F' | 'L')}
-                      >
-                        <SelectTrigger className="h-14 text-base px-4" data-testid="select-subscription-turn-type">
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="F" className="py-3 text-base">Fisso (F)</SelectItem>
-                          <SelectItem value="L" className="py-3 text-base">Libero (L)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label className="text-base font-medium">Numero Eventi Inclusi</Label>
-                      <div className="relative">
-                        <Calendar className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
-                        <Input
-                          type="number"
-                          min={1}
-                          max={100}
-                          className="h-14 text-base pl-12 pr-4"
-                          value={siaeSubscriptionEventsCount}
-                          onChange={(e) => setSiaeSubscriptionEventsCount(parseInt(e.target.value) || 5)}
-                          data-testid="input-subscription-events-count"
-                        />
-                      </div>
-                    </div>
-
-                    <div className="space-y-3">
-                      <Label className="text-base font-medium">Prezzo Abbonamento (€)</Label>
-                      <div className="relative">
-                        <Euro className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground pointer-events-none" />
-                        <Input
-                          type="number"
-                          min={0}
-                          step="0.01"
-                          className="h-14 text-base pl-12 pr-4"
-                          value={siaeSubscriptionPrice}
-                          onChange={(e) => setSiaeSubscriptionPrice(e.target.value)}
-                          data-testid="input-subscription-price"
-                        />
-                      </div>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
             </div>
           )}
 
@@ -1763,6 +1687,136 @@ export default function EventWizard() {
                   </HapticButton>
                 </div>
               )}
+
+              {/* Sezione Tipologie Abbonamenti */}
+              <div className="border-t pt-6 mt-6">
+                <div className="flex items-center justify-between mb-4">
+                  <h4 className="text-lg font-semibold">Tipologie Abbonamenti</h4>
+                  <HapticButton
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      const newSubType: SubscriptionTypeConfig = {
+                        id: Date.now().toString(),
+                        name: '',
+                        description: '',
+                        turnType: 'F',
+                        eventsCount: 5,
+                        price: '100.00',
+                      };
+                      setSiaeSubscriptionTypes([...siaeSubscriptionTypes, newSubType]);
+                    }}
+                    data-testid="button-add-subscription-type"
+                  >
+                    <Plus className="h-4 w-4 mr-1" />
+                    Aggiungi
+                  </HapticButton>
+                </div>
+
+                {siaeSubscriptionTypes.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-4">
+                    Nessun abbonamento configurato. Aggiungi una tipologia per eventi multi-giorno.
+                  </p>
+                ) : (
+                  <div className="space-y-4">
+                    {siaeSubscriptionTypes.map((subType, index) => (
+                      <Card key={subType.id} className="p-4">
+                        <div className="flex items-center justify-between mb-4">
+                          <h5 className="font-medium">Abbonamento {index + 1}</h5>
+                          <HapticButton
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            hapticType="medium"
+                            onClick={() => {
+                              setSiaeSubscriptionTypes(siaeSubscriptionTypes.filter(s => s.id !== subType.id));
+                            }}
+                            data-testid={`button-remove-sub-type-${index}`}
+                          >
+                            <Trash2 className="h-4 w-4 text-destructive" />
+                          </HapticButton>
+                        </div>
+                        
+                        <div className="space-y-4">
+                          <div className="space-y-2">
+                            <Label className="text-base">Nome *</Label>
+                            <Input
+                              value={subType.name}
+                              className="h-12"
+                              onChange={(e) => {
+                                const updated = siaeSubscriptionTypes.map(s => 
+                                  s.id === subType.id ? { ...s, name: e.target.value } : s
+                                );
+                                setSiaeSubscriptionTypes(updated);
+                              }}
+                              placeholder="es. Abbonamento 5 serate"
+                              data-testid={`input-sub-name-${index}`}
+                            />
+                          </div>
+
+                          <div className="grid grid-cols-2 gap-3">
+                            <div className="space-y-2">
+                              <Label>Tipo Turno</Label>
+                              <Select 
+                                value={subType.turnType} 
+                                onValueChange={(value: 'F' | 'L') => {
+                                  const updated = siaeSubscriptionTypes.map(s => 
+                                    s.id === subType.id ? { ...s, turnType: value } : s
+                                  );
+                                  setSiaeSubscriptionTypes(updated);
+                                }}
+                              >
+                                <SelectTrigger className="h-12" data-testid={`select-turn-type-${index}`}>
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  <SelectItem value="F">Fisso</SelectItem>
+                                  <SelectItem value="L">Libero</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                              <Label>N. Eventi</Label>
+                              <Input
+                                type="number"
+                                min={1}
+                                className="h-12"
+                                value={subType.eventsCount}
+                                onChange={(e) => {
+                                  const updated = siaeSubscriptionTypes.map(s => 
+                                    s.id === subType.id ? { ...s, eventsCount: parseInt(e.target.value) || 1 } : s
+                                  );
+                                  setSiaeSubscriptionTypes(updated);
+                                }}
+                                data-testid={`input-events-count-${index}`}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="space-y-2">
+                            <Label>Prezzo (€) *</Label>
+                            <Input
+                              type="number"
+                              step="0.01"
+                              className="h-12"
+                              value={subType.price}
+                              onChange={(e) => {
+                                const updated = siaeSubscriptionTypes.map(s => 
+                                  s.id === subType.id ? { ...s, price: e.target.value } : s
+                                );
+                                setSiaeSubscriptionTypes(updated);
+                              }}
+                              data-testid={`input-sub-price-${index}`}
+                            />
+                          </div>
+                        </div>
+                      </Card>
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
           )}
 
@@ -2466,70 +2520,6 @@ export default function EventWizard() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between rounded-lg border p-4">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-lg bg-muted">
-                        <Ticket className="h-5 w-5" />
-                      </div>
-                      <div>
-                        <Label className="font-medium">Vendita Abbonamenti</Label>
-                        <p className="text-sm text-muted-foreground">Dalla cassa</p>
-                      </div>
-                    </div>
-                    <Switch
-                      checked={siaeSubscriptionsEnabled}
-                      onCheckedChange={setSiaeSubscriptionsEnabled}
-                      data-testid="switch-subscriptions-enabled"
-                    />
-                  </div>
-
-                  {siaeSubscriptionsEnabled && (
-                    <div className="space-y-4 rounded-lg border bg-muted/30 p-4">
-                      <div className="grid grid-cols-3 gap-4">
-                        <div className="space-y-2">
-                          <Label>Tipo Turno</Label>
-                          <Select 
-                            value={siaeSubscriptionTurnType} 
-                            onValueChange={(v) => setSiaeSubscriptionTurnType(v as 'F' | 'L')}
-                          >
-                            <SelectTrigger className="h-11" data-testid="select-subscription-turn-type">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="F">Fisso (F)</SelectItem>
-                              <SelectItem value="L">Libero (L)</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Numero Eventi Inclusi</Label>
-                          <Input
-                            type="number"
-                            min={1}
-                            max={100}
-                            className="h-11"
-                            value={siaeSubscriptionEventsCount}
-                            onChange={(e) => setSiaeSubscriptionEventsCount(parseInt(e.target.value) || 5)}
-                            data-testid="input-subscription-events-count"
-                          />
-                        </div>
-
-                        <div className="space-y-2">
-                          <Label>Prezzo Abbonamento (€)</Label>
-                          <Input
-                            type="number"
-                            min={0}
-                            step="0.01"
-                            className="h-11"
-                            value={siaeSubscriptionPrice}
-                            onChange={(e) => setSiaeSubscriptionPrice(e.target.value)}
-                            data-testid="input-subscription-price"
-                          />
-                        </div>
-                      </div>
-                    </div>
-                  )}
                 </div>
               )}
 
@@ -2718,6 +2708,131 @@ export default function EventWizard() {
                       ))}
                     </div>
                   )}
+
+                  {/* Sezione Tipologie Abbonamenti */}
+                  <div className="border-t pt-6 mt-6">
+                    <div className="flex items-center justify-between mb-4">
+                      <h3 className="text-lg font-semibold">Tipologie Abbonamenti</h3>
+                      <Button
+                        type="button"
+                        onClick={() => {
+                          const newSubType: SubscriptionTypeConfig = {
+                            id: Date.now().toString(),
+                            name: '',
+                            description: '',
+                            turnType: 'F',
+                            eventsCount: 5,
+                            price: '100.00',
+                          };
+                          setSiaeSubscriptionTypes([...siaeSubscriptionTypes, newSubType]);
+                        }}
+                        data-testid="button-add-subscription-type"
+                      >
+                        <Plus className="h-4 w-4 mr-2" />
+                        Aggiungi Abbonamento
+                      </Button>
+                    </div>
+
+                    {siaeSubscriptionTypes.length === 0 ? (
+                      <p className="text-sm text-muted-foreground text-center py-4">
+                        Nessun abbonamento configurato. Aggiungi una tipologia per eventi multi-giorno.
+                      </p>
+                    ) : (
+                      <div className="space-y-4">
+                        {siaeSubscriptionTypes.map((subType, index) => (
+                          <Card key={subType.id} className="p-4">
+                            <div className="flex items-center justify-between mb-4">
+                              <h4 className="font-semibold">Abbonamento {index + 1}</h4>
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => {
+                                  setSiaeSubscriptionTypes(siaeSubscriptionTypes.filter(s => s.id !== subType.id));
+                                }}
+                                data-testid={`button-remove-sub-type-${index}`}
+                              >
+                                <Trash2 className="h-4 w-4 text-destructive" />
+                              </Button>
+                            </div>
+                            
+                            <div className="grid grid-cols-4 gap-4">
+                              <div className="space-y-2">
+                                <Label>Nome *</Label>
+                                <Input
+                                  value={subType.name}
+                                  className="h-11"
+                                  onChange={(e) => {
+                                    const updated = siaeSubscriptionTypes.map(s => 
+                                      s.id === subType.id ? { ...s, name: e.target.value } : s
+                                    );
+                                    setSiaeSubscriptionTypes(updated);
+                                  }}
+                                  placeholder="es. Abbonamento 5 serate"
+                                  data-testid={`input-sub-name-${index}`}
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Tipo Turno</Label>
+                                <Select 
+                                  value={subType.turnType} 
+                                  onValueChange={(value: 'F' | 'L') => {
+                                    const updated = siaeSubscriptionTypes.map(s => 
+                                      s.id === subType.id ? { ...s, turnType: value } : s
+                                    );
+                                    setSiaeSubscriptionTypes(updated);
+                                  }}
+                                >
+                                  <SelectTrigger className="h-11" data-testid={`select-turn-type-${index}`}>
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                  <SelectContent>
+                                    <SelectItem value="F">Fisso</SelectItem>
+                                    <SelectItem value="L">Libero</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>N. Eventi</Label>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  className="h-11"
+                                  value={subType.eventsCount}
+                                  onChange={(e) => {
+                                    const updated = siaeSubscriptionTypes.map(s => 
+                                      s.id === subType.id ? { ...s, eventsCount: parseInt(e.target.value) || 1 } : s
+                                    );
+                                    setSiaeSubscriptionTypes(updated);
+                                  }}
+                                  data-testid={`input-events-count-${index}`}
+                                />
+                              </div>
+
+                              <div className="space-y-2">
+                                <Label>Prezzo (€) *</Label>
+                                <Input
+                                  type="number"
+                                  step="0.01"
+                                  className="h-11"
+                                  value={subType.price}
+                                  onChange={(e) => {
+                                    const updated = siaeSubscriptionTypes.map(s => 
+                                      s.id === subType.id ? { ...s, price: e.target.value } : s
+                                    );
+                                    setSiaeSubscriptionTypes(updated);
+                                  }}
+                                  data-testid={`input-sub-price-${index}`}
+                                />
+                              </div>
+                            </div>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
 
