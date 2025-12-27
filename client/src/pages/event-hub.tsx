@@ -2425,21 +2425,28 @@ export default function EventHub() {
                                             </Button>
                                           </DropdownMenuTrigger>
                                           <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
-                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditSector(sector.id); }}>
+                                            <DropdownMenuItem 
+                                              onSelect={() => {
+                                                const sectorId = sector.id;
+                                                setTimeout(() => handleEditSector(sectorId), 150);
+                                              }}
+                                              data-testid="button-modify"
+                                            >
                                               <Edit2 className="h-4 w-4 mr-2" />
                                               Modifica
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onClick={(e) => {
-                                              e.stopPropagation();
-                                              setEditingSector(sector);
-                                              setEditingCapacity(String(sector.capacity));
+                                            <DropdownMenuItem onSelect={() => {
+                                              const s = sector;
+                                              setTimeout(() => {
+                                                setEditingSector(s);
+                                                setEditingCapacity(String(s.capacity));
+                                              }, 150);
                                             }}>
                                               <Hash className="h-4 w-4 mr-2" />
                                               Modifica Capienza
                                             </DropdownMenuItem>
                                             <DropdownMenuSeparator />
-                                            <DropdownMenuItem onClick={(e) => {
-                                              e.stopPropagation();
+                                            <DropdownMenuItem onSelect={() => {
                                               updateSectorMutation.mutate({
                                                 ...sector,
                                                 active: !sector.active,
@@ -2537,13 +2544,15 @@ export default function EventHub() {
                                             </Button>
                                           </DropdownMenuTrigger>
                                           <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
-                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditSubscriptionType(subType.id); }}>
+                                            <DropdownMenuItem onSelect={() => {
+                                              const subTypeId = subType.id;
+                                              setTimeout(() => handleEditSubscriptionType(subTypeId), 150);
+                                            }}>
                                               <Edit2 className="h-4 w-4 mr-2" />
                                               Modifica
                                             </DropdownMenuItem>
                                             <DropdownMenuSeparator />
-                                            <DropdownMenuItem onClick={(e) => {
-                                              e.stopPropagation();
+                                            <DropdownMenuItem onSelect={() => {
                                               updateSubscriptionTypeMutation.mutate({
                                                 id: subType.id,
                                                 active: subType.active === false ? true : false,
@@ -2833,22 +2842,27 @@ export default function EventHub() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent>
-                            <DropdownMenuItem onClick={() => handleEditSector(selectedSectorId)}>
+                            <DropdownMenuItem onSelect={() => {
+                              const sectorId = selectedSectorId;
+                              setTimeout(() => handleEditSector(sectorId), 150);
+                            }}>
                               <Edit2 className="h-4 w-4 mr-2" />
                               Modifica Settore
                             </DropdownMenuItem>
-                            <DropdownMenuItem onClick={() => {
+                            <DropdownMenuItem onSelect={() => {
                               const sector = ticketedEvent?.sectors?.find(s => s.id === selectedSectorId);
                               if (sector) {
-                                setEditingSector(sector);
-                                setEditingCapacity(String(sector.capacity));
+                                setTimeout(() => {
+                                  setEditingSector(sector);
+                                  setEditingCapacity(String(sector.capacity));
+                                }, 150);
                               }
                             }}>
                               <Hash className="h-4 w-4 mr-2" />
                               Modifica Capienza
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onClick={() => {
+                            <DropdownMenuItem onSelect={() => {
                               const sector = ticketedEvent?.sectors?.find(s => s.id === selectedSectorId);
                               if (sector) {
                                 updateSectorMutation.mutate({
