@@ -3951,6 +3951,477 @@ export default function EventHub() {
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        {/* Sector Creation Dialog - Desktop */}
+        <Dialog open={isSectorDialogOpen} onOpenChange={setIsSectorDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Nuovo Settore</DialogTitle>
+              <DialogDescription>
+                Crea un nuovo settore per la biglietteria
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...sectorForm}>
+              <form onSubmit={sectorForm.handleSubmit(onSubmitSector)} className="space-y-4">
+                <FormField
+                  control={sectorForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome Settore</FormLabel>
+                      <FormControl>
+                        <Input placeholder="es. Pista" {...field} data-testid="input-sector-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={sectorForm.control}
+                  name="capacity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Capienza</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min={1}
+                          placeholder="100"
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          data-testid="input-sector-capacity"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={sectorForm.control}
+                  name="ticketTypeCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo Biglietto</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-ticket-type">
+                            <SelectValue placeholder="Seleziona tipo" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="01">Intero</SelectItem>
+                          <SelectItem value="02">Ridotto</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={sectorForm.control}
+                  name="grossAmount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prezzo (€)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="10.00" {...field} data-testid="input-gross-amount" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={sectorForm.control}
+                  name="ivaRate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Aliquota IVA</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-iva-rate">
+                            <SelectValue placeholder="Seleziona IVA" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="10">10%</SelectItem>
+                          <SelectItem value="22">22%</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <DialogFooter className="pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsSectorDialogOpen(false)}
+                  >
+                    Annulla
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={createSectorMutation.isPending}
+                    data-testid="button-submit-sector"
+                  >
+                    {createSectorMutation.isPending ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creazione...</>
+                    ) : (
+                      'Crea Settore'
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Subscription Type Creation Dialog - Desktop */}
+        <Dialog open={isSubscriptionTypeDialogOpen} onOpenChange={setIsSubscriptionTypeDialogOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Nuovo Tipo Abbonamento</DialogTitle>
+              <DialogDescription>
+                Crea un nuovo tipo di abbonamento per questo evento
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...subscriptionTypeForm}>
+              <form onSubmit={subscriptionTypeForm.handleSubmit(onSubmitSubscriptionType)} className="space-y-4">
+                <FormField
+                  control={subscriptionTypeForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Nome abbonamento" {...field} data-testid="input-subscription-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={subscriptionTypeForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Descrizione (opzionale)</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Descrizione abbonamento" {...field} data-testid="input-subscription-description" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={subscriptionTypeForm.control}
+                  name="turnType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo Turno</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-subscription-turn-type">
+                            <SelectValue placeholder="Seleziona tipo turno" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="F">Fisso</SelectItem>
+                          <SelectItem value="L">Libero</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={subscriptionTypeForm.control}
+                  name="eventsCount"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Numero Eventi</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min={1}
+                          placeholder="Numero eventi inclusi"
+                          {...field}
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                          data-testid="input-subscription-events-count"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={subscriptionTypeForm.control}
+                  name="price"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Prezzo (€)</FormLabel>
+                      <FormControl>
+                        <Input placeholder="0.00" {...field} data-testid="input-subscription-price" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={subscriptionTypeForm.control}
+                  name="ivaRate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Aliquota IVA</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-subscription-iva-rate">
+                            <SelectValue placeholder="Seleziona IVA" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="10">10%</SelectItem>
+                          <SelectItem value="22">22%</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={subscriptionTypeForm.control}
+                  name="maxQuantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Quantità Massima (opzionale)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min={0}
+                          placeholder="Lascia vuoto per illimitato"
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                          data-testid="input-subscription-max-quantity"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <DialogFooter className="pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsSubscriptionTypeDialogOpen(false)}
+                  >
+                    Annulla
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={createSubscriptionTypeMutation.isPending}
+                    data-testid="button-submit-subscription-type"
+                  >
+                    {createSubscriptionTypeMutation.isPending ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creazione...</>
+                    ) : (
+                      'Crea Abbonamento'
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Subscription Type Dialog - Desktop */}
+        <Dialog open={isEditSubscriptionTypeDialogOpen} onOpenChange={setIsEditSubscriptionTypeDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Modifica Abbonamento</DialogTitle>
+              <DialogDescription>
+                Modifica le impostazioni del tipo abbonamento
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...editSubscriptionTypeForm}>
+              <form onSubmit={editSubscriptionTypeForm.handleSubmit((data) => {
+                updateSubscriptionTypeMutation.mutate({
+                  id: editingSubscriptionTypeData?.id,
+                  name: data.name,
+                  description: data.description,
+                  turnType: data.turnType,
+                  eventsCount: data.eventsCount,
+                  price: data.price,
+                  ivaRate: data.ivaRate,
+                  maxQuantity: data.maxQuantity,
+                });
+              })} className="space-y-4">
+                <FormField
+                  control={editSubscriptionTypeForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome Abbonamento</FormLabel>
+                      <FormControl>
+                        <Input placeholder="es. Pass Weekend" {...field} data-testid="input-edit-subscription-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editSubscriptionTypeForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Descrizione</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Descrizione abbonamento" {...field} data-testid="input-edit-subscription-description" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={editSubscriptionTypeForm.control}
+                    name="turnType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tipo Turno</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-edit-subscription-turn-type">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="F">Fisso</SelectItem>
+                            <SelectItem value="L">Libero</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editSubscriptionTypeForm.control}
+                    name="eventsCount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Numero Eventi</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min={1}
+                            {...field}
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                            data-testid="input-edit-subscription-events-count"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={editSubscriptionTypeForm.control}
+                    name="price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Prezzo (€)</FormLabel>
+                        <FormControl>
+                          <Input placeholder="0.00" {...field} data-testid="input-edit-subscription-price" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={editSubscriptionTypeForm.control}
+                    name="ivaRate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Aliquota IVA</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-edit-subscription-iva-rate">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="10">10%</SelectItem>
+                            <SelectItem value="22">22%</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <FormField
+                  control={editSubscriptionTypeForm.control}
+                  name="maxQuantity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Quantità Massima (opzionale)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min={0}
+                          placeholder="Lascia vuoto per illimitato"
+                          value={field.value ?? ""}
+                          onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                          data-testid="input-edit-subscription-max-quantity"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <DialogFooter className="pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsEditSubscriptionTypeDialogOpen(false)}
+                  >
+                    Annulla
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={updateSubscriptionTypeMutation.isPending}
+                    data-testid="button-submit-edit-subscription-type"
+                  >
+                    {updateSubscriptionTypeMutation.isPending ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Salvataggio...</>
+                    ) : (
+                      'Salva'
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
       </div>
     );
   }
