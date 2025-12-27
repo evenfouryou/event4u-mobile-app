@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { useParams } from "wouter";
-import { useRef, useState } from "react";
+import { useRef, useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
@@ -17,9 +17,17 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ArrowLeft, Printer, Eye, FileText, Euro, Users } from "lucide-react";
+import { ArrowLeft, Printer, Eye, FileText, Euro, Users, Calendar, RefreshCw } from "lucide-react";
+import { queryClient } from "@/lib/queryClient";
 
 interface SubscriptionData {
   id: string;
@@ -34,15 +42,14 @@ interface SubscriptionData {
   validTo: string;
 }
 
-// Interfaccia conforme Allegato 4 G.U. n.188 12/08/2004
 interface SubscriptionSummary {
-  turnType: string;      // F = Fisso, L = Libero
-  eventsCount: number;   // Numero eventi inclusi
-  count: number;         // Numero abbonamenti venduti
-  totalAmount: number;   // Importo lordo incassato
-  cancelled: number;     // Abbonamenti annullati
-  tipoTitolo?: string;   // Codice TAB.3: A1, AX, etc.
-  tipoSpettacolo?: string; // I = Intrattenimento, S = Spettacolo
+  turnType: string;
+  eventsCount: number;
+  count: number;
+  totalAmount: number;
+  cancelled: number;
+  tipoTitolo?: string;
+  tipoSpettacolo?: string;
 }
 
 interface C2ReportData {
@@ -55,9 +62,7 @@ interface C2ReportData {
   eventLocation: string;
   generatedAt: string;
   
-  // QUADRO A - Dati Identificativi (conforme Allegato 4)
   quadroA?: {
-    // Dati Organizzatore
     denominazioneOrganizzatore: string;
     codiceFiscaleOrganizzatore: string;
     partitaIvaOrganizzatore: string;
@@ -66,7 +71,6 @@ interface C2ReportData {
     provinciaOrganizzatore: string;
     capOrganizzatore: string;
     
-    // Titolare Sistema di Emissione
     titolareSistemaEmissione: string;
     codiceFiscaleTitolareSistema: string;
     partitaIvaTitolareSistema: string;
@@ -76,7 +80,6 @@ interface C2ReportData {
     capTitolareSistema: string;
     codiceSistemaEmissione: string;
     
-    // Dati Locale
     codiceLocale: string;
     denominazioneLocale: string;
     indirizzoLocale: string;
@@ -85,28 +88,23 @@ interface C2ReportData {
     capLocale: string;
     capienza: number;
     
-    // Periodo riferimento
     periodoRiferimento: string;
     dataRiferimento: string | null;
   };
   
-  // QUADRO B - Dettaglio Abbonamenti (conforme Allegato 4)
   quadroB?: {
-    // Righe dettaglio conformi al modello ufficiale
-    // Colonne: Tipo titolo (2), Codice abb., I/S, F/L, Venduti, Importo lordo, Annullati, N° eventi
     righeDettaglio: Array<{
-      tipoTitolo: string;           // Codice TAB.3: A1, AX, etc.
+      tipoTitolo: string;
       tipoTitoloDescrizione: string;
       codiceAbbonamento: string;
-      tipoSpettacolo: string;       // I = Intrattenimento, S = Spettacolo
-      turnoAbbonamento: string;     // F = Fisso, L = Libero
+      tipoSpettacolo: string;
+      turnoAbbonamento: string;
       numeroVenduti: number;
       importoLordoIncassato: number;
       numeroAnnullati: number;
       numeroEventi: number;
     }>;
     
-    // Totali
     totaleAbbonamenti: number;
     totaleAnnullati: number;
     totaleImportoLordo: number;
@@ -157,16 +155,47 @@ export default function SiaeReportC2() {
   const [selectedSubscription, setSelectedSubscription] = useState<SubscriptionData | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
-  const { data: report, isLoading, error } = useQuery<C2ReportData>({
-    queryKey: ['/api/siae/ticketed-events', id, 'reports/c2'],
+  const urlParams = new URLSearchParams(window.location.search);
+  const defaultType = urlParams.get('type') || 'giornaliero';
+  const defaultDate = urlParams.get('date') || new Date().toISOString().split('T')[0];
+  const [reportType, setReportType] = useState<'giornaliero' | 'mensile'>(defaultType as 'giornaliero' | 'mensile');
+  const [reportDate, setReportDate] = useState<string>(defaultDate);
+  const isMonthly = reportType === 'mensile';
+
+  useEffect(() => {
+    const newUrl = `${window.location.pathname}?type=${reportType}&date=${reportDate}`;
+    window.history.replaceState({}, '', newUrl);
+  }, [reportType, reportDate]);
+
+  const { data: report, isLoading, error, isFetching } = useQuery<C2ReportData>({
+    queryKey: ['/api/siae/ticketed-events', id, 'reports', 'c2', reportType, reportDate],
+    queryFn: async () => {
+      const res = await fetch(`/api/siae/ticketed-events/${id}/reports/c2?type=${reportType}&date=${reportDate}`, {
+        credentials: 'include',
+      });
+      if (!res.ok) {
+        throw new Error('Errore nel caricamento del report');
+      }
+      return res.json();
+    },
     enabled: !!id,
+    refetchOnMount: 'always',
+    staleTime: 0,
+    gcTime: 0,
+    placeholderData: undefined,
   });
 
   const handlePrint = () => {
     window.print();
   };
 
-  if (isLoading) {
+  const handleRefresh = () => {
+    queryClient.invalidateQueries({ 
+      queryKey: ['/api/siae/ticketed-events', id, 'reports', 'c2', reportType] 
+    });
+  };
+
+  if (isLoading || (isFetching && !report)) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="animate-spin w-8 h-8 border-4 border-primary border-t-transparent rounded-full" />
@@ -186,12 +215,167 @@ export default function SiaeReportC2() {
   }
 
   const transmissionDate = new Date().toLocaleDateString('it-IT');
-  const reportDate = report.eventDate ? new Date(report.eventDate).toLocaleDateString('it-IT') : transmissionDate;
+  const eventDate = report.eventDate ? new Date(report.eventDate) : new Date();
+  const reportDisplayDate = report.quadroA?.dataRiferimento ? new Date(report.quadroA.dataRiferimento) : eventDate;
+  const formattedDate = reportDisplayDate.toLocaleDateString('it-IT');
+  const monthName = eventDate.toLocaleDateString('it-IT', { month: 'long', year: 'numeric' });
+
+  const quadroA = report.quadroA || {
+    denominazioneOrganizzatore: 'N/D',
+    codiceFiscaleOrganizzatore: 'N/D',
+    partitaIvaOrganizzatore: 'N/D',
+    indirizzoOrganizzatore: 'N/D',
+    comuneOrganizzatore: 'N/D',
+    provinciaOrganizzatore: '',
+    capOrganizzatore: '',
+    titolareSistemaEmissione: 'N/D',
+    codiceFiscaleTitolareSistema: 'N/D',
+    partitaIvaTitolareSistema: 'N/D',
+    indirizzoTitolareSistema: 'N/D',
+    comuneTitolareSistema: 'N/D',
+    provinciaTitolareSistema: '',
+    capTitolareSistema: '',
+    codiceSistemaEmissione: `E4U-${report.eventId?.substring(0, 8).toUpperCase()}`,
+    codiceLocale: 'N/D',
+    denominazioneLocale: 'N/D',
+    indirizzoLocale: 'N/D',
+    comuneLocale: 'N/D',
+    provinciaLocale: '',
+    capLocale: '',
+    capienza: 0,
+    periodoRiferimento: 'Mensile',
+    dataRiferimento: null,
+  };
+
+  const PrintableQuadroA = () => (
+    <div className="border border-black mb-4">
+      <div className="bg-gray-100 px-2 py-1 font-bold border-b border-black">
+        QUADRO A - Dati anagrafici
+      </div>
+      <table className="w-full text-xs">
+        <tbody>
+          <tr>
+            <td className="border border-black p-2 w-1/4 font-semibold">ORGANIZZATORE</td>
+            <td className="border border-black p-2">{quadroA.denominazioneOrganizzatore}</td>
+            <td className="border border-black p-2 w-1/4 font-semibold">COD.FISCALE/PARTITA IVA</td>
+            <td className="border border-black p-2">{quadroA.codiceFiscaleOrganizzatore || quadroA.partitaIvaOrganizzatore}</td>
+          </tr>
+          <tr>
+            <td className="border border-black p-2 font-semibold">TITOLARE SISTEMA DI EMISSIONE</td>
+            <td className="border border-black p-2">{quadroA.titolareSistemaEmissione || quadroA.denominazioneOrganizzatore}</td>
+            <td className="border border-black p-2 font-semibold">COD.FISCALE/PARTITA IVA</td>
+            <td className="border border-black p-2">{quadroA.codiceFiscaleTitolareSistema || quadroA.partitaIvaTitolareSistema}</td>
+          </tr>
+          <tr>
+            <td className="border border-black p-2 font-semibold">CODICE SISTEMA DI EMISSIONE</td>
+            <td className="border border-black p-2" colSpan={3}>{quadroA.codiceSistemaEmissione || 'E4U-SYS'}</td>
+          </tr>
+        </tbody>
+      </table>
+      <div className="text-right text-xs p-1 border-t border-black">
+        Gli importi sono espressi in Euro
+      </div>
+    </div>
+  );
+
+  const PrintableQuadroB = () => (
+    <>
+      <div className="border border-black mb-4">
+        <div className="bg-gray-100 px-2 py-1 font-bold border-b border-black">
+          QUADRO B - Abbonamenti
+        </div>
+        <table className="w-full text-xs">
+          <thead>
+            <tr className="bg-gray-50">
+              <th className="border border-black p-2 text-left" rowSpan={2}>TIPO TITOLO (1)</th>
+              <th className="border border-black p-2 text-center" rowSpan={2}>CODICE ABBONAMENTO</th>
+              <th className="border border-black p-2 text-center">INTRATTENIMENTI</th>
+              <th className="border border-black p-2 text-center">FISSO</th>
+              <th className="border border-black p-2 text-right" rowSpan={2}>NUMERO VENDUTI</th>
+              <th className="border border-black p-2 text-right" rowSpan={2}>IMPORTO LORDO INCASSATO</th>
+              <th className="border border-black p-2 text-center" rowSpan={2}>ABBONAMENTI ANNULLATI</th>
+              <th className="border border-black p-2 text-center" rowSpan={2}>NUMERO EVENTI</th>
+            </tr>
+            <tr className="bg-gray-50">
+              <th className="border border-black p-2 text-center">SPETTACOLO</th>
+              <th className="border border-black p-2 text-center">LIBERO</th>
+            </tr>
+          </thead>
+          <tbody>
+            {report.quadroB?.righeDettaglio && report.quadroB.righeDettaglio.length > 0 ? (
+              report.quadroB.righeDettaglio.map((riga, index) => (
+                <tr key={`riga-${index}`}>
+                  <td className="border border-black p-2" title={riga.tipoTitoloDescrizione}>{riga.tipoTitolo}</td>
+                  <td className="border border-black p-2 text-center font-mono">{riga.codiceAbbonamento}</td>
+                  <td className="border border-black p-2 text-center">{riga.tipoSpettacolo === 'I' ? 'Intrattenimenti' : 'Spettacolo'}</td>
+                  <td className="border border-black p-2 text-center">{riga.turnoAbbonamento}</td>
+                  <td className="border border-black p-2 text-right">{riga.numeroVenduti}</td>
+                  <td className="border border-black p-2 text-right">{riga.importoLordoIncassato.toFixed(2)}</td>
+                  <td className="border border-black p-2 text-center">{riga.numeroAnnullati > 0 ? riga.numeroAnnullati : 0}</td>
+                  <td className="border border-black p-2 text-center">{riga.numeroEventi}</td>
+                </tr>
+              ))
+            ) : report.subscriptions && report.subscriptions.length > 0 ? (
+              report.subscriptions.map((sub, index) => (
+                <tr key={sub.id || index}>
+                  <td className="border border-black p-2">A1</td>
+                  <td className="border border-black p-2 text-center font-mono">{sub.subscriptionCode}</td>
+                  <td className="border border-black p-2 text-center">Spettacolo</td>
+                  <td className="border border-black p-2 text-center">{sub.turnType || 'F'}</td>
+                  <td className="border border-black p-2 text-right">{sub.status !== 'cancelled' ? 1 : 0}</td>
+                  <td className="border border-black p-2 text-right">{sub.totalAmount.toFixed(2)}</td>
+                  <td className="border border-black p-2 text-center">{sub.status === 'cancelled' ? 1 : 0}</td>
+                  <td className="border border-black p-2 text-center">{sub.eventsCount}</td>
+                </tr>
+              ))
+            ) : (
+              <>
+                <tr>
+                  <td className="border border-black p-2 h-8" colSpan={8}></td>
+                </tr>
+                <tr>
+                  <td className="border border-black p-2 h-8" colSpan={8}></td>
+                </tr>
+                <tr>
+                  <td className="border border-black p-1 h-6" colSpan={8}></td>
+                </tr>
+              </>
+            )}
+            <tr className="bg-gray-100 font-bold">
+              <td className="border border-black p-1 text-center" colSpan={4}>TOTALE</td>
+              <td className="border border-black p-1 text-right">{report.quadroB?.totaleAbbonamenti || report.summary.subscriptionsSold || 0}</td>
+              <td className="border border-black p-1 text-right">{(report.quadroB?.totaleImportoLordo || report.summary.subscriptionRevenue || 0).toFixed(2)}</td>
+              <td className="border border-black p-1 text-center">{report.quadroB?.totaleAnnullati || report.summary.subscriptionsCancelled || 0}</td>
+              <td className="border border-black p-1 text-center">-</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </>
+  );
 
   if (!isMobile) {
     return (
       <div className="container mx-auto p-6 space-y-6" data-testid="page-siae-report-c2-desktop">
-        <div className="flex items-center justify-between">
+        <style>{`
+          @media print {
+            body * { visibility: hidden; }
+            .print-area, .print-area * { visibility: visible; }
+            .print-area { 
+              position: absolute; 
+              left: 0; 
+              top: 0; 
+              width: 100%;
+              background: white !important;
+              color: black !important;
+            }
+            .no-print { display: none !important; }
+            .print-area table { border-collapse: collapse; }
+            .print-area td, .print-area th { border: 1px solid black; }
+          }
+        `}</style>
+
+        <div className="flex items-center justify-between no-print">
           <div className="flex items-center gap-4">
             <Button variant="ghost" onClick={() => window.history.back()} data-testid="button-back">
               <ArrowLeft className="w-4 h-4 mr-2" /> Indietro
@@ -199,16 +383,21 @@ export default function SiaeReportC2() {
             <div>
               <h1 className="text-3xl font-bold">Report C2 - Riepilogo Abbonamenti</h1>
               <p className="text-muted-foreground">
-                {report.eventName} - {reportDate}
+                {report.eventName} - {formattedDate}
               </p>
             </div>
           </div>
-          <Button variant="outline" onClick={handlePrint} data-testid="button-print">
-            <Printer className="w-4 h-4 mr-2" /> Stampa
-          </Button>
+          <div className="flex gap-2">
+            <Button variant="outline" onClick={handleRefresh} data-testid="button-refresh">
+              <RefreshCw className="w-4 h-4 mr-2" /> Aggiorna
+            </Button>
+            <Button variant="outline" onClick={handlePrint} data-testid="button-print">
+              <Printer className="w-4 h-4 mr-2" /> Stampa
+            </Button>
+          </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-4 gap-4 no-print">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-2">
@@ -255,7 +444,73 @@ export default function SiaeReportC2() {
           </Card>
         </div>
 
-        <Card>
+        <div className="grid grid-cols-4 gap-4 no-print">
+          <Card className="col-span-2">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Calendar className="w-4 h-4" />
+                Tipo e Periodo Report
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">Tipo</label>
+                  <Select value={reportType} onValueChange={(value: 'giornaliero' | 'mensile') => setReportType(value)}>
+                    <SelectTrigger data-testid="select-report-type">
+                      <SelectValue placeholder="Seleziona tipo" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="giornaliero">Giornaliero</SelectItem>
+                      <SelectItem value="mensile">Mensile</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-xs text-muted-foreground mb-1 block">
+                    {isMonthly ? 'Mese' : 'Data'}
+                  </label>
+                  <input
+                    type={isMonthly ? 'month' : 'date'}
+                    value={isMonthly ? reportDate.substring(0, 7) : reportDate}
+                    onChange={(e) => setReportDate(isMonthly ? `${e.target.value}-01` : e.target.value)}
+                    className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                    data-testid="input-report-date"
+                  />
+                </div>
+              </div>
+              <p className="text-xs text-muted-foreground mt-2">
+                {isMonthly 
+                  ? "Report cumulativo per l'intero mese selezionato" 
+                  : "Report dettagliato per la data selezionata"}
+              </p>
+            </CardContent>
+          </Card>
+
+          <Card className="col-span-2">
+            <CardHeader>
+              <CardTitle className="text-base">Dati Locale</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-2 text-sm">
+                <div>
+                  <span className="text-muted-foreground">Codice BA:</span>
+                  <span className="ml-2 font-medium">{quadroA.codiceLocale}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">Capienza:</span>
+                  <span className="ml-2 font-medium">{quadroA.capienza}</span>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-muted-foreground">Locale:</span>
+                  <span className="ml-2 font-medium">{quadroA.denominazioneLocale}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+
+        <Card className="no-print">
           <CardHeader>
             <CardTitle>Dati Anagrafici - Quadro A (Allegato 4 G.U. n.188 12/08/2004)</CardTitle>
           </CardHeader>
@@ -264,56 +519,56 @@ export default function SiaeReportC2() {
               <TableBody>
                 <TableRow>
                   <TableCell className="font-medium w-1/4">Organizzatore</TableCell>
-                  <TableCell>{report.quadroA?.denominazioneOrganizzatore || 'N/D'}</TableCell>
+                  <TableCell>{quadroA.denominazioneOrganizzatore}</TableCell>
                   <TableCell className="font-medium w-1/4">Codice Fiscale</TableCell>
-                  <TableCell>{report.quadroA?.codiceFiscaleOrganizzatore || 'N/D'}</TableCell>
+                  <TableCell>{quadroA.codiceFiscaleOrganizzatore}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">Indirizzo</TableCell>
-                  <TableCell>{report.quadroA?.indirizzoOrganizzatore || 'N/D'}</TableCell>
+                  <TableCell>{quadroA.indirizzoOrganizzatore}</TableCell>
                   <TableCell className="font-medium">Comune</TableCell>
-                  <TableCell>{report.quadroA?.comuneOrganizzatore || 'N/D'} ({report.quadroA?.provinciaOrganizzatore || ''}) - {report.quadroA?.capOrganizzatore || ''}</TableCell>
+                  <TableCell>{quadroA.comuneOrganizzatore} ({quadroA.provinciaOrganizzatore}) - {quadroA.capOrganizzatore}</TableCell>
                 </TableRow>
                 <TableRow className="bg-muted/30">
                   <TableCell className="font-medium">Titolare Sistema di Emissione</TableCell>
-                  <TableCell>{report.quadroA?.titolareSistemaEmissione || 'N/D'}</TableCell>
+                  <TableCell>{quadroA.titolareSistemaEmissione}</TableCell>
                   <TableCell className="font-medium">Codice Fiscale Titolare</TableCell>
-                  <TableCell>{report.quadroA?.codiceFiscaleTitolareSistema || 'N/D'}</TableCell>
+                  <TableCell>{quadroA.codiceFiscaleTitolareSistema}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">P.IVA Titolare Sistema</TableCell>
-                  <TableCell>{report.quadroA?.partitaIvaTitolareSistema || 'N/D'}</TableCell>
+                  <TableCell>{quadroA.partitaIvaTitolareSistema}</TableCell>
                   <TableCell className="font-medium">Indirizzo Titolare</TableCell>
-                  <TableCell>{report.quadroA?.indirizzoTitolareSistema || 'N/D'}</TableCell>
+                  <TableCell>{quadroA.indirizzoTitolareSistema}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">Comune Titolare</TableCell>
-                  <TableCell>{report.quadroA?.comuneTitolareSistema || 'N/D'} ({report.quadroA?.provinciaTitolareSistema || ''}) - {report.quadroA?.capTitolareSistema || ''}</TableCell>
+                  <TableCell>{quadroA.comuneTitolareSistema} ({quadroA.provinciaTitolareSistema}) - {quadroA.capTitolareSistema}</TableCell>
                   <TableCell className="font-medium">Codice Sistema di Emissione</TableCell>
-                  <TableCell>{report.quadroA?.codiceSistemaEmissione || `E4U-${report.eventId?.substring(0, 8).toUpperCase()}`}</TableCell>
+                  <TableCell>{quadroA.codiceSistemaEmissione}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">Codice Locale (BA)</TableCell>
-                  <TableCell>{report.quadroA?.codiceLocale || 'N/D'}</TableCell>
+                  <TableCell>{quadroA.codiceLocale}</TableCell>
                   <TableCell className="font-medium">Denominazione Locale</TableCell>
-                  <TableCell>{report.quadroA?.denominazioneLocale || 'N/D'}</TableCell>
+                  <TableCell>{quadroA.denominazioneLocale}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">Indirizzo Locale</TableCell>
-                  <TableCell>{report.quadroA?.indirizzoLocale || 'N/D'}</TableCell>
+                  <TableCell>{quadroA.indirizzoLocale}</TableCell>
                   <TableCell className="font-medium">Capienza</TableCell>
-                  <TableCell>{report.quadroA?.capienza || 0}</TableCell>
+                  <TableCell>{quadroA.capienza}</TableCell>
                 </TableRow>
                 <TableRow>
                   <TableCell className="font-medium">Periodo Riferimento</TableCell>
-                  <TableCell colSpan={3}>{report.quadroA?.periodoRiferimento || 'Mensile'} - {report.quadroA?.dataRiferimento || reportDate}</TableCell>
+                  <TableCell colSpan={3}>{isMonthly ? 'Mensile' : 'Giornaliero'} - {formattedDate}</TableCell>
                 </TableRow>
               </TableBody>
             </Table>
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="no-print">
           <CardHeader>
             <CardTitle>Abbonamenti - Quadro B (Allegato 4 G.U. n.188 12/08/2004)</CardTitle>
             <p className="text-sm text-muted-foreground">
@@ -404,7 +659,7 @@ export default function SiaeReportC2() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="no-print">
           <CardContent className="pt-6">
             <Table>
               <TableBody>
@@ -476,164 +731,36 @@ export default function SiaeReportC2() {
           </DialogContent>
         </Dialog>
 
-        <style>{`
-          @media print {
-            body * { visibility: hidden; }
-            .print-area, .print-area * { visibility: visible; }
-            .print-area { 
-              position: absolute; 
-              left: 0; 
-              top: 0; 
-              width: 100%;
-              background: white !important;
-              color: black !important;
-            }
-            .no-print { display: none !important; }
-            .print-area table { border-collapse: collapse; }
-            .print-area td, .print-area th { border: 1px solid black; }
-          }
-        `}</style>
-
-        <div ref={printRef} className="print-area hidden print:block bg-white text-black p-8 max-w-[210mm] mx-auto font-serif text-sm">
-          <div className="text-right text-xs mb-2">mod. C 2 fronte</div>
-          
-          <h1 className="text-center font-bold text-lg mb-4 uppercase tracking-wide">
-            "RIEPILOGO ABBONAMENTI"
+        <div ref={printRef} className="print-area bg-white text-black p-8 max-w-[210mm] mx-auto font-serif text-sm rounded-lg border">
+          <h1 className="text-center font-bold text-lg mb-6 uppercase tracking-wide">
+            RIEPILOGO ABBONAMENTI
           </h1>
 
-          <div className="flex gap-8 mb-4 text-xs">
-            <span>Riepilogo giornaliero del <span className="border-b border-black px-2 min-w-[80px]">{reportDate}</span></span>
-            <span>Riepilogo mensile del <span className="border-b border-black px-2 min-w-[80px]">................</span></span>
-            <span>Trasmesso in data <span className="border-b border-black px-2 min-w-[60px]">... / ... / ...</span></span>
-          </div>
-
-          <div className="border border-black mb-4">
-            <div className="bg-gray-100 px-2 py-1 font-bold border-b border-black">
-              QUADRO A - Dati anagrafici
+          <div className="flex justify-between items-center mb-6 text-xs">
+            <div className="flex gap-6">
+              <span>
+                Riepilogo giornaliero del <span className="border-b border-black px-2 min-w-[60px] inline-block">{!isMonthly ? formattedDate : ''}</span>
+              </span>
+              <span>
+                Riepilogo mensile del <span className="border-b border-black px-2 min-w-[60px] inline-block font-semibold">{isMonthly ? monthName : ''}</span>
+              </span>
+              <span>
+                Trasmesso in data <span className="border-b border-black px-2 min-w-[60px] inline-block">{transmissionDate}</span>
+              </span>
             </div>
-            <table className="w-full text-xs">
-              <tbody>
-                <tr>
-                  <td className="border border-black p-2 w-1/3 font-semibold">Organizzatore</td>
-                  <td className="border border-black p-2">Event4U S.r.l.</td>
-                  <td className="border border-black p-2 w-1/4 font-semibold">Codice fiscale</td>
-                  <td className="border border-black p-2">12345678901</td>
-                </tr>
-                <tr>
-                  <td className="border border-black p-2 font-semibold">Titolare sistema di emissione</td>
-                  <td className="border border-black p-2">Event4U S.r.l.</td>
-                  <td className="border border-black p-2 font-semibold">Codice fiscale</td>
-                  <td className="border border-black p-2">12345678901</td>
-                </tr>
-                <tr>
-                  <td className="border border-black p-2 font-semibold">Codice sistema di emissione</td>
-                  <td className="border border-black p-2" colSpan={3}>E4U-{report.eventId?.substring(0, 8).toUpperCase()}</td>
-                </tr>
-              </tbody>
-            </table>
-            <div className="text-right text-xs p-1 border-t border-black">
-              Gli importi sono espressi in €
+            <div className="text-right font-semibold">
+              Modello C2
             </div>
           </div>
 
-          <div className="border border-black mb-4">
-            <div className="bg-gray-100 px-2 py-1 font-bold border-b border-black">
-              QUADRO B - Abbonamenti
-            </div>
-            <table className="w-full text-xs">
-              <thead>
-                <tr className="bg-gray-50">
-                  <th className="border border-black p-2 text-left">Tipo titolo<br/><span className="font-normal">(2)</span></th>
-                  <th className="border border-black p-2 text-center">Codice<br/>abbonamento</th>
-                  <th className="border border-black p-2 text-center">Intrattenimenti<br/>Spettacolo</th>
-                  <th className="border border-black p-2 text-center">Fisso<br/>Libero</th>
-                  <th className="border border-black p-2 text-right">Numero<br/>venduti</th>
-                  <th className="border border-black p-2 text-right">Importo lordo<br/>Incassato</th>
-                  <th className="border border-black p-2 text-center">Abbonamenti<br/>annullati</th>
-                  <th className="border border-black p-2 text-center">Numero<br/>eventi</th>
-                </tr>
-              </thead>
-              <tbody>
-                {report.subscriptions && report.subscriptions.length > 0 ? (
-                  report.subscriptions.map((sub, index) => (
-                    <tr key={sub.id || index}>
-                      <td className="border border-black p-2">
-                        ABBONAMENTO TURNO {sub.turnType || 'F'}
-                      </td>
-                      <td className="border border-black p-2 text-center font-mono text-xs">{sub.subscriptionCode}</td>
-                      <td className="border border-black p-2 text-center">S</td>
-                      <td className="border border-black p-2 text-center">{sub.turnType}</td>
-                      <td className="border border-black p-2 text-right">{sub.status !== 'cancelled' ? 1 : '-'}</td>
-                      <td className="border border-black p-2 text-right">
-                        {sub.totalAmount.toFixed(2)}
-                      </td>
-                      <td className="border border-black p-2 text-center">{sub.status === 'cancelled' ? 1 : '-'}</td>
-                      <td className="border border-black p-2 text-center">{sub.eventsCount}</td>
-                    </tr>
-                  ))
-                ) : (
-                  <>
-                    <tr>
-                      <td className="border border-black p-2 h-8"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                    </tr>
-                    <tr>
-                      <td className="border border-black p-2 h-8"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                    </tr>
-                    <tr>
-                      <td className="border border-black p-2 h-8"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                      <td className="border border-black p-2"></td>
-                    </tr>
-                  </>
-                )}
-              </tbody>
-            </table>
-          </div>
-
-          <div className="border border-black mb-6">
-            <table className="w-full text-xs">
-              <tbody>
-                <tr className="bg-gray-100 font-bold">
-                  <td className="border border-black p-2 text-center" colSpan={4}>TOTALE</td>
-                  <td className="border border-black p-2 text-right">
-                    {report.summary.subscriptionsSold || 0}
-                  </td>
-                  <td className="border border-black p-2 text-right">
-                    {(report.summary.subscriptionRevenue || 0).toFixed(2)}
-                  </td>
-                  <td className="border border-black p-2 text-center">
-                    {report.summary.subscriptionsCancelled || 0}
-                  </td>
-                  <td className="border border-black p-2 text-center">-</td>
-                </tr>
-              </tbody>
-            </table>
-          </div>
+          <PrintableQuadroA />
+          <PrintableQuadroB />
 
           <div className="flex justify-between mt-8 text-xs">
-            <div className="w-1/3">
-              <div className="border border-black p-2 mb-2 flex items-center gap-2">
-                <div className="w-12 h-12 border border-black flex items-center justify-center text-[8px]">
-                  SIAE<br/>Timbro
+            <div className="w-1/4">
+              <div className="flex items-center gap-2">
+                <div className="w-14 h-14 border border-black flex items-center justify-center text-[8px] text-center">
+                  SIAE<br/>Timbro e firma
                 </div>
                 <div>
                   <div className="font-semibold">SIAE DI</div>
@@ -641,17 +768,21 @@ export default function SiaeReportC2() {
                 </div>
               </div>
             </div>
-            <div className="w-1/3 text-center">
-              <div className="font-semibold mb-2">L'ORGANIZZATORE</div>
-              <div className="text-[10px] mb-2">Titolare del sistema di emissione</div>
-              <div className="border-b border-black w-48 mx-auto mt-8"></div>
-              <div className="text-[10px] mt-1">FIRMA</div>
+            <div className="w-1/4 text-right">
+              <div className="font-semibold mb-2">FIRMA</div>
+              <div className="mt-8">
+                <div className="text-[10px]">TITOLARE SISTEMA DI EMISSIONE</div>
+                <div className="border-b border-black w-40 ml-auto mt-2"></div>
+              </div>
+              <div className="mt-6">
+                <div className="text-[10px]">ORGANIZZATORE</div>
+                <div className="border-b border-black w-40 ml-auto mt-2"></div>
+              </div>
             </div>
           </div>
 
           <div className="mt-6 text-[8px] border-t border-black pt-2">
-            <p>(1) tab. 4 all. A provv. 23/7/2003</p>
-            <p>(2) tab. 3 all. Provv. 23/7/2003*;</p>
+            <p>(1) Tab.3 all. Provv. 23/07/2001</p>
           </div>
         </div>
       </div>
@@ -683,170 +814,105 @@ export default function SiaeReportC2() {
           <ArrowLeft className="w-4 h-4 mr-2" /> Indietro
         </Button>
         <div className="flex gap-2">
+          <Button variant="outline" onClick={handleRefresh} data-testid="button-refresh">
+            <RefreshCw className="w-4 h-4 mr-2" /> Aggiorna
+          </Button>
           <Button variant="outline" onClick={handlePrint} data-testid="button-print">
             <Printer className="w-4 h-4 mr-2" /> Stampa
           </Button>
         </div>
       </div>
 
-      <div ref={printRef} className="print-area bg-white text-black p-8 max-w-[210mm] mx-auto font-serif text-sm" data-testid="report-c2">
-        <div className="text-right text-xs mb-2">mod. C 2 fronte</div>
-        
-        <h1 className="text-center font-bold text-lg mb-4 uppercase tracking-wide">
-          "RIEPILOGO ABBONAMENTI"
-        </h1>
-
-        <div className="flex gap-8 mb-4 text-xs">
-          <span>Riepilogo giornaliero del <span className="border-b border-black px-2 min-w-[80px]">{reportDate}</span></span>
-          <span>Riepilogo mensile del <span className="border-b border-black px-2 min-w-[80px]">................</span></span>
-          <span>Trasmesso in data <span className="border-b border-black px-2 min-w-[60px]">... / ... / ...</span></span>
-        </div>
-
-        <div className="border border-black mb-4">
-          <div className="bg-gray-100 px-2 py-1 font-bold border-b border-black">
-            QUADRO A - Dati anagrafici
-          </div>
-          <table className="w-full text-xs">
-            <tbody>
-              <tr>
-                <td className="border border-black p-2 w-1/3 font-semibold">Organizzatore</td>
-                <td className="border border-black p-2">Event4U S.r.l.</td>
-                <td className="border border-black p-2 w-1/4 font-semibold">Codice fiscale</td>
-                <td className="border border-black p-2">12345678901</td>
-              </tr>
-              <tr>
-                <td className="border border-black p-2 font-semibold">Titolare sistema di emissione</td>
-                <td className="border border-black p-2">Event4U S.r.l.</td>
-                <td className="border border-black p-2 font-semibold">Codice fiscale</td>
-                <td className="border border-black p-2">12345678901</td>
-              </tr>
-              <tr>
-                <td className="border border-black p-2 font-semibold">Codice sistema di emissione</td>
-                <td className="border border-black p-2" colSpan={3}>E4U-{report.eventId?.substring(0, 8).toUpperCase()}</td>
-              </tr>
-            </tbody>
-          </table>
-          <div className="text-right text-xs p-1 border-t border-black">
-            Gli importi sono espressi in €
-          </div>
-        </div>
-
-        <div className="border border-black mb-4">
-          <div className="bg-gray-100 px-2 py-1 font-bold border-b border-black">
-            QUADRO B - Abbonamenti
-          </div>
-          <table className="w-full text-xs">
-            <thead>
-              <tr className="bg-gray-50">
-                <th className="border border-black p-2 text-left">Tipo titolo<br/><span className="font-normal">(2)</span></th>
-                <th className="border border-black p-2 text-center">Codice<br/>abbonamento</th>
-                <th className="border border-black p-2 text-center">Intrattenimenti<br/>Spettacolo</th>
-                <th className="border border-black p-2 text-center">Fisso<br/>Libero</th>
-                <th className="border border-black p-2 text-right">Numero<br/>venduti</th>
-                <th className="border border-black p-2 text-right">Importo lordo<br/>Incassato</th>
-                <th className="border border-black p-2 text-center">Abbonamenti<br/>annullati</th>
-                <th className="border border-black p-2 text-center">Numero<br/>eventi</th>
-              </tr>
-            </thead>
-            <tbody>
-              {report.subscriptions && report.subscriptions.length > 0 ? (
-                report.subscriptions.map((sub, index) => (
-                  <tr key={sub.id || index}>
-                    <td className="border border-black p-2">
-                      ABBONAMENTO TURNO {sub.turnType || 'F'}
-                    </td>
-                    <td className="border border-black p-2 text-center font-mono text-xs">{sub.subscriptionCode}</td>
-                    <td className="border border-black p-2 text-center">S</td>
-                    <td className="border border-black p-2 text-center">{sub.turnType}</td>
-                    <td className="border border-black p-2 text-right">{sub.status !== 'cancelled' ? 1 : '-'}</td>
-                    <td className="border border-black p-2 text-right">
-                      {sub.totalAmount.toFixed(2)}
-                    </td>
-                    <td className="border border-black p-2 text-center">{sub.status === 'cancelled' ? 1 : '-'}</td>
-                    <td className="border border-black p-2 text-center">{sub.eventsCount}</td>
-                  </tr>
-                ))
-              ) : (
-                <>
-                  <tr>
-                    <td className="border border-black p-2 h-8"></td>
-                    <td className="border border-black p-2"></td>
-                    <td className="border border-black p-2"></td>
-                    <td className="border border-black p-2"></td>
-                    <td className="border border-black p-2"></td>
-                    <td className="border border-black p-2"></td>
-                    <td className="border border-black p-2"></td>
-                    <td className="border border-black p-2"></td>
-                  </tr>
-                  <tr>
-                    <td className="border border-black p-2 h-8"></td>
-                    <td className="border border-black p-2"></td>
-                    <td className="border border-black p-2"></td>
-                    <td className="border border-black p-2"></td>
-                    <td className="border border-black p-2"></td>
-                    <td className="border border-black p-2"></td>
-                    <td className="border border-black p-2"></td>
-                    <td className="border border-black p-2"></td>
-                  </tr>
-                  <tr>
-                    <td className="border border-black p-2 h-8"></td>
-                    <td className="border border-black p-2"></td>
-                    <td className="border border-black p-2"></td>
-                    <td className="border border-black p-2"></td>
-                    <td className="border border-black p-2"></td>
-                    <td className="border border-black p-2"></td>
-                    <td className="border border-black p-2"></td>
-                    <td className="border border-black p-2"></td>
-                  </tr>
-                </>
-              )}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="border border-black mb-6">
-          <table className="w-full text-xs">
-            <tbody>
-              <tr className="bg-gray-100 font-bold">
-                <td className="border border-black p-2 text-center" colSpan={4}>TOTALE</td>
-                <td className="border border-black p-2 text-right">
-                  {report.summary.subscriptionsSold || 0}
-                </td>
-                <td className="border border-black p-2 text-right">
-                  {(report.summary.subscriptionRevenue || 0).toFixed(2)}
-                </td>
-                <td className="border border-black p-2 text-center">
-                  {report.summary.subscriptionsCancelled || 0}
-                </td>
-                <td className="border border-black p-2 text-center">-</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-
-        <div className="flex justify-between mt-8 text-xs">
-          <div className="w-1/3">
-            <div className="border border-black p-2 mb-2 flex items-center gap-2">
-              <div className="w-12 h-12 border border-black flex items-center justify-center text-[8px]">
-                SIAE<br/>Timbro
+      <div className="no-print p-4 space-y-4">
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base flex items-center gap-2">
+              <Calendar className="w-4 h-4" />
+              Tipo e Periodo Report
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <label className="text-xs text-muted-foreground mb-1 block">Tipo</label>
+                <Select value={reportType} onValueChange={(value: 'giornaliero' | 'mensile') => setReportType(value)}>
+                  <SelectTrigger data-testid="select-report-type-mobile">
+                    <SelectValue placeholder="Seleziona tipo" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="giornaliero">Giornaliero</SelectItem>
+                    <SelectItem value="mensile">Mensile</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
               <div>
-                <div className="font-semibold">SIAE DI</div>
-                <div className="border-b border-black w-32 mt-4"></div>
+                <label className="text-xs text-muted-foreground mb-1 block">
+                  {isMonthly ? 'Mese' : 'Data'}
+                </label>
+                <input
+                  type={isMonthly ? 'month' : 'date'}
+                  value={isMonthly ? reportDate.substring(0, 7) : reportDate}
+                  onChange={(e) => setReportDate(isMonthly ? `${e.target.value}-01` : e.target.value)}
+                  className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm transition-colors file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-1 focus-visible:ring-ring disabled:cursor-not-allowed disabled:opacity-50"
+                  data-testid="input-report-date-mobile"
+                />
               </div>
             </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <div ref={printRef} className="print-area bg-white text-black p-6 max-w-[210mm] mx-auto font-serif text-sm" data-testid="report-c2">
+        <h1 className="text-center font-bold text-lg mb-4 uppercase tracking-wide">
+          RIEPILOGO ABBONAMENTI
+        </h1>
+
+        <div className="flex flex-col gap-2 mb-4 text-xs">
+          <div className="flex flex-wrap justify-between items-center gap-2">
+            <span>
+              Riepilogo giornaliero del <span className="border-b border-black px-2 min-w-[50px] inline-block">{!isMonthly ? formattedDate : ''}</span>
+            </span>
+            <span>
+              Riepilogo mensile del <span className="border-b border-black px-2 min-w-[50px] inline-block font-semibold">{isMonthly ? monthName : ''}</span>
+            </span>
           </div>
-          <div className="w-1/3 text-center">
-            <div className="font-semibold mb-2">L'ORGANIZZATORE</div>
-            <div className="text-[10px] mb-2">Titolare del sistema di emissione</div>
-            <div className="border-b border-black w-48 mx-auto mt-8"></div>
-            <div className="text-[10px] mt-1">FIRMA</div>
+          <div className="flex justify-between items-center">
+            <span>
+              Trasmesso in data <span className="border-b border-black px-2 min-w-[50px] inline-block">{transmissionDate}</span>
+            </span>
+            <span className="font-semibold">Modello C2</span>
           </div>
         </div>
 
-        <div className="mt-6 text-[8px] border-t border-black pt-2">
-          <p>(1) tab. 4 all. A provv. 23/7/2003</p>
-          <p>(2) tab. 3 all. Provv. 23/7/2003*;</p>
+        <PrintableQuadroA />
+        <PrintableQuadroB />
+
+        <div className="flex flex-col gap-4 mt-6 text-xs">
+          <div className="flex items-center gap-2">
+            <div className="w-10 h-10 border border-black flex items-center justify-center text-[7px]">
+              SIAE<br/>Timbro
+            </div>
+            <div>
+              <div className="font-semibold">SIAE DI</div>
+              <div className="border-b border-black w-24 mt-2"></div>
+            </div>
+          </div>
+          <div className="flex justify-between">
+            <div>
+              <div className="font-semibold">TITOLARE SISTEMA DI EMISSIONE</div>
+              <div className="border-b border-black w-40 mt-4"></div>
+              <div className="text-[9px] mt-1">FIRMA</div>
+            </div>
+            <div>
+              <div className="font-semibold">ORGANIZZATORE</div>
+              <div className="border-b border-black w-40 mt-4"></div>
+              <div className="text-[9px] mt-1">FIRMA</div>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-4 text-[8px] border-t border-black pt-2">
+          <p>(1) Tab.3 all. Provv. 23/07/2001</p>
         </div>
       </div>
     </>
