@@ -741,6 +741,10 @@ export default function EventHub() {
   // Subscription type creation dialog state
   const [isSubscriptionTypeDialogOpen, setIsSubscriptionTypeDialogOpen] = useState(false);
 
+  // Edit Subscription Type dialog state
+  const [isEditSubscriptionTypeDialogOpen, setIsEditSubscriptionTypeDialogOpen] = useState(false);
+  const [editingSubscriptionTypeData, setEditingSubscriptionTypeData] = useState<any>(null);
+
   // Activate Ticketing dialog state
   const [isActivateTicketingOpen, setIsActivateTicketingOpen] = useState(false);
   const [pendingSubscriptionTypes, setPendingSubscriptionTypes] = useState<Array<{
@@ -1031,6 +1035,20 @@ export default function EventHub() {
     },
   });
 
+  // Edit Subscription type form
+  const editSubscriptionTypeForm = useForm<SubscriptionTypeFormData>({
+    resolver: zodResolver(subscriptionTypeFormSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      turnType: "F",
+      eventsCount: 1,
+      price: "0",
+      ivaRate: "22",
+      maxQuantity: undefined,
+    },
+  });
+
   // Reset subscription type form when dialog closes
   useEffect(() => {
     if (!isSubscriptionTypeDialogOpen) {
@@ -1056,6 +1074,40 @@ export default function EventHub() {
 
   const onSubmitSubscriptionType = (data: SubscriptionTypeFormData) => {
     createSubscriptionTypeMutation.mutate(data);
+  };
+
+  // Update subscription type mutation
+  const updateSubscriptionTypeMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const response = await apiRequest("PATCH", `/api/siae/subscription-types/${data.id}`, data);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/ticketed-events', ticketedEvent?.id, 'subscription-types'] });
+      setIsEditSubscriptionTypeDialogOpen(false);
+      toast({ title: "Abbonamento aggiornato" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Handler to open edit subscription type dialog
+  const handleEditSubscriptionType = (subTypeId: string) => {
+    const subType = subscriptionTypes?.find((s: any) => s.id === subTypeId);
+    if (subType) {
+      setEditingSubscriptionTypeData(subType);
+      editSubscriptionTypeForm.reset({
+        name: subType.name || "",
+        description: subType.description || "",
+        turnType: subType.turnType || "F",
+        eventsCount: subType.eventsCount || 1,
+        price: String(subType.price || "0"),
+        ivaRate: String(subType.ivaRate || "22"),
+        maxQuantity: subType.maxQuantity,
+      });
+      setIsEditSubscriptionTypeDialogOpen(true);
+    }
   };
 
   const { data: users = [] } = useQuery<User[]>({
@@ -2377,15 +2429,30 @@ export default function EventHub() {
                               return (
                                 <Card 
                                   key={subType.id} 
-                                  className="hover-elevate transition-all" 
+                                  className="hover-elevate transition-all cursor-pointer" 
+                                  onClick={() => handleEditSubscriptionType(subType.id)}
                                   data-testid={`subscription-type-card-${subType.id}`}
                                 >
                                   <CardHeader className="pb-2">
                                     <div className="flex items-start justify-between gap-2">
                                       <CardTitle className="text-lg">{subType.name}</CardTitle>
-                                      <Badge variant={isSoldOut ? 'destructive' : subType.active !== false ? 'default' : 'secondary'}>
-                                        {isSoldOut ? 'Esaurito' : subType.active !== false ? 'Attivo' : 'Disattivato'}
-                                      </Badge>
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant={isSoldOut ? 'destructive' : subType.active !== false ? 'default' : 'secondary'}>
+                                          {isSoldOut ? 'Esaurito' : subType.active !== false ? 'Attivo' : 'Disattivato'}
+                                        </Badge>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-7 w-7"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditSubscriptionType(subType.id);
+                                          }}
+                                          data-testid={`button-edit-subscription-type-${subType.id}`}
+                                        >
+                                          <Edit2 className="h-4 w-4" />
+                                        </Button>
+                                      </div>
                                     </div>
                                     <CardDescription>
                                       €{Number(subType.price || 0).toFixed(2)}
@@ -4429,10 +4496,11 @@ export default function EventHub() {
                               return (
                                 <motion.div 
                                   key={subType.id} 
-                                  className="p-4 rounded-xl bg-background/50 border"
+                                  className="p-4 rounded-xl bg-background/50 border cursor-pointer"
                                   data-testid={`subscription-type-card-mobile-${subType.id}`}
                                   whileTap={{ scale: 0.98 }}
                                   transition={springConfig}
+                                  onClick={() => handleEditSubscriptionType(subType.id)}
                                 >
                                   <div className="flex items-center justify-between gap-4 mb-3">
                                     <div className="flex items-center gap-2 flex-wrap">
@@ -4441,9 +4509,23 @@ export default function EventHub() {
                                         {isSoldOut ? 'Esaurito' : subType.active !== false ? 'Attivo' : 'Disattivato'}
                                       </Badge>
                                     </div>
-                                    <Badge variant="outline" className="text-xs">
-                                      {subType.turnType === 'fixed' ? 'Fisso' : 'Libero'}
-                                    </Badge>
+                                    <div className="flex items-center gap-2">
+                                      <Badge variant="outline" className="text-xs">
+                                        {subType.turnType === 'fixed' ? 'Fisso' : 'Libero'}
+                                      </Badge>
+                                      <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-8 w-8"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          handleEditSubscriptionType(subType.id);
+                                        }}
+                                        data-testid={`button-edit-subscription-type-mobile-${subType.id}`}
+                                      >
+                                        <Edit2 className="h-4 w-4" />
+                                      </Button>
+                                    </div>
                                   </div>
                                   <div className="flex items-center gap-3 text-sm text-muted-foreground mb-2">
                                     <span>€{Number(subType.price || 0).toFixed(2)}</span>
@@ -7803,6 +7885,178 @@ export default function EventHub() {
                     <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creazione...</>
                   ) : (
                     'Crea Abbonamento'
+                  )}
+                </Button>
+              </DialogFooter>
+            </form>
+          </Form>
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Subscription Type Dialog */}
+      <Dialog open={isEditSubscriptionTypeDialogOpen} onOpenChange={setIsEditSubscriptionTypeDialogOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Modifica Abbonamento</DialogTitle>
+            <DialogDescription>
+              Modifica le impostazioni del tipo abbonamento
+            </DialogDescription>
+          </DialogHeader>
+          <Form {...editSubscriptionTypeForm}>
+            <form onSubmit={editSubscriptionTypeForm.handleSubmit((data) => {
+              updateSubscriptionTypeMutation.mutate({
+                id: editingSubscriptionTypeData?.id,
+                name: data.name,
+                description: data.description,
+                turnType: data.turnType,
+                eventsCount: data.eventsCount,
+                price: data.price,
+                ivaRate: data.ivaRate,
+                maxQuantity: data.maxQuantity,
+              });
+            })} className="space-y-4">
+              <FormField
+                control={editSubscriptionTypeForm.control}
+                name="name"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Nome Abbonamento</FormLabel>
+                    <FormControl>
+                      <Input placeholder="es. Pass Weekend" {...field} data-testid="input-edit-subscription-name" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={editSubscriptionTypeForm.control}
+                name="description"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Descrizione (opzionale)</FormLabel>
+                    <FormControl>
+                      <Textarea placeholder="Descrizione abbonamento" {...field} data-testid="input-edit-subscription-description" />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={editSubscriptionTypeForm.control}
+                name="turnType"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Tipo Turno</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-edit-subscription-turn-type">
+                          <SelectValue />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="F">Fisso</SelectItem>
+                        <SelectItem value="L">Libero</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={editSubscriptionTypeForm.control}
+                name="eventsCount"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Numero Eventi</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min={1}
+                        {...field} 
+                        onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                        data-testid="input-edit-subscription-events-count"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={editSubscriptionTypeForm.control}
+                name="price"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Prezzo (€)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        step="0.01"
+                        placeholder="0.00" 
+                        {...field} 
+                        data-testid="input-edit-subscription-price"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={editSubscriptionTypeForm.control}
+                name="ivaRate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Aliquota IVA</FormLabel>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <FormControl>
+                        <SelectTrigger data-testid="select-edit-subscription-iva-rate">
+                          <SelectValue placeholder="Seleziona IVA" />
+                        </SelectTrigger>
+                      </FormControl>
+                      <SelectContent>
+                        <SelectItem value="10">10%</SelectItem>
+                        <SelectItem value="22">22%</SelectItem>
+                      </SelectContent>
+                    </Select>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={editSubscriptionTypeForm.control}
+                name="maxQuantity"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Quantità Max (opzionale)</FormLabel>
+                    <FormControl>
+                      <Input 
+                        type="number" 
+                        min={1}
+                        placeholder="Illimitata"
+                        value={field.value ?? ""}
+                        onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                        data-testid="input-edit-subscription-max-quantity"
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <DialogFooter className="pt-4">
+                <Button type="button" variant="outline" onClick={() => setIsEditSubscriptionTypeDialogOpen(false)}>
+                  Annulla
+                </Button>
+                <Button type="submit" disabled={updateSubscriptionTypeMutation.isPending} data-testid="button-submit-edit-subscription-type">
+                  {updateSubscriptionTypeMutation.isPending ? (
+                    <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Salvataggio...</>
+                  ) : (
+                    'Salva'
                   )}
                 </Button>
               </DialogFooter>
