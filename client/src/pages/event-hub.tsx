@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import {
   Form,
   FormControl,
+  FormDescription,
   FormField,
   FormItem,
   FormLabel,
@@ -121,6 +122,7 @@ import {
   Send,
   Upload,
   Palette,
+  XCircle,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -194,6 +196,18 @@ const subscriptionTypeFormSchema = z.object({
   maxQuantity: z.number().optional(),
 });
 type SubscriptionTypeFormData = z.infer<typeof subscriptionTypeFormSchema>;
+
+const activateTicketingSchema = z.object({
+  genreCode: z.string().min(1, "Genere evento richiesto"),
+  taxType: z.string().min(1),
+  totalCapacity: z.number().min(1),
+  maxTicketsPerUser: z.number().min(1),
+  ivaPreassolta: z.string().default("N"),
+  requiresNominative: z.boolean().default(false),
+  allowsChangeName: z.boolean().default(false),
+  allowsResale: z.boolean().default(false),
+});
+type ActivateTicketingFormData = z.infer<typeof activateTicketingSchema>;
 
 const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: React.ElementType; gradient: string }> = {
   draft: { label: 'Bozza', color: 'text-slate-400', bgColor: 'bg-slate-500/20', icon: Circle, gradient: 'from-slate-500 to-slate-600' },
@@ -721,6 +735,20 @@ export default function EventHub() {
   // Subscription type creation dialog state
   const [isSubscriptionTypeDialogOpen, setIsSubscriptionTypeDialogOpen] = useState(false);
 
+  // Activate Ticketing dialog state
+  const [isActivateTicketingOpen, setIsActivateTicketingOpen] = useState(false);
+  const [pendingSubscriptionTypes, setPendingSubscriptionTypes] = useState<Array<{
+    name: string;
+    turnType: string;
+    eventsCount: number;
+    price: string;
+  }>>([]);
+  const [showSubTypeForm, setShowSubTypeForm] = useState(false);
+  const [newSubTypeName, setNewSubTypeName] = useState("");
+  const [newSubTypeTurnType, setNewSubTypeTurnType] = useState("F");
+  const [newSubTypeEventsCount, setNewSubTypeEventsCount] = useState(1);
+  const [newSubTypePrice, setNewSubTypePrice] = useState("");
+
   // Reset pagination when transaction filters change
   useEffect(() => {
     setTransactionsDisplayLimit(20);
@@ -792,6 +820,75 @@ export default function EventHub() {
     queryKey: ['/api/siae/sector-codes'],
     enabled: isSectorDialogOpen,
   });
+
+  // Genres for activate ticketing dialog (TAB.1)
+  const { data: genres } = useQuery<any[]>({
+    queryKey: ['/api/siae/event-genres'],
+    enabled: isActivateTicketingOpen,
+  });
+
+  // Activate ticketing form
+  const activateTicketingForm = useForm<ActivateTicketingFormData>({
+    resolver: zodResolver(activateTicketingSchema),
+    defaultValues: {
+      genreCode: "",
+      taxType: "S",
+      totalCapacity: 500,
+      maxTicketsPerUser: 10,
+      ivaPreassolta: "N",
+      requiresNominative: false,
+      allowsChangeName: false,
+      allowsResale: false,
+    },
+  });
+
+  // Reset activate ticketing form when dialog closes
+  useEffect(() => {
+    if (!isActivateTicketingOpen) {
+      activateTicketingForm.reset();
+      setPendingSubscriptionTypes([]);
+      setShowSubTypeForm(false);
+      setNewSubTypeName("");
+      setNewSubTypeTurnType("F");
+      setNewSubTypeEventsCount(1);
+      setNewSubTypePrice("");
+    }
+  }, [isActivateTicketingOpen]);
+
+  // Activate ticketing mutation
+  const activateTicketingMutation = useMutation({
+    mutationFn: async (data: ActivateTicketingFormData) => {
+      const response = await apiRequest("POST", "/api/siae/ticketed-events", {
+        ...data,
+        eventId: id,
+        companyId: user?.companyId,
+        ticketingStatus: "draft",
+      });
+      const newEvent = await response.json();
+      
+      for (const subType of pendingSubscriptionTypes) {
+        await apiRequest("POST", `/api/siae/ticketed-events/${newEvent.id}/subscription-types`, {
+          ...subType,
+          ivaRate: "22",
+        });
+      }
+      return newEvent;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/events', id, 'ticketing'] });
+      setIsActivateTicketingOpen(false);
+      setPendingSubscriptionTypes([]);
+      activateTicketingForm.reset();
+      toast({ title: "Biglietteria SIAE attivata con successo" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const onSubmitActivateTicketing = (data: ActivateTicketingFormData) => {
+    activateTicketingMutation.mutate(data);
+  };
 
   // Sector creation form
   const sectorForm = useForm<SectorFormData>({
@@ -4478,20 +4575,380 @@ export default function EventHub() {
                 </Dialog>
               </div>
             ) : (
-              <Card className="glass-card">
-                <CardContent className="py-12">
-                  <div className="text-center">
-                    <Ticket className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                    <h3 className="font-semibold mb-2">Biglietteria Non Attiva</h3>
-                    <p className="text-sm text-muted-foreground mb-4">
-                      Attiva la biglietteria SIAE per vendere biglietti
-                    </p>
-                    <Button onClick={() => navigate('/siae/ticketed-events')} data-testid="btn-activate-ticketing">
-                      Attiva Biglietteria
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <>
+                <Card className="glass-card">
+                  <CardContent className="py-12">
+                    <div className="text-center">
+                      <Ticket className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
+                      <h3 className="font-semibold mb-2">Biglietteria Non Attiva</h3>
+                      <p className="text-sm text-muted-foreground mb-4">
+                        Attiva la biglietteria SIAE per vendere biglietti
+                      </p>
+                      <Button onClick={() => setIsActivateTicketingOpen(true)} data-testid="btn-activate-ticketing">
+                        Attiva Biglietteria
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Activate Ticketing Dialog */}
+                <Dialog open={isActivateTicketingOpen} onOpenChange={setIsActivateTicketingOpen}>
+                  <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto" data-testid="dialog-activate-ticketing">
+                    <DialogHeader>
+                      <DialogTitle className="flex items-center gap-2">
+                        <Ticket className="w-5 h-5 text-[#FFD700]" />
+                        Attiva Biglietteria SIAE
+                      </DialogTitle>
+                      <DialogDescription>
+                        Configura la biglietteria SIAE per questo evento
+                      </DialogDescription>
+                    </DialogHeader>
+
+                    <Form {...activateTicketingForm}>
+                      <form onSubmit={activateTicketingForm.handleSubmit(onSubmitActivateTicketing)} className="space-y-6" data-testid="form-activate-ticketing">
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={activateTicketingForm.control}
+                            name="genreCode"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Genere Evento (TAB.1)</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="select-genre">
+                                      <SelectValue placeholder="Seleziona genere" />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    {genres?.map((genre: any) => (
+                                      <SelectItem key={genre.code} value={genre.code}>
+                                        {genre.code} - {genre.description}
+                                      </SelectItem>
+                                    ))}
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={activateTicketingForm.control}
+                            name="taxType"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Tipo Fiscale</FormLabel>
+                                <Select onValueChange={field.onChange} value={field.value}>
+                                  <FormControl>
+                                    <SelectTrigger data-testid="select-tax-type">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                  </FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="S">Spettacolo</SelectItem>
+                                    <SelectItem value="I">Intrattenimento</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
+                            control={activateTicketingForm.control}
+                            name="totalCapacity"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Capienza Totale</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                    data-testid="input-capacity"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={activateTicketingForm.control}
+                            name="maxTicketsPerUser"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Max Biglietti per Utente</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                                    data-testid="input-max-tickets"
+                                  />
+                                </FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <FormField
+                          control={activateTicketingForm.control}
+                          name="ivaPreassolta"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>IVA Preassolta</FormLabel>
+                              <Select onValueChange={field.onChange} value={field.value}>
+                                <FormControl>
+                                  <SelectTrigger data-testid="select-iva">
+                                    <SelectValue />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="N">No</SelectItem>
+                                  <SelectItem value="B">Base</SelectItem>
+                                  <SelectItem value="F">Forfait</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
+                          <h4 className="font-medium">Opzioni Nominatività</h4>
+                          
+                          <FormField
+                            control={activateTicketingForm.control}
+                            name="requiresNominative"
+                            render={({ field }) => (
+                              <FormItem className="flex items-center justify-between">
+                                <div>
+                                  <FormLabel className="text-sm">Biglietti Nominativi</FormLabel>
+                                  <FormDescription className="text-xs">
+                                    I biglietti saranno associati al nome dell'acquirente
+                                  </FormDescription>
+                                </div>
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    data-testid="switch-nominative"
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={activateTicketingForm.control}
+                            name="allowsChangeName"
+                            render={({ field }) => (
+                              <FormItem className="flex items-center justify-between">
+                                <div>
+                                  <FormLabel className="text-sm">Consenti Cambio Nome</FormLabel>
+                                  <FormDescription className="text-xs">
+                                    Solo per eventi con capienza {">"} 5000
+                                  </FormDescription>
+                                </div>
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    data-testid="switch-change-name"
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+
+                          <FormField
+                            control={activateTicketingForm.control}
+                            name="allowsResale"
+                            render={({ field }) => (
+                              <FormItem className="flex items-center justify-between">
+                                <div>
+                                  <FormLabel className="text-sm">Consenti Rivendita</FormLabel>
+                                  <FormDescription className="text-xs">
+                                    Solo per eventi con capienza {">"} 5000
+                                  </FormDescription>
+                                </div>
+                                <FormControl>
+                                  <Switch
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    data-testid="switch-resale"
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <div className="space-y-4 rounded-lg border p-4 bg-muted/30">
+                          <div className="flex items-center gap-2">
+                            <Package className="w-4 h-4 text-[#FFD700]" />
+                            <h4 className="font-medium">Tipi Abbonamento (Opzionale)</h4>
+                          </div>
+                          
+                          {pendingSubscriptionTypes.length > 0 && (
+                            <div className="flex flex-wrap gap-2">
+                              {pendingSubscriptionTypes.map((subType, index) => (
+                                <div
+                                  key={index}
+                                  className="flex items-center gap-2 px-3 py-2 rounded-md bg-background border text-sm"
+                                  data-testid={`pending-sub-type-${index}`}
+                                >
+                                  <span className="font-medium">{subType.name}</span>
+                                  <span className="text-muted-foreground">-</span>
+                                  <span>{subType.eventsCount} eventi</span>
+                                  <span className="text-muted-foreground">-</span>
+                                  <span className="text-[#FFD700]">{"\u20AC"}{subType.price}</span>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="h-5 w-5 ml-1"
+                                    onClick={() => {
+                                      setPendingSubscriptionTypes(prev => prev.filter((_, i) => i !== index));
+                                    }}
+                                    data-testid={`remove-sub-type-${index}`}
+                                  >
+                                    <XCircle className="w-3 h-3" />
+                                  </Button>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {showSubTypeForm ? (
+                            <div className="space-y-3 p-3 rounded-md bg-background/50 border">
+                              <div className="grid grid-cols-4 gap-3">
+                                <div className="col-span-2">
+                                  <Label className="text-xs">Nome</Label>
+                                  <Input
+                                    value={newSubTypeName}
+                                    onChange={(e) => setNewSubTypeName(e.target.value)}
+                                    placeholder="es. Pass 3 Giorni"
+                                    data-testid="input-new-sub-type-name"
+                                  />
+                                </div>
+                                <div>
+                                  <Label className="text-xs">Turno</Label>
+                                  <Select value={newSubTypeTurnType} onValueChange={setNewSubTypeTurnType}>
+                                    <SelectTrigger data-testid="select-new-sub-type-turn">
+                                      <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                      <SelectItem value="F">Fisso</SelectItem>
+                                      <SelectItem value="L">Libero</SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </div>
+                                <div>
+                                  <Label className="text-xs">N. Eventi</Label>
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    value={newSubTypeEventsCount}
+                                    onChange={(e) => setNewSubTypeEventsCount(parseInt(e.target.value) || 1)}
+                                    data-testid="input-new-sub-type-events"
+                                  />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-4 gap-3">
+                                <div className="col-span-2">
+                                  <Label className="text-xs">Prezzo ({"\u20AC"})</Label>
+                                  <Input
+                                    type="number"
+                                    step="0.01"
+                                    value={newSubTypePrice}
+                                    onChange={(e) => setNewSubTypePrice(e.target.value)}
+                                    placeholder="0.00"
+                                    data-testid="input-new-sub-type-price"
+                                  />
+                                </div>
+                                <div className="col-span-2 flex items-end gap-2">
+                                  <Button
+                                    type="button"
+                                    size="sm"
+                                    onClick={() => {
+                                      if (newSubTypeName && newSubTypePrice) {
+                                        setPendingSubscriptionTypes(prev => [...prev, {
+                                          name: newSubTypeName,
+                                          turnType: newSubTypeTurnType,
+                                          eventsCount: newSubTypeEventsCount,
+                                          price: newSubTypePrice,
+                                        }]);
+                                        setNewSubTypeName("");
+                                        setNewSubTypeTurnType("F");
+                                        setNewSubTypeEventsCount(1);
+                                        setNewSubTypePrice("");
+                                        setShowSubTypeForm(false);
+                                      }
+                                    }}
+                                    disabled={!newSubTypeName || !newSubTypePrice}
+                                    data-testid="button-add-sub-type"
+                                  >
+                                    Aggiungi
+                                  </Button>
+                                  <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => {
+                                      setShowSubTypeForm(false);
+                                      setNewSubTypeName("");
+                                      setNewSubTypeTurnType("F");
+                                      setNewSubTypeEventsCount(1);
+                                      setNewSubTypePrice("");
+                                    }}
+                                  >
+                                    Annulla
+                                  </Button>
+                                </div>
+                              </div>
+                            </div>
+                          ) : (
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => setShowSubTypeForm(true)}
+                              data-testid="button-show-sub-type-form"
+                            >
+                              <Plus className="w-4 h-4 mr-2" />
+                              Aggiungi Tipo
+                            </Button>
+                          )}
+                        </div>
+
+                        <DialogFooter>
+                          <Button type="button" variant="outline" onClick={() => setIsActivateTicketingOpen(false)}>
+                            Annulla
+                          </Button>
+                          <Button type="submit" disabled={activateTicketingMutation.isPending} data-testid="button-submit-activate-ticketing">
+                            {activateTicketingMutation.isPending ? (
+                              <>
+                                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                                Attivazione...
+                              </>
+                            ) : (
+                              <>
+                                <CheckCircle2 className="w-4 h-4 mr-2" />
+                                Attiva Biglietteria
+                              </>
+                            )}
+                          </Button>
+                        </DialogFooter>
+                      </form>
+                    </Form>
+                  </DialogContent>
+                </Dialog>
+              </>
             )}
 
                 {/* Cancel Ticket Dialog */}
