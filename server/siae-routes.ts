@@ -36,6 +36,8 @@ import {
   insertSiaeTransmissionSchema,
   insertSiaeBoxOfficeSessionSchema,
   insertSiaeSubscriptionSchema,
+  insertSiaeSubscriptionTypeSchema,
+  siaeSubscriptionTypes,
   insertSiaeAuditLogSchema,
   insertSiaeNumberedSeatSchema,
   insertSiaeSmartCardSessionSchema,
@@ -72,6 +74,7 @@ const patchResaleSchema = makePatchSchema(insertSiaeResaleSchema.omit({ original
 const patchTransmissionSchema = makePatchSchema(insertSiaeTransmissionSchema.omit({ companyId: true }));
 const patchBoxOfficeSessionSchema = makePatchSchema(insertSiaeBoxOfficeSessionSchema.omit({ emissionChannelId: true, userId: true }));
 const patchSubscriptionSchema = makePatchSchema(insertSiaeSubscriptionSchema.omit({ customerId: true }));
+const patchSubscriptionTypeSchema = makePatchSchema(insertSiaeSubscriptionTypeSchema.omit({ companyId: true, ticketedEventId: true }) as z.AnyZodObject);
 const patchNumberedSeatSchema = makePatchSchema(insertSiaeNumberedSeatSchema.omit({ sectorId: true }));
 
 const router = Router();
@@ -2741,6 +2744,79 @@ router.patch("/api/siae/subscriptions/:id", requireAuth, requireOrganizer, async
     res.json(subscription);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
+  }
+});
+
+// ==================== Subscription Types ====================
+
+router.get("/api/siae/ticketed-events/:eventId/subscription-types", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const subscriptionTypes = await db.select()
+      .from(siaeSubscriptionTypes)
+      .where(eq(siaeSubscriptionTypes.ticketedEventId, eventId));
+    res.json(subscriptionTypes);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+router.post("/api/siae/ticketed-events/:eventId/subscription-types", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const user = req.user as any;
+    
+    // Get companyId from the ticketed event (safer than relying on user.companyId which can be null for super_admin)
+    const [ticketedEvent] = await db.select({ companyId: siaeTicketedEvents.companyId })
+      .from(siaeTicketedEvents)
+      .where(eq(siaeTicketedEvents.id, eventId));
+    
+    if (!ticketedEvent) {
+      return res.status(404).json({ message: "Evento non trovato" });
+    }
+    
+    const data = insertSiaeSubscriptionTypeSchema.parse({
+      ...req.body,
+      ticketedEventId: eventId,
+      companyId: ticketedEvent.companyId,
+    });
+    
+    const [subscriptionType] = await db.insert(siaeSubscriptionTypes)
+      .values(data)
+      .returning();
+    res.status(201).json(subscriptionType);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.patch("/api/siae/subscription-types/:id", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const data = patchSubscriptionTypeSchema.parse(req.body);
+    const [subscriptionType] = await db.update(siaeSubscriptionTypes)
+      .set({ ...data, updatedAt: new Date() })
+      .where(eq(siaeSubscriptionTypes.id, req.params.id))
+      .returning();
+    if (!subscriptionType) {
+      return res.status(404).json({ message: "Tipo abbonamento non trovato" });
+    }
+    res.json(subscriptionType);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+router.delete("/api/siae/subscription-types/:id", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const [deleted] = await db.delete(siaeSubscriptionTypes)
+      .where(eq(siaeSubscriptionTypes.id, req.params.id))
+      .returning();
+    if (!deleted) {
+      return res.status(404).json({ message: "Tipo abbonamento non trovato" });
+    }
+    res.json({ message: "Tipo abbonamento eliminato", id: deleted.id });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 });
 

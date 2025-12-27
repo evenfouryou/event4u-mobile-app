@@ -19,6 +19,7 @@ import {
   type Event,
   type SiaeSubscription,
   type SiaeCustomer,
+  type SiaeSubscriptionType,
 } from "@shared/schema";
 
 type SiaeTicketedEventWithCompany = SiaeTicketedEvent & {
@@ -111,6 +112,7 @@ import {
   CalendarDays,
   Palette,
   CreditCard,
+  Package,
 } from "lucide-react";
 import { Link, useRoute } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -146,6 +148,18 @@ const subscriptionFormSchema = z.object({
 });
 type SubscriptionFormData = z.infer<typeof subscriptionFormSchema>;
 
+const subscriptionTypeFormSchema = z.object({
+  name: z.string().min(1, "Nome obbligatorio"),
+  description: z.string().optional(),
+  turnType: z.string().min(1),
+  eventsCount: z.number().min(1, "Almeno 1 evento"),
+  price: z.string().min(1, "Prezzo obbligatorio"),
+  ivaRate: z.string().default("22"),
+  validFrom: z.string().optional(),
+  validTo: z.string().optional(),
+  maxQuantity: z.number().optional(),
+});
+
 export default function SiaeTicketedEventsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -156,6 +170,7 @@ export default function SiaeTicketedEventsPage() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isSectorDialogOpen, setIsSectorDialogOpen] = useState(false);
   const [isSubscriptionDialogOpen, setIsSubscriptionDialogOpen] = useState(false);
+  const [isSubscriptionTypeDialogOpen, setIsSubscriptionTypeDialogOpen] = useState(false);
   const [selectedEvent, setSelectedEvent] = useState<SiaeTicketedEvent | null>(null);
   const [selectedSubscriptionForEdit, setSelectedSubscriptionForEdit] = useState<SiaeSubscription | null>(null);
   const [expandedEventId, setExpandedEventId] = useState<string | null>(urlEventId || null);
@@ -243,6 +258,11 @@ export default function SiaeTicketedEventsPage() {
     enabled: !!companyId,
   });
 
+  const { data: subscriptionTypes, isLoading: subscriptionTypesLoading } = useQuery<SiaeSubscriptionType[]>({
+    queryKey: ['/api/siae/ticketed-events', expandedEventId, 'subscription-types'],
+    enabled: !!expandedEventId,
+  });
+
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
     defaultValues: {
@@ -286,6 +306,21 @@ export default function SiaeTicketedEventsPage() {
       totalAmount: 0,
       holderFirstName: "",
       holderLastName: "",
+    },
+  });
+
+  const subscriptionTypeForm = useForm<z.infer<typeof subscriptionTypeFormSchema>>({
+    resolver: zodResolver(subscriptionTypeFormSchema),
+    defaultValues: {
+      name: "",
+      description: "",
+      turnType: "F",
+      eventsCount: 1,
+      price: "",
+      ivaRate: "22",
+      validFrom: "",
+      validTo: "",
+      maxQuantity: undefined,
     },
   });
 
@@ -340,6 +375,22 @@ export default function SiaeTicketedEventsPage() {
       });
     }
   }, [isSubscriptionDialogOpen, subscriptionForm]);
+
+  useEffect(() => {
+    if (!isSubscriptionTypeDialogOpen) {
+      subscriptionTypeForm.reset({
+        name: "",
+        description: "",
+        turnType: "F",
+        eventsCount: 1,
+        price: "",
+        ivaRate: "22",
+        validFrom: "",
+        validTo: "",
+        maxQuantity: undefined,
+      });
+    }
+  }, [isSubscriptionTypeDialogOpen, subscriptionTypeForm]);
 
   // Auto-set price to 0 when Omaggio is selected
   useEffect(() => {
@@ -480,6 +531,28 @@ export default function SiaeTicketedEventsPage() {
         description: error.message,
         variant: "destructive",
       });
+    },
+  });
+
+  const createSubscriptionTypeMutation = useMutation({
+    mutationFn: async (data: any) => {
+      const ticketedEventId = expandedEventId;
+      const response = await apiRequest("POST", `/api/siae/ticketed-events/${ticketedEventId}/subscription-types`, {
+        ...data,
+        companyId: user?.companyId,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      toast({ title: "Tipo abbonamento creato" });
+      queryClient.invalidateQueries({ predicate: (query) => 
+        query.queryKey.some(k => typeof k === 'string' && k.includes('subscription-types'))
+      });
+      setIsSubscriptionTypeDialogOpen(false);
+      subscriptionTypeForm.reset();
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
 
@@ -1069,6 +1142,82 @@ export default function SiaeTicketedEventsPage() {
                                   <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Annullato</Badge>
                                 ) : (
                                   <Badge variant="secondary">{subscription.status}</Badge>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )}
+                  </div>
+
+                  {/* Tipi Abbonamento Section */}
+                  <div className="space-y-4 mt-6">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <Package className="w-4 h-4" />
+                        Tipi Abbonamento
+                      </h4>
+                      <Button
+                        size="sm"
+                        onClick={() => setIsSubscriptionTypeDialogOpen(true)}
+                        data-testid={`button-add-subscription-type-${ticketedEvent.id}`}
+                      >
+                        <Plus className="w-4 h-4 mr-2" />
+                        Nuovo Tipo
+                      </Button>
+                    </div>
+
+                    {subscriptionTypesLoading ? (
+                      <div className="space-y-2">
+                        {[1, 2].map((i) => (
+                          <Skeleton key={i} className="h-12 w-full" />
+                        ))}
+                      </div>
+                    ) : !subscriptionTypes?.length ? (
+                      <div className="p-4 text-center text-muted-foreground bg-background/50 rounded-lg border border-dashed">
+                        <Package className="w-6 h-6 mx-auto mb-2 text-muted-foreground" />
+                        Nessun tipo abbonamento configurato. Crea un tipo per vendere abbonamenti multi-evento.
+                      </div>
+                    ) : (
+                      <Table>
+                        <TableHeader>
+                          <TableRow>
+                            <TableHead>Nome</TableHead>
+                            <TableHead>Tipo</TableHead>
+                            <TableHead>N. Eventi</TableHead>
+                            <TableHead>Prezzo</TableHead>
+                            <TableHead>Venduti</TableHead>
+                            <TableHead>Stato</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {subscriptionTypes.map((subType) => (
+                            <TableRow key={subType.id} data-testid={`row-subscription-type-${subType.id}`}>
+                              <TableCell>
+                                <div>
+                                  <div className="font-medium">{subType.name}</div>
+                                  {subType.description && (
+                                    <div className="text-xs text-muted-foreground">{subType.description}</div>
+                                  )}
+                                </div>
+                              </TableCell>
+                              <TableCell>
+                                <Badge variant="outline">
+                                  {subType.turnType === 'F' ? 'Fisso' : 'Libero'}
+                                </Badge>
+                              </TableCell>
+                              <TableCell>{subType.eventsCount}</TableCell>
+                              <TableCell>€{Number(subType.price).toFixed(2)}</TableCell>
+                              <TableCell>
+                                {subType.soldCount}
+                                {subType.maxQuantity && ` / ${subType.maxQuantity}`}
+                              </TableCell>
+                              <TableCell>
+                                {subType.active ? (
+                                  <Badge className="bg-emerald-500/20 text-emerald-400">Attivo</Badge>
+                                ) : (
+                                  <Badge variant="secondary">Inattivo</Badge>
                                 )}
                               </TableCell>
                             </TableRow>
@@ -1829,6 +1978,161 @@ export default function SiaeTicketedEventsPage() {
                     )}
                   </Button>
                 </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Create Subscription Type Dialog */}
+        <Dialog open={isSubscriptionTypeDialogOpen} onOpenChange={setIsSubscriptionTypeDialogOpen}>
+          <DialogContent className="max-w-lg" data-testid="dialog-create-subscription-type">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <Package className="w-5 h-5 text-[#FFD700]" />
+                Nuovo Tipo Abbonamento
+              </DialogTitle>
+              <DialogDescription>
+                Crea un template per vendere abbonamenti multi-evento
+              </DialogDescription>
+            </DialogHeader>
+
+            <Form {...subscriptionTypeForm}>
+              <form onSubmit={subscriptionTypeForm.handleSubmit((data) => createSubscriptionTypeMutation.mutate(data))} className="space-y-4">
+                <FormField
+                  control={subscriptionTypeForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome</FormLabel>
+                      <FormControl>
+                        <Input placeholder="es. Pass 3 Giorni" {...field} data-testid="input-subscription-type-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={subscriptionTypeForm.control}
+                  name="description"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Descrizione (opzionale)</FormLabel>
+                      <FormControl>
+                        <Textarea placeholder="Descrizione del tipo abbonamento..." {...field} data-testid="input-subscription-type-description" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={subscriptionTypeForm.control}
+                    name="turnType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tipo Turno</FormLabel>
+                        <Select onValueChange={field.onChange} value={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-subscription-type-turn">
+                              <SelectValue />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="F">Fisso (date predefinite)</SelectItem>
+                            <SelectItem value="L">Libero (a scelta)</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={subscriptionTypeForm.control}
+                    name="eventsCount"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>N. Eventi Inclusi</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min={1}
+                            {...field} 
+                            onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                            data-testid="input-subscription-type-events" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={subscriptionTypeForm.control}
+                    name="price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Prezzo (€)</FormLabel>
+                        <FormControl>
+                          <div className="relative">
+                            <Euro className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                            <Input 
+                              type="number" 
+                              step="0.01"
+                              className="pl-9"
+                              placeholder="0.00"
+                              {...field} 
+                              data-testid="input-subscription-type-price" 
+                            />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={subscriptionTypeForm.control}
+                    name="maxQuantity"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Quantità Max (opz.)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            min={1}
+                            placeholder="Illimitato"
+                            {...field}
+                            value={field.value || ""}
+                            onChange={(e) => field.onChange(e.target.value ? parseInt(e.target.value) : undefined)}
+                            data-testid="input-subscription-type-max" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="flex justify-end gap-2 pt-4">
+                  <Button type="button" variant="outline" onClick={() => setIsSubscriptionTypeDialogOpen(false)}>
+                    Annulla
+                  </Button>
+                  <Button type="submit" disabled={createSubscriptionTypeMutation.isPending} data-testid="button-submit-subscription-type">
+                    {createSubscriptionTypeMutation.isPending ? (
+                      <>
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                        Creazione...
+                      </>
+                    ) : (
+                      "Crea Tipo"
+                    )}
+                  </Button>
+                </div>
               </form>
             </Form>
           </DialogContent>

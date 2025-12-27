@@ -1751,6 +1751,7 @@ export const siaeSubscriptions = pgTable("siae_subscriptions", {
   // Collegamento opzionale a evento/settore per vendita da cassa
   ticketedEventId: varchar("ticketed_event_id").references(() => siaeTicketedEvents.id),
   sectorId: varchar("sector_id").references(() => siaeEventSectors.id),
+  subscriptionTypeId: varchar("subscription_type_id"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1771,6 +1772,41 @@ export const siaeSubscriptionsRelations = relations(siaeSubscriptions, ({ one, m
   sector: one(siaeEventSectors, {
     fields: [siaeSubscriptions.sectorId],
     references: [siaeEventSectors.id],
+  }),
+  subscriptionType: one(siaeSubscriptionTypes, {
+    fields: [siaeSubscriptions.subscriptionTypeId],
+    references: [siaeSubscriptionTypes.id],
+  }),
+}));
+
+// Tipi Abbonamento (Template per vendita)
+export const siaeSubscriptionTypes = pgTable("siae_subscription_types", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  ticketedEventId: varchar("ticketed_event_id").notNull().references(() => siaeTicketedEvents.id),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  turnType: varchar("turn_type", { length: 1 }).notNull().default('F'),
+  eventsCount: integer("events_count").notNull(),
+  price: decimal("price", { precision: 10, scale: 2 }).notNull(),
+  ivaRate: decimal("iva_rate", { precision: 5, scale: 2 }).notNull().default('22'),
+  validFrom: timestamp("valid_from"),
+  validTo: timestamp("valid_to"),
+  maxQuantity: integer("max_quantity"),
+  soldCount: integer("sold_count").notNull().default(0),
+  active: boolean("active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const siaeSubscriptionTypesRelations = relations(siaeSubscriptionTypes, ({ one }) => ({
+  company: one(companies, {
+    fields: [siaeSubscriptionTypes.companyId],
+    references: [companies.id],
+  }),
+  ticketedEvent: one(siaeTicketedEvents, {
+    fields: [siaeSubscriptionTypes.ticketedEventId],
+    references: [siaeTicketedEvents.id],
   }),
 }));
 
@@ -2732,6 +2768,24 @@ export const insertSiaeSubscriptionSchema = createInsertSchema(siaeSubscriptions
 });
 export const updateSiaeSubscriptionSchema = insertSiaeSubscriptionSchema.partial().omit({ companyId: true, customerId: true });
 
+// Tipi Abbonamento
+export const insertSiaeSubscriptionTypeSchema = createInsertSchema(siaeSubscriptionTypes).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+  soldCount: true,
+}).extend({
+  price: z.union([z.string(), z.coerce.number()]).transform(val => typeof val === 'number' ? val.toString() : val),
+  ivaRate: z.union([z.string(), z.coerce.number()]).transform(val => typeof val === 'number' ? val.toString() : val),
+  validFrom: z.union([z.string(), z.date(), z.null()]).optional().transform(val => 
+    val === null || val === undefined ? null : (typeof val === 'string' ? new Date(val) : val)
+  ),
+  validTo: z.union([z.string(), z.date(), z.null()]).optional().transform(val => 
+    val === null || val === undefined ? null : (typeof val === 'string' ? new Date(val) : val)
+  ),
+});
+export const updateSiaeSubscriptionTypeSchema = insertSiaeSubscriptionTypeSchema.partial().omit({ companyId: true, ticketedEventId: true });
+
 // Audit Logs
 export const insertSiaeAuditLogSchema = createInsertSchema(siaeAuditLogs).omit({
   id: true,
@@ -2873,6 +2927,11 @@ export type UpdateSiaeBoxOfficeSession = z.infer<typeof updateSiaeBoxOfficeSessi
 export type SiaeSubscription = typeof siaeSubscriptions.$inferSelect;
 export type InsertSiaeSubscription = z.infer<typeof insertSiaeSubscriptionSchema>;
 export type UpdateSiaeSubscription = z.infer<typeof updateSiaeSubscriptionSchema>;
+
+// Tipi Abbonamento
+export type SiaeSubscriptionType = typeof siaeSubscriptionTypes.$inferSelect;
+export type InsertSiaeSubscriptionType = z.infer<typeof insertSiaeSubscriptionTypeSchema>;
+export type UpdateSiaeSubscriptionType = z.infer<typeof updateSiaeSubscriptionTypeSchema>;
 
 // Audit Logs
 export type SiaeAuditLog = typeof siaeAuditLogs.$inferSelect;
