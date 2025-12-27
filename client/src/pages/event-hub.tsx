@@ -2367,9 +2367,52 @@ export default function EventHub() {
                                   <CardHeader className="pb-2">
                                     <div className="flex items-start justify-between gap-2">
                                       <CardTitle className="text-lg">{sector.name}</CardTitle>
-                                      <Badge variant={sector.active ? 'default' : 'secondary'}>
-                                        {sector.active ? 'Attivo' : 'Disattivato'}
-                                      </Badge>
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant={sector.active ? 'default' : 'secondary'}>
+                                          {sector.active ? 'Attivo' : 'Disattivato'}
+                                        </Badge>
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7" data-testid={`button-sector-actions-${sector.id}`}>
+                                              <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditSector(sector.id); }}>
+                                              <Edit2 className="h-4 w-4 mr-2" />
+                                              Modifica
+                                            </DropdownMenuItem>
+                                            <DropdownMenuItem onClick={(e) => {
+                                              e.stopPropagation();
+                                              setEditingSector(sector);
+                                              setEditingCapacity(String(sector.capacity));
+                                            }}>
+                                              <Hash className="h-4 w-4 mr-2" />
+                                              Modifica Capienza
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem onClick={(e) => {
+                                              e.stopPropagation();
+                                              updateSectorMutation.mutate({
+                                                ...sector,
+                                                active: !sector.active,
+                                              });
+                                            }}>
+                                              {sector.active ? (
+                                                <>
+                                                  <XCircle className="h-4 w-4 mr-2" />
+                                                  Disattiva
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                                                  Attiva
+                                                </>
+                                              )}
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
+                                      </div>
                                     </div>
                                     <CardDescription>
                                       {minPrice === maxPrice ? `€${minPrice.toFixed(2)}` : `€${minPrice.toFixed(2)} - €${maxPrice.toFixed(2)}`}
@@ -2440,18 +2483,39 @@ export default function EventHub() {
                                         <Badge variant={isSoldOut ? 'destructive' : subType.active !== false ? 'default' : 'secondary'}>
                                           {isSoldOut ? 'Esaurito' : subType.active !== false ? 'Attivo' : 'Disattivato'}
                                         </Badge>
-                                        <Button
-                                          variant="ghost"
-                                          size="icon"
-                                          className="h-7 w-7"
-                                          onClick={(e) => {
-                                            e.stopPropagation();
-                                            handleEditSubscriptionType(subType.id);
-                                          }}
-                                          data-testid={`button-edit-subscription-type-${subType.id}`}
-                                        >
-                                          <Edit2 className="h-4 w-4" />
-                                        </Button>
+                                        <DropdownMenu>
+                                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                            <Button variant="ghost" size="icon" className="h-7 w-7" data-testid={`button-subscription-actions-${subType.id}`}>
+                                              <MoreHorizontal className="h-4 w-4" />
+                                            </Button>
+                                          </DropdownMenuTrigger>
+                                          <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+                                            <DropdownMenuItem onClick={(e) => { e.stopPropagation(); handleEditSubscriptionType(subType.id); }}>
+                                              <Edit2 className="h-4 w-4 mr-2" />
+                                              Modifica
+                                            </DropdownMenuItem>
+                                            <DropdownMenuSeparator />
+                                            <DropdownMenuItem onClick={(e) => {
+                                              e.stopPropagation();
+                                              updateSubscriptionTypeMutation.mutate({
+                                                id: subType.id,
+                                                active: subType.active === false ? true : false,
+                                              });
+                                            }}>
+                                              {subType.active !== false ? (
+                                                <>
+                                                  <XCircle className="h-4 w-4 mr-2" />
+                                                  Disattiva
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <CheckCircle2 className="h-4 w-4 mr-2" />
+                                                  Attiva
+                                                </>
+                                              )}
+                                            </DropdownMenuItem>
+                                          </DropdownMenuContent>
+                                        </DropdownMenu>
                                       </div>
                                     </div>
                                     <CardDescription>
