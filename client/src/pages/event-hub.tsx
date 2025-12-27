@@ -123,6 +123,10 @@ import {
   ExternalLink,
   Banknote,
   Send,
+  ChevronDown,
+  Repeat,
+  UserCog,
+  ShoppingCart,
   Upload,
   Palette,
   XCircle,
@@ -168,6 +172,9 @@ import type {
   SiaeEventSector,
   SiaeTransaction,
   SiaeTicket,
+  SiaeNameChange,
+  SiaeResale,
+  SiaeCustomer,
   User,
   Product,
   Location as LocationType,
@@ -727,6 +734,10 @@ export default function EventHub() {
   const [selectedTicketForDetail, setSelectedTicketForDetail] = useState<SiaeTicket | null>(null);
   const [showTicketDetailSheet, setShowTicketDetailSheet] = useState(false);
 
+  // Cambio nominativo / Rivendita collapsible sections
+  const [nameChangesExpanded, setNameChangesExpanded] = useState(false);
+  const [resalesExpanded, setResalesExpanded] = useState(false);
+
   // Transazioni state
   const [transactionPaymentMethodFilter, setTransactionPaymentMethodFilter] = useState<string>("all");
   const [transactionStatusFilter, setTransactionStatusFilter] = useState<string>("all");
@@ -824,6 +835,18 @@ export default function EventHub() {
   const { data: subscriptionTypes = [] } = useQuery<any[]>({
     queryKey: ['/api/siae/ticketed-events', ticketedEvent?.id, 'subscription-types'],
     enabled: !!ticketedEvent?.id,
+  });
+
+  // Name Changes query (cambio nominativo)
+  const { data: nameChanges = [] } = useQuery<SiaeNameChange[]>({
+    queryKey: ['/api/siae/ticketed-events', ticketedEvent?.id, 'name-changes'],
+    enabled: !!ticketedEvent?.id && ticketedEvent?.allowsChangeName,
+  });
+
+  // Resales query (rivendita)
+  const { data: resales = [] } = useQuery<SiaeResale[]>({
+    queryKey: ['/api/siae/ticketed-events', ticketedEvent?.id, 'resales'],
+    enabled: !!ticketedEvent?.id && ticketedEvent?.allowsResale,
   });
 
   // Sector codes for the new sector dialog
@@ -1301,6 +1324,29 @@ export default function EventHub() {
       toast({
         title: "Errore",
         description: error?.message || "Impossibile aggiornare lo stato vendita",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Update ticketed event flags mutation (cambio nominativo/rivendita)
+  const updateTicketedEventFlagsMutation = useMutation({
+    mutationFn: async (flags: { allowsChangeName?: boolean; allowsResale?: boolean }) => {
+      if (!ticketedEvent) throw new Error("Ticketed event not found");
+      return apiRequest('PATCH', `/api/siae/ticketed-events/${ticketedEvent.id}`, {
+        ...ticketedEvent,
+        ...flags,
+      });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/events', id, 'ticketing'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/ticketed-events'] });
+      toast({ title: "Impostazioni aggiornate" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error?.message || "Impossibile aggiornare le impostazioni",
         variant: "destructive",
       });
     },
@@ -2553,6 +2599,202 @@ export default function EventHub() {
                                 </Card>
                               );
                             })}
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Cambio Nominativo & Rivendita Settings */}
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Cambio Nominativo & Rivendita</CardTitle>
+                        <CardDescription>
+                          Gestione cambio intestatario e rivendita biglietti (SIAE - Provvedimento 356768/2025)
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        {/* Toggle Cambio Nominativo */}
+                        <div className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <UserCog className="h-5 w-5 text-muted-foreground" />
+                              <span className="font-medium">Cambio Nominativo</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Consenti ai clienti di modificare l'intestatario del biglietto (costo €2,50)
+                            </p>
+                          </div>
+                          <Switch
+                            checked={ticketedEvent?.allowsChangeName ?? false}
+                            onCheckedChange={(checked) => updateTicketedEventFlagsMutation.mutate({ allowsChangeName: checked })}
+                            disabled={updateTicketedEventFlagsMutation.isPending}
+                            data-testid="switch-allows-change-name"
+                          />
+                        </div>
+
+                        {/* Sezione Collassabile Cambio Nominativo */}
+                        {ticketedEvent?.allowsChangeName && (
+                          <div className="border rounded-lg overflow-hidden">
+                            <button
+                              className="w-full flex items-center justify-between p-4 hover-elevate text-left"
+                              onClick={() => setNameChangesExpanded(!nameChangesExpanded)}
+                              data-testid="button-expand-name-changes"
+                            >
+                              <div className="flex items-center gap-2">
+                                <UserCog className="h-4 w-4" />
+                                <span className="font-medium">Richieste Cambio Nominativo</span>
+                                <Badge variant="secondary">{nameChanges.length}</Badge>
+                              </div>
+                              <ChevronDown className={`h-4 w-4 transition-transform ${nameChangesExpanded ? 'rotate-180' : ''}`} />
+                            </button>
+                            {nameChangesExpanded && (
+                              <div className="border-t p-4">
+                                {nameChanges.length === 0 ? (
+                                  <p className="text-center text-muted-foreground py-4">Nessuna richiesta di cambio nominativo</p>
+                                ) : (
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Data</TableHead>
+                                        <TableHead>Biglietto</TableHead>
+                                        <TableHead>Nuovo Intestatario</TableHead>
+                                        <TableHead>Costo</TableHead>
+                                        <TableHead>Stato</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {nameChanges.map((change) => (
+                                        <TableRow key={change.id} data-testid={`row-name-change-${change.id}`}>
+                                          <TableCell className="text-sm">
+                                            {change.createdAt ? format(new Date(change.createdAt), 'dd/MM/yyyy HH:mm', { locale: it }) : '-'}
+                                          </TableCell>
+                                          <TableCell className="font-mono text-xs">
+                                            {change.originalTicketId?.substring(0, 8)}...
+                                          </TableCell>
+                                          <TableCell>
+                                            <span className="font-medium">{change.newFirstName} {change.newLastName}</span>
+                                          </TableCell>
+                                          <TableCell>€{Number(change.fee || 2.5).toFixed(2)}</TableCell>
+                                          <TableCell>
+                                            <Badge variant={
+                                              change.status === 'completed' ? 'default' :
+                                              change.status === 'rejected' ? 'destructive' : 'secondary'
+                                            }>
+                                              {change.status === 'completed' ? 'Completato' :
+                                               change.status === 'rejected' ? 'Rifiutato' : 'In Attesa'}
+                                            </Badge>
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        <Separator />
+
+                        {/* Toggle Rivendita */}
+                        <div className="flex items-center justify-between p-4 border rounded-lg">
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-2">
+                              <Repeat className="h-5 w-5 text-muted-foreground" />
+                              <span className="font-medium">Rivendita Biglietti</span>
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Abilita il circuito ufficiale di rivendita (Art. 1 comma 545 L. 232/2016)
+                            </p>
+                          </div>
+                          <Switch
+                            checked={ticketedEvent?.allowsResale ?? false}
+                            onCheckedChange={(checked) => updateTicketedEventFlagsMutation.mutate({ allowsResale: checked })}
+                            disabled={updateTicketedEventFlagsMutation.isPending}
+                            data-testid="switch-allows-resale"
+                          />
+                        </div>
+
+                        {/* Sezione Collassabile Rivendita */}
+                        {ticketedEvent?.allowsResale && (
+                          <div className="border rounded-lg overflow-hidden">
+                            <button
+                              className="w-full flex items-center justify-between p-4 hover-elevate text-left"
+                              onClick={() => setResalesExpanded(!resalesExpanded)}
+                              data-testid="button-expand-resales"
+                            >
+                              <div className="flex items-center gap-2">
+                                <ShoppingCart className="h-4 w-4" />
+                                <span className="font-medium">Biglietti in Rivendita</span>
+                                <Badge variant="secondary">{resales.length}</Badge>
+                              </div>
+                              <ChevronDown className={`h-4 w-4 transition-transform ${resalesExpanded ? 'rotate-180' : ''}`} />
+                            </button>
+                            {resalesExpanded && (
+                              <div className="border-t p-4">
+                                {resales.length === 0 ? (
+                                  <p className="text-center text-muted-foreground py-4">Nessun biglietto in rivendita</p>
+                                ) : (
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Data</TableHead>
+                                        <TableHead>Biglietto</TableHead>
+                                        <TableHead>Prezzo Orig.</TableHead>
+                                        <TableHead>Prezzo Riv.</TableHead>
+                                        <TableHead>Causale</TableHead>
+                                        <TableHead>Venditore</TableHead>
+                                        <TableHead>Stato</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {resales.map((resale) => (
+                                        <TableRow key={resale.id} data-testid={`row-resale-${resale.id}`}>
+                                          <TableCell className="text-sm">
+                                            {resale.listedAt ? format(new Date(resale.listedAt), 'dd/MM/yyyy', { locale: it }) : '-'}
+                                          </TableCell>
+                                          <TableCell className="font-mono text-xs">
+                                            {resale.originalTicketId?.substring(0, 8)}...
+                                          </TableCell>
+                                          <TableCell>€{Number(resale.originalPrice || 0).toFixed(2)}</TableCell>
+                                          <TableCell>€{Number(resale.resalePrice || 0).toFixed(2)}</TableCell>
+                                          <TableCell>
+                                            <Badge variant="outline">
+                                              {resale.causaleRivendita === 'IMP' ? 'Impedimento' :
+                                               resale.causaleRivendita === 'RIN' ? 'Rinuncia' :
+                                               resale.causaleRivendita === 'ERR' ? 'Errore' : 'Altro'}
+                                            </Badge>
+                                          </TableCell>
+                                          <TableCell>
+                                            {resale.venditoreVerificato ? (
+                                              <Badge variant="default" className="gap-1">
+                                                <CheckCircle2 className="h-3 w-3" />
+                                                Verificato
+                                              </Badge>
+                                            ) : (
+                                              <Badge variant="secondary">Non verificato</Badge>
+                                            )}
+                                          </TableCell>
+                                          <TableCell>
+                                            <Badge variant={
+                                              resale.status === 'sold' ? 'default' :
+                                              resale.status === 'cancelled' ? 'destructive' :
+                                              resale.status === 'expired' ? 'secondary' :
+                                              resale.status === 'listed' ? 'outline' : 'secondary'
+                                            }>
+                                              {resale.status === 'sold' ? 'Venduto' :
+                                               resale.status === 'cancelled' ? 'Annullato' :
+                                               resale.status === 'expired' ? 'Scaduto' :
+                                               resale.status === 'listed' ? 'In Vendita' : resale.status}
+                                            </Badge>
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                )}
+                              </div>
+                            )}
                           </div>
                         )}
                       </CardContent>
