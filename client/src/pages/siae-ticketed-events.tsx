@@ -2553,6 +2553,85 @@ export default function SiaeTicketedEventsPage() {
                               </div>
                             )}
 
+                            {/* Tipi Abbonamento Section */}
+                            <div className="space-y-4 mt-6">
+                              <div className="flex items-center justify-between">
+                                <h4 className="font-medium flex items-center gap-2">
+                                  <Package className="w-4 h-4" />
+                                  Tipi Abbonamento
+                                </h4>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => setIsSubscriptionTypeDialogOpen(true)}
+                                  data-testid={`button-add-subscription-type-mobile-${ticketedEvent.id}`}
+                                >
+                                  <Plus className="w-4 h-4 mr-2" />
+                                  Nuovo Tipo
+                                </Button>
+                              </div>
+
+                              {subscriptionTypesLoading ? (
+                                <div className="space-y-2">
+                                  {[1, 2].map((i) => (
+                                    <Skeleton key={i} className="h-12 w-full" />
+                                  ))}
+                                </div>
+                              ) : !subscriptionTypes?.length ? (
+                                <div className="p-4 text-center text-muted-foreground bg-background/50 rounded-lg border border-dashed">
+                                  <Package className="w-6 h-6 mx-auto mb-2 text-muted-foreground" />
+                                  Nessun tipo abbonamento configurato.
+                                </div>
+                              ) : (
+                                <div className="overflow-x-auto">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Nome</TableHead>
+                                        <TableHead>Tipo</TableHead>
+                                        <TableHead>N. Eventi</TableHead>
+                                        <TableHead>Prezzo</TableHead>
+                                        <TableHead>Venduti</TableHead>
+                                        <TableHead>Stato</TableHead>
+                                      </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {subscriptionTypes.map((subType) => (
+                                        <TableRow key={subType.id} data-testid={`row-subscription-type-mobile-${subType.id}`}>
+                                          <TableCell>
+                                            <div>
+                                              <div className="font-medium">{subType.name}</div>
+                                              {subType.description && (
+                                                <div className="text-xs text-muted-foreground">{subType.description}</div>
+                                              )}
+                                            </div>
+                                          </TableCell>
+                                          <TableCell>
+                                            <Badge variant="outline">
+                                              {subType.turnType === 'F' ? 'Fisso' : 'Libero'}
+                                            </Badge>
+                                          </TableCell>
+                                          <TableCell>{subType.eventsCount}</TableCell>
+                                          <TableCell>€{Number(subType.price).toFixed(2)}</TableCell>
+                                          <TableCell>
+                                            {subType.soldCount}
+                                            {subType.maxQuantity && ` / ${subType.maxQuantity}`}
+                                          </TableCell>
+                                          <TableCell>
+                                            {subType.active ? (
+                                              <Badge className="bg-emerald-500/20 text-emerald-400">Attivo</Badge>
+                                            ) : (
+                                              <Badge variant="secondary">Inattivo</Badge>
+                                            )}
+                                          </TableCell>
+                                        </TableRow>
+                                      ))}
+                                    </TableBody>
+                                  </Table>
+                                </div>
+                              )}
+                            </div>
+
                             {/* Informazioni Pubbliche */}
                             <div className="mt-6 p-4 rounded-lg bg-background/50 border border-border/50" data-testid={`section-public-info-${ticketedEvent.id}`}>
                               <h4 className="font-medium mb-4 flex items-center gap-2">
