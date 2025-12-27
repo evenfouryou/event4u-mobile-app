@@ -2779,13 +2779,14 @@ export default function EventHub() {
                                             <Badge variant={
                                               resale.status === 'sold' ? 'default' :
                                               resale.status === 'cancelled' ? 'destructive' :
-                                              resale.status === 'expired' ? 'secondary' :
-                                              resale.status === 'listed' ? 'outline' : 'secondary'
+                                              resale.status === 'expired' ? 'outline' :
+                                              resale.status === 'rejected' ? 'destructive' : 'secondary'
                                             }>
                                               {resale.status === 'sold' ? 'Venduto' :
                                                resale.status === 'cancelled' ? 'Annullato' :
                                                resale.status === 'expired' ? 'Scaduto' :
-                                               resale.status === 'listed' ? 'In Vendita' : resale.status}
+                                               resale.status === 'listed' ? 'In Vendita' :
+                                               resale.status === 'rejected' ? 'Rifiutato' : resale.status}
                                             </Badge>
                                           </TableCell>
                                         </TableRow>
