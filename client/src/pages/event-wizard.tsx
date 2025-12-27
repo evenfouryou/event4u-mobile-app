@@ -1892,6 +1892,70 @@ export default function EventWizard() {
                       <span className="text-muted-foreground">Quantità Totale:</span>
                       <span className="font-semibold">{siaeSectors.reduce((sum, s) => sum + s.quantity, 0)} biglietti</span>
                     </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Abbonamenti:</span>
+                      <span>{siaeSubscriptionTypes.length}</span>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* Dettaglio Biglietti e Abbonamenti - Mobile */}
+              {siaeEnabled && siaeSectors.length > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.15 }}
+                  className="space-y-3 p-5 bg-muted rounded-2xl"
+                >
+                  <h4 className="text-base font-semibold flex items-center gap-2">
+                    <Ticket className="h-4 w-4" />
+                    Biglietti Configurati
+                  </h4>
+                  <div className="space-y-2">
+                    {siaeSectors.map((sector, index) => (
+                      <div key={sector.id} className="flex justify-between items-center text-sm border-b border-border/50 pb-2 last:border-0">
+                        <div>
+                          <span className="font-medium">{sector.name || `Biglietto ${index + 1}`}</span>
+                          <span className="text-muted-foreground ml-1 text-xs">
+                            ({sector.ticketType === 'INT' ? 'Intero' : sector.ticketType === 'RID' ? 'Ridotto' : 'Omaggio'})
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-semibold">€{Number(sector.price).toFixed(2)}</span>
+                          <span className="text-muted-foreground ml-1 text-xs">x{sector.quantity}</span>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </motion.div>
+              )}
+
+              {siaeEnabled && siaeSubscriptionTypes.length > 0 && (
+                <motion.div 
+                  initial={{ opacity: 0, y: 10 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="space-y-3 p-5 bg-muted rounded-2xl"
+                >
+                  <h4 className="text-base font-semibold flex items-center gap-2">
+                    <Users className="h-4 w-4" />
+                    Abbonamenti Configurati
+                  </h4>
+                  <div className="space-y-2">
+                    {siaeSubscriptionTypes.map((subType, index) => (
+                      <div key={subType.id} className="flex justify-between items-center text-sm border-b border-border/50 pb-2 last:border-0">
+                        <div>
+                          <span className="font-medium">{subType.name || `Abbonamento ${index + 1}`}</span>
+                          <span className="text-muted-foreground ml-1 text-xs">
+                            ({subType.turnType === 'F' ? 'Fisso' : 'Libero'} - {subType.eventsCount} ev.)
+                          </span>
+                        </div>
+                        <div className="text-right">
+                          <span className="font-semibold">€{Number(subType.price).toFixed(2)}</span>
+                        </div>
+                      </div>
+                    ))}
                   </div>
                 </motion.div>
               )}
@@ -2908,10 +2972,68 @@ export default function EventWizard() {
                             <span className="text-muted-foreground">Quantità Totale:</span>
                             <span>{siaeSectors.reduce((sum, s) => sum + s.quantity, 0)} biglietti</span>
                           </div>
+                          <div className="flex justify-between">
+                            <span className="text-muted-foreground">Abbonamenti:</span>
+                            <span>{siaeSubscriptionTypes.length}</span>
+                          </div>
                         </div>
                       </Card>
                     )}
                   </div>
+
+                  {/* Dettaglio Biglietti e Abbonamenti */}
+                  {siaeEnabled && (siaeSectors.length > 0 || siaeSubscriptionTypes.length > 0) && (
+                    <div className="grid grid-cols-2 gap-6">
+                      {siaeSectors.length > 0 && (
+                        <Card className="p-4 space-y-3">
+                          <h4 className="font-semibold flex items-center gap-2">
+                            <Ticket className="h-4 w-4" />
+                            Biglietti Configurati
+                          </h4>
+                          <div className="space-y-2">
+                            {siaeSectors.map((sector, index) => (
+                              <div key={sector.id} className="flex justify-between items-center text-sm border-b pb-2 last:border-0">
+                                <div>
+                                  <span className="font-medium">{sector.name || `Biglietto ${index + 1}`}</span>
+                                  <span className="text-muted-foreground ml-2">
+                                    ({sector.ticketType === 'INT' ? 'Intero' : sector.ticketType === 'RID' ? 'Ridotto' : 'Omaggio'})
+                                  </span>
+                                </div>
+                                <div className="text-right">
+                                  <span className="font-semibold">€{Number(sector.price).toFixed(2)}</span>
+                                  <span className="text-muted-foreground ml-2">x{sector.quantity}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </Card>
+                      )}
+
+                      {siaeSubscriptionTypes.length > 0 && (
+                        <Card className="p-4 space-y-3">
+                          <h4 className="font-semibold flex items-center gap-2">
+                            <Users className="h-4 w-4" />
+                            Abbonamenti Configurati
+                          </h4>
+                          <div className="space-y-2">
+                            {siaeSubscriptionTypes.map((subType, index) => (
+                              <div key={subType.id} className="flex justify-between items-center text-sm border-b pb-2 last:border-0">
+                                <div>
+                                  <span className="font-medium">{subType.name || `Abbonamento ${index + 1}`}</span>
+                                  <span className="text-muted-foreground ml-2">
+                                    ({subType.turnType === 'F' ? 'Turno Fisso' : 'Turno Libero'} - {subType.eventsCount} eventi)
+                                  </span>
+                                </div>
+                                <div className="text-right">
+                                  <span className="font-semibold">€{Number(subType.price).toFixed(2)}</span>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </Card>
+                      )}
+                    </div>
+                  )}
 
                   <FormField
                     control={form.control}
