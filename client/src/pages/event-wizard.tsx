@@ -65,7 +65,7 @@ const BASE_STEPS = [
 
 const SIAE_STEPS = [
   { id: 4, title: "SIAE", icon: Ticket, fullTitle: "Biglietteria SIAE" },
-  { id: 5, title: "Biglietti", icon: Euro, fullTitle: "Biglietti e Abbonamenti" },
+  { id: 5, title: "Biglietti & Abbonamenti", icon: Euro, fullTitle: "Biglietti e Abbonamenti" },
 ];
 
 const FINAL_STEP = { id: 6, title: "Riepilogo", icon: CheckCircle2, fullTitle: "Riepilogo" };
