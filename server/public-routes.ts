@@ -3550,10 +3550,18 @@ router.post("/api/public/account/name-change", async (req, res) => {
       return res.status(401).json({ message: "Non autenticato" });
     }
 
-    const { ticketId, newFirstName, newLastName, newEmail, newPhone } = req.body;
+    const { 
+      ticketId, 
+      newFirstName, 
+      newLastName, 
+      newFiscalCode,
+      newDocumentType,
+      newDocumentNumber,
+      newDateOfBirth 
+    } = req.body;
 
-    if (!ticketId || !newFirstName || !newLastName) {
-      return res.status(400).json({ message: "Dati incompleti" });
+    if (!ticketId || !newFirstName || !newLastName || !newFiscalCode || !newDocumentType || !newDocumentNumber || !newDateOfBirth) {
+      return res.status(400).json({ message: "Dati incompleti. Tutti i campi sono obbligatori secondo le norme SIAE." });
     }
 
     // Verifica biglietto e permessi
@@ -3581,7 +3589,7 @@ router.post("/api/public/account/name-change", async (req, res) => {
       return res.status(404).json({ message: "Biglietto non trovato" });
     }
 
-    if (ticket.status !== 'emitted') {
+    if (ticket.status !== 'emitted' && ticket.status !== 'active') {
       return res.status(400).json({ message: "Biglietto non valido per cambio nominativo" });
     }
 
@@ -3599,7 +3607,7 @@ router.post("/api/public/account/name-change", async (req, res) => {
       });
     }
 
-    // Crea richiesta cambio nominativo
+    // Crea richiesta cambio nominativo con dati SIAE completi
     const [nameChange] = await db
       .insert(siaeNameChanges)
       .values({
@@ -3608,6 +3616,10 @@ router.post("/api/public/account/name-change", async (req, res) => {
         requestedByType: 'customer',
         newFirstName,
         newLastName,
+        newFiscalCode: newFiscalCode.toUpperCase(),
+        newDocumentType,
+        newDocumentNumber,
+        newDateOfBirth,
         fee: '0',
         status: 'pending',
       })

@@ -5,6 +5,13 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { format } from "date-fns";
@@ -47,6 +54,12 @@ import {
 const nameChangeSchema = z.object({
   newFirstName: z.string().min(2, "Il nome deve avere almeno 2 caratteri"),
   newLastName: z.string().min(2, "Il cognome deve avere almeno 2 caratteri"),
+  newFiscalCode: z.string().length(16, "Il codice fiscale deve essere di 16 caratteri").toUpperCase(),
+  newDocumentType: z.enum(["carta_identita", "passaporto", "patente"], {
+    required_error: "Seleziona un tipo di documento",
+  }),
+  newDocumentNumber: z.string().min(5, "Inserisci un numero documento valido"),
+  newDateOfBirth: z.string().min(1, "Inserisci la data di nascita"),
 });
 
 type NameChangeFormData = z.infer<typeof nameChangeSchema>;
@@ -85,6 +98,10 @@ export default function AccountNameChange() {
     defaultValues: {
       newFirstName: "",
       newLastName: "",
+      newFiscalCode: "",
+      newDocumentType: undefined,
+      newDocumentNumber: "",
+      newDateOfBirth: "",
     },
   });
 
@@ -94,6 +111,10 @@ export default function AccountNameChange() {
         ticketId: id,
         newFirstName: data.newFirstName,
         newLastName: data.newLastName,
+        newFiscalCode: data.newFiscalCode.toUpperCase(),
+        newDocumentType: data.newDocumentType,
+        newDocumentNumber: data.newDocumentNumber,
+        newDateOfBirth: data.newDateOfBirth,
       });
     },
     onSuccess: () => {
@@ -275,6 +296,94 @@ export default function AccountNameChange() {
                   />
                 </div>
 
+                <FormField
+                  control={form.control}
+                  name="newFiscalCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Codice Fiscale</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="RSSMRA85M01H501Z"
+                          maxLength={16}
+                          {...field}
+                          onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                          data-testid="input-fiscal-code"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={form.control}
+                  name="newDateOfBirth"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Data di Nascita</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          {...field}
+                          data-testid="input-date-of-birth"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <div className="grid grid-cols-2 gap-4">
+                  <FormField
+                    control={form.control}
+                    name="newDocumentType"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Tipo Documento</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-document-type">
+                              <SelectValue placeholder="Seleziona..." />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="carta_identita">Carta d'Identità</SelectItem>
+                            <SelectItem value="passaporto">Passaporto</SelectItem>
+                            <SelectItem value="patente">Patente di Guida</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+
+                  <FormField
+                    control={form.control}
+                    name="newDocumentNumber"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Numero Documento</FormLabel>
+                        <FormControl>
+                          <Input
+                            placeholder="AB1234567"
+                            {...field}
+                            data-testid="input-document-number"
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+
+                <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
+                  <p className="text-xs text-amber-700 dark:text-amber-300">
+                    Secondo le normative SIAE, tutti i dati sono obbligatori per il cambio nominativo.
+                    I dati saranno utilizzati esclusivamente per la gestione del biglietto.
+                  </p>
+                </div>
+
                 <div className="pt-4 flex justify-end gap-3">
                   <Link href={`/account/tickets/${id}`}>
                     <Button type="button" variant="outline" data-testid="button-cancel">
@@ -440,6 +549,91 @@ export default function AccountNameChange() {
                 </FormItem>
               )}
             />
+
+            <FormField
+              control={form.control}
+              name="newFiscalCode"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Codice Fiscale</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="RSSMRA85M01H501Z"
+                      maxLength={16}
+                      {...field}
+                      onChange={(e) => field.onChange(e.target.value.toUpperCase())}
+                      data-testid="input-fiscal-code"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="newDateOfBirth"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Data di Nascita</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      {...field}
+                      data-testid="input-date-of-birth"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="newDocumentType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Tipo Documento</FormLabel>
+                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <FormControl>
+                      <SelectTrigger data-testid="select-document-type">
+                        <SelectValue placeholder="Seleziona..." />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="carta_identita">Carta d'Identità</SelectItem>
+                      <SelectItem value="passaporto">Passaporto</SelectItem>
+                      <SelectItem value="patente">Patente di Guida</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="newDocumentNumber"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Numero Documento</FormLabel>
+                  <FormControl>
+                    <Input
+                      placeholder="AB1234567"
+                      {...field}
+                      data-testid="input-document-number"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <div className="bg-amber-50 dark:bg-amber-950/30 rounded-lg p-4 border border-amber-200 dark:border-amber-800">
+              <p className="text-xs text-amber-700 dark:text-amber-300">
+                Secondo le normative SIAE, tutti i dati sono obbligatori per il cambio nominativo.
+              </p>
+            </div>
 
             <div className="pt-4 flex flex-col gap-3">
               <Button

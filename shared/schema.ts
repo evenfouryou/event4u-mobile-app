@@ -6,6 +6,7 @@ import {
   jsonb,
   pgTable,
   timestamp,
+  date,
   varchar,
   text,
   integer,
@@ -1475,9 +1476,13 @@ export const siaeNameChanges = pgTable("siae_name_changes", {
   newTicketId: varchar("new_ticket_id").references(() => siaeTickets.id),
   requestedById: varchar("requested_by_id").notNull(), // Customer o User ID
   requestedByType: varchar("requested_by_type", { length: 20 }).notNull(), // customer, operator
-  // Nuovo nominativo
+  // Nuovo nominativo - Dati anagrafici SIAE obbligatori
   newFirstName: varchar("new_first_name", { length: 100 }).notNull(),
   newLastName: varchar("new_last_name", { length: 100 }).notNull(),
+  newFiscalCode: varchar("new_fiscal_code", { length: 16 }), // Codice fiscale italiano
+  newDocumentType: varchar("new_document_type", { length: 30 }), // CI, passaporto, patente
+  newDocumentNumber: varchar("new_document_number", { length: 50 }), // Numero documento
+  newDateOfBirth: date("new_date_of_birth"), // Data di nascita
   // Costi
   fee: decimal("fee", { precision: 10, scale: 2 }).default('0'),
   // Stato
