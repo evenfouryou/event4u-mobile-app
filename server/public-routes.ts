@@ -3760,7 +3760,7 @@ router.get("/api/public/events/:eventId/subscriptions", async (req, res) => {
     const [ticketedEvent] = await db
       .select()
       .from(siaeTicketedEvents)
-      .where(eq(siaeTicketedEvents.eventId, parseInt(eventId)));
+      .where(eq(siaeTicketedEvents.eventId, eventId));
 
     if (!ticketedEvent) {
       return res.json([]);

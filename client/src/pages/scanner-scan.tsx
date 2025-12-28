@@ -117,6 +117,7 @@ export default function ScannerScanPage() {
   const isMobile = useIsMobile();
   const inputRef = useRef<HTMLInputElement>(null);
   const scannerRef = useRef<Html5Qrcode | null>(null);
+  const handleScanRef = useRef<(code: string) => void>(() => {});
   const scannerContainerId = "qr-reader-container";
   
   const [scanResult, setScanResult] = useState<ScanResult | null>(null);
@@ -206,6 +207,9 @@ export default function ScannerScanPage() {
     scanMutation.mutate(code.trim());
   }, [isProcessing, scanMutation]);
 
+  // Keep the ref updated with the latest handleScan
+  handleScanRef.current = handleScan;
+
   const handleSearch = async (query: string) => {
     if (query.trim().length < 2) {
       setSearchResults([]);
@@ -249,9 +253,8 @@ export default function ScannerScanPage() {
           aspectRatio: 1,
         },
         (decodedText) => {
-          if (!isProcessing) {
-            handleScan(decodedText);
-          }
+          // Use ref to always get the latest handleScan function
+          handleScanRef.current(decodedText);
         },
         () => {}
       );
