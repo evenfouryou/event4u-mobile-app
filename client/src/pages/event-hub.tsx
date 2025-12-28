@@ -119,6 +119,7 @@ import {
   Volume2,
   VolumeX,
   X,
+  Check,
   LogIn,
   Link2,
   Copy,
@@ -1365,7 +1366,7 @@ export default function EventHub() {
 
   // Update ticketed event flags mutation (cambio nominativo/rivendita)
   const updateTicketedEventFlagsMutation = useMutation({
-    mutationFn: async (flags: { allowsChangeName?: boolean; allowsResale?: boolean }) => {
+    mutationFn: async (flags: { allowsChangeName?: boolean; allowsResale?: boolean; autoApproveNameChanges?: boolean }) => {
       if (!ticketedEvent) throw new Error("Ticketed event not found");
       return apiRequest('PATCH', `/api/siae/ticketed-events/${ticketedEvent.id}`, flags);
     },
@@ -1378,6 +1379,25 @@ export default function EventHub() {
       toast({
         title: "Errore",
         description: error?.message || "Impossibile aggiornare le impostazioni",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Process name change request mutation
+  const processNameChangeMutation = useMutation({
+    mutationFn: async ({ id, action, rejectionReason }: { id: string; action: 'approve' | 'reject'; rejectionReason?: string }) => {
+      return apiRequest('POST', `/api/siae/name-changes/${id}/process`, { action, rejectionReason });
+    },
+    onSuccess: (data: any) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/ticketed-events', ticketedEvent?.id, 'name-changes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/tickets'] });
+      toast({ title: data?.autoApproved ? "Cambio nominativo approvato automaticamente" : "Cambio nominativo processato" });
+    },
+    onError: (error: any) => {
+      toast({
+        title: "Errore",
+        description: error?.message || "Impossibile processare la richiesta",
         variant: "destructive",
       });
     },
@@ -2956,6 +2976,24 @@ export default function EventHub() {
                           />
                         </div>
 
+                        {/* Auto-Approval Toggle */}
+                        {ticketedEvent?.allowsChangeName && (
+                          <div className="flex items-center justify-between p-3 border rounded-lg bg-background/50 ml-4">
+                            <div className="space-y-1">
+                              <span className="font-medium text-sm">Approvazione Automatica</span>
+                              <p className="text-xs text-muted-foreground">
+                                Processa automaticamente le richieste se il bridge è connesso
+                              </p>
+                            </div>
+                            <Switch
+                              checked={ticketedEvent?.autoApproveNameChanges ?? false}
+                              onCheckedChange={(checked) => updateTicketedEventFlagsMutation.mutate({ autoApproveNameChanges: checked })}
+                              disabled={updateTicketedEventFlagsMutation.isPending}
+                              data-testid="switch-auto-approve-name-changes"
+                            />
+                          </div>
+                        )}
+
                         {/* Sezione Collassabile Cambio Nominativo */}
                         {ticketedEvent?.allowsChangeName && (
                           <div className="border rounded-lg overflow-hidden">
@@ -2984,6 +3022,7 @@ export default function EventHub() {
                                         <TableHead>Nuovo Intestatario</TableHead>
                                         <TableHead>Costo</TableHead>
                                         <TableHead>Stato</TableHead>
+                                        <TableHead>Azioni</TableHead>
                                       </TableRow>
                                     </TableHeader>
                                     <TableBody>
@@ -3007,6 +3046,32 @@ export default function EventHub() {
                                               {change.status === 'completed' ? 'Completato' :
                                                change.status === 'rejected' ? 'Rifiutato' : 'In Attesa'}
                                             </Badge>
+                                          </TableCell>
+                                          <TableCell>
+                                            {change.status === 'pending' && (
+                                              <div className="flex items-center gap-1">
+                                                <Button
+                                                  size="icon"
+                                                  variant="ghost"
+                                                  className="h-7 w-7 text-green-600 hover:text-green-700"
+                                                  onClick={() => processNameChangeMutation.mutate({ id: change.id, action: 'approve' })}
+                                                  disabled={processNameChangeMutation.isPending}
+                                                  data-testid={`button-approve-name-change-${change.id}`}
+                                                >
+                                                  <Check className="h-4 w-4" />
+                                                </Button>
+                                                <Button
+                                                  size="icon"
+                                                  variant="ghost"
+                                                  className="h-7 w-7 text-red-600 hover:text-red-700"
+                                                  onClick={() => processNameChangeMutation.mutate({ id: change.id, action: 'reject' })}
+                                                  disabled={processNameChangeMutation.isPending}
+                                                  data-testid={`button-reject-name-change-${change.id}`}
+                                                >
+                                                  <X className="h-4 w-4" />
+                                                </Button>
+                                              </div>
+                                            )}
                                           </TableCell>
                                         </TableRow>
                                       ))}
