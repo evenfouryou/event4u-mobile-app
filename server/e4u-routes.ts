@@ -1680,6 +1680,52 @@ router.get("/api/e4u/scanner/search/:eventId", requireAuth, async (req: Request,
       }
     }
     
+    // Search in SIAE tickets (join with customers for name/phone)
+    const [ticketedEvent] = await db.select()
+      .from(siaeTicketedEvents)
+      .where(eq(siaeTicketedEvents.eventId, eventId));
+    
+    if (ticketedEvent) {
+      const ticketsData = await db.select({
+        ticket: siaeTickets,
+        customer: siaeCustomers,
+        sector: siaeEventSectors,
+      })
+      .from(siaeTickets)
+      .leftJoin(siaeCustomers, eq(siaeTickets.customerId, siaeCustomers.id))
+      .leftJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
+      .where(eq(siaeTickets.ticketedEventId, ticketedEvent.id));
+      
+      for (const { ticket, customer, sector } of ticketsData) {
+        if (ticket.status === 'cancelled') continue;
+        
+        const firstName = (customer?.firstName || '').toLowerCase();
+        const lastName = (customer?.lastName || '').toLowerCase();
+        const phone = (customer?.phone || '').replace(/\s/g, '');
+        const searchPhone = searchTerm.replace(/\s/g, '');
+        const ticketCode = (ticket.ticketCode || '').toLowerCase();
+        
+        if (firstName.includes(searchTerm) || 
+            lastName.includes(searchTerm) ||
+            `${firstName} ${lastName}`.includes(searchTerm) ||
+            (phone && phone.includes(searchPhone)) ||
+            ticketCode.includes(searchTerm)) {
+          results.push({
+            id: ticket.id,
+            type: 'biglietto',
+            firstName: customer?.firstName || 'N/D',
+            lastName: customer?.lastName || '',
+            phone: customer?.phone,
+            ticketCode: ticket.ticketCode,
+            sector: sector?.name,
+            status: ticket.status,
+            checkedInAt: ticket.validatedAt,
+            qrCode: `E4U-TKT-${ticket.id.substring(0, 8)}-${ticket.ticketCode}`,
+          });
+        }
+      }
+    }
+    
     // Limit results
     res.json(results.slice(0, 20));
   } catch (error: any) {
