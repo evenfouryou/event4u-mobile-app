@@ -2926,8 +2926,21 @@ router.post("/api/siae/tickets/:id/cancel", requireAuth, requireGestore, async (
         console.log(`[SIAE] Refund created for ticket ${id}: ${refund.id}, status: ${refund.status}`);
       } catch (stripeError: any) {
         console.error(`[SIAE] Stripe refund failed for ticket ${id}:`, stripeError.message);
-        return res.status(500).json({ 
-          message: `Errore durante il rimborso Stripe: ${stripeError.message}`,
+        
+        // Translate common Stripe error messages to Italian
+        let userMessage = stripeError.message;
+        if (stripeError.message?.includes('already been refunded')) {
+          userMessage = "Questo pagamento è già stato rimborsato in precedenza.";
+        } else if (stripeError.message?.includes('insufficient funds')) {
+          userMessage = "Fondi insufficienti per elaborare il rimborso.";
+        } else if (stripeError.message?.includes('charge_already_refunded')) {
+          userMessage = "Questo pagamento è già stato rimborsato in precedenza.";
+        } else if (stripeError.message?.includes('No such payment_intent')) {
+          userMessage = "Pagamento non trovato. Potrebbe essere stato già rimborsato o non esiste.";
+        }
+        
+        return res.status(400).json({ 
+          message: userMessage,
           code: "STRIPE_REFUND_FAILED"
         });
       }
@@ -2998,6 +3011,13 @@ router.post("/api/siae/subscriptions/:id/cancel", requireAuth, requireGestore, a
       return res.status(400).json({ message: `Stato abbonamento non valido per annullamento: ${subscription.status}` });
     }
 
+    // Check if subscription has been used (scanned)
+    if (subscription.eventsUsed && subscription.eventsUsed > 0) {
+      return res.status(400).json({ 
+        message: `Impossibile annullare: l'abbonamento è già stato utilizzato per ${subscription.eventsUsed} evento/i. Gli abbonamenti già scansionati non possono essere annullati.` 
+      });
+    }
+
     let refundId: string | null = null;
     let refundStatus: string | null = null;
 
@@ -3049,8 +3069,21 @@ router.post("/api/siae/subscriptions/:id/cancel", requireAuth, requireGestore, a
         console.log(`[SIAE] Refund created for subscription ${id}: ${refund.id}, status: ${refund.status}`);
       } catch (stripeError: any) {
         console.error(`[SIAE] Stripe refund failed for subscription ${id}:`, stripeError.message);
-        return res.status(500).json({ 
-          message: `Errore durante il rimborso Stripe: ${stripeError.message}`,
+        
+        // Translate common Stripe error messages to Italian
+        let userMessage = stripeError.message;
+        if (stripeError.message?.includes('already been refunded')) {
+          userMessage = "Questo pagamento è già stato rimborsato in precedenza.";
+        } else if (stripeError.message?.includes('insufficient funds')) {
+          userMessage = "Fondi insufficienti per elaborare il rimborso.";
+        } else if (stripeError.message?.includes('charge_already_refunded')) {
+          userMessage = "Questo pagamento è già stato rimborsato in precedenza.";
+        } else if (stripeError.message?.includes('No such payment_intent')) {
+          userMessage = "Pagamento non trovato. Potrebbe essere stato già rimborsato o non esiste.";
+        }
+        
+        return res.status(400).json({ 
+          message: userMessage,
           code: "STRIPE_REFUND_FAILED"
         });
       }

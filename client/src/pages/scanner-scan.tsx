@@ -276,26 +276,32 @@ export default function ScannerScanPage() {
   const startCamera = async () => {
     try {
       setCameraError(null);
-      const scanner = new Html5Qrcode(scannerContainerId);
+      const scanner = new Html5Qrcode(scannerContainerId, {
+        verbose: false,
+        formatsToSupport: [0], // 0 = QR_CODE only for better performance
+      });
       scannerRef.current = scanner;
       
       await scanner.start(
         { facingMode: "environment" },
         {
-          fps: 10,
-          qrbox: { width: 260, height: 260 },
+          fps: 15, // Increased from 10 for faster scanning
+          qrbox: { width: 300, height: 300 }, // Larger scan area for printed QR codes
           aspectRatio: 1,
+          disableFlip: false, // Allow image flipping for better detection
         },
         (decodedText) => {
+          console.log('[Scanner] QR code decoded:', decodedText);
           // Use ref to always get the latest handleScan function
           handleScanRef.current(decodedText);
         },
-        () => {}
+        () => {} // Ignore error callback (continuous scanning)
       );
       
       setCameraActive(true);
       setViewfinderState("scanning");
     } catch (error: any) {
+      console.error('[Scanner] Camera error:', error);
       setCameraError("Fotocamera non disponibile");
       setCameraActive(false);
     }
