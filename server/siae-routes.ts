@@ -2476,17 +2476,17 @@ router.post("/api/siae/companies/:companyId/transmissions/send-c1", requireAuth,
       <SigilloFiscale>${escapeXml(ticket.fiscalSealCode)}</SigilloFiscale>
       <TipologiaTitolo>${escapeXml(ticket.ticketTypeCode)}</TipologiaTitolo>
       <DataOraEmissione>${formatSiaeDateTime(ticket.emissionDate)}</DataOraEmissione>
-      <CodiceCanale>${escapeXml(ticket.emissionChannelCode)}</CodiceCanale>
+      <CodiceCanale>${escapeXml(ticket.emissionChannelCode || 'WEB')}</CodiceCanale>
       <ImportoLordo>${parseFloat(ticket.grossAmount || '0').toFixed(2)}</ImportoLordo>
       <ImportoNetto>${parseFloat(ticket.netAmount || '0').toFixed(2)}</ImportoNetto>
       <Diritti>0.00</Diritti>
       <IVA>${parseFloat(ticket.vatAmount || '0').toFixed(2)}</IVA>
-      <CodiceGenere>${escapeXml(ticketedEvent?.genreCode || '')}</CodiceGenere>
-      <CodicePrestazione>${escapeXml(ticket.ticketTypeCode || '')}</CodicePrestazione>
-      <DataEvento>${formatSiaeDate(ticketedEvent?.saleStartDate || null)}</DataEvento>
+      <CodiceGenere>${escapeXml(ticketedEvent?.genreCode || '60')}</CodiceGenere>
+      <CodicePrestazione>${escapeXml(ticket.ticketTypeCode || 'INT')}</CodicePrestazione>
+      <DataEvento>${formatSiaeDate(ticketedEvent?.eventDate || ticketedEvent?.saleStartDate || null)}</DataEvento>
       <NominativoAcquirente>
-        <Nome>${escapeXml(ticket.participantFirstName || '')}</Nome>
-        <Cognome>${escapeXml(ticket.participantLastName || '')}</Cognome>
+        <Nome>${escapeXml(ticket.participantFirstName || 'N/D')}</Nome>
+        <Cognome>${escapeXml(ticket.participantLastName || 'N/D')}</Cognome>
       </NominativoAcquirente>
       <Stato>${escapeXml(ticket.status)}</Stato>
     </Titolo>`;
@@ -2621,17 +2621,17 @@ router.post("/api/siae/companies/:companyId/transmissions/send-daily", requireAu
       <SigilloFiscale>${escapeXml(ticket.fiscalSealCode)}</SigilloFiscale>
       <TipologiaTitolo>${escapeXml(ticket.ticketTypeCode)}</TipologiaTitolo>
       <DataOraEmissione>${formatSiaeDateTime(ticket.emissionDate)}</DataOraEmissione>
-      <CodiceCanale>${escapeXml(ticket.emissionChannelCode)}</CodiceCanale>
+      <CodiceCanale>${escapeXml(ticket.emissionChannelCode || 'WEB')}</CodiceCanale>
       <ImportoLordo>${parseFloat(ticket.grossAmount || '0').toFixed(2)}</ImportoLordo>
       <ImportoNetto>${parseFloat(ticket.netAmount || '0').toFixed(2)}</ImportoNetto>
       <Diritti>0.00</Diritti>
       <IVA>${parseFloat(ticket.vatAmount || '0').toFixed(2)}</IVA>
-      <CodiceGenere>${escapeXml(ticketedEvent?.genreCode || '')}</CodiceGenere>
-      <CodicePrestazione>${escapeXml(ticket.ticketTypeCode || '')}</CodicePrestazione>
-      <DataEvento>${formatSiaeDate(ticketedEvent?.saleStartDate || null)}</DataEvento>
+      <CodiceGenere>${escapeXml(ticketedEvent?.genreCode || '60')}</CodiceGenere>
+      <CodicePrestazione>${escapeXml(ticket.ticketTypeCode || 'INT')}</CodicePrestazione>
+      <DataEvento>${formatSiaeDate(ticketedEvent?.eventDate || ticketedEvent?.saleStartDate || null)}</DataEvento>
       <NominativoAcquirente>
-        <Nome>${escapeXml(ticket.participantFirstName || '')}</Nome>
-        <Cognome>${escapeXml(ticket.participantLastName || '')}</Cognome>
+        <Nome>${escapeXml(ticket.participantFirstName || 'N/D')}</Nome>
+        <Cognome>${escapeXml(ticket.participantLastName || 'N/D')}</Cognome>
       </NominativoAcquirente>
       <Stato>${escapeXml(ticket.status)}</Stato>
     </Titolo>`;
@@ -3332,17 +3332,17 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
       <SigilloFiscale>${escapeXml(ticket.fiscalSealCode)}</SigilloFiscale>
       <TipologiaTitolo>${escapeXml(ticket.ticketTypeCode)}</TipologiaTitolo>
       <DataOraEmissione>${formatSiaeDateTime(ticket.emissionDate)}</DataOraEmissione>
-      <CodiceCanale>${escapeXml(ticket.emissionChannelCode)}</CodiceCanale>
+      <CodiceCanale>${escapeXml(ticket.emissionChannelCode || 'WEB')}</CodiceCanale>
       <ImportoLordo>${parseFloat(ticket.grossAmount || '0').toFixed(2)}</ImportoLordo>
       <ImportoNetto>${parseFloat(ticket.netAmount || '0').toFixed(2)}</ImportoNetto>
       <Diritti>0.00</Diritti>
       <IVA>${parseFloat(ticket.vatAmount || '0').toFixed(2)}</IVA>
-      <CodiceGenere>${escapeXml(ticketedEvent?.genreCode || '')}</CodiceGenere>
-      <CodicePrestazione>${escapeXml(ticket.ticketTypeCode || '')}</CodicePrestazione>
-      <DataEvento>${formatSiaeDate(ticketedEvent?.saleStartDate || null)}</DataEvento>
+      <CodiceGenere>${escapeXml(ticketedEvent?.genreCode || '60')}</CodiceGenere>
+      <CodicePrestazione>${escapeXml(ticket.ticketTypeCode || 'INT')}</CodicePrestazione>
+      <DataEvento>${formatSiaeDate(ticketedEvent?.eventDate || ticketedEvent?.saleStartDate || null)}</DataEvento>
       <NominativoAcquirente>
-        <Nome>${escapeXml(ticket.participantFirstName || '')}</Nome>
-        <Cognome>${escapeXml(ticket.participantLastName || '')}</Cognome>
+        <Nome>${escapeXml(ticket.participantFirstName || 'N/D')}</Nome>
+        <Cognome>${escapeXml(ticket.participantLastName || 'N/D')}</Cognome>
       </NominativoAcquirente>
       <Stato>${escapeXml(ticket.status)}</Stato>
     </Titolo>`;
