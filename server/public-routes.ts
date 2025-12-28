@@ -1858,6 +1858,10 @@ router.post("/api/public/checkout/confirm", async (req, res) => {
         const ticketType = item.ticketType || "intero";
         const ticketTypeCode = ticketType === "intero" ? "INT" : (ticketType === "ridotto" ? "RID" : "OMG");
         
+        // Calcola progressivo sequenziale dell'evento (non il contatore della carta)
+        // Il progressiveNumber deve essere sequenziale per l'evento, non basato sul contatore del sigillo
+        const eventProgressiveNumber = (ticketedEvent.ticketsSold || 0) + tickets.length + 1;
+        
         const [ticket] = await db
           .insert(siaeTickets)
           .values({
@@ -1867,7 +1871,7 @@ router.post("/api/public/checkout/confirm", async (req, res) => {
             customerId: customer.id,
             fiscalSealId: fiscalSeal.id,
             fiscalSealCode: sealData.sealCode,
-            progressiveNumber: sealData.counter,
+            progressiveNumber: eventProgressiveNumber, // Progressivo sequenziale dell'evento
             cardCode: sealData.serialNumber,
             emissionChannelCode: emissionChannel?.channelCode || "WEB",
             emissionDateStr,
