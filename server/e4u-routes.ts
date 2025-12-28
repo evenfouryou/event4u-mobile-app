@@ -2664,4 +2664,46 @@ router.get("/api/siae/ticketed-events/:id/subscriptions", requireAuth, async (re
   }
 });
 
+// PATCH /api/siae/subscriptions/:id/cancel - Cancel a subscription (only if unused)
+router.patch("/api/siae/subscriptions/:id/cancel", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = req.user as any;
+    
+    // Find subscription by ID
+    const [subscription] = await db.select()
+      .from(siaeSubscriptions)
+      .where(eq(siaeSubscriptions.id, id));
+    
+    if (!subscription) {
+      return res.status(404).json({ message: "Abbonamento non trovato" });
+    }
+    
+    // Company scope check - only allow cancellation of subscriptions belonging to user's company
+    if (subscription.companyId !== user.companyId) {
+      return res.status(403).json({ message: "Non autorizzato a modificare questo abbonamento" });
+    }
+    
+    // Check if subscription has been used
+    if (subscription.eventsUsed > 0) {
+      return res.status(400).json({ 
+        message: `Impossibile annullare: abbonamento già utilizzato per ${subscription.eventsUsed} eventi` 
+      });
+    }
+    
+    // Update subscription status to cancelled
+    const [updated] = await db.update(siaeSubscriptions)
+      .set({ 
+        status: 'cancelled',
+        updatedAt: new Date()
+      })
+      .where(eq(siaeSubscriptions.id, id))
+      .returning();
+    
+    res.json(updated);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 export default router;
