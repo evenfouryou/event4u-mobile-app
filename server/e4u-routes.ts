@@ -18,6 +18,7 @@ import {
   siaeTickets,
   siaeTicketedEvents,
   siaeEventSectors,
+  siaeSubscriptions,
   reservationPayments,
   insertEventListSchema,
   insertListEntrySchema,
@@ -2642,6 +2643,22 @@ router.get("/api/e4u/wallet/my", requireAuth, async (req: Request, res: Response
       listEntries: userListEntries,
       tableGuests: userTableGuests,
     });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ==================== SIAE SUBSCRIPTIONS API ====================
+
+// GET /api/siae/ticketed-events/:id/subscriptions - Get issued subscriptions for a ticketed event
+router.get("/api/siae/ticketed-events/:id/subscriptions", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const subscriptions = await db.select()
+      .from(siaeSubscriptions)
+      .where(eq(siaeSubscriptions.ticketedEventId, id))
+      .orderBy(desc(siaeSubscriptions.createdAt));
+    res.json(subscriptions);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }

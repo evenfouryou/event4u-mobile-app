@@ -93,6 +93,7 @@ import {
   Bell,
   MoreHorizontal,
   ChevronRight,
+  ChevronLeft,
   Loader2,
   Wifi,
   WifiOff,
@@ -176,6 +177,7 @@ import type {
   SiaeNameChange,
   SiaeResale,
   SiaeCustomer,
+  SiaeSubscription,
   User,
   Product,
   Location as LocationType,
@@ -738,6 +740,10 @@ export default function EventHub() {
   const [selectedTicketForDetail, setSelectedTicketForDetail] = useState<SiaeTicket | null>(null);
   const [showTicketDetailSheet, setShowTicketDetailSheet] = useState(false);
 
+  // Abbonamenti Emessi state
+  const [selectedSubscriptionTypeId, setSelectedSubscriptionTypeId] = useState<string | null>(null);
+  const [subscriptionsDisplayLimit, setSubscriptionsDisplayLimit] = useState(20);
+
   // Cambio nominativo / Rivendita collapsible sections
   const [nameChangesExpanded, setNameChangesExpanded] = useState(false);
   const [resalesExpanded, setResalesExpanded] = useState(false);
@@ -838,6 +844,12 @@ export default function EventHub() {
   // Subscription Types query
   const { data: subscriptionTypes = [] } = useQuery<any[]>({
     queryKey: ['/api/siae/ticketed-events', ticketedEvent?.id, 'subscription-types'],
+    enabled: !!ticketedEvent?.id,
+  });
+
+  // Issued Subscriptions query (Abbonamenti Emessi)
+  const { data: issuedSubscriptions = [], isLoading: subscriptionsLoading } = useQuery<SiaeSubscription[]>({
+    queryKey: ['/api/siae/ticketed-events', ticketedEvent?.id, 'subscriptions'],
     enabled: !!ticketedEvent?.id,
   });
 
@@ -2569,117 +2581,261 @@ export default function EventHub() {
                     </Card>
 
                     {/* Subscription Types Section */}
-                    <Card>
-                      <CardHeader className="flex flex-row items-center justify-between gap-4">
-                        <div>
-                          <CardTitle>Abbonamenti</CardTitle>
-                          <CardDescription>Tipologie di abbonamento per questo evento</CardDescription>
-                        </div>
-                        <Button onClick={() => setIsSubscriptionTypeDialogOpen(true)} data-testid="button-new-subscription-type">
-                          <Plus className="w-4 h-4 mr-2" />
-                          Nuovo Abbonamento
-                        </Button>
-                      </CardHeader>
-                      <CardContent>
-                        {!subscriptionTypes || subscriptionTypes.length === 0 ? (
-                          <div className="text-center py-12 text-muted-foreground">
-                            <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                            <p>Nessun tipo di abbonamento configurato</p>
-                            <p className="text-sm mt-2">Configura gli abbonamenti dalla gestione biglietteria</p>
+                    {!selectedSubscriptionTypeId ? (
+                      <Card>
+                        <CardHeader className="flex flex-row items-center justify-between gap-4">
+                          <div>
+                            <CardTitle>Abbonamenti</CardTitle>
+                            <CardDescription>Seleziona un abbonamento per visualizzare gli abbonamenti emessi</CardDescription>
                           </div>
-                        ) : (
-                          <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
-                            {subscriptionTypes.map((subType: any) => {
-                              const soldCount = subType.soldCount || 0;
-                              const maxQuantity = subType.maxQuantity || 0;
-                              const isSoldOut = maxQuantity > 0 && soldCount >= maxQuantity;
-                              
+                          <Button onClick={() => setIsSubscriptionTypeDialogOpen(true)} data-testid="button-new-subscription-type">
+                            <Plus className="w-4 h-4 mr-2" />
+                            Nuovo Abbonamento
+                          </Button>
+                        </CardHeader>
+                        <CardContent>
+                          {!subscriptionTypes || subscriptionTypes.length === 0 ? (
+                            <div className="text-center py-12 text-muted-foreground">
+                              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                              <p>Nessun tipo di abbonamento configurato</p>
+                              <p className="text-sm mt-2">Configura gli abbonamenti dalla gestione biglietteria</p>
+                            </div>
+                          ) : (
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                              {subscriptionTypes.map((subType: any) => {
+                                const typeSubscriptions = issuedSubscriptions.filter(s => s.subscriptionTypeId === subType.id);
+                                const soldCount = typeSubscriptions.length;
+                                const maxQuantity = subType.maxQuantity || 0;
+                                const isSoldOut = maxQuantity > 0 && soldCount >= maxQuantity;
+                                
+                                return (
+                                  <Card 
+                                    key={subType.id} 
+                                    className="hover-elevate transition-all cursor-pointer" 
+                                    onClick={() => setSelectedSubscriptionTypeId(subType.id)}
+                                    data-testid={`subscription-type-card-${subType.id}`}
+                                  >
+                                    <CardHeader className="pb-2">
+                                      <div className="flex items-start justify-between gap-2">
+                                        <CardTitle className="text-lg">{subType.name}</CardTitle>
+                                        <div className="flex items-center gap-2">
+                                          <Badge variant={isSoldOut ? 'destructive' : subType.active !== false ? 'default' : 'secondary'}>
+                                            {isSoldOut ? 'Esaurito' : subType.active !== false ? 'Attivo' : 'Disattivato'}
+                                          </Badge>
+                                          <DropdownMenu>
+                                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                              <Button variant="ghost" size="icon" className="h-7 w-7" data-testid={`button-subscription-actions-${subType.id}`}>
+                                                <MoreHorizontal className="h-4 w-4" />
+                                              </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
+                                              <DropdownMenuItem onSelect={() => handleEditSubscriptionType(subType.id)}>
+                                                <Edit2 className="h-4 w-4 mr-2" />
+                                                Modifica
+                                              </DropdownMenuItem>
+                                              <DropdownMenuSeparator />
+                                              <DropdownMenuItem onSelect={() => {
+                                                updateSubscriptionTypeMutation.mutate({
+                                                  id: subType.id,
+                                                  active: subType.active === false ? true : false,
+                                                });
+                                              }}>
+                                                {subType.active !== false ? (
+                                                  <>
+                                                    <XCircle className="h-4 w-4 mr-2" />
+                                                    Disattiva
+                                                  </>
+                                                ) : (
+                                                  <>
+                                                    <CheckCircle2 className="h-4 w-4 mr-2" />
+                                                    Attiva
+                                                  </>
+                                                )}
+                                              </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                          </DropdownMenu>
+                                        </div>
+                                      </div>
+                                      <CardDescription>
+                                        €{Number(subType.price || 0).toFixed(2)}
+                                      </CardDescription>
+                                    </CardHeader>
+                                    <CardContent>
+                                      <div className="space-y-3">
+                                        <div className="flex justify-between text-sm">
+                                          <span className="text-muted-foreground">Tipo Turno</span>
+                                          <Badge variant="outline">
+                                            {subType.turnType === 'fixed' ? 'Fisso' : 'Libero'}
+                                          </Badge>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                          <span className="text-muted-foreground">Eventi</span>
+                                          <span className="font-medium">{subType.eventsCount || 0}</span>
+                                        </div>
+                                        <div className="flex justify-between text-sm">
+                                          <span className="text-muted-foreground">Venduti</span>
+                                          <span className="font-semibold text-blue-400">{soldCount}</span>
+                                        </div>
+                                        {maxQuantity > 0 && (
+                                          <>
+                                            <div className="flex justify-between text-sm">
+                                              <span className="text-muted-foreground">Disponibili</span>
+                                              <span className="font-medium">{maxQuantity}</span>
+                                            </div>
+                                            <Progress value={maxQuantity > 0 ? (soldCount / maxQuantity) * 100 : 0} className="h-2" />
+                                          </>
+                                        )}
+                                        <div className="flex items-center justify-between pt-2">
+                                          <span className="text-xs text-muted-foreground">{soldCount} abbonamenti</span>
+                                          <ChevronRight className="h-4 w-4 text-muted-foreground" />
+                                        </div>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                );
+                              })}
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      /* Abbonamenti Emessi - Selected Subscription Type Detail View */
+                      <Card>
+                        <CardHeader className="flex flex-row items-center justify-between gap-4">
+                          <div className="flex items-center gap-3">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                setSelectedSubscriptionTypeId(null);
+                                setSubscriptionsDisplayLimit(20);
+                              }}
+                              data-testid="button-back-to-subscription-types"
+                            >
+                              <ChevronLeft className="h-5 w-5" />
+                            </Button>
+                            <div>
+                              <CardTitle>{subscriptionTypes.find((s: any) => s.id === selectedSubscriptionTypeId)?.name || 'Abbonamento'}</CardTitle>
+                              <CardDescription>Abbonamenti emessi per questo tipo</CardDescription>
+                            </div>
+                          </div>
+                          <DropdownMenu>
+                            <DropdownMenuTrigger asChild>
+                              <Button variant="outline" data-testid="button-subscription-type-detail-actions">
+                                <MoreHorizontal className="h-4 w-4 mr-2" />
+                                Azioni
+                              </Button>
+                            </DropdownMenuTrigger>
+                            <DropdownMenuContent>
+                              <DropdownMenuItem onSelect={() => handleEditSubscriptionType(selectedSubscriptionTypeId!)}>
+                                <Edit2 className="h-4 w-4 mr-2" />
+                                Modifica Tipo
+                              </DropdownMenuItem>
+                            </DropdownMenuContent>
+                          </DropdownMenu>
+                        </CardHeader>
+                        <CardContent>
+                          {(() => {
+                            const typeSubscriptions = issuedSubscriptions.filter(s => s.subscriptionTypeId === selectedSubscriptionTypeId);
+                            const displayedSubscriptions = typeSubscriptions.slice(0, subscriptionsDisplayLimit);
+                            
+                            if (subscriptionsLoading) {
                               return (
-                                <Card 
-                                  key={subType.id} 
-                                  className="hover-elevate transition-all cursor-pointer" 
-                                  onClick={() => handleEditSubscriptionType(subType.id)}
-                                  data-testid={`subscription-type-card-${subType.id}`}
-                                >
-                                  <CardHeader className="pb-2">
-                                    <div className="flex items-start justify-between gap-2">
-                                      <CardTitle className="text-lg">{subType.name}</CardTitle>
-                                      <div className="flex items-center gap-2">
-                                        <Badge variant={isSoldOut ? 'destructive' : subType.active !== false ? 'default' : 'secondary'}>
-                                          {isSoldOut ? 'Esaurito' : subType.active !== false ? 'Attivo' : 'Disattivato'}
-                                        </Badge>
-                                        <DropdownMenu>
-                                          <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
-                                            <Button variant="ghost" size="icon" className="h-7 w-7" data-testid={`button-subscription-actions-${subType.id}`}>
-                                              <MoreHorizontal className="h-4 w-4" />
-                                            </Button>
-                                          </DropdownMenuTrigger>
-                                          <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
-                                            <DropdownMenuItem onSelect={() => handleEditSubscriptionType(subType.id)}>
-                                              <Edit2 className="h-4 w-4 mr-2" />
-                                              Modifica
-                                            </DropdownMenuItem>
-                                            <DropdownMenuSeparator />
-                                            <DropdownMenuItem onSelect={() => {
-                                              updateSubscriptionTypeMutation.mutate({
-                                                id: subType.id,
-                                                active: subType.active === false ? true : false,
-                                              });
-                                            }}>
-                                              {subType.active !== false ? (
-                                                <>
-                                                  <XCircle className="h-4 w-4 mr-2" />
-                                                  Disattiva
-                                                </>
-                                              ) : (
-                                                <>
-                                                  <CheckCircle2 className="h-4 w-4 mr-2" />
-                                                  Attiva
-                                                </>
-                                              )}
-                                            </DropdownMenuItem>
-                                          </DropdownMenuContent>
-                                        </DropdownMenu>
-                                      </div>
-                                    </div>
-                                    <CardDescription>
-                                      €{Number(subType.price || 0).toFixed(2)}
-                                    </CardDescription>
-                                  </CardHeader>
-                                  <CardContent>
-                                    <div className="space-y-3">
-                                      <div className="flex justify-between text-sm">
-                                        <span className="text-muted-foreground">Tipo Turno</span>
-                                        <Badge variant="outline">
-                                          {subType.turnType === 'fixed' ? 'Fisso' : 'Libero'}
-                                        </Badge>
-                                      </div>
-                                      <div className="flex justify-between text-sm">
-                                        <span className="text-muted-foreground">Eventi</span>
-                                        <span className="font-medium">{subType.eventsCount || 0}</span>
-                                      </div>
-                                      <div className="flex justify-between text-sm">
-                                        <span className="text-muted-foreground">Venduti</span>
-                                        <span className="font-semibold text-blue-400">{soldCount}</span>
-                                      </div>
-                                      {maxQuantity > 0 && (
-                                        <>
-                                          <div className="flex justify-between text-sm">
-                                            <span className="text-muted-foreground">Disponibili</span>
-                                            <span className="font-medium">{maxQuantity}</span>
-                                          </div>
-                                          <Progress value={maxQuantity > 0 ? (soldCount / maxQuantity) * 100 : 0} className="h-2" />
-                                        </>
-                                      )}
-                                    </div>
-                                  </CardContent>
-                                </Card>
+                                <div className="flex items-center justify-center py-12">
+                                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                                </div>
                               );
-                            })}
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
+                            }
+                            
+                            if (typeSubscriptions.length === 0) {
+                              return (
+                                <div className="text-center py-12 text-muted-foreground">
+                                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                  <p>Nessun abbonamento emesso</p>
+                                  <p className="text-sm mt-2">Gli abbonamenti venduti appariranno qui</p>
+                                </div>
+                              );
+                            }
+                            
+                            return (
+                              <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-muted-foreground">
+                                    {typeSubscriptions.length} abbonamenti emessi
+                                  </span>
+                                </div>
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Codice</TableHead>
+                                      <TableHead>QR Code</TableHead>
+                                      <TableHead>Intestatario</TableHead>
+                                      <TableHead>Stato</TableHead>
+                                      <TableHead>Eventi</TableHead>
+                                      <TableHead>Data</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {displayedSubscriptions.map((subscription: SiaeSubscription) => (
+                                      <TableRow key={subscription.id} data-testid={`row-subscription-${subscription.id}`}>
+                                        <TableCell className="font-mono text-sm">
+                                          {subscription.subscriptionCode || '-'}
+                                        </TableCell>
+                                        <TableCell>
+                                          <div className="flex items-center gap-2">
+                                            <QrCode className="h-4 w-4 text-muted-foreground" />
+                                            <span className="font-mono text-xs truncate max-w-[100px]">
+                                              {subscription.qrCode || '-'}
+                                            </span>
+                                          </div>
+                                        </TableCell>
+                                        <TableCell>
+                                          <div className="flex flex-col">
+                                            <span className="font-medium">
+                                              {subscription.holderFirstName} {subscription.holderLastName}
+                                            </span>
+                                          </div>
+                                        </TableCell>
+                                        <TableCell>
+                                          <Badge variant={
+                                            subscription.status === 'active' ? 'default' :
+                                            subscription.status === 'cancelled' ? 'destructive' :
+                                            subscription.status === 'expired' ? 'secondary' : 'outline'
+                                          }>
+                                            {subscription.status === 'active' ? 'Attivo' :
+                                             subscription.status === 'cancelled' ? 'Annullato' :
+                                             subscription.status === 'expired' ? 'Scaduto' :
+                                             subscription.status === 'pending' ? 'In attesa' : subscription.status}
+                                          </Badge>
+                                        </TableCell>
+                                        <TableCell>
+                                          <span className="font-semibold text-blue-400">{subscription.eventsUsed || 0}</span>
+                                          <span className="text-muted-foreground">/{subscription.eventsCount || 0}</span>
+                                        </TableCell>
+                                        <TableCell className="text-sm text-muted-foreground">
+                                          {subscription.createdAt ? format(new Date(subscription.createdAt), 'dd/MM/yyyy HH:mm', { locale: it }) : '-'}
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                                {typeSubscriptions.length > subscriptionsDisplayLimit && (
+                                  <div className="flex justify-center pt-4">
+                                    <Button
+                                      variant="outline"
+                                      onClick={() => setSubscriptionsDisplayLimit(prev => prev + 20)}
+                                      data-testid="button-load-more-subscriptions"
+                                    >
+                                      Carica altri ({typeSubscriptions.length - subscriptionsDisplayLimit} rimanenti)
+                                    </Button>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {/* Cambio Nominativo & Rivendita Settings */}
                     <Card>
@@ -5818,99 +5974,233 @@ export default function EventHub() {
                     </Card>
 
                     {/* Subscription Types Section - Mobile */}
-                    <Card className="glass-card">
-                      <CardHeader className="flex flex-row items-center justify-between gap-2 px-4">
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                          <Users className="h-5 w-5 text-purple-400" />
-                          Abbonamenti
-                        </CardTitle>
-                        <HapticButton
-                          variant="outline"
-                          size="sm"
-                          onClick={() => setIsSubscriptionTypeDialogOpen(true)}
-                          data-testid="button-new-subscription-type-mobile"
-                          className="min-h-[44px]"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Nuovo
-                        </HapticButton>
-                      </CardHeader>
-                      <CardContent className="px-4">
-                        {subscriptionTypes && subscriptionTypes.length > 0 ? (
-                          <div className="space-y-3">
-                            {subscriptionTypes.map((subType: any) => {
-                              const soldCount = subType.soldCount || 0;
-                              const maxQuantity = subType.maxQuantity || 0;
-                              const isSoldOut = maxQuantity > 0 && soldCount >= maxQuantity;
-                              
-                              return (
-                                <motion.div 
-                                  key={subType.id} 
-                                  className="p-4 rounded-xl bg-background/50 border cursor-pointer"
-                                  data-testid={`subscription-type-card-mobile-${subType.id}`}
-                                  whileTap={{ scale: 0.98 }}
-                                  transition={springConfig}
-                                  onClick={() => handleEditSubscriptionType(subType.id)}
-                                >
-                                  <div className="flex items-center justify-between gap-4 mb-3">
-                                    <div className="flex items-center gap-2 flex-wrap">
-                                      <h4 className="font-medium text-base">{subType.name}</h4>
-                                      <Badge variant={isSoldOut ? 'destructive' : subType.active !== false ? 'default' : 'secondary'} className="text-xs">
-                                        {isSoldOut ? 'Esaurito' : subType.active !== false ? 'Attivo' : 'Disattivato'}
-                                      </Badge>
+                    {!selectedSubscriptionTypeId ? (
+                      <Card className="glass-card">
+                        <CardHeader className="flex flex-row items-center justify-between gap-2 px-4">
+                          <CardTitle className="flex items-center gap-2 text-lg">
+                            <Users className="h-5 w-5 text-purple-400" />
+                            Abbonamenti
+                          </CardTitle>
+                          <HapticButton
+                            variant="outline"
+                            size="sm"
+                            onClick={() => setIsSubscriptionTypeDialogOpen(true)}
+                            data-testid="button-new-subscription-type-mobile"
+                            className="min-h-[44px]"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Nuovo
+                          </HapticButton>
+                        </CardHeader>
+                        <CardContent className="px-4">
+                          {subscriptionTypes && subscriptionTypes.length > 0 ? (
+                            <div className="space-y-3">
+                              {subscriptionTypes.map((subType: any) => {
+                                const typeSubscriptions = issuedSubscriptions.filter(s => s.subscriptionTypeId === subType.id);
+                                const soldCount = typeSubscriptions.length;
+                                const maxQuantity = subType.maxQuantity || 0;
+                                const isSoldOut = maxQuantity > 0 && soldCount >= maxQuantity;
+                                
+                                return (
+                                  <motion.div 
+                                    key={subType.id} 
+                                    className="p-4 rounded-xl bg-background/50 border cursor-pointer"
+                                    data-testid={`subscription-type-card-mobile-${subType.id}`}
+                                    whileTap={{ scale: 0.98 }}
+                                    transition={springConfig}
+                                    onClick={() => {
+                                      triggerHaptic('light');
+                                      setSelectedSubscriptionTypeId(subType.id);
+                                    }}
+                                  >
+                                    <div className="flex items-center justify-between gap-4 mb-3">
+                                      <div className="flex items-center gap-2 flex-wrap">
+                                        <h4 className="font-medium text-base">{subType.name}</h4>
+                                        <Badge variant={isSoldOut ? 'destructive' : subType.active !== false ? 'default' : 'secondary'} className="text-xs">
+                                          {isSoldOut ? 'Esaurito' : subType.active !== false ? 'Attivo' : 'Disattivato'}
+                                        </Badge>
+                                      </div>
+                                      <div className="flex items-center gap-2">
+                                        <Badge variant="outline" className="text-xs">
+                                          {subType.turnType === 'fixed' ? 'Fisso' : 'Libero'}
+                                        </Badge>
+                                        <Button
+                                          variant="ghost"
+                                          size="icon"
+                                          className="h-8 w-8"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleEditSubscriptionType(subType.id);
+                                          }}
+                                          data-testid={`button-edit-subscription-type-mobile-${subType.id}`}
+                                        >
+                                          <Edit2 className="h-4 w-4" />
+                                        </Button>
+                                        <ChevronRight className="h-5 w-5 text-muted-foreground flex-shrink-0" />
+                                      </div>
                                     </div>
-                                    <div className="flex items-center gap-2">
-                                      <Badge variant="outline" className="text-xs">
-                                        {subType.turnType === 'fixed' ? 'Fisso' : 'Libero'}
-                                      </Badge>
-                                      <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-8 w-8"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          handleEditSubscriptionType(subType.id);
-                                        }}
-                                        data-testid={`button-edit-subscription-type-mobile-${subType.id}`}
-                                      >
-                                        <Edit2 className="h-4 w-4" />
-                                      </Button>
+                                    <div className="flex items-center gap-3 text-sm text-muted-foreground mb-2">
+                                      <span>€{Number(subType.price || 0).toFixed(2)}</span>
+                                      <span>•</span>
+                                      <span>{subType.eventsCount || 0} eventi</span>
                                     </div>
-                                  </div>
-                                  <div className="flex items-center gap-3 text-sm text-muted-foreground mb-2">
-                                    <span>€{Number(subType.price || 0).toFixed(2)}</span>
-                                    <span>•</span>
-                                    <span>{subType.eventsCount || 0} eventi</span>
-                                  </div>
-                                  {maxQuantity > 0 && (
-                                    <>
-                                      <Progress value={maxQuantity > 0 ? (soldCount / maxQuantity) * 100 : 0} className="h-2 mb-2" />
+                                    {maxQuantity > 0 && (
+                                      <>
+                                        <Progress value={maxQuantity > 0 ? (soldCount / maxQuantity) * 100 : 0} className="h-2 mb-2" />
+                                        <div className="flex items-center justify-between text-sm">
+                                          <span className="text-muted-foreground">
+                                            <span className="font-semibold text-blue-400">{soldCount}</span>/{maxQuantity} venduti
+                                          </span>
+                                          <span className="text-xs text-muted-foreground">{soldCount} abbonamenti</span>
+                                        </div>
+                                      </>
+                                    )}
+                                    {!maxQuantity && (
                                       <div className="flex items-center justify-between text-sm">
                                         <span className="text-muted-foreground">
-                                          <span className="font-semibold text-blue-400">{soldCount}</span>/{maxQuantity} venduti
+                                          <span className="font-semibold text-blue-400">{soldCount}</span> venduti
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">{soldCount} abbonamenti</span>
+                                      </div>
+                                    )}
+                                  </motion.div>
+                                );
+                              })}
+                            </div>
+                          ) : (
+                            <div className="text-center py-8 text-muted-foreground">
+                              <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                              <p>Nessun abbonamento configurato</p>
+                            </div>
+                          )}
+                        </CardContent>
+                      </Card>
+                    ) : (
+                      /* Abbonamenti Emessi - Selected Subscription Type Detail View - Mobile */
+                      <Card className="glass-card">
+                        <CardHeader className="flex flex-row items-center justify-between gap-2 px-4">
+                          <div className="flex items-center gap-3">
+                            <HapticButton
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                triggerHaptic('light');
+                                setSelectedSubscriptionTypeId(null);
+                                setSubscriptionsDisplayLimit(20);
+                              }}
+                              data-testid="button-back-to-subscription-types-mobile"
+                            >
+                              <ChevronLeft className="h-5 w-5" />
+                            </HapticButton>
+                            <CardTitle className="text-lg">
+                              {subscriptionTypes.find((s: any) => s.id === selectedSubscriptionTypeId)?.name || 'Abbonamento'}
+                            </CardTitle>
+                          </div>
+                          <HapticButton
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleEditSubscriptionType(selectedSubscriptionTypeId!)}
+                            data-testid="button-edit-subscription-type-detail-mobile"
+                          >
+                            <Edit2 className="h-4 w-4" />
+                          </HapticButton>
+                        </CardHeader>
+                        <CardContent className="px-4">
+                          {(() => {
+                            const typeSubscriptions = issuedSubscriptions.filter(s => s.subscriptionTypeId === selectedSubscriptionTypeId);
+                            const displayedSubscriptions = typeSubscriptions.slice(0, subscriptionsDisplayLimit);
+                            
+                            if (subscriptionsLoading) {
+                              return (
+                                <div className="flex items-center justify-center py-12">
+                                  <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                                </div>
+                              );
+                            }
+                            
+                            if (typeSubscriptions.length === 0) {
+                              return (
+                                <div className="text-center py-8 text-muted-foreground">
+                                  <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
+                                  <p>Nessun abbonamento emesso</p>
+                                  <p className="text-sm mt-2">Gli abbonamenti venduti appariranno qui</p>
+                                </div>
+                              );
+                            }
+                            
+                            return (
+                              <div className="space-y-4">
+                                <div className="flex items-center justify-between">
+                                  <span className="text-sm text-muted-foreground">
+                                    {typeSubscriptions.length} abbonamenti emessi
+                                  </span>
+                                </div>
+                                <div className="space-y-3">
+                                  {displayedSubscriptions.map((subscription: SiaeSubscription) => (
+                                    <motion.div
+                                      key={subscription.id}
+                                      className="p-4 rounded-xl bg-background/50 border"
+                                      data-testid={`subscription-card-mobile-${subscription.id}`}
+                                      initial={{ opacity: 0, y: 20 }}
+                                      animate={{ opacity: 1, y: 0 }}
+                                      transition={springConfig}
+                                    >
+                                      <div className="flex items-start justify-between gap-3 mb-3">
+                                        <div className="flex-1">
+                                          <div className="font-medium">
+                                            {subscription.holderFirstName} {subscription.holderLastName}
+                                          </div>
+                                          <div className="font-mono text-xs text-muted-foreground mt-1">
+                                            {subscription.subscriptionCode || '-'}
+                                          </div>
+                                        </div>
+                                        <Badge variant={
+                                          subscription.status === 'active' ? 'default' :
+                                          subscription.status === 'cancelled' ? 'destructive' :
+                                          subscription.status === 'expired' ? 'secondary' : 'outline'
+                                        } className="text-xs">
+                                          {subscription.status === 'active' ? 'Attivo' :
+                                           subscription.status === 'cancelled' ? 'Annullato' :
+                                           subscription.status === 'expired' ? 'Scaduto' :
+                                           subscription.status === 'pending' ? 'In attesa' : subscription.status}
+                                        </Badge>
+                                      </div>
+                                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
+                                        <QrCode className="h-3 w-3" />
+                                        <span className="font-mono truncate max-w-[150px]">
+                                          {subscription.qrCode || '-'}
                                         </span>
                                       </div>
-                                    </>
-                                  )}
-                                  {!maxQuantity && (
-                                    <div className="flex items-center justify-between text-sm">
-                                      <span className="text-muted-foreground">
-                                        <span className="font-semibold text-blue-400">{soldCount}</span> venduti
-                                      </span>
-                                    </div>
-                                  )}
-                                </motion.div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className="text-center py-8 text-muted-foreground">
-                            <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
-                            <p>Nessun abbonamento configurato</p>
-                          </div>
-                        )}
-                      </CardContent>
-                    </Card>
+                                      <div className="flex items-center justify-between text-sm">
+                                        <span className="text-muted-foreground">
+                                          Eventi: <span className="font-semibold text-blue-400">{subscription.eventsUsed || 0}</span>/{subscription.eventsCount || 0}
+                                        </span>
+                                        <span className="text-xs text-muted-foreground">
+                                          {subscription.createdAt ? format(new Date(subscription.createdAt), 'dd/MM/yy', { locale: it }) : '-'}
+                                        </span>
+                                      </div>
+                                    </motion.div>
+                                  ))}
+                                </div>
+                                {typeSubscriptions.length > subscriptionsDisplayLimit && (
+                                  <div className="flex justify-center pt-2">
+                                    <HapticButton
+                                      variant="outline"
+                                      size="sm"
+                                      onClick={() => setSubscriptionsDisplayLimit(prev => prev + 20)}
+                                      data-testid="button-load-more-subscriptions-mobile"
+                                      className="min-h-[44px]"
+                                    >
+                                      Carica altri ({typeSubscriptions.length - subscriptionsDisplayLimit} rimanenti)
+                                    </HapticButton>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })()}
+                        </CardContent>
+                      </Card>
+                    )}
 
                     {/* Cambio Nominativo & Rivendita Settings - Mobile */}
                     <Card className="glass-card">
