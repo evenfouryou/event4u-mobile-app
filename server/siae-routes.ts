@@ -5721,6 +5721,13 @@ router.patch("/api/siae/tickets/:id/cancel", requireAuth, async (req: Request, r
       return res.status(404).json({ message: "Biglietto non trovato" });
     }
     
+    // Get the ticketed event to retrieve the companyId
+    const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(ticket.ticketedEventId);
+    if (!ticketedEvent) {
+      return res.status(404).json({ message: "Evento associato al biglietto non trovato" });
+    }
+    const eventCompanyId = ticketedEvent.companyId;
+    
     // Verify ticket is not already cancelled
     if (ticket.status === 'cancelled') {
       return res.status(400).json({ 
@@ -5750,7 +5757,7 @@ router.patch("/api/siae/tickets/:id/cancel", requireAuth, async (req: Request, r
         // Audit log per tentativo di annullamento senza bridge
         try {
           await siaeStorage.createAuditLog({
-            companyId: user.companyId,
+            companyId: eventCompanyId,
             userId: userIdForCheck,
             action: 'ticket_cancellation_blocked',
             entityType: 'ticket',
@@ -5795,7 +5802,7 @@ router.patch("/api/siae/tickets/:id/cancel", requireAuth, async (req: Request, r
         // Audit log per tentativo fallito
         try {
           await siaeStorage.createAuditLog({
-            companyId: user.companyId,
+            companyId: eventCompanyId,
             userId: userIdForCheck,
             action: 'ticket_cancellation_failed',
             entityType: 'ticket',
@@ -5840,7 +5847,7 @@ router.patch("/api/siae/tickets/:id/cancel", requireAuth, async (req: Request, r
     
     // Create ticket audit entry (outside transaction, not critical)
     await siaeStorage.createTicketAudit({
-      companyId: user.companyId,
+      companyId: eventCompanyId,
       ticketId: id,
       operationType: 'cancellation',
       performedBy: userIdForCancellation,
@@ -5862,7 +5869,7 @@ router.patch("/api/siae/tickets/:id/cancel", requireAuth, async (req: Request, r
     // General audit log
     const fiscalInfo = fiscalCancellationRegistered ? ' (Registrato fiscalmente)' : '';
     await siaeStorage.createAuditLog({
-      companyId: user.companyId,
+      companyId: eventCompanyId,
       userId: userIdForCancellation,
       action: 'ticket_cancelled',
       entityType: 'ticket',

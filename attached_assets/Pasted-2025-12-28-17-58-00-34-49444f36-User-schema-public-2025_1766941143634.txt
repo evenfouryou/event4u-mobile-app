@@ -1,0 +1,93 @@
+2025-12-28 17:58:00.34
+49444f36
+User
+schema: 'public',
+2025-12-28 17:58:00.34
+49444f36
+User
+}
+2025-12-28 17:58:00.34
+49444f36
+User
+dataType: undefined,
+2025-12-28 17:58:00.34
+49444f36
+User
+internalQuery: undefined,
+2025-12-28 17:58:00.34
+49444f36
+User
+hint: undefined,
+2025-12-28 17:58:00.34
+49444f36
+User
+routine: 'ExecConstraints'
+2025-12-28 17:58:00.34
+49444f36
+User
+at async file:///home/runner/workspace/dist/index.js:15516:5 {
+2025-12-28 17:58:00.34
+49444f36
+User
+code: '23502',
+2025-12-28 17:58:00.34
+49444f36
+User
+detail: 'Failing row contains (297669c2-2dae-49ba-8871-6122f486c6ab, null, bdde707b-ec7b-4841-ad84-93f274eaa6fc, cancellation, null, 06, {"cancelledBy": "Utente", "originalPrice": "1.00", "fiscalCancel..., 2025-12-28 16:58:00.31493).',
+2025-12-28 17:58:00.34
+49444f36
+User
+[TicketCancel] Error in cancel endpoint: error: null value in column "company_id" of relation "siae_ticket_audit" violates not-null constraint
+2025-12-28 17:58:00.34
+49444f36
+User
+at async NeonPreparedQuery.execute (file:///home/runner/workspace/node_modules/drizzle-orm/neon-serverless/session.js:76:20)
+2025-12-28 17:58:00.34
+49444f36
+User
+position: undefined,
+2025-12-28 17:58:00.34
+49444f36
+User
+constraint: undefined,
+2025-12-28 17:58:00.34
+49444f36
+User
+at file:///home/runner/workspace/node_modules/@neondatabase/serverless/index.mjs:1345:74
+2025-12-28 17:58:00.34
+49444f36
+User
+internalPosition: undefined,
+2025-12-28 17:58:00.34
+49444f36
+User
+line: '2067',
+2025-12-28 17:58:00.34
+49444f36
+User
+severity: 'ERROR',
+2025-12-28 17:58:00.34
+49444f36
+User
+table: 'siae_ticket_audit',
+2025-12-28 17:58:00.34
+49444f36
+User
+file: 'execMain.c',
+2025-12-28 17:58:00.34
+49444f36
+User
+at process.processTicksAndRejections (node:internal/process/task_queues:95:5)
+2025-12-28 17:58:00.34
+49444f36
+User
+where: undefined,
+2025-12-28 17:58:00.34
+49444f36
+User
+length: 422,
+2025-12-28 17:58:00.34
+49444f36
+User
+column: 'company_id',
+2025-12-28 17:58:00.34
