@@ -1026,13 +1026,8 @@ export default function EventHub() {
   });
 
   const handleEditSector = (sectorId: string | null) => {
-    console.log("[DEBUG] handleEditSector called with sectorId:", sectorId);
-    if (!sectorId) {
-      console.log("[DEBUG] sectorId is null, returning");
-      return;
-    }
+    if (!sectorId) return;
     const sector = ticketedEvent?.sectors?.find(s => s.id === sectorId);
-    console.log("[DEBUG] Found sector:", sector);
     if (sector) {
       setEditingSectorData(sector);
       editSectorForm.reset({
@@ -1047,10 +1042,7 @@ export default function EventHub() {
         sortOrder: sector.sortOrder || 0,
         active: sector.active !== false,
       });
-      console.log("[DEBUG] Setting isEditSectorDialogOpen to true");
       setIsEditSectorDialogOpen(true);
-    } else {
-      console.log("[DEBUG] Sector not found in ticketedEvent.sectors");
     }
   };
 
@@ -2439,8 +2431,10 @@ export default function EventHub() {
                                               Modifica
                                             </DropdownMenuItem>
                                             <DropdownMenuItem onSelect={() => {
-                                              setEditingSector(sector);
-                                              setEditingCapacity(String(sector.capacity));
+                                              setTimeout(() => {
+                                                setEditingSector(sector);
+                                                setEditingCapacity(String(sector.capacity));
+                                              }, 100);
                                             }}>
                                               <Hash className="h-4 w-4 mr-2" />
                                               Modifica Capienza
@@ -2844,11 +2838,13 @@ export default function EventHub() {
                               Modifica Settore
                             </DropdownMenuItem>
                             <DropdownMenuItem onSelect={() => {
-                              const sector = ticketedEvent?.sectors?.find(s => s.id === selectedSectorId);
-                              if (sector) {
-                                setEditingSector(sector);
-                                setEditingCapacity(String(sector.capacity));
-                              }
+                              setTimeout(() => {
+                                const sector = ticketedEvent?.sectors?.find(s => s.id === selectedSectorId);
+                                if (sector) {
+                                  setEditingSector(sector);
+                                  setEditingCapacity(String(sector.capacity));
+                                }
+                              }, 100);
                             }}>
                               <Hash className="h-4 w-4 mr-2" />
                               Modifica Capienza
@@ -4472,6 +4468,169 @@ export default function EventHub() {
                       <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creazione...</>
                     ) : (
                       'Crea Biglietto'
+                    )}
+                  </Button>
+                </DialogFooter>
+              </form>
+            </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Edit Sector Dialog - Desktop */}
+        <Dialog open={isEditSectorDialogOpen} onOpenChange={setIsEditSectorDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Modifica Settore</DialogTitle>
+              <DialogDescription>
+                Modifica le impostazioni del settore
+              </DialogDescription>
+            </DialogHeader>
+            <Form {...editSectorForm}>
+              <form onSubmit={editSectorForm.handleSubmit((data) => {
+                const priceValue = data.ticketType === 'OMA' ? '0' : (data.price || '0');
+                updateSectorMutation.mutate({
+                  id: editingSectorData?.id,
+                  name: data.name,
+                  capacity: data.capacity,
+                  priceIntero: data.ticketType === 'INT' ? priceValue : '0',
+                  priceRidotto: data.ticketType === 'RID' ? priceValue : '0',
+                  prevendita: data.ddp,
+                  ivaRate: data.ivaRate,
+                  sortOrder: data.sortOrder,
+                  active: data.active,
+                });
+              })} className="space-y-4">
+                <FormField
+                  control={editSectorForm.control}
+                  name="name"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Nome Biglietto</FormLabel>
+                      <FormControl>
+                        <Input placeholder="es. Ingresso Generale" {...field} data-testid="input-edit-sector-name" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editSectorForm.control}
+                  name="capacity"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Quantità</FormLabel>
+                      <FormControl>
+                        <Input 
+                          type="number" 
+                          min={1} 
+                          {...field} 
+                          onChange={(e) => field.onChange(parseInt(e.target.value) || 0)}
+                          data-testid="input-edit-sector-capacity" 
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editSectorForm.control}
+                  name="ticketType"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Tipo Biglietto</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-edit-ticket-type">
+                            <SelectValue placeholder="Seleziona tipo" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="INT">Intero</SelectItem>
+                          <SelectItem value="RID">Ridotto</SelectItem>
+                          <SelectItem value="OMA">Omaggio</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                {editSectorForm.watch("ticketType") !== 'OMA' && (
+                  <FormField
+                    control={editSectorForm.control}
+                    name="price"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Prezzo (€)</FormLabel>
+                        <FormControl>
+                          <Input 
+                            type="number" 
+                            step="0.01" 
+                            min="0" 
+                            {...field} 
+                            data-testid="input-edit-sector-price" 
+                          />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                <FormField
+                  control={editSectorForm.control}
+                  name="ivaRate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Aliquota IVA</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value}>
+                        <FormControl>
+                          <SelectTrigger data-testid="select-edit-iva-rate">
+                            <SelectValue placeholder="Seleziona IVA" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="10">10%</SelectItem>
+                          <SelectItem value="22">22%</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+
+                <FormField
+                  control={editSectorForm.control}
+                  name="active"
+                  render={({ field }) => (
+                    <FormItem className="flex items-center justify-between">
+                      <FormLabel>Settore Attivo</FormLabel>
+                      <FormControl>
+                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                      </FormControl>
+                    </FormItem>
+                  )}
+                />
+
+                <DialogFooter className="pt-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setIsEditSectorDialogOpen(false)}
+                  >
+                    Annulla
+                  </Button>
+                  <Button 
+                    type="submit" 
+                    disabled={updateSectorMutation.isPending}
+                    data-testid="button-submit-edit-sector"
+                  >
+                    {updateSectorMutation.isPending ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Salvataggio...</>
+                    ) : (
+                      'Salva'
                     )}
                   </Button>
                 </DialogFooter>

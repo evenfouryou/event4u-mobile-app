@@ -5,9 +5,8 @@ import { storage } from "./storage";
 import multer from "multer";
 import sharp from "sharp";
 import { ObjectStorageService } from "./objectStorage";
-// Replit Auth disabled - using classic email/password login
-// import { setupAuth, isAuthenticated } from "./replitAuth";
-import { getSession } from "./replitAuth";
+// Replit Auth enabled for testing
+import { setupAuth, getSession } from "./replitAuth";
 import passport from "passport";
 import cookieParser from "cookie-parser";
 import siaeRoutes from "./siae-routes";
@@ -116,14 +115,17 @@ import { setupPrintRelay } from "./print-relay";
 import { siaeStorage } from "./siae-storage";
 
 export async function registerRoutes(app: Express): Promise<Server> {
-  // Setup passport for classic email/password authentication (no Replit OAuth)
+  // Setup passport for authentication
   app.set("trust proxy", 1);
   app.use(cookieParser());
   app.use(getSession());
   app.use(passport.initialize());
   app.use(passport.session());
   
-  // Passport serialization for classic login
+  // Setup Replit OIDC auth routes (/api/login, /api/callback, /api/logout)
+  await setupAuth(app);
+  
+  // Passport serialization for classic login (fallback)
   passport.serializeUser((user: Express.User, cb) => cb(null, user));
   passport.deserializeUser((user: Express.User, cb) => cb(null, user));
 
