@@ -35,6 +35,7 @@ import {
   GraduationCap,
   Printer,
   Wallet,
+  CheckCircle,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -105,6 +106,12 @@ export function AppSidebar() {
         icon: Settings,
         url: "/admin/site-settings",
         group: "Sistema",
+      },
+      {
+        title: "Approvazioni Eventi",
+        icon: CheckCircle,
+        url: "/siae-approvals",
+        group: "Biglietteria SIAE",
       },
       {
         title: "Tabelle SIAE",
