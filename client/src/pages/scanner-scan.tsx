@@ -348,30 +348,31 @@ export default function ScannerScanPage() {
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div 
-                  id={scannerContainerId} 
-                  className={`aspect-square max-w-md mx-auto rounded-lg overflow-hidden bg-muted ${cameraActive ? 'opacity-100' : 'opacity-0 absolute pointer-events-none'}`}
-                  style={{ minHeight: cameraActive ? 'auto' : '1px', minWidth: cameraActive ? 'auto' : '1px' }}
-                />
-                
-                {!cameraActive && !cameraError && (
-                  <div className="aspect-square max-w-md mx-auto flex flex-col items-center justify-center bg-muted rounded-lg">
-                    <QrCode className="w-16 h-16 text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground mb-4">Avvio fotocamera...</p>
-                    <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                  </div>
-                )}
+                <div className="relative aspect-square max-w-md mx-auto rounded-lg overflow-hidden bg-muted">
+                  <div 
+                    id={scannerContainerId} 
+                    className="absolute inset-0 w-full h-full"
+                  />
+                  
+                  {!cameraActive && !cameraError && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted z-10">
+                      <QrCode className="w-16 h-16 text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground mb-4">Avvio fotocamera...</p>
+                      <Loader2 className="w-6 h-6 animate-spin text-primary" />
+                    </div>
+                  )}
 
-                {cameraError && (
-                  <div className="aspect-square max-w-md mx-auto flex flex-col items-center justify-center bg-muted rounded-lg">
-                    <CameraOff className="w-12 h-12 text-muted-foreground mb-4" />
-                    <p className="text-muted-foreground mb-2">{cameraError}</p>
-                    <Button onClick={startCamera} className="mt-4" data-testid="button-retry-camera">
-                      <Camera className="w-4 h-4 mr-2" />
-                      Riprova
-                    </Button>
-                  </div>
-                )}
+                  {cameraError && (
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-muted z-10">
+                      <CameraOff className="w-12 h-12 text-muted-foreground mb-4" />
+                      <p className="text-muted-foreground mb-2">{cameraError}</p>
+                      <Button onClick={startCamera} className="mt-4" data-testid="button-retry-camera">
+                        <Camera className="w-4 h-4 mr-2" />
+                        Riprova
+                      </Button>
+                    </div>
+                  )}
+                </div>
 
                 <div className="relative max-w-md mx-auto">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
