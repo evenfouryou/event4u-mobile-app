@@ -2506,27 +2506,45 @@ router.post("/api/siae/companies/:companyId/transmissions/send-c1", requireAuth,
     const transmissionType = isMonthly ? 'monthly' : 'daily';
     const typeLabel = isMonthly ? 'mensile' : 'giornaliera';
     
-    // Try to sign the XML with smart card if requested
+    // Try to sign the XML with smart card if requested (with retry for unstable connections)
     let xmlToSend = xml;
     let signatureInfo = '';
     let signatureData = null;
     
     if (signWithSmartCard) {
-      try {
-        const bridgeConnected = isBridgeConnected();
-        if (bridgeConnected) {
-          console.log(`[SIAE-ROUTES] Attempting XML signature for C1 ${typeLabel} report...`);
-          signatureData = await requestXmlSignature(xml);
-          xmlToSend = signatureData.signedXml;
-          signatureInfo = ' (firmato digitalmente)';
-          console.log(`[SIAE-ROUTES] XML signed successfully for C1 ${typeLabel}`);
-        } else {
-          console.log(`[SIAE-ROUTES] Bridge not connected, sending unsigned XML for C1 ${typeLabel}`);
-          signatureInfo = ' (non firmato - bridge non connesso)';
+      const MAX_SIGNATURE_RETRIES = 3;
+      const RETRY_DELAY_MS = 2000;
+      
+      for (let attempt = 1; attempt <= MAX_SIGNATURE_RETRIES; attempt++) {
+        try {
+          const bridgeConnected = isBridgeConnected();
+          console.log(`[SIAE-ROUTES] Signature attempt ${attempt}/${MAX_SIGNATURE_RETRIES}: bridgeConnected=${bridgeConnected}`);
+          
+          if (bridgeConnected) {
+            console.log(`[SIAE-ROUTES] Attempting XML signature for C1 ${typeLabel} report...`);
+            signatureData = await requestXmlSignature(xml);
+            xmlToSend = signatureData.signedXml;
+            signatureInfo = ' (firmato digitalmente)';
+            console.log(`[SIAE-ROUTES] XML signed successfully for C1 ${typeLabel}`);
+            break; // Success, exit retry loop
+          } else {
+            console.log(`[SIAE-ROUTES] Bridge not connected on attempt ${attempt}, waiting ${RETRY_DELAY_MS}ms...`);
+            if (attempt < MAX_SIGNATURE_RETRIES) {
+              await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+            } else {
+              console.log(`[SIAE-ROUTES] Bridge not connected after ${MAX_SIGNATURE_RETRIES} attempts, sending unsigned XML for C1 ${typeLabel}`);
+              signatureInfo = ' (non firmato - bridge non connesso)';
+            }
+          }
+        } catch (signError: any) {
+          console.error(`[SIAE-ROUTES] XML signature failed on attempt ${attempt}:`, signError.message);
+          if (attempt < MAX_SIGNATURE_RETRIES) {
+            console.log(`[SIAE-ROUTES] Retrying in ${RETRY_DELAY_MS}ms...`);
+            await new Promise(resolve => setTimeout(resolve, RETRY_DELAY_MS));
+          } else {
+            signatureInfo = ` (non firmato - ${signError.message})`;
+          }
         }
-      } catch (signError: any) {
-        console.error(`[SIAE-ROUTES] XML signature failed for C1 ${typeLabel}:`, signError.message);
-        signatureInfo = ` (non firmato - ${signError.message})`;
       }
     }
     
