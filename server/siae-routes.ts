@@ -1997,8 +1997,192 @@ router.get("/api/siae/tickets/:ticketId/name-changes", requireAuth, async (req: 
 
 router.post("/api/siae/name-changes", requireAuth, async (req: Request, res: Response) => {
   try {
+    const userId = (req as any).user?.id;
     const data = insertSiaeNameChangeSchema.parse(req.body);
+    
+    // Create the name change request
     const change = await siaeStorage.createSiaeNameChange(data);
+    
+    // Check if auto-approval is enabled for this event
+    const [originalTicket] = await db.select().from(siaeTickets).where(eq(siaeTickets.id, data.originalTicketId));
+    if (originalTicket) {
+      const [ticketedEvent] = await db.select().from(siaeTicketedEvents).where(eq(siaeTicketedEvents.id, originalTicket.ticketedEventId));
+      
+      if (ticketedEvent?.autoApproveNameChanges) {
+        // Auto-process the name change
+        console.log(`[NAME-CHANGE] Auto-approving name change ${change.id} for event ${ticketedEvent.id}`);
+        
+        // Check bridge availability
+        const bridgeStatus = getCachedBridgeStatus();
+        if (bridgeStatus.connected && bridgeStatus.cardInserted) {
+          try {
+            // Request fiscal seal
+            const sealData = await requestFiscalSeal({
+              ticketCode: `NC-${Date.now()}`,
+              amount: Number(originalTicket.grossAmount || originalTicket.ticketPrice || 0),
+              eventCode: ticketedEvent.siaeEventCode || 'EVT',
+              sectorCode: originalTicket.sectorCode
+            });
+            
+            // Process the name change
+            const result = await db.transaction(async (tx) => {
+              // Mark original ticket as replaced
+              await tx.update(siaeTickets)
+                .set({
+                  status: 'replaced',
+                  cancellationReasonCode: 'CN',
+                  cancellationDate: new Date(),
+                  cancelledByUserId: userId,
+                  updatedAt: new Date()
+                })
+                .where(eq(siaeTickets.id, originalTicket.id));
+              
+              // Get next progressive number
+              const [{ maxProgress }] = await tx
+                .select({ maxProgress: sql<number>`COALESCE(MAX(progressive_number), 0)` })
+                .from(siaeTickets)
+                .where(eq(siaeTickets.ticketedEventId, originalTicket.ticketedEventId));
+              const newProgressiveNumber = (maxProgress || 0) + 1;
+              
+              // Generate new ticket code
+              const newTicketCode = `${ticketedEvent.siaeEventCode || 'TKT'}-NC-${newProgressiveNumber.toString().padStart(6, '0')}`;
+              
+              // Create new ticket
+              const [newTicket] = await tx.insert(siaeTickets)
+                .values({
+                  ticketedEventId: originalTicket.ticketedEventId,
+                  sectorId: originalTicket.sectorId,
+                  transactionId: originalTicket.transactionId,
+                  customerId: originalTicket.customerId,
+                  fiscalSealCode: sealData.sealCode,
+                  fiscalSealCounter: sealData.counter,
+                  progressiveNumber: newProgressiveNumber,
+                  cardCode: sealData.serialNumber,
+                  emissionDate: new Date(),
+                  emissionDateStr: new Date().toISOString().slice(0, 10).replace(/-/g, ''),
+                  emissionTimeStr: new Date().toTimeString().slice(0, 5).replace(':', ''),
+                  ticketTypeCode: originalTicket.ticketTypeCode,
+                  sectorCode: originalTicket.sectorCode,
+                  ticketCode: newTicketCode,
+                  ticketType: originalTicket.ticketType,
+                  ticketPrice: originalTicket.ticketPrice,
+                  seatId: originalTicket.seatId,
+                  row: originalTicket.row,
+                  seatNumber: originalTicket.seatNumber,
+                  grossAmount: originalTicket.grossAmount,
+                  netAmount: originalTicket.netAmount,
+                  vatAmount: originalTicket.vatAmount,
+                  prevendita: originalTicket.prevendita,
+                  prevenditaVat: originalTicket.prevenditaVat,
+                  participantFirstName: data.newFirstName,
+                  participantLastName: data.newLastName,
+                  issuedByUserId: userId,
+                  isComplimentary: originalTicket.isComplimentary,
+                  paymentMethod: 'name_change',
+                  status: 'active',
+                  originalTicketId: originalTicket.id,
+                  qrCode: `SIAE-TKT-NC-${newProgressiveNumber}`
+                })
+                .returning();
+              
+              // Update original ticket with replacement reference
+              await tx.update(siaeTickets)
+                .set({ replacedByTicketId: newTicket.id })
+                .where(eq(siaeTickets.id, originalTicket.id));
+              
+              // Update name change request
+              const [updatedChange] = await tx.update(siaeNameChanges)
+                .set({
+                  newTicketId: newTicket.id,
+                  status: 'completed',
+                  processedAt: new Date(),
+                  processedByUserId: userId,
+                  updatedAt: new Date()
+                })
+                .where(eq(siaeNameChanges.id, change.id))
+                .returning();
+              
+              return { newTicket, updatedChange };
+            });
+            
+            // Send email to new holder (async)
+            if (data.newEmail) {
+              const [event] = await db.select().from(events).where(eq(events.id, ticketedEvent.eventId));
+              const [sector] = await db.select().from(siaeEventSectors).where(eq(siaeEventSectors.id, originalTicket.sectorId));
+              
+              if (event) {
+                try {
+                  const { sendTicketEmail } = await import('./email-service');
+                  const { generateDigitalTicketPdf } = await import('./pdf-service');
+                  
+                  const ticketData = {
+                    eventName: event.name,
+                    eventDate: event.date,
+                    locationName: event.location || 'N/A',
+                    sectorName: sector?.name || 'N/A',
+                    holderName: `${data.newFirstName} ${data.newLastName}`,
+                    price: String(originalTicket.grossAmount || originalTicket.ticketPrice || '0'),
+                    ticketCode: result.newTicket.ticketCode || '',
+                    qrCode: result.newTicket.qrCode || '',
+                    fiscalSealCode: sealData.sealCode
+                  };
+                  
+                  const pdfBuffer = await generateDigitalTicketPdf(ticketData);
+                  
+                  const ticketHtml = `
+                    <div style="border:1px solid #ddd; padding:20px; border-radius:8px;">
+                      <h2 style="color:#6366f1;">Biglietto - ${event.name}</h2>
+                      <p><strong>Intestatario:</strong> ${ticketData.holderName}</p>
+                      <p><strong>Settore:</strong> ${ticketData.sectorName}</p>
+                      <p><strong>Codice:</strong> ${ticketData.ticketCode}</p>
+                      <p><strong>Sigillo SIAE:</strong> ${ticketData.fiscalSealCode}</p>
+                    </div>
+                  `;
+                  
+                  await sendTicketEmail({
+                    to: data.newEmail,
+                    subject: `Cambio Nominativo Completato - ${event.name}`,
+                    eventName: event.name,
+                    tickets: [{ id: result.newTicket.id, html: ticketHtml }],
+                    pdfBuffers: [pdfBuffer]
+                  });
+                } catch (emailError) {
+                  console.error('[NAME-CHANGE] Auto-approval email error:', emailError);
+                }
+              }
+            }
+            
+            // Create audit log
+            await siaeStorage.createSiaeAuditLog({
+              companyId: ticketedEvent.companyId,
+              userId,
+              action: 'name_change_auto_approved',
+              entityType: 'ticket',
+              entityId: result.newTicket.id,
+              details: {
+                originalTicketId: originalTicket.id,
+                newTicketId: result.newTicket.id,
+                nameChangeId: change.id,
+                fiscalSeal: sealData.sealCode
+              }
+            });
+            
+            return res.status(201).json({
+              ...result.updatedChange,
+              autoApproved: true,
+              newTicket: result.newTicket,
+              message: "Cambio nominativo approvato automaticamente"
+            });
+          } catch (processError: any) {
+            console.error('[NAME-CHANGE] Auto-approval failed:', processError);
+            // Fall through to return pending status
+          }
+        } else {
+          console.log('[NAME-CHANGE] Auto-approval skipped: bridge not ready');
+        }
+      }
+    }
+    
     res.status(201).json(change);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
@@ -2196,8 +2380,8 @@ router.post("/api/siae/name-changes/:id/process", requireAuth, requireOrganizer,
     // 9. Send email to new holder (async, don't block response)
     if (nameChangeRequest.newEmail && event) {
       try {
-        const { sendTicketEmail, generateTicketHtml, generateDigitalTicketPdf } = await import('./email-service');
-        const { generateDigitalTicketPdf: generatePdf } = await import('./pdf-service');
+        const { sendTicketEmail } = await import('./email-service');
+        const { generateDigitalTicketPdf } = await import('./pdf-service');
         
         const ticketData = {
           eventName: event.name,
@@ -2211,13 +2395,25 @@ router.post("/api/siae/name-changes/:id/process", requireAuth, requireOrganizer,
           fiscalSealCode: sealData.sealCode
         };
         
-        const pdfBuffer = await generatePdf(ticketData);
+        const pdfBuffer = await generateDigitalTicketPdf(ticketData);
+        
+        // Simple HTML for email body
+        const ticketHtml = `
+          <div style="border:1px solid #ddd; padding:20px; border-radius:8px;">
+            <h2 style="color:#6366f1;">Biglietto - ${ticketData.eventName}</h2>
+            <p><strong>Intestatario:</strong> ${ticketData.holderName}</p>
+            <p><strong>Settore:</strong> ${ticketData.sectorName}</p>
+            <p><strong>Codice:</strong> ${ticketData.ticketCode}</p>
+            <p><strong>Sigillo SIAE:</strong> ${ticketData.fiscalSealCode}</p>
+            <p style="color:#666; font-size:12px;">Il biglietto PDF è allegato a questa email.</p>
+          </div>
+        `;
         
         await sendTicketEmail({
           to: nameChangeRequest.newEmail,
           subject: `Cambio Nominativo Completato - ${event.name}`,
           eventName: event.name,
-          tickets: [{ id: result.newTicket.id, html: generateTicketHtml(ticketData) }],
+          tickets: [{ id: result.newTicket.id, html: ticketHtml }],
           pdfBuffers: [pdfBuffer]
         });
         
