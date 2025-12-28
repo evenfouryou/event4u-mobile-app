@@ -249,6 +249,8 @@ export function setupBridgeRelay(server: Server): void {
           } else if (message.type === 'SEAL_RESPONSE') {
             // Handle seal response from desktop app (for server-side seal requests)
             console.log(`[Bridge] Seal response received: requestId=${message.requestId}`);
+            console.log(`[Bridge] Seal payload: ${JSON.stringify(message.payload)}`);
+            console.log(`[Bridge] Seal data: ${JSON.stringify(message.payload?.seal)}`);
             handleSealResponse(
               message.requestId || '',
               message.payload?.success ?? false,
