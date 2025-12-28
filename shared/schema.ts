@@ -1220,6 +1220,7 @@ export const siaeTicketedEvents = pgTable("siae_ticketed_events", {
   requiresNominative: boolean("requires_nominative").notNull().default(true),
   allowsChangeName: boolean("allows_change_name").notNull().default(false), // Solo se >5000
   allowsResale: boolean("allows_resale").notNull().default(false), // Solo se >5000
+  autoApproveNameChanges: boolean("auto_approve_name_changes").notNull().default(false), // Approva automaticamente le richieste
   // Date vendita
   saleStartDate: timestamp("sale_start_date"),
   saleEndDate: timestamp("sale_end_date"),
