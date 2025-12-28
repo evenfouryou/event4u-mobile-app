@@ -78,6 +78,7 @@ import {
   Pause,
   StopCircle,
   AlertTriangle,
+  AlertCircle,
   CheckCircle2,
   Clock,
   Calendar,
