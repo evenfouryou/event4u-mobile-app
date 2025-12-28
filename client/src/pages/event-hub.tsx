@@ -3683,19 +3683,20 @@ export default function EventHub() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {e4uScanners.map((scanner: any) => {
-                        const scannerUser = users.find(u => u.id === scanner.userId);
-                        const sectorDisplay = getScannerSectorDisplay(scanner);
+                      {e4uScanners.map((scannerData: any) => {
+                        const scannerRecord = scannerData.scanner;
+                        const scannerUser = scannerData.user;
+                        const sectorDisplay = getScannerSectorDisplay(scannerData);
                         return (
-                          <TableRow key={scanner.id} data-testid={`row-scanner-${scanner.id}`}>
+                          <TableRow key={scannerRecord?.id} data-testid={`row-scanner-${scannerRecord?.id}`}>
                             <TableCell className="font-medium">
                               {scannerUser ? `${scannerUser.firstName} ${scannerUser.lastName}` : 'Scanner sconosciuto'}
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-1">
-                                {scanner.canScanLists && <Badge className="bg-cyan-500/20 text-cyan-400">Liste</Badge>}
-                                {scanner.canScanTables && <Badge className="bg-purple-500/20 text-purple-400">Tavoli</Badge>}
-                                {scanner.canScanTickets && <Badge className="bg-blue-500/20 text-blue-400">Biglietti</Badge>}
+                                {scannerRecord?.canScanLists && <Badge className="bg-cyan-500/20 text-cyan-400">Liste</Badge>}
+                                {scannerRecord?.canScanTables && <Badge className="bg-purple-500/20 text-purple-400">Tavoli</Badge>}
+                                {scannerRecord?.canScanTickets && <Badge className="bg-blue-500/20 text-blue-400">Biglietti</Badge>}
                               </div>
                             </TableCell>
                             <TableCell>
@@ -3703,10 +3704,10 @@ export default function EventHub() {
                             </TableCell>
                             <TableCell>
                               <div className="flex gap-1">
-                                <Button variant="ghost" size="icon" onClick={() => openScannerAccessDialog(scanner)}>
+                                <Button variant="ghost" size="icon" onClick={() => openScannerAccessDialog(scannerData)}>
                                   <Settings className="h-4 w-4" />
                                 </Button>
-                                <Button variant="ghost" size="icon" onClick={() => removeScannerMutation.mutate(scanner.id)}>
+                                <Button variant="ghost" size="icon" onClick={() => scannerRecord?.id && removeScannerMutation.mutate(scannerRecord.id)} data-testid={`button-remove-scanner-${scannerRecord?.id}`}>
                                   <Trash2 className="h-4 w-4" />
                                 </Button>
                               </div>
@@ -4227,7 +4228,7 @@ export default function EventHub() {
                 <Label>Seleziona Utente</Label>
                 <select className="w-full h-10 px-3 rounded-md border bg-background" value={newScannerData.userId} onChange={(e) => setNewScannerData(p => ({ ...p, userId: e.target.value }))}>
                   <option value="">Seleziona...</option>
-                  {users.filter(u => !e4uScanners.some((s: any) => s.userId === u.id)).map(u => (
+                  {users.filter(u => !e4uScanners.some((s: any) => (s.scanner?.userId || s.userId) === u.id)).map(u => (
                     <option key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.role})</option>
                   ))}
                 </select>
@@ -8588,7 +8589,7 @@ export default function EventHub() {
               >
                 <option value="">Seleziona un utente...</option>
                 {users
-                  .filter(u => !e4uScanners.some((s: any) => s.userId === u.id))
+                  .filter(u => !e4uScanners.some((s: any) => (s.scanner?.userId || s.userId) === u.id))
                   .map(u => (
                     <option key={u.id} value={u.id}>
                       {u.firstName} {u.lastName} ({u.role})
