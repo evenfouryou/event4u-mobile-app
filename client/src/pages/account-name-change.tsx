@@ -54,6 +54,7 @@ import {
 const nameChangeSchema = z.object({
   newFirstName: z.string().min(2, "Il nome deve avere almeno 2 caratteri"),
   newLastName: z.string().min(2, "Il cognome deve avere almeno 2 caratteri"),
+  newEmail: z.string().email("Inserisci un'email valida"),
   newFiscalCode: z.string().length(16, "Il codice fiscale deve essere di 16 caratteri").toUpperCase(),
   newDocumentType: z.enum(["carta_identita", "passaporto", "patente"], {
     required_error: "Seleziona un tipo di documento",
@@ -98,6 +99,7 @@ export default function AccountNameChange() {
     defaultValues: {
       newFirstName: "",
       newLastName: "",
+      newEmail: "",
       newFiscalCode: "",
       newDocumentType: undefined,
       newDocumentNumber: "",
@@ -111,6 +113,7 @@ export default function AccountNameChange() {
         ticketId: id,
         newFirstName: data.newFirstName,
         newLastName: data.newLastName,
+        newEmail: data.newEmail,
         newFiscalCode: data.newFiscalCode.toUpperCase(),
         newDocumentType: data.newDocumentType,
         newDocumentNumber: data.newDocumentNumber,
@@ -295,6 +298,25 @@ export default function AccountNameChange() {
                     )}
                   />
                 </div>
+
+                <FormField
+                  control={form.control}
+                  name="newEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Email del Nuovo Intestatario</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="email"
+                          placeholder="email@esempio.com"
+                          {...field}
+                          data-testid="input-new-email"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 <FormField
                   control={form.control}
@@ -543,6 +565,25 @@ export default function AccountNameChange() {
                       placeholder="Inserisci il cognome"
                       {...field}
                       data-testid="input-last-name"
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="newEmail"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Email del Nuovo Intestatario</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="email"
+                      placeholder="email@esempio.com"
+                      {...field}
+                      data-testid="input-new-email"
                     />
                   </FormControl>
                   <FormMessage />

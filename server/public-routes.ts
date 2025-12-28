@@ -3553,14 +3553,15 @@ router.post("/api/public/account/name-change", async (req, res) => {
     const { 
       ticketId, 
       newFirstName, 
-      newLastName, 
+      newLastName,
+      newEmail,
       newFiscalCode,
       newDocumentType,
       newDocumentNumber,
       newDateOfBirth 
     } = req.body;
 
-    if (!ticketId || !newFirstName || !newLastName || !newFiscalCode || !newDocumentType || !newDocumentNumber || !newDateOfBirth) {
+    if (!ticketId || !newFirstName || !newLastName || !newEmail || !newFiscalCode || !newDocumentType || !newDocumentNumber || !newDateOfBirth) {
       return res.status(400).json({ message: "Dati incompleti. Tutti i campi sono obbligatori secondo le norme SIAE." });
     }
 
@@ -3616,6 +3617,7 @@ router.post("/api/public/account/name-change", async (req, res) => {
         requestedByType: 'customer',
         newFirstName,
         newLastName,
+        newEmail,
         newFiscalCode: newFiscalCode.toUpperCase(),
         newDocumentType,
         newDocumentNumber,
