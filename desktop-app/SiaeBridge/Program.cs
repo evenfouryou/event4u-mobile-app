@@ -1057,10 +1057,11 @@ namespace SiaeBridge
 
                 // Create signed XML with embedded signature
                 string signatureValue = Convert.ToBase64String(signature);
+                string digestValue = Convert.ToBase64String(hash); // SHA-1 hash as DigestValue
                 string signedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz");
                 
                 // For SIAE C1 reports, we embed the signature in XML-DSig format
-                string signedXml = CreateSignedXml(xmlContent, signatureValue, certificateData, signedAt);
+                string signedXml = CreateSignedXml(xmlContent, signatureValue, certificateData, digestValue, signedAt);
 
                 return JsonConvert.SerializeObject(new
                 {
@@ -1096,26 +1097,26 @@ namespace SiaeBridge
         // ============================================================
         // Helper: Create XML-DSig signed document
         // ============================================================
-        static string CreateSignedXml(string xmlContent, string signatureValue, string certificateData, string signedAt)
+        static string CreateSignedXml(string xmlContent, string signatureValue, string certificateData, string digestValue, string signedAt)
         {
             // Find the position before the closing root tag to insert the signature
-            // For SIAE C1 reports, the root tag is typically <flussi>
+            // For SIAE C1 reports, the root tag is typically <ComunicazioneDatiTitoli> or <RiepilogoMensile>
             int closingTagPos = xmlContent.LastIndexOf("</");
             
             if (closingTagPos < 0)
             {
                 // If no closing tag found, append signature at the end
-                return xmlContent + CreateSignatureBlock(signatureValue, certificateData, signedAt);
+                return xmlContent + CreateSignatureBlock(signatureValue, certificateData, digestValue, signedAt);
             }
 
             // Insert XML-DSig signature before the closing root tag
-            string signatureBlock = CreateSignatureBlock(signatureValue, certificateData, signedAt);
+            string signatureBlock = CreateSignatureBlock(signatureValue, certificateData, digestValue, signedAt);
             return xmlContent.Substring(0, closingTagPos) + signatureBlock + xmlContent.Substring(closingTagPos);
         }
 
-        static string CreateSignatureBlock(string signatureValue, string certificateData, string signedAt)
+        static string CreateSignatureBlock(string signatureValue, string certificateData, string digestValue, string signedAt)
         {
-            // XML Digital Signature (XML-DSig) format
+            // XML Digital Signature (XML-DSig) format per SIAE
             return $@"
   <Signature xmlns=""http://www.w3.org/2000/09/xmldsig#"">
     <SignedInfo>
@@ -1126,7 +1127,7 @@ namespace SiaeBridge
           <Transform Algorithm=""http://www.w3.org/2000/09/xmldsig#enveloped-signature""/>
         </Transforms>
         <DigestMethod Algorithm=""http://www.w3.org/2000/09/xmldsig#sha1""/>
-        <DigestValue></DigestValue>
+        <DigestValue>{digestValue}</DigestValue>
       </Reference>
     </SignedInfo>
     <SignatureValue>{signatureValue}</SignatureValue>
