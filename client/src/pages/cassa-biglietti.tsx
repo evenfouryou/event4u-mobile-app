@@ -1264,23 +1264,39 @@ export default function CassaBigliettiPage() {
 
                         <div className="space-y-2">
                           <Label>Metodo Pagamento</Label>
-                          <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                            <SelectTrigger data-testid="select-payment">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="cash">
-                                <div className="flex items-center gap-2">
-                                  <Banknote className="w-4 h-4" /> Contanti
+                          {!canEmitTickets ? (
+                            <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400">
+                              <div className="flex items-center gap-2">
+                                <WifiOff className="w-5 h-5 flex-shrink-0" />
+                                <div>
+                                  <p className="font-medium">Servizio temporaneamente non disponibile</p>
+                                  <p className="text-sm mt-1">
+                                    {!bridgeConnected 
+                                      ? "Avvia l'app desktop Event4U e riprova." 
+                                      : "Inserisci la Smart Card SIAE nel lettore e riprova."}
+                                  </p>
                                 </div>
-                              </SelectItem>
-                              <SelectItem value="card">
-                                <div className="flex items-center gap-2">
-                                  <CreditCard className="w-4 h-4" /> Carta
-                                </div>
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
+                              </div>
+                            </div>
+                          ) : (
+                            <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                              <SelectTrigger data-testid="select-payment">
+                                <SelectValue />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="cash">
+                                  <div className="flex items-center gap-2">
+                                    <Banknote className="w-4 h-4" /> Contanti
+                                  </div>
+                                </SelectItem>
+                                <SelectItem value="card">
+                                  <div className="flex items-center gap-2">
+                                    <CreditCard className="w-4 h-4" /> Carta
+                                  </div>
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                          )}
                         </div>
 
                         {ticketType === "ridotto" && (
@@ -2104,23 +2120,39 @@ export default function CassaBigliettiPage() {
 
                 <div className="space-y-2">
                   <Label>Metodo Pagamento</Label>
-                  <Select value={paymentMethod} onValueChange={setPaymentMethod}>
-                    <SelectTrigger data-testid="select-payment">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="cash">
-                        <div className="flex items-center gap-2">
-                          <Banknote className="w-4 h-4" /> Contanti
+                  {!canEmitTickets ? (
+                    <div className="p-4 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400">
+                      <div className="flex items-center gap-2">
+                        <WifiOff className="w-5 h-5 flex-shrink-0" />
+                        <div>
+                          <p className="font-medium">Servizio temporaneamente non disponibile</p>
+                          <p className="text-sm mt-1">
+                            {!bridgeConnected 
+                              ? "Avvia l'app desktop Event4U e riprova." 
+                              : "Inserisci la Smart Card SIAE nel lettore e riprova."}
+                          </p>
                         </div>
-                      </SelectItem>
-                      <SelectItem value="card">
-                        <div className="flex items-center gap-2">
-                          <CreditCard className="w-4 h-4" /> Carta
-                        </div>
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
+                      </div>
+                    </div>
+                  ) : (
+                    <Select value={paymentMethod} onValueChange={setPaymentMethod}>
+                      <SelectTrigger data-testid="select-payment">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="cash">
+                          <div className="flex items-center gap-2">
+                            <Banknote className="w-4 h-4" /> Contanti
+                          </div>
+                        </SelectItem>
+                        <SelectItem value="card">
+                          <div className="flex items-center gap-2">
+                            <CreditCard className="w-4 h-4" /> Carta
+                          </div>
+                        </SelectItem>
+                      </SelectContent>
+                    </Select>
+                  )}
                 </div>
 
                 {ticketType === "ridotto" && (
