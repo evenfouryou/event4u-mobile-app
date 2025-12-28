@@ -99,6 +99,7 @@ async function generateC1ReportData(ticketedEvent: any, reportType: 'giornaliero
     sectors,
     reportType,
     reportDate,
+    progressivo,
     activeTicketsCount: activeTickets.length,
     cancelledTicketsCount: cancelledTickets.length,
     totalRevenue: totalTicketRevenue,
@@ -108,7 +109,7 @@ async function generateC1ReportData(ticketedEvent: any, reportType: 'giornaliero
 }
 
 function generateXMLContent(reportData: any): string {
-  const { ticketedEvent, company, eventRecord, sectors, reportType, reportDate, activeTicketsCount, cancelledTicketsCount, totalRevenue, filteredTickets } = reportData;
+  const { ticketedEvent, company, eventRecord, sectors, reportType, reportDate, activeTicketsCount, cancelledTicketsCount, totalRevenue, filteredTickets, progressivo = 1 } = reportData;
   const isMonthly = reportType === 'mensile';
   
   const now = new Date();
@@ -172,7 +173,7 @@ function generateXMLContent(reportData: any): string {
   const meseAttrName = isMonthly ? 'Mese' : 'Giorno';
 
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<${rootElement} ${meseAttrName}="${meseAttr}" DataGenerazione="${dataGen}" OraGenerazione="${oraGen}" ProgressivoGenerazione="1" Sostituzione="N">
+<${rootElement} ${meseAttrName}="${meseAttr}" DataGenerazione="${dataGen}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressivo}" Sostituzione="N">
     <Titolare>
         <Denominazione>${company?.name || 'N/A'}</Denominazione>
         <CodiceFiscale>${company?.taxId || 'XXXXXXXXXXXXXXXX'}</CodiceFiscale>
@@ -275,11 +276,13 @@ async function sendDailyReports() {
           continue;
         }
 
-        const reportData = await generateC1ReportData(ticketedEvent, 'giornaliero', yesterday);
+        // Calcola il progressivo per questa trasmissione
+        const progressivo = await getNextProgressivo(ticketedEvent.id, 'daily', yesterday);
+        const reportData = await generateC1ReportData(ticketedEvent, 'giornaliero', yesterday, progressivo);
         const xmlContent = generateXMLContent(reportData);
 
         const dateStr = yesterday.toISOString().split('T')[0].replace(/-/g, '');
-        const fileName = `C1_DAILY_${ticketedEvent.siaeEventCode || ticketedEvent.id}_${dateStr}.xml`;
+        let fileName = `C1_DAILY_${ticketedEvent.siaeEventCode || ticketedEvent.id}_${dateStr}_P${progressivo}.xml`;
 
         const transmission = await siaeStorage.createSiaeTransmission({
           companyId: ticketedEvent.companyId,
@@ -299,6 +302,7 @@ async function sendDailyReports() {
         // Tenta firma digitale se il bridge è connesso
         let xmlToSend = xmlContent;
         let signatureInfo = '';
+        let isSigned = false;
         
         try {
           if (isBridgeConnected()) {
@@ -306,11 +310,16 @@ async function sendDailyReports() {
             const signatureResult = await requestXmlSignature(xmlContent);
             xmlToSend = signatureResult.signedXml;
             signatureInfo = ' (firmato digitalmente)';
+            isSigned = true;
             log(`XML firmato con successo alle ${signatureResult.signedAt}`);
             
-            // Aggiorna trasmissione con contenuto firmato
+            // Aggiorna nome file con estensione .xml.p7m per file firmati
+            fileName = fileName.replace('.xml', '.xml.p7m');
+            
+            // Aggiorna trasmissione con contenuto firmato e nuovo nome file
             await siaeStorage.updateSiaeTransmission(transmission.id, {
               fileContent: xmlToSend,
+              fileName: fileName,
             });
           } else {
             log(`Bridge non connesso, invio XML non firmato`);
@@ -386,11 +395,13 @@ async function sendMonthlyReports() {
           continue;
         }
 
-        const reportData = await generateC1ReportData(ticketedEvent, 'mensile', previousMonth);
+        // Calcola il progressivo per questa trasmissione mensile
+        const progressivo = await getNextProgressivo(ticketedEvent.id, 'monthly', previousMonth);
+        const reportData = await generateC1ReportData(ticketedEvent, 'mensile', previousMonth, progressivo);
         const xmlContent = generateXMLContent(reportData);
 
         const monthStr = `${previousMonth.getFullYear()}${String(previousMonth.getMonth() + 1).padStart(2, '0')}`;
-        const fileName = `C1_MONTHLY_${ticketedEvent.siaeEventCode || ticketedEvent.id}_${monthStr}.xml`;
+        let fileName = `C1_MONTHLY_${ticketedEvent.siaeEventCode || ticketedEvent.id}_${monthStr}_P${progressivo}.xml`;
 
         const transmission = await siaeStorage.createSiaeTransmission({
           companyId: ticketedEvent.companyId,
@@ -410,6 +421,7 @@ async function sendMonthlyReports() {
         // Tenta firma digitale se il bridge è connesso
         let xmlToSend = xmlContent;
         let signatureInfo = '';
+        let isSigned = false;
         
         try {
           if (isBridgeConnected()) {
@@ -417,11 +429,16 @@ async function sendMonthlyReports() {
             const signatureResult = await requestXmlSignature(xmlContent);
             xmlToSend = signatureResult.signedXml;
             signatureInfo = ' (firmato digitalmente)';
+            isSigned = true;
             log(`XML mensile firmato con successo alle ${signatureResult.signedAt}`);
             
-            // Aggiorna trasmissione con contenuto firmato
+            // Aggiorna nome file con estensione .xml.p7m per file firmati
+            fileName = fileName.replace('.xml', '.xml.p7m');
+            
+            // Aggiorna trasmissione con contenuto firmato e nuovo nome file
             await siaeStorage.updateSiaeTransmission(transmission.id, {
               fileContent: xmlToSend,
+              fileName: fileName,
             });
           } else {
             log(`Bridge non connesso, invio XML mensile non firmato`);
