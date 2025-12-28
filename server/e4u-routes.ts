@@ -1892,6 +1892,132 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
       });
     }
     
+    // Check if it's a SIAE subscription QR code (format: SIAE-SUB-{subscriptionId})
+    if (parts.length === 3 && parts[0] === 'SIAE' && parts[1] === 'SUB') {
+      const subscriptionId = parts[2];
+      
+      // Find subscription by ID
+      const [subscription] = await db.select()
+        .from(siaeSubscriptions)
+        .where(eq(siaeSubscriptions.id, subscriptionId));
+      
+      if (!subscription) {
+        return res.status(404).json({ message: "Abbonamento non trovato" });
+      }
+      
+      // Get ticketed event info
+      const [ticketedEvent] = await db.select({
+        id: siaeTicketedEvents.id,
+        eventId: siaeTicketedEvents.eventId,
+      })
+        .from(siaeTicketedEvents)
+        .where(eq(siaeTicketedEvents.id, subscription.ticketedEventId));
+      
+      if (!ticketedEvent) {
+        return res.status(404).json({ message: "Evento non trovato" });
+      }
+      
+      // Get subscription type info
+      const [subType] = await db.select({
+        name: siaeSubscriptionTypes.name,
+      })
+        .from(siaeSubscriptionTypes)
+        .where(eq(siaeSubscriptionTypes.id, subscription.subscriptionTypeId));
+      
+      // SECURITY: Verify scanner permissions for this event
+      const isGestore = await isGestoreForEvent(user, ticketedEvent.eventId);
+      if (!isGestore) {
+        const permResult = await checkScannerPermissionGranular(getUserId(user), ticketedEvent.eventId, 'tickets');
+        if (!permResult.allowed) {
+          return res.status(403).json({ 
+            message: permResult.reason || "Non hai i permessi di scansione abbonamenti per questo evento. Contatta l'organizzatore.",
+            errorCode: "SCANNER_PERMISSION_DENIED"
+          });
+        }
+      }
+      
+      // Check subscription status
+      if (subscription.status === 'cancelled') {
+        return res.status(400).json({ 
+          message: "Abbonamento annullato",
+          subscription: {
+            id: subscription.id,
+            subscriptionCode: subscription.subscriptionCode,
+          },
+          isCancelled: true,
+        });
+      }
+      
+      if (subscription.status === 'suspended') {
+        return res.status(400).json({ 
+          message: "Abbonamento sospeso",
+          subscription: {
+            id: subscription.id,
+            subscriptionCode: subscription.subscriptionCode,
+          },
+        });
+      }
+      
+      // Check validity period
+      const now = new Date();
+      if (subscription.validFrom && new Date(subscription.validFrom) > now) {
+        return res.status(400).json({ 
+          message: `Abbonamento non ancora valido. Valido dal ${new Date(subscription.validFrom).toLocaleDateString('it-IT')}`,
+        });
+      }
+      
+      if (subscription.validTo && new Date(subscription.validTo) < now) {
+        return res.status(400).json({ 
+          message: "Abbonamento scaduto",
+          subscription: {
+            id: subscription.id,
+            subscriptionCode: subscription.subscriptionCode,
+            validTo: subscription.validTo,
+          },
+        });
+      }
+      
+      // Check events usage
+      if (subscription.eventsCount !== null && subscription.eventsUsed !== null) {
+        if (subscription.eventsUsed >= subscription.eventsCount) {
+          return res.status(400).json({ 
+            message: `Abbonamento esaurito. Utilizzati ${subscription.eventsUsed}/${subscription.eventsCount} eventi`,
+            subscription: {
+              id: subscription.id,
+              subscriptionCode: subscription.subscriptionCode,
+              eventsUsed: subscription.eventsUsed,
+              eventsCount: subscription.eventsCount,
+            },
+          });
+        }
+      }
+      
+      // Validate subscription - increment eventsUsed
+      const newEventsUsed = (subscription.eventsUsed || 0) + 1;
+      const [updated] = await db.update(siaeSubscriptions)
+        .set({
+          eventsUsed: newEventsUsed,
+          updatedAt: new Date(),
+        })
+        .where(eq(siaeSubscriptions.id, subscription.id))
+        .returning();
+      
+      return res.json({
+        success: true,
+        type: 'subscription',
+        message: "Ingresso abbonamento registrato con successo",
+        person: {
+          firstName: subscription.holderFirstName || '',
+          lastName: subscription.holderLastName || '',
+          type: 'abbonamento',
+          ticketType: subType?.name || 'Abbonamento',
+          ticketCode: subscription.subscriptionCode,
+          eventsUsed: newEventsUsed,
+          eventsCount: subscription.eventsCount,
+        },
+      });
+    }
+    
     // Check if it's a paid reservation QR code (format: RES-{eventId}-{random})
     if (parts[0] === 'RES' && parts.length >= 2) {
       // Find reservation by QR code
@@ -1981,7 +2107,7 @@ router.post("/api/e4u/scan", requireAuth, async (req: Request, res: Response) =>
     
     // Original E4U format: E4U-{type}-{id}-{random}
     if (parts.length !== 4 || parts[0] !== 'E4U') {
-      return res.status(400).json({ message: "Formato codice QR non valido. Formati supportati: E4U-LST-*, E4U-TBL-*, SIAE-TKT-*, RES-*" });
+      return res.status(400).json({ message: "Formato codice QR non valido. Formati supportati: E4U-LST-*, E4U-TBL-*, SIAE-TKT-*, SIAE-SUB-*, RES-*" });
     }
     
     const type = parts[1]; // LST or TBL
