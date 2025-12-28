@@ -83,6 +83,7 @@ import {
   siaeCancellationReasons,
   siaeCashiers,
   siaeCustomers,
+  siaeNameChanges,
   publicCustomerSessions,
   systemSettings,
   insertSiaeEventGenreSchema,
@@ -7974,7 +7975,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // POST /api/public/account/name-change - Change ticket participant name
+  // POST /api/public/account/name-change - Request ticket name change
   app.post('/api/public/account/name-change', isAuthenticated, async (req: any, res) => {
     try {
       const { ticketId, newFirstName, newLastName } = req.body;
@@ -7985,30 +7986,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Get the ticket to verify ownership
-      const ticket = await db.select().from(siaeTickets)
-        .where(eq(siaeTickets.id, ticketId))
-        .limit(1);
+      const ticketData = await db.query.siaeTickets.findFirst({
+        where: eq(siaeTickets.id, ticketId),
+        with: { customer: true }
+      });
 
-      if (!ticket || ticket.length === 0) {
+      if (!ticketData) {
         return res.status(404).json({ message: "Biglietto non trovato" });
       }
 
-      // Verify user owns this ticket (check via customerId if possible, or general auth)
-      // For now, just verify the ticket exists and user is authenticated
-      
-      // Update ticket with new name
-      await db.update(siaeTickets)
-        .set({
-          participantFirstName: newFirstName,
-          participantLastName: newLastName,
-          updatedAt: new Date()
-        })
-        .where(eq(siaeTickets.id, ticketId));
+      // Verify user owns this ticket
+      if (ticketData.customerId) {
+        const customer = await db.query.siaeCustomers.findFirst({
+          where: eq(siaeCustomers.id, ticketData.customerId)
+        });
 
-      res.json({ message: "Nominativo aggiornato con successo" });
+        if (!customer || customer.userId !== userId) {
+          return res.status(403).json({ message: "Non autorizzato a modificare questo biglietto" });
+        }
+      } else {
+        return res.status(403).json({ message: "Biglietto non associato a un cliente" });
+      }
+
+      // Create a name change request in siaeNameChanges table
+      const nameChangeRequest = await db.insert(siaeNameChanges).values({
+        originalTicketId: ticketId,
+        requestedById: ticketData.customerId,
+        requestedByType: 'customer',
+        newFirstName,
+        newLastName,
+        status: 'pending'
+      }).returning();
+
+      res.json({ 
+        message: "Richiesta di cambio nominativo inviata con successo",
+        nameChangeId: nameChangeRequest[0].id,
+        status: 'pending'
+      });
     } catch (error: any) {
-      console.error("Error changing ticket name:", error);
-      res.status(500).json({ message: error.message || "Errore nell'aggiornamento del nominativo" });
+      console.error("Error requesting name change:", error);
+      res.status(500).json({ message: error.message || "Errore nella richiesta di cambio nominativo" });
     }
   });
 
