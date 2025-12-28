@@ -128,27 +128,36 @@ function playSound(type: 'success' | 'error') {
     const ctx = initAudioContext();
     if (!ctx) return;
 
+    // Ensure context is running (needed for some mobile browsers)
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
+
+    const startTime = ctx.currentTime + 0.01;
+
     if (type === 'success') {
       // Success: Two ascending beeps
       const osc1 = ctx.createOscillator();
       const gain1 = ctx.createGain();
       osc1.connect(gain1);
       gain1.connect(ctx.destination);
-      osc1.frequency.setValueAtTime(800, ctx.currentTime);
-      gain1.gain.setValueAtTime(0.4, ctx.currentTime);
-      gain1.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.1);
-      osc1.start(ctx.currentTime);
-      osc1.stop(ctx.currentTime + 0.1);
+      osc1.frequency.setValueAtTime(800, startTime);
+      gain1.gain.setValueAtTime(0, startTime);
+      gain1.gain.linearRampToValueAtTime(0.4, startTime + 0.01);
+      gain1.gain.exponentialRampToValueAtTime(0.01, startTime + 0.1);
+      osc1.start(startTime);
+      osc1.stop(startTime + 0.1);
 
       const osc2 = ctx.createOscillator();
       const gain2 = ctx.createGain();
       osc2.connect(gain2);
       gain2.connect(ctx.destination);
-      osc2.frequency.setValueAtTime(1200, ctx.currentTime + 0.12);
-      gain2.gain.setValueAtTime(0.4, ctx.currentTime + 0.12);
-      gain2.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.25);
-      osc2.start(ctx.currentTime + 0.12);
-      osc2.stop(ctx.currentTime + 0.25);
+      osc2.frequency.setValueAtTime(1200, startTime + 0.12);
+      gain2.gain.setValueAtTime(0, startTime + 0.12);
+      gain2.gain.linearRampToValueAtTime(0.4, startTime + 0.13);
+      gain2.gain.exponentialRampToValueAtTime(0.01, startTime + 0.25);
+      osc2.start(startTime + 0.12);
+      osc2.stop(startTime + 0.25);
     } else {
       // Error: Low descending buzz
       const osc = ctx.createOscillator();
@@ -156,12 +165,13 @@ function playSound(type: 'success' | 'error') {
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.type = 'sawtooth';
-      osc.frequency.setValueAtTime(300, ctx.currentTime);
-      osc.frequency.exponentialRampToValueAtTime(150, ctx.currentTime + 0.3);
-      gain.gain.setValueAtTime(0.3, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-      osc.start(ctx.currentTime);
-      osc.stop(ctx.currentTime + 0.3);
+      osc.frequency.setValueAtTime(300, startTime);
+      osc.frequency.exponentialRampToValueAtTime(150, startTime + 0.3);
+      gain.gain.setValueAtTime(0, startTime);
+      gain.gain.linearRampToValueAtTime(0.3, startTime + 0.01);
+      gain.gain.exponentialRampToValueAtTime(0.01, startTime + 0.3);
+      osc.start(startTime);
+      osc.stop(startTime + 0.3);
     }
   } catch (error) {
     console.error('Audio error:', error);
