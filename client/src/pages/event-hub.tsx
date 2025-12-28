@@ -2301,10 +2301,12 @@ export default function EventHub() {
                       <Armchair className="h-5 w-5" />
                       <span className="text-xs">Tavolo</span>
                     </Button>
-                    <Button variant="outline" onClick={() => navigate(`/events/${id}/direct-stock`)} className="flex flex-col h-auto py-4 gap-2" data-testid="quick-stock">
-                      <Package className="h-5 w-5" />
-                      <span className="text-xs">Stock</span>
-                    </Button>
+                    {(userFeatures?.beverageEnabled !== false) && (
+                      <Button variant="outline" onClick={() => navigate(`/events/${id}/direct-stock`)} className="flex flex-col h-auto py-4 gap-2" data-testid="quick-stock">
+                        <Package className="h-5 w-5" />
+                        <span className="text-xs">Stock</span>
+                      </Button>
+                    )}
                     <Button variant="outline" onClick={() => navigate(`/reports?eventId=${id}`)} className="flex flex-col h-auto py-4 gap-2" data-testid="quick-report">
                       <BarChart3 className="h-5 w-5" />
                       <span className="text-xs">Report</span>
@@ -2321,7 +2323,9 @@ export default function EventHub() {
             {/* Charts Row */}
             <div className="grid grid-cols-2 gap-6">
               <EntranceChart data={e4uStats?.entranceFlowData || []} />
-              <TopConsumptionsWidget eventId={id || ''} />
+              {(userFeatures?.beverageEnabled !== false) && (
+                <TopConsumptionsWidget eventId={id || ''} />
+              )}
             </div>
 
             {/* Venue Map */}
@@ -5075,15 +5079,17 @@ export default function EventHub() {
               }}
               testId="quick-action-book-table"
             />
-            <QuickActionButton
-              icon={Package}
-              label="Trasferisci Stock"
-              onClick={() => {
-                setQuickActionsOpen(false);
-                navigate(`/events/${id}/direct-stock`);
-              }}
-              testId="quick-action-transfer"
-            />
+            {(userFeatures?.beverageEnabled !== false) && (
+              <QuickActionButton
+                icon={Package}
+                label="Trasferisci Stock"
+                onClick={() => {
+                  setQuickActionsOpen(false);
+                  navigate(`/events/${id}/direct-stock`);
+                }}
+                testId="quick-action-transfer"
+              />
+            )}
             <QuickActionButton
               icon={BarChart3}
               label="Report Live"
@@ -5415,7 +5421,7 @@ export default function EventHub() {
                 </CardHeader>
                 <CardContent className="px-4">
                   <div className="space-y-3">
-                    {alerts.length === 0 && eventStocks.length < 5 && (
+                    {(userFeatures?.beverageEnabled !== false) && alerts.length === 0 && eventStocks.length < 5 && (
                       <div className="flex items-center gap-3 p-4 rounded-xl bg-amber-500/10 border border-amber-500/20">
                         <AlertTriangle className="h-5 w-5 text-amber-400 flex-shrink-0" />
                         <div>
