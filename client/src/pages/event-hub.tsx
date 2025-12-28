@@ -1026,8 +1026,13 @@ export default function EventHub() {
   });
 
   const handleEditSector = (sectorId: string | null) => {
-    if (!sectorId) return;
+    console.log("[DEBUG] handleEditSector called with sectorId:", sectorId);
+    if (!sectorId) {
+      console.log("[DEBUG] sectorId is null, returning");
+      return;
+    }
     const sector = ticketedEvent?.sectors?.find(s => s.id === sectorId);
+    console.log("[DEBUG] Found sector:", sector);
     if (sector) {
       setEditingSectorData(sector);
       editSectorForm.reset({
@@ -1042,7 +1047,10 @@ export default function EventHub() {
         sortOrder: sector.sortOrder || 0,
         active: sector.active !== false,
       });
+      console.log("[DEBUG] Setting isEditSectorDialogOpen to true");
       setIsEditSectorDialogOpen(true);
+    } else {
+      console.log("[DEBUG] Sector not found in ticketedEvent.sectors");
     }
   };
 
@@ -2424,27 +2432,26 @@ export default function EventHub() {
                                           </DropdownMenuTrigger>
                                           <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
                                             <DropdownMenuItem 
-                                              onSelect={() => {
-                                                const sectorId = sector.id;
-                                                setTimeout(() => handleEditSector(sectorId), 150);
+                                              onSelect={(e) => {
+                                                e.preventDefault();
+                                                handleEditSector(sector.id);
                                               }}
                                               data-testid="button-modify"
                                             >
                                               <Edit2 className="h-4 w-4 mr-2" />
                                               Modifica
                                             </DropdownMenuItem>
-                                            <DropdownMenuItem onSelect={() => {
-                                              const s = sector;
-                                              setTimeout(() => {
-                                                setEditingSector(s);
-                                                setEditingCapacity(String(s.capacity));
-                                              }, 150);
+                                            <DropdownMenuItem onSelect={(e) => {
+                                              e.preventDefault();
+                                              setEditingSector(sector);
+                                              setEditingCapacity(String(sector.capacity));
                                             }}>
                                               <Hash className="h-4 w-4 mr-2" />
                                               Modifica Capienza
                                             </DropdownMenuItem>
                                             <DropdownMenuSeparator />
-                                            <DropdownMenuItem onSelect={() => {
+                                            <DropdownMenuItem onSelect={(e) => {
+                                              e.preventDefault();
                                               updateSectorMutation.mutate({
                                                 ...sector,
                                                 active: !sector.active,
@@ -2542,15 +2549,16 @@ export default function EventHub() {
                                             </Button>
                                           </DropdownMenuTrigger>
                                           <DropdownMenuContent onClick={(e) => e.stopPropagation()}>
-                                            <DropdownMenuItem onSelect={() => {
-                                              const subTypeId = subType.id;
-                                              setTimeout(() => handleEditSubscriptionType(subTypeId), 150);
+                                            <DropdownMenuItem onSelect={(e) => {
+                                              e.preventDefault();
+                                              handleEditSubscriptionType(subType.id);
                                             }}>
                                               <Edit2 className="h-4 w-4 mr-2" />
                                               Modifica
                                             </DropdownMenuItem>
                                             <DropdownMenuSeparator />
-                                            <DropdownMenuItem onSelect={() => {
+                                            <DropdownMenuItem onSelect={(e) => {
+                                              e.preventDefault();
                                               updateSubscriptionTypeMutation.mutate({
                                                 id: subType.id,
                                                 active: subType.active === false ? true : false,
@@ -2840,27 +2848,27 @@ export default function EventHub() {
                             </Button>
                           </DropdownMenuTrigger>
                           <DropdownMenuContent>
-                            <DropdownMenuItem onSelect={() => {
-                              const sectorId = selectedSectorId;
-                              setTimeout(() => handleEditSector(sectorId), 150);
+                            <DropdownMenuItem onSelect={(e) => {
+                              e.preventDefault();
+                              handleEditSector(selectedSectorId);
                             }}>
                               <Edit2 className="h-4 w-4 mr-2" />
                               Modifica Settore
                             </DropdownMenuItem>
-                            <DropdownMenuItem onSelect={() => {
+                            <DropdownMenuItem onSelect={(e) => {
+                              e.preventDefault();
                               const sector = ticketedEvent?.sectors?.find(s => s.id === selectedSectorId);
                               if (sector) {
-                                setTimeout(() => {
-                                  setEditingSector(sector);
-                                  setEditingCapacity(String(sector.capacity));
-                                }, 150);
+                                setEditingSector(sector);
+                                setEditingCapacity(String(sector.capacity));
                               }
                             }}>
                               <Hash className="h-4 w-4 mr-2" />
                               Modifica Capienza
                             </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem onSelect={() => {
+                            <DropdownMenuItem onSelect={(e) => {
+                              e.preventDefault();
                               const sector = ticketedEvent?.sectors?.find(s => s.id === selectedSectorId);
                               if (sector) {
                                 updateSectorMutation.mutate({
