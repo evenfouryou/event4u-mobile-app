@@ -19,6 +19,7 @@ import {
   siaeTicketedEvents,
   siaeEventSectors,
   siaeSubscriptions,
+  siaeSubscriptionTypes,
   siaeTransactions,
   siaeCancellationReasons,
   publicCheckoutSessions,
