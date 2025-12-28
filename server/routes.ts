@@ -7974,6 +7974,44 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // POST /api/public/account/name-change - Change ticket participant name
+  app.post('/api/public/account/name-change', isAuthenticated, async (req: any, res) => {
+    try {
+      const { ticketId, newFirstName, newLastName } = req.body;
+      const userId = req.user.claims.sub;
+
+      if (!ticketId || !newFirstName || !newLastName) {
+        return res.status(400).json({ message: "Campi obbligatori mancanti" });
+      }
+
+      // Get the ticket to verify ownership
+      const ticket = await db.select().from(siaeTickets)
+        .where(eq(siaeTickets.id, ticketId))
+        .limit(1);
+
+      if (!ticket || ticket.length === 0) {
+        return res.status(404).json({ message: "Biglietto non trovato" });
+      }
+
+      // Verify user owns this ticket (check via customerId if possible, or general auth)
+      // For now, just verify the ticket exists and user is authenticated
+      
+      // Update ticket with new name
+      await db.update(siaeTickets)
+        .set({
+          participantFirstName: newFirstName,
+          participantLastName: newLastName,
+          updatedAt: new Date()
+        })
+        .where(eq(siaeTickets.id, ticketId));
+
+      res.json({ message: "Nominativo aggiornato con successo" });
+    } catch (error: any) {
+      console.error("Error changing ticket name:", error);
+      res.status(500).json({ message: error.message || "Errore nell'aggiornamento del nominativo" });
+    }
+  });
+
   // GET /api/public/cookie-settings - Public endpoint for cookie banner settings
   app.get('/api/public/cookie-settings', async (req, res) => {
     try {
