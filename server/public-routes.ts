@@ -1917,8 +1917,18 @@ router.post("/api/public/checkout/confirm", async (req, res) => {
             })
             .returning();
 
+          // Aggiorna qrCode con formato scannable (SIAE-SUB-{subscriptionId}) come per i biglietti
+          const scannableQrCode = `SIAE-SUB-${subscription.id}`;
+          await db
+            .update(siaeSubscriptions)
+            .set({ qrCode: scannableQrCode })
+            .where(eq(siaeSubscriptions.id, subscription.id));
+          
+          // Aggiorna subscription locale con qrCode scannable
+          subscription.qrCode = scannableQrCode;
+
           subscriptions.push(subscription);
-          console.log(`[PUBLIC] Created subscription: ${subscriptionCode}, QR: ${qrCode}, progressiveNumber: ${subscription.progressiveNumber}, seal: ${sealData.sealCode}`);
+          console.log(`[PUBLIC] Created subscription: ${subscriptionCode}, QR: ${scannableQrCode}, progressiveNumber: ${subscription.progressiveNumber}, seal: ${sealData.sealCode}`);
         }
 
         // Update subscription type sold count
@@ -2870,6 +2880,100 @@ router.get("/api/public/account/tickets", async (req, res) => {
   } catch (error: any) {
     console.error("[PUBLIC] Get tickets error:", error);
     res.status(500).json({ message: "Errore nel caricamento biglietti" });
+  }
+});
+
+// Ottieni abbonamenti del cliente autenticato
+router.get("/api/public/account/subscriptions", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    // Query subscriptions for this customer
+    const subscriptionRows = await db
+      .select()
+      .from(siaeSubscriptions)
+      .where(eq(siaeSubscriptions.customerId, customer.id));
+
+    // If no subscriptions, return empty arrays
+    if (subscriptionRows.length === 0) {
+      return res.json({ upcoming: [], past: [], total: 0 });
+    }
+
+    // Fetch related data for each subscription
+    const subscriptions = await Promise.all(subscriptionRows.map(async (subscription) => {
+      let subscriptionTypeName = null;
+      let eventName = null;
+      let eventStart = null;
+      let eventEnd = null;
+      let locationName = null;
+
+      // Fetch subscription type name
+      if (subscription.subscriptionTypeId) {
+        const [subType] = await db.select().from(siaeSubscriptionTypes).where(eq(siaeSubscriptionTypes.id, subscription.subscriptionTypeId));
+        subscriptionTypeName = subType?.name || null;
+      }
+
+      // Fetch ticketed event -> event -> location
+      if (subscription.ticketedEventId) {
+        const [ticketedEvent] = await db.select().from(siaeTicketedEvents).where(eq(siaeTicketedEvents.id, subscription.ticketedEventId));
+        if (ticketedEvent?.eventId) {
+          const [event] = await db.select().from(events).where(eq(events.id, ticketedEvent.eventId));
+          if (event) {
+            eventName = event.name;
+            eventStart = event.startDatetime;
+            eventEnd = event.endDatetime;
+            if (event.locationId) {
+              const [location] = await db.select().from(locations).where(eq(locations.id, event.locationId));
+              locationName = location?.name || null;
+            }
+          }
+        }
+      }
+
+      return {
+        id: subscription.id,
+        subscriptionCode: subscription.subscriptionCode,
+        qrCode: subscription.qrCode,
+        holderFirstName: subscription.holderFirstName,
+        holderLastName: subscription.holderLastName,
+        status: subscription.status,
+        eventsCount: subscription.eventsCount,
+        eventsUsed: subscription.eventsUsed,
+        validFrom: subscription.validFrom,
+        validTo: subscription.validTo,
+        fiscalSealCode: subscription.fiscalSealCode,
+        subscriptionTypeName,
+        eventName,
+        eventStart,
+        eventEnd,
+        locationName,
+      };
+    }));
+
+    // Separate upcoming/past subscriptions
+    const now = new Date();
+    const upcoming = subscriptions.filter(s => 
+      s.validTo && new Date(s.validTo) >= now && s.status === 'active'
+    );
+    const past = subscriptions.filter(s => 
+      !s.validTo || new Date(s.validTo) < now || s.status !== 'active'
+    );
+
+    // Sort by validTo date descending
+    upcoming.sort((a, b) => (b.validTo ? new Date(b.validTo).getTime() : 0) - (a.validTo ? new Date(a.validTo).getTime() : 0));
+    past.sort((a, b) => (b.validTo ? new Date(b.validTo).getTime() : 0) - (a.validTo ? new Date(a.validTo).getTime() : 0));
+
+    res.json({
+      upcoming,
+      past,
+      total: subscriptions.length,
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Get subscriptions error:", error);
+    res.status(500).json({ message: "Errore nel caricamento abbonamenti" });
   }
 });
 
