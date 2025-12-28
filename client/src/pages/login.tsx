@@ -302,30 +302,6 @@ export default function Login() {
               >
                 {isLoading ? "Accesso in corso..." : "Accedi"}
               </Button>
-
-              <div className="relative my-6">
-                <div className="absolute inset-0 flex items-center">
-                  <span className="w-full border-t" />
-                </div>
-                <div className="relative flex justify-center text-sm uppercase">
-                  <span className="bg-card px-4 text-muted-foreground">oppure</span>
-                </div>
-              </div>
-
-              <Button
-                type="button"
-                variant="outline"
-                className="w-full"
-                onClick={() => {
-                  window.location.href = '/api/login';
-                }}
-                data-testid="button-replit-login"
-              >
-                <svg className="h-5 w-5 mr-2" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.6 0 12 0zm0 3c4.97 0 9 4.03 9 9s-4.03 9-9 9-9-4.03-9-9 4.03-9 9-9z"/>
-                </svg>
-                Accedi con Replit
-              </Button>
             </form>
 
             <div className="mt-6 text-center">
@@ -596,43 +572,6 @@ export default function Login() {
                 data-testid="button-submit"
               >
                 {isLoading ? "Accesso in corso..." : "Accedi"}
-              </HapticButton>
-            </motion.div>
-
-            <motion.div 
-              className="relative my-8"
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ ...springConfig, delay: 0.35 }}
-            >
-              <div className="absolute inset-0 flex items-center">
-                <span className="w-full border-t border-white/10" />
-              </div>
-              <div className="relative flex justify-center text-sm uppercase">
-                <span className="bg-background px-4 text-muted-foreground">oppure</span>
-              </div>
-            </motion.div>
-
-            <motion.div 
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ ...springConfig, delay: 0.4 }}
-              whileTap={{ scale: 0.98 }}
-            >
-              <HapticButton
-                type="button"
-                variant="outline"
-                className="w-full h-14 border-white/10 text-base rounded-xl"
-                onClick={() => {
-                  window.location.href = '/api/login';
-                }}
-                hapticType="light"
-                data-testid="button-replit-login"
-              >
-                <svg className="h-6 w-6 mr-3" viewBox="0 0 24 24" fill="currentColor">
-                  <path d="M12 0C5.4 0 0 5.4 0 12s5.4 12 12 12 12-5.4 12-12S18.6 0 12 0zm0 3c4.97 0 9 4.03 9 9s-4.03 9-9 9-9-4.03-9-9 4.03-9 9-9z"/>
-                </svg>
-                Accedi con Replit
               </HapticButton>
             </motion.div>
           </form>
