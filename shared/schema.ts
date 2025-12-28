@@ -142,6 +142,7 @@ export const userFeatures = pgTable("user_features", {
   cassaBigliettiEnabled: boolean("cassa_biglietti_enabled").notNull().default(true), // Cassa Biglietti
   templateEnabled: boolean("template_enabled").notNull().default(true), // Template Digitali
   canCreateProducts: boolean("can_create_products").notNull().default(false), // Warehouse permission to create products
+  skipSiaeApproval: boolean("skip_siae_approval").notNull().default(false), // Gestore can auto-approve SIAE events
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1224,6 +1225,11 @@ export const siaeTicketedEvents = pgTable("siae_ticketed_events", {
   maxTicketsPerUser: integer("max_tickets_per_user").notNull().default(10),
   // Stato
   ticketingStatus: varchar("ticketing_status", { length: 20 }).notNull().default('draft'), // draft, active, suspended, closed
+  // Stato approvazione admin
+  approvalStatus: varchar("approval_status", { length: 20 }).notNull().default('pending'), // pending, approved, rejected
+  approvedBy: varchar("approved_by").references(() => users.id),
+  approvedAt: timestamp("approved_at"),
+  rejectedReason: text("rejected_reason"),
   // Contatori
   ticketsSold: integer("tickets_sold").notNull().default(0),
   ticketsCancelled: integer("tickets_cancelled").notNull().default(0),
@@ -1241,6 +1247,10 @@ export const siaeTicketedEventsRelations = relations(siaeTicketedEvents, ({ one,
   company: one(companies, {
     fields: [siaeTicketedEvents.companyId],
     references: [companies.id],
+  }),
+  approver: one(users, {
+    fields: [siaeTicketedEvents.approvedBy],
+    references: [users.id],
   }),
   sectors: many(siaeEventSectors),
   tickets: many(siaeTickets),
