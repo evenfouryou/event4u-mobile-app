@@ -160,6 +160,16 @@ export function setupBridgeRelay(server: Server): void {
           return;
         }
 
+        // Respond to ping with pong (critical for keeping bridge connection alive)
+        if (message.type === 'ping') {
+          try {
+            ws.send(JSON.stringify({ type: 'pong' }));
+          } catch (e) {
+            // Ignore send errors
+          }
+          return;
+        }
+
         if (message.type === 'pong') {
           if (connectionType === 'bridge' && globalBridge) {
             globalBridge.lastPing = new Date();
