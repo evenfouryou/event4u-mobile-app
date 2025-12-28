@@ -450,18 +450,36 @@ export default function AdminEventDetail() {
                     </TableCell>
                     <TableCell>{getStatusBadge(ticket.status)}</TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
-                      {ticket.status !== 'cancelled' && ticket.status !== 'refunded' ? (
-                        <Button 
-                          variant="ghost" 
-                          size="icon" 
-                          onClick={(e) => { e.stopPropagation(); setTicketToCancel(ticket); }}
-                          data-testid={`button-cancel-ticket-${ticket.id}`}
-                        >
-                          <Ban className="h-4 w-4 text-destructive" />
-                        </Button>
-                      ) : (
-                        <span className="text-muted-foreground text-xs">-</span>
-                      )}
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button 
+                            variant="ghost" 
+                            size="icon"
+                            data-testid={`button-ticket-actions-${ticket.id}`}
+                          >
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem 
+                            onClick={() => { setSelectedTicket(ticket); setShowTicketDetail(true); }}
+                            data-testid={`menu-view-ticket-${ticket.id}`}
+                          >
+                            <Info className="h-4 w-4 mr-2" />
+                            Visualizza dettagli
+                          </DropdownMenuItem>
+                          {ticket.status !== 'cancelled' && ticket.status !== 'refunded' && (
+                            <DropdownMenuItem 
+                              onClick={() => setTicketToCancel(ticket)}
+                              className="text-destructive focus:text-destructive"
+                              data-testid={`menu-cancel-ticket-${ticket.id}`}
+                            >
+                              <Ban className="h-4 w-4 mr-2" />
+                              Annulla biglietto
+                            </DropdownMenuItem>
+                          )}
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
                 ))}
