@@ -1333,10 +1333,7 @@ export default function EventHub() {
   const updateTicketedEventFlagsMutation = useMutation({
     mutationFn: async (flags: { allowsChangeName?: boolean; allowsResale?: boolean }) => {
       if (!ticketedEvent) throw new Error("Ticketed event not found");
-      return apiRequest('PATCH', `/api/siae/ticketed-events/${ticketedEvent.id}`, {
-        ...ticketedEvent,
-        ...flags,
-      });
+      return apiRequest('PATCH', `/api/siae/ticketed-events/${ticketedEvent.id}`, flags);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/siae/events', id, 'ticketing'] });
@@ -5450,6 +5447,157 @@ export default function EventHub() {
                           <div className="text-center py-8 text-muted-foreground">
                             <Users className="h-8 w-8 mx-auto mb-2 opacity-50" />
                             <p>Nessun abbonamento configurato</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+
+                    {/* Cambio Nominativo & Rivendita Settings - Mobile */}
+                    <Card className="glass-card">
+                      <CardHeader className="px-4">
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                          <UserCog className="h-5 w-5 text-purple-400" />
+                          Cambio Nominativo & Rivendita
+                        </CardTitle>
+                        <CardDescription>
+                          Gestione cambio intestatario e rivendita (SIAE)
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="px-4 space-y-4">
+                        {/* Toggle Cambio Nominativo */}
+                        <div className="flex items-center justify-between gap-3 p-4 rounded-xl bg-background/50 border">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <UserCog className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium text-sm">Cambio Nominativo</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Consenti ai clienti di modificare l'intestatario (€2,50)
+                            </p>
+                          </div>
+                          <Switch
+                            checked={ticketedEvent?.allowsChangeName ?? false}
+                            onCheckedChange={(checked) => {
+                              triggerHaptic('light');
+                              updateTicketedEventFlagsMutation.mutate({ allowsChangeName: checked });
+                            }}
+                            disabled={updateTicketedEventFlagsMutation.isPending}
+                            data-testid="switch-allows-change-name-mobile"
+                          />
+                        </div>
+
+                        {/* Sezione Collassabile Cambio Nominativo */}
+                        {ticketedEvent?.allowsChangeName && (
+                          <div className="border rounded-xl overflow-hidden">
+                            <button
+                              className="w-full flex items-center justify-between p-4 hover-elevate text-left"
+                              onClick={() => setNameChangesExpanded(!nameChangesExpanded)}
+                              data-testid="button-expand-name-changes-mobile"
+                            >
+                              <div className="flex items-center gap-2">
+                                <UserCog className="h-4 w-4" />
+                                <span className="font-medium text-sm">Richieste Cambio</span>
+                                <Badge variant="secondary">{nameChanges.length}</Badge>
+                              </div>
+                              <ChevronDown className={`h-4 w-4 transition-transform ${nameChangesExpanded ? 'rotate-180' : ''}`} />
+                            </button>
+                            {nameChangesExpanded && (
+                              <div className="border-t p-4">
+                                {nameChanges.length === 0 ? (
+                                  <p className="text-center text-muted-foreground py-4 text-sm">Nessuna richiesta</p>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {nameChanges.map((change: any) => (
+                                      <div key={change.id} className="p-3 rounded-lg bg-background/50 border text-sm" data-testid={`row-name-change-mobile-${change.id}`}>
+                                        <div className="flex justify-between items-start gap-2">
+                                          <div>
+                                            <div className="font-medium">{change.newFirstName} {change.newLastName}</div>
+                                            <div className="text-xs text-muted-foreground">€{Number(change.feeAmount || 0).toFixed(2)}</div>
+                                          </div>
+                                          <Badge variant={change.status === 'approved' ? 'default' : change.status === 'rejected' ? 'destructive' : 'secondary'}>
+                                            {change.status === 'approved' ? 'Approvato' : change.status === 'rejected' ? 'Rifiutato' : 'In attesa'}
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Toggle Rivendita */}
+                        <div className="flex items-center justify-between gap-3 p-4 rounded-xl bg-background/50 border">
+                          <div className="flex-1 min-w-0">
+                            <div className="flex items-center gap-2">
+                              <RefreshCw className="h-4 w-4 text-muted-foreground" />
+                              <span className="font-medium text-sm">Rivendita Biglietti</span>
+                            </div>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              Abilita il circuito ufficiale di rivendita
+                            </p>
+                          </div>
+                          <Switch
+                            checked={ticketedEvent?.allowsResale ?? false}
+                            onCheckedChange={(checked) => {
+                              triggerHaptic('light');
+                              updateTicketedEventFlagsMutation.mutate({ allowsResale: checked });
+                            }}
+                            disabled={updateTicketedEventFlagsMutation.isPending}
+                            data-testid="switch-allows-resale-mobile"
+                          />
+                        </div>
+
+                        {/* Sezione Collassabile Rivendita */}
+                        {ticketedEvent?.allowsResale && (
+                          <div className="border rounded-xl overflow-hidden">
+                            <button
+                              className="w-full flex items-center justify-between p-4 hover-elevate text-left"
+                              onClick={() => setResalesExpanded(!resalesExpanded)}
+                              data-testid="button-expand-resales-mobile"
+                            >
+                              <div className="flex items-center gap-2">
+                                <RefreshCw className="h-4 w-4" />
+                                <span className="font-medium text-sm">Biglietti in Rivendita</span>
+                                <Badge variant="secondary">{resales.length}</Badge>
+                              </div>
+                              <ChevronDown className={`h-4 w-4 transition-transform ${resalesExpanded ? 'rotate-180' : ''}`} />
+                            </button>
+                            {resalesExpanded && (
+                              <div className="border-t p-4">
+                                {resales.length === 0 ? (
+                                  <p className="text-center text-muted-foreground py-4 text-sm">Nessun biglietto in rivendita</p>
+                                ) : (
+                                  <div className="space-y-2">
+                                    {resales.map((resale) => (
+                                      <div key={resale.id} className="p-3 rounded-lg bg-background/50 border text-sm" data-testid={`row-resale-mobile-${resale.id}`}>
+                                        <div className="flex justify-between items-start gap-2">
+                                          <div>
+                                            <div className="font-medium">€{Number(resale.resalePrice || 0).toFixed(2)}</div>
+                                            <div className="text-xs text-muted-foreground">
+                                              Originale: €{Number(resale.originalPrice || 0).toFixed(2)}
+                                            </div>
+                                          </div>
+                                          <Badge 
+                                            variant={
+                                              resale.status === 'sold' ? 'default' :
+                                              resale.status === 'cancelled' ? 'destructive' :
+                                              resale.status === 'expired' ? 'outline' : 'secondary'
+                                            }
+                                          >
+                                            {resale.status === 'sold' ? 'Venduto' :
+                                             resale.status === 'cancelled' ? 'Annullato' :
+                                             resale.status === 'expired' ? 'Scaduto' :
+                                             resale.status === 'listed' ? 'In Vendita' : resale.status}
+                                          </Badge>
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                            )}
                           </div>
                         )}
                       </CardContent>
