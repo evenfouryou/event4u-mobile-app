@@ -743,6 +743,15 @@ export default function EventHub() {
   // Abbonamenti Emessi state
   const [selectedSubscriptionTypeId, setSelectedSubscriptionTypeId] = useState<string | null>(null);
   const [subscriptionsDisplayLimit, setSubscriptionsDisplayLimit] = useState(20);
+  const [selectedSubscriptionForDetail, setSelectedSubscriptionForDetail] = useState<SiaeSubscription | null>(null);
+  const [showSubscriptionDetailSheet, setShowSubscriptionDetailSheet] = useState(false);
+
+  // Cancel Subscription Modal state
+  const [showCancelSubscriptionModal, setShowCancelSubscriptionModal] = useState(false);
+  const [subscriptionToCancel, setSubscriptionToCancel] = useState<SiaeSubscription | null>(null);
+  const [cancelSubscriptionReason, setCancelSubscriptionReason] = useState("");
+  const [cancelSubscriptionNote, setCancelSubscriptionNote] = useState("");
+  const [cancelSubscriptionWithRefund, setCancelSubscriptionWithRefund] = useState(false);
 
   // Cambio nominativo / Rivendita collapsible sections
   const [nameChangesExpanded, setNameChangesExpanded] = useState(false);
@@ -863,6 +872,12 @@ export default function EventHub() {
   const { data: resales = [] } = useQuery<SiaeResale[]>({
     queryKey: ['/api/siae/ticketed-events', ticketedEvent?.id, 'resales'],
     enabled: !!ticketedEvent?.id && ticketedEvent?.allowsResale,
+  });
+
+  // Cancellation reasons query
+  const { data: cancellationReasons = [] } = useQuery<Array<{ code: string; description: string }>>({
+    queryKey: ['/api/siae/cancellation-reasons'],
+    enabled: cancelTicketDialogOpen || showCancelSubscriptionModal,
   });
 
   // Sector codes for the new sector dialog
@@ -1652,6 +1667,55 @@ export default function EventHub() {
       });
     },
   });
+
+  // Cancel subscription mutation
+  const cancelSubscriptionMutation = useMutation({
+    mutationFn: async ({ subscriptionId, reasonCode, reasonNote, requestRefund }: { subscriptionId: string; reasonCode: string; reasonNote?: string; requestRefund?: boolean }) => {
+      return apiRequest('POST', `/api/siae/subscriptions/${subscriptionId}/cancel`, { 
+        reasonCode, 
+        reasonNote,
+        requestRefund 
+      });
+    },
+    onSuccess: (_, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/ticketed-events', ticketedEvent?.id, 'subscriptions'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/events', id, 'ticketing'] });
+      setShowCancelSubscriptionModal(false);
+      setSubscriptionToCancel(null);
+      setCancelSubscriptionReason("");
+      setCancelSubscriptionNote("");
+      setCancelSubscriptionWithRefund(false);
+      const message = variables.requestRefund 
+        ? "L'abbonamento è stato annullato e il rimborso è stato richiesto."
+        : "L'abbonamento è stato annullato con successo.";
+      toast({ title: variables.requestRefund ? "Annullamento e Rimborso" : "Abbonamento Annullato", description: message });
+    },
+    onError: (error: any) => {
+      toast({ 
+        title: "Errore Annullamento", 
+        description: error?.message || "Impossibile annullare l'abbonamento", 
+        variant: "destructive" 
+      });
+    },
+  });
+
+  // Handler to open cancel subscription modal
+  const handleCancelSubscription = (subscription: SiaeSubscription) => {
+    setSubscriptionToCancel(subscription);
+    setCancelSubscriptionWithRefund(!!(subscription as any).transactionId);
+    setShowCancelSubscriptionModal(true);
+  };
+
+  // Confirm cancel subscription
+  const confirmCancelSubscription = () => {
+    if (!subscriptionToCancel) return;
+    cancelSubscriptionMutation.mutate({ 
+      subscriptionId: subscriptionToCancel.id, 
+      reasonCode: cancelSubscriptionReason || "01",
+      reasonNote: cancelSubscriptionNote || undefined,
+      requestRefund: cancelSubscriptionWithRefund
+    });
+  };
 
   // Helper to get filtered tickets
   const filteredTickets = useMemo(() => {
@@ -2785,7 +2849,12 @@ export default function EventHub() {
                                       {displayedSubscriptions.map((subscription: SiaeSubscription) => {
                                         const subscriptionTypeName = subscriptionTypes.find((t: any) => t.id === subscription.subscriptionTypeId)?.name || '-';
                                         return (
-                                          <TableRow key={subscription.id} data-testid={`row-subscription-${subscription.id}`}>
+                                          <TableRow 
+                                            key={subscription.id} 
+                                            className="cursor-pointer"
+                                            onClick={() => { setSelectedSubscriptionForDetail(subscription); setShowSubscriptionDetailSheet(true); }}
+                                            data-testid={`row-subscription-${subscription.id}`}
+                                          >
                                             <TableCell className="font-mono text-xs">
                                               {subscription.cardCode ? 'BRIDGE01' : '-'}
                                             </TableCell>
@@ -4238,53 +4307,87 @@ export default function EventHub() {
           </AlertDialogContent>
         </AlertDialog>
 
+        {/* Cancel Ticket Modal */}
         <Dialog open={cancelTicketDialogOpen} onOpenChange={setCancelTicketDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Annulla Biglietto</DialogTitle>
+              <DialogTitle className="flex items-center gap-2 text-red-400">
+                <XCircle className="h-5 w-5" />
+                Annulla Biglietto
+              </DialogTitle>
               <DialogDescription>
                 Stai per annullare il biglietto #{ticketToCancel?.progressiveNumber}
               </DialogDescription>
             </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Motivo Annullamento</Label>
-                <Select value={cancelReason} onValueChange={setCancelReason} disabled={cancelWithRefund}>
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="01">Richiesta cliente</SelectItem>
-                    <SelectItem value="02">Errore emissione</SelectItem>
-                    <SelectItem value="03">Evento annullato</SelectItem>
-                    <SelectItem value="04">Altro</SelectItem>
-                  </SelectContent>
-                </Select>
-              </div>
-              <div className="space-y-2">
-                <Label>Note (opzionale)</Label>
-                <Textarea value={cancelNote} onChange={(e) => setCancelNote(e.target.value)} placeholder="Inserisci note aggiuntive..." />
-              </div>
-              <div className="flex items-center space-x-2 pt-2 border-t">
-                <Checkbox 
-                  id="cancelWithRefund" 
-                  checked={cancelWithRefund} 
-                  onCheckedChange={(checked) => setCancelWithRefund(checked === true)}
-                  data-testid="checkbox-cancel-with-refund"
-                />
-                <Label htmlFor="cancelWithRefund" className="cursor-pointer text-sm">
-                  Emetti anche rimborso automatico
-                </Label>
-              </div>
-              {cancelWithRefund && (
-                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm text-amber-400">
-                  Il biglietto verrà annullato e il rimborso sarà automaticamente registrato nel sistema SIAE.
+            {ticketToCancel && (
+              <div className="space-y-4 py-4">
+                <div className="p-3 rounded-lg bg-muted/50 border space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Progressivo</span>
+                    <span className="font-mono font-medium">#{ticketToCancel.progressiveNumber}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Intestatario</span>
+                    <span className="font-medium">{`${ticketToCancel.participantFirstName || ''} ${ticketToCancel.participantLastName || ''}`.trim() || '-'}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Importo</span>
+                    <span className="font-bold text-emerald-400">€{Number(ticketToCancel.grossAmount || 0).toFixed(2)}</span>
+                  </div>
                 </div>
-              )}
-            </div>
+                <div className="space-y-2">
+                  <Label>Causale Annullamento</Label>
+                  <Select value={cancelReason} onValueChange={setCancelReason} disabled={cancelWithRefund}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona causale..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cancellationReasons.length > 0 ? (
+                        cancellationReasons.map((reason) => (
+                          <SelectItem key={reason.code} value={reason.code}>{reason.description}</SelectItem>
+                        ))
+                      ) : (
+                        <>
+                          <SelectItem value="01">Richiesta cliente</SelectItem>
+                          <SelectItem value="02">Errore emissione</SelectItem>
+                          <SelectItem value="03">Evento annullato</SelectItem>
+                          <SelectItem value="04">Altro</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Note (opzionale)</Label>
+                  <Textarea value={cancelNote} onChange={(e) => setCancelNote(e.target.value)} placeholder="Inserisci note aggiuntive..." />
+                </div>
+                <div className="flex items-center space-x-2 pt-2 border-t">
+                  <Checkbox 
+                    id="cancelWithRefund" 
+                    checked={cancelWithRefund} 
+                    onCheckedChange={(checked) => setCancelWithRefund(checked === true)}
+                    data-testid="checkbox-cancel-with-refund"
+                  />
+                  <Label htmlFor="cancelWithRefund" className="cursor-pointer text-sm">
+                    Richiedi rimborso automatico Stripe
+                  </Label>
+                </div>
+                {cancelWithRefund && (
+                  <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm text-amber-400">
+                    <AlertTriangle className="h-4 w-4 inline mr-2" />
+                    Il rimborso verrà elaborato immediatamente su Stripe. Questa azione non può essere annullata.
+                  </div>
+                )}
+              </div>
+            )}
             <DialogFooter>
               <Button variant="outline" onClick={() => setCancelTicketDialogOpen(false)}>Chiudi</Button>
-              <Button variant="destructive" onClick={confirmCancelTicket} disabled={cancelTicketMutation.isPending}>
+              <Button 
+                variant="destructive" 
+                onClick={confirmCancelTicket} 
+                disabled={cancelTicketMutation.isPending}
+                data-testid="button-confirm-cancel-ticket"
+              >
                 {cancelTicketMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                 {cancelWithRefund ? "Annulla e Rimborsa" : "Conferma Annullamento"}
               </Button>
@@ -4419,6 +4522,234 @@ export default function EventHub() {
             )}
           </SheetContent>
         </Sheet>
+
+        {/* Subscription Detail Sheet */}
+        <Sheet open={showSubscriptionDetailSheet} onOpenChange={setShowSubscriptionDetailSheet}>
+          <SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-[85vh] rounded-t-2xl" : ""}>
+            <SheetHeader>
+              <SheetTitle className="flex items-center gap-2">
+                <Repeat className="h-5 w-5 text-purple-400" />
+                Dettaglio Abbonamento
+              </SheetTitle>
+            </SheetHeader>
+            {selectedSubscriptionForDetail && (
+              <div className="space-y-6 mt-6">
+                <div className="p-4 rounded-xl bg-muted/50 border">
+                  <div className="text-center mb-4">
+                    <div className="text-2xl font-mono font-bold text-purple-400">
+                      {selectedSubscriptionForDetail.subscriptionCode || 'N/A'}
+                    </div>
+                    <div className="text-sm text-muted-foreground mt-1">
+                      {selectedSubscriptionForDetail.fiscalSealCode || 'N/A'}
+                    </div>
+                  </div>
+                  <div className="flex justify-center">
+                    <Badge variant={
+                      selectedSubscriptionForDetail.status === 'active' ? 'default' :
+                      selectedSubscriptionForDetail.status === 'cancelled' ? 'destructive' :
+                      selectedSubscriptionForDetail.status === 'expired' ? 'secondary' : 'outline'
+                    }>
+                      {selectedSubscriptionForDetail.status === 'active' ? 'Attivo' :
+                       selectedSubscriptionForDetail.status === 'cancelled' ? 'Annullato' :
+                       selectedSubscriptionForDetail.status === 'expired' ? 'Scaduto' :
+                       selectedSubscriptionForDetail.status === 'pending' ? 'In attesa' : selectedSubscriptionForDetail.status}
+                    </Badge>
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Sistema</span>
+                    <span className="font-mono text-sm">{selectedSubscriptionForDetail.cardCode ? 'E4U' : '-'}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Progressivo</span>
+                    <span className="font-mono font-medium">{selectedSubscriptionForDetail.progressiveNumber || '-'}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Carta Attivazione</span>
+                    <span className="font-mono text-xs">{selectedSubscriptionForDetail.cardCode || '-'}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Sigillo Fiscale</span>
+                    <span className="font-mono text-xs">{selectedSubscriptionForDetail.fiscalSealCode || '-'}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Contatore Carta</span>
+                    <span className="font-mono">{selectedSubscriptionForDetail.fiscalSealCounter || '-'}</span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Nome e Cognome</span>
+                    <span className="font-medium">
+                      {`${selectedSubscriptionForDetail.holderFirstName || ''} ${selectedSubscriptionForDetail.holderLastName || ''}`.trim() || '-'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Valido dal</span>
+                    <span className="font-medium">
+                      {selectedSubscriptionForDetail.validFrom 
+                        ? format(new Date(selectedSubscriptionForDetail.validFrom), 'dd/MM/yyyy') 
+                        : '-'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Valido fino al</span>
+                    <span className="font-medium">
+                      {selectedSubscriptionForDetail.validTo 
+                        ? format(new Date(selectedSubscriptionForDetail.validTo), 'dd/MM/yyyy') 
+                        : '-'}
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Eventi</span>
+                    <span>
+                      <span className="font-semibold text-blue-400">{selectedSubscriptionForDetail.eventsUsed || 0}</span>
+                      <span className="text-muted-foreground">/{selectedSubscriptionForDetail.eventsCount || 0}</span>
+                    </span>
+                  </div>
+                  <div className="flex justify-between items-center py-2 border-b">
+                    <span className="text-muted-foreground">Data Emissione</span>
+                    <span className="font-medium">
+                      {selectedSubscriptionForDetail.emissionDate 
+                        ? format(new Date(selectedSubscriptionForDetail.emissionDate), 'dd/MM/yyyy HH:mm') 
+                        : (selectedSubscriptionForDetail.createdAt 
+                            ? format(new Date(selectedSubscriptionForDetail.createdAt), 'dd/MM/yyyy HH:mm') 
+                            : '-')}
+                    </span>
+                  </div>
+                  {selectedSubscriptionForDetail.qrCode && (
+                    <div className="flex justify-between items-center py-2 border-b">
+                      <span className="text-muted-foreground">QR Code</span>
+                      <span className="font-mono text-xs truncate max-w-[150px]">{selectedSubscriptionForDetail.qrCode}</span>
+                    </div>
+                  )}
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  {selectedSubscriptionForDetail.status === 'active' && (
+                    <Button 
+                      variant="destructive" 
+                      className="flex-1"
+                      onClick={() => {
+                        setShowSubscriptionDetailSheet(false);
+                        handleCancelSubscription(selectedSubscriptionForDetail);
+                      }}
+                      data-testid="button-cancel-subscription-detail"
+                    >
+                      <X className="h-4 w-4 mr-2" />
+                      Annulla
+                    </Button>
+                  )}
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => setShowSubscriptionDetailSheet(false)}
+                  >
+                    Chiudi
+                  </Button>
+                </div>
+              </div>
+            )}
+          </SheetContent>
+        </Sheet>
+
+        {/* Cancel Subscription Modal */}
+        <Dialog open={showCancelSubscriptionModal} onOpenChange={setShowCancelSubscriptionModal}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2 text-red-400">
+                <XCircle className="h-5 w-5" />
+                Annulla Abbonamento
+              </DialogTitle>
+              <DialogDescription>
+                Stai per annullare l'abbonamento {subscriptionToCancel?.subscriptionCode || `#${subscriptionToCancel?.progressiveNumber}`}
+              </DialogDescription>
+            </DialogHeader>
+            {subscriptionToCancel && (
+              <div className="space-y-4 py-4">
+                <div className="p-3 rounded-lg bg-muted/50 border space-y-2">
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Codice</span>
+                    <span className="font-mono font-medium">{subscriptionToCancel.subscriptionCode || `#${subscriptionToCancel.progressiveNumber}`}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Intestatario</span>
+                    <span className="font-medium">{`${subscriptionToCancel.holderFirstName || ''} ${subscriptionToCancel.holderLastName || ''}`.trim() || '-'}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Importo</span>
+                    <span className="font-bold text-emerald-400">€{Number((subscriptionToCancel as any).grossAmount || (subscriptionToCancel as any).price || 0).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between text-sm">
+                    <span className="text-muted-foreground">Validità</span>
+                    <span className="font-medium">
+                      {subscriptionToCancel.validFrom ? format(new Date(subscriptionToCancel.validFrom), 'dd/MM/yy') : '-'} - {subscriptionToCancel.validTo ? format(new Date(subscriptionToCancel.validTo), 'dd/MM/yy') : '-'}
+                    </span>
+                  </div>
+                </div>
+                <div className="space-y-2">
+                  <Label>Causale Annullamento</Label>
+                  <Select value={cancelSubscriptionReason} onValueChange={setCancelSubscriptionReason}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Seleziona causale..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {cancellationReasons.length > 0 ? (
+                        cancellationReasons.map((reason) => (
+                          <SelectItem key={reason.code} value={reason.code}>{reason.description}</SelectItem>
+                        ))
+                      ) : (
+                        <>
+                          <SelectItem value="01">Richiesta cliente</SelectItem>
+                          <SelectItem value="02">Errore emissione</SelectItem>
+                          <SelectItem value="03">Evento annullato</SelectItem>
+                          <SelectItem value="04">Altro</SelectItem>
+                        </>
+                      )}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-2">
+                  <Label>Note (opzionale)</Label>
+                  <Textarea 
+                    value={cancelSubscriptionNote} 
+                    onChange={(e) => setCancelSubscriptionNote(e.target.value)} 
+                    placeholder="Inserisci note aggiuntive..." 
+                  />
+                </div>
+                <div className="flex items-center space-x-2 pt-2 border-t">
+                  <Checkbox 
+                    id="cancelSubscriptionWithRefund" 
+                    checked={cancelSubscriptionWithRefund} 
+                    onCheckedChange={(checked) => setCancelSubscriptionWithRefund(checked === true)}
+                    data-testid="checkbox-cancel-subscription-with-refund"
+                  />
+                  <Label htmlFor="cancelSubscriptionWithRefund" className="cursor-pointer text-sm">
+                    Richiedi rimborso automatico Stripe
+                  </Label>
+                </div>
+                {cancelSubscriptionWithRefund && (
+                  <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm text-amber-400">
+                    <AlertTriangle className="h-4 w-4 inline mr-2" />
+                    Il rimborso verrà elaborato immediatamente su Stripe. Questa azione non può essere annullata.
+                  </div>
+                )}
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowCancelSubscriptionModal(false)}>Chiudi</Button>
+              <Button 
+                variant="destructive" 
+                onClick={confirmCancelSubscription} 
+                disabled={cancelSubscriptionMutation.isPending}
+                data-testid="button-confirm-cancel-subscription"
+              >
+                {cancelSubscriptionMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                {cancelSubscriptionWithRefund ? "Annulla e Rimborsa" : "Conferma Annullamento"}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Create List Dialog */}
         <Dialog open={showCreateListDialog} onOpenChange={setShowCreateListDialog}>
@@ -6163,11 +6494,16 @@ export default function EventHub() {
                                     return (
                                       <motion.div
                                         key={subscription.id}
-                                        className="p-4 rounded-xl bg-background/50 border"
+                                        className="p-4 rounded-xl bg-background/50 border cursor-pointer"
                                         data-testid={`subscription-card-mobile-${subscription.id}`}
                                         initial={{ opacity: 0, y: 20 }}
                                         animate={{ opacity: 1, y: 0 }}
                                         transition={springConfig}
+                                        onClick={() => {
+                                          triggerHaptic('light');
+                                          setSelectedSubscriptionForDetail(subscription);
+                                          setShowSubscriptionDetailSheet(true);
+                                        }}
                                       >
                                         <div className="flex items-start justify-between gap-3 mb-3">
                                           <div className="flex-1">

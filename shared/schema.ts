@@ -1759,6 +1759,13 @@ export const siaeSubscriptions = pgTable("siae_subscriptions", {
   holderLastName: varchar("holder_last_name", { length: 100 }).notNull(),
   // Stato
   status: varchar("status", { length: 20 }).notNull().default('active'), // active, expired, cancelled
+  // Campi annullamento
+  cancellationReasonCode: varchar("cancellation_reason_code", { length: 3 }), // TAB.5
+  cancellationDate: timestamp("cancellation_date"),
+  cancelledByUserId: varchar("cancelled_by_user_id"),
+  refundRequested: boolean("refund_requested").default(false),
+  refundId: varchar("refund_id", { length: 100 }), // Stripe refund ID
+  refundStatus: varchar("refund_status", { length: 20 }), // pending, completed, failed
   // QR Code per scansione
   qrCode: varchar("qr_code", { length: 100 }).unique(),
   // Sigillo Fiscale SIAE

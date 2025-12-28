@@ -19,6 +19,9 @@ import {
   siaeTicketedEvents,
   siaeEventSectors,
   siaeSubscriptions,
+  siaeTransactions,
+  siaeCancellationReasons,
+  publicCheckoutSessions,
   reservationPayments,
   insertEventListSchema,
   insertListEntrySchema,
@@ -29,6 +32,7 @@ import {
   insertEventPrAssignmentSchema,
   insertEventScannerSchema,
 } from "@shared/schema";
+import { getUncachableStripeClient } from "./stripeClient";
 
 // Helper to create validated partial schemas for PATCH operations
 function makePatchSchema<T extends z.ZodRawShape>(schema: z.ZodObject<T>) {
@@ -2790,44 +2794,290 @@ router.get("/api/siae/ticketed-events/:id/subscriptions", requireAuth, async (re
   }
 });
 
-// PATCH /api/siae/subscriptions/:id/cancel - Cancel a subscription (only if unused)
-router.patch("/api/siae/subscriptions/:id/cancel", requireAuth, requireGestore, async (req: Request, res: Response) => {
+// ==================== SIAE CANCELLATION ENDPOINTS ====================
+
+// GET /api/siae/cancellation-reasons - Get all SIAE cancellation reasons
+router.get("/api/siae/cancellation-reasons", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const reasons = await db.select()
+      .from(siaeCancellationReasons)
+      .where(eq(siaeCancellationReasons.active, true))
+      .orderBy(siaeCancellationReasons.code);
+    res.json(reasons);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// POST /api/siae/tickets/:id/cancel - Cancel a ticket with optional Stripe refund
+router.post("/api/siae/tickets/:id/cancel", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const user = req.user as any;
-    
+    const { reasonCode, reasonNote, requestRefund } = req.body;
+
+    // Validate request body
+    if (!reasonCode) {
+      return res.status(400).json({ message: "Codice causale annullamento obbligatorio" });
+    }
+
+    // Find ticket by ID
+    const [ticket] = await db.select()
+      .from(siaeTickets)
+      .where(eq(siaeTickets.id, id));
+
+    if (!ticket) {
+      return res.status(404).json({ message: "Biglietto non trovato" });
+    }
+
+    // Get the ticketed event to check company ownership
+    const [ticketedEvent] = await db.select()
+      .from(siaeTicketedEvents)
+      .where(eq(siaeTicketedEvents.id, ticket.ticketedEventId));
+
+    if (!ticketedEvent) {
+      return res.status(404).json({ message: "Evento associato non trovato" });
+    }
+
+    // Company scope check
+    if (ticketedEvent.companyId !== user.companyId && user.role !== 'super_admin') {
+      return res.status(403).json({ message: "Non autorizzato a modificare questo biglietto" });
+    }
+
+    // Validate ticket status
+    if (ticket.status === 'cancelled') {
+      return res.status(400).json({ message: "Biglietto già annullato" });
+    }
+    if (ticket.status === 'used') {
+      return res.status(400).json({ message: "Impossibile annullare un biglietto già utilizzato" });
+    }
+    if (ticket.status !== 'valid') {
+      return res.status(400).json({ message: `Stato biglietto non valido per annullamento: ${ticket.status}` });
+    }
+
+    let stripeRefundId: string | null = null;
+    let refundedAt: Date | null = null;
+    let refundAmount: string | null = null;
+
+    // If refund requested, process Stripe refund
+    if (requestRefund) {
+      // Find the transaction to get payment reference
+      let paymentIntentId: string | null = null;
+
+      if (ticket.transactionId) {
+        // Get payment intent from transaction
+        const [transaction] = await db.select()
+          .from(siaeTransactions)
+          .where(eq(siaeTransactions.id, ticket.transactionId));
+
+        if (transaction?.paymentReference) {
+          paymentIntentId = transaction.paymentReference;
+        }
+      }
+
+      // Fallback: try to find checkout session with this ticket
+      if (!paymentIntentId) {
+        // Try to find checkout session through customer
+        if (ticket.customerId) {
+          const [checkoutSession] = await db.select()
+            .from(publicCheckoutSessions)
+            .where(
+              and(
+                eq(publicCheckoutSessions.customerId, ticket.customerId),
+                eq(publicCheckoutSessions.status, "completed")
+              )
+            )
+            .orderBy(desc(publicCheckoutSessions.createdAt))
+            .limit(1);
+
+          if (checkoutSession?.stripePaymentIntentId) {
+            paymentIntentId = checkoutSession.stripePaymentIntentId;
+          }
+        }
+      }
+
+      if (!paymentIntentId) {
+        return res.status(400).json({ 
+          message: "Impossibile elaborare il rimborso: nessun pagamento Stripe trovato per questo biglietto" 
+        });
+      }
+
+      try {
+        const stripe = await getUncachableStripeClient();
+        const refund = await stripe.refunds.create({
+          payment_intent: paymentIntentId,
+          amount: Math.round(parseFloat(ticket.grossAmount) * 100), // Amount in cents
+          reason: 'requested_by_customer',
+          metadata: {
+            ticketId: ticket.id,
+            reasonCode: reasonCode,
+            reasonNote: reasonNote || '',
+            cancelledBy: getUserId(user),
+          }
+        });
+
+        stripeRefundId = refund.id;
+        refundedAt = new Date();
+        refundAmount = ticket.grossAmount;
+
+        console.log(`[SIAE] Refund created for ticket ${id}: ${refund.id}, status: ${refund.status}`);
+      } catch (stripeError: any) {
+        console.error(`[SIAE] Stripe refund failed for ticket ${id}:`, stripeError.message);
+        return res.status(500).json({ 
+          message: `Errore durante il rimborso Stripe: ${stripeError.message}`,
+          code: "STRIPE_REFUND_FAILED"
+        });
+      }
+    }
+
+    // Update ticket with cancellation details
+    const [updatedTicket] = await db.update(siaeTickets)
+      .set({
+        status: 'cancelled',
+        cancellationReasonCode: reasonCode,
+        cancellationDate: new Date(),
+        cancelledByUserId: getUserId(user),
+        ...(stripeRefundId && {
+          stripeRefundId,
+          refundedAt,
+          refundAmount,
+          refundInitiatorId: getUserId(user),
+          refundReason: reasonNote || `Annullamento con causale ${reasonCode}`,
+        }),
+        updatedAt: new Date(),
+      })
+      .where(eq(siaeTickets.id, id))
+      .returning();
+
+    res.json({
+      success: true,
+      ticket: updatedTicket,
+      refunded: !!stripeRefundId,
+      refundId: stripeRefundId,
+    });
+  } catch (error: any) {
+    console.error(`[SIAE] Error cancelling ticket:`, error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// POST /api/siae/subscriptions/:id/cancel - Cancel a subscription with optional Stripe refund
+router.post("/api/siae/subscriptions/:id/cancel", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = req.user as any;
+    const { reasonCode, reasonNote, requestRefund } = req.body;
+
+    // Validate request body
+    if (!reasonCode) {
+      return res.status(400).json({ message: "Codice causale annullamento obbligatorio" });
+    }
+
     // Find subscription by ID
     const [subscription] = await db.select()
       .from(siaeSubscriptions)
       .where(eq(siaeSubscriptions.id, id));
-    
+
     if (!subscription) {
       return res.status(404).json({ message: "Abbonamento non trovato" });
     }
-    
-    // Company scope check - only allow cancellation of subscriptions belonging to user's company
-    if (subscription.companyId !== user.companyId) {
+
+    // Company scope check
+    if (subscription.companyId !== user.companyId && user.role !== 'super_admin') {
       return res.status(403).json({ message: "Non autorizzato a modificare questo abbonamento" });
     }
-    
-    // Check if subscription has been used
-    if (subscription.eventsUsed > 0) {
-      return res.status(400).json({ 
-        message: `Impossibile annullare: abbonamento già utilizzato per ${subscription.eventsUsed} eventi` 
-      });
+
+    // Validate subscription status
+    if (subscription.status === 'cancelled') {
+      return res.status(400).json({ message: "Abbonamento già annullato" });
     }
-    
-    // Update subscription status to cancelled
-    const [updated] = await db.update(siaeSubscriptions)
-      .set({ 
+    if (subscription.status !== 'active') {
+      return res.status(400).json({ message: `Stato abbonamento non valido per annullamento: ${subscription.status}` });
+    }
+
+    let refundId: string | null = null;
+    let refundStatus: string | null = null;
+
+    // If refund requested, process Stripe refund
+    if (requestRefund) {
+      // Try to find checkout session for this subscription
+      let paymentIntentId: string | null = null;
+
+      if (subscription.customerId) {
+        const [checkoutSession] = await db.select()
+          .from(publicCheckoutSessions)
+          .where(
+            and(
+              eq(publicCheckoutSessions.customerId, subscription.customerId),
+              eq(publicCheckoutSessions.status, "completed")
+            )
+          )
+          .orderBy(desc(publicCheckoutSessions.createdAt))
+          .limit(1);
+
+        if (checkoutSession?.stripePaymentIntentId) {
+          paymentIntentId = checkoutSession.stripePaymentIntentId;
+        }
+      }
+
+      if (!paymentIntentId) {
+        return res.status(400).json({ 
+          message: "Impossibile elaborare il rimborso: nessun pagamento Stripe trovato per questo abbonamento" 
+        });
+      }
+
+      try {
+        const stripe = await getUncachableStripeClient();
+        const refund = await stripe.refunds.create({
+          payment_intent: paymentIntentId,
+          amount: Math.round(parseFloat(subscription.totalAmount) * 100), // Amount in cents
+          reason: 'requested_by_customer',
+          metadata: {
+            subscriptionId: subscription.id,
+            reasonCode: reasonCode,
+            reasonNote: reasonNote || '',
+            cancelledBy: getUserId(user),
+          }
+        });
+
+        refundId = refund.id;
+        refundStatus = refund.status;
+
+        console.log(`[SIAE] Refund created for subscription ${id}: ${refund.id}, status: ${refund.status}`);
+      } catch (stripeError: any) {
+        console.error(`[SIAE] Stripe refund failed for subscription ${id}:`, stripeError.message);
+        return res.status(500).json({ 
+          message: `Errore durante il rimborso Stripe: ${stripeError.message}`,
+          code: "STRIPE_REFUND_FAILED"
+        });
+      }
+    }
+
+    // Update subscription with cancellation details
+    const [updatedSubscription] = await db.update(siaeSubscriptions)
+      .set({
         status: 'cancelled',
-        updatedAt: new Date()
+        cancellationReasonCode: reasonCode,
+        cancellationDate: new Date(),
+        cancelledByUserId: getUserId(user),
+        refundRequested: requestRefund || false,
+        ...(refundId && {
+          refundId,
+          refundStatus,
+        }),
+        updatedAt: new Date(),
       })
       .where(eq(siaeSubscriptions.id, id))
       .returning();
-    
-    res.json(updated);
+
+    res.json({
+      success: true,
+      subscription: updatedSubscription,
+      refunded: !!refundId,
+      refundId: refundId,
+    });
   } catch (error: any) {
+    console.error(`[SIAE] Error cancelling subscription:`, error);
     res.status(500).json({ message: error.message });
   }
 });
