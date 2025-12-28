@@ -2764,61 +2764,83 @@ export default function EventHub() {
                                     {typeSubscriptions.length} abbonamenti emessi
                                   </span>
                                 </div>
-                                <Table>
-                                  <TableHeader>
-                                    <TableRow>
-                                      <TableHead>Codice</TableHead>
-                                      <TableHead>QR Code</TableHead>
-                                      <TableHead>Intestatario</TableHead>
-                                      <TableHead>Stato</TableHead>
-                                      <TableHead>Eventi</TableHead>
-                                      <TableHead>Data</TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {displayedSubscriptions.map((subscription: SiaeSubscription) => (
-                                      <TableRow key={subscription.id} data-testid={`row-subscription-${subscription.id}`}>
-                                        <TableCell className="font-mono text-sm">
-                                          {subscription.subscriptionCode || '-'}
-                                        </TableCell>
-                                        <TableCell>
-                                          <div className="flex items-center gap-2">
-                                            <QrCode className="h-4 w-4 text-muted-foreground" />
-                                            <span className="font-mono text-xs truncate max-w-[100px]">
-                                              {subscription.qrCode || '-'}
-                                            </span>
-                                          </div>
-                                        </TableCell>
-                                        <TableCell>
-                                          <div className="flex flex-col">
-                                            <span className="font-medium">
-                                              {subscription.holderFirstName} {subscription.holderLastName}
-                                            </span>
-                                          </div>
-                                        </TableCell>
-                                        <TableCell>
-                                          <Badge variant={
-                                            subscription.status === 'active' ? 'default' :
-                                            subscription.status === 'cancelled' ? 'destructive' :
-                                            subscription.status === 'expired' ? 'secondary' : 'outline'
-                                          }>
-                                            {subscription.status === 'active' ? 'Attivo' :
-                                             subscription.status === 'cancelled' ? 'Annullato' :
-                                             subscription.status === 'expired' ? 'Scaduto' :
-                                             subscription.status === 'pending' ? 'In attesa' : subscription.status}
-                                          </Badge>
-                                        </TableCell>
-                                        <TableCell>
-                                          <span className="font-semibold text-blue-400">{subscription.eventsUsed || 0}</span>
-                                          <span className="text-muted-foreground">/{subscription.eventsCount || 0}</span>
-                                        </TableCell>
-                                        <TableCell className="text-sm text-muted-foreground">
-                                          {subscription.createdAt ? format(new Date(subscription.createdAt), 'dd/MM/yyyy HH:mm', { locale: it }) : '-'}
-                                        </TableCell>
+                                <div className="overflow-x-auto">
+                                  <Table>
+                                    <TableHeader>
+                                      <TableRow>
+                                        <TableHead>Sistema</TableHead>
+                                        <TableHead>Prog.</TableHead>
+                                        <TableHead>Carta Attivazione</TableHead>
+                                        <TableHead>Sigillo Fiscale</TableHead>
+                                        <TableHead>Cont. Carta</TableHead>
+                                        <TableHead>Codice Ordine</TableHead>
+                                        <TableHead>Tipo Titolo</TableHead>
+                                        <TableHead>Data/Ora Emissione</TableHead>
+                                        <TableHead>Intestatario</TableHead>
+                                        <TableHead>Eventi</TableHead>
+                                        <TableHead>Stato</TableHead>
                                       </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
+                                    </TableHeader>
+                                    <TableBody>
+                                      {displayedSubscriptions.map((subscription: SiaeSubscription) => {
+                                        const subscriptionTypeName = subscriptionTypes.find((t: any) => t.id === subscription.subscriptionTypeId)?.name || '-';
+                                        return (
+                                          <TableRow key={subscription.id} data-testid={`row-subscription-${subscription.id}`}>
+                                            <TableCell className="font-mono text-xs">
+                                              {subscription.cardCode ? 'BRIDGE01' : '-'}
+                                            </TableCell>
+                                            <TableCell className="font-mono text-sm">
+                                              {subscription.progressiveNumber || '-'}
+                                            </TableCell>
+                                            <TableCell className="font-mono text-xs">
+                                              {subscription.cardCode || '-'}
+                                            </TableCell>
+                                            <TableCell className="font-mono text-xs">
+                                              {subscription.fiscalSealCode || '-'}
+                                            </TableCell>
+                                            <TableCell className="font-mono text-sm">
+                                              {subscription.fiscalSealCounter || '-'}
+                                            </TableCell>
+                                            <TableCell className="font-mono text-sm">
+                                              {subscription.subscriptionCode || '-'}
+                                            </TableCell>
+                                            <TableCell className="text-sm">
+                                              {subscriptionTypeName}
+                                            </TableCell>
+                                            <TableCell className="text-sm text-muted-foreground whitespace-nowrap">
+                                              {subscription.emissionDate 
+                                                ? format(new Date(subscription.emissionDate), 'dd/MM/yyyy HH:mm', { locale: it }) 
+                                                : (subscription.createdAt ? format(new Date(subscription.createdAt), 'dd/MM/yyyy HH:mm', { locale: it }) : '-')}
+                                            </TableCell>
+                                            <TableCell>
+                                              <div className="flex flex-col">
+                                                <span className="font-medium whitespace-nowrap">
+                                                  {subscription.holderFirstName} {subscription.holderLastName}
+                                                </span>
+                                              </div>
+                                            </TableCell>
+                                            <TableCell>
+                                              <span className="font-semibold text-blue-400">{subscription.eventsUsed || 0}</span>
+                                              <span className="text-muted-foreground">/{subscription.eventsCount || 0}</span>
+                                            </TableCell>
+                                            <TableCell>
+                                              <Badge variant={
+                                                subscription.status === 'active' ? 'default' :
+                                                subscription.status === 'cancelled' ? 'destructive' :
+                                                subscription.status === 'expired' ? 'secondary' : 'outline'
+                                              }>
+                                                {subscription.status === 'active' ? 'Attivo' :
+                                                 subscription.status === 'cancelled' ? 'Annullato' :
+                                                 subscription.status === 'expired' ? 'Scaduto' :
+                                                 subscription.status === 'pending' ? 'In attesa' : subscription.status}
+                                              </Badge>
+                                            </TableCell>
+                                          </TableRow>
+                                        );
+                                      })}
+                                    </TableBody>
+                                  </Table>
+                                </div>
                                 {typeSubscriptions.length > subscriptionsDisplayLimit && (
                                   <div className="flex justify-center pt-4">
                                     <Button
@@ -6136,51 +6158,74 @@ export default function EventHub() {
                                   </span>
                                 </div>
                                 <div className="space-y-3">
-                                  {displayedSubscriptions.map((subscription: SiaeSubscription) => (
-                                    <motion.div
-                                      key={subscription.id}
-                                      className="p-4 rounded-xl bg-background/50 border"
-                                      data-testid={`subscription-card-mobile-${subscription.id}`}
-                                      initial={{ opacity: 0, y: 20 }}
-                                      animate={{ opacity: 1, y: 0 }}
-                                      transition={springConfig}
-                                    >
-                                      <div className="flex items-start justify-between gap-3 mb-3">
-                                        <div className="flex-1">
-                                          <div className="font-medium">
-                                            {subscription.holderFirstName} {subscription.holderLastName}
+                                  {displayedSubscriptions.map((subscription: SiaeSubscription) => {
+                                    const subscriptionTypeName = subscriptionTypes.find((t: any) => t.id === subscription.subscriptionTypeId)?.name || '-';
+                                    return (
+                                      <motion.div
+                                        key={subscription.id}
+                                        className="p-4 rounded-xl bg-background/50 border"
+                                        data-testid={`subscription-card-mobile-${subscription.id}`}
+                                        initial={{ opacity: 0, y: 20 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={springConfig}
+                                      >
+                                        <div className="flex items-start justify-between gap-3 mb-3">
+                                          <div className="flex-1">
+                                            <div className="font-medium">
+                                              {subscription.holderFirstName} {subscription.holderLastName}
+                                            </div>
+                                            <div className="text-xs text-muted-foreground mt-1">
+                                              {subscriptionTypeName}
+                                            </div>
                                           </div>
-                                          <div className="font-mono text-xs text-muted-foreground mt-1">
-                                            {subscription.subscriptionCode || '-'}
+                                          <Badge variant={
+                                            subscription.status === 'active' ? 'default' :
+                                            subscription.status === 'cancelled' ? 'destructive' :
+                                            subscription.status === 'expired' ? 'secondary' : 'outline'
+                                          } className="text-xs">
+                                            {subscription.status === 'active' ? 'Attivo' :
+                                             subscription.status === 'cancelled' ? 'Annullato' :
+                                             subscription.status === 'expired' ? 'Scaduto' :
+                                             subscription.status === 'pending' ? 'In attesa' : subscription.status}
+                                          </Badge>
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-2 gap-2 text-xs mb-3">
+                                          <div>
+                                            <span className="text-muted-foreground">Prog.: </span>
+                                            <span className="font-mono">{subscription.progressiveNumber || '-'}</span>
+                                          </div>
+                                          <div>
+                                            <span className="text-muted-foreground">Cont.: </span>
+                                            <span className="font-mono">{subscription.fiscalSealCounter || '-'}</span>
+                                          </div>
+                                          <div className="col-span-2">
+                                            <span className="text-muted-foreground">Sigillo: </span>
+                                            <span className="font-mono">{subscription.fiscalSealCode || '-'}</span>
+                                          </div>
+                                          <div className="col-span-2">
+                                            <span className="text-muted-foreground">Carta: </span>
+                                            <span className="font-mono">{subscription.cardCode || '-'}</span>
+                                          </div>
+                                          <div className="col-span-2">
+                                            <span className="text-muted-foreground">Codice: </span>
+                                            <span className="font-mono">{subscription.subscriptionCode || '-'}</span>
                                           </div>
                                         </div>
-                                        <Badge variant={
-                                          subscription.status === 'active' ? 'default' :
-                                          subscription.status === 'cancelled' ? 'destructive' :
-                                          subscription.status === 'expired' ? 'secondary' : 'outline'
-                                        } className="text-xs">
-                                          {subscription.status === 'active' ? 'Attivo' :
-                                           subscription.status === 'cancelled' ? 'Annullato' :
-                                           subscription.status === 'expired' ? 'Scaduto' :
-                                           subscription.status === 'pending' ? 'In attesa' : subscription.status}
-                                        </Badge>
-                                      </div>
-                                      <div className="flex items-center gap-2 text-xs text-muted-foreground mb-2">
-                                        <QrCode className="h-3 w-3" />
-                                        <span className="font-mono truncate max-w-[150px]">
-                                          {subscription.qrCode || '-'}
-                                        </span>
-                                      </div>
-                                      <div className="flex items-center justify-between text-sm">
-                                        <span className="text-muted-foreground">
-                                          Eventi: <span className="font-semibold text-blue-400">{subscription.eventsUsed || 0}</span>/{subscription.eventsCount || 0}
-                                        </span>
-                                        <span className="text-xs text-muted-foreground">
-                                          {subscription.createdAt ? format(new Date(subscription.createdAt), 'dd/MM/yy', { locale: it }) : '-'}
-                                        </span>
-                                      </div>
-                                    </motion.div>
-                                  ))}
+                                        
+                                        <div className="flex items-center justify-between text-sm pt-2 border-t">
+                                          <span className="text-muted-foreground">
+                                            Eventi: <span className="font-semibold text-blue-400">{subscription.eventsUsed || 0}</span>/{subscription.eventsCount || 0}
+                                          </span>
+                                          <span className="text-xs text-muted-foreground">
+                                            {subscription.emissionDate 
+                                              ? format(new Date(subscription.emissionDate), 'dd/MM/yy HH:mm', { locale: it }) 
+                                              : (subscription.createdAt ? format(new Date(subscription.createdAt), 'dd/MM/yy HH:mm', { locale: it }) : '-')}
+                                          </span>
+                                        </div>
+                                      </motion.div>
+                                    );
+                                  })}
                                 </div>
                                 {typeSubscriptions.length > subscriptionsDisplayLimit && (
                                   <div className="flex justify-center pt-2">

@@ -1,5 +1,6 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { queryClient } from "@/lib/queryClient";
 import { Link, useSearch } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -183,6 +184,13 @@ export default function PublicCheckoutSuccessPage() {
     enabled: !!transactionCode,
   });
 
+  useEffect(() => {
+    if (transactionCode) {
+      queryClient.invalidateQueries({ queryKey: ["/api/public/account/tickets"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/public/account/subscriptions"] });
+    }
+  }, [transactionCode]);
+
   const handleDownloadAllPdfs = async () => {
     if (!tickets || tickets.length === 0) {
       toast({ title: "Nessun biglietto da scaricare", variant: "destructive" });
@@ -326,10 +334,10 @@ export default function PublicCheckoutSuccessPage() {
                   <ChevronRight className="w-4 h-4 ml-1" />
                 </Button>
               </Link>
-              <Link href="/i-miei-biglietti">
+              <Link href="/account/tickets">
                 <Button size="lg" data-testid="button-my-tickets">
                   <Ticket className="w-4 h-4 mr-2" />
-                  I Miei Biglietti
+                  Biglietti/Abbonamenti
                 </Button>
               </Link>
             </div>
@@ -501,12 +509,12 @@ export default function PublicCheckoutSuccessPage() {
               <ChevronRight className="w-4 h-4 ml-1" />
             </Button>
           </Link>
-          <Link href="/i-miei-biglietti">
+          <Link href="/account/tickets">
             <Button
               data-testid="button-my-tickets"
             >
               <Ticket className="w-4 h-4 mr-2" />
-              I Miei Biglietti
+              Biglietti/Abbonamenti
             </Button>
           </Link>
         </div>

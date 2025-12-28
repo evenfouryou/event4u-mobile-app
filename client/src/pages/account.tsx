@@ -12,7 +12,6 @@ import AccountTicketDetail from "@/pages/account-ticket-detail";
 import AccountNameChange from "@/pages/account-name-change";
 import AccountWallet from "@/pages/account-wallet";
 import AccountResales from "@/pages/account-resales";
-import AccountSubscriptions from "@/pages/account-subscriptions";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { Card, CardContent } from "@/components/ui/card";
@@ -34,7 +33,6 @@ import {
   Home,
   LogOut,
   ChevronLeft,
-  CreditCard,
 } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 
@@ -48,8 +46,7 @@ interface Customer {
 
 const navItems = [
   { href: "/account/home", label: "Home", icon: Home },
-  { href: "/account/tickets", label: "Biglietti", icon: Ticket },
-  { href: "/account/subscriptions", label: "Abbonamenti", icon: CreditCard },
+  { href: "/account/tickets", label: "Biglietti/Abbonamenti", icon: Ticket },
   { href: "/account/wallet", label: "Wallet", icon: Wallet },
   { href: "/account/resales", label: "Rivendita", icon: RefreshCw },
   { href: "/account/profile", label: "Profilo", icon: User },
@@ -128,8 +125,7 @@ export default function AccountPage() {
   const getPageTitle = useCallback(() => {
     if (location.includes('/account/home')) return 'Home';
     if (location.includes('/account/profile')) return 'Profilo';
-    if (location.includes('/account/tickets')) return 'Biglietti';
-    if (location.includes('/account/subscriptions')) return 'Abbonamenti';
+    if (location.includes('/account/tickets')) return 'Biglietti/Abbonamenti';
     if (location.includes('/account/wallet')) return 'Wallet';
     if (location.includes('/account/resales')) return 'Rivendita';
     return 'Account';
@@ -351,7 +347,6 @@ export default function AccountPage() {
                 <Route path="/account/tickets/:id/name-change" component={AccountNameChange} />
                 <Route path="/account/tickets/:id" component={AccountTicketDetail} />
                 <Route path="/account/tickets" component={AccountTickets} />
-                <Route path="/account/subscriptions" component={AccountSubscriptions} />
                 <Route path="/account/wallet" component={AccountWallet} />
                 <Route path="/account/resales" component={AccountResales} />
               </Switch>
@@ -385,7 +380,6 @@ export default function AccountPage() {
             <Route path="/account/tickets/:id/name-change" component={AccountNameChange} />
             <Route path="/account/tickets/:id" component={AccountTicketDetail} />
             <Route path="/account/tickets" component={AccountTickets} />
-            <Route path="/account/subscriptions" component={AccountSubscriptions} />
             <Route path="/account/wallet" component={AccountWallet} />
             <Route path="/account/resales" component={AccountResales} />
           </Switch>
