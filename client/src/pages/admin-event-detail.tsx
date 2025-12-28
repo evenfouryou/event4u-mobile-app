@@ -18,6 +18,16 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Separator } from "@/components/ui/separator";
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from "@/components/ui/sheet";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,6 +59,12 @@ import {
   MoreHorizontal,
   Ban,
   RefreshCw,
+  Building2,
+  User,
+  CreditCard,
+  QrCode,
+  Info,
+  Hash,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -114,6 +130,26 @@ interface SiaeTicketedEvent {
   ticketingStatus: string;
 }
 
+interface Company {
+  id: string;
+  name: string;
+  legalName?: string;
+  address?: string;
+  city?: string;
+  province?: string;
+  vatNumber?: string;
+  fiscalCode?: string;
+}
+
+interface Location {
+  id: string;
+  name: string;
+  address?: string;
+  city?: string;
+  province?: string;
+  capacity?: number;
+}
+
 export default function AdminEventDetail() {
   const [, setLocation] = useLocation();
   const params = useParams<{ eventId: string; gestoreId?: string }>();
@@ -123,7 +159,9 @@ export default function AdminEventDetail() {
   const { toast } = useToast();
   
   const [ticketToCancel, setTicketToCancel] = useState<SiaeTicket | null>(null);
-  const [ticketToRefund, setTicketToRefund] = useState<SiaeTicket | null>(null);
+  const [cancelWithRefund, setCancelWithRefund] = useState(false);
+  const [selectedTicket, setSelectedTicket] = useState<SiaeTicket | null>(null);
+  const [showTicketDetail, setShowTicketDetail] = useState(false);
 
   const { data: event, isLoading: eventLoading } = useQuery<Event>({
     queryKey: [`/api/events/${eventId}`],
@@ -146,6 +184,18 @@ export default function AdminEventDetail() {
     enabled: !!ticketedEvent?.id,
   });
 
+  // Query per company (gestore)
+  const { data: company } = useQuery<Company>({
+    queryKey: ['/api/companies', ticketedEvent?.companyId],
+    enabled: !!ticketedEvent?.companyId,
+  });
+
+  // Query per location (locale)
+  const { data: location } = useQuery<Location>({
+    queryKey: ['/api/locations', event?.locationId],
+    enabled: !!event?.locationId,
+  });
+
   const stats = useMemo(() => {
     if (!tickets || !transactions) return null;
     
@@ -165,41 +215,34 @@ export default function AdminEventDetail() {
     };
   }, [tickets, transactions]);
 
-  // Cancel ticket mutation
+  // Cancel ticket mutation (with optional refund)
   const cancelTicketMutation = useMutation({
-    mutationFn: async (ticketId: string) => {
+    mutationFn: async ({ ticketId, withRefund }: { ticketId: string; withRefund: boolean }) => {
       const response = await apiRequest("PATCH", `/api/siae/tickets/${ticketId}/cancel`, {
-        reason: "Annullamento amministrativo"
+        reasonCode: withRefund ? "RIM" : "ANN",
+        refund: withRefund,
+        refundReason: withRefund ? "Rimborso amministrativo" : undefined
       });
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (_, { withRefund }) => {
       queryClient.invalidateQueries({ queryKey: ['/api/siae/ticketed-events', ticketedEvent?.id, 'tickets'] });
-      toast({ title: "Biglietto annullato", description: "Il biglietto è stato annullato con successo" });
+      if (withRefund) {
+        queryClient.invalidateQueries({ queryKey: ['/api/siae/ticketed-events', ticketedEvent?.id, 'transactions'] });
+      }
+      toast({ 
+        title: withRefund ? "Biglietto annullato e rimborsato" : "Biglietto annullato", 
+        description: withRefund 
+          ? "Il biglietto è stato annullato e il rimborso è stato processato" 
+          : "Il biglietto è stato annullato con successo" 
+      });
       setTicketToCancel(null);
+      setCancelWithRefund(false);
+      setShowTicketDetail(false);
+      setSelectedTicket(null);
     },
     onError: (error: any) => {
       toast({ title: "Errore", description: error.message || "Impossibile annullare il biglietto", variant: "destructive" });
-    }
-  });
-
-  // Refund ticket mutation (uses cancel with refund reason)
-  const refundTicketMutation = useMutation({
-    mutationFn: async (ticketId: string) => {
-      const response = await apiRequest("PATCH", `/api/siae/tickets/${ticketId}/cancel`, {
-        reason: "Rimborso richiesto",
-        cancellationReasonCode: "RIM"
-      });
-      return response.json();
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/siae/ticketed-events', ticketedEvent?.id, 'tickets'] });
-      queryClient.invalidateQueries({ queryKey: ['/api/siae/ticketed-events', ticketedEvent?.id, 'transactions'] });
-      toast({ title: "Rimborso effettuato", description: "Il biglietto è stato annullato per rimborso" });
-      setTicketToRefund(null);
-    },
-    onError: (error: any) => {
-      toast({ title: "Errore", description: error.message || "Impossibile effettuare il rimborso", variant: "destructive" });
     }
   });
 
@@ -379,7 +422,12 @@ export default function AdminEventDetail() {
               </TableHeader>
               <TableBody>
                 {tickets.slice(0, 50).map((ticket) => (
-                  <TableRow key={ticket.id} data-testid={`row-ticket-${ticket.id}`}>
+                  <TableRow 
+                    key={ticket.id} 
+                    data-testid={`row-ticket-${ticket.id}`}
+                    className="cursor-pointer hover-elevate"
+                    onClick={() => { setSelectedTicket(ticket); setShowTicketDetail(true); }}
+                  >
                     <TableCell>
                       <Badge variant="outline">
                         {getEmissionChannelLabel(ticket.emissionChannelCode)}
@@ -388,7 +436,7 @@ export default function AdminEventDetail() {
                     <TableCell className="font-mono font-semibold">{ticket.progressiveNumber}</TableCell>
                     <TableCell className="font-mono text-xs">{ticket.cardCode || "-"}</TableCell>
                     <TableCell className="font-mono text-xs">{ticket.fiscalSealCode || "-"}</TableCell>
-                    <TableCell className="font-mono text-xs">{ticket.fiscalSealCounter || "-"}</TableCell>
+                    <TableCell className="font-mono text-xs">{(ticket as any).fiscalSealCounter || "-"}</TableCell>
                     <TableCell className="font-mono text-xs">{ticket.ticketCode || ticket.transactionId || "-"}</TableCell>
                     <TableCell>
                       <Badge variant="secondary">
@@ -401,32 +449,16 @@ export default function AdminEventDetail() {
                         : "-"}
                     </TableCell>
                     <TableCell>{getStatusBadge(ticket.status)}</TableCell>
-                    <TableCell>
+                    <TableCell onClick={(e) => e.stopPropagation()}>
                       {ticket.status !== 'cancelled' && ticket.status !== 'refunded' ? (
-                        <DropdownMenu>
-                          <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" data-testid={`button-ticket-actions-${ticket.id}`}>
-                              <MoreHorizontal className="h-4 w-4" />
-                            </Button>
-                          </DropdownMenuTrigger>
-                          <DropdownMenuContent align="end">
-                            <DropdownMenuItem 
-                              onClick={() => setTicketToCancel(ticket)}
-                              className="text-destructive"
-                              data-testid={`button-cancel-ticket-${ticket.id}`}
-                            >
-                              <Ban className="h-4 w-4 mr-2" />
-                              Annulla
-                            </DropdownMenuItem>
-                            <DropdownMenuItem 
-                              onClick={() => setTicketToRefund(ticket)}
-                              data-testid={`button-refund-ticket-${ticket.id}`}
-                            >
-                              <RefreshCw className="h-4 w-4 mr-2" />
-                              Rimborso
-                            </DropdownMenuItem>
-                          </DropdownMenuContent>
-                        </DropdownMenu>
+                        <Button 
+                          variant="ghost" 
+                          size="icon" 
+                          onClick={(e) => { e.stopPropagation(); setTicketToCancel(ticket); }}
+                          data-testid={`button-cancel-ticket-${ticket.id}`}
+                        >
+                          <Ban className="h-4 w-4 text-destructive" />
+                        </Button>
                       ) : (
                         <span className="text-muted-foreground text-xs">-</span>
                       )}
@@ -525,7 +557,11 @@ export default function AdminEventDetail() {
       initial="hidden"
       animate="visible"
     >
-      <Card className="hover-elevate" data-testid={`card-ticket-${ticket.id}`}>
+      <Card 
+        className="hover-elevate cursor-pointer" 
+        data-testid={`card-ticket-${ticket.id}`}
+        onClick={() => { setSelectedTicket(ticket); setShowTicketDetail(true); }}
+      >
         <CardContent className="p-4">
           <div className="flex items-start justify-between gap-2">
             <div className="flex-1 min-w-0">
@@ -550,26 +586,14 @@ export default function AdminEventDetail() {
                 </p>
               )}
               {ticket.status !== 'cancelled' && ticket.status !== 'refunded' && (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button variant="ghost" size="icon" className="h-7 w-7">
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    <DropdownMenuItem 
-                      onClick={() => setTicketToCancel(ticket)}
-                      className="text-destructive"
-                    >
-                      <Ban className="h-4 w-4 mr-2" />
-                      Annulla
-                    </DropdownMenuItem>
-                    <DropdownMenuItem onClick={() => setTicketToRefund(ticket)}>
-                      <RefreshCw className="h-4 w-4 mr-2" />
-                      Rimborso
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                <Button 
+                  variant="ghost" 
+                  size="icon" 
+                  className="h-7 w-7"
+                  onClick={(e) => { e.stopPropagation(); setTicketToCancel(ticket); }}
+                >
+                  <Ban className="h-4 w-4 text-destructive" />
+                </Button>
               )}
             </div>
           </div>
@@ -718,50 +742,114 @@ export default function AdminEventDetail() {
           </Tabs>
         </div>
 
-        {/* Cancel Ticket Dialog - Mobile */}
-        <AlertDialog open={!!ticketToCancel} onOpenChange={() => setTicketToCancel(null)}>
+        {/* Cancel Ticket Dialog - Mobile (with optional refund) */}
+        <AlertDialog open={!!ticketToCancel} onOpenChange={(open) => { if (!open) { setTicketToCancel(null); setCancelWithRefund(false); } }}>
           <AlertDialogContent>
             <AlertDialogHeader>
               <AlertDialogTitle>Annullare questo biglietto?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Stai per annullare il biglietto #{ticketToCancel?.progressiveNumber}. 
-                Questa azione non può essere annullata.
+              <AlertDialogDescription asChild>
+                <div className="space-y-4">
+                  <p>
+                    Stai per annullare il biglietto #{ticketToCancel?.progressiveNumber} 
+                    del valore di €{ticketToCancel?.grossAmount ? parseFloat(ticketToCancel.grossAmount).toFixed(2) : '0.00'}.
+                  </p>
+                  <div className="flex items-center space-x-2 p-3 rounded-lg bg-muted/50">
+                    <Checkbox 
+                      id="cancelWithRefundMobile" 
+                      checked={cancelWithRefund} 
+                      onCheckedChange={(checked) => setCancelWithRefund(checked === true)}
+                    />
+                    <Label htmlFor="cancelWithRefundMobile" className="flex items-center gap-2 cursor-pointer">
+                      <RefreshCw className="h-4 w-4" />
+                      Emetti anche rimborso
+                    </Label>
+                  </div>
+                </div>
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel>Annulla</AlertDialogCancel>
               <AlertDialogAction
-                onClick={() => ticketToCancel && cancelTicketMutation.mutate(ticketToCancel.id)}
+                onClick={() => ticketToCancel && cancelTicketMutation.mutate({ ticketId: ticketToCancel.id, withRefund: cancelWithRefund })}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 disabled={cancelTicketMutation.isPending}
               >
-                {cancelTicketMutation.isPending ? "Annullamento..." : "Conferma Annullamento"}
+                {cancelTicketMutation.isPending 
+                  ? (cancelWithRefund ? "Elaborazione..." : "Annullamento...") 
+                  : (cancelWithRefund ? "Annulla e Rimborsa" : "Conferma")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
 
-        {/* Refund Ticket Dialog - Mobile */}
-        <AlertDialog open={!!ticketToRefund} onOpenChange={() => setTicketToRefund(null)}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Rimborsare questo biglietto?</AlertDialogTitle>
-              <AlertDialogDescription>
-                Stai per rimborsare il biglietto #{ticketToRefund?.progressiveNumber} 
-                del valore di €{ticketToRefund?.grossAmount ? parseFloat(ticketToRefund.grossAmount).toFixed(2) : '0.00'}.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Annulla</AlertDialogCancel>
-              <AlertDialogAction
-                onClick={() => ticketToRefund && refundTicketMutation.mutate(ticketToRefund.id)}
-                disabled={refundTicketMutation.isPending}
-              >
-                {refundTicketMutation.isPending ? "Rimborso in corso..." : "Conferma Rimborso"}
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
+        {/* Ticket Detail Sheet - Mobile */}
+        <Sheet open={showTicketDetail} onOpenChange={setShowTicketDetail}>
+          <SheetContent side="bottom" className="h-[90vh] rounded-t-2xl overflow-y-auto">
+            <SheetHeader>
+              <SheetTitle className="flex items-center gap-2">
+                <Ticket className="h-5 w-5 text-primary" />
+                Dettaglio Biglietto
+              </SheetTitle>
+            </SheetHeader>
+            
+            {selectedTicket && (
+              <div className="space-y-4 mt-4">
+                <div className="p-4 rounded-xl bg-muted/50 border text-center">
+                  <div className="text-3xl font-mono font-bold text-primary">
+                    #{selectedTicket.progressiveNumber}
+                  </div>
+                  <div className="text-sm text-muted-foreground mt-1 font-mono">
+                    {selectedTicket.fiscalSealCode || 'Nessun sigillo'}
+                  </div>
+                  <div className="flex justify-center mt-2">
+                    {getStatusBadge(selectedTicket.status)}
+                  </div>
+                </div>
+
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-muted-foreground">Sistema</span>
+                    <Badge variant="outline">{getEmissionChannelLabel(selectedTicket.emissionChannelCode)}</Badge>
+                  </div>
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-muted-foreground">Tipo</span>
+                    <Badge variant="secondary">{getTicketTypeLabel(selectedTicket.ticketTypeCode, selectedTicket.ticketType)}</Badge>
+                  </div>
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-muted-foreground">Prezzo</span>
+                    <span className="font-bold text-primary">€{parseFloat(selectedTicket.grossAmount).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-muted-foreground">Carta</span>
+                    <span className="font-mono text-xs">{selectedTicket.cardCode || '-'}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-muted-foreground">Contatore</span>
+                    <span className="font-mono">{(selectedTicket as any).fiscalSealCounter || '-'}</span>
+                  </div>
+                </div>
+
+                {company && (
+                  <div className="p-3 rounded-lg bg-muted/30 border">
+                    <p className="text-xs text-muted-foreground mb-1">Gestore</p>
+                    <p className="font-medium text-sm">{company.name}</p>
+                  </div>
+                )}
+
+                {selectedTicket.status !== 'cancelled' && selectedTicket.status !== 'refunded' && (
+                  <Button 
+                    variant="destructive" 
+                    className="w-full"
+                    onClick={() => setTicketToCancel(selectedTicket)}
+                  >
+                    <Ban className="h-4 w-4 mr-2" />
+                    Annulla Biglietto
+                  </Button>
+                )}
+              </div>
+            )}
+          </SheetContent>
+        </Sheet>
       </MobileAppLayout>
     );
   }
@@ -811,51 +899,219 @@ export default function AdminEventDetail() {
         </TabsContent>
       </Tabs>
 
-      {/* Cancel Ticket Dialog */}
-      <AlertDialog open={!!ticketToCancel} onOpenChange={() => setTicketToCancel(null)}>
+      {/* Cancel Ticket Dialog (with optional refund) */}
+      <AlertDialog open={!!ticketToCancel} onOpenChange={(open) => { if (!open) { setTicketToCancel(null); setCancelWithRefund(false); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>Annullare questo biglietto?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Stai per annullare il biglietto #{ticketToCancel?.progressiveNumber}. 
-              Questa azione non può essere annullata.
+            <AlertDialogDescription asChild>
+              <div className="space-y-4">
+                <p>
+                  Stai per annullare il biglietto #{ticketToCancel?.progressiveNumber} 
+                  del valore di €{ticketToCancel?.grossAmount ? parseFloat(ticketToCancel.grossAmount).toFixed(2) : '0.00'}.
+                </p>
+                <div className="flex items-center space-x-2 p-3 rounded-lg bg-muted/50">
+                  <Checkbox 
+                    id="cancelWithRefund" 
+                    checked={cancelWithRefund} 
+                    onCheckedChange={(checked) => setCancelWithRefund(checked === true)}
+                  />
+                  <Label htmlFor="cancelWithRefund" className="flex items-center gap-2 cursor-pointer">
+                    <RefreshCw className="h-4 w-4" />
+                    Emetti anche rimborso automatico
+                  </Label>
+                </div>
+                {cancelWithRefund && (
+                  <p className="text-sm text-amber-500">
+                    Il rimborso verrà processato sulla modalità di pagamento originale.
+                  </p>
+                )}
+              </div>
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
             <AlertDialogCancel>Annulla</AlertDialogCancel>
             <AlertDialogAction
-              onClick={() => ticketToCancel && cancelTicketMutation.mutate(ticketToCancel.id)}
+              onClick={() => ticketToCancel && cancelTicketMutation.mutate({ ticketId: ticketToCancel.id, withRefund: cancelWithRefund })}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               disabled={cancelTicketMutation.isPending}
             >
-              {cancelTicketMutation.isPending ? "Annullamento..." : "Conferma Annullamento"}
+              {cancelTicketMutation.isPending 
+                ? (cancelWithRefund ? "Annullamento e rimborso..." : "Annullamento...") 
+                : (cancelWithRefund ? "Annulla e Rimborsa" : "Conferma Annullamento")}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
 
-      {/* Refund Ticket Dialog */}
-      <AlertDialog open={!!ticketToRefund} onOpenChange={() => setTicketToRefund(null)}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Rimborsare questo biglietto?</AlertDialogTitle>
-            <AlertDialogDescription>
-              Stai per rimborsare il biglietto #{ticketToRefund?.progressiveNumber} 
-              del valore di €{ticketToRefund?.grossAmount ? parseFloat(ticketToRefund.grossAmount).toFixed(2) : '0.00'}.
-              Il rimborso verrà processato secondo le modalità di pagamento originali.
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Annulla</AlertDialogCancel>
-            <AlertDialogAction
-              onClick={() => ticketToRefund && refundTicketMutation.mutate(ticketToRefund.id)}
-              disabled={refundTicketMutation.isPending}
-            >
-              {refundTicketMutation.isPending ? "Rimborso in corso..." : "Conferma Rimborso"}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
+      {/* Ticket Detail Sheet */}
+      <Sheet open={showTicketDetail} onOpenChange={setShowTicketDetail}>
+        <SheetContent side={isMobile ? "bottom" : "right"} className={isMobile ? "h-[90vh] rounded-t-2xl overflow-y-auto" : "w-[500px] overflow-y-auto"}>
+          <SheetHeader>
+            <SheetTitle className="flex items-center gap-2">
+              <Ticket className="h-5 w-5 text-primary" />
+              Dettaglio Biglietto
+            </SheetTitle>
+            <SheetDescription>
+              Informazioni complete del biglietto
+            </SheetDescription>
+          </SheetHeader>
+          
+          {selectedTicket && (
+            <div className="space-y-6 mt-6">
+              {/* Header con numero e stato */}
+              <div className="p-4 rounded-xl bg-muted/50 border text-center">
+                <div className="text-4xl font-mono font-bold text-primary">
+                  #{selectedTicket.progressiveNumber}
+                </div>
+                <div className="text-sm text-muted-foreground mt-1 font-mono">
+                  {selectedTicket.fiscalSealCode || 'Nessun sigillo'}
+                </div>
+                <div className="flex justify-center mt-3">
+                  {getStatusBadge(selectedTicket.status)}
+                </div>
+              </div>
+
+              {/* QR Code placeholder */}
+              {(selectedTicket as any).qrCode && (
+                <div className="p-4 rounded-xl bg-white border flex flex-col items-center">
+                  <QrCode className="h-8 w-8 text-muted-foreground mb-2" />
+                  <img 
+                    src={(selectedTicket as any).qrCode} 
+                    alt="QR Code" 
+                    className="max-w-[200px]"
+                  />
+                </div>
+              )}
+
+              {/* Info Biglietto */}
+              <div className="space-y-1">
+                <h4 className="text-sm font-medium flex items-center gap-2 text-muted-foreground mb-3">
+                  <Info className="h-4 w-4" />
+                  Dettagli Biglietto
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-muted-foreground">Sistema</span>
+                    <Badge variant="outline">{getEmissionChannelLabel(selectedTicket.emissionChannelCode)}</Badge>
+                  </div>
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-muted-foreground">Tipo</span>
+                    <Badge variant="secondary">{getTicketTypeLabel(selectedTicket.ticketTypeCode, selectedTicket.ticketType)}</Badge>
+                  </div>
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-muted-foreground">Prezzo</span>
+                    <span className="font-bold text-primary">€{parseFloat(selectedTicket.grossAmount).toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-muted-foreground">Data Emissione</span>
+                    <span>{selectedTicket.emissionDate ? format(new Date(selectedTicket.emissionDate), "dd/MM/yyyy HH:mm", { locale: it }) : '-'}</span>
+                  </div>
+                  {(selectedTicket.participantFirstName || selectedTicket.participantLastName) && (
+                    <div className="flex justify-between py-2 border-b">
+                      <span className="text-muted-foreground">Partecipante</span>
+                      <span className="font-medium">{`${selectedTicket.participantFirstName || ''} ${selectedTicket.participantLastName || ''}`.trim()}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-muted-foreground">Codice Ordine</span>
+                    <span className="font-mono text-xs">{selectedTicket.ticketCode || selectedTicket.transactionId || '-'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info SIAE */}
+              <div className="space-y-1">
+                <h4 className="text-sm font-medium flex items-center gap-2 text-muted-foreground mb-3">
+                  <CreditCard className="h-4 w-4" />
+                  Dati Fiscali SIAE
+                </h4>
+                <div className="space-y-2 text-sm">
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-muted-foreground">Carta Attivazione</span>
+                    <span className="font-mono text-xs">{selectedTicket.cardCode || '-'}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-muted-foreground">Sigillo Fiscale</span>
+                    <span className="font-mono text-xs">{selectedTicket.fiscalSealCode || '-'}</span>
+                  </div>
+                  <div className="flex justify-between py-2 border-b">
+                    <span className="text-muted-foreground">Contatore Carta</span>
+                    <span className="font-mono">{(selectedTicket as any).fiscalSealCounter || '-'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Info Locale */}
+              {location && (
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium flex items-center gap-2 text-muted-foreground mb-3">
+                    <MapPin className="h-4 w-4" />
+                    Locale
+                  </h4>
+                  <div className="p-3 rounded-lg bg-muted/30 border">
+                    <p className="font-medium">{location.name}</p>
+                    {location.address && (
+                      <p className="text-sm text-muted-foreground">{location.address}</p>
+                    )}
+                    {(location.city || location.province) && (
+                      <p className="text-sm text-muted-foreground">
+                        {[location.city, location.province].filter(Boolean).join(', ')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              {/* Info Gestore */}
+              {company && (
+                <div className="space-y-1">
+                  <h4 className="text-sm font-medium flex items-center gap-2 text-muted-foreground mb-3">
+                    <Building2 className="h-4 w-4" />
+                    Gestore / Titolare Sistema
+                  </h4>
+                  <div className="p-3 rounded-lg bg-muted/30 border">
+                    <p className="font-medium">{company.name}</p>
+                    {company.legalName && company.legalName !== company.name && (
+                      <p className="text-sm text-muted-foreground">{company.legalName}</p>
+                    )}
+                    {company.vatNumber && (
+                      <p className="text-xs text-muted-foreground mt-1">P.IVA: {company.vatNumber}</p>
+                    )}
+                    {company.fiscalCode && (
+                      <p className="text-xs text-muted-foreground">C.F.: {company.fiscalCode}</p>
+                    )}
+                    {(company.city || company.province) && (
+                      <p className="text-xs text-muted-foreground">
+                        {[company.city, company.province].filter(Boolean).join(', ')}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
+
+              <Separator />
+
+              {/* Azioni */}
+              {selectedTicket.status !== 'cancelled' && selectedTicket.status !== 'refunded' && (
+                <div className="pt-2">
+                  <Button 
+                    variant="destructive" 
+                    className="w-full"
+                    onClick={() => { 
+                      setTicketToCancel(selectedTicket); 
+                    }}
+                    data-testid="button-cancel-from-detail"
+                  >
+                    <Ban className="h-4 w-4 mr-2" />
+                    Annulla Biglietto
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </SheetContent>
+      </Sheet>
     </div>
   );
 }
