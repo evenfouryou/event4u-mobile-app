@@ -875,7 +875,7 @@ export default function EventHub() {
   });
 
   // Cancellation reasons query
-  const { data: cancellationReasons = [] } = useQuery<Array<{ code: string; description: string }>>({
+  const { data: cancellationReasons = [] } = useQuery<Array<{ code: string; name: string; description?: string }>>({
     queryKey: ['/api/siae/cancellation-reasons'],
     enabled: cancelTicketDialogOpen || showCancelSubscriptionModal,
   });
@@ -4344,14 +4344,13 @@ export default function EventHub() {
                     <SelectContent>
                       {cancellationReasons.length > 0 ? (
                         cancellationReasons.map((reason) => (
-                          <SelectItem key={reason.code} value={reason.code}>{reason.description}</SelectItem>
+                          <SelectItem key={reason.code} value={reason.code}>{reason.code} - {reason.name}</SelectItem>
                         ))
                       ) : (
                         <>
-                          <SelectItem value="01">Richiesta cliente</SelectItem>
-                          <SelectItem value="02">Errore emissione</SelectItem>
-                          <SelectItem value="03">Evento annullato</SelectItem>
-                          <SelectItem value="04">Altro</SelectItem>
+                          <SelectItem value="01">01 - Annullamento evento</SelectItem>
+                          <SelectItem value="04">04 - Richiesta cliente</SelectItem>
+                          <SelectItem value="06">06 - Errore emissione</SelectItem>
                         </>
                       )}
                     </SelectContent>
@@ -4678,7 +4677,7 @@ export default function EventHub() {
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Importo</span>
-                    <span className="font-bold text-emerald-400">€{Number((subscriptionToCancel as any).grossAmount || (subscriptionToCancel as any).price || 0).toFixed(2)}</span>
+                    <span className="font-bold text-emerald-400">€{Number(subscriptionToCancel.totalAmount || 0).toFixed(2)}</span>
                   </div>
                   <div className="flex justify-between text-sm">
                     <span className="text-muted-foreground">Validità</span>
@@ -4696,14 +4695,13 @@ export default function EventHub() {
                     <SelectContent>
                       {cancellationReasons.length > 0 ? (
                         cancellationReasons.map((reason) => (
-                          <SelectItem key={reason.code} value={reason.code}>{reason.description}</SelectItem>
+                          <SelectItem key={reason.code} value={reason.code}>{reason.code} - {reason.name}</SelectItem>
                         ))
                       ) : (
                         <>
-                          <SelectItem value="01">Richiesta cliente</SelectItem>
-                          <SelectItem value="02">Errore emissione</SelectItem>
-                          <SelectItem value="03">Evento annullato</SelectItem>
-                          <SelectItem value="04">Altro</SelectItem>
+                          <SelectItem value="01">01 - Annullamento evento</SelectItem>
+                          <SelectItem value="04">04 - Richiesta cliente</SelectItem>
+                          <SelectItem value="06">06 - Errore emissione</SelectItem>
                         </>
                       )}
                     </SelectContent>
