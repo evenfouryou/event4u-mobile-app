@@ -3183,6 +3183,59 @@ export default function EventHub() {
 
               <TabsContent value="online">
                 <div className="grid gap-6" data-testid="online-visibility-card">
+                  {/* Stato Attuale Evento */}
+                  <Card className="border-2">
+                    <CardHeader className="pb-3">
+                      <CardTitle className="flex items-center gap-2">
+                        <AlertCircle className="h-5 w-5" />
+                        Stato Attuale
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="grid grid-cols-3 gap-4">
+                        <div className="text-center p-4 rounded-lg bg-muted/50">
+                          <div className="mb-2">
+                            {ticketedEvent?.ticketingStatus === 'draft' ? (
+                              <Badge variant="secondary" className="text-base px-4 py-1">Bozza</Badge>
+                            ) : ticketedEvent?.ticketingStatus === 'active' ? (
+                              <Badge className="bg-emerald-500 text-base px-4 py-1">Attivo</Badge>
+                            ) : ticketedEvent?.ticketingStatus === 'suspended' ? (
+                              <Badge variant="outline" className="text-amber-500 border-amber-500 text-base px-4 py-1">Sospeso</Badge>
+                            ) : (
+                              <Badge variant="destructive" className="text-base px-4 py-1">Chiuso</Badge>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Biglietteria</div>
+                        </div>
+                        <div className="text-center p-4 rounded-lg bg-muted/50">
+                          <div className="mb-2">
+                            {event?.isPublic ? (
+                              <Badge className="bg-blue-500 text-base px-4 py-1">Pubblico</Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-base px-4 py-1">Privato</Badge>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Visibilità</div>
+                        </div>
+                        <div className="text-center p-4 rounded-lg bg-muted/50">
+                          <div className="mb-2">
+                            {event?.isPublic && ticketedEvent?.ticketingStatus === 'active' ? (
+                              <Badge className="bg-emerald-500 text-base px-4 py-1">In Vendita</Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-base px-4 py-1">Non in Vendita</Badge>
+                            )}
+                          </div>
+                          <div className="text-xs text-muted-foreground">Acquisto Online</div>
+                        </div>
+                      </div>
+                      {ticketedEvent?.ticketingStatus === 'draft' && (
+                        <div className="mt-4 p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm text-amber-600 dark:text-amber-400">
+                          <strong>Evento in bozza:</strong> Per renderlo visibile al pubblico, attiva il toggle "Vendita Online" qui sotto.
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
                   <Card>
                     <CardHeader>
                       <CardTitle className="flex items-center gap-2">
@@ -6465,6 +6518,59 @@ export default function EventHub() {
 
               <TabsContent value="online">
                 <div className="space-y-4" data-testid="online-visibility-card">
+                  {/* Stato Attuale Evento - Mobile */}
+                  <Card className="glass-card border-2">
+                    <CardHeader className="px-4 pb-2">
+                      <CardTitle className="flex items-center gap-2 text-lg">
+                        <AlertCircle className="h-5 w-5" />
+                        Stato Attuale
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent className="px-4">
+                      <div className="grid grid-cols-3 gap-2">
+                        <div className="text-center p-3 rounded-lg bg-white/5">
+                          <div className="mb-1">
+                            {ticketedEvent?.ticketingStatus === 'draft' ? (
+                              <Badge variant="secondary" className="text-xs px-2">Bozza</Badge>
+                            ) : ticketedEvent?.ticketingStatus === 'active' ? (
+                              <Badge className="bg-emerald-500 text-xs px-2">Attivo</Badge>
+                            ) : ticketedEvent?.ticketingStatus === 'suspended' ? (
+                              <Badge variant="outline" className="text-amber-500 border-amber-500 text-xs px-2">Sospeso</Badge>
+                            ) : (
+                              <Badge variant="destructive" className="text-xs px-2">Chiuso</Badge>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">Biglietteria</div>
+                        </div>
+                        <div className="text-center p-3 rounded-lg bg-white/5">
+                          <div className="mb-1">
+                            {event?.isPublic ? (
+                              <Badge className="bg-blue-500 text-xs px-2">Pubblico</Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-xs px-2">Privato</Badge>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">Visibilità</div>
+                        </div>
+                        <div className="text-center p-3 rounded-lg bg-white/5">
+                          <div className="mb-1">
+                            {event?.isPublic && ticketedEvent?.ticketingStatus === 'active' ? (
+                              <Badge className="bg-emerald-500 text-xs px-2">In Vendita</Badge>
+                            ) : (
+                              <Badge variant="secondary" className="text-xs px-2">Non in Vendita</Badge>
+                            )}
+                          </div>
+                          <div className="text-[10px] text-muted-foreground">Acquisto</div>
+                        </div>
+                      </div>
+                      {ticketedEvent?.ticketingStatus === 'draft' && (
+                        <div className="mt-3 p-2 rounded-lg bg-amber-500/10 border border-amber-500/30 text-xs text-amber-600 dark:text-amber-400">
+                          <strong>In bozza:</strong> Attiva "Vendita Online" per pubblicare.
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+
                   <Card className="glass-card">
                     <CardHeader className="px-4">
                       <CardTitle className="flex items-center gap-2 text-lg">
