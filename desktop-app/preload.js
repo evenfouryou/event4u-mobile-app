@@ -38,6 +38,7 @@ contextBridge.exposeInMainWorld('siaeAPI', {
   
   // PIN verification (SIAE compliance)
   verifyPin: (pin) => ipcRenderer.invoke('pin:verify', pin),
+  changePin: (oldPin, newPin) => ipcRenderer.invoke('pin:changePin', { oldPin, newPin }),
   getPinStatus: () => ipcRenderer.invoke('pin:status'),
   setPin: (newPin) => ipcRenderer.invoke('pin:setPin', newPin),
   onPinRequired: (callback) => {

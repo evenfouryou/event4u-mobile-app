@@ -1,5 +1,28 @@
 # 🔧 ISTRUZIONI DI BUILD - Event Four You SIAE Lettore
 
+## ✅ NUOVA FUNZIONALITÀ v1.0.6 (Dicembre 2024)
+
+**Funzionalità:** Auto-riconnessione e Cambio PIN
+
+### Cosa fa:
+1. **Auto-riconnessione migliorata:** 
+   - Heartbeat più veloce (15s invece di 30s) per rilevare disconnessioni
+   - Exponential backoff (1s → 2s → 4s → ... → max 30s) per riconnessioni
+   - Si riconnette automaticamente dopo deploy del server
+   
+2. **Cambio PIN dalla app:**
+   - Nuovo bottone "Cambia PIN" nel pannello carta
+   - Dialog con validazione: PIN attuale, nuovo PIN, conferma
+   - Feedback chiaro su successo/errore
+
+### Modifiche:
+- **main.js:** Logica reconnect con exponential backoff
+- **renderer.js:** Dialog cambio PIN
+- **preload.js:** API changePin esposta
+- **index.html:** Bottone "Cambia PIN"
+
+---
+
 ## ✅ NUOVA FUNZIONALITÀ v1.0.5 (Dicembre 2024)
 
 **Funzionalità:** Estrazione email dal certificato X.509 della smart card

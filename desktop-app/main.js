@@ -63,9 +63,12 @@ let relayConfig = {
   enabled: true,
   serverType: 'production' // 'production' or 'development'
 };
-const RELAY_RECONNECT_DELAY = 5000;
-const RELAY_HEARTBEAT_INTERVAL = 30000;
-const RELAY_HEARTBEAT_TIMEOUT = 10000; // If no pong received within 10 seconds, consider connection dead
+// Reconnection with exponential backoff
+const RELAY_RECONNECT_BASE_DELAY = 1000;  // Start with 1 second
+const RELAY_RECONNECT_MAX_DELAY = 30000;  // Max 30 seconds
+let currentReconnectDelay = RELAY_RECONNECT_BASE_DELAY;
+const RELAY_HEARTBEAT_INTERVAL = 15000;   // Check every 15 seconds (faster detection)
+const RELAY_HEARTBEAT_TIMEOUT = 5000;     // 5 second timeout for pong
 let relayHeartbeatTimer = null;
 let lastPongReceived = Date.now();
 let heartbeatTimeoutTimer = null;
@@ -713,6 +716,9 @@ function connectToRelay() {
     relayWs.on('open', () => {
       log.info('Relay WebSocket connected');
       
+      // Reset exponential backoff on successful connection
+      resetReconnectDelay();
+      
       // Clear reconnect timer
       if (relayReconnectTimer) {
         clearTimeout(relayReconnectTimer);
@@ -792,11 +798,18 @@ function scheduleRelayReconnect() {
   if (relayReconnectTimer) return;
   if (!relayConfig.enabled) return;
   
-  log.info(`Scheduling relay reconnect in ${RELAY_RECONNECT_DELAY}ms`);
+  log.info(`Scheduling relay reconnect in ${currentReconnectDelay}ms (exponential backoff)`);
   relayReconnectTimer = setTimeout(() => {
     relayReconnectTimer = null;
     connectToRelay();
-  }, RELAY_RECONNECT_DELAY);
+  }, currentReconnectDelay);
+  
+  // Increase delay for next attempt (exponential backoff)
+  currentReconnectDelay = Math.min(currentReconnectDelay * 2, RELAY_RECONNECT_MAX_DELAY);
+}
+
+function resetReconnectDelay() {
+  currentReconnectDelay = RELAY_RECONNECT_BASE_DELAY;
 }
 
 function startRelayHeartbeat() {

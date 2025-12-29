@@ -599,4 +599,185 @@ document.addEventListener('DOMContentLoaded', () => {
       closePinDialog();
     });
   }
+  
+  // ============================================
+  // PIN Change Dialog
+  // ============================================
+  
+  const btnChangePin = document.getElementById('btn-change-pin');
+  if (btnChangePin) {
+    btnChangePin.addEventListener('click', showChangePinDialog);
+  }
+  
+  function showChangePinDialog() {
+    addLog('info', '🔑 Apertura dialog cambio PIN');
+    
+    // Create overlay
+    const overlay = document.createElement('div');
+    overlay.id = 'change-pin-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.8);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    `;
+    
+    // Create dialog
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+      background: linear-gradient(145deg, #2d2d3a, #1e1e28);
+      border-radius: 16px;
+      padding: 32px;
+      width: 420px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      border: 1px solid rgba(255,255,255,0.1);
+    `;
+    
+    dialog.innerHTML = `
+      <div style="text-align: center; margin-bottom: 24px;">
+        <div style="font-size: 48px; margin-bottom: 16px;">🔑</div>
+        <h2 style="color: #2196f3; margin: 0 0 8px 0; font-size: 20px;">Cambia PIN Carta SIAE</h2>
+        <p style="color: #999; margin: 0; font-size: 14px;">Inserisci il PIN attuale e il nuovo PIN</p>
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; color: #ccc; margin-bottom: 8px; font-size: 13px;">PIN Attuale</label>
+        <input type="password" id="change-pin-old" maxlength="12" 
+          style="width: 100%; padding: 14px; font-size: 20px; text-align: center; 
+          letter-spacing: 6px; background: #1a1a24; border: 2px solid #444;
+          border-radius: 8px; color: white; box-sizing: border-box;"
+          placeholder="••••••" autofocus
+          pattern="[0-9]*" inputmode="numeric">
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; color: #ccc; margin-bottom: 8px; font-size: 13px;">Nuovo PIN</label>
+        <input type="password" id="change-pin-new" maxlength="12" 
+          style="width: 100%; padding: 14px; font-size: 20px; text-align: center; 
+          letter-spacing: 6px; background: #1a1a24; border: 2px solid #444;
+          border-radius: 8px; color: white; box-sizing: border-box;"
+          placeholder="••••••"
+          pattern="[0-9]*" inputmode="numeric">
+      </div>
+      <div style="margin-bottom: 24px;">
+        <label style="display: block; color: #ccc; margin-bottom: 8px; font-size: 13px;">Conferma Nuovo PIN</label>
+        <input type="password" id="change-pin-confirm" maxlength="12" 
+          style="width: 100%; padding: 14px; font-size: 20px; text-align: center; 
+          letter-spacing: 6px; background: #1a1a24; border: 2px solid #444;
+          border-radius: 8px; color: white; box-sizing: border-box;"
+          placeholder="••••••"
+          pattern="[0-9]*" inputmode="numeric">
+        <p id="change-pin-error" style="color: #f44336; margin: 8px 0 0 0; font-size: 13px; display: none;"></p>
+      </div>
+      <div style="display: flex; gap: 12px;">
+        <button id="change-pin-cancel" style="flex: 1; padding: 14px; background: #444; 
+          border: none; border-radius: 8px; color: white; font-size: 15px; cursor: pointer;">
+          Annulla
+        </button>
+        <button id="change-pin-submit" style="flex: 1; padding: 14px; 
+          background: linear-gradient(135deg, #2196f3, #1976d2);
+          border: none; border-radius: 8px; color: white; font-size: 15px; 
+          cursor: pointer; font-weight: 600;">
+          Cambia PIN
+        </button>
+      </div>
+      <p style="text-align: center; color: #ff9800; font-size: 12px; margin-top: 16px;">
+        ⚠️ Ricorda il nuovo PIN, non può essere recuperato
+      </p>
+    `;
+    
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    
+    const oldPinInput = document.getElementById('change-pin-old');
+    const newPinInput = document.getElementById('change-pin-new');
+    const confirmPinInput = document.getElementById('change-pin-confirm');
+    const errorEl = document.getElementById('change-pin-error');
+    const submitBtn = document.getElementById('change-pin-submit');
+    const cancelBtn = document.getElementById('change-pin-cancel');
+    
+    oldPinInput.focus();
+    
+    function closeDialog() {
+      if (overlay && overlay.parentNode) {
+        overlay.parentNode.removeChild(overlay);
+      }
+    }
+    
+    async function changePin() {
+      const oldPin = oldPinInput.value.replace(/\D/g, '');
+      const newPin = newPinInput.value.replace(/\D/g, '');
+      const confirmPin = confirmPinInput.value.replace(/\D/g, '');
+      
+      // Validation
+      if (!oldPin || oldPin.length < 4) {
+        errorEl.textContent = 'PIN attuale deve essere di almeno 4 cifre';
+        errorEl.style.display = 'block';
+        return;
+      }
+      if (!newPin || newPin.length < 4) {
+        errorEl.textContent = 'Nuovo PIN deve essere di almeno 4 cifre';
+        errorEl.style.display = 'block';
+        return;
+      }
+      if (newPin !== confirmPin) {
+        errorEl.textContent = 'I nuovi PIN non corrispondono';
+        errorEl.style.display = 'block';
+        return;
+      }
+      if (oldPin === newPin) {
+        errorEl.textContent = 'Il nuovo PIN deve essere diverso dall\'attuale';
+        errorEl.style.display = 'block';
+        return;
+      }
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Cambio in corso...';
+      errorEl.style.display = 'none';
+      
+      try {
+        const result = await window.siaeAPI.changePin(oldPin, newPin);
+        console.log('PIN change result:', result);
+        
+        if (result && result.success) {
+          addLog('info', '✓ PIN cambiato correttamente');
+          closeDialog();
+          // Show success message
+          alert('PIN cambiato con successo!');
+        } else {
+          errorEl.textContent = result?.error || 'Errore cambio PIN';
+          errorEl.style.display = 'block';
+          addLog('error', result?.error || 'Errore cambio PIN');
+        }
+      } catch (err) {
+        console.error('PIN change error:', err);
+        errorEl.textContent = 'Errore: ' + err.message;
+        errorEl.style.display = 'block';
+        addLog('error', 'Errore cambio PIN: ' + err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Cambia PIN';
+      }
+    }
+    
+    submitBtn.addEventListener('click', changePin);
+    confirmPinInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') changePin();
+    });
+    cancelBtn.addEventListener('click', () => {
+      addLog('info', 'Cambio PIN annullato');
+      closeDialog();
+    });
+    
+    // Close on escape
+    overlay.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeDialog();
+      }
+    });
+  }
 });
