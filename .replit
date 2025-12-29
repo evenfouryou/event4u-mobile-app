@@ -58,3 +58,4 @@ SIAE_TEST_MODE = "true"
 
 [userenv.production]
 PUBLIC_URL = "https://eventmanage.replit.app"
+PRODUCTION_URL = "https://manage.eventfouryou.com"

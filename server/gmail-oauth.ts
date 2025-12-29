@@ -17,10 +17,22 @@ function getOAuth2Client() {
   }
   
   // Determine redirect URI based on environment
-  const baseUrl = process.env.REPLIT_DEPLOYMENT_URL || 
-                  process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 
-                  'http://localhost:5000';
+  // Priority: Custom production URL > Replit deployment > Replit dev > localhost
+  let baseUrl: string;
+  
+  if (process.env.PRODUCTION_URL) {
+    // Use custom production domain (e.g., https://manage.eventfouryou.com)
+    baseUrl = process.env.PRODUCTION_URL;
+  } else if (process.env.REPLIT_DEPLOYMENT_URL) {
+    baseUrl = process.env.REPLIT_DEPLOYMENT_URL;
+  } else if (process.env.REPLIT_DEV_DOMAIN) {
+    baseUrl = `https://${process.env.REPLIT_DEV_DOMAIN}`;
+  } else {
+    baseUrl = 'http://localhost:5000';
+  }
+  
   const redirectUri = `${baseUrl}/api/gmail/callback`;
+  console.log(`[GMAIL-OAUTH] Using redirect URI: ${redirectUri}`);
   
   return new google.auth.OAuth2(clientId, clientSecret, redirectUri);
 }
