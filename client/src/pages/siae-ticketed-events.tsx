@@ -31,6 +31,7 @@ type SiaeTicketedEventWithCompany = SiaeTicketedEvent & {
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import {
   Dialog,
   DialogContent,
@@ -275,6 +276,25 @@ export default function SiaeTicketedEventsPage() {
     queryKey: ['/api/siae/ticketed-events', expandedEventId, 'subscription-types'],
     enabled: !!expandedEventId,
   });
+
+  // Check if SIAE system is properly configured (taxId required)
+  // The backend uses fallback: systemConfig.taxId || company.taxId
+  const { data: systemConfig } = useQuery<{ taxId: string | null }>({
+    queryKey: ['/api/siae/companies', companyId, 'system-config'],
+    enabled: !!companyId && !isSuperAdmin,
+  });
+  
+  const { data: companyData } = useQuery<{ taxId: string | null }>({
+    queryKey: ['/api/companies', companyId],
+    enabled: !!companyId && !isSuperAdmin,
+  });
+  
+  // Alert only if BOTH systemConfig.taxId AND company.taxId are missing (matching backend logic)
+  const isTaxIdMissing = !isSuperAdmin && 
+    systemConfig !== undefined && 
+    companyData !== undefined && 
+    !systemConfig?.taxId && 
+    !companyData?.taxId;
 
   const form = useForm<FormData>({
     resolver: zodResolver(formSchema),
@@ -734,6 +754,25 @@ export default function SiaeTicketedEventsPage() {
             </CardContent>
           </Card>
         </div>
+
+        {/* Alert obbligatorio per Codice Fiscale Emittente */}
+        {isTaxIdMissing && (
+          <Alert variant="destructive" className="mb-6" data-testid="alert-tax-id-missing">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertTitle>Configurazione Incompleta</AlertTitle>
+            <AlertDescription>
+              <span className="block mb-2">
+                Il <strong>Codice Fiscale Emittente</strong> non è configurato. Non è possibile emettere biglietti o generare report SIAE senza questo dato obbligatorio.
+              </span>
+              <Link href="/siae/system-config">
+                <Button variant="outline" size="sm" className="mt-2" data-testid="button-configure-tax-id">
+                  <Settings className="w-4 h-4 mr-2" />
+                  Configura Impostazioni SIAE
+                </Button>
+              </Link>
+            </AlertDescription>
+          </Alert>
+        )}
 
         {ticketedEvents?.length === 0 ? (
           <Card data-testid="card-empty-state">

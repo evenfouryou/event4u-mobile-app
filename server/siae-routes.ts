@@ -1766,6 +1766,18 @@ router.post("/api/siae/tickets", requireAuth, requireOrganizer, async (req: Requ
       return res.status(400).json({ message: "Evento non trovato" });
     }
     
+    // CONTROLLO OBBLIGATORIO: Codice Fiscale Emittente configurato
+    const systemConfig = await siaeStorage.getSiaeSystemConfig(ticketedEvent.companyId);
+    const company = await storage.getCompany(ticketedEvent.companyId);
+    const taxId = systemConfig?.taxId || company?.taxId;
+    
+    if (!taxId) {
+      return res.status(400).json({ 
+        message: "Codice Fiscale Emittente non configurato. Vai su Impostazioni SIAE > Dati Aziendali per configurarlo.",
+        code: "TAX_ID_REQUIRED"
+      });
+    }
+    
     // Calcola prezzo in centesimi
     const grossAmount = data.ticketTypeCode === "INT" ? sector.priceIntero : 
                        data.ticketTypeCode === "RID" ? (sector.priceRidotto || sector.priceIntero) : "0";
@@ -2814,6 +2826,15 @@ router.post("/api/siae/companies/:companyId/transmissions/send-c1", requireAuth,
     const company = await storage.getCompany(companyId);
     const companyName = company?.name || 'N/A';
     
+    // CONTROLLO OBBLIGATORIO: Codice Fiscale Emittente
+    const taxId = systemConfig?.taxId || company?.taxId;
+    if (!taxId) {
+      return res.status(400).json({ 
+        message: "Codice Fiscale Emittente non configurato. Vai su Impostazioni SIAE > Dati Aziendali per configurarlo prima di generare report.",
+        code: "TAX_ID_REQUIRED"
+      });
+    }
+    
     // Calculate date range based on report type
     let startDate: Date, endDate: Date;
     if (isMonthly) {
@@ -2854,7 +2875,7 @@ router.post("/api/siae/companies/:companyId/transmissions/send-c1", requireAuth,
 <RiepilogoMensile Mese="${meseAttr}" DataGenerazione="${dataGen}" OraGenerazione="${oraGen}" ProgressivoGenerazione="1" Sostituzione="N" xmlns="urn:siae:biglietteria:2025">
   <Titolare>
     <Denominazione>${escapeXml(companyName)}</Denominazione>
-    <CodiceFiscale>${escapeXml(systemConfig?.taxId || activeCard.cardCode)}</CodiceFiscale>
+    <CodiceFiscale>${escapeXml(taxId)}</CodiceFiscale>
     <SistemaEmissione>EVENT4U</SistemaEmissione>
   </Titolare>
   <RiepilogoTitoli>
@@ -2880,7 +2901,7 @@ router.post("/api/siae/companies/:companyId/transmissions/send-c1", requireAuth,
       xml = `<?xml version="1.0" encoding="UTF-8"?>
 <ComunicazioneDatiTitoli xmlns="urn:siae:biglietteria:2025">
   <Intestazione>
-    <CodiceFiscaleEmittente>${escapeXml(systemConfig?.taxId || company?.taxId || activeCard?.cardCode || 'MANCANTE')}</CodiceFiscaleEmittente>
+    <CodiceFiscaleEmittente>${escapeXml(taxId)}</CodiceFiscaleEmittente>
     <NumeroCarta>${escapeXml(activeCard.cardCode)}</NumeroCarta>
     <DataRiferimento>${formatSiaeDate(reportDate)}</DataRiferimento>
     <DataOraGenerazione>${formatSiaeDateTime(now)}</DataOraGenerazione>
@@ -3052,6 +3073,15 @@ router.post("/api/siae/companies/:companyId/transmissions/send-daily", requireAu
     const systemConfig = await siaeStorage.getSiaeSystemConfig(companyId);
     const company = await storage.getCompany(companyId);
     
+    // CONTROLLO OBBLIGATORIO: Codice Fiscale Emittente
+    const taxId = systemConfig?.taxId || company?.taxId;
+    if (!taxId) {
+      return res.status(400).json({ 
+        message: "Codice Fiscale Emittente non configurato. Vai su Impostazioni SIAE > Dati Aziendali per configurarlo prima di generare report.",
+        code: "TAX_ID_REQUIRED"
+      });
+    }
+    
     // Get all tickets for the date range
     const startOfDay = new Date(reportDate);
     startOfDay.setHours(0, 0, 0, 0);
@@ -3069,7 +3099,7 @@ router.post("/api/siae/companies/:companyId/transmissions/send-daily", requireAu
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <ComunicazioneDatiTitoli xmlns="urn:siae:biglietteria:2025">
   <Intestazione>
-    <CodiceFiscaleEmittente>${escapeXml(systemConfig?.taxId || company?.taxId || activeCard?.cardCode || 'MANCANTE')}</CodiceFiscaleEmittente>
+    <CodiceFiscaleEmittente>${escapeXml(taxId)}</CodiceFiscaleEmittente>
     <NumeroCarta>${escapeXml(activeCard.cardCode)}</NumeroCarta>
     <DataRiferimento>${formatSiaeDate(reportDate)}</DataRiferimento>
     <DataOraGenerazione>${formatSiaeDateTime(new Date())}</DataOraGenerazione>
@@ -3815,11 +3845,20 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
     const systemConfig = await siaeStorage.getSiaeSystemConfig(companyId);
     const company = await storage.getCompany(companyId);
     
+    // CONTROLLO OBBLIGATORIO: Codice Fiscale Emittente
+    const taxId = systemConfig?.taxId || company?.taxId;
+    if (!taxId) {
+      return res.status(400).json({ 
+        message: "Codice Fiscale Emittente non configurato. Vai su Impostazioni SIAE > Dati Aziendali per configurarlo prima di generare report.",
+        code: "TAX_ID_REQUIRED"
+      });
+    }
+    
     // Build XML report
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <ComunicazioneDatiTitoli xmlns="urn:siae:biglietteria:2025">
   <Intestazione>
-    <CodiceFiscaleEmittente>${escapeXml(systemConfig?.taxId || company?.taxId || activeCard?.cardCode || 'MANCANTE')}</CodiceFiscaleEmittente>
+    <CodiceFiscaleEmittente>${escapeXml(taxId)}</CodiceFiscaleEmittente>
     <NumeroCarta>${escapeXml(activeCard.cardCode)}</NumeroCarta>
     <DataRiferimento>${formatSiaeDate(reportDate)}</DataRiferimento>
     <DataOraGenerazione>${formatSiaeDateTime(new Date())}</DataOraGenerazione>
@@ -3932,11 +3971,20 @@ router.get("/api/siae/ticketed-events/:eventId/reports/xml", requireAuth, requir
     const systemConfig = await siaeStorage.getSiaeSystemConfig(ticketedEvent.companyId);
     const company = await storage.getCompany(ticketedEvent.companyId);
     
+    // CONTROLLO OBBLIGATORIO: Codice Fiscale Emittente
+    const taxId = systemConfig?.taxId || company?.taxId;
+    if (!taxId) {
+      return res.status(400).json({ 
+        message: "Codice Fiscale Emittente non configurato. Vai su Impostazioni SIAE > Dati Aziendali per configurarlo prima di generare report.",
+        code: "TAX_ID_REQUIRED"
+      });
+    }
+    
     // Build XML
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <ReportEvento xmlns="urn:siae:biglietteria:2025">
   <Intestazione>
-    <CodiceFiscaleEmittente>${escapeXml(systemConfig?.taxId || company?.taxId || activeCard?.cardCode || 'MANCANTE')}</CodiceFiscaleEmittente>
+    <CodiceFiscaleEmittente>${escapeXml(taxId)}</CodiceFiscaleEmittente>
     <NumeroCarta>${escapeXml(activeCard.cardCode)}</NumeroCarta>
     <DataOraGenerazione>${formatSiaeDateTime(new Date())}</DataOraGenerazione>
   </Intestazione>
@@ -4026,10 +4074,19 @@ router.get("/api/siae/companies/:companyId/reports/xml/cancellations", requireAu
     const systemConfig = await siaeStorage.getSiaeSystemConfig(companyId);
     const company = await storage.getCompany(companyId);
     
+    // CONTROLLO OBBLIGATORIO: Codice Fiscale Emittente
+    const taxId = systemConfig?.taxId || company?.taxId;
+    if (!taxId) {
+      return res.status(400).json({ 
+        message: "Codice Fiscale Emittente non configurato. Vai su Impostazioni SIAE > Dati Aziendali per configurarlo prima di generare report.",
+        code: "TAX_ID_REQUIRED"
+      });
+    }
+    
     let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <ReportAnnullamenti xmlns="urn:siae:biglietteria:2025">
   <Intestazione>
-    <CodiceFiscaleEmittente>${escapeXml(systemConfig?.taxId || company?.taxId || activeCard?.cardCode || 'MANCANTE')}</CodiceFiscaleEmittente>
+    <CodiceFiscaleEmittente>${escapeXml(taxId)}</CodiceFiscaleEmittente>
     <NumeroCarta>${escapeXml(activeCard.cardCode)}</NumeroCarta>
     <PeriodoDa>${formatSiaeDate(startDate)}</PeriodoDa>
     <PeriodoA>${formatSiaeDate(endDate)}</PeriodoA>
@@ -5975,6 +6032,18 @@ router.post("/api/cashiers/events/:eventId/tickets", requireAuth, async (req: Re
       return res.status(403).json({ 
         message: "Non è possibile emettere biglietti per un evento non ancora approvato",
         errorCode: "EVENT_NOT_APPROVED"
+      });
+    }
+    
+    // CONTROLLO OBBLIGATORIO: Codice Fiscale Emittente configurato
+    const systemConfig = await siaeStorage.getSiaeSystemConfig(event.companyId);
+    const company = await storage.getCompany(event.companyId);
+    const emitterTaxId = systemConfig?.taxId || company?.taxId;
+    
+    if (!emitterTaxId) {
+      return res.status(400).json({ 
+        message: "Codice Fiscale Emittente non configurato. Contattare l'amministratore per configurare le Impostazioni SIAE.",
+        errorCode: "TAX_ID_REQUIRED"
       });
     }
     
