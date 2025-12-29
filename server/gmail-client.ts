@@ -1,11 +1,12 @@
 // Gmail Integration for SIAE Transmission Response Reading
-// Uses Replit's Gmail connector for secure OAuth access
+// Supports both custom OAuth and Replit's Gmail connector
 
 import { google } from 'googleapis';
+import { getCustomGmailClient, isGmailAuthorized } from './gmail-oauth';
 
 let connectionSettings: any;
 
-async function getAccessToken() {
+async function getReplitAccessToken() {
   if (connectionSettings && connectionSettings.settings.expires_at && new Date(connectionSettings.settings.expires_at).getTime() > Date.now()) {
     return connectionSettings.settings.access_token;
   }
@@ -41,8 +42,8 @@ async function getAccessToken() {
 
 // WARNING: Never cache this client.
 // Access tokens expire, so a new client must be created each time.
-export async function getUncachableGmailClient() {
-  const accessToken = await getAccessToken();
+async function getReplitGmailClient() {
+  const accessToken = await getReplitAccessToken();
 
   const oauth2Client = new google.auth.OAuth2();
   oauth2Client.setCredentials({
@@ -50,6 +51,26 @@ export async function getUncachableGmailClient() {
   });
 
   return google.gmail({ version: 'v1', auth: oauth2Client });
+}
+
+// Get Gmail client - tries custom OAuth first, then falls back to Replit connector
+export async function getGmailClient(companyId?: string) {
+  // Try custom OAuth first if companyId provided
+  if (companyId) {
+    try {
+      const authStatus = await isGmailAuthorized(companyId);
+      if (authStatus.authorized) {
+        console.log(`[Gmail] Using custom OAuth for company ${companyId} (${authStatus.email})`);
+        return await getCustomGmailClient(companyId);
+      }
+    } catch (error: any) {
+      console.log(`[Gmail] Custom OAuth not available: ${error.message}`);
+    }
+  }
+  
+  // Fall back to Replit connector
+  console.log('[Gmail] Falling back to Replit connector');
+  return await getReplitGmailClient();
 }
 
 // Interface for SIAE response parsing
@@ -107,8 +128,8 @@ function parseSiaeResponse(subject: string, body: string): Partial<SiaeEmailResp
 }
 
 // Fetch SIAE response emails from inbox
-export async function fetchSiaeResponses(sinceDate?: Date): Promise<SiaeEmailResponse[]> {
-  const gmail = await getUncachableGmailClient();
+export async function fetchSiaeResponses(companyId?: string, sinceDate?: Date): Promise<SiaeEmailResponse[]> {
+  const gmail = await getGmailClient(companyId);
   
   // Build query for SIAE-related emails
   let query = 'from:siae.it OR from:batest.siae.it';
@@ -174,13 +195,13 @@ export async function fetchSiaeResponses(sinceDate?: Date): Promise<SiaeEmailRes
 }
 
 // Check for new SIAE responses and return any that match pending transmissions
-export async function checkForSiaeResponses(): Promise<SiaeEmailResponse[]> {
+export async function checkForSiaeResponses(companyId?: string): Promise<SiaeEmailResponse[]> {
   try {
     // Check emails from the last 7 days
     const sinceDate = new Date();
     sinceDate.setDate(sinceDate.getDate() - 7);
     
-    return await fetchSiaeResponses(sinceDate);
+    return await fetchSiaeResponses(companyId, sinceDate);
   } catch (error: any) {
     console.error('[Gmail] Error fetching SIAE responses:', error);
     
@@ -189,20 +210,22 @@ export async function checkForSiaeResponses(): Promise<SiaeEmailResponse[]> {
         error.code === 403 || 
         error.errors?.[0]?.reason === 'insufficientPermissions') {
       throw new Error(
-        'GMAIL_PERMISSION_ERROR: Il connettore Gmail non ha i permessi per leggere le email. ' +
-        'Per verificare le risposte SIAE, devi ricollegare il connettore Gmail con i permessi di lettura. ' +
-        'Vai in Impostazioni → Connettori → Gmail → Ricollega con permessi "Leggi email".'
+        'GMAIL_PERMISSION_ERROR: Permessi Gmail insufficienti per leggere le email. ' +
+        'Autorizza Gmail con permessi di lettura dalla pagina Trasmissioni SIAE.'
       );
     }
     
-    // Handle not connected error
-    if (error.message?.includes('Gmail not connected')) {
+    // Handle not connected/authorized error
+    if (error.message?.includes('Gmail not connected') || error.message?.includes('GMAIL_NOT_AUTHORIZED')) {
       throw new Error(
-        'GMAIL_NOT_CONNECTED: Connettore Gmail non configurato. ' +
-        'Per verificare le risposte SIAE automaticamente, configura il connettore Gmail nelle impostazioni.'
+        'GMAIL_NOT_CONNECTED: Gmail non configurato per la lettura email. ' +
+        'Autorizza Gmail dalla pagina Trasmissioni SIAE per verificare automaticamente le risposte.'
       );
     }
     
     throw error;
   }
 }
+
+// Check Gmail authorization status for a company
+export { isGmailAuthorized } from './gmail-oauth';

@@ -3383,13 +3383,111 @@ router.post("/api/siae/transmissions/test-email", requireAuth, requireGestore, a
   }
 });
 
+// Gmail OAuth - Get authorization URL
+router.get("/api/gmail/auth", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { getAuthUrl } = await import('./gmail-oauth');
+    const companyId = req.query.companyId as string || (req.user as any)?.companyId;
+    
+    if (!companyId) {
+      return res.status(400).json({ message: "Company ID richiesto" });
+    }
+    
+    // State contains companyId for callback
+    const state = Buffer.from(JSON.stringify({ companyId })).toString('base64');
+    const authUrl = getAuthUrl(state);
+    
+    res.json({ authUrl });
+  } catch (error: any) {
+    console.error('[Gmail OAuth] Error generating auth URL:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Gmail OAuth - Callback from Google
+router.get("/api/gmail/callback", async (req: Request, res: Response) => {
+  try {
+    const { code, state, error: oauthError } = req.query;
+    
+    if (oauthError) {
+      console.error('[Gmail OAuth] OAuth error:', oauthError);
+      return res.redirect('/siae/transmissions?gmail_error=access_denied');
+    }
+    
+    if (!code || !state) {
+      return res.redirect('/siae/transmissions?gmail_error=missing_params');
+    }
+    
+    // Decode state to get companyId
+    let companyId: string;
+    try {
+      const stateData = JSON.parse(Buffer.from(state as string, 'base64').toString());
+      companyId = stateData.companyId;
+    } catch {
+      return res.redirect('/siae/transmissions?gmail_error=invalid_state');
+    }
+    
+    const { exchangeCodeForTokens, saveTokens } = await import('./gmail-oauth');
+    
+    // Exchange code for tokens
+    const tokens = await exchangeCodeForTokens(code as string);
+    
+    // Save tokens for company
+    await saveTokens(companyId, tokens);
+    
+    console.log(`[Gmail OAuth] Successfully authorized Gmail for company ${companyId} (${tokens.email})`);
+    
+    res.redirect(`/siae/transmissions?gmail_success=true&gmail_email=${encodeURIComponent(tokens.email || '')}`);
+  } catch (error: any) {
+    console.error('[Gmail OAuth] Callback error:', error);
+    res.redirect('/siae/transmissions?gmail_error=' + encodeURIComponent(error.message));
+  }
+});
+
+// Gmail OAuth - Get status
+router.get("/api/gmail/status", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { isGmailAuthorized } = await import('./gmail-oauth');
+    const companyId = req.query.companyId as string || (req.user as any)?.companyId;
+    
+    if (!companyId) {
+      return res.status(400).json({ message: "Company ID richiesto" });
+    }
+    
+    const status = await isGmailAuthorized(companyId);
+    res.json(status);
+  } catch (error: any) {
+    console.error('[Gmail OAuth] Error checking status:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Gmail OAuth - Revoke authorization
+router.delete("/api/gmail/revoke", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { revokeGmailAuthorization } = await import('./gmail-oauth');
+    const companyId = req.query.companyId as string || (req.user as any)?.companyId;
+    
+    if (!companyId) {
+      return res.status(400).json({ message: "Company ID richiesto" });
+    }
+    
+    await revokeGmailAuthorization(companyId);
+    res.json({ success: true, message: "Autorizzazione Gmail revocata" });
+  } catch (error: any) {
+    console.error('[Gmail OAuth] Error revoking:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Check for SIAE email responses and update transmission statuses
 router.post("/api/siae/transmissions/check-responses", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const { checkForSiaeResponses } = await import('./gmail-client');
+    const companyId = req.query.companyId as string || (req.user as any)?.companyId;
     
-    console.log('[SIAE-ROUTES] Checking for SIAE email responses...');
-    const responses = await checkForSiaeResponses();
+    console.log(`[SIAE-ROUTES] Checking for SIAE email responses (company: ${companyId})...`);
+    const responses = await checkForSiaeResponses(companyId);
     
     const updates: Array<{transmissionId: string; status: string; protocolNumber?: string}> = [];
     

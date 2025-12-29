@@ -74,6 +74,8 @@ import {
   Building2,
   ShieldCheck,
   ShieldAlert,
+  Link2,
+  Unlink,
 } from "lucide-react";
 
 const springTransition = {
@@ -122,6 +124,39 @@ export default function SiaeTransmissionsPage() {
     queryKey: ['/api/siae/companies', companyId, 'transmissions'],
     enabled: !!companyId,
   });
+
+  // Gmail OAuth status
+  const { data: gmailStatus } = useQuery<{ authorized: boolean; email?: string }>({
+    queryKey: ['/api/gmail/status', companyId],
+    enabled: !!companyId,
+  });
+
+  // Handle URL params for Gmail OAuth callback
+  const urlParams = new URLSearchParams(window.location.search);
+  const gmailSuccess = urlParams.get('gmail_success');
+  const gmailEmail = urlParams.get('gmail_email');
+  const gmailError = urlParams.get('gmail_error');
+  
+  // Show toast for Gmail OAuth result (only once)
+  if (gmailSuccess === 'true' && gmailEmail) {
+    window.history.replaceState({}, '', window.location.pathname);
+    setTimeout(() => {
+      toast({
+        title: "Gmail Autorizzato",
+        description: `Account ${decodeURIComponent(gmailEmail)} collegato per la lettura email SIAE.`,
+      });
+      queryClient.invalidateQueries({ queryKey: ['/api/gmail/status'] });
+    }, 100);
+  } else if (gmailError) {
+    window.history.replaceState({}, '', window.location.pathname);
+    setTimeout(() => {
+      toast({
+        title: "Errore Gmail",
+        description: gmailError === 'access_denied' ? "Accesso negato dall'utente" : `Errore: ${decodeURIComponent(gmailError)}`,
+        variant: "destructive",
+      });
+    }, 100);
+  }
 
   const createTransmissionMutation = useMutation({
     mutationFn: async (data: { transmissionType: string; periodDate: string }) => {
@@ -291,9 +326,53 @@ export default function SiaeTransmissionsPage() {
     },
   });
 
+  // Gmail OAuth authorization
+  const authorizeGmailMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("GET", `/api/gmail/auth?companyId=${companyId}`);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      if (data.authUrl) {
+        window.location.href = data.authUrl;
+      }
+    },
+    onError: (error: Error) => {
+      triggerHaptic('error');
+      toast({
+        title: "Errore",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const revokeGmailMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("DELETE", `/api/gmail/revoke?companyId=${companyId}`);
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/gmail/status'] });
+      triggerHaptic('success');
+      toast({
+        title: "Gmail Scollegato",
+        description: "L'autorizzazione Gmail è stata revocata.",
+      });
+    },
+    onError: (error: Error) => {
+      triggerHaptic('error');
+      toast({
+        title: "Errore",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const checkResponsesMutation = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", `/api/siae/transmissions/check-responses`, {});
+      const response = await apiRequest("POST", `/api/siae/transmissions/check-responses?companyId=${companyId}`, {});
       return response.json();
     },
     onSuccess: (data) => {
@@ -416,29 +495,72 @@ export default function SiaeTransmissionsPage() {
                 </Select>
               </div>
             )}
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <Button 
-                  variant="outline" 
-                  onClick={() => checkResponsesMutation.mutate()} 
-                  data-testid="button-check-responses" 
-                  disabled={checkResponsesMutation.isPending}
-                >
-                  {checkResponsesMutation.isPending ? (
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                  ) : (
-                    <Mail className="w-4 h-4 mr-2" />
-                  )}
-                  Controlla Risposte
-                </Button>
-              </TooltipTrigger>
-              <TooltipContent side="bottom" className="max-w-xs text-center">
-                <p>Verifica automaticamente le risposte SIAE via Gmail.</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Richiede permessi Gmail di lettura. In alternativa, usa la conferma manuale del protocollo.
-                </p>
-              </TooltipContent>
-            </Tooltip>
+            {/* Gmail Authorization Status & Check Responses */}
+            {gmailStatus?.authorized ? (
+              <div className="flex items-center gap-2">
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="outline" 
+                      onClick={() => checkResponsesMutation.mutate()} 
+                      data-testid="button-check-responses" 
+                      disabled={checkResponsesMutation.isPending}
+                    >
+                      {checkResponsesMutation.isPending ? (
+                        <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                      ) : (
+                        <Mail className="w-4 h-4 mr-2" />
+                      )}
+                      Controlla Risposte
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent side="bottom" className="max-w-xs text-center">
+                    <p>Gmail collegato: {gmailStatus.email}</p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Verifica automaticamente le risposte SIAE.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <Button 
+                      variant="ghost" 
+                      size="icon"
+                      onClick={() => revokeGmailMutation.mutate()} 
+                      data-testid="button-revoke-gmail"
+                      disabled={revokeGmailMutation.isPending}
+                    >
+                      <Unlink className="w-4 h-4" />
+                    </Button>
+                  </TooltipTrigger>
+                  <TooltipContent>Scollega Gmail</TooltipContent>
+                </Tooltip>
+              </div>
+            ) : (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Button 
+                    variant="outline" 
+                    onClick={() => authorizeGmailMutation.mutate()} 
+                    data-testid="button-authorize-gmail" 
+                    disabled={authorizeGmailMutation.isPending || !companyId}
+                  >
+                    {authorizeGmailMutation.isPending ? (
+                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    ) : (
+                      <Link2 className="w-4 h-4 mr-2" />
+                    )}
+                    Collega Gmail
+                  </Button>
+                </TooltipTrigger>
+                <TooltipContent side="bottom" className="max-w-xs text-center">
+                  <p>Autorizza Gmail per leggere le risposte SIAE automaticamente.</p>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    In alternativa, puoi confermare manualmente il protocollo.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            )}
             <Button variant="outline" onClick={() => setIsTestEmailDialogOpen(true)} data-testid="button-test-email" disabled={!companyId}>
               <TestTube className="w-4 h-4 mr-2" />
               Test Email

@@ -127,6 +127,36 @@ export const companyFeaturesRelations = relations(companyFeatures, ({ one }) => 
   }),
 }));
 
+// Gmail OAuth Tokens table - Stores OAuth tokens for custom Gmail integration per company
+export const gmailOAuthTokens = pgTable("gmail_oauth_tokens", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id).unique(),
+  accessToken: text("access_token").notNull(),
+  refreshToken: text("refresh_token"),
+  expiresAt: timestamp("expires_at"),
+  scope: text("scope"),
+  tokenType: varchar("token_type", { length: 50 }).default('Bearer'),
+  email: varchar("email", { length: 255 }), // Gmail account email
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const gmailOAuthTokensRelations = relations(gmailOAuthTokens, ({ one }) => ({
+  company: one(companies, {
+    fields: [gmailOAuthTokens.companyId],
+    references: [companies.id],
+  }),
+}));
+
+export const insertGmailOAuthTokenSchema = createInsertSchema(gmailOAuthTokens).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export type InsertGmailOAuthToken = z.infer<typeof insertGmailOAuthTokenSchema>;
+export type GmailOAuthToken = typeof gmailOAuthTokens.$inferSelect;
+
 // User Features table - Controls which modules are enabled for each user
 export const userFeatures = pgTable("user_features", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
