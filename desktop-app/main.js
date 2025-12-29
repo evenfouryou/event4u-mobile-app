@@ -1490,6 +1490,118 @@ async function handleRelayCommand(msg) {
         }
       }
       break;
+    
+    case 'REQUEST_SMIME_SIGNATURE':
+      // S/MIME signature request for SIAE email transmission (Allegato C)
+      // Uses the PKI functionality of the SIAE smart card to sign emails
+      try {
+        const smimeRequestId = msg.requestId;
+        const smimePayload = msg.payload || {};
+        const mimeContent = smimePayload.mimeContent || '';
+        
+        log.info(`[S/MIME] Signature request: requestId=${smimeRequestId}, mimeLength=${mimeContent.length}`);
+        
+        // Check if bridge is ready
+        if (!bridgeProcess || !currentStatus.readerConnected) {
+          log.error(`[S/MIME] Bridge not ready: bridge=${!!bridgeProcess}, reader=${currentStatus.readerConnected}`);
+          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            relayWs.send(JSON.stringify({
+              type: 'SMIME_SIGNATURE_RESPONSE',
+              requestId: smimeRequestId,
+              payload: { 
+                success: false, 
+                error: 'App desktop Event4U non connessa o lettore non disponibile' 
+              }
+            }));
+          }
+          return;
+        }
+        
+        if (!currentStatus.cardInserted) {
+          log.error(`[S/MIME] No card inserted for S/MIME signature request`);
+          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            relayWs.send(JSON.stringify({
+              type: 'SMIME_SIGNATURE_RESPONSE',
+              requestId: smimeRequestId,
+              payload: { 
+                success: false, 
+                error: 'Smart Card SIAE non inserita' 
+              }
+            }));
+          }
+          return;
+        }
+        
+        // PIN must be verified for S/MIME signature operations
+        if (!pinVerified || !lastVerifiedPin) {
+          log.error(`[S/MIME] PIN not verified for S/MIME signature request`);
+          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            relayWs.send(JSON.stringify({
+              type: 'SMIME_SIGNATURE_RESPONSE',
+              requestId: smimeRequestId,
+              payload: { 
+                success: false, 
+                error: 'PIN non verificato. Inserire il PIN prima di firmare.' 
+              }
+            }));
+          }
+          return;
+        }
+        
+        // Execute S/MIME signature command
+        const smimeSignPayload = { 
+          mimeContent,
+          pin: lastVerifiedPin 
+        };
+        log.info(`[S/MIME] Sending SIGN_SMIME command...`);
+        const smimeResult = await sendBridgeCommand(`SIGN_SMIME:${JSON.stringify(smimeSignPayload)}`);
+        
+        if (smimeResult.success && smimeResult.signature) {
+          log.info(`[S/MIME] Email signed successfully by ${smimeResult.signature.signerEmail || 'unknown'}`);
+          
+          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            relayWs.send(JSON.stringify({
+              type: 'SMIME_SIGNATURE_RESPONSE',
+              requestId: smimeRequestId,
+              payload: {
+                success: true,
+                signatureData: {
+                  signedMime: smimeResult.signature.signedMime,
+                  signerEmail: smimeResult.signature.signerEmail,
+                  signerName: smimeResult.signature.signerName,
+                  certificateSerial: smimeResult.signature.certificateSerial,
+                  signedAt: smimeResult.signature.signedAt
+                }
+              }
+            }));
+          }
+        } else {
+          log.error(`[S/MIME] Signature failed: ${smimeResult.error || 'Unknown error'}`);
+          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            relayWs.send(JSON.stringify({
+              type: 'SMIME_SIGNATURE_RESPONSE',
+              requestId: smimeRequestId,
+              payload: { 
+                success: false, 
+                error: smimeResult.error || 'Errore firma S/MIME' 
+              }
+            }));
+          }
+        }
+      } catch (smimeErr) {
+        log.error(`[S/MIME] Exception in S/MIME signature request: ${smimeErr.message}`);
+        if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+          relayWs.send(JSON.stringify({
+            type: 'SMIME_SIGNATURE_RESPONSE',
+            requestId: msg.requestId,
+            payload: { 
+              success: false, 
+              error: smimeErr.message 
+            }
+          }));
+        }
+      }
+      break;
       
     default:
       log.warn('Unknown relay command:', msg.type);

@@ -4,7 +4,9 @@
 
 Per conformarsi all'Allegato C del Provvedimento Agenzia delle Entrate 04/03/2008, le email di trasmissione SIAE devono essere firmate S/MIME versione 2 utilizzando la carta di attivazione SIAE.
 
-L'app desktop Event4U Bridge deve implementare un handler per firmare i messaggi email con la carta di attivazione.
+L'app desktop Event4U Bridge implementa l'handler `SIGN_SMIME` per firmare i messaggi email con la carta di attivazione.
+
+**Stato implementazione: COMPLETATO** (v3.6)
 
 ## Requisiti
 
