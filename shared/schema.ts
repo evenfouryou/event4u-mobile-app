@@ -127,10 +127,11 @@ export const companyFeaturesRelations = relations(companyFeatures, ({ one }) => 
   }),
 }));
 
-// Gmail OAuth Tokens table - Stores OAuth tokens for custom Gmail integration per company
+// Gmail OAuth Tokens table - Stores OAuth tokens for system-wide Gmail integration
+// Uses tokenKey = "SYSTEM" for the global system token (not per-company)
 export const gmailOAuthTokens = pgTable("gmail_oauth_tokens", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  companyId: varchar("company_id").notNull().references(() => companies.id).unique(),
+  tokenKey: varchar("token_key", { length: 100 }).notNull().unique().default('SYSTEM'), // "SYSTEM" for global token
   accessToken: text("access_token").notNull(),
   refreshToken: text("refresh_token"),
   expiresAt: timestamp("expires_at"),
@@ -140,13 +141,6 @@ export const gmailOAuthTokens = pgTable("gmail_oauth_tokens", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
-
-export const gmailOAuthTokensRelations = relations(gmailOAuthTokens, ({ one }) => ({
-  company: one(companies, {
-    fields: [gmailOAuthTokens.companyId],
-    references: [companies.id],
-  }),
-}));
 
 export const insertGmailOAuthTokenSchema = createInsertSchema(gmailOAuthTokens).omit({
   id: true,
