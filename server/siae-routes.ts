@@ -2017,12 +2017,8 @@ router.post("/api/siae/name-changes", requireAuth, async (req: Request, res: Res
         if (bridgeStatus.connected && bridgeStatus.cardInserted) {
           try {
             // Request fiscal seal
-            const sealData = await requestFiscalSeal({
-              ticketCode: `NC-${Date.now()}`,
-              amount: Number(originalTicket.grossAmount || originalTicket.ticketPrice || 0),
-              eventCode: ticketedEvent.siaeEventCode || 'EVT',
-              sectorCode: originalTicket.sectorCode
-            });
+            const priceInCents = Math.round(Number(originalTicket.grossAmount || originalTicket.ticketPrice || 0) * 100);
+            const sealData = await requestFiscalSeal(priceInCents);
             
             // Process the name change
             const result = await db.transaction(async (tx) => {
@@ -2271,12 +2267,8 @@ router.post("/api/siae/name-changes/:id/process", requireAuth, requireOrganizer,
     // 7. Request fiscal seal for new ticket
     let sealData;
     try {
-      sealData = await requestFiscalSeal({
-        ticketCode: `NC-${Date.now()}`,
-        amount: Number(originalTicket.grossAmount || originalTicket.ticketPrice || 0),
-        eventCode: ticketedEvent.siaeEventCode || 'EVT',
-        sectorCode: originalTicket.sectorCode
-      });
+      const priceInCents = Math.round(Number(originalTicket.grossAmount || originalTicket.ticketPrice || 0) * 100);
+      sealData = await requestFiscalSeal(priceInCents);
     } catch (sealError: any) {
       console.error('[NAME-CHANGE] Failed to get fiscal seal:', sealError);
       return res.status(503).json({
