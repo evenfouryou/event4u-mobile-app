@@ -72,20 +72,29 @@ export default function Login() {
         window.location.href = '/pr/wallet';
         return;
       } else if (loginMethod === 'username') {
-        // Username login (scanner, cashier, etc.) - uses email field which stores username
-        const response: any = await apiRequest('POST', '/api/auth/login', { email: username, password });
-        triggerHaptic('success');
-        
-        if (response.user?.role === 'scanner') {
-          window.location.href = '/scanner';
-        } else if (response.user?.role === 'cassiere') {
+        // Username login - try SIAE cashier endpoint first, then fallback to auth/login
+        try {
+          // Try SIAE cashier login (uses siaeCashiers table)
+          const cashierResponse: any = await apiRequest('POST', '/api/cashiers/login', { username, password });
+          triggerHaptic('success');
           window.location.href = '/cashier/dashboard';
-        } else if (response.user?.role === 'bartender' || response.user?.role === 'warehouse') {
-          window.location.href = '/staff';
-        } else {
-          window.location.href = redirectTo || '/';
+          return;
+        } catch (cashierError: any) {
+          // If cashier login fails, try regular auth with username
+          const response: any = await apiRequest('POST', '/api/auth/login', { email: username, password });
+          triggerHaptic('success');
+          
+          if (response.user?.role === 'scanner') {
+            window.location.href = '/scanner';
+          } else if (response.user?.role === 'cassiere') {
+            window.location.href = '/cashier/dashboard';
+          } else if (response.user?.role === 'bartender' || response.user?.role === 'warehouse') {
+            window.location.href = '/staff';
+          } else {
+            window.location.href = redirectTo || '/';
+          }
+          return;
         }
-        return;
       } else {
         // Email login (default)
         const response: any = await apiRequest('POST', '/api/auth/login', { email, password });
