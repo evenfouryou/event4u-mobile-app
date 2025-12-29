@@ -1,0 +1,116 @@
+2025-12-29 11:22:08.22
+a2928cda
+User
+validateStatus: [Function (anonymous)],
+2025-12-29 11:22:08.22
+a2928cda
+User
+at Gaxios._request (/home/runner/workspace/node_modules/gaxios/build/src/gaxios.js:142:23)
+2025-12-29 11:22:08.22
+a2928cda
+User
+errorRedactor: [Function: defaultErrorRedactor]
+2025-12-29 11:22:08.22
+a2928cda
+User
+}
+2025-12-29 11:22:08.22
+a2928cda
+User
+currentRetryAttempt: 0,
+2025-12-29 11:22:08.22
+a2928cda
+User
+retry: true,
+2025-12-29 11:22:08.22
+a2928cda
+User
+timeOfFirstRequest: 1767003728217,
+2025-12-29 11:22:08.22
+a2928cda
+User
+responseType: 'unknown',
+2025-12-29 11:22:08.22
+a2928cda
+User
+},
+2025-12-29 11:22:08.22
+a2928cda
+User
+},
+2025-12-29 11:22:08.22
+a2928cda
+User
+params: {
+2025-12-29 11:22:08.22
+a2928cda
+User
+'Accept-Encoding': 'gzip',
+2025-12-29 11:22:08.22
+a2928cda
+User
+retryConfig: {
+2025-12-29 11:22:08.22
+a2928cda
+User
+retryDelayMultiplier: 2,
+2025-12-29 11:22:08.22
+a2928cda
+User
+paramsSerializer: [Function (anonymous)],
+2025-12-29 11:22:08.22
+a2928cda
+User
+noResponseRetries: 2,
+2025-12-29 11:22:08.22
+a2928cda
+User
+params: [Object],
+2025-12-29 11:22:08.22
+a2928cda
+User
+apiVersion: '',
+2025-12-29 11:22:08.22
+a2928cda
+User
+apiVersion: '',
+2025-12-29 11:22:08.22
+a2928cda
+User
+errorRedactor: [Function: defaultErrorRedactor],
+2025-12-29 11:22:08.22
+a2928cda
+User
+retry: 3,
+2025-12-29 11:22:08.22
+a2928cda
+User
+at async OAuth2Client.requestAsync (/home/runner/workspace/node_modules/google-auth-library/build/src/auth/oauth2client.js:429:18)
+2025-12-29 11:22:08.22
+a2928cda
+User
+},
+2025-12-29 11:22:08.22
+a2928cda
+User
+statusCodesToRetry: [Array]
+2025-12-29 11:22:08.22
+a2928cda
+User
+'User-Agent': 'google-api-nodejs-client/7.2.0 (gzip)',
+2025-12-29 11:22:08.22
+a2928cda
+User
+userAgentDirectives: [Array],
+2025-12-29 11:22:08.22
+a2928cda
+User
+maxRetryDelay: 9007199254740991,
+2025-12-29 11:22:08.22
+a2928cda
+User
+q: 'from:siae.it OR from:batest.siae.it after:2025/12/22',
+2025-12-29 11:22:08.22
+a2928cda
+User
+[Gmail] Error fetching SIAE responses: GaxiosError: Insufficient Permission

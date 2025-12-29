@@ -3071,6 +3071,7 @@ router.post("/api/siae/companies/:companyId/transmissions/send-c1", requireAuth,
       transmissionId: transmission.id,
       systemCode: SIAE_SYSTEM_CODE_DEFAULT,
       sequenceNumber: 1,
+      signWithSmime: true, // Per Allegato C SIAE 1.6.2 - firma S/MIME obbligatoria
     });
     
     const smimeInfo = emailResult.smimeSigned 
@@ -3229,7 +3230,7 @@ router.post("/api/siae/companies/:companyId/transmissions/send-daily", requireAu
     const { sendSiaeTransmissionEmail } = await import('./email-service');
     
     const dailyDestination = getSiaeDestinationEmail(toEmail);
-    await sendSiaeTransmissionEmail({
+    const emailResult = await sendSiaeTransmissionEmail({
       to: dailyDestination,
       companyName,
       transmissionType: 'daily',
@@ -3240,25 +3241,35 @@ router.post("/api/siae/companies/:companyId/transmissions/send-daily", requireAu
       transmissionId: transmission.id,
       systemCode: SIAE_SYSTEM_CODE_DEFAULT,
       sequenceNumber: 1,
+      signWithSmime: true, // Per Allegato C SIAE 1.6.2 - firma S/MIME obbligatoria
     });
     
-    console.log(`[SIAE-ROUTES] Daily RCA transmission sent to: ${dailyDestination} (Test mode: ${SIAE_TEST_MODE})`);
+    const smimeInfo = emailResult.smimeSigned 
+      ? ` (S/MIME: ${emailResult.signerEmail})` 
+      : ' (NON firmata S/MIME)';
+    console.log(`[SIAE-ROUTES] Daily RCA transmission sent to: ${dailyDestination}${smimeInfo} (Test mode: ${SIAE_TEST_MODE})`);
     
-    // Update transmission status
+    // Update transmission status with S/MIME info
     await siaeStorage.updateSiaeTransmission(transmission.id, {
       status: 'sent',
       sentAt: new Date(),
       sentToPec: dailyDestination,
+      smimeSigned: emailResult.smimeSigned || false,
+      smimeSignerEmail: emailResult.signerEmail || null,
+      smimeSignerName: emailResult.signerName || null,
+      smimeSignedAt: emailResult.signedAt ? new Date(emailResult.signedAt) : null,
     });
     
     res.json({
       success: true,
-      message: "Trasmissione giornaliera generata e inviata con successo",
+      message: `Trasmissione giornaliera generata e inviata con successo${emailResult.smimeSigned ? ' (email firmata S/MIME)' : ''}`,
       transmission: {
         id: transmission.id,
         ticketsCount: dayTickets.length,
         totalAmount,
         sentTo: dailyDestination,
+        smimeSigned: emailResult.smimeSigned,
+        smimeSignerEmail: emailResult.signerEmail,
       }
     });
   } catch (error: any) {
@@ -3346,7 +3357,7 @@ router.post("/api/siae/transmissions/test-email", requireAuth, requireGestore, a
     // Import and send the test email
     const { sendSiaeTransmissionEmail } = await import('./email-service');
     
-    await sendSiaeTransmissionEmail({
+    const emailResult = await sendSiaeTransmissionEmail({
       to: toEmail,
       companyName,
       transmissionType: 'daily',
@@ -3357,11 +3368,14 @@ router.post("/api/siae/transmissions/test-email", requireAuth, requireGestore, a
       transmissionId: 'TEST-' + Date.now(),
       systemCode: SIAE_SYSTEM_CODE_DEFAULT,
       sequenceNumber: 1,
+      signWithSmime: true, // Per Allegato C SIAE 1.6.2 - firma S/MIME obbligatoria
     });
     
     res.json({
       success: true,
-      message: `Email di test inviata con successo a ${toEmail}`,
+      message: `Email di test inviata con successo a ${toEmail}${emailResult.smimeSigned ? ' (S/MIME firmata)' : ' (NON firmata S/MIME - bridge non connesso)'}`,
+      smimeSigned: emailResult.smimeSigned,
+      smimeSignerEmail: emailResult.signerEmail,
     });
   } catch (error: any) {
     console.error('[SIAE-ROUTES] Failed to send test email:', error);
@@ -5457,7 +5471,7 @@ ${ordiniDiPostoXml}
     if (toEmail) {
       const { sendSiaeTransmissionEmail } = await import('./email-service');
       
-      await sendSiaeTransmissionEmail({
+      const emailResult = await sendSiaeTransmissionEmail({
         to: toEmail,
         companyName: company?.name || 'N/A',
         transmissionType: isMonthly ? 'monthly' : 'daily',
@@ -5466,11 +5480,17 @@ ${ordiniDiPostoXml}
         totalAmount: reportData.totalRevenue.toFixed(2),
         xmlContent: finalXmlContent, // Use signed XML if signature was requested
         transmissionId: transmission.id,
+        signWithSmime: true, // Per Allegato C SIAE 1.6.2 - firma S/MIME obbligatoria
       });
 
       await siaeStorage.updateSiaeTransmission(transmission.id, {
         status: 'sent',
         sentAt: new Date(),
+        sentToPec: toEmail,
+        smimeSigned: emailResult.smimeSigned || false,
+        smimeSignerEmail: emailResult.signerEmail || null,
+        smimeSignerName: emailResult.signerName || null,
+        smimeSignedAt: emailResult.signedAt ? new Date(emailResult.signedAt) : null,
       });
     }
 
