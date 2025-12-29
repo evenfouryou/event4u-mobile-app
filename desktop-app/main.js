@@ -1532,16 +1532,18 @@ async function handleRelayCommand(msg) {
           return;
         }
         
-        // PIN must be verified for S/MIME signature operations
-        if (!pinVerified || !lastVerifiedPin) {
-          log.error(`[S/MIME] PIN not verified for S/MIME signature request`);
+        // PIN check - use pinLocked status from card state
+        // If pinLocked is false, the card is already unlocked and we can proceed
+        // If we have a cached PIN, include it for extra safety
+        if (currentStatus.pinLocked) {
+          log.error(`[S/MIME] Card PIN is locked - need to verify PIN first`);
           if (relayWs && relayWs.readyState === WebSocket.OPEN) {
             relayWs.send(JSON.stringify({
               type: 'SMIME_SIGNATURE_RESPONSE',
               requestId: smimeRequestId,
               payload: { 
                 success: false, 
-                error: 'PIN non verificato. Inserire il PIN prima di firmare.' 
+                error: 'PIN carta bloccato. Inserire il PIN prima di firmare.' 
               }
             }));
           }
@@ -1549,9 +1551,10 @@ async function handleRelayCommand(msg) {
         }
         
         // Execute S/MIME signature command
+        // Pass PIN if available, otherwise let the bridge handle it (card already unlocked)
         const smimeSignPayload = { 
           mimeContent,
-          pin: lastVerifiedPin 
+          pin: lastVerifiedPin || '' 
         };
         log.info(`[S/MIME] Sending SIGN_SMIME command...`);
         const smimeResult = await sendBridgeCommand(`SIGN_SMIME:${JSON.stringify(smimeSignPayload)}`);
