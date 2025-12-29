@@ -2792,7 +2792,8 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     // Update transmission status to sent
     await siaeStorage.updateSiaeTransmission(id, {
       status: 'sent',
-      sentDate: new Date(),
+      sentAt: new Date(),
+      sentToPec: destinationEmail,
     });
     
     res.json({ success: true, message: `Email inviata con successo${signatureInfo}` });
@@ -3029,7 +3030,8 @@ router.post("/api/siae/companies/:companyId/transmissions/send-c1", requireAuth,
     // Update transmission status
     await siaeStorage.updateSiaeTransmission(transmission.id, {
       status: 'sent',
-      sentDate: new Date(),
+      sentAt: new Date(),
+      sentToPec: destination,
     });
     
     res.json({
@@ -3186,7 +3188,8 @@ router.post("/api/siae/companies/:companyId/transmissions/send-daily", requireAu
     // Update transmission status
     await siaeStorage.updateSiaeTransmission(transmission.id, {
       status: 'sent',
-      sentDate: new Date(),
+      sentAt: new Date(),
+      sentToPec: dailyDestination,
     });
     
     res.json({
