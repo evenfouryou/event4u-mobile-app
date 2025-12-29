@@ -126,6 +126,7 @@ async function main() {
       'desktop-app/renderer.js',
       'desktop-app/preload.js',
       'desktop-app/package.json',
+      'desktop-app/BUILD_INSTRUCTIONS.md',
       'desktop-app/SiaeBridge/Program.cs',
       'desktop-app/SiaeBridge/SiaeBridge.csproj'
     ];
