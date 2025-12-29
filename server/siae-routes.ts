@@ -4213,31 +4213,17 @@ function mapToSiaeStatus(internalStatus: string | null | undefined): string {
   }
 }
 
-// Generate XML for daily ticket report (Provvedimento 356768/2025)
+// Generate XML for daily ticket report - uses RiepilogoMensile format (Provvedimento 04/03/2008)
 router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const { companyId } = req.params;
-    const { date, eventId } = req.query;
+    const { date } = req.query;
     
     if (!date) {
       return res.status(400).json({ message: "Data obbligatoria (formato: YYYY-MM-DD)" });
     }
     
     const reportDate = new Date(date as string);
-    
-    // Get activation card for company
-    const activationCards = await siaeStorage.getSiaeActivationCardsByCompany(companyId);
-    const activeCard = activationCards.find(c => c.status === 'active');
-    
-    if (!activeCard) {
-      return res.status(400).json({ message: "Nessuna carta di attivazione attiva trovata" });
-    }
-    
-    // Get all tickets for the date range
-    const startOfDay = new Date(reportDate);
-    startOfDay.setHours(0, 0, 0, 0);
-    const endOfDay = new Date(reportDate);
-    endOfDay.setHours(23, 59, 59, 999);
     
     // Get system config and company for fiscal code
     const systemConfig = await siaeStorage.getSiaeSystemConfig(companyId);
@@ -4252,17 +4238,11 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
       });
     }
     
-    // Build XML report
-    let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<ComunicazioneDatiTitoli xmlns="urn:siae:biglietteria:2025">
-  <Intestazione>
-    <CodiceFiscaleEmittente>${escapeXml(taxId)}</CodiceFiscaleEmittente>
-    <NumeroCarta>${escapeXml(activeCard.cardCode)}</NumeroCarta>
-    <DataRiferimento>${formatSiaeDate(reportDate)}</DataRiferimento>
-    <DataOraGenerazione>${formatSiaeDateTime(new Date())}</DataOraGenerazione>
-    <TipoTrasmissione>ORDINARIA</TipoTrasmissione>
-  </Intestazione>
-  <ElencoTitoli>`;
+    // Get all tickets for the date range
+    const startOfDay = new Date(reportDate);
+    startOfDay.setHours(0, 0, 0, 0);
+    const endOfDay = new Date(reportDate);
+    endOfDay.setHours(23, 59, 59, 999);
     
     // Get tickets issued on this date
     const allTickets = await siaeStorage.getSiaeTicketsByCompany(companyId);
@@ -4271,51 +4251,23 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
       return ticketDate >= startOfDay && ticketDate <= endOfDay;
     });
     
-    for (const ticket of dayTickets) {
-      // Get related data - first try via sector, then fallback to ticketedEventId
-      let ticketedEvent = null;
-      if (ticket.sectorId) {
-        const sector = await siaeStorage.getSiaeEventSector(ticket.sectorId);
-        if (sector?.ticketedEventId) {
-          ticketedEvent = await siaeStorage.getSiaeTicketedEvent(sector.ticketedEventId);
-        }
-      }
-      // Fallback to direct ticketedEventId if sector lookup failed
-      if (!ticketedEvent && ticket.ticketedEventId) {
-        ticketedEvent = await siaeStorage.getSiaeTicketedEvent(ticket.ticketedEventId);
-      }
-      
-      xml += `
-    <Titolo>
-      <NumeroProgressivo>${ticket.progressiveNumber || 0}</NumeroProgressivo>
-      <SigilloFiscale>${escapeXml(ticket.fiscalSealCode)}</SigilloFiscale>
-      <TipologiaTitolo>${escapeXml(ticket.ticketTypeCode)}</TipologiaTitolo>
-      <DataOraEmissione>${formatSiaeDateTime(ticket.emissionDate)}</DataOraEmissione>
-      <CodiceCanale>${escapeXml(ticket.emissionChannelCode || 'WEB')}</CodiceCanale>
-      <ImportoLordo>${parseFloat(ticket.grossAmount || '0').toFixed(2)}</ImportoLordo>
-      <ImportoNetto>${parseFloat(ticket.netAmount || '0').toFixed(2)}</ImportoNetto>
-      <Diritti>0.00</Diritti>
-      <IVA>${parseFloat(ticket.vatAmount || '0').toFixed(2)}</IVA>
-      <CodiceGenere>${escapeXml(ticketedEvent?.genreCode || '60')}</CodiceGenere>
-      <CodicePrestazione>${escapeXml(ticket.ticketTypeCode || 'INT')}</CodicePrestazione>
-      <DataEvento>${formatSiaeDate(ticketedEvent?.eventDate || ticketedEvent?.saleStartDate || null)}</DataEvento>
-      <NominativoAcquirente>
-        <Nome>${escapeXml(ticket.participantFirstName || 'N/D')}</Nome>
-        <Cognome>${escapeXml(ticket.participantLastName || 'N/D')}</Cognome>
-      </NominativoAcquirente>
-      <Stato>${mapToSiaeStatus(ticket.status)}</Stato>
-    </Titolo>`;
-    }
+    // Generate OraGenerazione in HHMMSS format
+    const now = new Date();
+    const oraGen = String(now.getHours()).padStart(2, '0') + 
+                   String(now.getMinutes()).padStart(2, '0') + 
+                   String(now.getSeconds()).padStart(2, '0');
     
-    xml += `
-  </ElencoTitoli>
-  <Riepilogo>
-    <TotaleTitoli>${dayTickets.length}</TotaleTitoli>
-    <TotaleImportoLordo>${dayTickets.reduce((sum, t) => sum + parseFloat(t.grossAmount || '0'), 0).toFixed(2)}</TotaleImportoLordo>
-    <TotaleDiritti>0.00</TotaleDiritti>
-    <TotaleIVA>${dayTickets.reduce((sum, t) => sum + parseFloat(t.vatAmount || '0'), 0).toFixed(2)}</TotaleIVA>
-  </Riepilogo>
-</ComunicazioneDatiTitoli>`;
+    // Generate RiepilogoMensile XML using shared helper
+    const xml = await generateC1ReportXml({
+      companyId,
+      reportDate,
+      isMonthly: false,
+      filteredTickets: dayTickets,
+      systemConfig,
+      companyName: company?.name || 'N/D',
+      taxId,
+      oraGen
+    });
     
     // Create transmission record
     const transmission = await siaeStorage.createSiaeTransmission({
@@ -4328,8 +4280,13 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
       totalAmount: dayTickets.reduce((sum, t) => sum + parseFloat(t.grossAmount || '0'), 0).toString(),
     });
     
+    // Format date for filename
+    const dateStr = reportDate.getFullYear().toString() + 
+                    String(reportDate.getMonth() + 1).padStart(2, '0') + 
+                    String(reportDate.getDate()).padStart(2, '0');
+    
     res.set('Content-Type', 'application/xml');
-    res.set('Content-Disposition', `attachment; filename="SIAE_${formatSiaeDate(reportDate)}_${transmission.id}.xml"`);
+    res.set('Content-Disposition', `attachment; filename="SIAE_C1_${dateStr}_${transmission.id}.xml"`);
     res.send(xml);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
