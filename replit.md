@@ -71,7 +71,22 @@ An admin tool (`/siae/ticketed-events/:id/page-editor`) for customizing public e
 ### Desktop Bridge Relay System
 A WebSocket relay system (`/ws/bridge`) enabling remote smart card reader access from a desktop Electron app to the web application. Uses token-based authentication for desktop apps and session-based for web clients, with company-scoped message routing.
 -   **Digital Signature**: Supports XML-DSig digital signatures for SIAE C1 reports using the smart card's PKI functionality. Flow: `REQUEST_XML_SIGNATURE` message → Desktop app → `SIGN_XML` command → C# bridge with `SignML()` function → SHA-1 hash + RSA signature + X509 certificate embedding.
+-   **Signature Error Handling**: 18 structured error codes (`SignatureErrorCode` enum) for smart card, PIN, and certificate issues. Audit log tracks last 100 signature operations with timing and context. Debug endpoint: `/api/siae/debug/signature-audit`.
 -   **SIAE Report Transmission**: Signed XML reports are sent via email to SIAE test environment (`servertest2@batest.siae.it`) with manual confirmation for status updates.
+-   **Email Audit Trail**: All SIAE email transmissions logged in `siaeEmailAudit` table with SHA-256 attachment hashes, S/MIME status, SMTP responses, and delivery status. Endpoints: `/api/siae/companies/:id/email-audit`.
+
+### Italian Fiscal Validation
+Server-side validation for Italian fiscal identifiers per Agenzia delle Entrate requirements:
+-   **Codice Fiscale**: 16-character validation with odd/even position tables and mod-26 checksum calculation.
+-   **Partita IVA**: 11-digit Luhn-like algorithm with proper checksum validation.
+-   **Debug Endpoint**: `/api/siae/debug/validate-fiscal?cf=...&piva=...` for testing and troubleshooting.
+
+### Name Change Management (Cambio Nominativo)
+SIAE-compliant ticket holder name change workflow with temporal limits and fee processing:
+-   **Temporal Limits**: Configurable `nameChangeDeadlineHours` (default 48h before event) with fallback to event.date for legacy events.
+-   **Max Changes**: Configurable `maxNameChangesPerTicket` (default 1) to limit changes per ticket.
+-   **Auto-Approval**: Events with `autoApproveNameChanges` enabled process changes immediately when bridge is ready.
+-   **Payment Integration**: Optional `nameChangeFee` with payment verification before processing.
 
 ### Scanner Management Module
 Manages event scanner operators for `gestore`/`super_admin` users. Supports scanner account creation, a mobile-optimized UI, and granular event assignment with permissions for list, table, and ticket scanning (including specific sectors/types). Ensures company-scoped data access and sanitized API responses.
