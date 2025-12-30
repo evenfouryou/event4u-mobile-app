@@ -2072,7 +2072,7 @@ router.post("/api/siae/name-changes", requireAuth, async (req: Request, res: Res
         
         // Check bridge availability
         const bridgeStatus = getCachedBridgeStatus();
-        if (bridgeStatus.connected && bridgeStatus.cardInserted) {
+        if (bridgeStatus.bridgeConnected && bridgeStatus.cardInserted) {
           try {
             // Request fiscal seal
             const priceInCents = Math.round(Number(originalTicket.grossAmount || originalTicket.ticketPrice || 0) * 100);
@@ -2315,7 +2315,7 @@ router.post("/api/siae/name-changes/:id/process", requireAuth, requireOrganizer,
     
     // 6. Check bridge/smart card availability
     const bridgeStatus = getCachedBridgeStatus();
-    if (!bridgeStatus.connected || !bridgeStatus.cardInserted) {
+    if (!bridgeStatus.bridgeConnected || !bridgeStatus.cardInserted) {
       return res.status(503).json({ 
         message: "Lettore smart card SIAE non disponibile. Connetti il bridge desktop e inserisci la carta.",
         code: "BRIDGE_NOT_READY"
