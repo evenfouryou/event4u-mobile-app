@@ -618,7 +618,9 @@ router.get("/api/siae/activation-cards/:id/usage", requireAuth, requireGestore, 
 // Get activation card by serial (matching physical card) - always returns 200 with structured response
 router.get("/api/siae/activation-cards/by-serial/:serial", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
+    console.log(`[ACTIVATION-CARDS] Looking up card by serial: ${req.params.serial}`);
     const card = await siaeStorage.getActivationCardBySerial(req.params.serial);
+    console.log(`[ACTIVATION-CARDS] Card found:`, card ? card.id : 'null');
     if (!card) {
       // Return structured response even when card not found
       return res.json({ 
@@ -629,9 +631,12 @@ router.get("/api/siae/activation-cards/by-serial/:serial", requireAuth, requireG
         notFound: true
       });
     }
+    console.log(`[ACTIVATION-CARDS] Getting usage stats for card: ${card.id}`);
     const stats = await siaeStorage.getActivationCardUsageStats(card.id);
+    console.log(`[ACTIVATION-CARDS] Stats:`, stats);
     res.json({ card, ...stats, notFound: false });
   } catch (error: any) {
+    console.error(`[ACTIVATION-CARDS] Error:`, error);
     res.status(500).json({ message: error.message });
   }
 });
