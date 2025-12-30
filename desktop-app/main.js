@@ -63,10 +63,12 @@ let relayConfig = {
   enabled: true,
   serverType: 'production' // 'production' or 'development'
 };
-// Reconnection with exponential backoff
-const RELAY_RECONNECT_BASE_DELAY = 1000;  // Start with 1 second
-const RELAY_RECONNECT_MAX_DELAY = 30000;  // Max 30 seconds
+// Reconnection with exponential backoff (faster recovery after server restart)
+const RELAY_RECONNECT_BASE_DELAY = 500;   // Start with 0.5 second (faster initial retry)
+const RELAY_RECONNECT_MAX_DELAY = 10000;  // Max 10 seconds (was 30s - too slow)
+const RELAY_RECONNECT_FAST_RETRIES = 5;   // Number of fast retries before exponential backoff
 let currentReconnectDelay = RELAY_RECONNECT_BASE_DELAY;
+let reconnectAttempts = 0;
 const RELAY_HEARTBEAT_INTERVAL = 15000;   // Check every 15 seconds (faster detection)
 const RELAY_HEARTBEAT_TIMEOUT = 5000;     // 5 second timeout for pong
 let relayHeartbeatTimer = null;
@@ -798,18 +800,28 @@ function scheduleRelayReconnect() {
   if (relayReconnectTimer) return;
   if (!relayConfig.enabled) return;
   
-  log.info(`Scheduling relay reconnect in ${currentReconnectDelay}ms (exponential backoff)`);
+  reconnectAttempts++;
+  
+  // Use fast retries for first few attempts (server might just be restarting)
+  let delay = currentReconnectDelay;
+  if (reconnectAttempts <= RELAY_RECONNECT_FAST_RETRIES) {
+    delay = RELAY_RECONNECT_BASE_DELAY; // Keep fast for first 5 attempts
+    log.info(`Scheduling fast relay reconnect in ${delay}ms (attempt ${reconnectAttempts}/${RELAY_RECONNECT_FAST_RETRIES})`);
+  } else {
+    log.info(`Scheduling relay reconnect in ${delay}ms (exponential backoff, attempt ${reconnectAttempts})`);
+    // Only apply exponential backoff after fast retries
+    currentReconnectDelay = Math.min(currentReconnectDelay * 1.5, RELAY_RECONNECT_MAX_DELAY);
+  }
+  
   relayReconnectTimer = setTimeout(() => {
     relayReconnectTimer = null;
     connectToRelay();
-  }, currentReconnectDelay);
-  
-  // Increase delay for next attempt (exponential backoff)
-  currentReconnectDelay = Math.min(currentReconnectDelay * 2, RELAY_RECONNECT_MAX_DELAY);
+  }, delay);
 }
 
 function resetReconnectDelay() {
   currentReconnectDelay = RELAY_RECONNECT_BASE_DELAY;
+  reconnectAttempts = 0;
 }
 
 function startRelayHeartbeat() {
