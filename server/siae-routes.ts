@@ -2414,11 +2414,15 @@ router.post("/api/siae/name-changes/:id/process", requireAuth, requireOrganizer,
       return res.status(400).json({ message: "Richiesta già processata" });
     }
     
-    // Handle rejection
+    // Handle rejection - no payment check needed
     if (action === 'reject') {
+      // If fee was paid and rejecting, consider refund
+      const shouldRefund = nameChangeRequest.paymentStatus === 'paid' && parseFloat(nameChangeRequest.fee || '0') > 0;
+      const updatedPaymentStatus = shouldRefund ? 'refunded' : nameChangeRequest.paymentStatus;
       const [updated] = await db.update(siaeNameChanges)
         .set({
           status: 'rejected',
+          paymentStatus: updatedPaymentStatus,
           notes: rejectionReason || 'Rifiutata dall\'operatore',
           processedAt: new Date(),
           processedByUserId: userId,
@@ -2426,7 +2430,30 @@ router.post("/api/siae/name-changes/:id/process", requireAuth, requireOrganizer,
         })
         .where(eq(siaeNameChanges.id, req.params.id))
         .returning();
-      return res.json({ success: true, nameChange: updated, message: "Richiesta rifiutata" });
+      
+      // TODO: Process refund via Stripe if shouldRefund is true
+      if (shouldRefund && nameChangeRequest.paymentIntentId) {
+        console.log(`[NAME-CHANGE] Should refund payment ${nameChangeRequest.paymentIntentId} for rejected request ${req.params.id}`);
+        // Refund logic would go here
+      }
+      
+      return res.json({ 
+        success: true, 
+        nameChange: updated, 
+        message: shouldRefund ? "Richiesta rifiutata. Il rimborso verrà elaborato." : "Richiesta rifiutata",
+        refundInitiated: shouldRefund,
+      });
+    }
+    
+    // Check if payment is required and not yet paid (for approval only)
+    const feeAmount = parseFloat(nameChangeRequest.fee || '0');
+    if (feeAmount > 0 && nameChangeRequest.paymentStatus !== 'paid') {
+      return res.status(400).json({ 
+        message: `Impossibile approvare: la commissione di €${feeAmount.toFixed(2)} non è stata ancora pagata.`,
+        code: "PAYMENT_REQUIRED",
+        fee: feeAmount,
+        paymentStatus: nameChangeRequest.paymentStatus,
+      });
     }
     
     // 2. Get the original ticket with all details

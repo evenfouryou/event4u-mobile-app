@@ -3576,6 +3576,7 @@ router.post("/api/public/account/name-change", async (req, res) => {
         participantFirstName: siaeTickets.participantFirstName,
         participantLastName: siaeTickets.participantLastName,
         allowsChangeName: siaeTicketedEvents.allowsChangeName,
+        nameChangeFee: siaeTicketedEvents.nameChangeFee,
         eventStart: events.startDatetime,
       })
       .from(siaeTickets)
@@ -3608,6 +3609,10 @@ router.post("/api/public/account/name-change", async (req, res) => {
       });
     }
 
+    // Check name change fee from event settings
+    const fee = parseFloat(ticket.nameChangeFee || '0');
+    const paymentStatus = fee > 0 ? 'pending' : 'not_required';
+
     // Crea richiesta cambio nominativo con dati SIAE completi
     const [nameChange] = await db
       .insert(siaeNameChanges)
@@ -3622,20 +3627,159 @@ router.post("/api/public/account/name-change", async (req, res) => {
         newDocumentType,
         newDocumentNumber,
         newDateOfBirth,
-        fee: '0',
+        fee: fee.toFixed(2),
+        paymentStatus,
         status: 'pending',
       })
       .returning();
 
-    console.log("[PUBLIC] Name change request created:", nameChange.id);
+    console.log("[PUBLIC] Name change request created:", nameChange.id, "fee:", fee, "paymentStatus:", paymentStatus);
     res.json({ 
-      message: "Richiesta cambio nominativo inviata",
+      message: fee > 0 
+        ? "Richiesta creata. Per completare il cambio nominativo è richiesto il pagamento della commissione."
+        : "Richiesta cambio nominativo inviata",
       nameChangeId: nameChange.id,
-      fee: '0',
+      fee: fee.toFixed(2),
+      paymentStatus,
+      requiresPayment: fee > 0,
     });
   } catch (error: any) {
     console.error("[PUBLIC] Name change error:", error);
     res.status(500).json({ message: "Errore nella richiesta cambio nominativo" });
+  }
+});
+
+// Create payment intent for name change fee
+router.post("/api/public/account/name-change/:id/pay", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const { id } = req.params;
+
+    // Get name change request
+    const [nameChange] = await db
+      .select()
+      .from(siaeNameChanges)
+      .where(and(
+        eq(siaeNameChanges.id, id),
+        eq(siaeNameChanges.requestedById, customer.id)
+      ));
+
+    if (!nameChange) {
+      return res.status(404).json({ message: "Richiesta non trovata" });
+    }
+
+    if (nameChange.paymentStatus === 'paid') {
+      return res.status(400).json({ message: "Pagamento già effettuato" });
+    }
+
+    if (nameChange.status !== 'pending') {
+      return res.status(400).json({ message: "Richiesta non valida per il pagamento" });
+    }
+
+    const feeAmount = parseFloat(nameChange.fee || '0');
+    if (feeAmount <= 0) {
+      return res.status(400).json({ message: "Nessuna commissione richiesta" });
+    }
+
+    const amountInCents = Math.round(feeAmount * 100);
+
+    const stripe = await getUncachableStripeClient();
+    const paymentIntent = await stripe.paymentIntents.create({
+      amount: amountInCents,
+      currency: "eur",
+      metadata: {
+        type: "name_change_fee",
+        nameChangeId: id,
+        customerId: customer.id,
+        amount: feeAmount.toString(),
+      },
+    });
+
+    // Save payment intent ID
+    await db.update(siaeNameChanges)
+      .set({ paymentIntentId: paymentIntent.id, updatedAt: new Date() })
+      .where(eq(siaeNameChanges.id, id));
+
+    res.json({
+      clientSecret: paymentIntent.client_secret,
+      paymentIntentId: paymentIntent.id,
+      amount: feeAmount,
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Name change payment error:", error);
+    res.status(500).json({ message: "Errore nella creazione del pagamento" });
+  }
+});
+
+// Confirm name change fee payment
+router.post("/api/public/account/name-change/:id/pay/confirm", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const { id } = req.params;
+    const { paymentIntentId } = req.body;
+
+    if (!paymentIntentId) {
+      return res.status(400).json({ message: "Payment intent non fornito" });
+    }
+
+    // Get name change request
+    const [nameChange] = await db
+      .select()
+      .from(siaeNameChanges)
+      .where(and(
+        eq(siaeNameChanges.id, id),
+        eq(siaeNameChanges.requestedById, customer.id)
+      ));
+
+    if (!nameChange) {
+      return res.status(404).json({ message: "Richiesta non trovata" });
+    }
+
+    // Verify payment with Stripe
+    const stripe = await getUncachableStripeClient();
+    const paymentIntent = await stripe.paymentIntents.retrieve(paymentIntentId);
+
+    if (paymentIntent.status !== "succeeded") {
+      return res.status(400).json({ 
+        message: "Pagamento non completato",
+        status: paymentIntent.status,
+      });
+    }
+
+    // Verify metadata matches
+    if (paymentIntent.metadata?.type !== "name_change_fee" || 
+        paymentIntent.metadata?.nameChangeId !== id ||
+        paymentIntent.metadata?.customerId !== customer.id) {
+      return res.status(400).json({ message: "Payment intent non valido" });
+    }
+
+    // Update name change with payment confirmation
+    const [updated] = await db.update(siaeNameChanges)
+      .set({ 
+        paymentStatus: 'paid',
+        paidAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(siaeNameChanges.id, id))
+      .returning();
+
+    console.log("[PUBLIC] Name change fee paid:", id, "paymentIntentId:", paymentIntentId);
+    res.json({
+      success: true,
+      message: "Pagamento confermato. La tua richiesta è ora in attesa di approvazione.",
+      nameChange: updated,
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Name change payment confirm error:", error);
+    res.status(500).json({ message: "Errore nella conferma del pagamento" });
   }
 });
 

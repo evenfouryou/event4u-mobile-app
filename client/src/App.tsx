@@ -128,6 +128,7 @@ import AdminGestoreCompanies from "@/pages/admin-gestore-companies";
 import AdminGestoreUsers from "@/pages/admin-gestore-users";
 import AdminGestoreEvents from "@/pages/admin-gestore-events";
 import AdminEventDetail from "@/pages/admin-event-detail";
+import AdminNameChanges from "@/pages/admin-name-changes";
 import SiaeTicketingConsole from "@/pages/siae-ticketing-console";
 import OrganizerBilling from "@/pages/organizer-billing";
 import FloorPlanEditor from "@/pages/floor-plan-editor";
@@ -355,6 +356,7 @@ function Router() {
               <Route path="/admin/gestori/:gestoreId/events" component={AdminGestoreEvents} />
               <Route path="/admin/gestori/:gestoreId/events/:eventId" component={AdminEventDetail} />
               <Route path="/admin/events/:eventId" component={AdminEventDetail} />
+              <Route path="/admin/name-changes" component={AdminNameChanges} />
               <Route path="/siae/ticketing-console" component={SiaeTicketingConsole} />
               <Route path="/organizer/billing" component={OrganizerBilling} />
               <Route path="/billing" component={OrganizerBilling} />
