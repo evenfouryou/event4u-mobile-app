@@ -6084,7 +6084,16 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     const transmissionCount = await siaeStorage.getSiaeTransmissionCount(event.companyId);
     const progressivoGenerazione = transmissionCount + 1;
     
-    const fileName = `C1_${event.code || id}_${dataEvento}.xml`;
+    // Nome file conforme Allegato C SIAE: RMG_AAAA_MM_GG_###.xsi (RiepilogoGiornaliero)
+    // RMG = Riepilogo Mensile/Giornaliero (C1 report)
+    // Estensione .p7m aggiunta se firmato digitalmente
+    const year = eventDate.getFullYear();
+    const month = String(eventDate.getMonth() + 1).padStart(2, '0');
+    const day = String(eventDate.getDate()).padStart(2, '0');
+    const progressivo = String(progressivoGenerazione).padStart(3, '0');
+    const baseFileName = `RMG_${year}_${month}_${day}_${progressivo}`;
+    // fileName will be updated to .xsi.p7m if signed, otherwise .xsi
+    let fileName = `${baseFileName}.xsi`;
     
     // Determine event type (spettacolo vs intrattenimento) and tax type
     const isIntrattenimento = event.eventType === 'intrattenimento';
@@ -6234,6 +6243,7 @@ ${titoliAccessoXml}
         <Evento>
             <Intrattenimento>
                 <TipoTassazione valore="${tipoTassazione}"/>
+                <Incidenza>0</Incidenza>
             </Intrattenimento>
             <Locale>
                 <Denominazione>${escapeXml(localeDenominazione)}</Denominazione>
@@ -6288,6 +6298,8 @@ ${ordiniDiPostoXml}
           signedAt: signature.signedAt
         };
         console.log('[C1 Send] XML signed successfully at', signature.signedAt);
+        // Update filename to .xsi.p7m for signed files per Allegato C SIAE
+        fileName = `${baseFileName}.xsi.p7m`;
         
       } catch (signError: any) {
         console.error('[C1 Send] Signature error:', signError.message);
