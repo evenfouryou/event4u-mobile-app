@@ -56,7 +56,7 @@ async function main() {
     const { data: user } = await octokit.users.getAuthenticated();
     console.log(`✅ Connesso come: ${user.login}`);
     
-    // Files da pushare - SIAE Lettore
+    // Files da pushare - SIAE Lettore (tutti i file)
     const files = [
       { path: 'main.js', localPath: 'desktop-app/main.js' },
       { path: 'index.html', localPath: 'desktop-app/index.html' },
@@ -66,9 +66,17 @@ async function main() {
       { path: 'styles.css', localPath: 'desktop-app/styles.css' },
       { path: 'README.md', localPath: 'desktop-app/README.md' },
       { path: 'BUILD_INSTRUCTIONS.md', localPath: 'desktop-app/BUILD_INSTRUCTIONS.md' },
+      { path: 'build-local.ps1', localPath: 'desktop-app/build-local.ps1' },
       { path: 'SiaeBridge/Program.cs', localPath: 'desktop-app/SiaeBridge/Program.cs' },
       { path: 'SiaeBridge/LibSiae.cs', localPath: 'desktop-app/SiaeBridge/LibSiae.cs' },
       { path: 'SiaeBridge/SiaeBridge.csproj', localPath: 'desktop-app/SiaeBridge/SiaeBridge.csproj' }
+    ];
+    
+    // Binary files (icon, DLLs)
+    const binaryFiles = [
+      { path: 'icon.png', localPath: 'desktop-app/icon.png' },
+      { path: 'SiaeBridge/prebuilt/libSIAE.dll', localPath: 'desktop-app/SiaeBridge/prebuilt/libSIAE.dll' },
+      { path: 'SiaeBridge/prebuilt/Newtonsoft.Json.dll', localPath: 'desktop-app/SiaeBridge/prebuilt/Newtonsoft.Json.dll' }
     ];
     
     console.log(`📂 Target: https://github.com/${owner}/${repo}`);
@@ -100,6 +108,7 @@ async function main() {
     console.log('📦 Creating file blobs...');
     const treeItems: Array<{path: string, mode: '100644', type: 'blob', sha: string}> = [];
     
+    // Text files
     for (const file of files) {
       const content = fs.readFileSync(file.localPath, 'utf-8');
       
@@ -119,6 +128,26 @@ async function main() {
       console.log(`   ✓ ${file.path}`);
     }
     
+    // Binary files
+    for (const file of binaryFiles) {
+      const content = fs.readFileSync(file.localPath);
+      
+      const { data: blob } = await octokit.git.createBlob({
+        owner,
+        repo,
+        content: content.toString('base64'),
+        encoding: 'base64'
+      });
+      
+      treeItems.push({
+        path: file.path,
+        mode: '100644',
+        type: 'blob',
+        sha: blob.sha
+      });
+      console.log(`   ✓ ${file.path} (binary)`);
+    }
+    
     // Create tree
     console.log('🌳 Creating tree...');
     const { data: tree } = await octokit.git.createTree({
@@ -130,7 +159,7 @@ async function main() {
     
     // Create commit
     console.log('📝 Creating commit...');
-    const commitMessage = 'v3.17: Server-controlled seal generation + fixes\n\n- Hide manual seal generation form (server controls it)\n- Add sigillo:generated event for server-requested seals\n- Fix: cachedBridgeStatus reads .data instead of .payload\n- Sigilli history shows seals from both manual and server\n- Panel shows \"Sigilli Fiscali Generati\" with description\n\nSee BUILD_INSTRUCTIONS.md for details.';
+    const commitMessage = 'v3.18: Add missing files (icon, DLLs, build script)\n\n- Add icon.png for app icon\n- Add build-local.ps1 PowerShell build script\n- Add prebuilt DLLs (libSIAE.dll, Newtonsoft.Json.dll)\n\nSee BUILD_INSTRUCTIONS.md for details.';
     
     const { data: commit } = await octokit.git.createCommit({
       owner,
