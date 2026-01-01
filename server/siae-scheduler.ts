@@ -389,10 +389,12 @@ async function sendDailyReports() {
         const progressivo = await getNextProgressivo(ticketedEvent.id, 'daily', yesterday);
         const reportData = await generateC1ReportData(ticketedEvent, 'giornaliero', yesterday, progressivo);
         // Add EFFF data from Smart Card if available
-        reportData.cachedEfffData = getCachedEfffData();
+        const cachedEfff = getCachedEfffData();
+        reportData.cachedEfffData = cachedEfff;
         const xmlContent = generateXMLContent(reportData);
 
-        const systemCode = ticketedEvent.systemCode || SIAE_SYSTEM_CODE;
+        // Prefer systemId from Smart Card EFFF for email subject consistency with XML
+        const systemCode = cachedEfff?.systemId || ticketedEvent.systemCode || SIAE_SYSTEM_CODE;
         // RCA reports: usa 'rca' come tipo report per nome file RCA_YYYY_MM_DD_###.xsi
         let fileName = generateSiaeFileName('rca', yesterday, progressivo, false);
         let isSigned = false;
@@ -513,10 +515,12 @@ async function sendMonthlyReports() {
         const progressivo = await getNextProgressivo(ticketedEvent.id, 'monthly', previousMonth);
         const reportData = await generateC1ReportData(ticketedEvent, 'mensile', previousMonth, progressivo);
         // Add EFFF data from Smart Card if available
-        reportData.cachedEfffData = getCachedEfffData();
+        const cachedEfff = getCachedEfffData();
+        reportData.cachedEfffData = cachedEfff;
         const xmlContent = generateXMLContent(reportData);
 
-        const systemCode = ticketedEvent.systemCode || SIAE_SYSTEM_CODE;
+        // Prefer systemId from Smart Card EFFF for email subject consistency with XML
+        const systemCode = cachedEfff?.systemId || ticketedEvent.systemCode || SIAE_SYSTEM_CODE;
         // RCA reports mensili: usa 'rca' come tipo report per nome file RCA_YYYY_MM_DD_###.xsi
         let fileName = generateSiaeFileName('rca', previousMonth, progressivo, false);
         let isSigned = false;
