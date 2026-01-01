@@ -513,6 +513,145 @@ router.get("/api/siae/debug/signature-audit", async (req: Request, res: Response
   }
 });
 
+// ==================== DEBUG ENDPOINT - DTD Validation ====================
+router.post("/api/siae/debug/validate-xml", async (req: Request, res: Response) => {
+  try {
+    const { xml, reportType } = req.body;
+    
+    if (!xml) {
+      return res.status(400).json({ error: "XML content is required" });
+    }
+    
+    const type = reportType || 'giornaliero';
+    if (!['giornaliero', 'mensile', 'rca'].includes(type)) {
+      return res.status(400).json({ error: "reportType deve essere 'giornaliero', 'mensile' o 'rca'" });
+    }
+    
+    const { validateSiaeXml } = await import('./siae-utils');
+    const result = validateSiaeXml(xml, type as 'giornaliero' | 'mensile' | 'rca');
+    
+    res.json({
+      timestamp: new Date().toISOString(),
+      reportType: type,
+      xmlLength: xml.length,
+      ...result,
+      description: "Validazione sintattica XML conforme DTD SIAE"
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== DEBUG ENDPOINT - Parse Log SIAE ====================
+router.post("/api/siae/debug/parse-log", async (req: Request, res: Response) => {
+  try {
+    const { xml } = req.body;
+    
+    if (!xml) {
+      return res.status(400).json({ error: "XML content is required" });
+    }
+    
+    const { parseSiaeLogXml, analyzeSiaeLog } = await import('./siae-utils');
+    const parseResult = parseSiaeLogXml(xml);
+    const stats = analyzeSiaeLog(parseResult);
+    
+    res.json({
+      timestamp: new Date().toISOString(),
+      parseResult,
+      stats,
+      description: "Parser Log.xsi SIAE conforme a Log_v0040_20190627.dtd"
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== SMART CARD EFFF Data Endpoint ====================
+router.get("/api/siae/card/efff", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { requestCardEfffData, getCachedEfffData, isTestCardFromCache } = await import('./bridge-relay');
+    const { isTestSmartCard, getSiaeEnvironment } = await import('./siae-utils');
+    
+    // Prima prova dalla cache
+    const cached = getCachedEfffData();
+    const forceRefresh = req.query.refresh === 'true';
+    
+    if (cached && !forceRefresh) {
+      const isTest = isTestSmartCard(cached.systemId);
+      const environment = getSiaeEnvironment(cached.systemId);
+      
+      return res.json({
+        source: 'cache',
+        data: cached,
+        isTestCard: isTest,
+        environment,
+        siaeEmailTarget: isTest ? 'servertest2@batest.siae.it' : 'server@ba.siae.it'
+      });
+    }
+    
+    // Richiedi dalla Smart Card
+    const efffData = await requestCardEfffData();
+    const isTest = isTestSmartCard(efffData.systemId);
+    const environment = getSiaeEnvironment(efffData.systemId);
+    
+    res.json({
+      source: 'smartcard',
+      data: efffData,
+      isTestCard: isTest,
+      environment,
+      siaeEmailTarget: efffData.siaeEmail || (isTest ? 'servertest2@batest.siae.it' : 'server@ba.siae.it')
+    });
+  } catch (error: any) {
+    console.error('[SIAE-ROUTES] Failed to read EFFF from card:', error);
+    res.status(500).json({ 
+      error: error.message,
+      code: error.message.split(':')[0] || 'EFFF_ERROR'
+    });
+  }
+});
+
+// ==================== SIAE Environment Detection Endpoint ====================
+router.get("/api/siae/environment", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { getCachedEfffData, isBridgeConnected, isCardReadyForSeals } = await import('./bridge-relay');
+    const { isTestSmartCard, getSiaeEnvironment, getSiaeEmailForEnvironment } = await import('./siae-utils');
+    
+    const bridgeConnected = isBridgeConnected();
+    const cardReady = isCardReadyForSeals();
+    const cached = getCachedEfffData();
+    
+    let environment: 'test' | 'production' | 'unknown' = 'unknown';
+    let siaeEmail: string | null = null;
+    let systemId: string | null = null;
+    
+    if (cached?.systemId) {
+      systemId = cached.systemId;
+      environment = getSiaeEnvironment(systemId);
+      siaeEmail = cached.siaeEmail || getSiaeEmailForEnvironment(systemId);
+    } else if (process.env.SIAE_TEST_MODE === 'true') {
+      environment = 'test';
+      siaeEmail = 'servertest2@batest.siae.it';
+    }
+    
+    res.json({
+      environment,
+      isTestMode: environment === 'test',
+      bridgeConnected,
+      cardReady: cardReady.ready,
+      cardError: cardReady.error,
+      systemId,
+      siaeEmail,
+      description: environment === 'test' 
+        ? 'Ambiente di TEST - Smart Card con prefisso P nel systemId'
+        : environment === 'production'
+          ? 'Ambiente di PRODUZIONE - Smart Card ufficiale'
+          : 'Ambiente non determinato - inserire Smart Card'
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // ==================== TAB.1-5 Reference Tables (Super Admin) ====================
 
 // Event Genres (TAB.1)

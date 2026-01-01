@@ -5,6 +5,7 @@ import { parse as parseCookie } from 'cookie';
 import { db } from './db';
 import { companies, sessions } from '@shared/schema';
 import { eq } from 'drizzle-orm';
+import type { SiaeCardEfffData } from './siae-utils';
 
 interface BridgeConnection {
   ws: WebSocket;
@@ -291,6 +292,19 @@ export function setupBridgeRelay(server: Server): void {
               message.requestId || '',
               message.payload?.success ?? false,
               message.payload?.signatureData,
+              message.payload?.error
+            );
+            // Also forward to clients if there's a toCompanyId
+            if (message.toCompanyId) {
+              forwardToClients(message.toCompanyId as string, message);
+            }
+          } else if (message.type === 'EFFF_RESPONSE') {
+            // Handle EFFF read response from desktop app (Smart Card anagrafica data)
+            console.log(`[Bridge] EFFF response received: requestId=${message.requestId}`);
+            handleEfffResponse(
+              message.requestId || '',
+              message.payload?.success ?? false,
+              message.payload?.efffData,
               message.payload?.error
             );
             // Also forward to clients if there's a toCompanyId
@@ -1403,4 +1417,180 @@ export function getCardSignerEmail(): string | null {
   const payload = cachedBridgeStatus.payload;
   // The signer email should be exposed in the bridge status from certificate data
   return payload.cardEmail || payload.certificateEmail || payload.signerEmail || null;
+}
+
+// ==================== EFFF Card Data Request ====================
+// Lettura file EFFF dalla Smart Card SIAE
+// Conforme a Descrizione_contenuto_SmartCardTestxBA-V102.pdf
+
+interface PendingEfffRequest {
+  resolve: (data: SiaeCardEfffData) => void;
+  reject: (error: Error) => void;
+  timeout: NodeJS.Timeout;
+  createdAt: Date;
+}
+
+const pendingEfffRequests = new Map<string, PendingEfffRequest>();
+const EFFF_REQUEST_TIMEOUT = 10000; // 10 seconds
+
+function generateEfffRequestId(): string {
+  return `efff_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+}
+
+/**
+ * Richiede la lettura del file EFFF dalla Smart Card tramite Desktop Bridge
+ * Il file EFFF contiene 15 campi anagrafici incluso l'indirizzo email SIAE
+ */
+export async function requestCardEfffData(): Promise<SiaeCardEfffData> {
+  console.log(`[Bridge] requestCardEfffData called`);
+  
+  // Check if bridge is connected
+  if (!globalBridge || globalBridge.ws.readyState !== WebSocket.OPEN) {
+    console.log(`[Bridge] ERROR: Bridge not connected for EFFF read`);
+    throw new Error('EFFF_BRIDGE_OFFLINE: App desktop Event4U non connessa. Impossibile leggere dati Smart Card.');
+  }
+  
+  // Check if card is ready
+  const cardReady = isCardReadyForSeals();
+  console.log(`[Bridge] Card ready check for EFFF: ${JSON.stringify(cardReady)}`);
+  if (!cardReady.ready) {
+    throw new Error(`EFFF_CARD_NOT_READY: ${cardReady.error}`);
+  }
+  
+  const requestId = generateEfffRequestId();
+  
+  console.log(`[Bridge] Requesting EFFF data: requestId=${requestId}`);
+  
+  return new Promise<SiaeCardEfffData>((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      pendingEfffRequests.delete(requestId);
+      console.log(`[Bridge] EFFF request timeout: requestId=${requestId}`);
+      reject(new Error('EFFF_TIMEOUT: Timeout lettura dati Smart Card. Riprovare.'));
+    }, EFFF_REQUEST_TIMEOUT);
+    
+    pendingEfffRequests.set(requestId, {
+      resolve,
+      reject,
+      timeout,
+      createdAt: new Date()
+    });
+    
+    try {
+      globalBridge!.ws.send(JSON.stringify({
+        type: 'READ_EFFF',
+        requestId
+      }));
+      console.log(`[Bridge] EFFF request sent to bridge: requestId=${requestId}`);
+    } catch (sendError: any) {
+      clearTimeout(timeout);
+      pendingEfffRequests.delete(requestId);
+      reject(new Error(`EFFF_SEND_ERROR: Errore invio richiesta lettura EFFF: ${sendError.message}`));
+    }
+  });
+}
+
+/**
+ * Gestisce la risposta EFFF dal Desktop Bridge
+ */
+export function handleEfffResponse(
+  requestId: string,
+  success: boolean,
+  efffData?: Partial<SiaeCardEfffData>,
+  error?: string
+): void {
+  const pending = pendingEfffRequests.get(requestId);
+  if (!pending) {
+    console.log(`[Bridge] No pending request for EFFF response: requestId=${requestId}`);
+    return;
+  }
+  
+  clearTimeout(pending.timeout);
+  pendingEfffRequests.delete(requestId);
+  
+  const durationMs = Date.now() - pending.createdAt.getTime();
+  
+  if (success && efffData) {
+    console.log(`[Bridge] EFFF read completed: requestId=${requestId}, systemId=${efffData.systemId}, duration=${durationMs}ms`);
+    
+    // Costruisci oggetto EFFF completo con valori default
+    const fullEfffData: SiaeCardEfffData = {
+      systemId: efffData.systemId || '',
+      contactName: efffData.contactName || '',
+      contactLastName: efffData.contactLastName || '',
+      contactCodFis: efffData.contactCodFis || '',
+      systemLocation: efffData.systemLocation || '',
+      contactEmail: efffData.contactEmail || '',
+      siaeEmail: efffData.siaeEmail || '',
+      partnerName: efffData.partnerName || '',
+      partnerCodFis: efffData.partnerCodFis || '',
+      partnerRegistroImprese: efffData.partnerRegistroImprese || '',
+      partnerNation: efffData.partnerNation || 'IT',
+      systemApprCode: efffData.systemApprCode || '',
+      systemApprDate: efffData.systemApprDate || '',
+      contactRepresentationType: efffData.contactRepresentationType || 'I',
+      userDataFileVersion: efffData.userDataFileVersion || '1.0.0'
+    };
+    
+    pending.resolve(fullEfffData);
+  } else {
+    console.log(`[Bridge] EFFF read failed: requestId=${requestId}, error=${error}`);
+    pending.reject(new Error(`EFFF_READ_ERROR: ${error || 'Errore lettura file EFFF dalla Smart Card'}`));
+  }
+}
+
+/**
+ * Restituisce i dati EFFF dalla cache del bridge status (se disponibili)
+ * Più veloce di requestCardEfffData ma potrebbe essere stale
+ */
+export function getCachedEfffData(): Partial<SiaeCardEfffData> | null {
+  if (!cachedBridgeStatus?.payload) return null;
+  
+  const payload = cachedBridgeStatus.payload;
+  
+  // Il Desktop Bridge può esporre i dati EFFF nel payload di status
+  if (payload.efffData) {
+    return payload.efffData;
+  }
+  
+  // Fallback: costruisci da campi singoli se disponibili
+  if (payload.systemId || payload.partnerName) {
+    return {
+      systemId: payload.systemId,
+      partnerName: payload.partnerName,
+      partnerCodFis: payload.partnerCodFis || payload.taxId,
+      siaeEmail: payload.siaeEmail,
+      contactEmail: payload.contactEmail || payload.cardEmail
+    };
+  }
+  
+  return null;
+}
+
+/**
+ * Verifica se la Smart Card è di TEST analizzando il systemId
+ */
+export function isTestCardFromCache(): boolean | null {
+  const efff = getCachedEfffData();
+  if (!efff?.systemId) return null;
+  return efff.systemId.toUpperCase().startsWith('P');
+}
+
+/**
+ * Ottiene l'email SIAE dalla Smart Card (da cache o richiesta diretta)
+ */
+export async function getSiaeEmailFromCard(): Promise<string | null> {
+  // Prima prova dalla cache
+  const cached = getCachedEfffData();
+  if (cached?.siaeEmail) {
+    return cached.siaeEmail;
+  }
+  
+  // Se non in cache, prova a leggere dalla carta
+  try {
+    const efff = await requestCardEfffData();
+    return efff.siaeEmail || null;
+  } catch (error) {
+    console.log(`[Bridge] Failed to get SIAE email from card: ${error}`);
+    return null;
+  }
 }
