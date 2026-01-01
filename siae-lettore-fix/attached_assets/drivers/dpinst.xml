@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<dpInst>
+    <enableNotListedLanguages/>
+    <suppressAddRemovePrograms/>
+    <icon>bit4id.ico</icon>
+
+    <language code="1040">
+        <dpinstTitle>Bit4Id - miniLector U38 setup</dpinstTitle>
+        <welcomeTitle>Benvenuti nell'installazione guidata del miniLector U38 USB</welcomeTitle>
+        <welcomeIntro>Questa procedura guidata consente di installare i driver software richiesti per il funzionamento del miniLector U38 USB.</welcomeIntro>
+        <finishTitle>Installazione guidata del miniLector U38 USB completata</finishTitle>
+    </language>
+
+    <headerPath>bit4idlogo48.bmp</headerPath>
+    <watermarkPath>laterale.bmp</watermarkPath>
+</dpInst>

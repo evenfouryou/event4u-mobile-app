@@ -3482,27 +3482,59 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     const companyName = company?.name || 'N/A';
     
     // Try to digitally sign the XML using smart card
-    let xmlToSend = transmission.fileContent;
     let signatureInfo = '';
+    let p7mBase64: string | undefined;
+    let signedXmlContent: string | undefined;
     
     try {
       if (isBridgeConnected()) {
         console.log(`[SIAE-ROUTES] Bridge connected, attempting digital signature...`);
         const signatureResult = await requestXmlSignature(transmission.fileContent);
-        xmlToSend = signatureResult.signedXml;
-        signatureInfo = ' (firmato digitalmente)';
-        console.log(`[SIAE-ROUTES] XML signed successfully at ${signatureResult.signedAt}`);
+        
+        // Supporta sia CAdES-BES (nuovo) che XMLDSig (legacy)
+        if (signatureResult.p7mBase64) {
+          // CAdES-BES: mantieni il P7M Base64 separato
+          p7mBase64 = signatureResult.p7mBase64;
+          signatureInfo = ` (firmato CAdES-BES ${signatureResult.algorithm || 'SHA-256'})`;
+          console.log(`[SIAE-ROUTES] CAdES-BES signature created at ${signatureResult.signedAt}`);
+        } else if (signatureResult.signedXml) {
+          // Legacy XMLDSig (deprecato)
+          signedXmlContent = signatureResult.signedXml;
+          signatureInfo = ' (firmato XMLDSig - DEPRECATO)';
+          console.log(`[SIAE-ROUTES] XMLDSig signature created at ${signatureResult.signedAt}`);
+        }
         
         // Update transmission with signed content
-        await siaeStorage.updateSiaeTransmission(id, {
-          fileContent: xmlToSend,
-        });
+        if (p7mBase64 || signedXmlContent) {
+          await siaeStorage.updateSiaeTransmission(id, {
+            fileContent: signedXmlContent || transmission.fileContent,
+            p7mContent: p7mBase64 || null, // Salva P7M per resend offline
+            signatureFormat: p7mBase64 ? 'cades' : 'xmldsig',
+            signedAt: new Date(),
+          });
+        }
       } else {
-        console.log(`[SIAE-ROUTES] Bridge not connected, sending unsigned XML`);
+        console.log(`[SIAE-ROUTES] Bridge not connected, checking for existing signature...`);
+        // Se il bridge è offline, prova a usare la firma salvata nel database
+        if (transmission.p7mContent) {
+          p7mBase64 = transmission.p7mContent;
+          signatureInfo = ' (firma CAdES-BES da cache)';
+          console.log(`[SIAE-ROUTES] Using cached CAdES-BES signature from database`);
+        } else if (transmission.signatureFormat === 'xmldsig') {
+          signedXmlContent = transmission.fileContent;
+          signatureInfo = ' (firma XMLDSig da cache)';
+          console.log(`[SIAE-ROUTES] Using cached XMLDSig signature`);
+        } else {
+          console.log(`[SIAE-ROUTES] No cached signature found, sending unsigned XML`);
+        }
       }
     } catch (signError: any) {
-      console.warn(`[SIAE-ROUTES] Digital signature failed, sending unsigned: ${signError.message}`);
-      // Continue without signature - not a blocking error
+      console.warn(`[SIAE-ROUTES] Digital signature failed: ${signError.message}`);
+      // Fallback a firma salvata se disponibile
+      if (transmission.p7mContent) {
+        p7mBase64 = transmission.p7mContent;
+        signatureInfo = ' (firma CAdES-BES da cache dopo errore)';
+      }
     }
     
     // Import email service
@@ -3517,8 +3549,10 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
       periodDate: new Date(transmission.periodDate),
       ticketsCount: transmission.ticketsCount || 0,
       totalAmount: transmission.totalAmount || '0',
-      xmlContent: xmlToSend,
+      xmlContent: signedXmlContent || transmission.fileContent, // XML originale o XMLDSig firmato
       transmissionId: transmission.id,
+      p7mBase64: p7mBase64, // CAdES-BES P7M per allegato email
+      signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : undefined),
     });
     
     console.log(`[SIAE-ROUTES] Transmission sent to: ${destinationEmail}${signatureInfo} (Test mode: ${SIAE_TEST_MODE})`);
@@ -3656,8 +3690,9 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   // ===============================================================
   
   // Try to sign the XML with smart card if requested (with retry for unstable connections)
-  let xmlToSend = xml;
   let signatureInfo = '';
+  let p7mBase64: string | undefined;
+  let signedXmlContent: string | undefined;
   let signatureData = null;
   
   if (signWithSmartCard) {
@@ -3672,9 +3707,19 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
         if (bridgeConnected) {
           console.log(`[SIAE-ROUTES] Attempting XML signature for C1 ${typeLabel} report...`);
           signatureData = await requestXmlSignature(xml);
-          xmlToSend = signatureData.signedXml;
-          signatureInfo = ' (firmato digitalmente)';
-          console.log(`[SIAE-ROUTES] XML signed successfully for C1 ${typeLabel}`);
+          
+          // Supporta sia CAdES-BES (nuovo) che XMLDSig (legacy)
+          if (signatureData.p7mBase64) {
+            // CAdES-BES: mantieni il P7M Base64 separato
+            p7mBase64 = signatureData.p7mBase64;
+            signatureInfo = ` (firmato CAdES-BES ${signatureData.algorithm || 'SHA-256'})`;
+            console.log(`[SIAE-ROUTES] CAdES-BES signature created for C1 ${typeLabel}`);
+          } else if (signatureData.signedXml) {
+            // Legacy XMLDSig (deprecato)
+            signedXmlContent = signatureData.signedXml;
+            signatureInfo = ' (firmato XMLDSig - DEPRECATO)';
+            console.log(`[SIAE-ROUTES] XMLDSig signature created for C1 ${typeLabel}`);
+          }
           break; // Success, exit retry loop
         } else {
           console.log(`[SIAE-ROUTES] Bridge not connected on attempt ${attempt}, waiting ${RETRY_DELAY_MS}ms...`);
@@ -3697,12 +3742,15 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     }
   }
   
-  // Create transmission record
+  // Create transmission record - salva firma appropriata
   const transmission = await siaeStorage.createSiaeTransmission({
     companyId,
     transmissionType,
     periodDate: reportDate,
-    fileContent: xmlToSend,
+    fileContent: signedXmlContent || xml, // XMLDSig firmato o XML originale
+    p7mContent: p7mBase64 || null, // CAdES-BES P7M per resend offline
+    signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : null),
+    signedAt: (p7mBase64 || signedXmlContent) ? new Date() : null,
     status: 'pending',
     ticketsCount: filteredTickets.length,
     totalAmount: totalAmount.toString(),
@@ -3719,11 +3767,13 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     periodDate: reportDate,
     ticketsCount: filteredTickets.length,
     totalAmount: totalAmount.toString(),
-    xmlContent: xmlToSend,
+    xmlContent: signedXmlContent || xml, // XML originale o XMLDSig firmato
     transmissionId: transmission.id,
     systemCode: SIAE_SYSTEM_CODE_DEFAULT,
     sequenceNumber: 1,
     signWithSmime: true, // Per Allegato C SIAE 1.6.2 - firma S/MIME obbligatoria
+    p7mBase64: p7mBase64, // CAdES-BES P7M per allegato email
+    signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : undefined),
   });
   
   const smimeInfo = emailResult.smimeSigned 
@@ -3731,9 +3781,10 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     : ' (NON firmata S/MIME)';
   console.log(`[SIAE-ROUTES] ${typeLabel.toUpperCase()} C1 transmission sent to: ${destination}${signatureInfo}${smimeInfo} (Test mode: ${SIAE_TEST_MODE})`);
   
-  // Create email audit trail for traceability
+  // Create email audit trail for traceability - calcola hash su contenuto appropriato
   const crypto = await import('crypto');
-  const attachmentHash = crypto.createHash('sha256').update(xmlToSend).digest('hex');
+  const attachmentContent = p7mBase64 ? Buffer.from(p7mBase64, 'base64') : Buffer.from(signedXmlContent || xml, 'utf-8');
+  const attachmentHash = crypto.createHash('sha256').update(attachmentContent).digest('hex');
   await siaeStorage.createSiaeEmailAudit({
     companyId,
     transmissionId: transmission.id,
@@ -6191,7 +6242,8 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
 
     // Check if digital signature is requested via smart card
     const { signWithSmartCard } = req.body;
-    let finalXmlContent = xmlContent;
+    let signedXmlContent: string | undefined;
+    let p7mBase64: string | undefined;
     let signatureData: { signatureValue: string; certificateData: string; signedAt: string } | null = null;
     
     if (signWithSmartCard) {
@@ -6217,13 +6269,23 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
         
         // Request digital signature from smart card
         const signature = await requestXmlSignature(xmlContent);
-        finalXmlContent = signature.signedXml;
+        
+        // Supporta sia CAdES-BES (nuovo) che XMLDSig (legacy)
+        if (signature.p7mBase64) {
+          // CAdES-BES: mantieni il P7M Base64 separato per l'allegato email
+          p7mBase64 = signature.p7mBase64;
+          console.log(`[C1 Send] CAdES-BES signature created at ${signature.signedAt} (${signature.algorithm || 'SHA-256'})`);
+        } else if (signature.signedXml) {
+          // Legacy XMLDSig (deprecato)
+          signedXmlContent = signature.signedXml;
+          console.log('[C1 Send] XMLDSig signature created at', signature.signedAt, '(DEPRECATO)');
+        }
+        
         signatureData = {
-          signatureValue: signature.signatureValue,
-          certificateData: signature.certificateData,
+          signatureValue: signature.signatureValue || '',
+          certificateData: signature.certificateData || '',
           signedAt: signature.signedAt
         };
-        console.log('[C1 Send] XML signed successfully at', signature.signedAt);
         // Update filename to .xsi.p7m for signed files per Allegato C SIAE
         fileName = `${baseFileName}.xsi.p7m`;
         
@@ -6244,7 +6306,10 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
       transmissionType: isMonthly ? 'monthly' : 'daily',
       periodDate: eventDate,
       fileName: fileName,
-      fileContent: finalXmlContent, // Use signed XML if signature was requested
+      fileContent: signedXmlContent || xmlContent, // XMLDSig firmato o XML originale
+      p7mContent: p7mBase64 || null, // CAdES-BES P7M per resend offline
+      signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : null),
+      signedAt: (p7mBase64 || signedXmlContent) ? new Date() : null,
       status: 'pending',
       ticketsCount: reportData.activeTicketsCount,
       ticketsCancelled: reportData.cancelledTicketsCount,
@@ -6262,9 +6327,11 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
         periodDate: eventDate,
         ticketsCount: reportData.activeTicketsCount,
         totalAmount: reportData.totalRevenue.toFixed(2),
-        xmlContent: finalXmlContent, // Use signed XML if signature was requested
+        xmlContent: signedXmlContent || xmlContent, // XML originale o XMLDSig firmato
         transmissionId: transmission.id,
         signWithSmime: true, // Per Allegato C SIAE 1.6.2 - firma S/MIME obbligatoria
+        p7mBase64: p7mBase64, // CAdES-BES P7M per allegato email
+        signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : undefined),
       });
 
       await siaeStorage.updateSiaeTransmission(transmission.id, {

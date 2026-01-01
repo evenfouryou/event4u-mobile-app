@@ -38,6 +38,14 @@ An admin tool for customizing public event pages with modular blocks, managing e
 ### Desktop Bridge Relay System
 A WebSocket relay system (`/ws/bridge`) enables remote smart card reader access from a desktop Electron app to the web application. It supports token-based authentication and company-scoped message routing. This system facilitates digital signatures for SIAE C1 reports using PKI functionality, manages signature error handling, and handles SIAE report transmission via email with an audit trail.
 
+### SIAE Digital Signatures (CAdES-BES)
+The system supports CAdES-BES digital signatures for SIAE report compliance, generating .p7m binary files with SHA-256 algorithm. Key features:
+- **CAdES-BES format**: Uses .NET SignedCms for PKCS#7 signatures with SHA-256 (replaces deprecated SHA-1/XMLDSig)
+- **Signature persistence**: P7M content stored in `siaeTransmissions.p7mContent` field for offline resend capability
+- **Dual-format support**: Maintains XMLDSig fallback for legacy compatibility
+- **Email transmission**: P7M attachments sent as `application/pkcs7-mime` with proper binary encoding
+- **Offline resilience**: Cached signatures used when bridge is disconnected during resend operations
+
 ### Italian Fiscal Validation
 Server-side validation for Italian fiscal identifiers including Codice Fiscale (16-character) and Partita IVA (11-digit) with checksum algorithms, adhering to Agenzia delle Entrate requirements.
 

@@ -1035,9 +1035,16 @@ interface PendingSignatureRequest {
 }
 
 export interface XmlSignatureData {
-  signedXml: string;
-  signatureValue: string;
-  certificateData: string;
+  // CAdES-BES format (nuovo - conforme SIAE)
+  p7mBase64?: string;           // File P7M firmato in Base64 (CAdES-BES)
+  format?: string;              // "CAdES-BES" per firma conforme
+  algorithm?: string;           // "SHA-256" per hash conforme
+  xmlContent?: string;          // XML originale (per riferimento)
+  
+  // Legacy XMLDSig format (obsoleto - mantenuto per retrocompatibilità)
+  signedXml?: string;           // XML con firma interna (XMLDSig)
+  signatureValue?: string;
+  certificateData?: string;
   signedAt: string;
 }
 
@@ -1166,7 +1173,9 @@ export function handleSignatureResponse(requestId: string, success: boolean, sig
   const durationMs = completedAt.getTime() - pending.createdAt.getTime();
   
   if (success && signatureData) {
-    console.log(`[Bridge] XML signature request completed: requestId=${requestId}, duration=${durationMs}ms`);
+    // Determina il formato della firma (CAdES-BES o legacy XMLDSig)
+    const isCAdES = !!signatureData.p7mBase64;
+    console.log(`[Bridge] XML signature request completed: requestId=${requestId}, format=${isCAdES ? 'CAdES-BES' : 'XMLDSig'}, duration=${durationMs}ms`);
     
     // Update audit entry for success
     pending.auditEntry.status = 'completed';
@@ -1175,7 +1184,15 @@ export function handleSignatureResponse(requestId: string, success: boolean, sig
     pending.auditEntry.certificateSerial = signatureData.certificateSerial;
     addSignatureAuditEntry(pending.auditEntry);
     
+    // Supporta sia CAdES-BES (nuovo) che XMLDSig (legacy)
     pending.resolve({
+      // CAdES-BES fields (nuovo formato conforme SIAE)
+      p7mBase64: signatureData.p7mBase64,
+      format: signatureData.format || (isCAdES ? 'CAdES-BES' : 'XMLDSig'),
+      algorithm: signatureData.algorithm || (isCAdES ? 'SHA-256' : 'SHA-1'),
+      xmlContent: signatureData.xmlContent,
+      
+      // Legacy XMLDSig fields (per retrocompatibilità)
       signedXml: signatureData.signedXml,
       signatureValue: signatureData.signatureValue || '',
       certificateData: signatureData.certificateData || '',

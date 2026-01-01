@@ -1706,9 +1706,14 @@ export const siaeTransmissions = pgTable("siae_transmissions", {
   // File
   fileName: varchar("file_name", { length: 255 }), // Formato: AAAA>MM>GG>SSSSSSSS>MP>TT>V
   fileExtension: varchar("file_extension", { length: 4 }).notNull().default('.XST'), // .XST o .XSI
-  fileContent: text("file_content"), // Contenuto XML
-  fileHash: varchar("file_hash", { length: 64 }), // SHA-256 hash
-  digitalSignature: text("digital_signature"), // Firma digitale
+  fileContent: text("file_content"), // Contenuto XML originale (sempre presente per compatibilità)
+  fileHash: varchar("file_hash", { length: 64 }), // SHA-256 hash del file inviato
+  digitalSignature: text("digital_signature"), // Firma digitale XMLDSig (legacy)
+  
+  // CAdES-BES signature (nuovo formato SIAE SHA-256)
+  p7mContent: text("p7m_content"), // Contenuto P7M Base64 per firme CAdES-BES
+  signatureFormat: varchar("signature_format", { length: 10 }), // 'cades', 'xmldsig', o null per non firmato
+  signedAt: timestamp("signed_at"), // Data/ora firma documento
   
   // Invio
   status: varchar("status", { length: 20 }).notNull().default('pending'), // pending, sent, received, error

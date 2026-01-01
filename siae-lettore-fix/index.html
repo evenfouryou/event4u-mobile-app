@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline';">
+  <title>Event Four You - SIAE Lettore</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="app-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="logo">
+        <img src="icon.png" alt="Event4U Logo" class="logo-image">
+        <div class="logo-text">
+          <h1>Event Four You</h1>
+          <span class="subtitle">SIAE Lettore Smart Card</span>
+        </div>
+      </div>
+      <div class="header-actions">
+        <button id="btn-toggle-logs" class="btn-icon" title="Mostra/Nascondi Log">
+          📋
+        </button>
+      </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="main-content">
+      <!-- Remote Relay Panel - Auto-connect to Event4U server -->
+      <section class="panel relay-panel">
+        <h2>Connessione Server Event4U</h2>
+        <div class="server-selector">
+          <label for="server-select">Server:</label>
+          <select id="server-select" class="server-dropdown">
+            <option value="production">Produzione (manage.eventfouryou.com)</option>
+            <option value="development">Sviluppo (Replit)</option>
+          </select>
+        </div>
+        <div class="status-grid">
+          <div class="status-item" id="status-relay">
+            <div class="status-indicator"></div>
+            <div class="status-info">
+              <span class="status-label">Server</span>
+              <span class="status-value">Connessione in corso...</span>
+            </div>
+          </div>
+        </div>
+        <p class="relay-info" id="relay-info-text">Connesso a manage.eventfouryou.com</p>
+      </section>
+
+      <!-- Status Panel -->
+      <section class="panel status-panel">
+        <h2>Stato Connessione Locale</h2>
+        <div class="status-grid">
+          <div class="status-item" id="status-bridge">
+            <div class="status-indicator"></div>
+            <div class="status-info">
+              <span class="status-label">Bridge .NET</span>
+              <span class="status-value">Non connesso</span>
+            </div>
+          </div>
+          <div class="status-item" id="status-reader">
+            <div class="status-indicator"></div>
+            <div class="status-info">
+              <span class="status-label">Lettore</span>
+              <span class="status-value">Non rilevato</span>
+            </div>
+          </div>
+          <div class="status-item" id="status-card">
+            <div class="status-indicator"></div>
+            <div class="status-info">
+              <span class="status-label">Smart Card</span>
+              <span class="status-value">Non inserita</span>
+            </div>
+          </div>
+        </div>
+        <div class="status-actions">
+          <button id="btn-connect" class="btn btn-primary">
+            <span class="btn-icon">🔌</span>
+            Connetti Bridge
+          </button>
+          <button id="btn-check-reader" class="btn btn-secondary" disabled>
+            <span class="btn-icon">🔍</span>
+            Verifica Lettore
+          </button>
+        </div>
+      </section>
+
+      <!-- Card Info Panel -->
+      <section class="panel card-panel" id="card-panel" style="display: none;">
+        <h2>Informazioni Carta SIAE</h2>
+        <div class="card-info-grid">
+          <div class="info-item">
+            <span class="info-label">Numero Seriale</span>
+            <span class="info-value" id="card-serial">-</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Contatore</span>
+            <span class="info-value" id="card-counter">-</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Saldo</span>
+            <span class="info-value" id="card-balance">-</span>
+          </div>
+          <div class="info-item">
+            <span class="info-label">Key ID</span>
+            <span class="info-value" id="card-keyid">-</span>
+          </div>
+        </div>
+        <div class="card-actions">
+          <button id="btn-read-card" class="btn btn-primary">
+            <span class="btn-icon">📖</span>
+            Leggi Carta
+          </button>
+          <button id="btn-change-pin" class="btn btn-secondary">
+            <span class="btn-icon">🔑</span>
+            Cambia PIN
+          </button>
+        </div>
+      </section>
+
+      <!-- Sigillo Panel - Solo visualizzazione, generazione comandata dal server -->
+      <section class="panel sigillo-panel" id="sigillo-panel" style="display: none;">
+        <h2>Sigilli Fiscali Generati</h2>
+        <p class="panel-description">I sigilli vengono generati automaticamente quando un cassiere emette un biglietto dal sito web.</p>
+        
+        <!-- Form nascosto per generazione test (solo debug) -->
+        <form id="sigillo-form" style="display: none;">
+          <div class="form-row">
+            <div class="form-group">
+              <label for="input-price">Importo (€)</label>
+              <input type="number" id="input-price" step="0.01" min="0" placeholder="0.00" required>
+            </div>
+            <div class="form-group">
+              <label for="input-datetime">Data/Ora</label>
+              <input type="datetime-local" id="input-datetime">
+            </div>
+            <button type="submit" class="btn btn-success">
+              <span class="btn-icon">✅</span>
+              Genera
+            </button>
+          </div>
+        </form>
+        
+        <!-- Sigilli History - lista dei sigilli generati -->
+        <div id="sigilli-history" class="sigilli-history">
+          <div id="sigilli-list" class="sigilli-list">
+            <div class="sigilli-empty">In attesa di emissione biglietti...</div>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Log Panel (collapsible) -->
+    <aside class="log-panel" id="log-panel">
+      <div class="log-header">
+        <h3>📋 Log Sistema</h3>
+        <div class="log-actions">
+          <button id="btn-clear-logs" class="btn-small" title="Pulisci log">🗑️</button>
+          <button id="btn-export-logs" class="btn-small" title="Esporta log">💾</button>
+        </div>
+      </div>
+      <div class="log-content" id="log-content">
+        <div class="log-entry log-info">
+          <span class="log-time">--:--:--</span>
+          <span class="log-message">In attesa di connessione...</span>
+        </div>
+      </div>
+    </aside>
+
+    <!-- Footer -->
+    <footer class="footer">
+      <span>Event Four You © 2025</span>
+      <span id="app-version">v1.0.9</span>
+    </footer>
+  </div>
+
+  <script src="renderer.js"></script>
+</body>
+</html>

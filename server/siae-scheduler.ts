@@ -418,25 +418,40 @@ async function sendDailyReports() {
         log(`Evento ${ticketedEvent.id} (${event.name}) - Report RCA creato: ${fileName}`);
 
         // Tenta firma digitale se il bridge è connesso
-        let xmlToSend = xmlContent;
         let signatureInfo = '';
+        let p7mBase64: string | undefined;
+        let signedXmlContent: string | undefined;
         
         try {
           if (isBridgeConnected()) {
             log(`Bridge connesso, tentativo firma digitale...`);
             const signatureResult = await requestXmlSignature(xmlContent);
-            xmlToSend = signatureResult.signedXml;
-            signatureInfo = ' (firmato digitalmente)';
-            isSigned = true;
-            log(`XML firmato con successo alle ${signatureResult.signedAt}`);
+            
+            // Supporta sia CAdES-BES (nuovo) che XMLDSig (legacy)
+            if (signatureResult.p7mBase64) {
+              // CAdES-BES: mantieni il P7M Base64 separato
+              p7mBase64 = signatureResult.p7mBase64;
+              signatureInfo = ` (firmato CAdES-BES ${signatureResult.algorithm || 'SHA-256'})`;
+              isSigned = true;
+              log(`Firma CAdES-BES creata alle ${signatureResult.signedAt}`);
+            } else if (signatureResult.signedXml) {
+              // Legacy XMLDSig (deprecato)
+              signedXmlContent = signatureResult.signedXml;
+              signatureInfo = ' (firmato XMLDSig - DEPRECATO)';
+              isSigned = true;
+              log(`Firma XMLDSig creata alle ${signatureResult.signedAt}`);
+            }
             
             // Aggiorna nome file con estensione .xsi.p7m per file firmati
             fileName = generateSiaeFileName('rca', yesterday, progressivo, true);
             
-            // Aggiorna trasmissione con contenuto firmato e nuovo nome file
+            // Aggiorna trasmissione con firma e contenuto appropriato
             await siaeStorage.updateSiaeTransmission(transmission.id, {
-              fileContent: xmlToSend,
+              fileContent: signedXmlContent || xmlContent, // XML originale o XMLDSig firmato
               fileName: fileName,
+              p7mContent: p7mBase64 || null, // Salva P7M Base64 per resend offline
+              signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : null),
+              signedAt: new Date(),
             });
           } else {
             log(`Bridge non connesso, invio XML non firmato`);
@@ -454,10 +469,12 @@ async function sendDailyReports() {
             periodDate: yesterday,
             ticketsCount: reportData.activeTicketsCount,
             totalAmount: reportData.totalRevenue.toFixed(2),
-            xmlContent: xmlToSend,
+            xmlContent: signedXmlContent || xmlContent, // XML originale o XMLDSig firmato
             transmissionId: transmission.id,
             systemCode: systemCode,
             sequenceNumber: progressivo,
+            p7mBase64: p7mBase64, // CAdES-BES P7M per allegato email
+            signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : undefined),
           });
 
           // Aggiorna status a 'sent'
@@ -544,25 +561,40 @@ async function sendMonthlyReports() {
         log(`Evento ${ticketedEvent.id} - Report mensile RCA creato: ${fileName}`);
 
         // Tenta firma digitale se il bridge è connesso
-        let xmlToSend = xmlContent;
         let signatureInfo = '';
+        let p7mBase64: string | undefined;
+        let signedXmlContent: string | undefined;
         
         try {
           if (isBridgeConnected()) {
             log(`Bridge connesso, tentativo firma digitale per report mensile...`);
             const signatureResult = await requestXmlSignature(xmlContent);
-            xmlToSend = signatureResult.signedXml;
-            signatureInfo = ' (firmato digitalmente)';
-            isSigned = true;
-            log(`XML mensile firmato con successo alle ${signatureResult.signedAt}`);
+            
+            // Supporta sia CAdES-BES (nuovo) che XMLDSig (legacy)
+            if (signatureResult.p7mBase64) {
+              // CAdES-BES: mantieni il P7M Base64 separato
+              p7mBase64 = signatureResult.p7mBase64;
+              signatureInfo = ` (firmato CAdES-BES ${signatureResult.algorithm || 'SHA-256'})`;
+              isSigned = true;
+              log(`Firma mensile CAdES-BES creata alle ${signatureResult.signedAt}`);
+            } else if (signatureResult.signedXml) {
+              // Legacy XMLDSig (deprecato)
+              signedXmlContent = signatureResult.signedXml;
+              signatureInfo = ' (firmato XMLDSig - DEPRECATO)';
+              isSigned = true;
+              log(`Firma mensile XMLDSig creata alle ${signatureResult.signedAt}`);
+            }
             
             // Aggiorna nome file con estensione .xsi.p7m per file firmati
             fileName = generateSiaeFileName('rca', previousMonth, progressivo, true);
             
-            // Aggiorna trasmissione con contenuto firmato e nuovo nome file
+            // Aggiorna trasmissione con firma e contenuto appropriato
             await siaeStorage.updateSiaeTransmission(transmission.id, {
-              fileContent: xmlToSend,
+              fileContent: signedXmlContent || xmlContent, // XML originale o XMLDSig firmato
               fileName: fileName,
+              p7mContent: p7mBase64 || null, // Salva P7M Base64 per resend offline
+              signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : null),
+              signedAt: new Date(),
             });
           } else {
             log(`Bridge non connesso, invio XML mensile non firmato`);
@@ -580,10 +612,12 @@ async function sendMonthlyReports() {
             periodDate: previousMonth,
             ticketsCount: reportData.activeTicketsCount,
             totalAmount: reportData.totalRevenue.toFixed(2),
-            xmlContent: xmlToSend,
+            xmlContent: signedXmlContent || xmlContent, // XML originale o XMLDSig firmato
             transmissionId: transmission.id,
             systemCode: systemCode,
             sequenceNumber: progressivo,
+            p7mBase64: p7mBase64, // CAdES-BES P7M per allegato email
+            signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : undefined),
           });
 
           // Aggiorna status a 'sent'

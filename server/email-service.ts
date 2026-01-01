@@ -399,6 +399,9 @@ interface SiaeTransmissionEmailOptions {
   systemCode?: string;
   sequenceNumber?: number;
   signWithSmime?: boolean; // Per Allegato C SIAE - firma S/MIME con carta attivazione
+  // CAdES-BES support: se presente, il file è firmato CAdES-BES (SHA-256)
+  p7mBase64?: string; // Contenuto P7M in Base64 (binario CAdES-BES)
+  signatureFormat?: 'cades' | 'xmldsig'; // Formato firma (default: autodetect)
 }
 
 // Risultato dell'invio email SIAE con info sulla firma
@@ -430,11 +433,15 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
     transmissionId,
     systemCode = DEFAULT_SYSTEM_CODE,
     sequenceNumber = 1,
-    signWithSmime = false
+    signWithSmime = false,
+    p7mBase64,
+    signatureFormat
   } = options;
 
-  // Determina se il file è firmato (CMS/PKCS#7 o XML-DSig)
-  const isSigned = xmlContent.includes('<Signature') && xmlContent.includes('</Signature>');
+  // Determina se il file è firmato CAdES-BES (P7M) o XMLDSig legacy
+  const isCAdES = !!p7mBase64 || signatureFormat === 'cades';
+  const isXmlDsig = !isCAdES && xmlContent.includes('<Signature') && xmlContent.includes('</Signature>');
+  const isSigned = isCAdES || isXmlDsig;
   
   // Mappa transmissionType al formato richiesto da generateSiaeFileName
   const reportTypeMap: Record<string, 'giornaliero' | 'mensile' | 'rca'> = {
@@ -566,7 +573,10 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
       // Per Allegato C SIAE: CRLF folding e encoding canonico
       const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
       const htmlBodyBase64 = Buffer.from(htmlBody, 'utf-8').toString('base64');
-      const xmlContentBase64 = Buffer.from(xmlContent, 'utf-8').toString('base64');
+      
+      // Per CAdES-BES: usa il P7M base64 direttamente, altrimenti codifica XML in base64
+      const attachmentBase64 = isCAdES && p7mBase64 ? p7mBase64 : Buffer.from(xmlContent, 'utf-8').toString('base64');
+      const attachmentMimeType = isCAdES ? 'application/pkcs7-mime' : 'application/xml';
       
       const mimeContent = [
         `From: ${fromAddress}`,
@@ -585,11 +595,11 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
         htmlBodyBase64,
         ``,
         `--${boundary}`,
-        `Content-Type: application/xml; name="${fileName}"`,
+        `Content-Type: ${attachmentMimeType}; name="${fileName}"`,
         `Content-Disposition: attachment; filename="${fileName}"`,
         `Content-Transfer-Encoding: base64`,
         ``,
-        xmlContentBase64,
+        attachmentBase64,
         ``,
         `--${boundary}--`
       ].join('\r\n');
@@ -653,6 +663,22 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
 
   // Invia l'email non firmata (fallback quando S/MIME non disponibile o fallito)
   // Nota: Senza firma S/MIME, SIAE potrebbe non inviare conferma di ricezione (Allegato C 1.6.2)
+  
+  // Prepara l'allegato: P7M binario per CAdES-BES, testo XML per legacy
+  let attachmentContent: Buffer | string;
+  let attachmentContentType: string;
+  
+  if (isCAdES && p7mBase64) {
+    // CAdES-BES: decodifica Base64 in buffer binario
+    attachmentContent = Buffer.from(p7mBase64, 'base64');
+    attachmentContentType = 'application/pkcs7-mime';
+    console.log(`[EMAIL-SERVICE] Attaching CAdES-BES P7M file: ${fileName} (${attachmentContent.length} bytes)`);
+  } else {
+    // XMLDSig legacy o XML non firmato
+    attachmentContent = xmlContent;
+    attachmentContentType = 'application/xml';
+  }
+  
   const mailOptions = {
     from: fromAddress,
     to,
@@ -661,7 +687,8 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
     attachments: [
       {
         filename: fileName,
-        content: xmlContent,
+        content: attachmentContent,
+        contentType: attachmentContentType,
       },
     ],
   };

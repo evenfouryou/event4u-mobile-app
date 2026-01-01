@@ -1,0 +1,343 @@
+Release Notes for ACS Unified Driver
+========================================================
+
+--------------------------------------------------------
+Update: 4.0.0.4 (HG/GG/QA-MNO/RW)      Date: 21-Aug-2014
+--------------------------------------------------------
+
+Description:
+- Package supports the following OSes
+  * Windows 2000
+  * Windows XP (x86 & x64)
+  * Windows Vista (x86 & x64)
+  * Windows 7 (x86 & x64)
+  * Windows 8 (x86 & x64)
+  * Windows 8.1 (x86 & x64)
+  * Windows Server 2003 (x86 & x64)
+  * Windows Server 2008 (x86 & x64)
+  * Windows Server 2008 R2 (x64)
+  * Windows Server 2012 (x64)
+  * Windows Server 2012 R2(x64)
+
+Changes:
+- WHQL certified drivers signed by Microsoft for:
+  * Windows 2000
+  * Windows XP (x86 & x64)
+  * Windows Vista (x86 & x64)
+  * Windows 7 (x86 & x64)
+  * Windows 8 (x86 & x64)
+  * Windows 8.1 (x86 & x64)
+  * Windows Server 2003 (x86 & x64)
+  * Windows Server 2008 (x86 & x64)
+  * Windows Server 2008 R2 (x64)
+  * Windows Server 2012 (x64)
+  * Windows Server 2012 R2 (x64)
+
+--------------------------------------------------------
+Version: 4.0.0.4 (HG/GG)              Date: 21-July-2014
+--------------------------------------------------------
+
+Description:
+- Package supports the following OSes
+  * Windows 2000
+  * Windows XP (x86 & x64)
+  * Windows Vista (x86 & x64)
+  * Windows 7 (x86 & x64)
+  * Windows 8 (x86 & x64)
+  * Windows 8.1 (x86 & x64)
+  * Windows Server 2003 (x86 & x64)
+  * Windows Server 2008 (x86 & x64)
+  * Windows Server 2008 R2 (x64)
+  * Windows Server 2012 (x64)
+  * Windows Server 2012 R2(x64)
+
+Changes:
+- Added 2079 control code support to ACR128
+- Added support for ACR1251U-C1 (PICC+ICC+SAM) PID_2242
+- Bug Fix for ACR1251-A2 BSOD
+- Added support for CryptoMate (T1) PID_B200
+- Added support for CryptoMate (T2) PID_B106
+- Bug Fix for ACR122T BSOD
+- Added support for ACR3901U and ACR3901U-S1 sharing the same PID
+- Added BSOD fix to multislot readers 
+- Added fix for ACR128 sequence mismatch
+- Added the extra guard time according to ISO7816-3 for ACR38U non-CCID
+- Added return active protocol status if current state is SCARD_SPECIFIC and selected protocol matched
+
+--------------------------------------------------------
+Update: 4.0.0.3 (GG/QA-MNO/RW)         Date: 14-May-2014
+--------------------------------------------------------
+
+Description:
+- Package supports the following OSes
+  * Windows 2000
+  * Windows XP (x86 & x64)
+  * Windows Vista (x86 & x64)
+  * Windows 7 (x86 & x64)
+  * Windows 8 (x86 & x64)
+  * Windows 8.1 (x86 & x64)
+  * Windows Server 2003 (x86 & x64)
+  * Windows Server 2008 (x86 & x64)
+  * Windows Server 2008 R2 (x64)
+  * Windows Server 2012 (x64)
+  * Windows Server 2012 R2(x64)
+
+Changes:
+- WHQL certified drivers signed by Microsoft for:
+  * Windows 2000
+  * Windows XP (x86 & x64)
+  * Windows Vista (x86 & x64)
+  * Windows 7 (x86 & x64)
+  * Windows 8 (x86 & x64)
+  * Windows 8.1 (x86 & x64)
+  * Windows Server 2008 R2 (x64)
+  * Windows Server 2012 (x64)
+  * Windows Server 2012 R2 (x64)
+
+--------------------------------------------------------
+Version: 4.0.0.3 (GG)                Date: 28-April-2014
+--------------------------------------------------------
+
+Description:
+- Package supports the following OSes
+  * Windows 2000
+  * Windows XP (x86 & x64)
+  * Windows Vista (x86 & x64)
+  * Windows 7 (x86 & x64)
+  * Windows 8 (x86 & x64)
+  * Windows 8.1 (x86 & x64)
+  * Windows Server 2003 (x86 & x64)
+  * Windows Server 2008 (x86 & x64)
+  * Windows Server 2008 R2 (x64)
+  * Windows Server 2012 (x64)
+  * Windows Server 2012 R2(x64)
+
+Changes:
+- Updated T1 data handling for ACR1251U-A1 SAM 
+  and composite ACR1281 devices
+- Added support for ACR32-A1
+
+--------------------------------------------------------
+Update: 4.0.0.2 (GG/QA-MNO/RW)       Date: 25-March-2014
+--------------------------------------------------------
+
+Description:
+- Package supports the following OSes
+  * Windows 2000
+  * Windows XP (x86 & x64)
+  * Windows Vista (x86 & x64)
+  * Windows 7 (x86 & x64)
+  * Windows 8 (x86 & x64)
+  * Windows 8.1 (x86 & x64)
+  * Windows Server 2003 (x86 & x64)
+  * Windows Server 2008 (x86 & x64)
+  * Windows Server 2008 R2 (x64)
+  * Windows Server 2012 (x64)
+  * Windows Server 2012 R2(x64)
+
+Changes:
+- WHQL certified drivers signed by Microsoft for:
+  * Windows 2000
+  * Windows XP (x86 & x64)
+  * Windows Vista (x86 & x64)
+  * Windows 7 (x86 & x64)
+  * Windows 8 (x86 & x64)
+  * Windows 8.1 (x86 & x64)
+  * Windows Server 2008 R2 (x64)
+  * Windows Server 2012 (x64)
+  * Windows Server 2012 R2 (x64)
+
+--------------------------------------------------------
+Version: 4.0.0.2 (GG)                Date: 03-March-2014
+--------------------------------------------------------
+
+Description:
+- Package supports the following OSes
+  * Windows 2000
+  * Windows XP (x86 & x64)
+  * Windows Vista (x86 & x64)
+  * Windows 7 (x86 & x64)
+  * Windows 8 (x86 & x64)
+  * Windows 8.1 (x86 & x64)
+  * Windows Server 2003 (x86 & x64)
+  * Windows Server 2008 (x86 & x64)
+  * Windows Server 2008 R2 (x64)
+  * Windows Server 2012 (x64)
+  * Windows Server 2012 R2(x64)
+
+Changes:
+- Fixed ACR122U-SAM protocol setting
+
+--------------------------------------------------------
+Update: 4.0.0.1 (GG/QA-MNO/RW)     Date: 4-February-2014
+--------------------------------------------------------
+
+Description:
+- Package supports the following OSes
+  * Windows 2000
+  * Windows XP (x86 & x64)
+  * Windows Vista (x86 & x64)
+  * Windows 7 (x86 & x64)
+  * Windows 8 (x86 & x64)
+  * Windows 8.1 (x86 & x64)
+  * Windows Server 2003 (x86 & x64)
+  * Windows Server 2008 (x86 & x64)
+  * Windows Server 2008 R2 (x64)
+  * Windows Server 2012 (x64)
+  * Windows Server 2012 R2(x64)
+
+Changes:
+- WHQL certified drivers signed by Microsoft for:
+  * Windows 2000
+  * Windows XP (x86 & x64)
+  * Windows Vista (x86 & x64)
+  * Windows 7 (x86 & x64)
+  * Windows 8 (x86 & x64)
+  * Windows 8.1 (x86 & x64)
+  * Windows Server 2008 R2 (x64)
+  * Windows Server 2012 (x64)
+  * Windows Server 2012 R2 (x64)
+
+--------------------------------------------------------
+Version: 4.0.0.1 (GG)              Date: 25-January-2014
+--------------------------------------------------------
+
+Description:
+- Package supports the following OSes
+  * Windows 2000
+  * Windows XP (x86 & x64)
+  * Windows Vista (x86 & x64)
+  * Windows 7 (x86 & x64)
+  * Windows 8 (x86 & x64)
+  * Windows 8.1 (x86 & x64)
+  * Windows Server 2003 (x86 & x64)
+  * Windows Server 2008 (x86 & x64)
+  * Windows Server 2008 R2 (x64)
+  * Windows Server 2012 (x64)
+  * Windows Server 2012 R2(x64)
+
+Changes:
+- Fixed ACR1283L Bootloader driver
+- Fixed ACR128U SAM reader name
+- Fixed ACR123S Bootloader driver
+- Added fix for slow proc speed with AT88SC Card
+- Added extended APDU support for ACR1281UK PID_2233
+- Added support for ACR1256U-A1
+- Updated ACR1251U-C driver to support both ICC and PICC
+- Updated ACR1281C7-SAM driver to use custom datarates
+- Added extended APDU support for ACR1281U-C1
+- Fixed ACR83 T1 data handling
+
+--------------------------------------------------------
+Update: 4.0.0.0 (GG/QA-MNO/RW)    Date: 7-November-2013
+--------------------------------------------------------
+
+Description:
+- ACS Unified Driver supporting all generic ACS PCSC/CCID SmartCard Readers.
+  Package supports the following OSes
+  * Windows 2000
+  * Windows XP (x86 & x64)
+  * Windows Vista (x86 & x64)
+  * Windows 7 (x86 & x64)
+  * Windows 8 (x86 & x64)
+  * Windows 8.1 (x86 & x64)
+  * Windows Server 2003 (x86 & x64)
+  * Windows Server 2008 (x86 & x64)
+  * Windows Server 2008 R2 (x64)
+  * Windows Server 2012 (x64)
+  * Windows Server 2012 R2(x64)
+
+Changes:
+- WHQL certified drivers signed by Microsoft for:
+  * Windows 2000
+  * Windows XP (x86 & x64)
+  * Windows Vista (x86 & x64)
+  * Windows 7 (x86 & x64)
+  * Windows 8 (x86 & x64)
+  * Windows 8.1 (x86 & x64)
+  * Windows Server 2008 R2 (x64)
+  * Windows Server 2012 (x64)
+  * Windows Server 2012 R2 (x64)
+
+--------------------------------------------------------
+Version: 4.0.0.0 (GG) 	        Date: 10-October-2013
+--------------------------------------------------------
+
+Description:
+- ACS Unified Driver supporting all generic ACS PCSC/CCID SmartCard Readers
+  List of supported readers:
+  * VID_072F&PID_9006				CTM Fw110
+  * VID_072F&PID_90DB				CTM64 Fw112
+  * VID_072F&PID_2200				ACR122U/T
+  * VID_072F&PID_90CC				ACR122U-SAM / ACS CCID
+  * VID_072F&PID_2100				ACR128
+  * VID_072F&PID_2224				ACR1281U-C1
+  * VID_072F&PID_2220&MI_00/01			ACR1281U-C7
+  * VID_072F&PID_220F				qPBOC PICC
+  * VID_072F&PID_2208&MI_00/01			qPBOC Dual
+  * VID_072F&PID_220A&MI_00/01			BSI Dual
+  * VID_072F&PID_0901				ACR1281U-C4
+  * VID_072F&PID_2215				ACR1281 2SAM
+  * VID_072F&PID_2223				new qPBOC
+  * VID_072F&PID_2233				ACR1281U-K PICC Reader
+  * VID_072F&PID_2234				ACR1281U-K Dual Reader
+  * VID_072F&PID_2235				ACR1281U-K 1S
+  * VID_072F&PID_2236				ACR1281U-K 4S
+  * VID_072F&PID_222C				ACR1283L PICC
+  * VID_072F&PID_2213				ACR1283L 4SAM
+  * VID_072F&PID_220C				ACR1283 Bootloader
+  * VID_072F&PID_1280				ACR1222U-C3
+  * VID_072F&PID_2207				ACR1222U-C6
+  * VID_072F&PID_2214				ACR1222U-C1
+  * VID_072F&PID_2206				ACR1222L
+  * VID_072F&PID_2211				ACR1261U-C1
+  * VID_072F&PID_221A&MI_00/01			ACR1251U-A1
+  * VID_072F&PID_2229				ACR1251U-A2
+  * VID_072F&PID_2218&MI_00/01			ACR1251U-C PICC + SAM
+  * VID_072F&PID_221B				ACR1251U-C PICC
+  * VID_072F&PID_2232&MI_00/01			ACR1251U-K PICC + ICC
+  * VID_072F&PID_223B&MI_00/01			ACR1252U-A1
+  * VID_072F&PID_223E				ACR1252U-A2
+  * VID_072F&PID_223D				ACR1252U Bootloader
+  * VID_072F&PID_222E				ACR123-PICC+3SAM
+  * VID_072F&PID_2237				ACR123-PICC
+  * VID_072F&PID_2219				ACR123 Bootloader
+  * VID_072F&PID_8301				ACR33XX - 4SAM
+  * VID_072F&PID_8300				ACR33 - A1
+  * VID_072F&PID_8302				ACR33 - A2
+  * VID_072F&PID_8307				ACR33 - A3
+  * VID_072F&PID_9000				ACR38 FW110
+  * VID_072F&PID_90CF				ACR38USAM
+  * VID_072F&PID_90D8				ACR3801
+  * VID_072F&PID_1205				ACR100I
+  * VID_072F&PID_1204				ACR101
+  * VID_072F&PID_1206				ACR102
+  * VID_072F&PID_0102				AET62 w/o SAM
+  * VID_072F&PID_0103				AET62 w SAM
+  * VID_072F&PID_0100				AET65 w/o SAM
+  * VID_072F&PID_0101				AET65 w SAM
+  * VID_072F&PID_90D2				ACR83
+  * VID_072F&PID_8201				APG8201
+  * VID_072F&PID_B100				ACR39U
+  * VID_072F&PID_B000				ACR3901
+  * VID_072F&PID_8900				ACR89 Standard
+  * VID_072F&PID_8901				ACR89 CL
+  * VID_072F&PID_8902				ACR89 FPA
+  * VID_072F&PID_2010				ACR88
+  * VID_072F&PID_2011				ACR88
+  * VID_072F&PID_0001				ACR30
+  * VID_072F&PID_8002				AET63
+
+- Package supports the following OSes:
+  * Windows 2000
+  * Windows XP (x86 & x64)
+  * Windows Vista (x86 & x64)
+  * Windows 7 (x86 & x64)
+  * Windows 8 (x86 & x64)
+  * Windows 8.1 (x86 & x64)
+  * Windows Server 2003 (x86 & x64)
+  * Windows Server 2008 (x86 & x64)
+  * Windows Server 2008 R2 (x64)
+  * Windows Server 2012 (x64)
+  * Windows Server 2012 R2(x64)
+
