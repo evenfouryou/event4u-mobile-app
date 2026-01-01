@@ -1,0 +1,46 @@
+Counting objects: 100% (9602/9602), done.
+Delta compression using up to 8 threads
+Compressing objects: 100% (2019/2019), done.
+Writing objects: 100% (9602/9602), 152.53 MiB | 5.67 MiB/s, done.
+Total 9602 (delta 7915), reused 9028 (delta 7427), pack-reused 0 (from 0)
+remote: Resolving deltas: 100% (7915/7915), done.
+remote: warning: See https://gh.io/lfs for more information.
+remote: warning: File attached_assets/17140161581180_1765538893433.rar is 72.30 MB; this is larger than GitHub's recommended maximum file size of 50.00 MB
+remote: warning: GH001: Large files detected. You may want to try Git Large File Storage - https://git-lfs.github.com.
+remote: error: GH013: Repository rule violations found for refs/heads/main.
+remote: 
+remote: - GITHUB PUSH PROTECTION
+remote:   —————————————————————————————————————————
+remote:     Resolve the following violations before pushing again
+remote: 
+remote:     - Push cannot contain secrets
+remote: 
+remote:     
+remote:      (?) Learn how to resolve a blocked push
+remote:      https://docs.github.com/code-security/secret-scanning/working-with-secret-scanning-and-push-protection/working-with-push-protection-from-the-command-line#resolving-a-blocked-push
+remote:     
+remote:     
+remote:       —— Google OAuth Client ID ————————————————————————————
+remote:        locations:
+remote:          - commit: 54b3bf34e7657e474fd36680401003277b6a7462
+remote:            path: attached_assets/client_secret_248112015318-hhgdibmtp4k88o3p1lir7jd9eojf5iat.a_1767005646034.json:1
+remote:     
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.
+remote:        https://github.com/evenfouryou/Event-Four-You-2026/security/secret-scanning/unblock-secret/37fbzLmKbvqBZWoQ8P0M0pu4FHP
+remote:     
+remote:     
+remote:       —— Google OAuth Client Secret ————————————————————————
+remote:        locations:
+remote:          - commit: 54b3bf34e7657e474fd36680401003277b6a7462
+remote:            path: attached_assets/client_secret_248112015318-hhgdibmtp4k88o3p1lir7jd9eojf5iat.a_1767005646034.json:1
+remote:     
+remote:        (?) To push, remove secret from commit(s) or follow this URL to allow the secret.
+remote:        https://github.com/evenfouryou/Event-Four-You-2026/security/secret-scanning/unblock-secret/37fbzL3O0RY5xJEfp98DaGNvZVl
+remote:     
+remote: 
+remote: 
+To https://github.com/evenfouryou/Event-Four-You-2026.git
+ ! [remote rejected] main -> main (push declined due to repository rule violations)
+error: failed to push some refs to 'https://github.com/evenfouryou/Event-Four-You-2026.git'
+Push completed!
+~/workspace$ 
