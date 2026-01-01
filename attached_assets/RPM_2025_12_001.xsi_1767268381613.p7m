@@ -1,0 +1,264 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RiepilogoMensile Mese="202512" DataGenerazione="20260101" OraGenerazione="113242" ProgressivoGenerazione="14" Sostituzione="S">
+    <Titolare>
+        <Denominazione>Hyper Events</Denominazione>
+        <CodiceFiscale>02114370436</CodiceFiscale>
+        <SistemaEmissione>EVENT4U1</SistemaEmissione>
+    </Titolare>
+    <Organizzatore>
+        <Denominazione>Hyper Events</Denominazione>
+        <CodiceFiscale>02114370436</CodiceFiscale>
+        <TipoOrganizzatore valore="G"/>
+        <Evento>
+            <Intrattenimento>
+                <TipoTassazione valore="I"/>
+                <Incidenza>100</Incidenza>
+                <ImponibileIntrattenimenti>0</ImponibileIntrattenimenti>
+            </Intrattenimento>
+            <Locale>
+                <Denominazione>Azure Club</Denominazione>
+                <CodiceLocale>0000000000000</CodiceLocale>
+            </Locale>
+            <DataEvento>20260105</DataEvento>
+            <OraEvento>0910</OraEvento>
+            <MultiGenere>
+                <TipoGenere>64</TipoGenere>
+                <IncidenzaGenere>0</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>Prova 28/12 pt 2</Titolo>
+                </TitoliOpere>
+            </MultiGenere>
+            <OrdineDiPosto>
+                <CodiceOrdine>P0</CodiceOrdine>
+                <Capienza>100</Capienza>
+                <TitoliAccesso>
+                    <TipoTitolo>R1</TipoTitolo>
+                    <Quantita>2</Quantita>
+                    <CorrispettivoLordo>200</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>0</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                </TitoliAccesso>
+                <IVAEccedenteOmaggi>0</IVAEccedenteOmaggi>
+            </OrdineDiPosto>
+        </Evento>
+        <Evento>
+            <Intrattenimento>
+                <TipoTassazione valore="I"/>
+                <Incidenza>100</Incidenza>
+                <ImponibileIntrattenimenti>0</ImponibileIntrattenimenti>
+            </Intrattenimento>
+            <Locale>
+                <Denominazione>Azure Club</Denominazione>
+                <CodiceLocale>0000000000000</CodiceLocale>
+            </Locale>
+            <DataEvento>20251229</DataEvento>
+            <OraEvento>2030</OraEvento>
+            <MultiGenere>
+                <TipoGenere>60</TipoGenere>
+                <IncidenzaGenere>0</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>PROVA 28-12</Titolo>
+                </TitoliOpere>
+            </MultiGenere>
+            <OrdineDiPosto>
+                <CodiceOrdine>A9</CodiceOrdine>
+                <Capienza>100</Capienza>
+                <TitoliAccesso>
+                    <TipoTitolo>R1</TipoTitolo>
+                    <Quantita>6</Quantita>
+                    <CorrispettivoLordo>600</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>0</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                </TitoliAccesso>
+                <IVAEccedenteOmaggi>0</IVAEccedenteOmaggi>
+            </OrdineDiPosto>
+        </Evento>
+        <Evento>
+            <Intrattenimento>
+                <TipoTassazione valore="I"/>
+                <Incidenza>100</Incidenza>
+                <ImponibileIntrattenimenti>0</ImponibileIntrattenimenti>
+            </Intrattenimento>
+            <Locale>
+                <Denominazione>Azure Club</Denominazione>
+                <CodiceLocale>0000000000000</CodiceLocale>
+            </Locale>
+            <DataEvento>20251227</DataEvento>
+            <OraEvento>2030</OraEvento>
+            <MultiGenere>
+                <TipoGenere>64</TipoGenere>
+                <IncidenzaGenere>0</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>Prova Davis</Titolo>
+                </TitoliOpere>
+            </MultiGenere>
+            <OrdineDiPosto>
+                <CodiceOrdine>P0</CodiceOrdine>
+                <Capienza>300</Capienza>
+                <IVAEccedenteOmaggi>0</IVAEccedenteOmaggi>
+            </OrdineDiPosto>
+        </Evento>
+        <Evento>
+            <Intrattenimento>
+                <TipoTassazione valore="S"/>
+                <Incidenza>0</Incidenza>
+                <ImponibileIntrattenimenti>0</ImponibileIntrattenimenti>
+            </Intrattenimento>
+            <Locale>
+                <Denominazione>Azure Club</Denominazione>
+                <CodiceLocale>0000000000000</CodiceLocale>
+            </Locale>
+            <DataEvento>20260108</DataEvento>
+            <OraEvento>1955</OraEvento>
+            <MultiGenere>
+                <TipoGenere>07</TipoGenere>
+                <IncidenzaGenere>0</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>MELONS</Titolo>
+                </TitoliOpere>
+            </MultiGenere>
+            <OrdineDiPosto>
+                <CodiceOrdine>A0</CodiceOrdine>
+                <Capienza>100</Capienza>
+                <TitoliAccesso>
+                    <TipoTitolo>R1</TipoTitolo>
+                    <Quantita>6</Quantita>
+                    <CorrispettivoLordo>2400</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>0</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                </TitoliAccesso>
+                <IVAEccedenteOmaggi>0</IVAEccedenteOmaggi>
+            </OrdineDiPosto>
+        </Evento>
+        <Abbonamenti>
+            <Abbonamento>
+                <CodiceAbbonamento>ABO-MJQ5JI7Q-9DK6</CodiceAbbonamento>
+                <Validita>20261228</Validita>
+                <TipoTassazione valore="S"/>
+                <Turno valore="F"/>
+                <CodiceOrdine>A0</CodiceOrdine>
+                <TipoTitolo>ABB</TipoTitolo>
+                <QuantitaEventiAbilitati>5</QuantitaEventiAbilitati>
+                <AbbonamentiEmessi>
+                    <Quantita>1</Quantita>
+                    <CorrispettivoLordo>100</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>4</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                </AbbonamentiEmessi>
+                <AbbonamentiAnnullati>
+                    <Quantita>0</Quantita>
+                    <CorrispettivoLordo>0</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>0</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                </AbbonamentiAnnullati>
+                <AbbonamentiIVAPreassolta>
+                    <Quantita>0</Quantita>
+                    <ImportoFigurativo>0</ImportoFigurativo>
+                    <IVAFigurativa>0</IVAFigurativa>
+                </AbbonamentiIVAPreassolta>
+                <AbbonamentiIVAPreassoltaAnnullati>
+                    <Quantita>0</Quantita>
+                    <ImportoFigurativo>0</ImportoFigurativo>
+                    <IVAFigurativa>0</IVAFigurativa>
+                </AbbonamentiIVAPreassoltaAnnullati>
+            </Abbonamento>
+            <Abbonamento>
+                <CodiceAbbonamento>ABO-MJQ44GQO-QRTF</CodiceAbbonamento>
+                <Validita>20261228</Validita>
+                <TipoTassazione valore="S"/>
+                <Turno valore="F"/>
+                <CodiceOrdine>A0</CodiceOrdine>
+                <TipoTitolo>ABB</TipoTitolo>
+                <QuantitaEventiAbilitati>5</QuantitaEventiAbilitati>
+                <AbbonamentiEmessi>
+                    <Quantita>1</Quantita>
+                    <CorrispettivoLordo>100</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>4</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                </AbbonamentiEmessi>
+                <AbbonamentiAnnullati>
+                    <Quantita>0</Quantita>
+                    <CorrispettivoLordo>0</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>0</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                </AbbonamentiAnnullati>
+                <AbbonamentiIVAPreassolta>
+                    <Quantita>0</Quantita>
+                    <ImportoFigurativo>0</ImportoFigurativo>
+                    <IVAFigurativa>0</IVAFigurativa>
+                </AbbonamentiIVAPreassolta>
+                <AbbonamentiIVAPreassoltaAnnullati>
+                    <Quantita>0</Quantita>
+                    <ImportoFigurativo>0</ImportoFigurativo>
+                    <IVAFigurativa>0</IVAFigurativa>
+                </AbbonamentiIVAPreassoltaAnnullati>
+            </Abbonamento>
+            <Abbonamento>
+                <CodiceAbbonamento>ABO-MJQ3EJ8Z-MPVS</CodiceAbbonamento>
+                <Validita>20261228</Validita>
+                <TipoTassazione valore="S"/>
+                <Turno valore="F"/>
+                <CodiceOrdine>A0</CodiceOrdine>
+                <TipoTitolo>ABB</TipoTitolo>
+                <QuantitaEventiAbilitati>5</QuantitaEventiAbilitati>
+                <AbbonamentiEmessi>
+                    <Quantita>0</Quantita>
+                    <CorrispettivoLordo>0</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>0</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                </AbbonamentiEmessi>
+                <AbbonamentiAnnullati>
+                    <Quantita>1</Quantita>
+                    <CorrispettivoLordo>100</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>4</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                </AbbonamentiAnnullati>
+                <AbbonamentiIVAPreassolta>
+                    <Quantita>0</Quantita>
+                    <ImportoFigurativo>0</ImportoFigurativo>
+                    <IVAFigurativa>0</IVAFigurativa>
+                </AbbonamentiIVAPreassolta>
+                <AbbonamentiIVAPreassoltaAnnullati>
+                    <Quantita>0</Quantita>
+                    <ImportoFigurativo>0</ImportoFigurativo>
+                    <IVAFigurativa>0</IVAFigurativa>
+                </AbbonamentiIVAPreassoltaAnnullati>
+            </Abbonamento>
+        </Abbonamenti>
+    </Organizzatore>
+
+  <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+    <SignedInfo>
+      <CanonicalizationMethod Algorithm="http://www.w3.org/TR/2001/REC-xml-c14n-20010315"/>
+      <SignatureMethod Algorithm="http://www.w3.org/2000/09/xmldsig#rsa-sha1"/>
+      <Reference URI="">
+        <Transforms>
+          <Transform Algorithm="http://www.w3.org/2000/09/xmldsig#enveloped-signature"/>
+        </Transforms>
+        <DigestMethod Algorithm="http://www.w3.org/2000/09/xmldsig#sha1"/>
+        <DigestValue>2T9bn6lm3ETo/5oRPCWVvRla7xI=</DigestValue>
+      </Reference>
+    </SignedInfo>
+    <SignatureValue>w+33O2yk5sDwR3blSpcsJewScLY50azfv5CgRqSRO2WK8WL0QXGwxSdfON8V2MRqDmCcJ3LuwoD2d3SfQmXz4sn2puz/2N8SkX/Za8+IrRFfM7OGKWR1MqLO8mVmFFNY4pPgpgHuxv4nrgJ7el6C8OYM8XgyFJG/6fTbXmRY8zU=</SignatureValue>
+    <KeyInfo>
+      <X509Data>
+        <X509Certificate>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</X509Certificate>
+      </X509Data>
+    </KeyInfo>
+    <Object>
+      <SignatureProperties>
+        <SignatureProperty Target="#signature">
+          <SigningTime>2026-01-01T12:32:48+01:00</SigningTime>
+        </SignatureProperty>
+      </SignatureProperties>
+    </Object>
+  </Signature></RiepilogoMensile>
