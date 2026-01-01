@@ -66,6 +66,19 @@ namespace SiaeBridge
         [DllImport(DLL, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
         static extern int VerifyPINML(int nPIN, [MarshalAs(UnmanagedType.LPStr)] string pin, int nSlot);
 
+        // ============================================================
+        // IMPORT libSIAEp7.dll - per firme PKCS#7/P7M (CAdES-BES)
+        // ============================================================
+        private const string DLL_P7 = "libSIAEp7.dll";
+
+        [DllImport(DLL_P7, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
+        static extern int PKCS7SignML(
+            [MarshalAs(UnmanagedType.LPStr)] string pin,
+            uint slot,
+            [MarshalAs(UnmanagedType.LPStr)] string szInputFileName,
+            [MarshalAs(UnmanagedType.LPStr)] string szOutputFileName,
+            int bInitialize);
+
         // Windows API
         [DllImport("winscard.dll", CharSet = CharSet.Unicode)]
         static extern int SCardListReadersW(IntPtr hContext, string mszGroups, byte[] mszReaders, ref int pcchReaders);
@@ -91,7 +104,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.6 - S/MIME email signature for SIAE transmission (Allegato C)");
+            Log("SiaeBridge v3.7 - PKCS7SignML direct smart card signing (libSIAEp7.dll)");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -104,6 +117,16 @@ namespace SiaeBridge
             else
             {
                 Log("✗ libSIAE.dll NOT FOUND!");
+            }
+
+            string dllP7Path = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "libSIAEp7.dll");
+            if (File.Exists(dllP7Path))
+            {
+                Log($"✓ libSIAEp7.dll: {new FileInfo(dllP7Path).Length} bytes (PKCS7/P7M signing)");
+            }
+            else
+            {
+                Log("✗ libSIAEp7.dll NOT FOUND - P7M signing will fail!");
             }
 
             Console.WriteLine("READY");
@@ -1501,92 +1524,114 @@ namespace SiaeBridge
         }
 
         // ============================================================
-        // CAdES-BES SIGNATURE - Firma conforme SIAE con SHA-256
-        // Produce file P7M binario invece di XMLDSig
+        // CAdES-BES SIGNATURE - Firma PKCS#7/P7M usando libSIAEp7.dll
+        // Usa direttamente la smart card SIAE senza passare per Windows CSP
         // Richiesto per report C1 inviati a SIAE
         // ============================================================
 
         /// <summary>
-        /// Crea firma CAdES-BES con SHA-256 usando il certificato della Smart Card SIAE
+        /// Crea firma PKCS#7/P7M usando libSIAEp7.dll direttamente dalla smart card SIAE
         /// Ritorna il file P7M firmato in Base64
         /// </summary>
         static (bool success, string p7mBase64, string error, string signedAt) CreateCAdESSignature(byte[] xmlBytes, string pin)
         {
+            string inputFile = null;
+            string outputFile = null;
+            
             try
             {
-                Log($"CreateCAdESSignature: xmlBytes.Length={xmlBytes.Length}");
+                Log($"CreateCAdESSignature (libSIAEp7): xmlBytes.Length={xmlBytes.Length}, slot={_slot}");
 
-                // Ottieni il certificato dalla Smart Card tramite Windows Certificate Store
-                X509Certificate2 cert = GetSmartCardCertificateFromStore();
-                if (cert == null)
+                // Verifica che libSIAEp7.dll esista
+                string p7DllPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "libSIAEp7.dll");
+                if (!File.Exists(p7DllPath))
                 {
-                    return (false, null, "Certificato Smart Card SIAE non trovato nello store Windows", null);
+                    Log($"  ERROR: libSIAEp7.dll not found at {p7DllPath}");
+                    return (false, null, "libSIAEp7.dll non trovata - impossibile creare firma P7M", null);
+                }
+                Log($"  ✓ libSIAEp7.dll found: {new FileInfo(p7DllPath).Length} bytes");
+
+                // Crea file temporanei per input/output
+                string tempDir = Path.GetTempPath();
+                string timestamp = DateTime.Now.ToString("yyyyMMddHHmmss");
+                inputFile = Path.Combine(tempDir, $"siae_xml_{timestamp}.xml");
+                outputFile = Path.Combine(tempDir, $"siae_xml_{timestamp}.xml.p7m");
+
+                Log($"  Input file: {inputFile}");
+                Log($"  Output file: {outputFile}");
+
+                // Scrivi l'XML nel file temporaneo
+                File.WriteAllBytes(inputFile, xmlBytes);
+                Log($"  ✓ XML written to temp file ({xmlBytes.Length} bytes)");
+
+                // Chiama PKCS7SignML per creare il P7M firmato
+                // bInitialize = 0 perché la carta è già inizializzata
+                Log($"  Calling PKCS7SignML(pin=***, slot={_slot}, input={inputFile}, output={outputFile}, init=0)...");
+                
+                int result = PKCS7SignML(pin, (uint)_slot, inputFile, outputFile, 0);
+                Log($"  PKCS7SignML returned: {result} (0x{result:X4})");
+
+                if (result != 0)
+                {
+                    // Interpreta i codici di errore comuni
+                    string errorMsg = result switch
+                    {
+                        0x6983 => "PIN bloccato - troppi tentativi errati",
+                        0x6982 => "PIN errato - autenticazione fallita",
+                        0x6A82 => "File non trovato sulla smart card",
+                        0x6A80 => "Parametri errati",
+                        _ when result >= 0x63C0 && result <= 0x63CF => $"PIN errato - tentativi rimasti: {result & 0x0F}",
+                        _ => $"Errore firma PKCS7: 0x{result:X4}"
+                    };
+                    return (false, null, errorMsg, null);
                 }
 
-                Log($"  Certificate found: {cert.Subject}");
-                Log($"  Issuer: {cert.Issuer}");
-                Log($"  HasPrivateKey: {cert.HasPrivateKey}");
-
-                if (!cert.HasPrivateKey)
+                // Verifica che il file P7M sia stato creato
+                if (!File.Exists(outputFile))
                 {
-                    return (false, null, "Il certificato non ha una chiave privata associata", null);
+                    Log($"  ERROR: Output P7M file not created");
+                    return (false, null, "File P7M non creato - errore durante la firma", null);
                 }
 
-                // Crea la struttura CMS/PKCS#7 per CAdES-BES
-                ContentInfo content = new ContentInfo(xmlBytes);
-                SignedCms signedCms = new SignedCms(content, false); // false = attached signature
-
-                // Configura il firmatario con SHA-256
-                CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert);
-                signer.DigestAlgorithm = new Oid("2.16.840.1.101.3.4.2.1", "SHA256"); // SHA-256 OID
-                signer.IncludeOption = X509IncludeOption.WholeChain;
-
-                // Aggiungi attributi firmati richiesti per CAdES-BES
-                // 1. Content-Type
-                Pkcs9ContentType contentType = new Pkcs9ContentType();
-                signer.SignedAttributes.Add(contentType);
-
-                // 2. Signing-Time
-                Pkcs9SigningTime signingTime = new Pkcs9SigningTime(DateTime.Now);
-                signer.SignedAttributes.Add(signingTime);
-
-                // 3. Message-Digest (calcolato automaticamente da SignedCms)
-
-                Log($"  Computing CAdES-BES signature with SHA-256...");
-
-                // Calcola la firma (richiede PIN se la Smart Card lo richiede - gestito da Windows CSP)
-                signedCms.ComputeSignature(signer, false);
-
-                Log($"  Signature computed successfully");
-
-                // Codifica il risultato in formato P7M (DER/BER)
-                byte[] p7mBytes = signedCms.Encode();
+                // Leggi il file P7M e converti in Base64
+                byte[] p7mBytes = File.ReadAllBytes(outputFile);
                 string p7mBase64 = Convert.ToBase64String(p7mBytes);
                 string signedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz");
 
-                Log($"  P7M size: {p7mBytes.Length} bytes");
+                Log($"  ✓ P7M created successfully: {p7mBytes.Length} bytes");
 
                 return (true, p7mBase64, null, signedAt);
             }
-            catch (CryptographicException cryptoEx)
+            catch (DllNotFoundException dllEx)
             {
-                Log($"CreateCAdESSignature crypto error: {cryptoEx.Message}");
-                
-                // Errori comuni della Smart Card
-                if (cryptoEx.Message.Contains("cancelled") || cryptoEx.Message.Contains("annullat"))
-                {
-                    return (false, null, "Operazione annullata dall'utente", null);
-                }
-                if (cryptoEx.Message.Contains("PIN") || cryptoEx.Message.Contains("pin"))
-                {
-                    return (false, null, "Errore PIN: " + cryptoEx.Message, null);
-                }
-                return (false, null, "Errore crittografico: " + cryptoEx.Message, null);
+                Log($"CreateCAdESSignature DLL error: {dllEx.Message}");
+                return (false, null, "libSIAEp7.dll non trovata o non caricabile", null);
             }
             catch (Exception ex)
             {
-                Log($"CreateCAdESSignature error: {ex.Message}");
+                Log($"CreateCAdESSignature error: {ex.GetType().Name}: {ex.Message}");
                 return (false, null, ex.Message, null);
+            }
+            finally
+            {
+                // Pulisci i file temporanei
+                try
+                {
+                    if (inputFile != null && File.Exists(inputFile))
+                    {
+                        File.Delete(inputFile);
+                        Log($"  Cleaned up input file");
+                    }
+                    if (outputFile != null && File.Exists(outputFile))
+                    {
+                        File.Delete(outputFile);
+                        Log($"  Cleaned up output file");
+                    }
+                }
+                catch (Exception cleanupEx)
+                {
+                    Log($"  Cleanup error: {cleanupEx.Message}");
+                }
             }
         }
 

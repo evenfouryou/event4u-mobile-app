@@ -38,10 +38,13 @@ An admin tool for customizing public event pages with modular blocks, managing e
 ### Desktop Bridge Relay System
 A WebSocket relay system (`/ws/bridge`) enables remote smart card reader access from a desktop Electron app to the web application. It supports token-based authentication and company-scoped message routing. This system facilitates digital signatures for SIAE C1 reports using PKI functionality, manages signature error handling, and handles SIAE report transmission via email with an audit trail.
 
-### SIAE Digital Signatures (CAdES-BES)
-The system supports CAdES-BES digital signatures for SIAE report compliance, generating .p7m binary files with SHA-256 algorithm. Key features:
-- **CAdES-BES format**: Uses .NET SignedCms for PKCS#7 signatures with SHA-256 (replaces deprecated SHA-1/XMLDSig)
-- **Signature persistence**: P7M content stored in `siaeTransmissions.p7mContent` field for offline resend capability
+### SIAE Digital Signatures (CAdES-BES via libSIAEp7.dll)
+The system supports CAdES-BES digital signatures for SIAE report compliance, generating .p7m binary files using the official SIAE smart card library. Key features:
+- **Direct smart card signing**: Uses `libSIAEp7.dll` with `PKCS7SignML` function for direct P7M creation
+- **Bypasses Windows CSP**: Smart card accessed directly via SIAE library, avoiding certificate store issues
+- **File-based workflow**: XML written to temp file → PKCS7SignML creates P7M → read and Base64 encode
+- **Error handling**: Interprets smart card error codes (0x6983=PIN blocked, 0x6982=wrong PIN, 0x63Cx=attempts remaining)
+- **Signature persistence**: P7M content stored in `siaeTransmissions.p7mContent` for offline resend
 - **Dual-format support**: Maintains XMLDSig fallback for legacy compatibility
 - **Email transmission**: P7M attachments sent as `application/pkcs7-mime` with proper binary encoding
 - **Offline resilience**: Cached signatures used when bridge is disconnected during resend operations
