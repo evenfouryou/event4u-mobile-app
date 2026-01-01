@@ -163,7 +163,7 @@ async function main() {
     
     // Create commit
     console.log('📝 Creating commit...');
-    const commitMessage = 'v3.10: Fix DLL paths in SiaeBridge.csproj\n\n- Fixed libSIAE.dll path from root to prebuilt/ folder\n- Added <Link> directives for correct output file names\n- Included Newtonsoft.Json.dll from prebuilt as fallback\n- Version bump to 1.0.7 for Electron app\n- All native DLLs now copy correctly to output directory';
+    const commitMessage = 'v3.11: Fix missing System.Security.Permissions\n\n- Added System.Security.Permissions NuGet package v8.0.0\n- Required by Newtonsoft.Json on .NET 8\n- Fixes FileNotFoundException on DynamicCodeGeneration';
     
     const { data: commit } = await octokit.git.createCommit({
       owner,
