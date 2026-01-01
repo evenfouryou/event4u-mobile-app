@@ -43,7 +43,7 @@ async function getAccessToken() {
 }
 
 async function main() {
-  console.log('🚀 Push Event4U SIAE Lettore v3.4 su GitHub\n');
+  console.log('🚀 Push Event4U SIAE Lettore v3.7 su GitHub\n');
   
   const owner = 'evenfouryou';
   const repo = 'event-four-you-siae-lettore';
@@ -56,27 +56,15 @@ async function main() {
     const { data: user } = await octokit.users.getAuthenticated();
     console.log(`✅ Connesso come: ${user.login}`);
     
-    // Files da pushare - SIAE Lettore (tutti i file)
+    // Files da pushare - SIAE Lettore (file aggiornati)
     const files = [
-      { path: 'main.js', localPath: 'desktop-app/main.js' },
-      { path: 'index.html', localPath: 'desktop-app/index.html' },
-      { path: 'package.json', localPath: 'desktop-app/package.json' },
-      { path: 'preload.js', localPath: 'desktop-app/preload.js' },
-      { path: 'renderer.js', localPath: 'desktop-app/renderer.js' },
-      { path: 'styles.css', localPath: 'desktop-app/styles.css' },
-      { path: 'README.md', localPath: 'desktop-app/README.md' },
-      { path: 'BUILD_INSTRUCTIONS.md', localPath: 'desktop-app/BUILD_INSTRUCTIONS.md' },
-      { path: 'build-local.ps1', localPath: 'desktop-app/build-local.ps1' },
-      { path: 'SiaeBridge/Program.cs', localPath: 'desktop-app/SiaeBridge/Program.cs' },
-      { path: 'SiaeBridge/LibSiae.cs', localPath: 'desktop-app/SiaeBridge/LibSiae.cs' },
-      { path: 'SiaeBridge/SiaeBridge.csproj', localPath: 'desktop-app/SiaeBridge/SiaeBridge.csproj' }
+      { path: 'SiaeBridge/Program.cs', localPath: 'siae-lettore-fix/SiaeBridge/Program.cs' },
+      { path: 'SiaeBridge/SiaeBridge.csproj', localPath: 'siae-lettore-fix/SiaeBridge/SiaeBridge.csproj' }
     ];
     
-    // Binary files (icon, DLLs)
+    // Binary files (DLLs)
     const binaryFiles = [
-      { path: 'icon.png', localPath: 'desktop-app/icon.png' },
-      { path: 'SiaeBridge/prebuilt/libSIAE.dll', localPath: 'desktop-app/SiaeBridge/prebuilt/libSIAE.dll' },
-      { path: 'SiaeBridge/prebuilt/Newtonsoft.Json.dll', localPath: 'desktop-app/SiaeBridge/prebuilt/Newtonsoft.Json.dll' }
+      { path: 'SiaeBridge/libSIAEp7.dll', localPath: 'siae-lettore-fix/SiaeBridge/libSIAEp7.dll' }
     ];
     
     console.log(`📂 Target: https://github.com/${owner}/${repo}`);
@@ -159,7 +147,7 @@ async function main() {
     
     // Create commit
     console.log('📝 Creating commit...');
-    const commitMessage = 'v3.18: Add missing files (icon, DLLs, build script)\n\n- Add icon.png for app icon\n- Add build-local.ps1 PowerShell build script\n- Add prebuilt DLLs (libSIAE.dll, Newtonsoft.Json.dll)\n\nSee BUILD_INSTRUCTIONS.md for details.';
+    const commitMessage = 'v3.7: Integrate libSIAEp7.dll for direct PKCS7 P7M signing\n\n- Replace Windows CSP-based signing with PKCS7SignML from libSIAEp7.dll\n- Direct smart card access bypasses certificate store issues\n- File-based workflow: XML temp file -> PKCS7SignML -> P7M output\n- Smart card error code handling (PIN blocked/wrong/attempts remaining)\n- Temp file cleanup in finally block';
     
     const { data: commit } = await octokit.git.createCommit({
       owner,
