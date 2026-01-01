@@ -439,15 +439,15 @@ namespace SiaeBridge
                 int sel1111 = LibSiae.SelectML(0x1111, _slot);
                 Log($"  SelectML(0x1111 DF PKI) = {sel1111} (0x{sel1111:X4})");
                 
-                // Select EF FF (anagrafica file)
-                int selEFFF = LibSiae.SelectML(0x00FF, _slot);
-                Log($"  SelectML(0x00FF EF FF) = {selEFFF} (0x{selEFFF:X4})");
+                // Select EF FF (anagrafica file) - File ID is 0xEFFF per SIAE documentation
+                int selEFFF = LibSiae.SelectML(0xEFFF, _slot);
+                Log($"  SelectML(0xEFFF EF FF) = {selEFFF} (0x{selEFFF:X4})");
 
                 if (selEFFF != 0)
                 {
-                    // Try alternative path - some cards may have different structure
-                    selEFFF = LibSiae.SelectML(0xFFFF, _slot);
-                    Log($"  SelectML(0xFFFF alt) = {selEFFF} (0x{selEFFF:X4})");
+                    // Fallback: try 0x00FF in case card uses alternative addressing
+                    selEFFF = LibSiae.SelectML(0x00FF, _slot);
+                    Log($"  SelectML(0x00FF alt) = {selEFFF} (0x{selEFFF:X4})");
                 }
 
                 // EFFF contains 15 variable-length records

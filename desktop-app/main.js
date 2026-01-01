@@ -1821,6 +1821,28 @@ ipcMain.handle('bridge:computeSigillo', async (event, data) => {
   }
 });
 
+ipcMain.handle('bridge:getCertificate', async () => {
+  log.info('IPC: getCertificate');
+  try {
+    return await sendBridgeCommand('GET_CERTIFICATE');
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('bridge:readEfff', async () => {
+  log.info('IPC: readEfff');
+  try {
+    return await sendBridgeCommand('READ_EFFF');
+  } catch (err) {
+    return { success: false, error: err.message };
+  }
+});
+
+ipcMain.handle('app:getVersion', () => {
+  return app.getVersion();
+});
+
 ipcMain.handle('app:getLogPath', () => {
   return log.transports.file.getFile().path;
 });

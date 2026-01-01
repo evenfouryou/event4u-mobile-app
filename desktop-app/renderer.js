@@ -560,11 +560,28 @@ document.addEventListener('DOMContentLoaded', () => {
           addLog('info', '✓ PIN verificato correttamente');
           closePinDialog();
         } else {
-          pinError.textContent = result?.error || 'PIN errato';
-          pinError.style.display = 'block';
-          pinInput.value = '';
-          pinInput.focus();
-          addLog('error', result?.error || 'PIN errato');
+          // Check if PIN is blocked (error code 0x6983 or 0 retries)
+          const isBlocked = result?.errorCode === 0x6983 || 
+                           result?.pinRetriesRemaining === 0 ||
+                           (result?.error && result.error.toLowerCase().includes('bloccato'));
+          
+          if (isBlocked) {
+            closePinDialog();
+            addLog('error', 'PIN bloccato! Necessario sblocco con PUK');
+            setTimeout(() => {
+              window.showPukUnlockDialog && window.showPukUnlockDialog();
+            }, 300);
+          } else {
+            let errorMsg = result?.error || 'PIN errato';
+            if (result?.pinRetriesRemaining !== undefined && result?.pinRetriesRemaining !== null) {
+              errorMsg += ` (${result.pinRetriesRemaining} tentativi rimanenti)`;
+            }
+            pinError.textContent = errorMsg;
+            pinError.style.display = 'block';
+            pinInput.value = '';
+            pinInput.focus();
+            addLog('error', errorMsg);
+          }
         }
       } catch (err) {
         console.error('PIN verification error:', err);
@@ -780,4 +797,189 @@ document.addEventListener('DOMContentLoaded', () => {
       }
     });
   }
+  
+  // ============================================
+  // PUK Unlock Dialog - For blocked cards
+  // ============================================
+  
+  function showPukUnlockDialog(retriesRemaining = null) {
+    addLog('warn', '🔓 Apertura dialog sblocco PUK');
+    
+    const overlay = document.createElement('div');
+    overlay.id = 'puk-unlock-overlay';
+    overlay.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0, 0, 0, 0.85);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10000;
+    `;
+    
+    const dialog = document.createElement('div');
+    dialog.style.cssText = `
+      background: linear-gradient(145deg, #2d2d3a, #1e1e28);
+      border-radius: 16px;
+      padding: 32px;
+      width: 440px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.5);
+      border: 2px solid #f44336;
+    `;
+    
+    const retriesText = retriesRemaining !== null 
+      ? `<p style="color: #f44336; text-align: center; margin-top: 8px; font-size: 13px;">⚠️ Tentativi PUK rimanenti: ${retriesRemaining}</p>` 
+      : '';
+    
+    dialog.innerHTML = `
+      <div style="text-align: center; margin-bottom: 24px;">
+        <div style="font-size: 48px; margin-bottom: 16px;">🔓</div>
+        <h2 style="color: #f44336; margin: 0 0 8px 0; font-size: 20px;">Sblocco Carta con PUK</h2>
+        <p style="color: #999; margin: 0; font-size: 14px;">Il PIN è bloccato. Usa il PUK per sbloccarlo.</p>
+        ${retriesText}
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; color: #ccc; margin-bottom: 8px; font-size: 13px;">Codice PUK (8 cifre)</label>
+        <input type="password" id="puk-input" maxlength="8" 
+          style="width: 100%; padding: 14px; font-size: 22px; text-align: center; 
+          letter-spacing: 8px; background: #1a1a24; border: 2px solid #f44336;
+          border-radius: 8px; color: white; box-sizing: border-box;"
+          placeholder="••••••••" autofocus
+          pattern="[0-9]*" inputmode="numeric">
+      </div>
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; color: #ccc; margin-bottom: 8px; font-size: 13px;">Nuovo PIN (4-8 cifre)</label>
+        <input type="password" id="puk-new-pin" maxlength="8" 
+          style="width: 100%; padding: 14px; font-size: 20px; text-align: center; 
+          letter-spacing: 6px; background: #1a1a24; border: 2px solid #444;
+          border-radius: 8px; color: white; box-sizing: border-box;"
+          placeholder="••••••"
+          pattern="[0-9]*" inputmode="numeric">
+      </div>
+      <div style="margin-bottom: 24px;">
+        <label style="display: block; color: #ccc; margin-bottom: 8px; font-size: 13px;">Conferma nuovo PIN</label>
+        <input type="password" id="puk-confirm-pin" maxlength="8" 
+          style="width: 100%; padding: 14px; font-size: 20px; text-align: center; 
+          letter-spacing: 6px; background: #1a1a24; border: 2px solid #444;
+          border-radius: 8px; color: white; box-sizing: border-box;"
+          placeholder="••••••"
+          pattern="[0-9]*" inputmode="numeric">
+        <p id="puk-error" style="color: #f44336; margin: 8px 0 0 0; font-size: 13px; display: none;">
+          PUK errato
+        </p>
+      </div>
+      <div style="display: flex; gap: 12px;">
+        <button id="puk-cancel" style="flex: 1; padding: 14px; background: #444; 
+          border: none; border-radius: 8px; color: white; font-size: 15px; cursor: pointer;">
+          Annulla
+        </button>
+        <button id="puk-submit" style="flex: 1; padding: 14px; 
+          background: linear-gradient(135deg, #ff5722, #e64a19);
+          border: none; border-radius: 8px; color: white; font-size: 15px; 
+          cursor: pointer; font-weight: 600;">
+          Sblocca Carta
+        </button>
+      </div>
+      <p style="text-align: center; color: #888; font-size: 11px; margin-top: 16px;">
+        Il PUK è fornito insieme alla Smart Card. Se non lo hai, contatta SIAE.
+      </p>
+    `;
+    
+    overlay.appendChild(dialog);
+    document.body.appendChild(overlay);
+    
+    const pukInput = document.getElementById('puk-input');
+    const newPinInput = document.getElementById('puk-new-pin');
+    const confirmPinInput = document.getElementById('puk-confirm-pin');
+    const errorEl = document.getElementById('puk-error');
+    const submitBtn = document.getElementById('puk-submit');
+    const cancelBtn = document.getElementById('puk-cancel');
+    
+    pukInput.focus();
+    
+    function closeDialog() {
+      if (overlay && overlay.parentNode) {
+        overlay.parentNode.removeChild(overlay);
+      }
+    }
+    
+    async function unlockWithPuk() {
+      const puk = pukInput.value.replace(/\D/g, '');
+      const newPin = newPinInput.value.replace(/\D/g, '');
+      const confirmPin = confirmPinInput.value.replace(/\D/g, '');
+      
+      if (!puk || puk.length !== 8) {
+        errorEl.textContent = 'PUK deve essere esattamente 8 cifre';
+        errorEl.style.display = 'block';
+        return;
+      }
+      if (!newPin || newPin.length < 4) {
+        errorEl.textContent = 'Nuovo PIN deve essere di almeno 4 cifre';
+        errorEl.style.display = 'block';
+        return;
+      }
+      if (newPin !== confirmPin) {
+        errorEl.textContent = 'I PIN non corrispondono';
+        errorEl.style.display = 'block';
+        return;
+      }
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sblocco in corso...';
+      errorEl.style.display = 'none';
+      
+      try {
+        const result = await window.siaeAPI.unlockWithPuk(puk, newPin);
+        console.log('PUK unlock result:', result);
+        
+        if (result && result.unlocked) {
+          addLog('info', '✓ Carta sbloccata con successo');
+          closeDialog();
+          alert('Carta sbloccata! Nuovo PIN impostato.');
+        } else {
+          let errorMsg = result?.error || 'Errore sblocco';
+          const retries = result?.pukRetriesRemaining ?? result?.retriesRemaining;
+          if (retries !== undefined && retries !== null) {
+            errorMsg += ` (${retries} tentativi rimanenti)`;
+          }
+          errorEl.textContent = errorMsg;
+          errorEl.style.display = 'block';
+          addLog('error', errorMsg);
+          
+          if (retries === 0) {
+            errorEl.textContent = 'PUK BLOCCATO! La carta è inutilizzabile. Contatta SIAE.';
+          }
+        }
+      } catch (err) {
+        console.error('PUK unlock error:', err);
+        errorEl.textContent = 'Errore: ' + err.message;
+        errorEl.style.display = 'block';
+        addLog('error', 'Errore sblocco PUK: ' + err.message);
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Sblocca Carta';
+      }
+    }
+    
+    submitBtn.addEventListener('click', unlockWithPuk);
+    confirmPinInput.addEventListener('keypress', (e) => {
+      if (e.key === 'Enter') unlockWithPuk();
+    });
+    cancelBtn.addEventListener('click', () => {
+      addLog('warn', 'Sblocco PUK annullato');
+      closeDialog();
+    });
+    
+    overlay.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape') {
+        closeDialog();
+      }
+    });
+  }
+  
+  // Expose the PUK dialog globally so it can be triggered from PIN error
+  window.showPukUnlockDialog = showPukUnlockDialog;
 });
