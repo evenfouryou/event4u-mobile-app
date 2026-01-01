@@ -164,6 +164,7 @@ namespace SiaeBridge
                 if (cmd == "EXIT") { Environment.Exit(0); return OK("BYE"); }
                 if (cmd == "CHECK_READER") return CheckReader();
                 if (cmd == "READ_CARD") return ReadCard();
+                if (cmd == "READ_EFFF") return ReadEfff();
                 if (cmd == "GET_CERTIFICATE") return GetCertificate();
                 if (cmd == "GET_RETRIES") return GetRetries();
                 if (cmd.StartsWith("VERIFY_PIN:")) return VerifyPin(cmd.Substring(11));
@@ -399,6 +400,144 @@ namespace SiaeBridge
                     }
                     catch { }
                 }
+            }
+        }
+
+        // ============================================================
+        // READ EFFF - Legge file EFFF dalla Smart Card SIAE
+        // Contiene 15 campi anagrafici (DF 11 11, EF FF)
+        // Conforme a Descrizione_contenuto_SmartCardTestxBA-V102.pdf
+        // ============================================================
+        static string ReadEfff()
+        {
+            if (_slot < 0) return ERR("Nessuna carta rilevata - prima fai CHECK_READER");
+
+            bool tx = false;
+            try
+            {
+                Log($"ReadEfff: slot={_slot}");
+
+                int state = isCardIn(_slot);
+                Log($"  isCardIn({_slot}) = {state} ({DecodeCardState(state)})");
+                if (!IsCardPresent(state))
+                {
+                    _slot = -1;
+                    return ERR("Carta rimossa");
+                }
+
+                int init = Initialize(_slot);
+                Log($"  Initialize = {init}");
+
+                int txResult = BeginTransactionML(_slot);
+                Log($"  BeginTransactionML = {txResult}");
+                tx = (txResult == 0);
+
+                // Navigate to DF PKI (0x1111) which contains EFFF
+                int sel0000 = LibSiae.SelectML(0x0000, _slot);
+                Log($"  SelectML(0x0000 root) = {sel0000} (0x{sel0000:X4})");
+                
+                int sel1111 = LibSiae.SelectML(0x1111, _slot);
+                Log($"  SelectML(0x1111 DF PKI) = {sel1111} (0x{sel1111:X4})");
+                
+                // Select EF FF (anagrafica file)
+                int selEFFF = LibSiae.SelectML(0x00FF, _slot);
+                Log($"  SelectML(0x00FF EF FF) = {selEFFF} (0x{selEFFF:X4})");
+
+                if (selEFFF != 0)
+                {
+                    // Try alternative path - some cards may have different structure
+                    selEFFF = LibSiae.SelectML(0xFFFF, _slot);
+                    Log($"  SelectML(0xFFFF alt) = {selEFFF} (0x{selEFFF:X4})");
+                }
+
+                // EFFF contains 15 variable-length records
+                // Field lengths according to specification:
+                // 1. systemId (8), 2. contactName (40), 3. contactLastName (40), 4. contactCodFis (18)
+                // 5. systemLocation (100), 6. contactEmail (50), 7. siaeEmail (40)
+                // 8. partnerName (60), 9. partnerCodFis (18), 10. partnerRegistroImprese (18)
+                // 11. partnerNation (2), 12. systemApprCode (20), 13. systemApprDate (20)
+                // 14. contactRepresentationType (1), 15. userDataFileVersion (5)
+
+                var efffData = new
+                {
+                    systemId = ReadEfffField(1, 8),
+                    contactName = ReadEfffField(2, 40),
+                    contactLastName = ReadEfffField(3, 40),
+                    contactCodFis = ReadEfffField(4, 18),
+                    systemLocation = ReadEfffField(5, 100),
+                    contactEmail = ReadEfffField(6, 50),
+                    siaeEmail = ReadEfffField(7, 40),
+                    partnerName = ReadEfffField(8, 60),
+                    partnerCodFis = ReadEfffField(9, 18),
+                    partnerRegistroImprese = ReadEfffField(10, 18),
+                    partnerNation = ReadEfffField(11, 2),
+                    systemApprCode = ReadEfffField(12, 20),
+                    systemApprDate = ReadEfffField(13, 20),
+                    contactRepresentationType = ReadEfffField(14, 1),
+                    userDataFileVersion = ReadEfffField(15, 5)
+                };
+
+                Log($"  EFFF Data read: systemId={efffData.systemId}, siaeEmail={efffData.siaeEmail}");
+
+                // Determine if test card based on systemId prefix
+                bool isTestCard = !string.IsNullOrEmpty(efffData.systemId) && 
+                                  efffData.systemId.ToUpper().StartsWith("P");
+
+                return JsonConvert.SerializeObject(new
+                {
+                    success = true,
+                    efffData = efffData,
+                    isTestCard = isTestCard,
+                    environment = isTestCard ? "test" : "production",
+                    slot = _slot
+                });
+            }
+            catch (Exception ex)
+            {
+                Log($"ReadEfff error: {ex.Message}");
+                return ERR(ex.Message);
+            }
+            finally
+            {
+                if (tx)
+                {
+                    try
+                    {
+                        EndTransactionML(_slot);
+                        Log("  EndTransactionML done");
+                    }
+                    catch { }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Read a single field from EFFF file by record number
+        /// </summary>
+        static string ReadEfffField(int recordNumber, int maxLen)
+        {
+            try
+            {
+                byte[] buffer = new byte[maxLen + 2]; // Extra bytes for safety
+                int len = buffer.Length;
+                
+                int result = LibSiae.ReadRecordML(recordNumber, buffer, ref len, _slot);
+                
+                if (result != 0)
+                {
+                    Log($"    ReadRecordML({recordNumber}) = 0x{result:X4}, len={len}");
+                    return "";
+                }
+
+                // Trim null bytes and convert to string
+                string value = Encoding.ASCII.GetString(buffer, 0, len).TrimEnd('\0', ' ');
+                Log($"    Record {recordNumber}: \"{value}\" (len={len})");
+                return value;
+            }
+            catch (Exception ex)
+            {
+                Log($"    ReadEfffField({recordNumber}) error: {ex.Message}");
+                return "";
             }
         }
 
