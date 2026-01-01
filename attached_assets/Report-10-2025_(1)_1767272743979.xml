@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RiepilogoMensile Data="202511" DataGenerazione="202511" OraGenerazione="105944" ProgressivoGenerazione="5" Sostituzione="N">
+    <Titolare>
+        <Denominazione>HURAEX SRL</Denominazione>
+        <CodiceFiscale>02120820432</CodiceFiscale>
+        <SistemaEmissione>P0004010</SistemaEmissione>
+    </Titolare>
+         <Organizzatore>
+        <Denominazione>azureclub</Denominazione>
+        <CodiceFiscale>1234</CodiceFiscale> 
+        <TipoOrganizzatore valore="G"/>
+                 <Evento>
+            <Intrattenimento>
+                <TipoTassazione valore="S"/>
+            </Intrattenimento>
+            <Locale>
+                <Denominazione>Azure Club</Denominazione>
+                <CodiceLocale>Azure Club</CodiceLocale>
+            </Locale>
+            <DataEvento>20250830</DataEvento>
+            <OraEvento>2121</OraEvento>
+            <MultiGenere>
+                <TipoGenere>05</TipoGenere>
+                <IncidenzaGenere>10</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>Event new change</Titolo>
+                </TitoliOpere>
+            </MultiGenere>
+            
+            <OrdineDiPosto>
+                <CodiceOrdine>AC</CodiceOrdine>
+                <Capienza>34</Capienza>
+                                 <TitoliAccesso>
+                    <TipoTitolo>R1</TipoTitolo>
+                    <Quantita>10</Quantita>
+                    <CorrispettivoLordo>340.30</CorrispettivoLordo>
+                    <Prevendita>0.30</Prevendita>
+                    <IVACorrispettivo>30.94</IVACorrispettivo>
+                    <IVAPrevendita>0.27</IVAPrevendita>
+                    <ImportoPrestazione>0.00</ImportoPrestazione>
+                </TitoliAccesso>
+                                 <IVAEccedenteOmaggi>0</IVAEccedenteOmaggi>
+            </OrdineDiPosto>
+        </Evento>
+                <Evento>
+            <Intrattenimento>
+                <TipoTassazione valore="S"/>
+            </Intrattenimento>
+            <Locale>
+                <Denominazione>Azure Club</Denominazione>
+                <CodiceLocale>Azure Club</CodiceLocale>
+            </Locale>
+            <DataEvento>20251023</DataEvento>
+            <OraEvento>2306</OraEvento>
+            <MultiGenere>
+                <TipoGenere>05</TipoGenere>
+                <IncidenzaGenere>10</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>Payment subscribe</Titolo>
+                </TitoliOpere>
+            </MultiGenere>
+            
+            <OrdineDiPosto>
+                <CodiceOrdine>AC</CodiceOrdine>
+                <Capienza>34</Capienza>
+                                 <TitoliAccesso>
+                    <TipoTitolo>R1</TipoTitolo>
+                    <Quantita>1</Quantita>
+                    <CorrispettivoLordo>10.00</CorrispettivoLordo>
+                    <Prevendita>1.00</Prevendita>
+                    <IVACorrispettivo>0.91</IVACorrispettivo>
+                    <IVAPrevendita>0.91</IVAPrevendita>
+                    <ImportoPrestazione>0.00</ImportoPrestazione>
+                </TitoliAccesso>
+                                 <IVAEccedenteOmaggi>0</IVAEccedenteOmaggi>
+            </OrdineDiPosto>
+        </Evento>
+                <Evento>
+            <Intrattenimento>
+                <TipoTassazione valore="S"/>
+            </Intrattenimento>
+            <Locale>
+                <Denominazione>Azure Club</Denominazione>
+                <CodiceLocale>Azure Club</CodiceLocale>
+            </Locale>
+            <DataEvento>20251101</DataEvento>
+            <OraEvento>0323</OraEvento>
+            <MultiGenere>
+                <TipoGenere>05</TipoGenere>
+                <IncidenzaGenere>10</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>Discoteche</Titolo>
+                </TitoliOpere>
+            </MultiGenere>
+            
+            <OrdineDiPosto>
+                <CodiceOrdine>AB</CodiceOrdine>
+                <Capienza>23</Capienza>
+                                 <TitoliAccesso>
+                    <TipoTitolo>R1</TipoTitolo>
+                    <Quantita>5</Quantita>
+                    <CorrispettivoLordo>520.00</CorrispettivoLordo>
+                    <Prevendita>500.00</Prevendita>
+                    <IVACorrispettivo>47.27</IVACorrispettivo>
+                    <IVAPrevendita>454.55</IVAPrevendita>
+                    <ImportoPrestazione>0.00</ImportoPrestazione>
+                </TitoliAccesso>
+                                 <IVAEccedenteOmaggi>0</IVAEccedenteOmaggi>
+            </OrdineDiPosto>
+        </Evento>
+            </Organizzatore>
+    </RiepilogoMensile>
