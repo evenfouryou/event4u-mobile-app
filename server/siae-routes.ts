@@ -4503,22 +4503,41 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
                 </TitoliAccesso>`;
       }
       
-      sectorsXml += `
+      // DTD Differenze:
+      // - RiepilogoGiornaliero: OrdineDiPosto (CodiceOrdine, Capienza, TitoliAccesso*, ...) - NO IVAEccedenteOmaggi
+      // - RiepilogoMensile: OrdineDiPosto (CodiceOrdine, Capienza, IVAEccedenteOmaggi, TitoliAccesso*, ...)
+      if (isMonthly) {
+        sectorsXml += `
+            <OrdineDiPosto>
+                <CodiceOrdine>${escapeXml(codiceOrdine)}</CodiceOrdine>
+                <Capienza>${capacity}</Capienza>
+                <IVAEccedenteOmaggi>${totalOmaggiIva}</IVAEccedenteOmaggi>${titoliAccessoXml}
+            </OrdineDiPosto>`;
+      } else {
+        sectorsXml += `
             <OrdineDiPosto>
                 <CodiceOrdine>${escapeXml(codiceOrdine)}</CodiceOrdine>
                 <Capienza>${capacity}</Capienza>${titoliAccessoXml}
-                <IVAEccedenteOmaggi>${totalOmaggiIva}</IVAEccedenteOmaggi>
             </OrdineDiPosto>`;
+      }
     }
     
     // If no sectors from tickets, add default sector for event using helper
     if (sectorsXml === '') {
-      sectorsXml = `
+      if (isMonthly) {
+        sectorsXml = `
             <OrdineDiPosto>
                 <CodiceOrdine>${normalizeSiaeCodiceOrdine(null)}</CodiceOrdine>
                 <Capienza>${ticketedEvent.capacity || 100}</Capienza>
                 <IVAEccedenteOmaggi>0</IVAEccedenteOmaggi>
             </OrdineDiPosto>`;
+      } else {
+        sectorsXml = `
+            <OrdineDiPosto>
+                <CodiceOrdine>${normalizeSiaeCodiceOrdine(null)}</CodiceOrdine>
+                <Capienza>${ticketedEvent.capacity || 100}</Capienza>
+            </OrdineDiPosto>`;
+      }
     }
     
     const tipoTassazione = ticketedEvent.taxType || 'S';
@@ -4533,13 +4552,35 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
     const incidenzaGenere = ticketedEvent.genreIncidence ?? 0;
     const eventName = eventDetails.name || 'Evento';
     
-    eventsXml += `
-        <Evento>
+    // DTD Differenze per Intrattenimento:
+    // - RiepilogoGiornaliero: (TipoTassazione, Incidenza?) - NO ImponibileIntrattenimenti
+    // - RiepilogoMensile: (TipoTassazione, Incidenza?, ImponibileIntrattenimenti?)
+    let intrattenimentoXml: string;
+    if (isMonthly) {
+      intrattenimentoXml = `
             <Intrattenimento>
                 <TipoTassazione valore="${escapeXml(tipoTassazione)}"/>
                 <Incidenza>${incidenza}</Incidenza>
                 <ImponibileIntrattenimenti>${imponibileIntrattenimenti}</ImponibileIntrattenimenti>
-            </Intrattenimento>
+            </Intrattenimento>`;
+    } else {
+      // Giornaliero: Incidenza è opzionale, inclusa solo se > 0 per Intrattenimento
+      if (tipoTassazione === 'I' && incidenza > 0) {
+        intrattenimentoXml = `
+            <Intrattenimento>
+                <TipoTassazione valore="${escapeXml(tipoTassazione)}"/>
+                <Incidenza>${incidenza}</Incidenza>
+            </Intrattenimento>`;
+      } else {
+        intrattenimentoXml = `
+            <Intrattenimento>
+                <TipoTassazione valore="${escapeXml(tipoTassazione)}"/>
+            </Intrattenimento>`;
+      }
+    }
+    
+    eventsXml += `
+        <Evento>${intrattenimentoXml}
             <Locale>
                 <Denominazione>${escapeXml(venueName)}</Denominazione>
                 <CodiceLocale>${escapeXml(venueCode)}</CodiceLocale>
