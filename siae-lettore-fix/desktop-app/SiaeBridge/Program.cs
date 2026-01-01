@@ -104,7 +104,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.10 - PKCS7SignML direct smart card signing with fixed DLL paths");
+            Log("SiaeBridge v3.12 - PKCS7SignML with bInitialize=1 for separate session");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -1565,10 +1565,11 @@ namespace SiaeBridge
                 Log($"  ✓ XML written to temp file ({xmlBytes.Length} bytes)");
 
                 // Chiama PKCS7SignML per creare il P7M firmato
-                // bInitialize = 0 perché la carta è già inizializzata
-                Log($"  Calling PKCS7SignML(pin=***, slot={_slot}, input={inputFile}, output={outputFile}, init=0)...");
+                // bInitialize = 1 perché libSIAEp7.dll ha una sessione separata da libSIAE.dll
+                // La libreria p7 deve inizializzare la sua propria connessione alla smart card
+                Log($"  Calling PKCS7SignML(pin=***, slot={_slot}, input={inputFile}, output={outputFile}, init=1)...");
                 
-                int result = PKCS7SignML(pin, (uint)_slot, inputFile, outputFile, 0);
+                int result = PKCS7SignML(pin, (uint)_slot, inputFile, outputFile, 1);
                 Log($"  PKCS7SignML returned: {result} (0x{result:X4})");
 
                 if (result != 0)

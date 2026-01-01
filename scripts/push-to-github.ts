@@ -163,7 +163,7 @@ async function main() {
     
     // Create commit
     console.log('📝 Creating commit...');
-    const commitMessage = 'v3.11: Fix missing System.Security.Permissions\n\n- Added System.Security.Permissions NuGet package v8.0.0\n- Required by Newtonsoft.Json on .NET 8\n- Fixes FileNotFoundException on DynamicCodeGeneration';
+    const commitMessage = 'v3.12: Fix PKCS7SignML bInitialize parameter\n\n- Changed bInitialize from 0 to 1\n- libSIAEp7.dll needs its own session, separate from libSIAE.dll\n- This allows the P7M library to initialize the smart card connection';
     
     const { data: commit } = await octokit.git.createCommit({
       owner,
