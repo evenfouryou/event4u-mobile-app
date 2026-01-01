@@ -1585,17 +1585,28 @@ export const siaeResales = pgTable("siae_resales", {
   // Log controlli effettuati (audit trail obbligatorio)
   logControlli: text("log_controlli"), // JSON array dei controlli effettuati
   
-  // Stato
-  status: varchar("status", { length: 20 }).notNull().default('listed'), // listed, sold, cancelled, expired, rejected
+  // Stato: listed → reserved → paid → fulfilled (o cancelled/expired/rejected)
+  status: varchar("status", { length: 20 }).notNull().default('listed'),
   motivoRifiuto: varchar("motivo_rifiuto", { length: 255 }), // Se status=rejected
   listedAt: timestamp("listed_at").defaultNow(),
-  soldAt: timestamp("sold_at"),
+  reservedAt: timestamp("reserved_at"), // Quando l'acquirente inizia checkout
+  reservedUntil: timestamp("reserved_until"), // Scadenza prenotazione (es. 10 min)
+  paidAt: timestamp("paid_at"), // Quando il pagamento è confermato
+  soldAt: timestamp("sold_at"), // Alias per compatibilità (= paidAt)
+  fulfilledAt: timestamp("fulfilled_at"), // Quando il nuovo biglietto è emesso
   cancelledAt: timestamp("cancelled_at"),
   expiresAt: timestamp("expires_at"),
+  
+  // Pagamento e payout
+  stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
+  stripeCheckoutSessionId: varchar("stripe_checkout_session_id", { length: 255 }),
+  sellerPayout: decimal("seller_payout", { precision: 10, scale: 2 }), // Importo accreditato al venditore
+  payoutTransactionId: varchar("payout_transaction_id").references(() => siaeWalletTransactions.id),
   
   // Trasmissione fiscale
   transmissionId: varchar("transmission_id").references(() => siaeTransmissions.id),
   sigilloFiscaleRivendita: varchar("sigillo_fiscale_rivendita", { length: 16 }), // Nuovo sigillo per rivendita
+  originalTicketAnnulledAt: timestamp("original_ticket_annulled_at"), // Quando il biglietto originale è annullato
   
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),

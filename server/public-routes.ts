@@ -3990,6 +3990,356 @@ router.get("/api/public/account/resales", async (req, res) => {
   }
 });
 
+// ==================== RESALE PURCHASE FLOW (SIAE-COMPLIANT) ====================
+
+// Get available resales for an event (public, no auth required)
+router.get("/api/public/events/:eventId/resales", async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    
+    const resales = await db
+      .select({
+        id: siaeResales.id,
+        resalePrice: siaeResales.resalePrice,
+        originalPrice: siaeResales.originalPrice,
+        listedAt: siaeResales.listedAt,
+        ticketType: siaeTickets.ticketType,
+        sectorName: siaeEventSectors.name,
+        sectorId: siaeEventSectors.id,
+      })
+      .from(siaeResales)
+      .innerJoin(siaeTickets, eq(siaeResales.originalTicketId, siaeTickets.id))
+      .innerJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .where(and(
+        eq(siaeTicketedEvents.eventId, eventId),
+        eq(siaeResales.status, 'listed')
+      ))
+      .orderBy(siaeResales.resalePrice);
+    
+    res.json({ resales });
+  } catch (error: any) {
+    console.error("[PUBLIC] Get event resales error:", error);
+    res.status(500).json({ message: "Errore nel caricamento rivendite" });
+  }
+});
+
+// Reserve a resale for purchase (starts checkout, requires auth)
+router.post("/api/public/resales/:id/reserve", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Devi essere loggato per acquistare" });
+    }
+    
+    const { id } = req.params;
+    const { buyerDocumentoTipo, buyerDocumentoNumero } = req.body;
+    
+    // Get resale with ticket info
+    const [resale] = await db
+      .select({
+        resale: siaeResales,
+        ticket: siaeTickets,
+        eventName: events.name,
+        sectorName: siaeEventSectors.name,
+      })
+      .from(siaeResales)
+      .innerJoin(siaeTickets, eq(siaeResales.originalTicketId, siaeTickets.id))
+      .innerJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .where(eq(siaeResales.id, id));
+    
+    if (!resale) {
+      return res.status(404).json({ message: "Rivendita non trovata" });
+    }
+    
+    // Check if still available
+    if (resale.resale.status !== 'listed') {
+      return res.status(400).json({ message: "Questo biglietto non è più disponibile" });
+    }
+    
+    // Check buyer is not the seller
+    if (resale.resale.sellerId === customer.id) {
+      return res.status(400).json({ message: "Non puoi acquistare il tuo stesso biglietto" });
+    }
+    
+    // Reserve for 10 minutes
+    const reservedUntil = new Date(Date.now() + 10 * 60 * 1000);
+    
+    // Update resale to reserved status
+    await db
+      .update(siaeResales)
+      .set({
+        status: 'reserved',
+        buyerId: customer.id,
+        reservedAt: new Date(),
+        reservedUntil,
+        acquirenteDocumentoTipo: buyerDocumentoTipo || null,
+        acquirenteDocumentoNumero: buyerDocumentoNumero || null,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(siaeResales.id, id),
+        eq(siaeResales.status, 'listed')
+      ));
+    
+    // Create Stripe checkout session
+    const stripe = (await import('stripe')).default;
+    const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-12-18.acacia' });
+    
+    const resalePrice = parseFloat(resale.resale.resalePrice);
+    const platformFeePercent = 5; // 5% platform fee
+    const platformFee = Math.round(resalePrice * platformFeePercent) / 100;
+    const sellerPayout = resalePrice - platformFee;
+    
+    const session = await stripeClient.checkout.sessions.create({
+      payment_method_types: ['card'],
+      line_items: [
+        {
+          price_data: {
+            currency: 'eur',
+            product_data: {
+              name: `Rivendita: ${resale.eventName} - ${resale.sectorName}`,
+              description: `Biglietto ${resale.ticket.ticketType} (Rivendita autorizzata)`,
+            },
+            unit_amount: Math.round(resalePrice * 100), // cents
+          },
+          quantity: 1,
+        },
+      ],
+      mode: 'payment',
+      success_url: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/account/resale-success?resale_id=${id}`,
+      cancel_url: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/account/tickets`,
+      metadata: {
+        resaleId: id,
+        buyerId: customer.id,
+        sellerId: resale.resale.sellerId,
+        sellerPayout: sellerPayout.toFixed(2),
+        platformFee: platformFee.toFixed(2),
+        type: 'resale_purchase',
+      },
+      expires_at: Math.floor(reservedUntil.getTime() / 1000),
+    });
+    
+    // Save checkout session ID
+    await db
+      .update(siaeResales)
+      .set({
+        stripeCheckoutSessionId: session.id,
+        platformFee: platformFee.toFixed(2),
+        sellerPayout: sellerPayout.toFixed(2),
+      })
+      .where(eq(siaeResales.id, id));
+    
+    console.log(`[RESALE] Reserved ${id} for buyer ${customer.id}, checkout: ${session.id}`);
+    
+    res.json({
+      checkoutUrl: session.url,
+      reservedUntil,
+      resalePrice,
+      platformFee,
+      sellerPayout,
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Reserve resale error:", error);
+    res.status(500).json({ message: "Errore nella prenotazione" });
+  }
+});
+
+// Confirm resale purchase (called after Stripe payment success)
+router.post("/api/public/resales/:id/confirm", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+    
+    const { id } = req.params;
+    
+    // Get resale
+    const [resale] = await db
+      .select()
+      .from(siaeResales)
+      .where(and(
+        eq(siaeResales.id, id),
+        eq(siaeResales.buyerId, customer.id)
+      ));
+    
+    if (!resale) {
+      return res.status(404).json({ message: "Rivendita non trovata" });
+    }
+    
+    if (resale.status !== 'reserved') {
+      return res.status(400).json({ message: "Stato rivendita non valido" });
+    }
+    
+    // Verify Stripe payment
+    if (!resale.stripeCheckoutSessionId) {
+      return res.status(400).json({ message: "Sessione pagamento non trovata" });
+    }
+    
+    const stripe = (await import('stripe')).default;
+    const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-12-18.acacia' });
+    
+    const session = await stripeClient.checkout.sessions.retrieve(resale.stripeCheckoutSessionId);
+    
+    if (session.payment_status !== 'paid') {
+      return res.status(400).json({ message: "Pagamento non completato" });
+    }
+    
+    // === FULFILLMENT FLOW (SIAE-COMPLIANT) ===
+    console.log(`[RESALE] Starting fulfillment for ${id}`);
+    
+    // 1. Mark as paid
+    await db
+      .update(siaeResales)
+      .set({
+        status: 'paid',
+        paidAt: new Date(),
+        soldAt: new Date(),
+        stripePaymentIntentId: session.payment_intent as string,
+        acquirenteVerificato: true,
+        acquirenteVerificaData: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(siaeResales.id, id));
+    
+    // 2. Get original ticket details
+    const [originalTicket] = await db
+      .select()
+      .from(siaeTickets)
+      .where(eq(siaeTickets.id, resale.originalTicketId));
+    
+    if (!originalTicket) {
+      return res.status(500).json({ message: "Biglietto originale non trovato" });
+    }
+    
+    // 3. Annul original ticket (SIAE requirement)
+    await db
+      .update(siaeTickets)
+      .set({
+        status: 'annullato_rivendita',
+        annullamentoMotivo: `Rivendita completata - ID: ${id}`,
+        annullamentoData: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(siaeTickets.id, resale.originalTicketId));
+    
+    // 4. Generate new fiscal seal for new ticket
+    const now = new Date();
+    const newSigillo = `R${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    
+    // 5. Create new ticket for buyer
+    const newTicketCode = `RT${now.getTime().toString(36).toUpperCase()}`;
+    const newQrCode = `${newTicketCode}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+    
+    const [newTicket] = await db
+      .insert(siaeTickets)
+      .values({
+        ticketedEventId: originalTicket.ticketedEventId,
+        transactionId: originalTicket.transactionId,
+        sectorId: originalTicket.sectorId,
+        ticketCode: newTicketCode,
+        qrCode: newQrCode,
+        ticketType: originalTicket.ticketType,
+        ticketTypeCode: originalTicket.ticketTypeCode,
+        ticketPrice: resale.resalePrice,
+        ticketCategory: originalTicket.ticketCategory,
+        seatNumber: originalTicket.seatNumber,
+        seatRow: originalTicket.seatRow,
+        sigilloFiscale: newSigillo,
+        customerId: customer.id,
+        participantFirstName: customer.firstName,
+        participantLastName: customer.lastName,
+        participantEmail: customer.email,
+        participantPhone: customer.phone,
+        participantFiscalCode: customer.fiscalCode,
+        emissionDate: now,
+        status: 'emesso',
+        emissionChannel: 'resale',
+      })
+      .returning();
+    
+    // 6. Update resale with new ticket and sigillo
+    await db
+      .update(siaeResales)
+      .set({
+        status: 'fulfilled',
+        newTicketId: newTicket.id,
+        sigilloFiscaleRivendita: newSigillo,
+        originalTicketAnnulledAt: new Date(),
+        fulfilledAt: new Date(),
+        updatedAt: new Date(),
+      })
+      .where(eq(siaeResales.id, id));
+    
+    // 7. Credit seller wallet
+    const sellerPayout = parseFloat(resale.sellerPayout || '0');
+    if (sellerPayout > 0) {
+      const [walletTx] = await db
+        .insert(siaeWalletTransactions)
+        .values({
+          customerId: resale.sellerId,
+          type: 'resale_credit',
+          amount: sellerPayout.toFixed(2),
+          description: `Accredito rivendita biglietto ${originalTicket.ticketCode}`,
+          resaleId: id,
+          stripePaymentIntentId: session.payment_intent as string,
+          status: 'completed',
+        })
+        .returning();
+      
+      // Update resale with payout transaction
+      await db
+        .update(siaeResales)
+        .set({ payoutTransactionId: walletTx.id })
+        .where(eq(siaeResales.id, id));
+      
+      console.log(`[RESALE] Credited seller ${resale.sellerId} with €${sellerPayout}`);
+    }
+    
+    console.log(`[RESALE] Fulfilled ${id}: old ticket ${originalTicket.id} → new ticket ${newTicket.id}`);
+    
+    res.json({
+      success: true,
+      message: "Acquisto completato!",
+      newTicketId: newTicket.id,
+      newTicketCode: newTicket.ticketCode,
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Confirm resale error:", error);
+    res.status(500).json({ message: "Errore nella conferma acquisto" });
+  }
+});
+
+// Release expired reservations (cleanup job)
+router.post("/api/public/resales/cleanup-expired", async (req, res) => {
+  try {
+    const result = await db
+      .update(siaeResales)
+      .set({
+        status: 'listed',
+        buyerId: null,
+        reservedAt: null,
+        reservedUntil: null,
+        stripeCheckoutSessionId: null,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(siaeResales.status, 'reserved'),
+        lt(siaeResales.reservedUntil, new Date())
+      ))
+      .returning();
+    
+    console.log(`[RESALE] Released ${result.length} expired reservations`);
+    res.json({ released: result.length });
+  } catch (error: any) {
+    console.error("[PUBLIC] Cleanup expired resales error:", error);
+    res.status(500).json({ message: "Errore nel cleanup" });
+  }
+});
+
 // ==================== PUBLIC TICKET VERIFICATION ====================
 
 // Verify ticket by QR code - public endpoint (no auth required)
