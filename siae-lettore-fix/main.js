@@ -63,14 +63,10 @@ let relayConfig = {
   enabled: true,
   serverType: 'production' // 'production' or 'development'
 };
-// Reconnection with exponential backoff (faster recovery after server restart)
-const RELAY_RECONNECT_BASE_DELAY = 500;   // Start with 0.5 second (faster initial retry)
-const RELAY_RECONNECT_MAX_DELAY = 10000;  // Max 10 seconds (was 30s - too slow)
-const RELAY_RECONNECT_FAST_RETRIES = 5;   // Number of fast retries before exponential backoff
-const RELAY_CONNECTION_TIMEOUT = 5000;    // 5 second timeout for initial connection
+// Reconnection with exponential backoff
+const RELAY_RECONNECT_BASE_DELAY = 1000;  // Start with 1 second
+const RELAY_RECONNECT_MAX_DELAY = 30000;  // Max 30 seconds
 let currentReconnectDelay = RELAY_RECONNECT_BASE_DELAY;
-let reconnectAttempts = 0;
-let connectionTimeoutTimer = null;        // Timer for connection timeout
 const RELAY_HEARTBEAT_INTERVAL = 15000;   // Check every 15 seconds (faster detection)
 const RELAY_HEARTBEAT_TIMEOUT = 5000;     // 5 second timeout for pong
 let relayHeartbeatTimer = null;
@@ -711,51 +707,14 @@ function connectToRelay() {
     return;
   }
   
-  // Clean up any existing connection that might be stuck
-  if (relayWs) {
-    try {
-      relayWs.terminate();
-    } catch (e) {
-      // Ignore
-    }
-    relayWs = null;
-  }
-  
-  // Clear any existing connection timeout
-  if (connectionTimeoutTimer) {
-    clearTimeout(connectionTimeoutTimer);
-    connectionTimeoutTimer = null;
-  }
-  
   const relayUrl = `${relayConfig.serverUrl}/ws/bridge`;
   log.info(`Connecting to relay: ${relayUrl}`);
   
   try {
     relayWs = new WebSocket(relayUrl);
     
-    // Set connection timeout - if we don't connect in time, force retry
-    connectionTimeoutTimer = setTimeout(() => {
-      if (relayWs && relayWs.readyState !== WebSocket.OPEN) {
-        log.warn(`Connection timeout after ${RELAY_CONNECTION_TIMEOUT}ms - forcing retry`);
-        try {
-          relayWs.terminate();
-        } catch (e) {
-          // Ignore
-        }
-        relayWs = null;
-        updateStatus({ relayConnected: false });
-        scheduleRelayReconnect();
-      }
-    }, RELAY_CONNECTION_TIMEOUT);
-    
     relayWs.on('open', () => {
       log.info('Relay WebSocket connected');
-      
-      // Clear connection timeout
-      if (connectionTimeoutTimer) {
-        clearTimeout(connectionTimeoutTimer);
-        connectionTimeoutTimer = null;
-      }
       
       // Reset exponential backoff on successful connection
       resetReconnectDelay();
@@ -815,10 +774,6 @@ function connectToRelay() {
     
     relayWs.on('close', () => {
       log.info('Relay WebSocket disconnected');
-      if (connectionTimeoutTimer) {
-        clearTimeout(connectionTimeoutTimer);
-        connectionTimeoutTimer = null;
-      }
       relayWs = null;
       updateStatus({ relayConnected: false });
       stopRelayHeartbeat();
@@ -827,10 +782,6 @@ function connectToRelay() {
     
     relayWs.on('error', (err) => {
       log.error('Relay WebSocket error:', err.message);
-      if (connectionTimeoutTimer) {
-        clearTimeout(connectionTimeoutTimer);
-        connectionTimeoutTimer = null;
-      }
       relayWs = null;
       updateStatus({ relayConnected: false });
       stopRelayHeartbeat();
@@ -847,28 +798,18 @@ function scheduleRelayReconnect() {
   if (relayReconnectTimer) return;
   if (!relayConfig.enabled) return;
   
-  reconnectAttempts++;
-  
-  // Use fast retries for first few attempts (server might just be restarting)
-  let delay = currentReconnectDelay;
-  if (reconnectAttempts <= RELAY_RECONNECT_FAST_RETRIES) {
-    delay = RELAY_RECONNECT_BASE_DELAY; // Keep fast for first 5 attempts
-    log.info(`Scheduling fast relay reconnect in ${delay}ms (attempt ${reconnectAttempts}/${RELAY_RECONNECT_FAST_RETRIES})`);
-  } else {
-    log.info(`Scheduling relay reconnect in ${delay}ms (exponential backoff, attempt ${reconnectAttempts})`);
-    // Only apply exponential backoff after fast retries
-    currentReconnectDelay = Math.min(currentReconnectDelay * 1.5, RELAY_RECONNECT_MAX_DELAY);
-  }
-  
+  log.info(`Scheduling relay reconnect in ${currentReconnectDelay}ms (exponential backoff)`);
   relayReconnectTimer = setTimeout(() => {
     relayReconnectTimer = null;
     connectToRelay();
-  }, delay);
+  }, currentReconnectDelay);
+  
+  // Increase delay for next attempt (exponential backoff)
+  currentReconnectDelay = Math.min(currentReconnectDelay * 2, RELAY_RECONNECT_MAX_DELAY);
 }
 
 function resetReconnectDelay() {
   currentReconnectDelay = RELAY_RECONNECT_BASE_DELAY;
-  reconnectAttempts = 0;
 }
 
 function startRelayHeartbeat() {
@@ -1379,49 +1320,6 @@ async function handleRelayCommand(msg) {
       }
       break;
     
-    case 'READ_EFFF':
-      // Server requests EFFF data from Smart Card
-      try {
-        const efffRequestId = msg.requestId;
-        log.info(`[EFFF] EFFF read request received from server, requestId=${efffRequestId}`);
-        
-        if (!bridgeProcess) {
-          throw new Error('Bridge non avviato');
-        }
-        if (!currentStatus.cardInserted) {
-          throw new Error('Smart Card non inserita');
-        }
-        
-        const result = await sendBridgeCommand('READ_EFFF');
-        log.info(`[EFFF] EFFF read result:`, result);
-        
-        if (relayWs && relayWs.readyState === WebSocket.OPEN) {
-          relayWs.send(JSON.stringify({
-            type: 'EFFF_RESPONSE',
-            requestId: efffRequestId,
-            payload: {
-              success: result.success || false,
-              efffData: result.efffData || null,
-              isTestCard: result.isTestCard || false,
-              error: result.error
-            }
-          }));
-        }
-      } catch (err) {
-        log.error(`[EFFF] Error reading EFFF: ${err.message}`);
-        if (relayWs && relayWs.readyState === WebSocket.OPEN) {
-          relayWs.send(JSON.stringify({
-            type: 'EFFF_RESPONSE',
-            requestId: msg.requestId,
-            payload: {
-              success: false,
-              error: err.message
-            }
-          }));
-        }
-      }
-      break;
-    
     case 'verifyPin':
       // PIN verification from web client
       try {
@@ -1600,17 +1498,32 @@ async function handleRelayCommand(msg) {
           log.info(`[SIGNATURE] XML signed successfully`);
           
           if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            // Supporta sia il nuovo formato P7M (CAdES-BES) che il vecchio formato XMLDSig
+            const signatureData = result.signature.p7mBase64 
+              ? {
+                  // Nuovo formato CAdES-BES (P7M)
+                  p7mBase64: result.signature.p7mBase64,
+                  format: result.signature.format || 'CAdES-BES',
+                  algorithm: result.signature.algorithm || 'SHA-256',
+                  xmlContent: result.signature.xmlContent,
+                  signedAt: result.signature.signedAt
+                }
+              : {
+                  // Legacy XMLDSig format (fallback)
+                  signedXml: result.signature.signedXml,
+                  signatureValue: result.signature.signatureValue,
+                  certificateData: result.signature.certificateData,
+                  signedAt: result.signature.signedAt
+                };
+            
+            log.info(`[SIGNATURE] Sending ${result.signature.p7mBase64 ? 'CAdES-BES P7M' : 'XMLDSig'} signature to relay`);
+            
             relayWs.send(JSON.stringify({
               type: 'SIGNATURE_RESPONSE',
               requestId: signRequestId,
               payload: {
                 success: true,
-                signatureData: {
-                  signedXml: result.signature.signedXml,
-                  signatureValue: result.signature.signatureValue,
-                  certificateData: result.signature.certificateData,
-                  signedAt: result.signature.signedAt
-                }
+                signatureData
               }
             }));
           }
@@ -1864,28 +1777,6 @@ ipcMain.handle('bridge:computeSigillo', async (event, data) => {
   }
 });
 
-ipcMain.handle('bridge:getCertificate', async () => {
-  log.info('IPC: getCertificate');
-  try {
-    return await sendBridgeCommand('GET_CERTIFICATE');
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-});
-
-ipcMain.handle('bridge:readEfff', async () => {
-  log.info('IPC: readEfff');
-  try {
-    return await sendBridgeCommand('READ_EFFF');
-  } catch (err) {
-    return { success: false, error: err.message };
-  }
-});
-
-ipcMain.handle('app:getVersion', () => {
-  return app.getVersion();
-});
-
 ipcMain.handle('app:getLogPath', () => {
   return log.transports.file.getFile().path;
 });
@@ -2082,14 +1973,10 @@ ipcMain.handle('pin:changePin', async (event, { oldPin, newPin }) => {
   }
 });
 
-ipcMain.handle('pin:unlockWithPuk', async (event, { puk, newPin, pinNumber = 1 }) => {
-  log.info(`IPC: pin:unlockWithPuk (pinNumber=${pinNumber})`);
+ipcMain.handle('pin:unlockWithPuk', async (event, { puk, newPin }) => {
+  log.info('IPC: pin:unlockWithPuk');
   try {
-    // Format: pinNumber,puk,newPin for explicit PIN selection, or puk,newPin for default PIN1
-    const command = pinNumber !== 1 
-      ? `UNLOCK_PUK:${pinNumber},${puk},${newPin}` 
-      : `UNLOCK_PUK:${puk},${newPin}`;
-    const result = await sendBridgeCommand(command);
+    const result = await sendBridgeCommand(`UNLOCK_PUK:${puk},${newPin}`);
     log.info('PUK unlock result:', result);
     
     if (result.unlocked) {

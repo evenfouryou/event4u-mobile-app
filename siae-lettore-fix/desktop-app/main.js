@@ -1498,17 +1498,32 @@ async function handleRelayCommand(msg) {
           log.info(`[SIGNATURE] XML signed successfully`);
           
           if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            // Supporta sia il nuovo formato P7M (CAdES-BES) che il vecchio formato XMLDSig
+            const signatureData = result.signature.p7mBase64 
+              ? {
+                  // Nuovo formato CAdES-BES (P7M)
+                  p7mBase64: result.signature.p7mBase64,
+                  format: result.signature.format || 'CAdES-BES',
+                  algorithm: result.signature.algorithm || 'SHA-256',
+                  xmlContent: result.signature.xmlContent,
+                  signedAt: result.signature.signedAt
+                }
+              : {
+                  // Legacy XMLDSig format (fallback)
+                  signedXml: result.signature.signedXml,
+                  signatureValue: result.signature.signatureValue,
+                  certificateData: result.signature.certificateData,
+                  signedAt: result.signature.signedAt
+                };
+            
+            log.info(`[SIGNATURE] Sending ${result.signature.p7mBase64 ? 'CAdES-BES P7M' : 'XMLDSig'} signature to relay`);
+            
             relayWs.send(JSON.stringify({
               type: 'SIGNATURE_RESPONSE',
               requestId: signRequestId,
               payload: {
                 success: true,
-                signatureData: {
-                  signedXml: result.signature.signedXml,
-                  signatureValue: result.signature.signatureValue,
-                  certificateData: result.signature.certificateData,
-                  signedAt: result.signature.signedAt
-                }
+                signatureData
               }
             }));
           }
