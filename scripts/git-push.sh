@@ -8,6 +8,6 @@ fi
 
 REPO_URL="https://evenfouryou:${GITHUB_PERSONAL_ACCESS_TOKEN}@github.com/evenfouryou/Event-Four-You-2026.git"
 
-git push "$REPO_URL" main
+git push --force "$REPO_URL" main
 
 echo "Push completed!"
