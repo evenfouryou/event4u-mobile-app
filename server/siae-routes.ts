@@ -1,6 +1,6 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, validateC1Report, type C1ValidationResult } from './siae-utils';
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -3626,6 +3626,35 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   const transmissionType = isMonthly ? 'monthly' : 'daily';
   const typeLabel = isMonthly ? 'mensile' : 'giornaliera';
   
+  // ==================== AUTOMATIC VALIDATION ====================
+  // Validate XML before sending - blocks transmission if errors found
+  const validation = validateC1Report(xml);
+  console.log(`[SIAE-ROUTES] Validazione automatica C1 ${typeLabel}: ${validation.valid ? 'OK' : 'ERRORI TROVATI'}`);
+  
+  if (!validation.valid) {
+    console.error(`[SIAE-ROUTES] Validazione C1 fallita:`, validation.errors);
+    return {
+      success: false,
+      statusCode: 400,
+      error: `Validazione report fallita: ${validation.errors.join('; ')}`,
+      data: {
+        code: 'VALIDATION_FAILED',
+        validation: {
+          valid: false,
+          errors: validation.errors,
+          warnings: validation.warnings,
+          summary: validation.summary
+        }
+      }
+    };
+  }
+  
+  // Log warnings but continue
+  if (validation.warnings.length > 0) {
+    console.log(`[SIAE-ROUTES] Avvisi validazione C1:`, validation.warnings);
+  }
+  // ===============================================================
+  
   // Try to sign the XML with smart card if requested (with retry for unstable connections)
   let xmlToSend = xml;
   let signatureInfo = '';
@@ -3749,6 +3778,11 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
         signed: signatureData !== null,
         smimeSigned: emailResult.smimeSigned,
         smimeSignerEmail: emailResult.signerEmail,
+      },
+      validation: {
+        valid: true,
+        warnings: validation.warnings,
+        summary: validation.summary
       }
     }
   };

@@ -272,7 +272,14 @@ export default function SiaeTransmissionsPage() {
         toEmail,
         type,
       });
-      return response.json();
+      const data = await response.json();
+      if (!response.ok) {
+        const error = new Error(data.message || 'Errore invio') as Error & { validation?: any; code?: string };
+        error.validation = data.validation;
+        error.code = data.code;
+        throw error;
+      }
+      return data;
     },
     onSuccess: (data) => {
       queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.includes('transmissions') || false });
@@ -280,18 +287,34 @@ export default function SiaeTransmissionsPage() {
       setIsSendDailyDialogOpen(false);
       triggerHaptic('success');
       const tipoLabel = c1Type === 'monthly' ? 'mensile' : 'giornaliera';
+      
+      // Show validation success with warnings if present
+      const warnings = data.validation?.warnings || [];
+      const warningText = warnings.length > 0 ? ` (${warnings.length} avvisi)` : '';
+      
       toast({
         title: "Trasmissione C1 Inviata",
-        description: `Trasmissione ${tipoLabel} inviata con ${data.transmission?.ticketsCount || 0} biglietti.`,
+        description: `Validazione OK. Trasmissione ${tipoLabel} inviata con ${data.transmission?.ticketsCount || 0} biglietti.${warningText}`,
       });
     },
-    onError: (error: Error) => {
+    onError: (error: Error & { validation?: any; code?: string }) => {
       triggerHaptic('error');
-      toast({
-        title: "Errore",
-        description: error.message,
-        variant: "destructive",
-      });
+      
+      // Check if it's a validation error
+      if (error.code === 'VALIDATION_FAILED' && error.validation) {
+        const errors = error.validation.errors || [];
+        toast({
+          title: "Validazione Fallita",
+          description: `Il report contiene ${errors.length} errori: ${errors.slice(0, 2).join('; ')}${errors.length > 2 ? '...' : ''}`,
+          variant: "destructive",
+        });
+      } else {
+        toast({
+          title: "Errore",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     },
   });
 

@@ -354,6 +354,162 @@ export function validateSiaeXml(xml: string, reportType: 'giornaliero' | 'mensil
   };
 }
 
+/**
+ * Validazione specifica per RiepilogoControlloAccessi (C1 report)
+ * Conforme a RiepilogoControlloAccessi_v0100_20080201.dtd
+ */
+export interface C1ValidationResult {
+  valid: boolean;
+  errors: string[];
+  warnings: string[];
+  summary: {
+    ticketsCount: number;
+    totalAmount: number;
+    hasEvents: boolean;
+    hasTitolare: boolean;
+    systemCode: string | null;
+    taxId: string | null;
+  };
+}
+
+export function validateC1Report(xml: string): C1ValidationResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  const summary = {
+    ticketsCount: 0,
+    totalAmount: 0,
+    hasEvents: false,
+    hasTitolare: false,
+    systemCode: null as string | null,
+    taxId: null as string | null,
+  };
+  
+  // 1. Verifica dichiarazione XML
+  if (!xml.startsWith('<?xml')) {
+    errors.push('Dichiarazione XML mancante');
+  }
+  
+  // 2. Verifica DOCTYPE
+  if (!xml.includes('<!DOCTYPE RiepilogoControlloAccessi')) {
+    errors.push('DOCTYPE RiepilogoControlloAccessi mancante');
+  }
+  
+  // 3. Verifica elemento radice
+  if (!xml.includes('<RiepilogoControlloAccessi')) {
+    errors.push('Elemento radice RiepilogoControlloAccessi mancante');
+  }
+  
+  // 4. Verifica sezione Titolare
+  if (xml.includes('<Titolare>')) {
+    summary.hasTitolare = true;
+    
+    // Estrai CFTitolareCA
+    const cfMatch = xml.match(/<CFTitolareCA>([^<]+)<\/CFTitolareCA>/);
+    if (cfMatch) {
+      summary.taxId = cfMatch[1];
+      if (cfMatch[1].length !== 16 && cfMatch[1].length !== 11) {
+        errors.push(`Codice Fiscale non valido (${cfMatch[1].length} caratteri, attesi 16 o 11)`);
+      }
+    } else {
+      errors.push('CFTitolareCA mancante - Codice Fiscale obbligatorio');
+    }
+    
+    // Estrai CodiceSistemaCA
+    const codeMatch = xml.match(/<CodiceSistemaCA>([^<]+)<\/CodiceSistemaCA>/);
+    if (codeMatch) {
+      summary.systemCode = codeMatch[1];
+      if (codeMatch[1].length < 5) {
+        warnings.push('CodiceSistemaCA potrebbe essere troppo corto');
+      }
+    } else {
+      errors.push('CodiceSistemaCA mancante - Codice Sistema obbligatorio');
+    }
+    
+    // Verifica DenominazioneTitolareCA
+    if (!xml.includes('<DenominazioneTitolareCA>')) {
+      errors.push('DenominazioneTitolareCA mancante');
+    }
+    
+    // Verifica DataRiepilogo
+    if (!xml.includes('<DataRiepilogo>')) {
+      errors.push('DataRiepilogo mancante');
+    }
+    
+    // Verifica ProgressivoRiepilogo
+    if (!xml.includes('<ProgressivoRiepilogo>')) {
+      errors.push('ProgressivoRiepilogo mancante');
+    }
+  } else {
+    errors.push('Sezione Titolare mancante - obbligatoria');
+  }
+  
+  // 5. Verifica sezione Evento
+  if (xml.includes('<Evento>')) {
+    summary.hasEvents = true;
+    
+    // Verifica campi evento obbligatori
+    const eventRequired = [
+      'CFOrganizzatore',
+      'DenominazioneOrganizzatore', 
+      'TipologiaOrganizzatore',
+      'DenominazioneLocale',
+      'CodiceLocale',
+      'DataEvento',
+      'OraEvento',
+      'TipoGenere'
+    ];
+    
+    for (const field of eventRequired) {
+      if (!xml.includes(`<${field}>`)) {
+        errors.push(`Campo evento obbligatorio mancante: ${field}`);
+      }
+    }
+    
+    // Verifica CodiceLocale formato (13 caratteri)
+    const codLocaleMatch = xml.match(/<CodiceLocale>([^<]+)<\/CodiceLocale>/);
+    if (codLocaleMatch && codLocaleMatch[1].length !== 13) {
+      warnings.push(`CodiceLocale dovrebbe essere 13 caratteri (trovati ${codLocaleMatch[1].length})`);
+    }
+    
+    // Conta biglietti da TotaleTitoliLTA
+    const titoliMatches = xml.matchAll(/<TotaleTitoliLTA>(\d+)<\/TotaleTitoliLTA>/g);
+    for (const match of titoliMatches) {
+      summary.ticketsCount += parseInt(match[1], 10);
+    }
+    
+    // Somma importi da TotaleCorrispettiviLordi (in centesimi)
+    const importoMatches = xml.matchAll(/<TotaleCorrispettiviLordi>(\d+)<\/TotaleCorrispettiviLordi>/g);
+    for (const match of importoMatches) {
+      summary.totalAmount += parseInt(match[1], 10);
+    }
+    
+    // Verifica SistemaEmissione
+    if (!xml.includes('<SistemaEmissione')) {
+      errors.push('SistemaEmissione mancante');
+    }
+  } else {
+    warnings.push('Nessun evento trovato nel report');
+  }
+  
+  // 6. Verifica chiusura elemento radice
+  if (!xml.includes('</RiepilogoControlloAccessi>')) {
+    errors.push('Chiusura elemento RiepilogoControlloAccessi mancante');
+  }
+  
+  // 7. Verifica caratteri XML validi
+  const invalidChars = xml.match(/[^\x09\x0A\x0D\x20-\uD7FF\uE000-\uFFFD]/g);
+  if (invalidChars && invalidChars.length > 0) {
+    errors.push(`Caratteri XML non validi trovati: ${invalidChars.slice(0, 5).join(', ')}`);
+  }
+  
+  return {
+    valid: errors.length === 0,
+    errors,
+    warnings,
+    summary
+  };
+}
+
 // ==================== Log.xsi Response Parser ====================
 // Conforme a Log_v0040_20190627.dtd
 
