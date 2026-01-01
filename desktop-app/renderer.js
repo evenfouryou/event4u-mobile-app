@@ -68,6 +68,17 @@ document.addEventListener('DOMContentLoaded', () => {
   async function init() {
     addLog('info', 'Applicazione avviata');
     
+    // Load and display dynamic version
+    try {
+      const version = await window.siaeAPI.getAppVersion();
+      const versionEl = document.getElementById('app-version');
+      if (versionEl && version) {
+        versionEl.textContent = `v${version}`;
+      }
+    } catch (err) {
+      console.log('Could not load app version:', err);
+    }
+    
     // Set current datetime for sigillo form
     const now = new Date();
     const dateInput = document.getElementById('input-datetime');

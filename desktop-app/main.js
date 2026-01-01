@@ -2039,10 +2039,14 @@ ipcMain.handle('pin:changePin', async (event, { oldPin, newPin }) => {
   }
 });
 
-ipcMain.handle('pin:unlockWithPuk', async (event, { puk, newPin }) => {
-  log.info('IPC: pin:unlockWithPuk');
+ipcMain.handle('pin:unlockWithPuk', async (event, { puk, newPin, pinNumber = 1 }) => {
+  log.info(`IPC: pin:unlockWithPuk (pinNumber=${pinNumber})`);
   try {
-    const result = await sendBridgeCommand(`UNLOCK_PUK:${puk},${newPin}`);
+    // Format: pinNumber,puk,newPin for explicit PIN selection, or puk,newPin for default PIN1
+    const command = pinNumber !== 1 
+      ? `UNLOCK_PUK:${pinNumber},${puk},${newPin}` 
+      : `UNLOCK_PUK:${puk},${newPin}`;
+    const result = await sendBridgeCommand(command);
     log.info('PUK unlock result:', result);
     
     if (result.unlocked) {
