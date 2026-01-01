@@ -1592,76 +1592,92 @@ namespace SiaeBridge
 
         /// <summary>
         /// Cerca il certificato della Smart Card SIAE nello store Windows
-        /// Il certificato deve avere una chiave privata (indicatore di Smart Card)
+        /// Il certificato deve essere emesso da una CA italiana riconosciuta (InfoCert, Aruba, etc.)
+        /// e NON deve essere auto-firmato
         /// </summary>
         static X509Certificate2 GetSmartCardCertificateFromStore()
         {
             Log("  Searching for SIAE Smart Card certificate in Windows store...");
 
-            // Apri lo store dei certificati personali
-            X509Store store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
-            store.Open(OpenFlags.ReadOnly | OpenFlags.OpenExistingOnly);
-
-            X509Certificate2 bestMatch = null;
-
-            try
+            // Cerca in entrambi gli store: CurrentUser e LocalMachine
+            StoreLocation[] locations = { StoreLocation.CurrentUser, StoreLocation.LocalMachine };
+            
+            foreach (var location in locations)
             {
-                foreach (X509Certificate2 cert in store.Certificates)
+                try
                 {
-                    // Deve avere una chiave privata (tipico delle Smart Card)
-                    if (!cert.HasPrivateKey)
-                        continue;
+                    X509Store store = new X509Store(StoreName.My, location);
+                    store.Open(OpenFlags.ReadOnly | OpenFlags.OpenExistingOnly);
 
-                    // Il certificato deve essere valido
-                    if (DateTime.Now < cert.NotBefore || DateTime.Now > cert.NotAfter)
-                        continue;
-
-                    string issuer = cert.Issuer.ToUpperInvariant();
-                    string subject = cert.Subject.ToUpperInvariant();
-
-                    Log($"    Checking cert: Subject={cert.Subject}, Issuer={cert.Issuer}");
-
-                    // Cerca certificati emessi da InfoCert, Aruba, o altri provider italiani
-                    // tipicamente usati per le carte SIAE
-                    bool isSiaeCompatible = 
-                        issuer.Contains("INFOCERT") ||
-                        issuer.Contains("ARUBA") ||
-                        issuer.Contains("ACTALIS") ||
-                        issuer.Contains("POSTE") ||
-                        issuer.Contains("NAMIRIAL") ||
-                        issuer.Contains("INTESI") ||
-                        subject.Contains("SIAE") ||
-                        issuer.Contains("SIAE");
-
-                    if (isSiaeCompatible)
+                    try
                     {
-                        Log($"    -> SIAE-compatible certificate found!");
-                        bestMatch = cert;
-                        break;
+                        foreach (X509Certificate2 cert in store.Certificates)
+                        {
+                            // Deve avere una chiave privata (tipico delle Smart Card)
+                            if (!cert.HasPrivateKey)
+                                continue;
+
+                            // Il certificato deve essere valido
+                            if (DateTime.Now < cert.NotBefore || DateTime.Now > cert.NotAfter)
+                                continue;
+
+                            string issuer = cert.Issuer.ToUpperInvariant();
+                            string subject = cert.Subject.ToUpperInvariant();
+
+                            Log($"    [{location}] Checking cert: Subject={cert.Subject}, Issuer={cert.Issuer}");
+
+                            // IMPORTANTE: Escludi certificati auto-firmati (Issuer == Subject)
+                            // Questi sono tipicamente certificati di test/sviluppo, non SIAE
+                            if (cert.Issuer == cert.Subject)
+                            {
+                                Log($"    -> Skipping self-signed certificate");
+                                continue;
+                            }
+
+                            // Escludi certificati con GUID nel nome (tipicamente auto-generati)
+                            if (System.Text.RegularExpressions.Regex.IsMatch(subject, @"[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}"))
+                            {
+                                Log($"    -> Skipping GUID-based certificate");
+                                continue;
+                            }
+
+                            // Cerca certificati emessi da CA italiane riconosciute
+                            // tipicamente usati per le carte SIAE
+                            bool isSiaeCompatible = 
+                                issuer.Contains("INFOCERT") ||
+                                issuer.Contains("ARUBA") ||
+                                issuer.Contains("ACTALIS") ||
+                                issuer.Contains("POSTE") ||
+                                issuer.Contains("NAMIRIAL") ||
+                                issuer.Contains("INTESI") ||
+                                issuer.Contains("TELECOM") ||
+                                issuer.Contains("IN.TE.S.A") ||
+                                subject.Contains("SIAE") ||
+                                issuer.Contains("SIAE");
+
+                            if (isSiaeCompatible)
+                            {
+                                Log($"    -> SIAE-compatible certificate found from {location}!");
+                                store.Close();
+                                return cert;
+                            }
+                        }
                     }
-
-                    // Se non troviamo un match specifico, prendi il primo con chiave privata
-                    if (bestMatch == null)
+                    finally
                     {
-                        bestMatch = cert;
+                        store.Close();
                     }
                 }
-            }
-            finally
-            {
-                store.Close();
-            }
-
-            if (bestMatch != null)
-            {
-                Log($"  Using certificate: {bestMatch.Subject}");
-            }
-            else
-            {
-                Log($"  No suitable certificate found in store");
+                catch (Exception ex)
+                {
+                    Log($"  Error accessing {location} store: {ex.Message}");
+                }
             }
 
-            return bestMatch;
+            Log($"  No SIAE-compatible certificate found in Windows store");
+            Log($"  NOTE: The smart card certificate must be accessible via Windows CSP.");
+            Log($"  Make sure the Bit4id minidriver is installed and the certificate is visible in certmgr.msc");
+            return null;
         }
 
         // ============================================================

@@ -3,6 +3,9 @@ using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Security.Cryptography;
+using System.Security.Cryptography.Pkcs;
+using System.Security.Cryptography.X509Certificates;
 using Newtonsoft.Json;
 
 namespace SiaeBridge
@@ -164,6 +167,7 @@ namespace SiaeBridge
                 if (cmd == "EXIT") { Environment.Exit(0); return OK("BYE"); }
                 if (cmd == "CHECK_READER") return CheckReader();
                 if (cmd == "READ_CARD") return ReadCard();
+                if (cmd == "READ_EFFF") return ReadEfff();
                 if (cmd == "GET_CERTIFICATE") return GetCertificate();
                 if (cmd == "GET_RETRIES") return GetRetries();
                 if (cmd.StartsWith("VERIFY_PIN:")) return VerifyPin(cmd.Substring(11));
@@ -399,6 +403,144 @@ namespace SiaeBridge
                     }
                     catch { }
                 }
+            }
+        }
+
+        // ============================================================
+        // READ EFFF - Legge file EFFF dalla Smart Card SIAE
+        // Contiene 15 campi anagrafici (DF 11 11, EF FF)
+        // Conforme a Descrizione_contenuto_SmartCardTestxBA-V102.pdf
+        // ============================================================
+        static string ReadEfff()
+        {
+            if (_slot < 0) return ERR("Nessuna carta rilevata - prima fai CHECK_READER");
+
+            bool tx = false;
+            try
+            {
+                Log($"ReadEfff: slot={_slot}");
+
+                int state = isCardIn(_slot);
+                Log($"  isCardIn({_slot}) = {state} ({DecodeCardState(state)})");
+                if (!IsCardPresent(state))
+                {
+                    _slot = -1;
+                    return ERR("Carta rimossa");
+                }
+
+                int init = Initialize(_slot);
+                Log($"  Initialize = {init}");
+
+                int txResult = BeginTransactionML(_slot);
+                Log($"  BeginTransactionML = {txResult}");
+                tx = (txResult == 0);
+
+                // Navigate to DF PKI (0x1111) which contains EFFF
+                int sel0000 = LibSiae.SelectML(0x0000, _slot);
+                Log($"  SelectML(0x0000 root) = {sel0000} (0x{sel0000:X4})");
+                
+                int sel1111 = LibSiae.SelectML(0x1111, _slot);
+                Log($"  SelectML(0x1111 DF PKI) = {sel1111} (0x{sel1111:X4})");
+                
+                // Select EF FF (anagrafica file) - File ID is 0xEFFF per SIAE documentation
+                int selEFFF = LibSiae.SelectML(0xEFFF, _slot);
+                Log($"  SelectML(0xEFFF EF FF) = {selEFFF} (0x{selEFFF:X4})");
+
+                if (selEFFF != 0)
+                {
+                    // Fallback: try 0x00FF in case card uses alternative addressing
+                    selEFFF = LibSiae.SelectML(0x00FF, _slot);
+                    Log($"  SelectML(0x00FF alt) = {selEFFF} (0x{selEFFF:X4})");
+                }
+
+                // EFFF contains 15 variable-length records
+                // Field lengths according to specification:
+                // 1. systemId (8), 2. contactName (40), 3. contactLastName (40), 4. contactCodFis (18)
+                // 5. systemLocation (100), 6. contactEmail (50), 7. siaeEmail (40)
+                // 8. partnerName (60), 9. partnerCodFis (18), 10. partnerRegistroImprese (18)
+                // 11. partnerNation (2), 12. systemApprCode (20), 13. systemApprDate (20)
+                // 14. contactRepresentationType (1), 15. userDataFileVersion (5)
+
+                var efffData = new
+                {
+                    systemId = ReadEfffField(1, 8),
+                    contactName = ReadEfffField(2, 40),
+                    contactLastName = ReadEfffField(3, 40),
+                    contactCodFis = ReadEfffField(4, 18),
+                    systemLocation = ReadEfffField(5, 100),
+                    contactEmail = ReadEfffField(6, 50),
+                    siaeEmail = ReadEfffField(7, 40),
+                    partnerName = ReadEfffField(8, 60),
+                    partnerCodFis = ReadEfffField(9, 18),
+                    partnerRegistroImprese = ReadEfffField(10, 18),
+                    partnerNation = ReadEfffField(11, 2),
+                    systemApprCode = ReadEfffField(12, 20),
+                    systemApprDate = ReadEfffField(13, 20),
+                    contactRepresentationType = ReadEfffField(14, 1),
+                    userDataFileVersion = ReadEfffField(15, 5)
+                };
+
+                Log($"  EFFF Data read: systemId={efffData.systemId}, siaeEmail={efffData.siaeEmail}");
+
+                // Determine if test card based on systemId prefix
+                bool isTestCard = !string.IsNullOrEmpty(efffData.systemId) && 
+                                  efffData.systemId.ToUpper().StartsWith("P");
+
+                return JsonConvert.SerializeObject(new
+                {
+                    success = true,
+                    efffData = efffData,
+                    isTestCard = isTestCard,
+                    environment = isTestCard ? "test" : "production",
+                    slot = _slot
+                });
+            }
+            catch (Exception ex)
+            {
+                Log($"ReadEfff error: {ex.Message}");
+                return ERR(ex.Message);
+            }
+            finally
+            {
+                if (tx)
+                {
+                    try
+                    {
+                        EndTransactionML(_slot);
+                        Log("  EndTransactionML done");
+                    }
+                    catch { }
+                }
+            }
+        }
+
+        /// <summary>
+        /// Read a single field from EFFF file by record number
+        /// </summary>
+        static string ReadEfffField(int recordNumber, int maxLen)
+        {
+            try
+            {
+                byte[] buffer = new byte[maxLen + 2]; // Extra bytes for safety
+                int len = buffer.Length;
+                
+                int result = LibSiae.ReadRecordML(recordNumber, buffer, ref len, _slot);
+                
+                if (result != 0)
+                {
+                    Log($"    ReadRecordML({recordNumber}) = 0x{result:X4}, len={len}");
+                    return "";
+                }
+
+                // Trim null bytes and convert to string
+                string value = Encoding.ASCII.GetString(buffer, 0, len).TrimEnd('\0', ' ');
+                Log($"    Record {recordNumber}: \"{value}\" (len={len})");
+                return value;
+            }
+            catch (Exception ex)
+            {
+                Log($"    ReadEfffField({recordNumber}) error: {ex.Message}");
+                return "";
             }
         }
 
@@ -698,20 +840,36 @@ namespace SiaeBridge
 
         // ============================================================
         // CHANGE PIN - Cambio PIN della carta SIAE
+        // Formato: oldPin,newPin oppure pinNumber,oldPin,newPin
+        // SIAE cards have PIN1 (nPIN=1) for Sigillo and PIN2 (nPIN=2) for PKI
         // ============================================================
         static string ChangePin(string args)
         {
             if (_slot < 0) return ERR("Nessuna carta rilevata - prima fai CHECK_READER");
 
-            // Formato: oldPin,newPin
+            // Parse arguments: oldPin,newPin OR pinNumber,oldPin,newPin
             var parts = args.Split(',');
-            if (parts.Length != 2)
-            {
-                return ERR("Formato: CHANGE_PIN:oldPin,newPin");
-            }
+            int pinNumber = 1; // Default to PIN1 (Sigillo)
+            string oldPin, newPin;
 
-            string oldPin = new string(parts[0].Where(char.IsDigit).ToArray());
-            string newPin = new string(parts[1].Where(char.IsDigit).ToArray());
+            if (parts.Length == 2)
+            {
+                oldPin = new string(parts[0].Where(char.IsDigit).ToArray());
+                newPin = new string(parts[1].Where(char.IsDigit).ToArray());
+            }
+            else if (parts.Length == 3)
+            {
+                if (!int.TryParse(parts[0], out pinNumber) || (pinNumber != 1 && pinNumber != 2))
+                {
+                    return ERR("Numero PIN non valido - deve essere 1 (Sigillo) o 2 (PKI)");
+                }
+                oldPin = new string(parts[1].Where(char.IsDigit).ToArray());
+                newPin = new string(parts[2].Where(char.IsDigit).ToArray());
+            }
+            else
+            {
+                return ERR("Formato: CHANGE_PIN:oldPin,newPin oppure CHANGE_PIN:pinNumber,oldPin,newPin");
+            }
 
             if (oldPin.Length < 4 || oldPin.Length > 8)
             {
@@ -725,7 +883,7 @@ namespace SiaeBridge
             bool tx = false;
             try
             {
-                Log($"ChangePin: slot={_slot}, oldPin=****, newPin=****");
+                Log($"ChangePin: slot={_slot}, pinNumber={pinNumber}, oldPin=****, newPin=****");
 
                 int state = isCardIn(_slot);
                 if (!IsCardPresent(state))
@@ -744,16 +902,34 @@ namespace SiaeBridge
                 Log($"  BeginTransactionML = {txResult}");
                 tx = (txResult == 0);
 
-                // Seleziona root e DF Sigilli
+                // Select appropriate DF based on PIN number
+                // PIN1 = DF Sigilli (0x1112), PIN2 = DF PKI (0x1111)
                 int sel0000 = LibSiae.SelectML(0x0000, _slot);
                 Log($"  SelectML(0x0000) = {sel0000}");
                 
-                int sel1112 = LibSiae.SelectML(0x1112, _slot);
-                Log($"  SelectML(0x1112) = {sel1112}");
+                int selDF;
+                if (pinNumber == 1)
+                {
+                    selDF = LibSiae.SelectML(0x1112, _slot);
+                    Log($"  SelectML(0x1112 DF Sigilli) = {selDF}");
+                }
+                else
+                {
+                    selDF = LibSiae.SelectML(0x1111, _slot);
+                    Log($"  SelectML(0x1111 DF PKI) = {selDF}");
+                }
 
-                // Cambio PIN
-                int result = LibSiae.ChangePINML(1, oldPin, newPin, _slot);
-                Log($"  ChangePINML(nPIN=1) = {result} (0x{result:X4})");
+                // Change PIN
+                int result = LibSiae.ChangePINML(pinNumber, oldPin, newPin, _slot);
+                Log($"  ChangePINML(nPIN={pinNumber}) = {result} (0x{result:X4})");
+
+                // Decode retries from error code 0x63CX
+                int? retriesRemaining = null;
+                if (result >= 0x63C0 && result <= 0x63CF)
+                {
+                    retriesRemaining = result & 0x0F;
+                    Log($"  Retries remaining: {retriesRemaining}");
+                }
 
                 if (result == 0)
                 {
@@ -761,17 +937,32 @@ namespace SiaeBridge
                     {
                         success = true,
                         changed = true,
-                        message = "PIN cambiato con successo"
+                        pinNumber = pinNumber,
+                        message = $"PIN{pinNumber} cambiato con successo"
                     });
                 }
-                else if (result == 0x6982 || result == 0x6983)
+                else if (result == 0x6983)
                 {
                     return JsonConvert.SerializeObject(new
                     {
                         success = true,
                         changed = false,
-                        error = result == 0x6983 ? "PIN bloccato" : "PIN attuale errato",
-                        errorCode = result
+                        pinNumber = pinNumber,
+                        error = $"PIN{pinNumber} bloccato - usare PUK per sbloccare",
+                        errorCode = result,
+                        retriesRemaining = 0
+                    });
+                }
+                else if (result == 0x6982 || (result >= 0x63C0 && result <= 0x63CF))
+                {
+                    return JsonConvert.SerializeObject(new
+                    {
+                        success = true,
+                        changed = false,
+                        pinNumber = pinNumber,
+                        error = "PIN attuale errato",
+                        errorCode = result,
+                        retriesRemaining = retriesRemaining
                     });
                 }
                 else
@@ -780,7 +971,8 @@ namespace SiaeBridge
                     {
                         success = true,
                         changed = false,
-                        error = $"Errore cambio PIN: 0x{result:X4}",
+                        pinNumber = pinNumber,
+                        error = $"Errore cambio PIN{pinNumber}: 0x{result:X4} - {LibSiae.GetErrorMessage(result)}",
                         errorCode = result
                     });
                 }
@@ -806,20 +998,37 @@ namespace SiaeBridge
 
         // ============================================================
         // UNLOCK PUK - Sblocco carta con PUK
+        // Formato: puk,newPin oppure pinNumber,puk,newPin
+        // SIAE cards have PIN1 (nPIN=1) for Sigillo and PIN2 (nPIN=2) for PKI
+        // PUK is used to unlock blocked PINs and set a new PIN
         // ============================================================
         static string UnlockPuk(string args)
         {
             if (_slot < 0) return ERR("Nessuna carta rilevata - prima fai CHECK_READER");
 
-            // Formato: puk,newPin
+            // Parse arguments: puk,newPin OR pinNumber,puk,newPin
             var parts = args.Split(',');
-            if (parts.Length != 2)
-            {
-                return ERR("Formato: UNLOCK_PUK:puk,newPin");
-            }
+            int pinNumber = 1; // Default to PIN1 (Sigillo)
+            string puk, newPin;
 
-            string puk = new string(parts[0].Where(char.IsDigit).ToArray());
-            string newPin = new string(parts[1].Where(char.IsDigit).ToArray());
+            if (parts.Length == 2)
+            {
+                puk = new string(parts[0].Where(char.IsDigit).ToArray());
+                newPin = new string(parts[1].Where(char.IsDigit).ToArray());
+            }
+            else if (parts.Length == 3)
+            {
+                if (!int.TryParse(parts[0], out pinNumber) || (pinNumber != 1 && pinNumber != 2))
+                {
+                    return ERR("Numero PIN non valido - deve essere 1 (Sigillo) o 2 (PKI)");
+                }
+                puk = new string(parts[1].Where(char.IsDigit).ToArray());
+                newPin = new string(parts[2].Where(char.IsDigit).ToArray());
+            }
+            else
+            {
+                return ERR("Formato: UNLOCK_PUK:puk,newPin oppure UNLOCK_PUK:pinNumber,puk,newPin");
+            }
 
             if (puk.Length != 8)
             {
@@ -833,7 +1042,7 @@ namespace SiaeBridge
             bool tx = false;
             try
             {
-                Log($"UnlockPuk: slot={_slot}, puk=********, newPin=****");
+                Log($"UnlockPuk: slot={_slot}, pinNumber={pinNumber}, puk=********, newPin=****");
 
                 int state = isCardIn(_slot);
                 if (!IsCardPresent(state))
@@ -852,16 +1061,34 @@ namespace SiaeBridge
                 Log($"  BeginTransactionML = {txResult}");
                 tx = (txResult == 0);
 
-                // Seleziona root e DF Sigilli
+                // Select appropriate DF based on PIN number
+                // PIN1 = DF Sigilli (0x1112), PIN2 = DF PKI (0x1111)
                 int sel0000 = LibSiae.SelectML(0x0000, _slot);
                 Log($"  SelectML(0x0000) = {sel0000}");
                 
-                int sel1112 = LibSiae.SelectML(0x1112, _slot);
-                Log($"  SelectML(0x1112) = {sel1112}");
+                int selDF;
+                if (pinNumber == 1)
+                {
+                    selDF = LibSiae.SelectML(0x1112, _slot);
+                    Log($"  SelectML(0x1112 DF Sigilli) = {selDF}");
+                }
+                else
+                {
+                    selDF = LibSiae.SelectML(0x1111, _slot);
+                    Log($"  SelectML(0x1111 DF PKI) = {selDF}");
+                }
 
-                // Sblocco con PUK
-                int result = LibSiae.UnblockPINML(1, puk, newPin, _slot);
-                Log($"  UnblockPINML(nPIN=1) = {result} (0x{result:X4})");
+                // Unlock PIN with PUK
+                int result = LibSiae.UnblockPINML(pinNumber, puk, newPin, _slot);
+                Log($"  UnblockPINML(nPIN={pinNumber}) = {result} (0x{result:X4})");
+
+                // Decode retries from error code 0x63CX
+                int? pukRetriesRemaining = null;
+                if (result >= 0x63C0 && result <= 0x63CF)
+                {
+                    pukRetriesRemaining = result & 0x0F;
+                    Log($"  PUK retries remaining: {pukRetriesRemaining}");
+                }
 
                 if (result == 0)
                 {
@@ -869,7 +1096,8 @@ namespace SiaeBridge
                     {
                         success = true,
                         unlocked = true,
-                        message = "Carta sbloccata con successo"
+                        pinNumber = pinNumber,
+                        message = $"PIN{pinNumber} sbloccato con successo - nuovo PIN impostato"
                     });
                 }
                 else if (result == 0x6983)
@@ -878,18 +1106,22 @@ namespace SiaeBridge
                     {
                         success = true,
                         unlocked = false,
-                        error = "PUK bloccato - carta non recuperabile",
-                        errorCode = result
+                        pinNumber = pinNumber,
+                        error = "PUK bloccato - carta non recuperabile, contattare SIAE per sostituzione",
+                        errorCode = result,
+                        pukRetriesRemaining = 0
                     });
                 }
-                else if (result == 0x6982)
+                else if (result == 0x6982 || (result >= 0x63C0 && result <= 0x63CF))
                 {
                     return JsonConvert.SerializeObject(new
                     {
                         success = true,
                         unlocked = false,
+                        pinNumber = pinNumber,
                         error = "PUK errato",
-                        errorCode = result
+                        errorCode = result,
+                        pukRetriesRemaining = pukRetriesRemaining
                     });
                 }
                 else
@@ -898,7 +1130,8 @@ namespace SiaeBridge
                     {
                         success = true,
                         unlocked = false,
-                        error = $"Errore sblocco PUK: 0x{result:X4}",
+                        pinNumber = pinNumber,
+                        error = $"Errore sblocco PIN{pinNumber}: 0x{result:X4} - {LibSiae.GetErrorMessage(result)}",
                         errorCode = result
                     });
                 }
@@ -1093,7 +1326,8 @@ namespace SiaeBridge
         }
 
         // ============================================================
-        // SIGN XML - Firma digitale XML usando la chiave PKI della smart card SIAE
+        // SIGN XML - Firma digitale CAdES-BES con SHA-256
+        // Produce file P7M conforme ai requisiti SIAE
         // Usato per i report C1 da inviare a SIAE
         // ============================================================
         static string SignXml(string json)
@@ -1112,7 +1346,7 @@ namespace SiaeBridge
                     return ERR("Contenuto XML mancante");
                 }
 
-                Log($"SignXml: slot={_slot}, xmlLength={xmlContent?.Length ?? 0}");
+                Log($"SignXml (CAdES-BES): slot={_slot}, xmlLength={xmlContent?.Length ?? 0}");
 
                 int state = isCardIn(_slot);
                 if (!IsCardPresent(state))
@@ -1139,7 +1373,7 @@ namespace SiaeBridge
                 int sel1111 = LibSiae.SelectML(0x1111, _slot);
                 Log($"  SelectML(0x1111 DF PKI) = {sel1111} (0x{sel1111:X4})");
 
-                // Verify PIN if provided
+                // Verify PIN if provided (using libSIAE to unlock the card)
                 if (!string.IsNullOrEmpty(pin))
                 {
                     pin = new string(pin.Where(char.IsDigit).ToArray());
@@ -1164,80 +1398,34 @@ namespace SiaeBridge
                     Log($"  WARNING: No PIN provided for signature operation");
                 }
 
-                // Step 1: Get the correct key ID from the smart card (as per libSIAE documentation)
-                byte keyId = LibSiae.GetKeyIDML(_slot);
-                Log($"  GetKeyIDML = {keyId} (0x{keyId:X2})");
-                
-                if (keyId == 0)
-                {
-                    return ERR("GetKeyID ha restituito 0 - nessuna chiave di firma disponibile");
-                }
-
-                // Step 2: Calculate SHA-1 hash of the XML content
+                // Convert XML to UTF-8 bytes
                 byte[] xmlBytes = Encoding.UTF8.GetBytes(xmlContent);
-                byte[] hash = new byte[20]; // SHA-1 produces 20 bytes
-                
-                int hashResult = LibSiae.Hash(1, xmlBytes, xmlBytes.Length, hash); // 1 = SHA-1
-                Log($"  Hash(SHA-1) = {hashResult}, hashLen={hash.Length}");
-                
-                if (hashResult != 0)
+                Log($"  XML bytes: {xmlBytes.Length}");
+
+                // ============================================================
+                // NUOVO: Usa CAdES-BES con SHA-256 invece di XMLDSig con SHA-1
+                // ============================================================
+                var (success, p7mBase64, error, signedAt) = CreateCAdESSignature(xmlBytes, pin);
+
+                if (!success)
                 {
-                    return ERR($"Calcolo hash fallito: 0x{hashResult:X4}");
+                    return ERR(error ?? "Errore sconosciuto nella firma CAdES");
                 }
 
-                // Step 3: Apply PKCS#1 padding (output 128 bytes as per libSIAE documentation)
-                byte[] paddedHash = new byte[128];
-                int padResult = LibSiae.Padding(hash, hash.Length, paddedHash);
-                Log($"  Padding = {padResult} (0x{padResult:X4})");
-                
-                if (padResult != 0)
-                {
-                    return ERR($"Padding fallito: 0x{padResult:X4}");
-                }
+                Log($"  ✓ CAdES-BES signature created successfully");
 
-                // Step 4: Sign the padded hash using the card's private key
-                byte[] signature = new byte[128]; // RSA 1024-bit signature = 128 bytes
-                int signResult = LibSiae.SignML(keyId, paddedHash, signature, _slot);
-                Log($"  SignML(keyIndex={keyId}) = {signResult} (0x{signResult:X4})");
-                
-                if (signResult != 0)
-                {
-                    return ERR($"Firma fallita: 0x{signResult:X4}");
-                }
-                
-                Log($"  ✓ Signature successful with keyIndex={keyId}");
-
-                // Get the certificate for inclusion in signed XML
-                byte[] cert = new byte[2048];
-                int certLen = cert.Length;
-                int certResult = LibSiae.GetCertificateML(cert, ref certLen, _slot);
-                Log($"  GetCertificateML = {certResult}, certLen={certLen}");
-                
-                string certificateData = "";
-                if (certResult == 0 && certLen > 0)
-                {
-                    byte[] actualCert = new byte[certLen];
-                    Array.Copy(cert, actualCert, certLen);
-                    certificateData = Convert.ToBase64String(actualCert);
-                }
-
-                // Create signed XML with embedded signature
-                string signatureValue = Convert.ToBase64String(signature);
-                string digestValue = Convert.ToBase64String(hash); // SHA-1 hash as DigestValue
-                string signedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz");
-                
-                // For SIAE C1 reports, we embed the signature in XML-DSig format
-                string signedXml = CreateSignedXml(xmlContent, signatureValue, certificateData, digestValue, signedAt);
-
+                // Ritorna il P7M in formato Base64
+                // Il server web salverà questo come file binario .p7m
                 return JsonConvert.SerializeObject(new
                 {
                     success = true,
                     signature = new
                     {
-                        signedXml = signedXml,
-                        signatureValue = signatureValue,
-                        certificateData = certificateData,
-                        signedAt = signedAt
+                        p7mBase64 = p7mBase64,           // File P7M firmato (CAdES-BES)
+                        signedAt = signedAt,
+                        format = "CAdES-BES",            // Formato firma
+                        algorithm = "SHA-256",           // Algoritmo hash
+                        xmlContent = xmlContent          // XML originale (per riferimento)
                     }
                 });
             }
@@ -1310,6 +1498,186 @@ namespace SiaeBridge
       </SignatureProperties>
     </Object>
   </Signature>";
+        }
+
+        // ============================================================
+        // CAdES-BES SIGNATURE - Firma conforme SIAE con SHA-256
+        // Produce file P7M binario invece di XMLDSig
+        // Richiesto per report C1 inviati a SIAE
+        // ============================================================
+
+        /// <summary>
+        /// Crea firma CAdES-BES con SHA-256 usando il certificato della Smart Card SIAE
+        /// Ritorna il file P7M firmato in Base64
+        /// </summary>
+        static (bool success, string p7mBase64, string error, string signedAt) CreateCAdESSignature(byte[] xmlBytes, string pin)
+        {
+            try
+            {
+                Log($"CreateCAdESSignature: xmlBytes.Length={xmlBytes.Length}");
+
+                // Ottieni il certificato dalla Smart Card tramite Windows Certificate Store
+                X509Certificate2 cert = GetSmartCardCertificateFromStore();
+                if (cert == null)
+                {
+                    return (false, null, "Certificato Smart Card SIAE non trovato nello store Windows", null);
+                }
+
+                Log($"  Certificate found: {cert.Subject}");
+                Log($"  Issuer: {cert.Issuer}");
+                Log($"  HasPrivateKey: {cert.HasPrivateKey}");
+
+                if (!cert.HasPrivateKey)
+                {
+                    return (false, null, "Il certificato non ha una chiave privata associata", null);
+                }
+
+                // Crea la struttura CMS/PKCS#7 per CAdES-BES
+                ContentInfo content = new ContentInfo(xmlBytes);
+                SignedCms signedCms = new SignedCms(content, false); // false = attached signature
+
+                // Configura il firmatario con SHA-256
+                CmsSigner signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, cert);
+                signer.DigestAlgorithm = new Oid("2.16.840.1.101.3.4.2.1", "SHA256"); // SHA-256 OID
+                signer.IncludeOption = X509IncludeOption.WholeChain;
+
+                // Aggiungi attributi firmati richiesti per CAdES-BES
+                // 1. Content-Type
+                Pkcs9ContentType contentType = new Pkcs9ContentType();
+                signer.SignedAttributes.Add(contentType);
+
+                // 2. Signing-Time
+                Pkcs9SigningTime signingTime = new Pkcs9SigningTime(DateTime.Now);
+                signer.SignedAttributes.Add(signingTime);
+
+                // 3. Message-Digest (calcolato automaticamente da SignedCms)
+
+                Log($"  Computing CAdES-BES signature with SHA-256...");
+
+                // Calcola la firma (richiede PIN se la Smart Card lo richiede - gestito da Windows CSP)
+                signedCms.ComputeSignature(signer, false);
+
+                Log($"  Signature computed successfully");
+
+                // Codifica il risultato in formato P7M (DER/BER)
+                byte[] p7mBytes = signedCms.Encode();
+                string p7mBase64 = Convert.ToBase64String(p7mBytes);
+                string signedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz");
+
+                Log($"  P7M size: {p7mBytes.Length} bytes");
+
+                return (true, p7mBase64, null, signedAt);
+            }
+            catch (CryptographicException cryptoEx)
+            {
+                Log($"CreateCAdESSignature crypto error: {cryptoEx.Message}");
+                
+                // Errori comuni della Smart Card
+                if (cryptoEx.Message.Contains("cancelled") || cryptoEx.Message.Contains("annullat"))
+                {
+                    return (false, null, "Operazione annullata dall'utente", null);
+                }
+                if (cryptoEx.Message.Contains("PIN") || cryptoEx.Message.Contains("pin"))
+                {
+                    return (false, null, "Errore PIN: " + cryptoEx.Message, null);
+                }
+                return (false, null, "Errore crittografico: " + cryptoEx.Message, null);
+            }
+            catch (Exception ex)
+            {
+                Log($"CreateCAdESSignature error: {ex.Message}");
+                return (false, null, ex.Message, null);
+            }
+        }
+
+        /// <summary>
+        /// Cerca il certificato della Smart Card SIAE nello store Windows
+        /// Il certificato deve essere emesso da una CA italiana riconosciuta (InfoCert, Aruba, etc.)
+        /// e NON deve essere auto-firmato
+        /// </summary>
+        static X509Certificate2 GetSmartCardCertificateFromStore()
+        {
+            Log("  Searching for SIAE Smart Card certificate in Windows store...");
+
+            // Cerca in entrambi gli store: CurrentUser e LocalMachine
+            StoreLocation[] locations = { StoreLocation.CurrentUser, StoreLocation.LocalMachine };
+            
+            foreach (var location in locations)
+            {
+                try
+                {
+                    X509Store store = new X509Store(StoreName.My, location);
+                    store.Open(OpenFlags.ReadOnly | OpenFlags.OpenExistingOnly);
+
+                    try
+                    {
+                        foreach (X509Certificate2 cert in store.Certificates)
+                        {
+                            // Deve avere una chiave privata (tipico delle Smart Card)
+                            if (!cert.HasPrivateKey)
+                                continue;
+
+                            // Il certificato deve essere valido
+                            if (DateTime.Now < cert.NotBefore || DateTime.Now > cert.NotAfter)
+                                continue;
+
+                            string issuer = cert.Issuer.ToUpperInvariant();
+                            string subject = cert.Subject.ToUpperInvariant();
+
+                            Log($"    [{location}] Checking cert: Subject={cert.Subject}, Issuer={cert.Issuer}");
+
+                            // IMPORTANTE: Escludi certificati auto-firmati (Issuer == Subject)
+                            // Questi sono tipicamente certificati di test/sviluppo, non SIAE
+                            if (cert.Issuer == cert.Subject)
+                            {
+                                Log($"    -> Skipping self-signed certificate");
+                                continue;
+                            }
+
+                            // Escludi certificati con GUID nel nome (tipicamente auto-generati)
+                            if (System.Text.RegularExpressions.Regex.IsMatch(subject, @"[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}"))
+                            {
+                                Log($"    -> Skipping GUID-based certificate");
+                                continue;
+                            }
+
+                            // Cerca certificati emessi da CA italiane riconosciute
+                            // tipicamente usati per le carte SIAE
+                            bool isSiaeCompatible = 
+                                issuer.Contains("INFOCERT") ||
+                                issuer.Contains("ARUBA") ||
+                                issuer.Contains("ACTALIS") ||
+                                issuer.Contains("POSTE") ||
+                                issuer.Contains("NAMIRIAL") ||
+                                issuer.Contains("INTESI") ||
+                                issuer.Contains("TELECOM") ||
+                                issuer.Contains("IN.TE.S.A") ||
+                                subject.Contains("SIAE") ||
+                                issuer.Contains("SIAE");
+
+                            if (isSiaeCompatible)
+                            {
+                                Log($"    -> SIAE-compatible certificate found from {location}!");
+                                store.Close();
+                                return cert;
+                            }
+                        }
+                    }
+                    finally
+                    {
+                        store.Close();
+                    }
+                }
+                catch (Exception ex)
+                {
+                    Log($"  Error accessing {location} store: {ex.Message}");
+                }
+            }
+
+            Log($"  No SIAE-compatible certificate found in Windows store");
+            Log($"  NOTE: The smart card certificate must be accessible via Windows CSP.");
+            Log($"  Make sure the Bit4id minidriver is installed and the certificate is visible in certmgr.msc");
+            return null;
         }
 
         // ============================================================
