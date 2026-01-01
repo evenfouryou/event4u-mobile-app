@@ -4517,7 +4517,12 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
     }
     
     const tipoTassazione = ticketedEvent.taxType || 'S';
-    const incidenza = ticketedEvent.entertainmentIncidence ?? 100;
+    // Incidenza Intrattenimento (percentuale):
+    // - Per Intrattenimento (I): usa valore configurato o default 100
+    // - Per Spettacolo (S): deve essere 0 (non è intrattenimento)
+    const incidenza = tipoTassazione === 'I' 
+      ? (ticketedEvent.entertainmentIncidence ?? 100) 
+      : 0;
     const imponibileIntrattenimenti = 0; // Calcolato automaticamente dal sistema SIAE
     const genreCode = ticketedEvent.genreCode || '61';
     const incidenzaGenere = ticketedEvent.genreIncidence ?? 0;

@@ -388,7 +388,8 @@ async function sendDailyReports() {
         const xmlContent = generateXMLContent(reportData);
 
         const systemCode = ticketedEvent.systemCode || SIAE_SYSTEM_CODE;
-        let fileName = generateSiaeFileName(yesterday, progressivo, false);
+        // RCA reports: usa 'rca' come tipo report per nome file RCA_YYYY_MM_DD_###.xsi
+        let fileName = generateSiaeFileName('rca', yesterday, progressivo, false);
         let isSigned = false;
 
         const transmission = await siaeStorage.createSiaeTransmission({
@@ -420,7 +421,7 @@ async function sendDailyReports() {
             log(`XML firmato con successo alle ${signatureResult.signedAt}`);
             
             // Aggiorna nome file con estensione .xsi.p7m per file firmati
-            fileName = generateSiaeFileName(yesterday, progressivo, true);
+            fileName = generateSiaeFileName('rca', yesterday, progressivo, true);
             
             // Aggiorna trasmissione con contenuto firmato e nuovo nome file
             await siaeStorage.updateSiaeTransmission(transmission.id, {
@@ -509,7 +510,8 @@ async function sendMonthlyReports() {
         const xmlContent = generateXMLContent(reportData);
 
         const systemCode = ticketedEvent.systemCode || SIAE_SYSTEM_CODE;
-        let fileName = generateSiaeFileName(previousMonth, progressivo, false);
+        // RCA reports mensili: usa 'rca' come tipo report per nome file RCA_YYYY_MM_DD_###.xsi
+        let fileName = generateSiaeFileName('rca', previousMonth, progressivo, false);
         let isSigned = false;
 
         const transmission = await siaeStorage.createSiaeTransmission({
@@ -541,7 +543,7 @@ async function sendMonthlyReports() {
             log(`XML mensile firmato con successo alle ${signatureResult.signedAt}`);
             
             // Aggiorna nome file con estensione .xsi.p7m per file firmati
-            fileName = generateSiaeFileName(previousMonth, progressivo, true);
+            fileName = generateSiaeFileName('rca', previousMonth, progressivo, true);
             
             // Aggiorna trasmissione con contenuto firmato e nuovo nome file
             await siaeStorage.updateSiaeTransmission(transmission.id, {
