@@ -3632,11 +3632,33 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     endDate.setHours(23, 59, 59, 999);
   }
   
-  // Get tickets for the date range
+  // Get tickets for the date range - FILTER BY EVENT DATE (not emission date)
+  // SIAE requires reports to contain events that occurred in the period, not sales
   const allTickets = await siaeStorage.getSiaeTicketsByCompany(companyId);
+  
+  // Pre-fetch all ticketed events to get their event dates
+  const ticketedEventsMap = new Map<string, { eventDate: Date }>();
+  const uniqueTicketedEventIds = [...new Set(allTickets.map(t => t.ticketedEventId).filter(Boolean))];
+  
+  for (const ticketedEventId of uniqueTicketedEventIds) {
+    const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(ticketedEventId);
+    if (ticketedEvent) {
+      const eventDetails = await storage.getEvent(ticketedEvent.eventId);
+      if (eventDetails) {
+        ticketedEventsMap.set(ticketedEventId, { 
+          eventDate: new Date(eventDetails.startDatetime) 
+        });
+      }
+    }
+  }
+  
   const filteredTickets = allTickets.filter(t => {
-    const ticketDate = new Date(t.emissionDate);
-    return ticketDate >= startDate && ticketDate <= endDate;
+    // Use EVENT DATE for filtering (not ticket emission date)
+    const eventInfo = ticketedEventsMap.get(t.ticketedEventId);
+    if (!eventInfo) return false;
+    
+    const eventDate = eventInfo.eventDate;
+    return eventDate >= startDate && eventDate <= endDate;
   });
   
   const now = new Date();
