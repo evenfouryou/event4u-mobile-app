@@ -827,40 +827,82 @@ export default function SiaeTransmissionsPage() {
         </Dialog>
 
         <Dialog open={isSendDailyDialogOpen} onOpenChange={setIsSendDailyDialogOpen}>
-          <DialogContent>
+          <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>Trasmissione C1 SIAE</DialogTitle>
-              <DialogDescription>Genera e invia automaticamente la trasmissione XML C1</DialogDescription>
+              <DialogTitle>Trasmissione Report SIAE</DialogTitle>
+              <DialogDescription>Seleziona il tipo di report da generare e inviare</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div>
-                <Label>Tipo Report C1</Label>
+                <Label>Tipo Report</Label>
                 <Select value={c1Type} onValueChange={(v: 'daily' | 'monthly') => setC1Type(v)}>
                   <SelectTrigger data-testid="select-c1-type">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="daily">Giornaliero (dettaglio biglietti)</SelectItem>
-                    <SelectItem value="monthly">Mensile (riepilogo aggregato)</SelectItem>
+                    <SelectItem value="daily">
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">RMG - Riepilogo Giornaliero</span>
+                        <span className="text-xs text-muted-foreground">Eventi del giorno selezionato</span>
+                      </div>
+                    </SelectItem>
+                    <SelectItem value="monthly">
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">RPM - Riepilogo Mensile</span>
+                        <span className="text-xs text-muted-foreground">Rendicontazione fiscale mensile</span>
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  {c1Type === 'monthly' 
-                    ? "Il report mensile aggrega tutti i biglietti del mese selezionato" 
-                    : "Il report giornaliero include il dettaglio di ogni singolo biglietto"}
-                </p>
               </div>
+              
+              {/* Info box con spiegazione tipo report */}
+              <div className={`p-3 rounded-lg border ${c1Type === 'monthly' ? 'bg-amber-500/10 border-amber-500/30' : 'bg-blue-500/10 border-blue-500/30'}`}>
+                {c1Type === 'monthly' ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
+                      <AlertTriangle className="w-4 h-4" />
+                      <span className="font-medium text-sm">Adempimento Silenzioso</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Il Riepilogo Mensile (RPM) serve per la rendicontazione fiscale e il versamento delle imposte. 
+                      <strong className="text-foreground"> SIAE non invia risposta</strong> per questo tipo di report - viene acquisito silenziosamente.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Contiene solo eventi che si sono svolti nel mese selezionato.
+                    </p>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
+                      <Clock className="w-4 h-4" />
+                      <span className="font-medium text-sm">Report Giornaliero</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Il Riepilogo Giornaliero (RMG) include il dettaglio di tutti i biglietti per gli eventi del giorno.
+                      Generalmente utilizzato per monitoraggio interno.
+                    </p>
+                  </div>
+                )}
+              </div>
+              
               <div>
                 <Label>{c1Type === 'monthly' ? 'Mese di riferimento' : 'Data'}</Label>
                 <Input 
                   type={c1Type === 'monthly' ? 'month' : 'date'} 
                   value={dailyDate} 
                   onChange={(e) => setDailyDate(e.target.value)} 
+                  data-testid="input-c1-date"
                 />
+                {c1Type === 'monthly' && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Seleziona un mese con eventi già conclusi
+                  </p>
+                )}
               </div>
               <div>
                 <Label>Email Destinatario SIAE</Label>
-                <Input type="email" value={dailyEmail} onChange={(e) => setDailyEmail(e.target.value)} />
+                <Input type="email" value={dailyEmail} onChange={(e) => setDailyEmail(e.target.value)} data-testid="input-c1-email" />
               </div>
             </div>
             <DialogFooter>
@@ -870,9 +912,10 @@ export default function SiaeTransmissionsPage() {
                   sendC1Mutation.mutate({ date: dailyDate, toEmail: dailyEmail, type: c1Type });
                 }}
                 disabled={!dailyDate || !dailyEmail || sendC1Mutation.isPending}
+                data-testid="button-send-c1-submit"
               >
                 {sendC1Mutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                Genera e Invia
+                {c1Type === 'monthly' ? 'Genera e Invia RPM' : 'Genera e Invia RMG'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1708,31 +1751,46 @@ export default function SiaeTransmissionsPage() {
       <BottomSheet
         open={isSendDailySheetOpen}
         onClose={() => setIsSendDailySheetOpen(false)}
-        title="Trasmissione C1 SIAE"
+        title="Trasmissione Report SIAE"
       >
         <div className="p-4 space-y-6">
           <div className="text-center py-4">
-            <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-[#FFD700]/20 flex items-center justify-center">
-              <Zap className="w-8 h-8 text-[#FFD700]" />
+            <div className={`w-16 h-16 mx-auto mb-4 rounded-full ${c1Type === 'monthly' ? 'bg-amber-500/20' : 'bg-blue-500/20'} flex items-center justify-center`}>
+              {c1Type === 'monthly' ? (
+                <AlertTriangle className="w-8 h-8 text-amber-400" />
+              ) : (
+                <Zap className="w-8 h-8 text-blue-400" />
+              )}
             </div>
             <p className="text-muted-foreground text-sm">
-              Genera e invia automaticamente la trasmissione XML C1
+              {c1Type === 'monthly' 
+                ? "RPM - Rendicontazione fiscale mensile (nessuna risposta SIAE)"
+                : "RMG - Report giornaliero degli eventi"}
             </p>
           </div>
 
           <div className="space-y-4">
             <div>
-              <Label className="text-sm font-medium mb-2 block">Tipo Report C1</Label>
+              <Label className="text-sm font-medium mb-2 block">Tipo Report</Label>
               <Select value={c1Type} onValueChange={(v: 'daily' | 'monthly') => setC1Type(v)}>
                 <SelectTrigger className="h-12" data-testid="select-c1-type-mobile">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="daily">Giornaliero (dettaglio)</SelectItem>
-                  <SelectItem value="monthly">Mensile (riepilogo)</SelectItem>
+                  <SelectItem value="daily">RMG - Riepilogo Giornaliero</SelectItem>
+                  <SelectItem value="monthly">RPM - Riepilogo Mensile</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            
+            {/* Info box per mobile */}
+            {c1Type === 'monthly' && (
+              <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                <p className="text-xs text-muted-foreground">
+                  <strong className="text-amber-400">Nota:</strong> Il Riepilogo Mensile viene acquisito silenziosamente da SIAE. Non è prevista alcuna risposta.
+                </p>
+              </div>
+            )}
             
             <div>
               <Label className="text-sm font-medium mb-2 block">{c1Type === 'monthly' ? 'Mese' : 'Data'}</Label>
@@ -1741,7 +1799,7 @@ export default function SiaeTransmissionsPage() {
                 value={dailyDate}
                 onChange={(e) => setDailyDate(e.target.value)}
                 className="h-12"
-                data-testid="input-c1-date"
+                data-testid="input-c1-date-mobile"
               />
             </div>
             
@@ -1753,7 +1811,7 @@ export default function SiaeTransmissionsPage() {
                 onChange={(e) => setDailyEmail(e.target.value)}
                 className="h-12"
                 placeholder="servertest2@batest.siae.it"
-                data-testid="input-c1-email"
+                data-testid="input-c1-email-mobile"
               />
             </div>
           </div>
@@ -1767,14 +1825,14 @@ export default function SiaeTransmissionsPage() {
               Annulla
             </HapticButton>
             <HapticButton
-              className="flex-1 h-12 bg-[#FFD700] text-black hover:bg-[#FFD700]/90"
+              className={`flex-1 h-12 ${c1Type === 'monthly' ? 'bg-amber-500 text-black hover:bg-amber-500/90' : 'bg-blue-500 text-white hover:bg-blue-500/90'}`}
               onClick={() => sendC1Mutation.mutate({ date: dailyDate, toEmail: dailyEmail, type: c1Type })}
               disabled={!dailyDate || !dailyEmail || sendC1Mutation.isPending}
               hapticType="medium"
               data-testid="button-send-c1-confirm"
             >
               {sendC1Mutation.isPending && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
-              Genera e Invia
+              {c1Type === 'monthly' ? 'Invia RPM' : 'Invia RMG'}
             </HapticButton>
           </div>
         </div>
