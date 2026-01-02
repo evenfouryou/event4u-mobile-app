@@ -1,0 +1,129 @@
+Certo — qui sotto trovi un messaggio **pronto da incollare su Replit (o a Replit AI)** per far capire *esattamente* cosa non va e cosa deve generare il codice.
+
+---
+
+## Messaggio per Replit / Replit AI
+
+Sto inviando tracciati a SIAE ma non ricevo i report perché i file che produco **non sono CAdES veri**.
+
+### Problema attuale (con i file che sto generando)
+
+1. Il file chiamato `*.p7m` **non è un CAdES/CMS SignedData reale**: dentro c’è un **XML firmato internamente (XMLDSig)**, riconoscibile dal tag:
+
+```xml
+<Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+```
+
+2. La firma usa **SHA1** (es. `rsa-sha1` / `sha1`), che oggi è spesso **rifiutata** dai sistemi istituzionali.
+
+👉 Risultato: SIAE tende a **scartare/ignorare** il file e spesso **non genera risposta**.
+
+---
+
+## Obiettivo corretto (quello che SIAE si aspetta)
+
+Devo generare un **vero file .p7m CAdES-BES**, cioè:
+
+* **Formato:** CMS SignedData (CAdES-BES)
+* **Algoritmo:** SHA-256 (RSA-SHA256)
+* **Payload:** l’XML **NON deve essere firmato internamente** (niente XMLDSig dentro)
+* Output: `file.xsi.p7m` che contiene **solo CMS**, non un XML con `<Signature>`.
+
+---
+
+## Come implementarlo su Replit (soluzione più semplice e robusta)
+
+Usare OpenSSL da codice (Node o Python) per firmare l’XML come CAdES.
+
+### 1) Input
+
+`RMG_....xsi` (XML puro, senza `<Signature ...xmldsig...>`)
+
+### 2) Firma CAdES con OpenSSL (SHA256)
+
+Comando:
+
+```bash
+openssl smime -sign \
+  -binary \
+  -in INPUT.xsi \
+  -signer cert.pem \
+  -inkey key.pem \
+  -outform DER \
+  -out OUTPUT.xsi.p7m \
+  -md sha256 \
+  -nodetach
+```
+
+> Nota: `cert.pem` + `key.pem` devono provenire da un `.p12/.pfx` valido (certificato + chiave privata).
+
+---
+
+## Esempio Node.js su Replit (child_process)
+
+```js
+import { execFileSync } from "child_process";
+import fs from "fs";
+
+function signCadesP7m(inputPath, outputPath, certPem, keyPem) {
+  // Controllo: l’XML NON deve contenere XMLDSig
+  const xml = fs.readFileSync(inputPath, "utf8");
+  if (xml.includes('http://www.w3.org/2000/09/xmldsig#')) {
+    throw new Error("Input contiene XMLDSig (<Signature ...xmldsig...>): deve essere XML NON firmato.");
+  }
+
+  execFileSync("openssl", [
+    "smime", "-sign",
+    "-binary",
+    "-in", inputPath,
+    "-signer", certPem,
+    "-inkey", keyPem,
+    "-outform", "DER",
+    "-out", outputPath,
+    "-md", "sha256",
+    "-nodetach"
+  ], { stdio: "inherit" });
+}
+
+// esempio:
+signCadesP7m(
+  "RMG_2026_01_02_001.xsi",
+  "RMG_2026_01_02_001.xsi.p7m",
+  "cert.pem",
+  "key.pem"
+);
+```
+
+---
+
+## Verifica che sia davvero CAdES (non XMLDSig travestito)
+
+1. Deve risultare CMS SignedData:
+
+```bash
+openssl asn1parse -inform DER -in OUTPUT.xsi.p7m | head
+```
+
+2. Deve usare SHA256 (non SHA1):
+
+```bash
+openssl cms -inform DER -in OUTPUT.xsi.p7m -cmsout -print | grep -i -E "sha1|sha256"
+```
+
+Deve comparire **sha256** e NON **sha1**.
+
+3. Estrazione contenuto:
+
+```bash
+openssl smime -verify -inform DER -in OUTPUT.xsi.p7m -noverify -out estratto.xsi
+```
+
+---
+
+## Vincolo importante
+
+Il file `smime.p7s` (PEC) **non c’entra**: è firma S/MIME di email, non è il formato richiesto da SIAE.
+
+---
+
+Se mi dici che stack stai usando su Replit (**Node** o **Python**) e che formato hai del certificato (**.p12 / .pem**), ti adatto il codice pronto-incolla al tuo progetto.

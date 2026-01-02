@@ -1437,27 +1437,22 @@ namespace SiaeBridge
 
                 // ============================================================
                 // CAdES-BES con SHA-256 usando BouncyCastle
-                // Prima prova con BouncyCastle, poi fallback a libSIAEp7.dll legacy
+                // SIAE 2025: Solo CAdES-BES con SHA-256 è accettato
+                // NO FALLBACK a XMLDSig/SHA-1 (deprecato e rifiutato da SIAE)
                 // ============================================================
-                Log($"  Attempting CAdES-BES signature with BouncyCastle (SHA-256)...");
+                Log($"  Creating CAdES-BES signature with BouncyCastle (SHA-256)...");
+                Log($"  NOTE: NO fallback to legacy SHA-1/XMLDSig - SIAE requires SHA-256 only");
                 var (success, p7mBase64, error, signedAt) = CreateCAdESSignatureBC(xmlBytes, pin);
 
                 if (!success)
                 {
-                    Log($"  BouncyCastle signature failed: {error}");
-                    Log($"  Falling back to legacy libSIAEp7.dll method (SHA-1)...");
-                    
-                    // Fallback to legacy method using libSIAEp7.dll
-                    (success, p7mBase64, error, signedAt) = CreateCAdESSignatureLegacy(xmlBytes, pin);
-                    
-                    if (!success)
-                    {
-                        return ERR(error ?? "Errore sconosciuto nella firma CAdES");
-                    }
-                    Log($"  ✓ Legacy CAdES signature successful (SHA-1)");
+                    Log($"  ERROR: CAdES-BES signature failed: {error}");
+                    Log($"  CRITICAL: Cannot use legacy SHA-1 fallback - SIAE 2025 requires SHA-256");
+                    // NO FALLBACK - Return error instead of using deprecated SHA-1
+                    return ERR($"Firma CAdES-BES fallita: {error}. SIAE richiede SHA-256, fallback SHA-1 disabilitato.");
                 }
 
-                Log($"  ✓ CAdES-BES signature created successfully");
+                Log($"  ✓ CAdES-BES SHA-256 signature created successfully (SIAE 2025 compliant)");
 
                 // Ritorna il P7M in formato Base64
                 // Il server web salverà questo come file binario .p7m
