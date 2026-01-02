@@ -1,0 +1,113 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'Version tag (e.g., v3.14.0)'
+        required: true
+        default: 'v3.14.0'
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup .NET 8
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build SiaeBridge .NET (x86)
+        run: |
+          cd desktop-app/SiaeBridge
+          dotnet restore
+          dotnet publish -c Release -r win-x86 --self-contained true -o ../resources
+
+      - name: Verify SiaeBridge build
+        run: |
+          Write-Host "Contents of resources folder:"
+          Get-ChildItem -Path desktop-app/resources -Recurse
+          if (!(Test-Path "desktop-app/resources/SiaeBridge.exe")) {
+            throw "SiaeBridge.exe not found!"
+          }
+          if (!(Test-Path "desktop-app/resources/libSIAE.dll")) {
+            throw "libSIAE.dll not found!"
+          }
+          if (!(Test-Path "desktop-app/resources/libSIAEp7.dll")) {
+            throw "libSIAEp7.dll not found!"
+          }
+        shell: pwsh
+
+      - name: Install Electron dependencies
+        run: |
+          cd desktop-app
+          npm install
+
+      - name: Build Electron installer
+        run: |
+          cd desktop-app
+          npm run build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: List build output
+        run: |
+          Write-Host "Contents of dist folder:"
+          Get-ChildItem -Path desktop-app/dist -Recurse
+        shell: pwsh
+
+      - name: Get version
+        id: get_version
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            echo "VERSION=${{ github.event.inputs.version }}" >> $env:GITHUB_OUTPUT
+          } else {
+            $tag = "${{ github.ref_name }}"
+            echo "VERSION=$tag" >> $env:GITHUB_OUTPUT
+          }
+        shell: pwsh
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          name: "SIAE Lettore ${{ steps.get_version.outputs.VERSION }} - CAdES-BES SHA-256"
+          body: |
+            ## Event Four You SIAE Lettore ${{ steps.get_version.outputs.VERSION }}
+            
+            ### Novita in questa versione:
+            - Firma digitale CAdES-BES conforme ETSI EN 319 122-1
+            - SHA-256 invece di SHA-1 deprecato
+            - Attributo SigningCertificateV2 obbligatorio per SIAE 2025
+            - BouncyCastle.Cryptography v2.5.0
+            
+            ### Installazione:
+            1. Scarica `Event.Four.You.SIAE.Lettore.Setup.*.exe`
+            2. Esegui l'installer
+            3. Avvia l'applicazione dal menu Start
+            
+            ### Requisiti:
+            - Windows 10/11 (64-bit)
+            - Lettore smart card MiniLector EVO V3
+            - Smart card SIAE attiva
+            
+            ### Note:
+            I file firmati avranno estensione `.xsi.p7m` e saranno in formato CAdES-BES binario (non XMLDSig).
+          files: |
+            desktop-app/dist/*.exe
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

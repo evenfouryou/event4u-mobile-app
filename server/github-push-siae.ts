@@ -160,6 +160,11 @@ const filesToUpdate: FileUpdate[] = [
     localPath: 'siae-lettore-fix/icon.png',
     repoPath: 'icon.png',
     binary: true
+  },
+  // GitHub Actions workflow
+  {
+    localPath: 'siae-lettore-fix/.github/workflows/build-release.yml',
+    repoPath: '.github/workflows/build-release.yml'
   }
 ];
 
