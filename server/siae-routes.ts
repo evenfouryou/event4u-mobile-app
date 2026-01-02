@@ -3445,16 +3445,20 @@ router.get("/api/siae/companies/:companyId/ticketed-events", requireAuth, requir
     
     // The getSiaeTicketedEventsByCompany function already includes eventName, eventDate, ticketingStatus
     // Filter to only show approved events (RCA requires SIAE-approved events)
-    // Return ticketingStatus as 'status' for frontend filtering (closed events only for RCA)
+    // Return 'closed' status if EITHER ticketingStatus OR event.status is closed
     const filteredEvents = ticketedEvents
       .filter(te => te.approvalStatus === 'approved')
-      .map(te => ({
-        id: te.id,
-        eventId: te.eventId,
-        eventName: te.eventName || 'Evento sconosciuto',
-        eventDate: te.eventDate || te.createdAt,
-        status: te.ticketingStatus, // ticketingStatus: draft, active, suspended, closed
-      }));
+      .map(te => {
+        // Consider event closed if either ticketingStatus or base event status is closed
+        const isClosed = te.ticketingStatus === 'closed' || te.status === 'closed';
+        return {
+          id: te.id,
+          eventId: te.eventId,
+          eventName: te.eventName || 'Evento sconosciuto',
+          eventDate: te.eventDate || te.createdAt,
+          status: isClosed ? 'closed' : te.ticketingStatus, // Show as closed if either is closed
+        };
+      });
     
     // Sort by event date descending (most recent first)
     filteredEvents.sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime());
@@ -3696,8 +3700,14 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     }
     
     // Status validation: verify event is closed/completed for RCA
-    if (rcaTicketedEvent.ticketingStatus !== 'closed') {
-      return { success: false, statusCode: 400, error: "L'evento deve essere chiuso per generare il report RCA. Stato attuale: " + rcaTicketedEvent.ticketingStatus };
+    // Allow both 'closed' ticketingStatus OR if the base event status is 'closed'
+    const baseEvent = await storage.getEvent(rcaTicketedEvent.eventId);
+    const eventIsClosed = rcaTicketedEvent.ticketingStatus === 'closed' || baseEvent?.status === 'closed';
+    
+    console.log(`[SIAE-ROUTES] RCA validation: ticketingStatus=${rcaTicketedEvent.ticketingStatus}, eventStatus=${baseEvent?.status}, eventIsClosed=${eventIsClosed}`);
+    
+    if (!eventIsClosed) {
+      return { success: false, statusCode: 400, error: "L'evento deve essere chiuso per generare il report RCA. Stato attuale biglietteria: " + rcaTicketedEvent.ticketingStatus + ", stato evento: " + (baseEvent?.status || 'sconosciuto') };
     }
     
     const rcaEventDetails = await storage.getEvent(rcaTicketedEvent.eventId);
