@@ -45,6 +45,16 @@ jobs:
         with:
           node-version: '20'
           
+      - name: Cache electron-builder binaries
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~\AppData\Local\electron-builder\Cache
+            ~\AppData\Local\electron\Cache
+          key: ${{ runner.os }}-electron-builder-${{ hashFiles('desktop-app/package-lock.json') }}
+          restore-keys: |
+            ${{ runner.os }}-electron-builder-
+          
       - name: Install dependencies
         run: |
           cd desktop-app
@@ -56,6 +66,7 @@ jobs:
           npm run build
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          ELECTRON_BUILDER_ALLOW_UNRESOLVED_DEPENDENCIES: true
           
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -88,6 +99,7 @@ jobs:
             - SHA-256 invece di SHA-1 deprecato
             - SigningCertificateV2 per SIAE 2025
             - BouncyCastle.Cryptography v2.5.0
+            - Rimosso fallback XMLDSig legacy
             
             ### Installazione:
             1. Scarica il file .exe
