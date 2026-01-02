@@ -50,12 +50,30 @@ const COMMIT_MESSAGE = 'v3.14: CAdES-BES SHA-256 con SigningCertificateV2 (ETSI 
 interface FileUpdate {
   localPath: string;
   repoPath: string;
+  binary?: boolean;
 }
 
 const filesToUpdate: FileUpdate[] = [
   {
     localPath: 'siae-lettore-fix/desktop-app/SiaeBridge/Program.cs',
     repoPath: 'desktop-app/SiaeBridge/Program.cs'
+  },
+  {
+    localPath: 'siae-lettore-fix/desktop-app/SiaeBridge/LibSiae.cs',
+    repoPath: 'desktop-app/SiaeBridge/LibSiae.cs'
+  },
+  {
+    localPath: 'siae-lettore-fix/desktop-app/SiaeBridge/SIAEReader.cs',
+    repoPath: 'desktop-app/SiaeBridge/SIAEReader.cs'
+  },
+  {
+    localPath: 'siae-lettore-fix/desktop-app/SiaeBridge/SiaeBridge.csproj',
+    repoPath: 'desktop-app/SiaeBridge/SiaeBridge.csproj'
+  },
+  {
+    localPath: 'siae-lettore-fix/desktop-app/SiaeBridge/libSIAEp7.dll',
+    repoPath: 'desktop-app/SiaeBridge/libSIAEp7.dll',
+    binary: true
   }
 ];
 
@@ -99,7 +117,8 @@ async function updateFile(
   octokit: Octokit, 
   localPath: string, 
   repoPath: string, 
-  branch: string
+  branch: string,
+  binary: boolean = false
 ): Promise<void> {
   const absolutePath = path.resolve(process.cwd(), localPath);
   
@@ -107,13 +126,13 @@ async function updateFile(
     throw new Error(`Local file not found: ${absolutePath}`);
   }
   
-  const content = fs.readFileSync(absolutePath, 'utf-8');
-  const contentBase64 = Buffer.from(content).toString('base64');
+  const contentBuffer = fs.readFileSync(absolutePath);
+  const contentBase64 = contentBuffer.toString('base64');
   
   const sha = await getFileSha(octokit, repoPath, branch);
   
-  console.log(`Updating ${repoPath}...`);
-  console.log(`  Local file size: ${content.length} bytes`);
+  console.log(`Updating ${repoPath}${binary ? ' (binary)' : ''}...`);
+  console.log(`  Local file size: ${contentBuffer.length} bytes`);
   console.log(`  SHA: ${sha || '(new file)'}`);
   
   const params: any = {
@@ -152,7 +171,7 @@ export async function pushSiaeBridgeUpdates(): Promise<void> {
   console.log('');
   
   for (const file of filesToUpdate) {
-    await updateFile(octokit, file.localPath, file.repoPath, branch);
+    await updateFile(octokit, file.localPath, file.repoPath, branch, file.binary || false);
     console.log('');
   }
   
