@@ -3716,14 +3716,15 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
       rcaEventDate = new Date(rcaEventDetails.startDatetime);
     }
     
-    // Filter tickets for this specific event - exclude all cancelled/annulled statuses
-    // SIAE domain uses: 'cancelled', 'annullato', 'annullato_rivendita'
+    // NORMATIVA SIAE: Il report C1 DEVE includere TUTTI i biglietti, inclusi gli annullati
+    // I biglietti annullati vengono conteggiati separatamente nella sezione TotaleTitoliAnnullati
+    // Provvedimento 04/03/2008 - Allegato B: sezione Annullati obbligatoria
+    filteredTickets = allTickets.filter(t => t.ticketedEventId === eventId);
+    
     const cancelledStatuses = ['cancelled', 'annullato', 'annullato_rivendita', 'refunded'];
-    filteredTickets = allTickets.filter(t => 
-      t.ticketedEventId === eventId && 
-      !cancelledStatuses.includes(t.status || '')
-    );
-    console.log(`[SIAE-ROUTES] RCA report for event "${rcaEventName}" - ${filteredTickets.length} valid tickets (excluded cancelled/annulled)`);
+    const validTicketsCount = filteredTickets.filter(t => !cancelledStatuses.includes(t.status || '')).length;
+    const cancelledTicketsCount = filteredTickets.filter(t => cancelledStatuses.includes(t.status || '')).length;
+    console.log(`[SIAE-ROUTES] RCA report for event "${rcaEventName}" - ${filteredTickets.length} total tickets (${validTicketsCount} valid, ${cancelledTicketsCount} annullati - INCLUSI per normativa)`);
   } else {
     // RMG/RPM: Calculate date range and filter
     let startDate: Date, endDate: Date;
@@ -4829,13 +4830,15 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
       
       let titoliAccessoXml = '';
       let totalOmaggiIva = 0;
+      
+      // NORMATIVA SIAE: Per RMG/RPM, i biglietti annullati NON vengono conteggiati in TitoliAccesso
+      // ma vengono inclusi nel dataset per tracking. Solo i biglietti emessi validi vanno in TitoliAccesso.
+      const cancelledStatuses = ['cancelled', 'annullato', 'annullato_rivendita', 'refunded'];
+      
       for (const [tipoTitolo, typeTickets] of ticketsByType) {
-        // Exclude all cancelled/annulled tickets including resale annulments
-        const validTickets = typeTickets.filter((t: any) => 
-          t.status !== 'annullato' && 
-          t.status !== 'cancelled' && 
-          t.status !== 'annullato_rivendita'
-        );
+        // Solo biglietti validi (emessi) vanno in TitoliAccesso
+        const validTickets = typeTickets.filter((t: any) => !cancelledStatuses.includes(t.status || ''));
+        
         if (validTickets.length === 0) continue;
         
         const quantita = validTickets.length;
@@ -4848,8 +4851,6 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
           totalOmaggiIva += ivaCorrispettivo;
         }
         
-        // ImportoPrestazione: importo quota prestazione (Allegato B DTD)
-        // Normalmente 0 per biglietti standard; rappresenta la quota servizio
         const importoPrestazione = toCentesimi(validTickets.reduce((sum: number, t: any) => sum + parseFloat(t.serviceAmount || '0'), 0));
         
         titoliAccessoXml += `
@@ -4865,8 +4866,8 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
       }
       
       // DTD Differenze:
-      // - RiepilogoGiornaliero: OrdineDiPosto (CodiceOrdine, Capienza, TitoliAccesso*, ...) - NO IVAEccedenteOmaggi
-      // - RiepilogoMensile: OrdineDiPosto (CodiceOrdine, Capienza, IVAEccedenteOmaggi, TitoliAccesso*, ...)
+      // - RiepilogoGiornaliero: OrdineDiPosto (CodiceOrdine, Capienza, TitoliAccesso*) - NO IVAEccedenteOmaggi
+      // - RiepilogoMensile: OrdineDiPosto (CodiceOrdine, Capienza, IVAEccedenteOmaggi, TitoliAccesso*)
       if (isMonthly) {
         sectorsXml += `
             <OrdineDiPosto>
