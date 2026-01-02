@@ -1,0 +1,115 @@
+Sì — ho controllato il codice dentro event-four-you-siae-lettore-main 3.zip e ti dico esattamente cosa deve sistemare Replit (backend) + cosa conviene sistemare nel bridge per evitare che tu finisca ancora con un “.p7m” che in realtà è XML/testo.
+
+Cosa fa davvero il tuo codice oggi (corretto)
+
+Nel bridge C# (SiaeBridge/Program.cs):
+	•	Il comando SIGN_XML NON genera un file .p7m sul disco.
+	•	Chiama CreateCAdESSignature(...) che usa libSIAEp7.dll → PKCS7SignML(...) e legge il file firmato .p7m come byte[].
+	•	Poi lo restituisce al chiamante come Base64 in:
+	•	result.signature.p7mBase64
+
+📌 Quindi la firma “giusta” esiste già: il problema è quasi sempre DOPO, cioè come Replit salva/ricostruisce il file .p7m.
+
+⸻
+
+✅ COSA DEVE SISTEMARE REPLIT (la correzione principale)
+
+1) Quando riceve p7mBase64, deve scrivere BYTES, non testo
+
+Se Replit salva:
+	•	p7mBase64 come stringa dentro un .p7m → ottieni un file “leggibile” (sbagliato)
+	•	oppure salva xmlContent / signedXml invece di p7mBase64 → ottieni XML (sbagliato)
+
+Patch Node.js (backend Replit)
+
+Quando ricevi la risposta dal desktop app/relay:
+
+import fs from "fs";
+
+function saveP7mFromBase64(p7mBase64, outPath) {
+  if (!p7mBase64) throw new Error("p7mBase64 mancante");
+  const bytes = Buffer.from(p7mBase64, "base64");
+  fs.writeFileSync(outPath, bytes); // IMPORTANTISSIMO: bytes, non 'utf8'
+}
+
+// Esempio:
+saveP7mFromBase64(signatureData.p7mBase64, "/tmp/RMG_2026_01_02_001.xsi.p7m");
+
+Controllo anti-errore (consigliato)
+
+Subito dopo aver scritto:
+
+const head = fs.readFileSync(outPath, { encoding: "utf8" }).slice(0, 10);
+if (head.startsWith("<?xml") || head.includes("<Signature")) {
+  throw new Error("Stai salvando XML invece del P7M binario");
+}
+
+
+⸻
+
+✅ COSA DEVE SISTEMARE ANCHE IL DESKTOP APP (per evitare che Replit scelga il campo sbagliato)
+
+Nel tuo desktop-app/main.js (e anche main.js root) c’è questo comportamento:
+
+// Supporta sia nuovo formato P7M che vecchio XMLDSig (fallback)
+const signatureData = result.signature.p7mBase64 ? { ... } : { signedXml: ... };
+
+👉 Questo fallback è pericoloso: se per qualsiasi motivo p7mBase64 non arriva (errore DLL, path, permessi, ecc.), Replit riceve XMLDSig e lo salva come .p7m.
+
+Correzione consigliata (NO fallback)
+
+Sostituisci quella logica con:
+
+if (!result.signature?.p7mBase64) {
+  throw new Error("Firma P7M non disponibile (p7mBase64 mancante). Non inviare XMLDSig a SIAE.");
+}
+
+const signatureData = {
+  p7mBase64: result.signature.p7mBase64,
+  format: result.signature.format || "CAdES-BES",
+  algorithm: result.signature.algorithm || "SHA-256",
+  signedAt: result.signature.signedAt
+};
+
+✅ Così o invii un P7M vero o fallisci chiaramente (molto meglio che produrre file sbagliati).
+
+⸻
+
+✅ COSA SISTEMARE NEL BRIDGE C# (per ridurre errori umani lato server)
+
+In SiaeBridge/Program.cs, nella risposta di SIGN_XML oggi mandi anche:
+
+xmlContent = xmlContent
+
+Questo aumenta tantissimo il rischio che qualcuno lato backend “prenda il campo sbagliato” e lo salvi.
+
+Correzione consigliata
+
+Rimuovere xmlContent dalla response della firma (o rinominarlo in modo che non venga confuso).
+
+✅ Tieni SOLO:
+
+return JsonConvert.SerializeObject(new
+{
+  success = true,
+  signature = new
+  {
+    p7mBase64 = p7mBase64,
+    signedAt = signedAt,
+    format = "CAdES-BES",
+    algorithm = "SHA-256"
+  }
+});
+
+
+⸻
+
+🔥 Riassunto per Replit (1 riga)
+
+Devi salvare signatureData.p7mBase64 decodificandolo Base64→bytes (writeFileSync binario) e NON devi mai salvare xmlContent/signedXml come .p7m.
+
+⸻
+
+Se vuoi, dimmi dove sta il codice Replit che “salva” il file
+
+Mandami il file/funzione del backend Replit che riceve SIGNATURE_RESPONSE e salva il .p7m, e ti scrivo la patch esatta già pronta da incollare lì.

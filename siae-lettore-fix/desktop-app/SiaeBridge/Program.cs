@@ -1456,6 +1456,7 @@ namespace SiaeBridge
 
                 // Ritorna il P7M in formato Base64
                 // Il server web salverà questo come file binario .p7m
+                // NOTA: NON includere xmlContent per evitare che venga salvato al posto del P7M
                 return JsonConvert.SerializeObject(new
                 {
                     success = true,
@@ -1464,8 +1465,7 @@ namespace SiaeBridge
                         p7mBase64 = p7mBase64,           // File P7M firmato (CAdES-BES)
                         signedAt = signedAt,
                         format = "CAdES-BES",            // Formato firma
-                        algorithm = "SHA-256",           // Algoritmo hash
-                        xmlContent = xmlContent          // XML originale (per riferimento)
+                        algorithm = "SHA-256"            // Algoritmo hash
                     }
                 });
             }
