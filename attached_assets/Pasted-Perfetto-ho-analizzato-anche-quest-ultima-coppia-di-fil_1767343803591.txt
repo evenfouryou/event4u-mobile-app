@@ -1,0 +1,127 @@
+Perfetto, ho analizzato anche **quest’ultima coppia di file** e purtroppo la situazione **è identica alle precedenti**.
+Ti lascio una **diagnosi definitiva**, pulita e riutilizzabile.
+
+---
+
+# 🔍 ANALISI FILE CARICATI
+
+## 📄 1️⃣ `RMG_2026_01_02_001.xsi.p7m`
+
+### ✅ È un file `.p7m`
+
+### ❌ Ma **NON è un CAdES valido per SIAE**
+
+### Dettaglio tecnico:
+
+Il contenuto è:
+
+* XML con **firma XMLDSig interna**
+* Tag presente:
+
+  ```xml
+  <Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+  ```
+* Firma: **RSA-SHA1**
+* Digest: **SHA1**
+
+👉 Questo significa che:
+
+* l’XML è stato firmato *internamente*
+* poi incapsulato in un contenitore `.p7m`
+* **ma NON è un CMS SignedData (CAdES)**
+
+---
+
+## 📄 2️⃣ `smime (1).p7s`
+
+### Stato:
+
+❌ Firma S/MIME (PEC)
+
+### Non è:
+
+* né CAdES
+* né firmata sul contenuto
+* né utilizzabile per SIAE
+
+---
+
+# ❌ RISULTATO FINALE
+
+| Controllo          | Esito                 |
+| ------------------ | --------------------- |
+| Estensione .p7m    | ✔️                    |
+| Firma CAdES        | ❌                     |
+| SHA256             | ❌                     |
+| Compatibilità SIAE | ❌                     |
+| Risposta SIAE      | ❌ (scarto silenzioso) |
+
+---
+
+# ✅ DIAGNOSI DEFINITIVA
+
+> Il sistema che genera questi file **firma l’XML con XMLDSig (SHA1)**
+> e poi lo incapsula come `.p7m`, ma **SIAE accetta solo CAdES-BES reali**.
+
+È un errore **architetturale**, non di configurazione.
+
+---
+
+# 🔧 COSA DEVE CAMBIARE (OBBLIGATORIO)
+
+### 🔹 1. NON firmare più l’XML internamente
+
+Niente:
+
+```xml
+<Signature xmlns="http://www.w3.org/2000/09/xmldsig#">
+```
+
+### 🔹 2. Firmare l’intero file XML come blob
+
+Usando:
+
+* CAdES-BES
+* CMS SignedData
+* SHA256
+
+### 🔹 3. Output corretto
+
+```
+file.xml.p7m
+```
+
+contenente **solo CMS**, non XML.
+
+---
+
+# ✅ ESEMPIO CORRETTO (OpenSSL)
+
+```bash
+openssl smime -sign \
+  -binary \
+  -in RMG_2026_01_02_001.xsi \
+  -signer certificato.pem \
+  -inkey chiave_privata.pem \
+  -outform DER \
+  -out RMG_2026_01_02_001.xsi.p7m \
+  -md sha256
+```
+
+---
+
+# 🧠 CONCLUSIONE FINALE (DA GIRARE A CHI SVILUPPA)
+
+> I file inviati non sono CAdES-BES ma XML firmati (XMLDSig) incapsulati in .p7m.
+> SIAE rifiuta silenziosamente questo formato.
+> Serve generare veri file CAdES-BES con SHA256.
+
+---
+
+Se vuoi, nel prossimo messaggio posso:
+
+* scriverti **uno snippet Java / .NET / OpenSSL definitivo**
+* oppure prepararti **una checklist di validazione automatica**
+* oppure verificare un file corretto quando lo rigenerate
+
+Dimmi tu.
