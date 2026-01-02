@@ -1,0 +1,168 @@
+Perfetto, ho **aperto e analizzato il file `.p7m` che hai caricato**.
+Ti dico subito la verità tecnica: **il problema NON è SIAE → è il file C1**.
+È **formalmente firmato**, ma **strutturalmente non valido**.
+
+---
+
+## ✅ COSA HO VERIFICATO
+
+Il file:
+
+```
+RMG_2026_01_02_001.xsi (1).p7m
+```
+
+è **correttamente firmato digitalmente** (PKCS#7 valido).
+👉 Quindi **la PEC lo consegna**, ma **SIAE non può elaborarlo**.
+
+---
+
+## ❌ PROBLEMA GRAVE: CONTENUTO XML NON VALIDO
+
+Il contenuto estratto è questo (riassunto):
+
+```xml
+<RiepilogoGiornaliero Data="20260102" DataGenerazione="20260102"...enerazione="201202" ProgressivoGenerazione="6" Sostituzione="S">
+    <Titolare>
+        <Denominazione>Hyper Events</Denominazione>
+        <CodiceFiscale>02114370436</CodiceFiscale>
+        <SistemaEmissione>EVENT4U1</SistemaEmissione>
+    </Titolare>
+    <Organizzatore>
+        <Denominazione>Hyper Events</Denominazione>
+        <CodiceFiscale>02114370436</CodiceFiscale>
+        <TipoOrganizzatore valore="G"/>
+    </Organizzatore>
+</RiepilogoGiornaliero>
+```
+
+### ⚠️ Errori gravissimi
+
+#### 1️⃣ XML **TRONCATO / CORROTTO**
+
+Questa parte è **invalidissima**:
+
+```
+DataGenerazione="20260102"...enerazione="201202"
+```
+
+➡️ C’è una **sovrapposizione di attributi**, segno che il file è stato generato male.
+
+---
+
+#### 2️⃣ MANCANO TUTTI I BLOCCHI OBBLIGATORI SIAE
+
+Un C1 valido deve contenere almeno:
+
+* `<Evento>` / `<Manifestazione>`
+* `<Luogo>`
+* `<DataEvento>`
+* `<ProgrammaMusicale>`
+* `<Brani>`
+* `<Autori>`
+* `<Durata>`
+* ecc.
+
+👉 Qui non c’è **NESSUN evento**, solo intestazione.
+
+Questo file per SIAE è **vuoto**.
+
+---
+
+#### 3️⃣ Probabile causa tecnica (importantissima)
+
+Il tuo sistema (Event Four You) sta:
+
+✅ firmando correttamente
+❌ ma **sta firmando un XML incompleto o non ancora popolato**
+
+Tipicamente succede quando:
+
+* il generatore XML viene chiamato **prima** che i dati evento siano salvati
+* oppure viene serializzato un oggetto vuoto
+* oppure la funzione “genera C1” non riceve l’ID evento
+* oppure c’è un errore nel mapping XML → schema SIAE
+
+---
+
+## 🎯 PERCHÉ SIAE NON RISPONDE
+
+Perché:
+
+* il file **arriva**
+* ma **non è processabile**
+* e non genera ticket / pratica
+* quindi non viene protocollato
+* quindi nessuna risposta automatica
+
+➡️ È come inviare una busta vuota.
+
+---
+
+## ✅ COSA DEVI FARE ORA (con priorità)
+
+### 🔧 1. Correggere la generazione XML
+
+Il file deve contenere almeno:
+
+```xml
+<RiepilogoGiornaliero ...>
+  <Titolare>...</Titolare>
+  <Organizzatore>...</Organizzatore>
+  <Evento>
+     <DataEvento>...</DataEvento>
+     <Luogo>...</Luogo>
+     <ProgrammaMusicale>
+        <Brano>...</Brano>
+     </ProgrammaMusicale>
+  </Evento>
+</RiepilogoGiornaliero>
+```
+
+Se vuoi, posso:
+
+* scriverti **uno schema XML SIAE valido**
+* oppure aiutarti a **correggere il generatore in Event Four You**
+
+---
+
+### 🔧 2. NON inviare più questi file a SIAE
+
+Finché non è corretto, rischi solo:
+
+* silenzi
+* confusione
+* segnalazioni interne
+
+---
+
+### 🔧 3. Test corretto
+
+Quando sistemato:
+
+1. genera XML
+2. validalo (anche solo aprendo e controllando struttura)
+3. firmalo
+4. invialo via PEC
+
+Se è corretto, **SIAE risponde quasi sempre** (accettazione o errore formale).
+
+---
+
+## 🔥 Conclusione chiara
+
+❌ Il problema NON è la PEC
+❌ NON è l’indirizzo
+❌ NON è SIAE
+
+✅ È il **contenuto del C1 generato dalla tua piattaforma**.
+
+---
+
+Se vuoi, nel prossimo messaggio posso:
+
+* ricostruirti **un C1 XML corretto completo**
+* oppure aiutarti a **debuggare il punto esatto del codice che genera questo errore**
+* oppure creare uno **schema di validazione automatico** prima della firma
+
+Dimmi tu come vuoi procedere.

@@ -535,7 +535,8 @@ export function validateC1Report(xml: string): C1ValidationResult {
         summary.totalAmount += parseInt(match[1], 10);
       }
     } else {
-      warnings.push('Nessun evento trovato nel report');
+      // SIAE richiede almeno un evento nel report C1 - senza eventi il report è invalido
+      errors.push('SIAE_NO_EVENTS: Nessun elemento <Evento> trovato. Il report C1 richiede almeno un evento con biglietti emessi.');
     }
     
     if (!xml.includes(`</${rootTag}>`)) {

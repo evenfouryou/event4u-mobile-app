@@ -4631,6 +4631,12 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
     if (sub.ticketedEventId) allEventIds.add(sub.ticketedEventId);
   }
   
+  // VALIDAZIONE OBBLIGATORIA: Il report C1 deve contenere almeno un evento
+  // Secondo specifica SIAE Allegato B, un report senza <Evento> non è valido
+  if (allEventIds.size === 0 && filteredSubscriptions.length === 0) {
+    throw new Error('SIAE_NO_EVENTS: Nessun biglietto o abbonamento trovato per il periodo richiesto. Il report C1 richiede almeno un evento con biglietti emessi.');
+  }
+  
   // Build events XML
   let eventsXml = '';
   const DEFAULT_SECTOR_KEY = '__DEFAULT__';
