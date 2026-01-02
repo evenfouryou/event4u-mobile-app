@@ -3759,19 +3759,38 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   // For RCA, use the event date as report date
   const effectiveReportDate = isRCA && rcaEventDate ? rcaEventDate : reportDate;
   
-  // Generate C1 XML using shared helper (eliminates duplication between daily/monthly/rca)
-  const xml = await generateC1ReportXml({
-    companyId,
-    reportDate: effectiveReportDate,
-    isMonthly,
-    isRCA,
-    filteredTickets,
-    systemConfig,
-    companyName,
-    taxId,
-    oraGen,
-    rcaEventName,
-  });
+  // Validate eventId for RCA type (required)
+  if (isRCA && !eventId) {
+    return {
+      success: false,
+      statusCode: 400,
+      error: 'eventId è obbligatorio per trasmissioni RCA',
+      data: { code: 'MISSING_EVENT_ID' }
+    };
+  }
+  
+  // Generate XML using appropriate function based on type
+  const xml = isRCA 
+    ? await generateRcaReportXml({
+        companyId,
+        eventId: eventId!,
+        filteredTickets,
+        systemConfig,
+        companyName,
+        taxId,
+      })
+    : await generateC1ReportXml({
+        companyId,
+        reportDate: effectiveReportDate,
+        isMonthly,
+        isRCA: false,
+        filteredTickets,
+        systemConfig,
+        companyName,
+        taxId,
+        oraGen,
+        rcaEventName,
+      });
   
   const transmissionType = isRCA ? 'rca' : (isMonthly ? 'monthly' : 'daily');
   const typeLabel = isRCA ? `RCA evento "${rcaEventName}"` : (isMonthly ? 'mensile' : 'giornaliera');
@@ -4655,6 +4674,233 @@ router.post("/api/siae/seed-public", async (req: Request, res: Response) => {
 
 // ==================== XML Report Generation (SIAE Transmission) ====================
 // Conforme a Allegato B e C - Provvedimento Agenzia delle Entrate 04/03/2008
+
+// ==================== RCA Report XML Generation Helper ====================
+// Genera RiepilogoControlloAccessi per singolo evento
+// Conforme al DTD RiepilogoControlloAccessi_v0100_20080201.dtd
+// Importi in centesimi (interi), struttura specifica per controllo accessi
+
+interface RcaReportParams {
+  companyId: string;
+  eventId: string;
+  filteredTickets: any[];
+  systemConfig: any;
+  companyName: string;
+  taxId: string;
+}
+
+async function generateRcaReportXml(params: RcaReportParams): Promise<string> {
+  const { companyId, eventId, filteredTickets, systemConfig, companyName, taxId } = params;
+  
+  const { getCachedEfffData } = await import('./bridge-relay');
+  const cachedEfff = getCachedEfffData();
+  
+  const now = new Date();
+  const dataGenRiepilogo = formatSiaeDateCompact(now);
+  const oraGenRiepilogo = formatSiaeTimeCompact(now);
+  
+  const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(eventId);
+  if (!ticketedEvent) {
+    throw new Error('SIAE_EVENT_NOT_FOUND: Evento ticketed non trovato');
+  }
+  
+  const eventDetails = await storage.getEvent(ticketedEvent.eventId);
+  if (!eventDetails) {
+    throw new Error('SIAE_EVENT_DETAILS_NOT_FOUND: Dettagli evento non trovati');
+  }
+  
+  const location = await storage.getLocation(eventDetails.locationId);
+  const venueName = location?.name || 'N/D';
+  const rawVenueCode = ticketedEvent.siaeLocationCode || location?.siaeLocationCode || '0000000000001';
+  const venueCode = rawVenueCode.replace(/\D/g, '').padStart(13, '0').substring(0, 13);
+  
+  const eventDate = new Date(eventDetails.startDatetime);
+  const dataEvento = formatSiaeDateCompact(eventDate);
+  const oraEvento = formatSiaeTimeHHMM(eventDate);
+  const dataRiepilogo = formatSiaeDateCompact(eventDate);
+  
+  const systemEmissionCode = cachedEfff?.systemId || systemConfig?.systemCode || 'EVENT4U1';
+  
+  // CONFORMITÀ DTD: CFTitolareCA richiede codice fiscale 16 caratteri, non P.IVA 11 cifre
+  // Priorità: EFFF smart card > systemConfig.fiscalCode > taxId (solo se 16 caratteri validi)
+  let cfTitolare = cachedEfff?.partnerCodFis;
+  if (!cfTitolare && systemConfig?.fiscalCode && systemConfig.fiscalCode.length === 16) {
+    cfTitolare = systemConfig.fiscalCode;
+  }
+  if (!cfTitolare && taxId && taxId.length === 16 && /^[A-Z0-9]{16}$/i.test(taxId)) {
+    cfTitolare = taxId;
+  }
+  if (!cfTitolare) {
+    // BLOCCO GENERAZIONE RCA: Codice fiscale valido obbligatorio per conformità DTD
+    throw new Error('SIAE_MISSING_FISCAL_CODE: Per generare report RCA è necessario un codice fiscale valido (16 caratteri). Collegare la smart card o configurare il codice fiscale nella sezione Configurazione Sistema SIAE.');
+  }
+  const denominazioneTitolare = cachedEfff?.partnerName || companyName || '';
+  
+  const allTransmissions = await siaeStorage.getSiaeTransmissionsByCompany(companyId);
+  const rcaTransmissions = allTransmissions.filter(t => {
+    const tDate = new Date(t.periodDate);
+    return t.transmissionType === 'rca' && 
+           tDate.getFullYear() === eventDate.getFullYear() && 
+           tDate.getMonth() === eventDate.getMonth() &&
+           tDate.getDate() === eventDate.getDate();
+  });
+  const progressivoRiepilogo = rcaTransmissions.length + 1;
+  const sostituzione = rcaTransmissions.length > 0 ? 'S' : 'N';
+  
+  const cancelledStatuses = ['cancelled', 'annullato', 'annullato_rivendita', 'refunded'];
+  
+  const ticketsBySector: Map<string, typeof filteredTickets> = new Map();
+  const DEFAULT_SECTOR_KEY = '__DEFAULT__';
+  
+  for (const ticket of filteredTickets) {
+    const sectorKey = ticket.sectorId || DEFAULT_SECTOR_KEY;
+    if (!ticketsBySector.has(sectorKey)) {
+      ticketsBySector.set(sectorKey, []);
+    }
+    ticketsBySector.get(sectorKey)!.push(ticket);
+  }
+  
+  let titolXml = '';
+  
+  for (const [sectorKey, sectorTickets] of ticketsBySector) {
+    let codiceOrdine = normalizeSiaeCodiceOrdine(null);
+    let capacity = ticketedEvent.capacity || 100;
+    
+    if (sectorKey !== DEFAULT_SECTOR_KEY) {
+      const sector = await siaeStorage.getSiaeEventSector(sectorKey);
+      if (sector) {
+        codiceOrdine = normalizeSiaeCodiceOrdine(sector.sectorCode);
+        capacity = sector.capacity || capacity;
+      }
+    }
+    
+    const emittedByType: Map<string, { count: number; grossAmount: number; prevendita: number; ivaCorrispettivi: number; ivaPrevendita: number }> = new Map();
+    const cancelledByType: Map<string, { count: number; grossAmount: number; prevendita: number; ivaCorrispettivi: number; ivaPrevendita: number }> = new Map();
+    
+    for (const ticket of sectorTickets) {
+      const tipoTitolo = normalizeSiaeTipoTitolo(ticket.ticketTypeCode, ticket.isComplimentary);
+      if (tipoTitolo === 'ABB') continue;
+      
+      const isCancelled = cancelledStatuses.includes(ticket.status || '');
+      const targetMap = isCancelled ? cancelledByType : emittedByType;
+      
+      if (!targetMap.has(tipoTitolo)) {
+        targetMap.set(tipoTitolo, { count: 0, grossAmount: 0, prevendita: 0, ivaCorrispettivi: 0, ivaPrevendita: 0 });
+      }
+      
+      const data = targetMap.get(tipoTitolo)!;
+      data.count += 1;
+      data.grossAmount += Math.round(parseFloat(ticket.grossAmount || '0') * 100);
+      data.prevendita += Math.round(parseFloat(ticket.prevendita || ticket.presaleRights || '0') * 100);
+      data.ivaCorrispettivi += Math.round(parseFloat(ticket.ivaCorrispettivi || ticket.vatAmount || '0') * 100);
+      data.ivaPrevendita += Math.round(parseFloat(ticket.ivaPrevendita || '0') * 100);
+    }
+    
+    let tipoTitoloXml = '';
+    
+    for (const [tipoTitolo, data] of emittedByType) {
+      tipoTitoloXml += `
+        <TotaleTipoTitolo>
+          <TipoTitolo>${escapeXml(tipoTitolo)}</TipoTitolo>
+          <TotaleTitoliLTA>${data.count}</TotaleTitoliLTA>
+          <TotaleTitoliNoAccessoTradiz>0</TotaleTitoliNoAccessoTradiz>
+          <TotaleTitoliNoAccessoDigitali>0</TotaleTitoliNoAccessoDigitali>
+          <TotaleTitoliLTAAccessoTradiz>${data.count}</TotaleTitoliLTAAccessoTradiz>
+          <TotaleTitoliLTAAccessoDigitali>0</TotaleTitoliLTAAccessoDigitali>
+          <TotaleCorrispettiviLordi>${data.grossAmount}</TotaleCorrispettiviLordi>
+          <TotaleDirittiPrevendita>${data.prevendita}</TotaleDirittiPrevendita>
+          <TotaleIVACorrispettivi>${data.ivaCorrispettivi}</TotaleIVACorrispettivi>
+          <TotaleIVADirittiPrevendita>${data.ivaPrevendita}</TotaleIVADirittiPrevendita>
+        </TotaleTipoTitolo>`;
+    }
+    
+    for (const [tipoTitolo, data] of cancelledByType) {
+      tipoTitoloXml += `
+        <TotaleTitoliAnnullati>
+          <TipoTitolo>${escapeXml(tipoTitolo)}</TipoTitolo>
+          <TotaleTitoliAnnull>${data.count}</TotaleTitoliAnnull>
+          <TotaleCorrispettiviLordiAnnull>${data.grossAmount}</TotaleCorrispettiviLordiAnnull>
+          <TotaleDirittiPrevenditaAnnull>${data.prevendita}</TotaleDirittiPrevenditaAnnull>
+          <TotaleIVACorrispettiviAnnull>${data.ivaCorrispettivi}</TotaleIVACorrispettiviAnnull>
+          <TotaleIVADirittiPrevenditaAnnull>${data.ivaPrevendita}</TotaleIVADirittiPrevenditaAnnull>
+        </TotaleTitoliAnnullati>`;
+    }
+    
+    // CONFORMITÀ DTD: Se nessun biglietto emesso ma ci sono annullati, 
+    // aggiungere TotaleTipoTitolo con valori zero per il primo tipo annullato
+    if (emittedByType.size === 0 && cancelledByType.size > 0) {
+      const firstCancelledType = Array.from(cancelledByType.keys())[0];
+      tipoTitoloXml = `
+        <TotaleTipoTitolo>
+          <TipoTitolo>${escapeXml(firstCancelledType)}</TipoTitolo>
+          <TotaleTitoliLTA>0</TotaleTitoliLTA>
+          <TotaleTitoliNoAccessoTradiz>0</TotaleTitoliNoAccessoTradiz>
+          <TotaleTitoliNoAccessoDigitali>0</TotaleTitoliNoAccessoDigitali>
+          <TotaleTitoliLTAAccessoTradiz>0</TotaleTitoliLTAAccessoTradiz>
+          <TotaleTitoliLTAAccessoDigitali>0</TotaleTitoliLTAAccessoDigitali>
+          <TotaleCorrispettiviLordi>0</TotaleCorrispettiviLordi>
+          <TotaleDirittiPrevendita>0</TotaleDirittiPrevendita>
+          <TotaleIVACorrispettivi>0</TotaleIVACorrispettivi>
+          <TotaleIVADirittiPrevendita>0</TotaleIVADirittiPrevendita>
+        </TotaleTipoTitolo>` + tipoTitoloXml;
+    }
+    
+    if (tipoTitoloXml || emittedByType.size > 0 || cancelledByType.size > 0) {
+      titolXml += `
+      <Titoli>
+        <CodiceOrdinePosto>${escapeXml(codiceOrdine)}</CodiceOrdinePosto>
+        <Capienza>${capacity}</Capienza>${tipoTitoloXml}
+      </Titoli>`;
+    }
+  }
+  
+  if (!titolXml) {
+    titolXml = `
+      <Titoli>
+        <CodiceOrdinePosto>A0</CodiceOrdinePosto>
+        <Capienza>${ticketedEvent.capacity || 100}</Capienza>
+      </Titoli>`;
+  }
+  
+  const tipoGenere = ticketedEvent.eventGenreCode || 'DI';
+  const spettacoloIntrattenimento = ticketedEvent.entertainmentType || 'S';
+  const incidenzaIntrattenimento = ticketedEvent.entertainmentIncidence || 100;
+  
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE RiepilogoControlloAccessi SYSTEM "RiepilogoControlloAccessi_v0100_20080201.dtd">
+<RiepilogoControlloAccessi Sostituzione="${sostituzione}">
+  <Titolare>
+    <DenominazioneTitolareCA>${escapeXml(denominazioneTitolare)}</DenominazioneTitolareCA>
+    <CFTitolareCA>${escapeXml(cfTitolare)}</CFTitolareCA>
+    <CodiceSistemaCA>${escapeXml(systemEmissionCode)}</CodiceSistemaCA>
+    <DataRiepilogo>${dataRiepilogo}</DataRiepilogo>
+    <DataGenerazioneRiepilogo>${dataGenRiepilogo}</DataGenerazioneRiepilogo>
+    <OraGenerazioneRiepilogo>${oraGenRiepilogo}</OraGenerazioneRiepilogo>
+    <ProgressivoRiepilogo>${progressivoRiepilogo}</ProgressivoRiepilogo>
+  </Titolare>
+  <Evento>
+    <CFOrganizzatore>${escapeXml(cfTitolare)}</CFOrganizzatore>
+    <DenominazioneOrganizzatore>${escapeXml(denominazioneTitolare)}</DenominazioneOrganizzatore>
+    <TipologiaOrganizzatore>G</TipologiaOrganizzatore>
+    <SpettacoloIntrattenimento>${escapeXml(spettacoloIntrattenimento)}</SpettacoloIntrattenimento>
+    <IncidenzaIntrattenimento>${incidenzaIntrattenimento}</IncidenzaIntrattenimento>
+    <DenominazioneLocale>${escapeXml(venueName)}</DenominazioneLocale>
+    <CodiceLocale>${venueCode}</CodiceLocale>
+    <DataEvento>${dataEvento}</DataEvento>
+    <OraEvento>${oraEvento}</OraEvento>
+    <TipoGenere>${escapeXml(tipoGenere)}</TipoGenere>
+    <TitoloEvento>${escapeXml(eventDetails.name)}</TitoloEvento>
+    <Autore></Autore>
+    <Esecutore></Esecutore>
+    <NazionalitaFilm></NazionalitaFilm>
+    <NumOpereRappresentate>1</NumOpereRappresentate>
+    <SistemaEmissione CFTitolare="${escapeXml(cfTitolare)}" CodiceSistema="${escapeXml(systemEmissionCode)}">${titolXml}
+    </SistemaEmissione>
+  </Evento>
+</RiepilogoControlloAccessi>`;
+
+  return xml;
+}
 
 // ==================== C1 Report XML Generation Helper ====================
 // Shared helper to generate RiepilogoMensile XML for both daily and monthly C1 reports
