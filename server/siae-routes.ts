@@ -3436,6 +3436,35 @@ router.get("/api/siae/companies/:companyId/transmissions", requireAuth, requireG
   }
 });
 
+// Get SIAE ticketed events for RCA report selection
+// Returns only approved events (for RCA, only approved events can be transmitted)
+router.get("/api/siae/companies/:companyId/ticketed-events", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { companyId } = req.params;
+    const ticketedEvents = await siaeStorage.getSiaeTicketedEventsByCompany(companyId);
+    
+    // The getSiaeTicketedEventsByCompany function already includes eventName, eventDate, ticketingStatus
+    // Filter to only show approved events (RCA requires SIAE-approved events)
+    // Return ticketingStatus as 'status' for frontend filtering (closed events only for RCA)
+    const filteredEvents = ticketedEvents
+      .filter(te => te.approvalStatus === 'approved')
+      .map(te => ({
+        id: te.id,
+        eventId: te.eventId,
+        eventName: te.eventName || 'Evento sconosciuto',
+        eventDate: te.eventDate || te.createdAt,
+        status: te.ticketingStatus, // ticketingStatus: draft, active, suspended, closed
+      }));
+    
+    // Sort by event date descending (most recent first)
+    filteredEvents.sort((a, b) => new Date(b.eventDate).getTime() - new Date(a.eventDate).getTime());
+    
+    res.json(filteredEvents);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.post("/api/siae/transmissions", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const data = insertSiaeTransmissionSchema.parse(req.body);
@@ -3572,13 +3601,17 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
 });
 
 // ==================== C1 Transmission Handler (Shared Logic) ====================
-// Shared handler for generating and sending C1 transmissions (daily or monthly)
+// Shared handler for generating and sending C1 transmissions (daily, monthly, or RCA)
 // Used by both /send-c1 and legacy /send-daily endpoints
+// RCA = RiepilogoControlloAccessi for single event (SIAE responds with Log.xsi)
+// RMG = Riepilogo Giornaliero (silent)
+// RPM = Riepilogo Mensile (silent)
 interface SendC1Params {
   companyId: string;
   date?: string;
   toEmail?: string;
-  type?: 'daily' | 'monthly';
+  type?: 'daily' | 'monthly' | 'rca';
+  eventId?: string; // Required for RCA type
   signWithSmartCard?: boolean;
 }
 
@@ -3588,8 +3621,14 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   data?: any;
   error?: string;
 }> {
-  const { companyId, date, toEmail, type = 'daily', signWithSmartCard = true } = params;
+  const { companyId, date, toEmail, type = 'daily', eventId, signWithSmartCard = true } = params;
   const isMonthly = type === 'monthly';
+  const isRCA = type === 'rca';
+  
+  // RCA requires eventId
+  if (isRCA && !eventId) {
+    return { success: false, statusCode: 400, error: "EventId richiesto per report RCA" };
+  }
   
   const reportDate = date ? new Date(date) : new Date();
   reportDate.setHours(0, 0, 0, 0);
@@ -3618,26 +3657,13 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     };
   }
   
-  // Calculate date range based on report type
-  let startDate: Date, endDate: Date;
-  if (isMonthly) {
-    // For monthly: entire month
-    startDate = new Date(reportDate.getFullYear(), reportDate.getMonth(), 1);
-    endDate = new Date(reportDate.getFullYear(), reportDate.getMonth() + 1, 0, 23, 59, 59, 999);
-  } else {
-    // For daily: single day
-    startDate = new Date(reportDate);
-    startDate.setHours(0, 0, 0, 0);
-    endDate = new Date(reportDate);
-    endDate.setHours(23, 59, 59, 999);
-  }
-  
-  // Get tickets for the date range - FILTER BY EVENT DATE (not emission date)
-  // SIAE requires reports to contain events that occurred in the period, not sales
+  // Get tickets based on report type
+  // RCA: single event by eventId
+  // RMG/RPM: date range filtering by EVENT DATE (not emission date)
   const allTickets = await siaeStorage.getSiaeTicketsByCompany(companyId);
   
-  // Pre-fetch all ticketed events to get their event dates
-  const ticketedEventsMap = new Map<string, { eventDate: Date }>();
+  // Pre-fetch all ticketed events to get their event dates and IDs
+  const ticketedEventsMap = new Map<string, { eventDate: Date; eventId: string }>();
   const uniqueTicketedEventIds = [...new Set(allTickets.map(t => t.ticketedEventId).filter(Boolean))];
   
   for (const ticketedEventId of uniqueTicketedEventIds) {
@@ -3646,20 +3672,72 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
       const eventDetails = await storage.getEvent(ticketedEvent.eventId);
       if (eventDetails) {
         ticketedEventsMap.set(ticketedEventId, { 
-          eventDate: new Date(eventDetails.startDatetime) 
+          eventDate: new Date(eventDetails.startDatetime),
+          eventId: ticketedEvent.eventId
         });
       }
     }
   }
   
-  const filteredTickets = allTickets.filter(t => {
-    // Use EVENT DATE for filtering (not ticket emission date)
-    const eventInfo = ticketedEventsMap.get(t.ticketedEventId);
-    if (!eventInfo) return false;
+  let filteredTickets: typeof allTickets;
+  let rcaEventName = '';
+  let rcaEventDate: Date | null = null;
+  
+  if (isRCA && eventId) {
+    // RCA: filter by specific SIAE ticketed event ID
+    const rcaTicketedEvent = await siaeStorage.getSiaeTicketedEvent(eventId);
+    if (!rcaTicketedEvent) {
+      return { success: false, statusCode: 400, error: "Evento ticketed non trovato" };
+    }
     
-    const eventDate = eventInfo.eventDate;
-    return eventDate >= startDate && eventDate <= endDate;
-  });
+    // Security validation: verify event belongs to requesting company
+    if (rcaTicketedEvent.companyId !== companyId) {
+      return { success: false, statusCode: 403, error: "Accesso non autorizzato: l'evento non appartiene a questa azienda" };
+    }
+    
+    // Status validation: verify event is closed/completed for RCA
+    if (rcaTicketedEvent.ticketingStatus !== 'closed') {
+      return { success: false, statusCode: 400, error: "L'evento deve essere chiuso per generare il report RCA. Stato attuale: " + rcaTicketedEvent.ticketingStatus };
+    }
+    
+    const rcaEventDetails = await storage.getEvent(rcaTicketedEvent.eventId);
+    if (rcaEventDetails) {
+      rcaEventName = rcaEventDetails.name;
+      rcaEventDate = new Date(rcaEventDetails.startDatetime);
+    }
+    
+    // Filter tickets for this specific event - exclude all cancelled/annulled statuses
+    // SIAE domain uses: 'cancelled', 'annullato', 'annullato_rivendita'
+    const cancelledStatuses = ['cancelled', 'annullato', 'annullato_rivendita', 'refunded'];
+    filteredTickets = allTickets.filter(t => 
+      t.ticketedEventId === eventId && 
+      !cancelledStatuses.includes(t.status || '')
+    );
+    console.log(`[SIAE-ROUTES] RCA report for event "${rcaEventName}" - ${filteredTickets.length} valid tickets (excluded cancelled/annulled)`);
+  } else {
+    // RMG/RPM: Calculate date range and filter
+    let startDate: Date, endDate: Date;
+    if (isMonthly) {
+      // For monthly: entire month
+      startDate = new Date(reportDate.getFullYear(), reportDate.getMonth(), 1);
+      endDate = new Date(reportDate.getFullYear(), reportDate.getMonth() + 1, 0, 23, 59, 59, 999);
+    } else {
+      // For daily: single day
+      startDate = new Date(reportDate);
+      startDate.setHours(0, 0, 0, 0);
+      endDate = new Date(reportDate);
+      endDate.setHours(23, 59, 59, 999);
+    }
+    
+    filteredTickets = allTickets.filter(t => {
+      // Use EVENT DATE for filtering (not ticket emission date)
+      const eventInfo = ticketedEventsMap.get(t.ticketedEventId);
+      if (!eventInfo) return false;
+      
+      const eventDate = eventInfo.eventDate;
+      return eventDate >= startDate && eventDate <= endDate;
+    });
+  }
   
   const now = new Date();
   const oraGen = now.toTimeString().split(' ')[0].replace(/:/g, '');
@@ -3667,20 +3745,25 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   // Calculate totals
   const totalAmount = filteredTickets.reduce((sum, t) => sum + parseFloat(t.grossAmount || '0'), 0);
   
-  // Generate C1 XML using shared helper (eliminates duplication between daily/monthly)
+  // For RCA, use the event date as report date
+  const effectiveReportDate = isRCA && rcaEventDate ? rcaEventDate : reportDate;
+  
+  // Generate C1 XML using shared helper (eliminates duplication between daily/monthly/rca)
   const xml = await generateC1ReportXml({
     companyId,
-    reportDate,
+    reportDate: effectiveReportDate,
     isMonthly,
+    isRCA,
     filteredTickets,
     systemConfig,
     companyName,
     taxId,
     oraGen,
+    rcaEventName,
   });
   
-  const transmissionType = isMonthly ? 'monthly' : 'daily';
-  const typeLabel = isMonthly ? 'mensile' : 'giornaliera';
+  const transmissionType = isRCA ? 'rca' : (isMonthly ? 'monthly' : 'daily');
+  const typeLabel = isRCA ? `RCA evento "${rcaEventName}"` : (isMonthly ? 'mensile' : 'giornaliera');
   
   // ==================== AUTOMATIC VALIDATION ====================
   // Validate XML before sending - blocks transmission if errors found
@@ -3861,18 +3944,19 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   };
 }
 
-// Generate and send C1 transmission (daily or monthly)
-// type: 'daily' for giornaliero (default), 'monthly' for mensile
+// Generate and send C1 transmission (daily, monthly, or RCA)
+// type: 'rca' for single event (SIAE responds), 'daily' for RMG (silent), 'monthly' for RPM (silent)
 router.post("/api/siae/companies/:companyId/transmissions/send-c1", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const { companyId } = req.params;
-    const { date, toEmail, type = 'daily', signWithSmartCard = true } = req.body;
+    const { date, toEmail, type = 'daily', eventId, signWithSmartCard = true } = req.body;
     
     const result = await handleSendC1Transmission({
       companyId,
       date,
       toEmail,
       type,
+      eventId, // Required for RCA type
       signWithSmartCard,
     });
     
@@ -4570,15 +4654,17 @@ interface C1ReportParams {
   companyId: string;
   reportDate: Date;
   isMonthly: boolean;
+  isRCA?: boolean; // RCA = RiepilogoControlloAccessi for single event
   filteredTickets: any[];
   systemConfig: any;
   companyName: string;
   taxId: string;
   oraGen: string;
+  rcaEventName?: string; // Event name for RCA reports
 }
 
 async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
-  const { companyId, reportDate, isMonthly, filteredTickets, systemConfig, companyName, taxId, oraGen } = params;
+  const { companyId, reportDate, isMonthly, isRCA = false, filteredTickets, systemConfig, companyName, taxId, oraGen, rcaEventName } = params;
   
   // Try to get EFFF data from Smart Card for SIAE compliance
   const { getCachedEfffData } = await import('./bridge-relay');
@@ -4587,7 +4673,9 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
   const now = new Date();
   const dataGenAttr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
   
-  // Formato attributo periodo: Mese="YYYYMM" per mensile, Data="YYYYMMDD" per giornaliero
+  // Formato attributo periodo: 
+  // Mese="YYYYMM" per mensile (RPM)
+  // Data="YYYYMMDD" per giornaliero (RMG) e RCA
   let periodAttrName: string;
   let periodAttrValue: string;
   
@@ -4595,6 +4683,7 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
     periodAttrName = 'Mese';
     periodAttrValue = `${reportDate.getFullYear()}${String(reportDate.getMonth() + 1).padStart(2, '0')}`;
   } else {
+    // Both RCA and daily use Data attribute
     periodAttrName = 'Data';
     periodAttrValue = reportDate.getFullYear().toString() + 
                String(reportDate.getMonth() + 1).padStart(2, '0') + 

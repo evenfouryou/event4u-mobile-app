@@ -107,7 +107,8 @@ export default function SiaeTransmissionsPage() {
   const [testEmail, setTestEmail] = useState<string>("servertest2@batest.siae.it");
   const [dailyDate, setDailyDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [dailyEmail, setDailyEmail] = useState<string>("servertest2@batest.siae.it");
-  const [c1Type, setC1Type] = useState<'daily' | 'monthly'>('daily');
+  const [c1Type, setC1Type] = useState<'daily' | 'monthly' | 'rca'>('rca');
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [receiptProtocol, setReceiptProtocol] = useState<string>("");
   const [receiptContent, setReceiptContent] = useState<string>("");
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
@@ -124,6 +125,21 @@ export default function SiaeTransmissionsPage() {
     queryKey: ['/api/siae/companies', companyId, 'transmissions'],
     enabled: !!companyId,
   });
+
+  // Fetch SIAE ticketed events for RCA report selection
+  const { data: ticketedEvents } = useQuery<Array<{
+    id: string;
+    eventId: string;
+    eventName: string;
+    eventDate: string;
+    status: string;
+  }>>({
+    queryKey: ['/api/siae/companies', companyId, 'ticketed-events'],
+    enabled: !!companyId,
+  });
+
+  // Filter to show only closed events for RCA (events with ticketingStatus='closed')
+  const eventsForRCA = ticketedEvents?.filter(e => e.status === 'closed') || [];
 
   // Gmail OAuth status (system-wide, always enabled)
   const { data: gmailStatus } = useQuery<{ authorized: boolean; connected: boolean; email?: string }>({
@@ -266,11 +282,12 @@ export default function SiaeTransmissionsPage() {
   });
 
   const sendC1Mutation = useMutation({
-    mutationFn: async ({ date, toEmail, type }: { date: string; toEmail: string; type: 'daily' | 'monthly' }) => {
+    mutationFn: async ({ date, toEmail, type, eventId }: { date: string; toEmail: string; type: 'daily' | 'monthly' | 'rca'; eventId?: string }) => {
       const response = await apiRequest("POST", `/api/siae/companies/${companyId}/transmissions/send-c1`, {
         date,
         toEmail,
         type,
+        eventId,
       });
       const data = await response.json();
       if (!response.ok) {
@@ -285,16 +302,18 @@ export default function SiaeTransmissionsPage() {
       queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.includes('transmissions') || false });
       setIsSendDailySheetOpen(false);
       setIsSendDailyDialogOpen(false);
+      setSelectedEventId("");
       triggerHaptic('success');
-      const tipoLabel = c1Type === 'monthly' ? 'mensile' : 'giornaliera';
+      const tipoLabel = c1Type === 'rca' ? 'RCA evento' : (c1Type === 'monthly' ? 'mensile' : 'giornaliera');
       
       // Show validation success with warnings if present
       const warnings = data.validation?.warnings || [];
       const warningText = warnings.length > 0 ? ` (${warnings.length} avvisi)` : '';
       
+      const rcaNote = c1Type === 'rca' ? ' SIAE risponderà con Log.xsi.' : '';
       toast({
-        title: "Trasmissione C1 Inviata",
-        description: `Validazione OK. Trasmissione ${tipoLabel} inviata con ${data.transmission?.ticketsCount || 0} biglietti.${warningText}`,
+        title: c1Type === 'rca' ? "Report RCA Inviato" : "Trasmissione Inviata",
+        description: `Validazione OK. Trasmissione ${tipoLabel} inviata con ${data.transmission?.ticketsCount || 0} biglietti.${warningText}${rcaNote}`,
       });
     },
     onError: (error: Error & { validation?: any; code?: string }) => {
@@ -835,21 +854,27 @@ export default function SiaeTransmissionsPage() {
             <div className="space-y-4 py-4">
               <div>
                 <Label>Tipo Report</Label>
-                <Select value={c1Type} onValueChange={(v: 'daily' | 'monthly') => setC1Type(v)}>
+                <Select value={c1Type} onValueChange={(v: 'daily' | 'monthly' | 'rca') => { setC1Type(v); setSelectedEventId(""); }}>
                   <SelectTrigger data-testid="select-c1-type">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
+                    <SelectItem value="rca">
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">RCA - Controllo Accessi Evento</span>
+                        <span className="text-xs text-muted-foreground">Singolo evento - SIAE risponde</span>
+                      </div>
+                    </SelectItem>
                     <SelectItem value="daily">
                       <div className="flex flex-col items-start">
                         <span className="font-medium">RMG - Riepilogo Giornaliero</span>
-                        <span className="text-xs text-muted-foreground">Eventi del giorno selezionato</span>
+                        <span className="text-xs text-muted-foreground">Eventi del giorno - nessuna risposta</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="monthly">
                       <div className="flex flex-col items-start">
                         <span className="font-medium">RPM - Riepilogo Mensile</span>
-                        <span className="text-xs text-muted-foreground">Rendicontazione fiscale mensile</span>
+                        <span className="text-xs text-muted-foreground">Rendicontazione fiscale - nessuna risposta</span>
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -857,8 +882,26 @@ export default function SiaeTransmissionsPage() {
               </div>
               
               {/* Info box con spiegazione tipo report */}
-              <div className={`p-3 rounded-lg border ${c1Type === 'monthly' ? 'bg-amber-500/10 border-amber-500/30' : 'bg-blue-500/10 border-blue-500/30'}`}>
-                {c1Type === 'monthly' ? (
+              <div className={`p-3 rounded-lg border ${
+                c1Type === 'rca' ? 'bg-green-500/10 border-green-500/30' :
+                c1Type === 'monthly' ? 'bg-amber-500/10 border-amber-500/30' : 
+                'bg-blue-500/10 border-blue-500/30'
+              }`}>
+                {c1Type === 'rca' ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                      <CheckCircle2 className="w-4 h-4" />
+                      <span className="font-medium text-sm">Report con Risposta SIAE</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Il <strong className="text-foreground">RCA (RiepilogoControlloAccessi)</strong> è il report C1 per singolo evento. 
+                      <strong className="text-green-600 dark:text-green-400"> SIAE risponderà</strong> con un file Log.xsi di conferma (REPLY:0000:OK) o errore.
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      Formato conforme ad Allegato B - Provvedimento 04/03/2008.
+                    </p>
+                  </div>
+                ) : c1Type === 'monthly' ? (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
                       <AlertTriangle className="w-4 h-4" />
@@ -866,10 +909,7 @@ export default function SiaeTransmissionsPage() {
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Il Riepilogo Mensile (RPM) serve per la rendicontazione fiscale e il versamento delle imposte. 
-                      <strong className="text-foreground"> SIAE non invia risposta</strong> per questo tipo di report - viene acquisito silenziosamente.
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Contiene solo eventi che si sono svolti nel mese selezionato.
+                      <strong className="text-foreground"> SIAE non invia risposta</strong> per questo tipo di report.
                     </p>
                   </div>
                 ) : (
@@ -879,27 +919,62 @@ export default function SiaeTransmissionsPage() {
                       <span className="font-medium text-sm">Report Giornaliero</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Il Riepilogo Giornaliero (RMG) include il dettaglio di tutti i biglietti per gli eventi del giorno.
-                      Generalmente utilizzato per monitoraggio interno.
+                      Il Riepilogo Giornaliero (RMG) aggrega tutti gli eventi del giorno.
+                      <strong className="text-foreground"> SIAE non invia risposta</strong> per questo tipo.
                     </p>
                   </div>
                 )}
               </div>
               
-              <div>
-                <Label>{c1Type === 'monthly' ? 'Mese di riferimento' : 'Data'}</Label>
-                <Input 
-                  type={c1Type === 'monthly' ? 'month' : 'date'} 
-                  value={dailyDate} 
-                  onChange={(e) => setDailyDate(e.target.value)} 
-                  data-testid="input-c1-date"
-                />
-                {c1Type === 'monthly' && (
+              {/* Selezione evento per RCA */}
+              {c1Type === 'rca' && (
+                <div>
+                  <Label>Evento *</Label>
+                  <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                    <SelectTrigger data-testid="select-rca-event">
+                      <SelectValue placeholder="Seleziona un evento concluso..." />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {eventsForRCA.length === 0 ? (
+                        <SelectItem value="none" disabled>Nessun evento passato disponibile</SelectItem>
+                      ) : (
+                        eventsForRCA.map((event) => (
+                          <SelectItem key={event.id} value={event.id}>
+                            <div className="flex flex-col items-start">
+                              <span className="font-medium">{event.eventName}</span>
+                              <span className="text-xs text-muted-foreground">
+                                {format(new Date(event.eventDate), "d MMMM yyyy", { locale: it })}
+                              </span>
+                            </div>
+                          </SelectItem>
+                        ))
+                      )}
+                    </SelectContent>
+                  </Select>
                   <p className="text-xs text-muted-foreground mt-1">
-                    Seleziona un mese con eventi già conclusi
+                    Solo eventi già conclusi possono essere trasmessi
                   </p>
-                )}
-              </div>
+                </div>
+              )}
+              
+              {/* Data per RMG/RPM */}
+              {c1Type !== 'rca' && (
+                <div>
+                  <Label>{c1Type === 'monthly' ? 'Mese di riferimento' : 'Data'}</Label>
+                  <Input 
+                    type={c1Type === 'monthly' ? 'month' : 'date'} 
+                    value={dailyDate} 
+                    onChange={(e) => setDailyDate(e.target.value)} 
+                    data-testid="input-c1-date"
+                  />
+                  {c1Type === 'monthly' && (
+                    <p className="text-xs text-muted-foreground mt-1">
+                      Seleziona un mese con eventi già conclusi
+                    </p>
+                  )}
+                </div>
+              )}
+              
               <div>
                 <Label>Email Destinatario SIAE</Label>
                 <Input type="email" value={dailyEmail} onChange={(e) => setDailyEmail(e.target.value)} data-testid="input-c1-email" />
@@ -909,13 +984,22 @@ export default function SiaeTransmissionsPage() {
               <Button variant="outline" onClick={() => setIsSendDailyDialogOpen(false)}>Annulla</Button>
               <Button
                 onClick={() => {
-                  sendC1Mutation.mutate({ date: dailyDate, toEmail: dailyEmail, type: c1Type });
+                  sendC1Mutation.mutate({ 
+                    date: c1Type === 'rca' ? new Date().toISOString().split('T')[0] : dailyDate, 
+                    toEmail: dailyEmail, 
+                    type: c1Type,
+                    eventId: c1Type === 'rca' ? selectedEventId : undefined 
+                  });
                 }}
-                disabled={!dailyDate || !dailyEmail || sendC1Mutation.isPending}
+                disabled={
+                  (c1Type === 'rca' ? !selectedEventId : !dailyDate) || 
+                  !dailyEmail || 
+                  sendC1Mutation.isPending
+                }
                 data-testid="button-send-c1-submit"
               >
                 {sendC1Mutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {c1Type === 'monthly' ? 'Genera e Invia RPM' : 'Genera e Invia RMG'}
+                {c1Type === 'rca' ? 'Invia RCA' : c1Type === 'monthly' ? 'Invia RPM' : 'Invia RMG'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1755,28 +1839,37 @@ export default function SiaeTransmissionsPage() {
       >
         <div className="p-4 space-y-6">
           <div className="text-center py-4">
-            <div className={`w-16 h-16 mx-auto mb-4 rounded-full ${c1Type === 'monthly' ? 'bg-amber-500/20' : 'bg-blue-500/20'} flex items-center justify-center`}>
-              {c1Type === 'monthly' ? (
+            <div className={`w-16 h-16 mx-auto mb-4 rounded-full ${
+              c1Type === 'rca' ? 'bg-green-500/20' :
+              c1Type === 'monthly' ? 'bg-amber-500/20' : 
+              'bg-blue-500/20'
+            } flex items-center justify-center`}>
+              {c1Type === 'rca' ? (
+                <CheckCircle2 className="w-8 h-8 text-green-400" />
+              ) : c1Type === 'monthly' ? (
                 <AlertTriangle className="w-8 h-8 text-amber-400" />
               ) : (
                 <Zap className="w-8 h-8 text-blue-400" />
               )}
             </div>
             <p className="text-muted-foreground text-sm">
-              {c1Type === 'monthly' 
-                ? "RPM - Rendicontazione fiscale mensile (nessuna risposta SIAE)"
-                : "RMG - Report giornaliero degli eventi"}
+              {c1Type === 'rca' 
+                ? "RCA - Controllo Accessi Evento (SIAE risponde)"
+                : c1Type === 'monthly' 
+                  ? "RPM - Rendicontazione fiscale (nessuna risposta)"
+                  : "RMG - Report giornaliero (nessuna risposta)"}
             </p>
           </div>
 
           <div className="space-y-4">
             <div>
               <Label className="text-sm font-medium mb-2 block">Tipo Report</Label>
-              <Select value={c1Type} onValueChange={(v: 'daily' | 'monthly') => setC1Type(v)}>
+              <Select value={c1Type} onValueChange={(v: 'daily' | 'monthly' | 'rca') => { setC1Type(v); setSelectedEventId(""); }}>
                 <SelectTrigger className="h-12" data-testid="select-c1-type-mobile">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
+                  <SelectItem value="rca">RCA - Controllo Accessi (risposta)</SelectItem>
                   <SelectItem value="daily">RMG - Riepilogo Giornaliero</SelectItem>
                   <SelectItem value="monthly">RPM - Riepilogo Mensile</SelectItem>
                 </SelectContent>
@@ -1784,24 +1877,64 @@ export default function SiaeTransmissionsPage() {
             </div>
             
             {/* Info box per mobile */}
+            {c1Type === 'rca' && (
+              <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/30">
+                <p className="text-xs text-muted-foreground">
+                  <strong className="text-green-400">Con risposta:</strong> SIAE risponderà con Log.xsi (REPLY:0000:OK o errore).
+                </p>
+              </div>
+            )}
             {c1Type === 'monthly' && (
               <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30">
                 <p className="text-xs text-muted-foreground">
-                  <strong className="text-amber-400">Nota:</strong> Il Riepilogo Mensile viene acquisito silenziosamente da SIAE. Non è prevista alcuna risposta.
+                  <strong className="text-amber-400">Silenzioso:</strong> SIAE non invia risposta per questo tipo.
+                </p>
+              </div>
+            )}
+            {c1Type === 'daily' && (
+              <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30">
+                <p className="text-xs text-muted-foreground">
+                  <strong className="text-blue-400">Silenzioso:</strong> SIAE non invia risposta per questo tipo.
                 </p>
               </div>
             )}
             
-            <div>
-              <Label className="text-sm font-medium mb-2 block">{c1Type === 'monthly' ? 'Mese' : 'Data'}</Label>
-              <Input
-                type={c1Type === 'monthly' ? 'month' : 'date'}
-                value={dailyDate}
-                onChange={(e) => setDailyDate(e.target.value)}
-                className="h-12"
-                data-testid="input-c1-date-mobile"
-              />
-            </div>
+            {/* Selezione evento per RCA */}
+            {c1Type === 'rca' && (
+              <div>
+                <Label className="text-sm font-medium mb-2 block">Evento *</Label>
+                <Select value={selectedEventId} onValueChange={setSelectedEventId}>
+                  <SelectTrigger className="h-12" data-testid="select-rca-event-mobile">
+                    <SelectValue placeholder="Seleziona evento..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eventsForRCA.length === 0 ? (
+                      <SelectItem value="none" disabled>Nessun evento disponibile</SelectItem>
+                    ) : (
+                      eventsForRCA.map((event) => (
+                        <SelectItem key={event.id} value={event.id}>
+                          {event.eventName} - {format(new Date(event.eventDate), "d MMM", { locale: it })}
+                        </SelectItem>
+                      ))
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
+            
+            {/* Data per RMG/RPM */}
+            {c1Type !== 'rca' && (
+              <div>
+                <Label className="text-sm font-medium mb-2 block">{c1Type === 'monthly' ? 'Mese' : 'Data'}</Label>
+                <Input
+                  type={c1Type === 'monthly' ? 'month' : 'date'}
+                  value={dailyDate}
+                  onChange={(e) => setDailyDate(e.target.value)}
+                  className="h-12"
+                  data-testid="input-c1-date-mobile"
+                />
+              </div>
+            )}
             
             <div>
               <Label className="text-sm font-medium mb-2 block">Email Destinatario SIAE</Label>
@@ -1825,14 +1958,27 @@ export default function SiaeTransmissionsPage() {
               Annulla
             </HapticButton>
             <HapticButton
-              className={`flex-1 h-12 ${c1Type === 'monthly' ? 'bg-amber-500 text-black hover:bg-amber-500/90' : 'bg-blue-500 text-white hover:bg-blue-500/90'}`}
-              onClick={() => sendC1Mutation.mutate({ date: dailyDate, toEmail: dailyEmail, type: c1Type })}
-              disabled={!dailyDate || !dailyEmail || sendC1Mutation.isPending}
+              className={`flex-1 h-12 ${
+                c1Type === 'rca' ? 'bg-green-500 text-white hover:bg-green-500/90' :
+                c1Type === 'monthly' ? 'bg-amber-500 text-black hover:bg-amber-500/90' : 
+                'bg-blue-500 text-white hover:bg-blue-500/90'
+              }`}
+              onClick={() => sendC1Mutation.mutate({ 
+                date: c1Type === 'rca' ? new Date().toISOString().split('T')[0] : dailyDate, 
+                toEmail: dailyEmail, 
+                type: c1Type,
+                eventId: c1Type === 'rca' ? selectedEventId : undefined 
+              })}
+              disabled={
+                (c1Type === 'rca' ? !selectedEventId : !dailyDate) || 
+                !dailyEmail || 
+                sendC1Mutation.isPending
+              }
               hapticType="medium"
               data-testid="button-send-c1-confirm"
             >
               {sendC1Mutation.isPending && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
-              {c1Type === 'monthly' ? 'Invia RPM' : 'Invia RMG'}
+              {c1Type === 'rca' ? 'Invia RCA' : c1Type === 'monthly' ? 'Invia RPM' : 'Invia RMG'}
             </HapticButton>
           </div>
         </div>
