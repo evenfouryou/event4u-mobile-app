@@ -1498,25 +1498,32 @@ async function handleRelayCommand(msg) {
           log.info(`[SIGNATURE] XML signed successfully`);
           
           if (relayWs && relayWs.readyState === WebSocket.OPEN) {
-            // Supporta sia il nuovo formato P7M (CAdES-BES) che il vecchio formato XMLDSig
-            const signatureData = result.signature.p7mBase64 
-              ? {
-                  // Nuovo formato CAdES-BES (P7M)
-                  p7mBase64: result.signature.p7mBase64,
-                  format: result.signature.format || 'CAdES-BES',
-                  algorithm: result.signature.algorithm || 'SHA-256',
-                  xmlContent: result.signature.xmlContent,
-                  signedAt: result.signature.signedAt
+            // v3.15.0: SOLO CAdES-BES con SHA-256 è accettato
+            // NO FALLBACK a XMLDSig/SHA-1 (deprecato e rifiutato da SIAE dal 2025)
+            if (!result.signature.p7mBase64) {
+              log.error(`[SIGNATURE] CRITICAL: No p7mBase64 in signature response - CAdES-BES failed`);
+              log.error(`[SIGNATURE] SIAE 2025 richiede SHA-256, XMLDSig/SHA-1 NON accettato`);
+              relayWs.send(JSON.stringify({
+                type: 'SIGNATURE_RESPONSE',
+                requestId: signRequestId,
+                payload: { 
+                  success: false, 
+                  error: 'Firma CAdES-BES fallita: p7mBase64 mancante. SIAE richiede SHA-256, fallback XMLDSig disabilitato.' 
                 }
-              : {
-                  // Legacy XMLDSig format (fallback)
-                  signedXml: result.signature.signedXml,
-                  signatureValue: result.signature.signatureValue,
-                  certificateData: result.signature.certificateData,
-                  signedAt: result.signature.signedAt
-                };
+              }));
+              return;
+            }
             
-            log.info(`[SIGNATURE] Sending ${result.signature.p7mBase64 ? 'CAdES-BES P7M' : 'XMLDSig'} signature to relay`);
+            const signatureData = {
+              // Formato CAdES-BES (P7M) - UNICO FORMATO ACCETTATO DA SIAE 2025
+              p7mBase64: result.signature.p7mBase64,
+              format: result.signature.format || 'CAdES-BES',
+              algorithm: result.signature.algorithm || 'SHA-256',
+              xmlContent: result.signature.xmlContent,
+              signedAt: result.signature.signedAt
+            };
+            
+            log.info(`[SIGNATURE] Sending CAdES-BES P7M signature to relay (SHA-256, ${result.signature.p7mBase64.length} chars)`);
             
             relayWs.send(JSON.stringify({
               type: 'SIGNATURE_RESPONSE',
