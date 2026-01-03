@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocation, useParams } from "wouter";
-import { format } from "date-fns";
+import { format, isWithinInterval, parseISO, startOfDay, endOfDay } from "date-fns";
 import { it } from "date-fns/locale";
 import { motion } from "framer-motion";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -21,6 +21,7 @@ import { Skeleton } from "@/components/ui/skeleton";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
+import { Input } from "@/components/ui/input";
 import {
   Select,
   SelectContent,
@@ -72,6 +73,9 @@ import {
   QrCode,
   Info,
   Hash,
+  Filter,
+  ArrowUpDown,
+  X,
 } from "lucide-react";
 import { useToast } from "@/hooks/use-toast";
 import { apiRequest, queryClient } from "@/lib/queryClient";
@@ -179,6 +183,13 @@ export default function AdminEventDetail() {
   const [selectedReasonCode, setSelectedReasonCode] = useState<string>("");
   const [selectedTicket, setSelectedTicket] = useState<SiaeTicket | null>(null);
   const [showTicketDetail, setShowTicketDetail] = useState(false);
+  
+  // Ticket filters
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [dateFromFilter, setDateFromFilter] = useState<string>("");
+  const [dateToFilter, setDateToFilter] = useState<string>("");
+  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [showFilters, setShowFilters] = useState(false);
 
   const { data: event, isLoading: eventLoading } = useQuery<Event>({
     queryKey: [`/api/events/${eventId}`],
@@ -236,6 +247,54 @@ export default function AdminEventDetail() {
       totalRevenue,
     };
   }, [tickets, transactions]);
+
+  // Filtered and sorted tickets
+  const filteredTickets = useMemo(() => {
+    if (!tickets) return [];
+    
+    let result = [...tickets];
+    
+    // Filter by status
+    if (statusFilter !== "all") {
+      result = result.filter(t => t.status === statusFilter);
+    }
+    
+    // Filter by date range
+    if (dateFromFilter) {
+      const fromDate = startOfDay(parseISO(dateFromFilter));
+      result = result.filter(t => {
+        if (!t.emissionDate) return false;
+        return new Date(t.emissionDate) >= fromDate;
+      });
+    }
+    
+    if (dateToFilter) {
+      const toDate = endOfDay(parseISO(dateToFilter));
+      result = result.filter(t => {
+        if (!t.emissionDate) return false;
+        return new Date(t.emissionDate) <= toDate;
+      });
+    }
+    
+    // Sort by progressive number (seat order)
+    result.sort((a, b) => {
+      if (sortOrder === "asc") {
+        return a.progressiveNumber - b.progressiveNumber;
+      }
+      return b.progressiveNumber - a.progressiveNumber;
+    });
+    
+    return result;
+  }, [tickets, statusFilter, dateFromFilter, dateToFilter, sortOrder]);
+
+  const clearFilters = () => {
+    setStatusFilter("all");
+    setDateFromFilter("");
+    setDateToFilter("");
+    setSortOrder("desc");
+  };
+
+  const hasActiveFilters = statusFilter !== "all" || dateFromFilter || dateToFilter;
 
   // Cancel ticket mutation (with optional refund)
   const cancelTicketMutation = useMutation({
@@ -411,13 +470,119 @@ export default function AdminEventDetail() {
   const renderTicketsTable = () => (
     <Card>
       <CardHeader>
-        <CardTitle className="flex items-center gap-2">
-          <Ticket className="h-5 w-5" />
-          Biglietti
-        </CardTitle>
-        <CardDescription>
-          Lista di tutti i biglietti emessi per questo evento
-        </CardDescription>
+        <div className="flex items-center justify-between gap-4">
+          <div>
+            <CardTitle className="flex items-center gap-2">
+              <Ticket className="h-5 w-5" />
+              Biglietti
+            </CardTitle>
+            <CardDescription>
+              Lista di tutti i biglietti emessi per questo evento
+              {filteredTickets.length !== (tickets?.length || 0) && (
+                <span className="ml-2 text-primary">
+                  ({filteredTickets.length} di {tickets?.length || 0} mostrati)
+                </span>
+              )}
+            </CardDescription>
+          </div>
+          <Button
+            variant={showFilters ? "secondary" : "outline"}
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+            className="gap-2"
+            data-testid="button-toggle-filters"
+          >
+            <Filter className="h-4 w-4" />
+            Filtri
+            {hasActiveFilters && (
+              <Badge variant="default" className="ml-1 px-1.5 py-0.5 text-xs">
+                {[statusFilter !== "all" ? 1 : 0, dateFromFilter ? 1 : 0, dateToFilter ? 1 : 0].reduce((a, b) => a + b, 0)}
+              </Badge>
+            )}
+          </Button>
+        </div>
+        
+        {/* Filters Section */}
+        {showFilters && (
+          <motion.div
+            initial={{ opacity: 0, height: 0 }}
+            animate={{ opacity: 1, height: "auto" }}
+            exit={{ opacity: 0, height: 0 }}
+            className="mt-4 pt-4 border-t"
+          >
+            <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              {/* Status Filter */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Stato Biglietto</Label>
+                <Select value={statusFilter} onValueChange={setStatusFilter}>
+                  <SelectTrigger data-testid="select-status-filter">
+                    <SelectValue placeholder="Tutti gli stati" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tutti gli stati</SelectItem>
+                    <SelectItem value="sold">Venduto</SelectItem>
+                    <SelectItem value="validated">Validato</SelectItem>
+                    <SelectItem value="cancelled">Annullato</SelectItem>
+                    <SelectItem value="refunded">Rimborsato</SelectItem>
+                    <SelectItem value="pending">In attesa</SelectItem>
+                    <SelectItem value="available">Disponibile</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Date From Filter */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Data Da</Label>
+                <Input
+                  type="date"
+                  value={dateFromFilter}
+                  onChange={(e) => setDateFromFilter(e.target.value)}
+                  data-testid="input-date-from-filter"
+                />
+              </div>
+
+              {/* Date To Filter */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Data A</Label>
+                <Input
+                  type="date"
+                  value={dateToFilter}
+                  onChange={(e) => setDateToFilter(e.target.value)}
+                  data-testid="input-date-to-filter"
+                />
+              </div>
+
+              {/* Sort Order */}
+              <div className="space-y-2">
+                <Label className="text-sm font-medium">Ordine Posto</Label>
+                <Select value={sortOrder} onValueChange={(v: "asc" | "desc") => setSortOrder(v)}>
+                  <SelectTrigger data-testid="select-sort-order">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="desc">Dal più recente</SelectItem>
+                    <SelectItem value="asc">Dal più vecchio</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {hasActiveFilters && (
+              <div className="flex justify-end mt-4">
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={clearFilters}
+                  className="gap-2 text-muted-foreground"
+                  data-testid="button-clear-filters"
+                >
+                  <X className="h-4 w-4" />
+                  Cancella filtri
+                </Button>
+              </div>
+            )}
+          </motion.div>
+        )}
       </CardHeader>
       <CardContent>
         {ticketsLoading ? (
@@ -426,13 +591,24 @@ export default function AdminEventDetail() {
               <Skeleton key={i} className="h-12 w-full" />
             ))}
           </div>
-        ) : tickets && tickets.length > 0 ? (
+        ) : filteredTickets.length > 0 ? (
           <div className="overflow-x-auto">
             <Table>
               <TableHeader>
                 <TableRow>
                   <TableHead>Sistema</TableHead>
-                  <TableHead>Prog.</TableHead>
+                  <TableHead>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="gap-1 -ml-3 h-auto p-1"
+                      onClick={() => setSortOrder(sortOrder === "asc" ? "desc" : "asc")}
+                      data-testid="button-sort-progressive"
+                    >
+                      Prog.
+                      <ArrowUpDown className="h-3 w-3" />
+                    </Button>
+                  </TableHead>
                   <TableHead>Carta Attivazione</TableHead>
                   <TableHead>Sigillo Fiscale</TableHead>
                   <TableHead>Cont. Carta</TableHead>
@@ -444,7 +620,7 @@ export default function AdminEventDetail() {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {tickets.slice(0, 50).map((ticket) => (
+                {filteredTickets.slice(0, 100).map((ticket) => (
                   <TableRow 
                     key={ticket.id} 
                     data-testid={`row-ticket-${ticket.id}`}
@@ -508,11 +684,24 @@ export default function AdminEventDetail() {
                 ))}
               </TableBody>
             </Table>
-            {tickets.length > 50 && (
+            {filteredTickets.length > 100 && (
               <p className="text-center text-sm text-muted-foreground mt-4">
-                Mostrando 50 di {tickets.length} biglietti
+                Mostrando 100 di {filteredTickets.length} biglietti filtrati
               </p>
             )}
+          </div>
+        ) : tickets && tickets.length > 0 ? (
+          <div className="text-center py-8 text-muted-foreground">
+            <Filter className="h-10 w-10 mx-auto mb-2 opacity-50" />
+            Nessun biglietto corrisponde ai filtri selezionati
+            <Button
+              variant="link"
+              onClick={clearFilters}
+              className="block mx-auto mt-2"
+              data-testid="button-clear-filters-empty"
+            >
+              Cancella filtri
+            </Button>
           </div>
         ) : (
           <div className="text-center py-8 text-muted-foreground">
