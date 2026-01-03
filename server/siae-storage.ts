@@ -1093,24 +1093,30 @@ export class SiaeStorage implements ISiaeStorage {
   }
   
   async getAllSiaeNameChanges(): Promise<any[]> {
-    return await db.select({ 
-      nameChange: siaeNameChanges,
-      sigilloFiscaleOriginale: siaeTickets.sigilloFiscale,
-      companyId: siaeTicketedEvents.companyId,
-      companyName: companies.name
-    })
-      .from(siaeNameChanges)
-      .innerJoin(siaeTickets, eq(siaeNameChanges.originalTicketId, siaeTickets.id))
-      .innerJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
-      .innerJoin(siaeTicketedEvents, eq(siaeEventSectors.ticketedEventId, siaeTicketedEvents.id))
-      .innerJoin(companies, eq(siaeTicketedEvents.companyId, companies.id))
-      .orderBy(desc(siaeNameChanges.createdAt))
-      .then(rows => rows.map(r => ({ 
+    try {
+      const rows = await db.select({ 
+        nameChange: siaeNameChanges,
+        sigilloFiscaleOriginale: siaeTickets.sigilloFiscale,
+        companyId: siaeTicketedEvents.companyId,
+        companyName: companies.name
+      })
+        .from(siaeNameChanges)
+        .innerJoin(siaeTickets, eq(siaeNameChanges.originalTicketId, siaeTickets.id))
+        .innerJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
+        .innerJoin(siaeTicketedEvents, eq(siaeEventSectors.ticketedEventId, siaeTicketedEvents.id))
+        .innerJoin(companies, eq(siaeTicketedEvents.companyId, companies.id))
+        .orderBy(desc(siaeNameChanges.createdAt));
+      
+      return rows.map(r => ({ 
         ...r.nameChange, 
-        sigilloFiscaleOriginale: r.sigilloFiscaleOriginale,
-        companyId: r.companyId,
-        companyName: r.companyName
-      })));
+        sigilloFiscaleOriginale: r.sigilloFiscaleOriginale || null,
+        companyId: r.companyId || null,
+        companyName: r.companyName || 'N/A'
+      }));
+    } catch (error) {
+      console.error('[SIAE-Storage] getAllSiaeNameChanges error:', error);
+      return [];
+    }
   }
   
   async getSiaeNameChangesByCompany(companyId: string): Promise<any[]> {
