@@ -166,11 +166,10 @@ export function normalizeSiaeCodiceOrdine(rawCode: string | null | undefined): s
 // ==================== File Naming ====================
 
 /**
- * Genera nome file conforme Allegato C SIAE
- * - RMG_AAAA_MM_GG_###.xsi per RiepilogoGiornaliero
- * - RPM_AAAA_MM_###.xsi per RiepilogoMensile
- * - RCA_AAAA_MM_GG_###.xsi per RiepilogoControlloAccessi (legacy, silenzioso)
- * - LOG_AAAA_MM_GG_###.xsi per LogTransazione (C1 evento, genera risposta SIAE)
+ * Genera nome file conforme Allegato C SIAE (Provvedimento Agenzia Entrate 04/03/2008)
+ * - RMG_AAAA_MM_GG_###.xsi per Riepilogo Mensile Giornaliero (silenzioso)
+ * - RPM_AAAA_MM_###.xsi per Riepilogo Periodico Mensile (silenzioso)
+ * - RCA_AAAA_MM_GG_###.xsi per Riepilogo Controllo Accessi (C1 evento, genera risposta SIAE)
  * 
  * Per file firmati CAdES-BES: estensione .xsi.p7m
  * Per file non firmati o XMLDSig legacy: estensione .xsi
@@ -198,15 +197,16 @@ export function generateSiaeFileName(
   
   switch (reportType) {
     case 'mensile':
+      // RPM = Riepilogo Periodico Mensile (silenzioso, nessuna risposta SIAE)
       return `RPM_${year}_${month}_${prog}${extension}`;
     case 'log':
-      // LogTransazione - formato C1 evento che genera risposta SIAE
-      return `LOG_${year}_${month}_${day}_${prog}${extension}`;
     case 'rca':
-      // RiepilogoControlloAccessi - legacy, silenzioso
+      // RCA = Riepilogo Controllo Accessi (C1 evento, genera risposta SIAE Log.xsi)
+      // Conforme Allegato C - NON usare LOG_ che non esiste nella normativa
       return `RCA_${year}_${month}_${day}_${prog}${extension}`;
     case 'giornaliero':
     default:
+      // RMG = Riepilogo Mensile Giornaliero (silenzioso, nessuna risposta SIAE)
       return `RMG_${year}_${month}_${day}_${prog}${extension}`;
   }
 }
