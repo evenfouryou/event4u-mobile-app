@@ -433,9 +433,6 @@ export function generateC1LogXml(params: C1LogParams): C1LogResult {
     systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT
   );
   
-  // DEBUG: Log valori generati per conformità SIAE
-  console.log(`[SIAE-DEBUG] CodiceRichiedenteEmissioneSigillo: "${codiceRichiedente}" (input: ${systemConfig?.codiceRichiedente}, systemCode: ${systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT})`);
-  
   // 2. CartaAttivazione: NON usare "00000000"! Usa cardNumber o avvisa
   // Placeholder documentato solo se entrambi mancano
   const globalCartaAttivazione = cardNumber || null;
@@ -530,11 +527,6 @@ export function generateC1LogXml(params: C1LogParams): C1LogResult {
     const causaleAnnullamento = isCancelled 
       ? normalizeCausaleAnnullamento(ticket.cancellationReasonCode)
       : '';
-    
-    // DEBUG: Log valori per biglietti annullati
-    if (isCancelled) {
-      console.log(`[SIAE-DEBUG] Ticket ${ticket.id} annullato: status="${ticket.status}", causaleRaw="${ticket.cancellationReasonCode}", causaleNormalized="${causaleAnnullamento}"`);
-    }
     
     // Costruzione attributi Transazione (ordine DTD)
     let transactionAttrs = [
