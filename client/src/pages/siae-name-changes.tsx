@@ -62,13 +62,37 @@ export default function SiaeNameChangesPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [processNotes, setProcessNotes] = useState("");
   const [processAction, setProcessAction] = useState<"approve" | "reject">("approve");
+  const [selectedCompanyId, setSelectedCompanyId] = useState<string>("all");
 
+  const isSuperAdmin = user?.role === 'super_admin';
   const companyId = user?.companyId;
 
-  const { data: nameChanges, isLoading } = useQuery<SiaeNameChange[]>({
-    queryKey: ['/api/siae/companies', companyId, 'name-changes'],
-    enabled: !!companyId,
+  // Load companies for selector (super_admin only)
+  const { data: companiesData } = useQuery<any[]>({
+    queryKey: ['/api/companies'],
+    enabled: isSuperAdmin,
   });
+
+  // Determine which API to use based on selected company
+  const apiUrl = selectedCompanyId === "all" 
+    ? '/api/siae/name-changes/all'
+    : `/api/siae/companies/${selectedCompanyId}/name-changes`;
+
+  const { data: nameChanges, isLoading } = useQuery<any[]>({
+    queryKey: selectedCompanyId === "all" 
+      ? ['/api/siae/name-changes/all']
+      : ['/api/siae/companies', selectedCompanyId, 'name-changes'],
+    enabled: isSuperAdmin ? true : !!companyId,
+  });
+
+  // For non-super_admin, always use their company
+  const { data: myCompanyChanges, isLoading: isLoadingMy } = useQuery<any[]>({
+    queryKey: ['/api/siae/companies', companyId, 'name-changes'],
+    enabled: !isSuperAdmin && !!companyId,
+  });
+
+  const effectiveNameChanges = isSuperAdmin ? nameChanges : myCompanyChanges;
+  const effectiveLoading = isSuperAdmin ? isLoading : isLoadingMy;
 
   const processRequestMutation = useMutation({
     mutationFn: async ({ id, status, notes }: { id: string; status: string; notes: string }) => {
@@ -114,12 +138,13 @@ export default function SiaeNameChangesPage() {
     }
   };
 
-  const filteredRequests = nameChanges?.filter((request) => {
+  const filteredRequests = effectiveNameChanges?.filter((request) => {
     const matchesSearch =
       searchQuery === "" ||
       request.newFirstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       request.newLastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      request.originalTicketId?.toLowerCase().includes(searchQuery.toLowerCase());
+      request.originalTicketId?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (request as any).companyName?.toLowerCase().includes(searchQuery.toLowerCase());
 
     const matchesStatus = statusFilter === "all" || request.status === statusFilter;
 
@@ -127,10 +152,10 @@ export default function SiaeNameChangesPage() {
   });
 
   const stats = {
-    total: nameChanges?.length || 0,
-    pending: nameChanges?.filter(r => r.status === "pending").length || 0,
-    completed: nameChanges?.filter(r => r.status === "completed").length || 0,
-    rejected: nameChanges?.filter(r => r.status === "rejected").length || 0,
+    total: effectiveNameChanges?.length || 0,
+    pending: effectiveNameChanges?.filter(r => r.status === "pending").length || 0,
+    completed: effectiveNameChanges?.filter(r => r.status === "completed").length || 0,
+    rejected: effectiveNameChanges?.filter(r => r.status === "rejected").length || 0,
   };
 
   // Desktop version
@@ -180,11 +205,28 @@ export default function SiaeNameChangesPage() {
         <Card>
           <CardContent className="p-4">
             <div className="flex gap-4">
+              {isSuperAdmin && (
+                <div className="w-56">
+                  <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
+                    <SelectTrigger data-testid="select-company-filter">
+                      <SelectValue placeholder="Organizzatore" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tutti gli organizzatori</SelectItem>
+                      {companiesData?.map((company) => (
+                        <SelectItem key={company.id} value={company.id}>
+                          {company.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="flex-1">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                   <Input
-                    placeholder="Cerca per nome o codice biglietto..."
+                    placeholder="Cerca per nome, codice o organizzatore..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10"
@@ -209,7 +251,7 @@ export default function SiaeNameChangesPage() {
           </CardContent>
         </Card>
 
-        {isLoading ? (
+        {effectiveLoading ? (
           <Card>
             <CardContent className="p-6 space-y-4">
               {[1, 2, 3].map((i) => (
@@ -237,6 +279,7 @@ export default function SiaeNameChangesPage() {
                   <TableRow>
                     <TableHead>Biglietto</TableHead>
                     <TableHead>Sigillo Fiscale</TableHead>
+                    {isSuperAdmin && <TableHead>Organizzatore</TableHead>}
                     <TableHead>Nuovo Nome</TableHead>
                     <TableHead>Nuovo Cognome</TableHead>
                     <TableHead>Tipo Richiedente</TableHead>
@@ -257,6 +300,11 @@ export default function SiaeNameChangesPage() {
                           <span className="font-mono text-xs">{(request as any).sigilloFiscaleOriginale || 'N/A'}</span>
                         </div>
                       </TableCell>
+                      {isSuperAdmin && (
+                        <TableCell data-testid={`cell-company-${request.id}`}>
+                          <span className="text-sm">{(request as any).companyName || '-'}</span>
+                        </TableCell>
+                      )}
                       <TableCell data-testid={`cell-firstname-${request.id}`}>
                         {request.newFirstName}
                       </TableCell>

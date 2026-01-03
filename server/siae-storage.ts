@@ -1092,6 +1092,27 @@ export class SiaeStorage implements ISiaeStorage {
       .orderBy(desc(siaeNameChanges.createdAt));
   }
   
+  async getAllSiaeNameChanges(): Promise<any[]> {
+    return await db.select({ 
+      nameChange: siaeNameChanges,
+      sigilloFiscaleOriginale: siaeTickets.sigilloFiscale,
+      companyId: siaeTicketedEvents.companyId,
+      companyName: companies.name
+    })
+      .from(siaeNameChanges)
+      .innerJoin(siaeTickets, eq(siaeNameChanges.originalTicketId, siaeTickets.id))
+      .innerJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
+      .innerJoin(siaeTicketedEvents, eq(siaeEventSectors.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(companies, eq(siaeTicketedEvents.companyId, companies.id))
+      .orderBy(desc(siaeNameChanges.createdAt))
+      .then(rows => rows.map(r => ({ 
+        ...r.nameChange, 
+        sigilloFiscaleOriginale: r.sigilloFiscaleOriginale,
+        companyId: r.companyId,
+        companyName: r.companyName
+      })));
+  }
+  
   async getSiaeNameChangesByCompany(companyId: string): Promise<any[]> {
     return await db.select({ 
       nameChange: siaeNameChanges,

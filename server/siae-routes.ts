@@ -2814,6 +2814,16 @@ router.post("/api/siae/admin/name-changes/:id/process", requireAuth, requireSupe
 
 // ==================== Name Changes (Customer / Organizer) ====================
 
+// Get all name changes (for super_admin/gestore with company selector)
+router.get("/api/siae/name-changes/all", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const changes = await siaeStorage.getAllSiaeNameChanges();
+    res.json(changes);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.get("/api/siae/companies/:companyId/name-changes", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const changes = await siaeStorage.getSiaeNameChangesByCompany(req.params.companyId);
