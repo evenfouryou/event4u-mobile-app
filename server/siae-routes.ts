@@ -5191,7 +5191,8 @@ async function generateRcaReportXml(params: RcaReportParams): Promise<string> {
       const tipoTitolo = normalizeSiaeTipoTitolo(ticket.ticketTypeCode, ticket.isComplimentary);
       if (tipoTitolo === 'ABB') continue;
       
-      const isCancelled = isCancelledStatus(ticket.status);
+      // Determina annullamento considerando status, cancellationReasonCode e cancellationDate
+      const isCancelled = isCancelledStatus(ticket.status) || !!ticket.cancellationReasonCode || !!ticket.cancellationDate;
       const targetMap = isCancelled ? cancelledByType : emittedByType;
       
       if (!targetMap.has(tipoTitolo)) {
@@ -5491,7 +5492,10 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
       // ma vengono inclusi nel dataset per tracking. Solo i biglietti emessi validi vanno in TitoliAccesso.
       for (const [tipoTitolo, typeTickets] of ticketsByType) {
         // Solo biglietti validi (emessi) vanno in TitoliAccesso
-        const validTickets = typeTickets.filter((t: any) => !isCancelledStatus(t.status));
+        // Considera anche cancellationReasonCode e cancellationDate per determinare annullamento
+        const validTickets = typeTickets.filter((t: any) => 
+          !isCancelledStatus(t.status) && !t.cancellationReasonCode && !t.cancellationDate
+        );
         
         if (validTickets.length === 0) continue;
         
@@ -6468,10 +6472,17 @@ function buildC1ReportData(
     return 'intero';
   };
   
+  // Helper: determina se un biglietto è annullato (status O cancellationReasonCode/cancellationDate)
+  const isTicketCancelled = (t: any): boolean => {
+    if (isCancelledStatus(t.status)) return true;
+    if (t.cancellationReasonCode || t.cancellationDate) return true;
+    return false;
+  };
+
   // For daily report: filter tickets by today's emission date
   // For monthly report: filter tickets by month of reportDate
   let tickets = allTickets;
-  let cancelledTickets = allTickets.filter(t => t.status === 'cancelled');
+  let cancelledTickets = allTickets.filter(t => isTicketCancelled(t));
   
   if (!isMonthly) {
     // Daily report: only tickets emitted today
@@ -6482,7 +6493,7 @@ function buildC1ReportData(
     });
     // Also filter cancelled tickets for today
     cancelledTickets = allTickets.filter(t => {
-      if (t.status !== 'cancelled') return false;
+      if (!isTicketCancelled(t)) return false;
       if (t.cancellationDate) {
         const cancelDate = new Date(t.cancellationDate).toISOString().split('T')[0];
         return cancelDate === today;
@@ -6499,7 +6510,7 @@ function buildC1ReportData(
       return ticketDate.getMonth() === refMonth && ticketDate.getFullYear() === refYear;
     });
     cancelledTickets = allTickets.filter(t => {
-      if (t.status !== 'cancelled') return false;
+      if (!isTicketCancelled(t)) return false;
       if (t.cancellationDate) {
         const cancelDate = new Date(t.cancellationDate);
         return cancelDate.getMonth() === refMonth && cancelDate.getFullYear() === refYear;
@@ -6509,7 +6520,7 @@ function buildC1ReportData(
   }
   
   // Filter only active/emitted tickets for sales calculations
-  const activeTickets = tickets.filter(t => t.status !== 'cancelled');
+  const activeTickets = tickets.filter(t => !isTicketCancelled(t));
 
   const salesByDate: Record<string, { 
     date: string; 

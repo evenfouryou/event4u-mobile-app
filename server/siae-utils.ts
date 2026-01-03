@@ -514,8 +514,9 @@ export function generateC1LogXml(params: C1LogParams): C1LogResult {
       ? toCentesimi(ticket.entertainmentTaxBase || ticket.grossAmount || 0)
       : 0;
     
-    // Annullamento - usa costante condivisa SIAE_CANCELLED_STATUSES
-    const isCancelled = isCancelledStatus(ticket.status);
+    // Annullamento - considera status, cancellationReasonCode e cancellationDate
+    // IMPORTANTE: Se cancellationReasonCode o cancellationDate sono presenti, il biglietto è annullato
+    const isCancelled = isCancelledStatus(ticket.status) || !!ticket.cancellationReasonCode || !!ticket.cancellationDate;
     const annullamento = isCancelled ? 'S' : 'N';
     
     // Posto (opzionale)
