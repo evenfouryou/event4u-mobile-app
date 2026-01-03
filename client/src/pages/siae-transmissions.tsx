@@ -76,6 +76,8 @@ import {
   ShieldAlert,
   Link2,
   Unlink,
+  Search,
+  Calendar,
 } from "lucide-react";
 
 const springTransition = {
@@ -112,6 +114,9 @@ export default function SiaeTransmissionsPage() {
   const [receiptProtocol, setReceiptProtocol] = useState<string>("");
   const [receiptContent, setReceiptContent] = useState<string>("");
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState<string>("");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
 
   const isSuperAdmin = user?.role === 'super_admin';
   const companyId = isSuperAdmin ? selectedCompanyId : user?.companyId;
@@ -489,7 +494,32 @@ export default function SiaeTransmissionsPage() {
   const filteredTransmissions = transmissions?.filter((trans) => {
     const matchesStatus = statusFilter === "all" || trans.status === statusFilter;
     const matchesType = typeFilter === "all" || trans.transmissionType === typeFilter;
-    return matchesStatus && matchesType;
+    
+    // Filtro ricerca: cerca in fileName, transmissionType, status
+    const matchesSearch = searchQuery === "" || 
+      trans.fileName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      trans.transmissionType?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      trans.status?.toLowerCase().includes(searchQuery.toLowerCase());
+    
+    // Filtro per periodo
+    let matchesDate = true;
+    if (dateFrom || dateTo) {
+      const transDate = trans.periodDate ? new Date(trans.periodDate) : null;
+      if (transDate) {
+        if (dateFrom) {
+          const fromDate = new Date(dateFrom);
+          fromDate.setHours(0, 0, 0, 0);
+          matchesDate = matchesDate && transDate >= fromDate;
+        }
+        if (dateTo) {
+          const toDate = new Date(dateTo);
+          toDate.setHours(23, 59, 59, 999);
+          matchesDate = matchesDate && transDate <= toDate;
+        }
+      }
+    }
+    
+    return matchesStatus && matchesType && matchesSearch && matchesDate;
   });
 
   const stats = {
@@ -501,7 +531,15 @@ export default function SiaeTransmissionsPage() {
     totalTickets: transmissions?.reduce((sum, t) => sum + (t.ticketsCount || 0), 0) || 0,
   };
 
-  const activeFiltersCount = (statusFilter !== "all" ? 1 : 0) + (typeFilter !== "all" ? 1 : 0);
+  const activeFiltersCount = (statusFilter !== "all" ? 1 : 0) + (typeFilter !== "all" ? 1 : 0) + (searchQuery !== "" ? 1 : 0) + (dateFrom !== "" ? 1 : 0) + (dateTo !== "" ? 1 : 0);
+  
+  const resetFilters = () => {
+    setStatusFilter("all");
+    setTypeFilter("all");
+    setSearchQuery("");
+    setDateFrom("");
+    setDateTo("");
+  };
 
   // Desktop version
   if (!isMobile) {
@@ -666,11 +704,49 @@ export default function SiaeTransmissionsPage() {
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between">
-              <CardTitle>Elenco Trasmissioni</CardTitle>
-              <div className="flex gap-2">
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <CardTitle>Elenco Trasmissioni</CardTitle>
+                {activeFiltersCount > 0 && (
+                  <Button variant="ghost" size="sm" onClick={resetFilters} data-testid="button-reset-filters">
+                    <X className="h-4 w-4 mr-1" />
+                    Resetta filtri ({activeFiltersCount})
+                  </Button>
+                )}
+              </div>
+              <div className="flex flex-wrap items-center gap-3">
+                <div className="relative flex-1 min-w-[200px] max-w-[300px]">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Cerca trasmissione..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-9"
+                    data-testid="input-search"
+                  />
+                </div>
+                <div className="flex items-center gap-2">
+                  <Calendar className="h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="date"
+                    value={dateFrom}
+                    onChange={(e) => setDateFrom(e.target.value)}
+                    className="w-[140px]"
+                    placeholder="Da"
+                    data-testid="input-date-from"
+                  />
+                  <span className="text-muted-foreground">-</span>
+                  <Input
+                    type="date"
+                    value={dateTo}
+                    onChange={(e) => setDateTo(e.target.value)}
+                    className="w-[140px]"
+                    placeholder="A"
+                    data-testid="input-date-to"
+                  />
+                </div>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
-                  <SelectTrigger className="w-[150px]">
+                  <SelectTrigger className="w-[150px]" data-testid="select-status-filter">
                     <SelectValue placeholder="Stato" />
                   </SelectTrigger>
                   <SelectContent>
@@ -682,7 +758,7 @@ export default function SiaeTransmissionsPage() {
                   </SelectContent>
                 </Select>
                 <Select value={typeFilter} onValueChange={setTypeFilter}>
-                  <SelectTrigger className="w-[150px]">
+                  <SelectTrigger className="w-[150px]" data-testid="select-type-filter">
                     <SelectValue placeholder="Tipo" />
                   </SelectTrigger>
                   <SelectContent>
