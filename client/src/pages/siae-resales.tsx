@@ -3,7 +3,6 @@ import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
-import { useToast } from "@/hooks/use-toast";
 import {
   type SiaeResale,
 } from "@shared/schema";
@@ -42,8 +41,6 @@ import {
   Tag,
   TrendingUp,
   Clock,
-  CheckCircle2,
-  XCircle,
   Eye,
   Building2,
   AlertTriangle,
@@ -53,8 +50,6 @@ import {
   Calendar,
   Ticket,
 } from "lucide-react";
-import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
-import { useIsMobile } from "@/hooks/use-mobile";
 
 interface ResaleWithDetails extends SiaeResale {
   companyId?: string;
@@ -72,8 +67,6 @@ interface Company {
 
 export default function SiaeResalesPage() {
   const { user } = useAuth();
-  const { toast } = useToast();
-  const isMobile = useIsMobile();
   const [selectedResale, setSelectedResale] = useState<ResaleWithDetails | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -176,11 +169,7 @@ export default function SiaeResalesPage() {
   };
 
   return (
-    <MobileAppLayout
-      header={<MobileHeader title="Rivendite" showBackButton showMenuButton showUserMenu />}
-      contentClassName="pb-24"
-    >
-      <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-siae-resales">
+    <div className="container mx-auto p-4 md:p-6 space-y-4 md:space-y-6" data-testid="page-siae-resales">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <h1 className="text-xl font-bold flex items-center gap-2">
@@ -692,7 +681,6 @@ export default function SiaeResalesPage() {
             )}
           </DialogContent>
         </Dialog>
-      </div>
-    </MobileAppLayout>
+    </div>
   );
 }
