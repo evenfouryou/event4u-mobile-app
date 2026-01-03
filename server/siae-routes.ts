@@ -4114,6 +4114,8 @@ router.post("/api/siae/companies/:companyId/transmissions/send-c1", requireAuth,
     const { companyId } = req.params;
     const { date, toEmail, type = 'daily', eventId, signWithSmartCard = true } = req.body;
     
+    console.log(`[SIAE-ROUTES] send-c1 request received - type: ${type}, eventId: ${eventId}, companyId: ${companyId}`);
+    
     const result = await handleSendC1Transmission({
       companyId,
       date,
