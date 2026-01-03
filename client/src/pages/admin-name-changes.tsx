@@ -37,6 +37,8 @@ import {
   Filter,
   RefreshCw,
   Loader2,
+  AlertTriangle,
+  Stamp,
 } from "lucide-react";
 import {
   Dialog,
@@ -66,12 +68,14 @@ interface NameChangeData {
   status: string;
   createdAt: string;
   processedAt: string | null;
+  sigilloFiscaleOriginale: string | null; // SIAE Compliance
   ticket: {
     id: string;
     ticketCode: string;
     participantFirstName: string | null;
     participantLastName: string | null;
     ticketedEventId: string;
+    sigilloFiscale: string | null; // SIAE Compliance
   };
   ticketedEvent: {
     id: string;
@@ -87,6 +91,26 @@ interface NameChangeData {
   company: {
     id: string;
     name: string;
+  };
+}
+
+// Biglietti annullati in attesa di riemissione (anomalia fiscale)
+interface PendingReissueData {
+  cancelledAwaitingReissue: Array<{
+    id: string;
+    ticketCode: string;
+    sigilloFiscale: string | null;
+    participantFirstName: string | null;
+    participantLastName: string | null;
+    cancellationDate: string | null;
+    event: { id: string; name: string };
+    company: { id: string; name: string };
+  }>;
+  pendingRequests: NameChangeData[];
+  summary: {
+    cancelledAwaitingReissueCount: number;
+    pendingRequestsCount: number;
+    totalPendingReissue: number;
   };
 }
 
@@ -148,6 +172,11 @@ export default function AdminNameChanges() {
   // Fetch filters data
   const { data: filtersData } = useQuery<FiltersData>({
     queryKey: ["/api/siae/admin/name-changes/filters"],
+  });
+
+  // SIAE Compliance: Fetch pending reissue data (annullati senza nuovo titolo)
+  const { data: pendingReissueData } = useQuery<PendingReissueData>({
+    queryKey: ["/api/siae/admin/name-changes/pending-reissue"],
   });
 
   // Build query string for name changes
@@ -347,6 +376,58 @@ export default function AdminNameChanges() {
         </motion.div>
       </div>
 
+      {/* SIAE Compliance Alert: Biglietti in attesa di riemissione */}
+      {pendingReissueData && pendingReissueData.summary?.totalPendingReissue > 0 && (
+        <motion.div custom={4} variants={cardVariants} initial="hidden" animate="visible">
+          <Card className="border-amber-500/50 bg-amber-500/10">
+            <CardHeader className="pb-3">
+              <div className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-amber-500" />
+                <CardTitle className="text-base text-amber-600 dark:text-amber-400">
+                  Attenzione: Biglietti in Attesa di Riemissione
+                </CardTitle>
+              </div>
+              <CardDescription className="text-amber-600/80 dark:text-amber-400/80">
+                {pendingReissueData.summary.cancelledAwaitingReissueCount > 0 && (
+                  <span className="block">
+                    {pendingReissueData.summary.cancelledAwaitingReissueCount} biglietti annullati senza nuovo titolo emesso (anomalia fiscale)
+                  </span>
+                )}
+                {pendingReissueData.summary.pendingRequestsCount > 0 && (
+                  <span className="block">
+                    {pendingReissueData.summary.pendingRequestsCount} richieste di cambio nominativo in attesa di elaborazione
+                  </span>
+                )}
+              </CardDescription>
+            </CardHeader>
+            {pendingReissueData.cancelledAwaitingReissue.length > 0 && (
+              <CardContent className="pt-0">
+                <div className="text-sm space-y-2">
+                  <p className="font-medium text-amber-600 dark:text-amber-400">Biglietti con annullamento non completato:</p>
+                  <div className="space-y-1 max-h-32 overflow-y-auto">
+                    {pendingReissueData.cancelledAwaitingReissue.slice(0, 5).map((ticket) => (
+                      <div key={ticket.id} className="flex items-center gap-2 text-xs bg-amber-500/10 p-2 rounded">
+                        <Stamp className="h-3 w-3 text-amber-500" />
+                        <span className="font-mono">{ticket.sigilloFiscale || 'N/A'}</span>
+                        <span className="text-muted-foreground">•</span>
+                        <span>{ticket.ticketCode}</span>
+                        <span className="text-muted-foreground">•</span>
+                        <span>{ticket.participantFirstName} {ticket.participantLastName}</span>
+                      </div>
+                    ))}
+                    {pendingReissueData.cancelledAwaitingReissue.length > 5 && (
+                      <p className="text-xs text-muted-foreground">
+                        ... e altri {pendingReissueData.cancelledAwaitingReissue.length - 5} biglietti
+                      </p>
+                    )}
+                  </div>
+                </div>
+              </CardContent>
+            )}
+          </Card>
+        </motion.div>
+      )}
+
       {/* Filters */}
       <Card>
         <CardHeader className="pb-3">
@@ -434,6 +515,7 @@ export default function AdminNameChanges() {
                   <TableHeader>
                     <TableRow>
                       <TableHead>Nominativo Originale</TableHead>
+                      <TableHead>Sigillo Fiscale</TableHead>
                       <TableHead>Nuovo Nominativo</TableHead>
                       <TableHead>Evento</TableHead>
                       <TableHead>Gestore</TableHead>
@@ -452,6 +534,12 @@ export default function AdminNameChanges() {
                             {nc.ticket.participantFirstName} {nc.ticket.participantLastName}
                           </div>
                           <div className="text-xs text-muted-foreground">{nc.ticket.ticketCode}</div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center gap-1">
+                            <Stamp className="h-3 w-3 text-muted-foreground" />
+                            <span className="font-mono text-xs">{nc.sigilloFiscaleOriginale || nc.ticket.sigilloFiscale || 'N/A'}</span>
+                          </div>
                         </TableCell>
                         <TableCell>
                           <div className="font-medium">

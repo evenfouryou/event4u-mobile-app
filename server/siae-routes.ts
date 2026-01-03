@@ -2527,10 +2527,15 @@ router.get("/api/siae/admin/name-changes", requireAuth, requireSuperAdmin, async
     res.json({
       nameChanges: results.map(r => ({
         ...r.nameChange,
-        ticket: r.ticket,
+        ticket: {
+          ...r.ticket,
+          sigilloFiscale: r.ticket.sigilloFiscale, // Esplicito per conformità SIAE
+        },
         ticketedEvent: r.ticketedEvent,
         event: r.event,
         company: r.company,
+        // SIAE Compliance: sigillo fiscale per tracciabilità
+        sigilloFiscaleOriginale: r.ticket.sigilloFiscale,
       })),
       pagination: {
         page: pageNum,
