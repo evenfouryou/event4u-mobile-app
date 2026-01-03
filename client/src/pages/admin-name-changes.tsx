@@ -150,9 +150,28 @@ export default function AdminNameChanges() {
     queryKey: ["/api/siae/admin/name-changes/filters"],
   });
 
+  // Build query string for name changes
+  const queryParams = useMemo(() => {
+    const params = new URLSearchParams();
+    if (selectedCompanyId) params.append('companyId', selectedCompanyId);
+    if (selectedEventId) params.append('eventId', selectedEventId);
+    if (selectedStatus) params.append('status', selectedStatus);
+    params.append('page', String(page));
+    return params.toString();
+  }, [selectedCompanyId, selectedEventId, selectedStatus, page]);
+
   // Fetch name changes with filters
   const { data: nameChangesData, isLoading, refetch } = useQuery<{ nameChanges: NameChangeData[]; pagination: PaginationData }>({
-    queryKey: ["/api/siae/admin/name-changes", { companyId: selectedCompanyId, eventId: selectedEventId, status: selectedStatus, page }],
+    queryKey: ["/api/siae/admin/name-changes", selectedCompanyId, selectedEventId, selectedStatus, page],
+    queryFn: async () => {
+      const response = await fetch(`/api/siae/admin/name-changes?${queryParams}`, {
+        credentials: "include",
+      });
+      if (!response.ok) {
+        throw new Error("Failed to fetch name changes");
+      }
+      return response.json();
+    },
   });
 
   // Filter events by selected company
