@@ -1,6 +1,6 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, validateC1Report, type C1ValidationResult } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog } from './siae-utils';
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -3903,27 +3903,108 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   }
   
   // Generate XML using appropriate function based on type
-  const xml = isRCA 
-    ? await generateRcaReportXml({
-        companyId,
-        eventId: eventId!,
-        filteredTickets,
-        systemConfig,
-        companyName,
-        taxId,
-      })
-    : await generateC1ReportXml({
-        companyId,
-        reportDate: effectiveReportDate,
-        isMonthly,
-        isRCA: false,
-        filteredTickets,
-        systemConfig,
-        companyName,
-        taxId,
-        oraGen,
-        rcaEventName,
-      });
+  let xml: string;
+  
+  if (isRCA && eventId) {
+    // RCA: Use new C1 Log format (LogTransazione) per DTD Log_v0040_20190627.dtd
+    // Fetch ticketed event and base event for SiaeEventForLog
+    const rcaTicketedEvent = await siaeStorage.getSiaeTicketedEvent(eventId);
+    const rcaEventDetails = rcaTicketedEvent ? await storage.getEvent(rcaTicketedEvent.eventId) : null;
+    
+    // Prepare SiaeEventForLog
+    const eventForLog: SiaeEventForLog = {
+      id: eventId,
+      name: rcaEventDetails?.name || 'N/D',
+      date: rcaEventDetails?.startDatetime ? new Date(rcaEventDetails.startDatetime) : new Date(),
+      time: rcaEventDetails?.startDatetime ? new Date(rcaEventDetails.startDatetime) : null,
+      venueCode: rcaTicketedEvent?.siaeLocationCode || '0000000000001',
+      genreCode: rcaTicketedEvent?.genreCode || 'S1',
+      organizerTaxId: taxId,
+      organizerName: companyName,
+      tipoTassazione: (rcaTicketedEvent?.taxType as 'S' | 'I') || 'S',
+      ivaPreassolta: (rcaTicketedEvent?.ivaPreassolta as 'N' | 'B' | 'F') || 'N',
+    };
+    
+    // Convert filteredTickets to SiaeTicketForLog[]
+    const ticketsForLog: SiaeTicketForLog[] = filteredTickets.map(ticket => ({
+      id: ticket.id,
+      fiscalSealCode: ticket.fiscalSealCode || null,
+      progressiveNumber: ticket.progressiveNumber || 1,
+      cardCode: ticket.cardCode || activeCard?.cardCode || null,
+      emissionChannelCode: ticket.emissionChannelCode || null,
+      emissionDate: ticket.emissionDate ? new Date(ticket.emissionDate) : new Date(),
+      ticketTypeCode: ticket.ticketTypeCode || 'R1',
+      sectorCode: ticket.sectorCode || 'A0',
+      grossAmount: ticket.grossAmount || '0',
+      netAmount: ticket.netAmount || null,
+      vatAmount: ticket.vatAmount || null,
+      prevendita: ticket.prevendita || '0',
+      prevenditaVat: ticket.prevenditaVat || null,
+      status: ticket.status || 'emitted',
+      cancellationReasonCode: ticket.cancellationReasonCode || null,
+      cancellationDate: ticket.cancellationDate || null,
+      isComplimentary: ticket.isComplimentary || false,
+      row: ticket.row || null,
+      seatNumber: ticket.seatNumber || null,
+      participantFirstName: ticket.participantFirstName || null,
+      participantLastName: ticket.participantLastName || null,
+      originalTicketId: ticket.originalTicketId || null,
+      replacedByTicketId: ticket.replacedByTicketId || null,
+    }));
+    
+    // Generate C1 Log XML
+    const c1LogResult = generateC1LogXml({
+      companyId,
+      eventId,
+      event: eventForLog,
+      tickets: ticketsForLog,
+      systemConfig: {
+        systemCode: systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT,
+        taxId: systemConfig?.taxId || taxId,
+        businessName: systemConfig?.businessName || companyName,
+        codiceRichiedente: systemConfig?.codiceRichiedente || undefined,
+      },
+      companyName,
+      taxId,
+      cardNumber: activeCard?.cardCode || undefined,
+    });
+    
+    if (!c1LogResult.success) {
+      console.error(`[SIAE-ROUTES] C1 Log generation failed:`, c1LogResult.errors);
+      return {
+        success: false,
+        statusCode: 400,
+        error: `Generazione C1 Log fallita: ${c1LogResult.errors.join('; ')}`,
+        data: {
+          code: 'C1_LOG_GENERATION_FAILED',
+          errors: c1LogResult.errors,
+          warnings: c1LogResult.warnings,
+        }
+      };
+    }
+    
+    // Log any warnings
+    if (c1LogResult.warnings.length > 0) {
+      console.log(`[SIAE-ROUTES] C1 Log warnings:`, c1LogResult.warnings);
+    }
+    
+    xml = c1LogResult.xml;
+    console.log(`[SIAE-ROUTES] Generated C1 LogTransazione for RCA with ${c1LogResult.transactionCount} transactions`);
+  } else {
+    // RMG/RPM: Use existing RiepilogoGiornaliero/RiepilogoMensile format
+    xml = await generateC1ReportXml({
+      companyId,
+      reportDate: effectiveReportDate,
+      isMonthly,
+      isRCA: false,
+      filteredTickets,
+      systemConfig,
+      companyName,
+      taxId,
+      oraGen,
+      rcaEventName,
+    });
+  }
   
   const transmissionType = isRCA ? 'rca' : (isMonthly ? 'monthly' : 'daily');
   const typeLabel = isRCA ? `RCA evento "${rcaEventName}"` : (isMonthly ? 'mensile' : 'giornaliera');

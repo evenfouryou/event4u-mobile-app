@@ -347,14 +347,16 @@ const SIAE_VERSION = 'V.01.00';
 const DEFAULT_SYSTEM_CODE = SIAE_SYSTEM_CODE_DEFAULT;
 
 // generateSiaeFileName importata da siae-utils.ts
-// Supporta: 'giornaliero' -> RMG_, 'mensile' -> RPM_, 'rca' -> RCA_
+// Supporta: 'giornaliero' -> RMG_, 'mensile' -> RPM_, 'rca' -> LOG_, 'log' -> LOG_
 
 /**
  * Genera subject email conforme a RFC-2822 SIAE
  * Formato dipende dal tipo di report:
  * - C1 giornaliero: RMG_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY>
  * - C1 mensile: RPM_<AAAA>_<MM>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY>
- * - RCA: RCA_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY>
+ * - C1 evento (RCA): LOG_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY>
+ * 
+ * NOTA: 'rca' ora usa prefisso LOG_ perché genera LogTransazione (che ottiene risposta SIAE)
  */
 function generateSiaeEmailSubject(
   transmissionType: 'daily' | 'monthly' | 'corrective' | 'rca',
@@ -376,7 +378,8 @@ function generateSiaeEmailSubject(
     prefix = 'RPM';
     datePart = `${year}_${month}`; // Solo anno e mese per mensile
   } else if (transmissionType === 'rca') {
-    prefix = 'RCA';
+    // RCA ora usa LOG_ perché genera LogTransazione (C1 evento che ottiene risposta SIAE)
+    prefix = 'LOG';
     datePart = `${year}_${month}_${day}`;
   } else {
     // daily o corrective -> RMG (giornaliero)
@@ -444,10 +447,11 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
   const isSigned = isCAdES || isXmlDsig;
   
   // Mappa transmissionType al formato richiesto da generateSiaeFileName
-  const reportTypeMap: Record<string, 'giornaliero' | 'mensile' | 'rca'> = {
+  // 'rca' ora usa 'log' per generare file LOG_... (LogTransazione che genera risposta SIAE)
+  const reportTypeMap: Record<string, 'giornaliero' | 'mensile' | 'rca' | 'log'> = {
     'daily': 'giornaliero',
     'monthly': 'mensile',
-    'rca': 'rca',
+    'rca': 'log', // LogTransazione - C1 evento che genera risposta SIAE
     'corrective': 'giornaliero', // Correttivo usa stesso formato di giornaliero
   };
   const reportType = reportTypeMap[transmissionType] || 'giornaliero';
@@ -471,7 +475,7 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
   const reportNames: Record<string, string> = {
     'daily': 'RiepilogoGiornaliero',
     'monthly': 'RiepilogoMensile',
-    'rca': 'RiepilogoControlloAccessi',
+    'rca': 'LogTransazione', // C1 evento - genera risposta SIAE
     'corrective': 'RiepilogoGiornaliero'
   };
   const reportName = reportNames[transmissionType] || 'RiepilogoGiornaliero';

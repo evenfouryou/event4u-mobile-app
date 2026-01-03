@@ -169,7 +169,8 @@ export function normalizeSiaeCodiceOrdine(rawCode: string | null | undefined): s
  * Genera nome file conforme Allegato C SIAE
  * - RMG_AAAA_MM_GG_###.xsi per RiepilogoGiornaliero
  * - RPM_AAAA_MM_###.xsi per RiepilogoMensile
- * - RCA_AAAA_MM_GG_###.xsi per RiepilogoControlloAccessi
+ * - RCA_AAAA_MM_GG_###.xsi per RiepilogoControlloAccessi (legacy, silenzioso)
+ * - LOG_AAAA_MM_GG_###.xsi per LogTransazione (C1 evento, genera risposta SIAE)
  * 
  * Per file firmati CAdES-BES: estensione .xsi.p7m
  * Per file non firmati o XMLDSig legacy: estensione .xsi
@@ -178,7 +179,7 @@ export function normalizeSiaeCodiceOrdine(rawCode: string | null | undefined): s
  * Solo CAdES-BES con SHA-256 produce file P7M validi
  */
 export function generateSiaeFileName(
-  reportType: 'giornaliero' | 'mensile' | 'rca',
+  reportType: 'giornaliero' | 'mensile' | 'rca' | 'log',
   date: Date,
   progressivo: number,
   signatureFormat?: 'cades' | 'xmldsig' | null
@@ -198,12 +199,307 @@ export function generateSiaeFileName(
   switch (reportType) {
     case 'mensile':
       return `RPM_${year}_${month}_${prog}${extension}`;
+    case 'log':
+      // LogTransazione - formato C1 evento che genera risposta SIAE
+      return `LOG_${year}_${month}_${day}_${prog}${extension}`;
     case 'rca':
+      // RiepilogoControlloAccessi - legacy, silenzioso
       return `RCA_${year}_${month}_${day}_${prog}${extension}`;
     case 'giornaliero':
     default:
       return `RMG_${year}_${month}_${day}_${prog}${extension}`;
   }
+}
+
+// ==================== C1 Log XML Generation ====================
+// Conforme a Log_v0040_20190627.dtd per trasmissione C1 evento a SIAE
+
+/**
+ * Struttura biglietto per generazione Log C1
+ * Compatibile con siaeTickets schema
+ */
+export interface SiaeTicketForLog {
+  id: string;
+  fiscalSealCode: string | null;
+  progressiveNumber: number;
+  cardCode: string | null;
+  emissionChannelCode: string | null;
+  emissionDate: Date | string;
+  ticketTypeCode: string;
+  sectorCode: string;
+  grossAmount: string | number;
+  netAmount?: string | number | null;
+  vatAmount?: string | number | null;
+  prevendita?: string | number | null;
+  prevenditaVat?: string | number | null;
+  status: string;
+  cancellationReasonCode?: string | null;
+  cancellationDate?: Date | string | null;
+  isComplimentary?: boolean;
+  row?: string | null;
+  seatNumber?: string | null;
+  participantFirstName?: string | null;
+  participantLastName?: string | null;
+  originalTicketId?: string | null;
+  replacedByTicketId?: string | null;
+}
+
+/**
+ * Dati evento per generazione Log C1
+ */
+export interface SiaeEventForLog {
+  id: string;
+  name: string;
+  date: Date | string;
+  time?: Date | string | null;
+  venueCode: string;
+  genreCode: string;
+  organizerTaxId: string;
+  organizerName?: string;
+  tipoTassazione?: 'S' | 'I';
+  ivaPreassolta?: 'N' | 'B' | 'F';
+}
+
+/**
+ * Parametri per generazione Log C1 XML
+ */
+export interface C1LogParams {
+  companyId: string;
+  eventId: string;
+  event: SiaeEventForLog;
+  tickets: SiaeTicketForLog[];
+  systemConfig: {
+    systemCode?: string;
+    taxId?: string;
+    businessName?: string;
+    codiceRichiedente?: string;
+  };
+  companyName: string;
+  taxId: string;
+  cardNumber?: string;
+}
+
+/**
+ * Risultato generazione Log C1 XML
+ */
+export interface C1LogResult {
+  success: boolean;
+  xml: string;
+  transactionCount: number;
+  errors: string[];
+  warnings: string[];
+}
+
+/**
+ * Genera XML conforme al DTD Log_v0040_20190627.dtd per trasmissione C1 evento a SIAE
+ * 
+ * Struttura:
+ * - LogTransazione contiene N elementi Transazione (uno per biglietto)
+ * - Ogni Transazione ha attributi obbligatori e contiene TitoloAccesso
+ * - Importi in CENTESIMI (moltiplicare euro * 100) usando toCentesimi()
+ * - Date formato AAAAMMGG, ore formato HHMMSS o HHMM
+ * 
+ * CORREZIONI DTD-COMPLIANT (Log_v0040_20190627.dtd):
+ * - SistemaEmissione: da systemConfig.systemCode o SIAE_SYSTEM_CODE_DEFAULT
+ * - CartaAttivazione: da cardNumber o ticket.cardCode (warning se mancante)
+ * - NumeroProgressivo: da ticket.progressiveNumber o fallback a indice+1
+ * - OraEvento: da event.time (non usare new Date() come fallback)
+ * - Tutti gli importi convertiti con toCentesimi()
+ * 
+ * @param params - Parametri per la generazione del Log C1
+ * @returns Oggetto con XML generato, conteggio transazioni e eventuali errori
+ */
+export function generateC1LogXml(params: C1LogParams): C1LogResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  
+  const { event, tickets, systemConfig, companyName, taxId, cardNumber } = params;
+  
+  // Validazione parametri obbligatori
+  if (!event) {
+    errors.push('Evento obbligatorio per generazione Log C1');
+    return { success: false, xml: '', transactionCount: 0, errors, warnings };
+  }
+  
+  if (!tickets || tickets.length === 0) {
+    errors.push('Almeno un biglietto obbligatorio per generazione Log C1');
+    return { success: false, xml: '', transactionCount: 0, errors, warnings };
+  }
+  
+  if (!taxId || taxId.length < 11) {
+    errors.push('Codice Fiscale Titolare obbligatorio (11-16 caratteri)');
+    return { success: false, xml: '', transactionCount: 0, errors, warnings };
+  }
+  
+  // Valori default e configurazione
+  // 1. SistemaEmissione: da systemConfig.systemCode o default
+  const sistemaEmissione = systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT;
+  
+  // CF deve essere uppercase, max 16 caratteri, senza padding con spazi
+  const cfTitolare = taxId.toUpperCase().substring(0, 16);
+  const cfOrganizzatore = (event.organizerTaxId || taxId).toUpperCase().substring(0, 16);
+  const tipoTassazione = event.tipoTassazione || 'S';
+  const ivaPreassolta = event.ivaPreassolta || 'N';
+  const codiceRichiedente = systemConfig?.codiceRichiedente || sistemaEmissione;
+  
+  // 2. CartaAttivazione: NON usare "00000000"! Usa cardNumber o avvisa
+  // Placeholder documentato solo se entrambi mancano
+  const globalCartaAttivazione = cardNumber || null;
+  if (!globalCartaAttivazione) {
+    warnings.push('CartaAttivazione globale mancante - verrà usato il valore del singolo biglietto o placeholder');
+  }
+  
+  // Dati evento
+  const eventDate = typeof event.date === 'string' ? new Date(event.date) : event.date;
+  const dataEvento = formatSiaeDateCompact(eventDate);
+  
+  // 5. OraEvento: usare event.time, non new Date() come fallback!
+  // Se event.time è presente, usarlo; altrimenti estrarre l'ora da event.date
+  let eventTimeValue: Date;
+  if (event.time) {
+    eventTimeValue = typeof event.time === 'string' ? new Date(event.time) : event.time;
+  } else {
+    // Usa l'ora dall'eventDate stesso, non un fallback a "ora corrente"
+    eventTimeValue = eventDate;
+  }
+  const oraEvento = formatSiaeTimeHHMM(eventTimeValue);
+  
+  const codiceLocale = (event.venueCode || '0000000000001').padStart(13, '0');
+  const tipoGenere = event.genreCode || 'S1';
+  const titolo = escapeXml(event.name || 'Evento');
+  
+  // Costruzione XML
+  let xmlLines: string[] = [];
+  
+  // Intestazione XML
+  xmlLines.push('<?xml version="1.0" encoding="UTF-8"?>');
+  xmlLines.push('<!DOCTYPE LogTransazione SYSTEM "Log_v0040_20190627.dtd">');
+  xmlLines.push('<LogTransazione>');
+  
+  // Genera una Transazione per ogni biglietto
+  for (let i = 0; i < tickets.length; i++) {
+    const ticket = tickets[i];
+    const ticketIndex = i + 1;
+    
+    // Validazione biglietto - SigilloFiscale è obbligatorio DTD
+    const sigilloFiscale = ticket.fiscalSealCode || '';
+    if (!sigilloFiscale) {
+      warnings.push(`Ticket ${ticketIndex}: SigilloFiscale mancante`);
+    }
+    
+    // 2. CartaAttivazione: priorità cardNumber globale > ticket.cardCode
+    const ticketCarta = globalCartaAttivazione || ticket.cardCode;
+    if (!ticketCarta) {
+      warnings.push(`Ticket ${ticketIndex}: CartaAttivazione mancante (né cardNumber né ticket.cardCode)`);
+    }
+    // Placeholder documentato SOLO se necessario (mai "00000000" senza motivo)
+    const cartaAttivazioneValue = ticketCarta || 'MANCANTE';
+    
+    // 7. Date formattate correttamente
+    const emissionDate = typeof ticket.emissionDate === 'string' 
+      ? new Date(ticket.emissionDate) 
+      : ticket.emissionDate;
+    const dataEmissione = formatSiaeDateCompact(emissionDate);
+    const oraEmissione = formatSiaeTimeCompact(emissionDate);
+    
+    // 4. NumeroProgressivo: usa ticket.progressiveNumber o fallback a indice+1
+    const progressivo = ticket.progressiveNumber || ticketIndex;
+    const numeroProgressivo = String(progressivo).padStart(10, '0');
+    
+    // Tipo titolo e codice ordine normalizzati
+    const tipoTitolo = normalizeSiaeTipoTitolo(ticket.ticketTypeCode, ticket.isComplimentary);
+    const codiceOrdine = normalizeSiaeCodiceOrdine(ticket.sectorCode);
+    
+    // 3. Importi in centesimi - TUTTI con toCentesimi()
+    const grossAmountCents = toCentesimi(ticket.grossAmount);
+    const prevenditaCents = toCentesimi(ticket.prevendita || 0);
+    const ivaCorrispettivoCents = toCentesimi(ticket.vatAmount || 0);
+    const ivaPrevenditaCents = toCentesimi(ticket.prevenditaVat || 0);
+    
+    // Annullamento - verifica tutti gli stati che indicano biglietto annullato/rimborsato
+    const cancelledStatuses = ['cancelled', 'annullato', 'refunded', 'rimborsato', 'voided', 'annullato_rimborso'];
+    const isCancelled = cancelledStatuses.includes(ticket.status?.toLowerCase() || '');
+    const annullamento = isCancelled ? 'S' : 'N';
+    
+    // Posto (opzionale)
+    const posto = ticket.row && ticket.seatNumber 
+      ? `${ticket.row}-${ticket.seatNumber}` 
+      : (ticket.seatNumber || '');
+    
+    // 6. CausaleAnnullamento: includere se biglietto annullato e motivo presente
+    const causaleAnnullamento = ticket.cancellationReasonCode || '';
+    
+    // Costruzione attributi Transazione (ordine DTD)
+    let transactionAttrs = [
+      `CFOrganizzatore="${cfOrganizzatore}"`,
+      `CFTitolare="${cfTitolare}"`,
+      `IVAPreassolta="${ivaPreassolta}"`,
+      `TipoTassazione="${tipoTassazione}"`,
+      `Valuta="E"`,
+      `SistemaEmissione="${escapeXml(sistemaEmissione)}"`,
+      `CartaAttivazione="${escapeXml(cartaAttivazioneValue)}"`,
+      `SigilloFiscale="${escapeXml(sigilloFiscale)}"`,
+      `DataEmissione="${dataEmissione}"`,
+      `OraEmissione="${oraEmissione}"`,
+      `NumeroProgressivo="${numeroProgressivo}"`,
+      `TipoTitolo="${tipoTitolo}"`,
+      `CodiceOrdine="${codiceOrdine}"`,
+      `CodiceRichiedenteEmissioneSigillo="${escapeXml(codiceRichiedente)}"`,
+    ];
+    
+    // Attributi opzionali
+    if (posto) {
+      transactionAttrs.push(`Posto="${escapeXml(posto)}"`);
+    }
+    
+    // 6. CausaleAnnullamento per biglietti annullati
+    if (isCancelled && causaleAnnullamento) {
+      transactionAttrs.push(`CausaleAnnullamento="${escapeXml(causaleAnnullamento)}"`);
+    }
+    
+    if (ticket.originalTicketId) {
+      transactionAttrs.push(`OriginaleAnnullato="${escapeXml(ticket.originalTicketId)}"`);
+    }
+    
+    // Apertura Transazione
+    xmlLines.push(`  <Transazione ${transactionAttrs.join(' ')}>`);
+    
+    // TitoloAccesso
+    xmlLines.push(`    <TitoloAccesso Annullamento="${annullamento}">`);
+    xmlLines.push(`      <CorrispettivoLordo>${grossAmountCents}</CorrispettivoLordo>`);
+    xmlLines.push(`      <Prevendita>${prevenditaCents}</Prevendita>`);
+    xmlLines.push(`      <IVACorrispettivo>${ivaCorrispettivoCents}</IVACorrispettivo>`);
+    xmlLines.push(`      <IVAPrevendita>${ivaPrevenditaCents}</IVAPrevendita>`);
+    xmlLines.push(`      <CodiceLocale>${codiceLocale}</CodiceLocale>`);
+    xmlLines.push(`      <DataEvento>${dataEvento}</DataEvento>`);
+    xmlLines.push(`      <OraEvento>${oraEvento}</OraEvento>`);
+    xmlLines.push(`      <TipoGenere>${tipoGenere}</TipoGenere>`);
+    xmlLines.push(`      <Titolo>${titolo}</Titolo>`);
+    
+    // Partecipante (opzionale, se nominativo)
+    if (ticket.participantFirstName && ticket.participantLastName) {
+      xmlLines.push(`      <Partecipante>`);
+      xmlLines.push(`        <Nome>${escapeXml(ticket.participantFirstName)}</Nome>`);
+      xmlLines.push(`        <Cognome>${escapeXml(ticket.participantLastName)}</Cognome>`);
+      xmlLines.push(`      </Partecipante>`);
+    }
+    
+    xmlLines.push(`    </TitoloAccesso>`);
+    xmlLines.push(`  </Transazione>`);
+  }
+  
+  // Chiusura LogTransazione
+  xmlLines.push('</LogTransazione>');
+  
+  const xml = xmlLines.join('\n');
+  
+  return {
+    success: errors.length === 0,
+    xml,
+    transactionCount: tickets.length,
+    errors,
+    warnings
+  };
 }
 
 // ==================== SIAE Configuration ====================
