@@ -1933,9 +1933,18 @@ export default function EventWizard() {
                       <span className="text-muted-foreground">Aliquota IVA:</span>
                       <Badge variant="secondary">
                         {(() => {
-                          const rate = siaeGenres?.find(g => g.code === siaeGenreCode)?.vatRate;
-                          return rate !== null && rate !== undefined ? `${Number(rate)}%` : 'N/D';
+                          const genre = siaeGenres?.find(g => g.code === siaeGenreCode);
+                          const rate = genre?.vatRate;
+                          if (rate !== null && rate !== undefined) return `${Number(rate)}%`;
+                          // Fallback: 10% per Spettacolo (S), 22% per Intrattenimento (I)
+                          return siaeTaxType === 'S' ? '10%' : '22%';
                         })()}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between items-center">
+                      <span className="text-muted-foreground">Imposta Intrattenimenti (ISI):</span>
+                      <Badge className={siaeTaxType === 'I' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'}>
+                        {siaeTaxType === 'I' ? '16%' : 'ESENTE'}
                       </Badge>
                     </div>
                     <div className="flex justify-between">
@@ -3020,9 +3029,18 @@ export default function EventWizard() {
                             <span className="text-muted-foreground">Aliquota IVA:</span>
                             <Badge variant="secondary">
                               {(() => {
-                                const rate = siaeGenres?.find(g => g.code === siaeGenreCode)?.vatRate;
-                                return rate !== null && rate !== undefined ? `${Number(rate)}%` : 'N/D';
+                                const genre = siaeGenres?.find(g => g.code === siaeGenreCode);
+                                const rate = genre?.vatRate;
+                                if (rate !== null && rate !== undefined) return `${Number(rate)}%`;
+                                // Fallback: 10% per Spettacolo (S), 22% per Intrattenimento (I)
+                                return siaeTaxType === 'S' ? '10%' : '22%';
                               })()}
+                            </Badge>
+                          </div>
+                          <div className="flex justify-between items-center">
+                            <span className="text-muted-foreground">ISI:</span>
+                            <Badge className={siaeTaxType === 'I' ? 'bg-amber-500 hover:bg-amber-600' : 'bg-green-500 hover:bg-green-600'}>
+                              {siaeTaxType === 'I' ? '16%' : 'ESENTE'}
                             </Badge>
                           </div>
                           <div className="flex justify-between">
