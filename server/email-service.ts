@@ -347,16 +347,14 @@ const SIAE_VERSION = 'V.01.00';
 const DEFAULT_SYSTEM_CODE = SIAE_SYSTEM_CODE_DEFAULT;
 
 // generateSiaeFileName importata da siae-utils.ts
-// Supporta: 'giornaliero' -> RMG_, 'mensile' -> RPM_, 'rca' -> LOG_, 'log' -> LOG_
+// Supporta: 'giornaliero' -> RMG_, 'mensile' -> RPM_, 'rca'/'log' -> RCA_
 
 /**
- * Genera subject email conforme a RFC-2822 SIAE
+ * Genera subject email conforme a RFC-2822 SIAE (Allegato C - Provvedimento 04/03/2008)
  * Formato dipende dal tipo di report:
- * - C1 giornaliero: RMG_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY>
- * - C1 mensile: RPM_<AAAA>_<MM>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY>
- * - C1 evento (RCA): LOG_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY>
- * 
- * NOTA: 'rca' ora usa prefisso LOG_ perché genera LogTransazione (che ottiene risposta SIAE)
+ * - RMG giornaliero: RMG_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY> (silenzioso)
+ * - RPM mensile: RPM_<AAAA>_<MM>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY> (silenzioso)
+ * - RCA evento: RCA_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY> (genera risposta SIAE)
  */
 function generateSiaeEmailSubject(
   transmissionType: 'daily' | 'monthly' | 'corrective' | 'rca',
@@ -370,19 +368,19 @@ function generateSiaeEmailSubject(
   const code = systemCode.padEnd(8, '0').substring(0, 8);
   const seq = String(sequenceNumber).padStart(3, '0');
   
-  // Determina il prefisso corretto in base al tipo
+  // Determina il prefisso corretto in base al tipo (Allegato C SIAE)
   let prefix: string;
   let datePart: string;
   
   if (transmissionType === 'monthly') {
-    prefix = 'RPM';
+    prefix = 'RPM'; // Riepilogo Periodico Mensile (silenzioso)
     datePart = `${year}_${month}`; // Solo anno e mese per mensile
   } else if (transmissionType === 'rca') {
-    // RCA ora usa LOG_ perché genera LogTransazione (C1 evento che ottiene risposta SIAE)
-    prefix = 'LOG';
+    // RCA = Riepilogo Controllo Accessi (C1 evento che genera risposta SIAE)
+    prefix = 'RCA';
     datePart = `${year}_${month}_${day}`;
   } else {
-    // daily o corrective -> RMG (giornaliero)
+    // daily o corrective -> RMG (Riepilogo Mensile Giornaliero, silenzioso)
     prefix = 'RMG';
     datePart = `${year}_${month}_${day}`;
   }
@@ -446,17 +444,16 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
   const isXmlDsig = !isCAdES && xmlContent.includes('<Signature') && xmlContent.includes('</Signature>');
   const isSigned = isCAdES || isXmlDsig;
   
-  // Mappa transmissionType al formato richiesto da generateSiaeFileName
-  // 'rca' ora usa 'log' per generare file LOG_... (LogTransazione che genera risposta SIAE)
+  // Mappa transmissionType al formato richiesto da generateSiaeFileName (Allegato C SIAE)
   const reportTypeMap: Record<string, 'giornaliero' | 'mensile' | 'rca' | 'log'> = {
-    'daily': 'giornaliero',
-    'monthly': 'mensile',
-    'rca': 'log', // LogTransazione - C1 evento che genera risposta SIAE
+    'daily': 'giornaliero',     // RMG - Riepilogo Mensile Giornaliero (silenzioso)
+    'monthly': 'mensile',       // RPM - Riepilogo Periodico Mensile (silenzioso)
+    'rca': 'rca',               // RCA - Riepilogo Controllo Accessi (genera risposta SIAE)
     'corrective': 'giornaliero', // Correttivo usa stesso formato di giornaliero
   };
   const reportType = reportTypeMap[transmissionType] || 'giornaliero';
   
-  // Nome file conforme a Allegato C SIAE (RMG_ per giornaliero, RPM_ per mensile)
+  // Nome file conforme a Allegato C SIAE (RMG_ giornaliero, RPM_ mensile, RCA_ evento)
   // .xsi.p7m solo per CAdES-BES, .xsi per XMLDSig legacy o non firmato
   const effectiveSignatureFormat = isCAdES ? 'cades' : (isXmlDsig ? 'xmldsig' : null);
   const fileName = generateSiaeFileName(reportType, periodDate, sequenceNumber, effectiveSignatureFormat);
