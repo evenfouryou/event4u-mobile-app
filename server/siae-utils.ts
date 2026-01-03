@@ -400,7 +400,8 @@ export function generateC1LogXml(params: C1LogParams): C1LogResult {
       ? new Date(ticket.emissionDate) 
       : ticket.emissionDate;
     const dataEmissione = formatSiaeDateCompact(emissionDate);
-    const oraEmissione = formatSiaeTimeCompact(emissionDate);
+    // OraEmissione deve essere in formato HHMM (4 cifre), non HHMMSS (6 cifre)
+    const oraEmissione = formatSiaeTimeHHMM(emissionDate);
     
     // 4. NumeroProgressivo: usa ticket.progressiveNumber o fallback a indice+1
     const progressivo = ticket.progressiveNumber || ticketIndex;
@@ -415,6 +416,12 @@ export function generateC1LogXml(params: C1LogParams): C1LogResult {
     const prevenditaCents = toCentesimi(ticket.prevendita || 0);
     const ivaCorrispettivoCents = toCentesimi(ticket.vatAmount || 0);
     const ivaPrevenditaCents = toCentesimi(ticket.prevenditaVat || 0);
+    
+    // ImponibileIntrattenimenti: calcolato solo per TipoTassazione="I" (Intrattenimento)
+    // Per Spettacolo ("S") è sempre 0
+    const imponibileIntrattenimenti = tipoTassazione === 'I' 
+      ? toCentesimi(ticket.entertainmentTaxBase || ticket.grossAmount || 0)
+      : 0;
     
     // Annullamento - verifica tutti gli stati che indicano biglietto annullato/rimborsato
     const cancelledStatuses = ['cancelled', 'annullato', 'refunded', 'rimborsato', 'voided', 'annullato_rimborso'];
@@ -445,6 +452,7 @@ export function generateC1LogXml(params: C1LogParams): C1LogResult {
       `TipoTitolo="${tipoTitolo}"`,
       `CodiceOrdine="${codiceOrdine}"`,
       `CodiceRichiedenteEmissioneSigillo="${escapeXml(codiceRichiedente)}"`,
+      `ImponibileIntrattenimenti="${imponibileIntrattenimenti}"`,
     ];
     
     // Attributi opzionali
