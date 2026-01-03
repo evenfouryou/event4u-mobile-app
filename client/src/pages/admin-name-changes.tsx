@@ -1,6 +1,8 @@
 import { useState, useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
+import { apiRequest, queryClient } from "@/lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -34,7 +36,17 @@ import {
   XCircle,
   Filter,
   RefreshCw,
+  Loader2,
 } from "lucide-react";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Textarea } from "@/components/ui/textarea";
 import {
   MobileAppLayout,
   MobileHeader,
@@ -122,11 +134,16 @@ const paymentStatusConfig: Record<string, { label: string; variant: "default" | 
 export default function AdminNameChanges() {
   const [, setLocation] = useLocation();
   const isMobile = useIsMobile();
+  const { toast } = useToast();
   
   const [selectedCompanyId, setSelectedCompanyId] = useState<string>("");
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [selectedStatus, setSelectedStatus] = useState<string>("");
   const [page, setPage] = useState(1);
+  const [processingId, setProcessingId] = useState<string | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
+  const [showRejectDialog, setShowRejectDialog] = useState(false);
+  const [rejectingId, setRejectingId] = useState<string | null>(null);
 
   // Fetch filters data
   const { data: filtersData } = useQuery<FiltersData>({
@@ -155,6 +172,65 @@ export default function AdminNameChanges() {
       rejected: nameChanges.filter(nc => nc.status === 'rejected').length,
     };
   }, [nameChangesData]);
+
+  // Mutation for processing name changes
+  const processMutation = useMutation({
+    mutationFn: async ({ id, action, rejectionReason }: { id: string; action: 'approve' | 'reject'; rejectionReason?: string }) => {
+      const response = await apiRequest("POST", `/api/siae/admin/name-changes/${id}/process`, { action, rejectionReason });
+      return response.json();
+    },
+    onSuccess: (data, variables) => {
+      // Invalidate all name-changes queries using predicate to match any filter combinations
+      queryClient.invalidateQueries({ 
+        predicate: (query) => {
+          const key = query.queryKey;
+          return Array.isArray(key) && key[0] === "/api/siae/admin/name-changes";
+        }
+      });
+      toast({
+        title: variables.action === 'approve' ? "Cambio approvato" : "Cambio rifiutato",
+        description: data.message,
+      });
+      setProcessingId(null);
+      setShowRejectDialog(false);
+      setRejectingId(null);
+      setRejectionReason("");
+    },
+    onError: (error: any) => {
+      const errorMessage = error.message || "Si è verificato un errore";
+      const errorCode = error.code;
+      
+      let description = errorMessage;
+      if (errorCode === "PAYMENT_REQUIRED") {
+        description = "Impossibile approvare: il pagamento della commissione non è ancora stato completato.";
+      }
+      
+      toast({
+        title: "Errore",
+        description,
+        variant: "destructive",
+      });
+      setProcessingId(null);
+    },
+  });
+
+  const handleApprove = (id: string) => {
+    setProcessingId(id);
+    processMutation.mutate({ id, action: 'approve' });
+  };
+
+  const handleRejectClick = (id: string) => {
+    setRejectingId(id);
+    setRejectionReason("");
+    setShowRejectDialog(true);
+  };
+
+  const handleRejectConfirm = () => {
+    if (rejectingId) {
+      setProcessingId(rejectingId);
+      processMutation.mutate({ id: rejectingId, action: 'reject', rejectionReason });
+    }
+  };
 
   const handleCompanyChange = (value: string) => {
     setSelectedCompanyId(value === "all" ? "" : value);
@@ -346,6 +422,7 @@ export default function AdminNameChanges() {
                       <TableHead>Pagamento</TableHead>
                       <TableHead>Stato</TableHead>
                       <TableHead>Data</TableHead>
+                      <TableHead className="text-right">Azioni</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
@@ -411,6 +488,36 @@ export default function AdminNameChanges() {
                             {format(new Date(nc.createdAt), "HH:mm", { locale: it })}
                           </div>
                         </TableCell>
+                        <TableCell className="text-right">
+                          {nc.status === 'pending' && (
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="default"
+                                onClick={() => handleApprove(nc.id)}
+                                disabled={processingId === nc.id}
+                                data-testid={`button-approve-${nc.id}`}
+                              >
+                                {processingId === nc.id ? (
+                                  <Loader2 className="h-4 w-4 animate-spin" />
+                                ) : (
+                                  <CheckCircle2 className="h-4 w-4" />
+                                )}
+                                <span className="ml-1 hidden md:inline">Approva</span>
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => handleRejectClick(nc.id)}
+                                disabled={processingId === nc.id}
+                                data-testid={`button-reject-${nc.id}`}
+                              >
+                                <XCircle className="h-4 w-4" />
+                                <span className="ml-1 hidden md:inline">Rifiuta</span>
+                              </Button>
+                            </div>
+                          )}
+                        </TableCell>
                       </TableRow>
                     ))}
                   </TableBody>
@@ -457,9 +564,77 @@ export default function AdminNameChanges() {
       <MobileAppLayout>
         <MobileHeader title="Cambi Nominativo" showBack onBack={() => setLocation("/admin")} />
         {content}
+        <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Rifiuta cambio nominativo</DialogTitle>
+              <DialogDescription>
+                Inserisci una motivazione per il rifiuto della richiesta.
+              </DialogDescription>
+            </DialogHeader>
+            <Textarea
+              placeholder="Motivazione rifiuto (opzionale)"
+              value={rejectionReason}
+              onChange={(e) => setRejectionReason(e.target.value)}
+              data-testid="input-rejection-reason"
+            />
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
+                Annulla
+              </Button>
+              <Button 
+                variant="destructive" 
+                onClick={handleRejectConfirm}
+                disabled={processMutation.isPending}
+                data-testid="button-confirm-reject"
+              >
+                {processMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-1" />
+                ) : null}
+                Conferma rifiuto
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </MobileAppLayout>
     );
   }
 
-  return content;
+  return (
+    <>
+      {content}
+      <Dialog open={showRejectDialog} onOpenChange={setShowRejectDialog}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Rifiuta cambio nominativo</DialogTitle>
+            <DialogDescription>
+              Inserisci una motivazione per il rifiuto della richiesta.
+            </DialogDescription>
+          </DialogHeader>
+          <Textarea
+            placeholder="Motivazione rifiuto (opzionale)"
+            value={rejectionReason}
+            onChange={(e) => setRejectionReason(e.target.value)}
+            data-testid="input-rejection-reason"
+          />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowRejectDialog(false)}>
+              Annulla
+            </Button>
+            <Button 
+              variant="destructive" 
+              onClick={handleRejectConfirm}
+              disabled={processMutation.isPending}
+              data-testid="button-confirm-reject"
+            >
+              {processMutation.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-1" />
+              ) : null}
+              Conferma rifiuto
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
 }

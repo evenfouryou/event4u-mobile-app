@@ -2555,6 +2555,118 @@ router.get("/api/siae/admin/name-changes/filters", requireAuth, requireSuperAdmi
   }
 });
 
+// Process name change (super_admin)
+router.post("/api/siae/admin/name-changes/:id/process", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { action, rejectionReason } = req.body;
+    
+    if (!action || !['approve', 'reject'].includes(action)) {
+      return res.status(400).json({ message: "Azione non valida. Usa 'approve' o 'reject'" });
+    }
+    
+    // Get the name change request
+    const [nameChange] = await db.select().from(siaeNameChanges).where(eq(siaeNameChanges.id, id));
+    if (!nameChange) {
+      return res.status(404).json({ message: "Richiesta di cambio nominativo non trovata" });
+    }
+    
+    if (nameChange.status !== 'pending') {
+      return res.status(400).json({ message: "Solo le richieste in attesa possono essere elaborate" });
+    }
+    
+    // Handle rejection
+    if (action === 'reject') {
+      await db.update(siaeNameChanges)
+        .set({
+          status: 'rejected',
+          processedAt: new Date(),
+          rejectionReason: rejectionReason || 'Rifiutata dall\'amministratore'
+        })
+        .where(eq(siaeNameChanges.id, id));
+      
+      return res.json({ success: true, message: "Richiesta rifiutata" });
+    }
+    
+    // Handle approval - check payment if required
+    if (nameChange.fee && parseFloat(nameChange.fee) > 0 && nameChange.paymentStatus !== 'paid') {
+      return res.status(400).json({ 
+        message: "Non è possibile approvare: pagamento commissione non completato",
+        code: "PAYMENT_REQUIRED"
+      });
+    }
+    
+    // Get original ticket
+    const [originalTicket] = await db.select().from(siaeTickets).where(eq(siaeTickets.id, nameChange.originalTicketId));
+    if (!originalTicket) {
+      return res.status(404).json({ message: "Biglietto originale non trovato" });
+    }
+    
+    // Create new ticket with updated name
+    // For SIAE compliance: new ticket gets a new progressivo, sigillo will be generated at validation/print
+    const newTicketId = crypto.randomUUID();
+    const newTicketCode = `NC-${Date.now().toString(36).toUpperCase()}`;
+    
+    // Get next progressivo for this event
+    const [maxProgressivo] = await db
+      .select({ max: sql<number>`COALESCE(MAX(${siaeTickets.progressivoSerata}), 0)` })
+      .from(siaeTickets)
+      .where(eq(siaeTickets.ticketedEventId, originalTicket.ticketedEventId));
+    const nextProgressivo = (maxProgressivo?.max || 0) + 1;
+    
+    await db.insert(siaeTickets).values({
+      id: newTicketId,
+      ticketCode: newTicketCode,
+      ticketedEventId: originalTicket.ticketedEventId,
+      ticketTypeId: originalTicket.ticketTypeId,
+      participantFirstName: nameChange.newFirstName,
+      participantLastName: nameChange.newLastName,
+      participantEmail: nameChange.newEmail || originalTicket.participantEmail,
+      participantCodiceFiscale: nameChange.newCodiceFiscale || originalTicket.participantCodiceFiscale,
+      participantPhone: originalTicket.participantPhone,
+      price: originalTicket.price,
+      finalPrice: originalTicket.finalPrice,
+      status: 'sold',
+      sigilloFiscale: null, // New sigillo will be generated at validation/print (SIAE compliance)
+      progressivoSerata: nextProgressivo, // New progressivo for traceability
+      entranceType: originalTicket.entranceType,
+      paymentStatus: 'paid',
+      paymentMethod: originalTicket.paymentMethod,
+      orderId: originalTicket.orderId,
+      soldAt: new Date(),
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
+    
+    // Mark original ticket as superseded
+    await db.update(siaeTickets)
+      .set({ 
+        status: 'superseded',
+        updatedAt: new Date()
+      })
+      .where(eq(siaeTickets.id, originalTicket.id));
+    
+    // Update name change request
+    await db.update(siaeNameChanges)
+      .set({
+        status: 'completed',
+        newTicketId: newTicketId,
+        processedAt: new Date()
+      })
+      .where(eq(siaeNameChanges.id, id));
+    
+    res.json({ 
+      success: true, 
+      message: "Cambio nominativo approvato",
+      newTicketId,
+      newTicketCode
+    });
+  } catch (error: any) {
+    console.error("[ADMIN-NAME-CHANGE] Error:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // ==================== Name Changes (Customer / Organizer) ====================
 
 router.get("/api/siae/companies/:companyId/name-changes", requireAuth, requireGestore, async (req: Request, res: Response) => {
