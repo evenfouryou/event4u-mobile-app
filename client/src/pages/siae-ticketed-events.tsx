@@ -819,6 +819,8 @@ export default function SiaeTicketedEventsPage() {
                           <TableRow>
                             <TableHead>Evento</TableHead>
                             <TableHead>Data</TableHead>
+                            <TableHead>IVA</TableHead>
+                            <TableHead>ISI</TableHead>
                             <TableHead>Stato</TableHead>
                             <TableHead>Approvazione</TableHead>
                             <TableHead>Capienza</TableHead>
@@ -830,11 +832,26 @@ export default function SiaeTicketedEventsPage() {
                           {companyEvents.map((event) => {
                             const displayEventName = event.eventName || "Evento";
                             const displayEventDate = event.eventDate;
+                            const eventGenre = genres?.find(g => g.code === event.genreCode);
+                            const vatRate = eventGenre?.vatRate ?? (event.taxType === 'S' ? 10 : 22);
                             return (
                               <TableRow key={event.id} data-testid={`row-event-${event.id}`}>
                                 <TableCell className="font-medium">{displayEventName}</TableCell>
                                 <TableCell>
                                   {displayEventDate && format(new Date(displayEventDate), "d MMM yyyy", { locale: it })}
+                                </TableCell>
+                                <TableCell>
+                                  <Badge variant="secondary">{vatRate}%</Badge>
+                                </TableCell>
+                                <TableCell>
+                                  <Badge 
+                                    variant="outline"
+                                    className={event.taxType === 'I' 
+                                      ? 'border-amber-500 text-amber-600 dark:text-amber-400' 
+                                      : 'border-green-500 text-green-600 dark:text-green-400'}
+                                  >
+                                    {event.taxType === 'I' ? 'ISI 16%' : 'Esente'}
+                                  </Badge>
                                 </TableCell>
                                 <TableCell>{getStatusBadge(event.ticketingStatus)}</TableCell>
                                 <TableCell>{getApprovalBadge((event as any).approvalStatus, (event as any).rejectedReason)}</TableCell>
@@ -864,6 +881,8 @@ export default function SiaeTicketedEventsPage() {
                   <TableRow>
                     <TableHead>Evento</TableHead>
                     <TableHead>Data</TableHead>
+                    <TableHead>IVA</TableHead>
+                    <TableHead>ISI</TableHead>
                     <TableHead>Stato</TableHead>
                     <TableHead>Approvazione</TableHead>
                     <TableHead>Capienza</TableHead>
@@ -877,6 +896,8 @@ export default function SiaeTicketedEventsPage() {
                   {ticketedEvents?.map((ticketedEvent) => {
                     const eventInfo = getEventInfo(ticketedEvent.eventId);
                     const isExpanded = expandedEventId === ticketedEvent.id;
+                    const eventGenre = genres?.find(g => g.code === ticketedEvent.genreCode);
+                    const vatRate = eventGenre?.vatRate ?? (ticketedEvent.taxType === 'S' ? 10 : 22);
                     return (
                       <TableRow 
                         key={ticketedEvent.id} 
@@ -903,6 +924,19 @@ export default function SiaeTicketedEventsPage() {
                               {format(new Date(eventInfo.startDatetime), "d MMM yyyy", { locale: it })}
                             </span>
                           )}
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="secondary">{vatRate}%</Badge>
+                        </TableCell>
+                        <TableCell>
+                          <Badge 
+                            variant="outline"
+                            className={ticketedEvent.taxType === 'I' 
+                              ? 'border-amber-500 text-amber-600 dark:text-amber-400' 
+                              : 'border-green-500 text-green-600 dark:text-green-400'}
+                          >
+                            {ticketedEvent.taxType === 'I' ? 'ISI 16%' : 'Esente'}
+                          </Badge>
                         </TableCell>
                         <TableCell>{getStatusBadge(ticketedEvent.ticketingStatus)}</TableCell>
                         <TableCell>{getApprovalBadge((ticketedEvent as any).approvalStatus, (ticketedEvent as any).rejectedReason)}</TableCell>
@@ -1044,7 +1078,7 @@ export default function SiaeTicketedEventsPage() {
                   </DialogHeader>
 
                   {/* Stats */}
-                  <div className="grid grid-cols-4 gap-4 my-4">
+                  <div className="grid grid-cols-3 gap-4 my-4">
                     <div className="p-3 rounded-lg bg-background/50 border border-border/50">
                       <div className="text-xs text-muted-foreground mb-1">Biglietti Venduti</div>
                       <div className="text-2xl font-bold text-[#FFD700]">{ticketedEvent.ticketsSold}</div>
@@ -1056,14 +1090,53 @@ export default function SiaeTicketedEventsPage() {
                       </div>
                     </div>
                     <div className="p-3 rounded-lg bg-background/50 border border-border/50">
-                      <div className="text-xs text-muted-foreground mb-1">Annullati</div>
-                      <div className="text-2xl font-bold text-destructive">{ticketedEvent.ticketsCancelled}</div>
-                    </div>
-                    <div className="p-3 rounded-lg bg-background/50 border border-border/50">
                       <div className="text-xs text-muted-foreground mb-1">Incasso</div>
                       <div className="text-2xl font-bold text-[#FFD700] flex items-center gap-1">
                         <Euro className="w-5 h-5" />
                         {Number(ticketedEvent.totalRevenue || 0).toFixed(2)}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Fiscal Info - IVA e ISI */}
+                  <div className="grid grid-cols-2 gap-4 mb-4">
+                    <div className="p-3 rounded-lg bg-background/50 border border-border/50">
+                      <div className="text-xs text-muted-foreground mb-1">Aliquota IVA</div>
+                      <div className="text-xl font-bold flex items-center gap-2">
+                        {(() => {
+                          const eventGenre = genres?.find(g => g.code === ticketedEvent.genreCode);
+                          const vatRate = eventGenre?.vatRate ?? (ticketedEvent.taxType === 'S' ? 10 : 22);
+                          return <Badge variant="secondary" className="text-base">{vatRate}%</Badge>;
+                        })()}
+                        <span className="text-sm font-normal text-muted-foreground">
+                          {ticketedEvent.taxType === 'S' ? '(detraibile)' : '(non detraibile)'}
+                        </span>
+                      </div>
+                    </div>
+                    <div className={`p-3 rounded-lg border ${
+                      ticketedEvent.taxType === 'I' 
+                        ? 'bg-amber-500/10 border-amber-500/30' 
+                        : 'bg-green-500/10 border-green-500/30'
+                    }`}>
+                      <div className="text-xs text-muted-foreground mb-1">Imposta Intrattenimenti (ISI)</div>
+                      <div className="text-xl font-bold flex items-center gap-2">
+                        <Badge 
+                          variant="outline"
+                          className={`text-base ${ticketedEvent.taxType === 'I' 
+                            ? 'border-amber-500 text-amber-600 dark:text-amber-400' 
+                            : 'border-green-500 text-green-600 dark:text-green-400'}`}
+                        >
+                          {ticketedEvent.taxType === 'I' ? 'ISI 16%' : 'ESENTE'}
+                        </Badge>
+                        <span className={`text-sm font-normal ${
+                          ticketedEvent.taxType === 'I' 
+                            ? 'text-amber-600 dark:text-amber-400' 
+                            : 'text-green-600 dark:text-green-400'
+                        }`}>
+                          {ticketedEvent.taxType === 'I' 
+                            ? 'Live < 51%' 
+                            : 'Live ≥ 51%'}
+                        </span>
                       </div>
                     </div>
                   </div>

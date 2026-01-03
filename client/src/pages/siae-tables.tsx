@@ -285,8 +285,9 @@ function EventGenresTab() {
             <TableRow>
               <TableHead className="w-20" data-testid="header-genre-code">Codice</TableHead>
               <TableHead data-testid="header-genre-name">Nome</TableHead>
-              <TableHead className="w-24" data-testid="header-genre-tax">Imposta</TableHead>
-              <TableHead className="w-20" data-testid="header-genre-vat">IVA %</TableHead>
+              <TableHead className="w-24" data-testid="header-genre-tax">Tipo</TableHead>
+              <TableHead className="w-20" data-testid="header-genre-vat">IVA</TableHead>
+              <TableHead className="w-28" data-testid="header-genre-isi">ISI</TableHead>
               <TableHead className="w-24" data-testid="header-genre-status">Stato</TableHead>
               <TableHead className="w-16" data-testid="header-genre-actions"></TableHead>
             </TableRow>
@@ -306,6 +307,16 @@ function EventGenresTab() {
                     {genre.vatRate !== null && genre.vatRate !== undefined 
                       ? `${Number(genre.vatRate)}%` 
                       : genre.taxType === 'S' ? '10%' : '22%'}
+                  </Badge>
+                </TableCell>
+                <TableCell data-testid={`cell-genre-isi-${genre.id}`}>
+                  <Badge 
+                    variant="outline"
+                    className={genre.taxType === 'I' 
+                      ? 'border-amber-500 text-amber-600 dark:text-amber-400' 
+                      : 'border-green-500 text-green-600 dark:text-green-400'}
+                  >
+                    {genre.taxType === 'I' ? 'ISI 16%' : 'Esente'}
                   </Badge>
                 </TableCell>
                 <TableCell data-testid={`cell-genre-status-${genre.id}`}>
