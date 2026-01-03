@@ -4106,31 +4106,41 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     };
     
     // Convert filteredTickets to SiaeTicketForLog[]
-    const ticketsForLog: SiaeTicketForLog[] = filteredTickets.map(ticket => ({
-      id: ticket.id,
-      fiscalSealCode: ticket.fiscalSealCode || null,
-      progressiveNumber: ticket.progressiveNumber || 1,
-      cardCode: ticket.cardCode || activeCard?.cardCode || null,
-      emissionChannelCode: ticket.emissionChannelCode || null,
-      emissionDate: ticket.emissionDate ? new Date(ticket.emissionDate) : new Date(),
-      ticketTypeCode: ticket.ticketTypeCode || 'R1',
-      sectorCode: ticket.sectorCode || 'A0',
-      grossAmount: ticket.grossAmount || '0',
-      netAmount: ticket.netAmount || null,
-      vatAmount: ticket.vatAmount || null,
-      prevendita: ticket.prevendita || '0',
-      prevenditaVat: ticket.prevenditaVat || null,
-      status: ticket.status || 'emitted',
-      cancellationReasonCode: ticket.cancellationReasonCode || null,
-      cancellationDate: ticket.cancellationDate || null,
-      isComplimentary: ticket.isComplimentary || false,
-      row: ticket.row || null,
-      seatNumber: ticket.seatNumber || null,
-      participantFirstName: ticket.participantFirstName || null,
-      participantLastName: ticket.participantLastName || null,
-      originalTicketId: ticket.originalTicketId || null,
-      replacedByTicketId: ticket.replacedByTicketId || null,
-    }));
+    // IMPORTANTE: Determinare correttamente lo status per conformità SIAE
+    const ticketsForLog: SiaeTicketForLog[] = filteredTickets.map(ticket => {
+      // Determina lo status corretto: se ha motivo/data annullamento, è annullato
+      let effectiveStatus = ticket.status || 'emitted';
+      if (!isCancelledStatus(effectiveStatus) && (ticket.cancellationReasonCode || ticket.cancellationDate)) {
+        effectiveStatus = 'cancelled'; // Forza status annullato se ha dati di annullamento
+      }
+      
+      return {
+        id: ticket.id,
+        fiscalSealCode: ticket.fiscalSealCode || null,
+        progressiveNumber: ticket.progressiveNumber || 1,
+        cardCode: ticket.cardCode || activeCard?.cardCode || null,
+        emissionChannelCode: ticket.emissionChannelCode || null,
+        emissionDate: ticket.emissionDate ? new Date(ticket.emissionDate) : new Date(),
+        ticketTypeCode: ticket.ticketTypeCode || 'R1',
+        sectorCode: ticket.sectorCode || 'A0',
+        grossAmount: ticket.grossAmount || '0',
+        netAmount: ticket.netAmount || null,
+        vatAmount: ticket.vatAmount || null,
+        prevendita: ticket.prevendita || '0',
+        prevenditaVat: ticket.prevenditaVat || null,
+        status: effectiveStatus,
+        cancellationReasonCode: ticket.cancellationReasonCode || null,
+        cancellationDate: ticket.cancellationDate || null,
+        isComplimentary: ticket.isComplimentary || false,
+        row: ticket.row || null,
+        seatNumber: ticket.seatNumber || null,
+        participantFirstName: ticket.participantFirstName || null,
+        participantLastName: ticket.participantLastName || null,
+        originalTicketId: ticket.originalTicketId || null,
+        replacedByTicketId: ticket.replacedByTicketId || null,
+        originalProgressiveNumber: ticket.progressiveNumber || null,
+      };
+    });
     
     // Generate C1 Log XML
     const c1LogResult = generateC1LogXml({
@@ -4142,7 +4152,7 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
         systemCode: systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT,
         taxId: systemConfig?.taxId || taxId,
         businessName: systemConfig?.businessName || companyName,
-        codiceRichiedente: systemConfig?.codiceRichiedente || undefined,
+        codiceRichiedente: undefined, // SEMPRE undefined per forzare generazione automatica TTCCCCCC
       },
       companyName,
       taxId,
@@ -6980,32 +6990,43 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     const progressivoGenerazione = transmissionCount + 1;
     
     // Prepara i biglietti per generateC1LogXml (formato SiaeTicketForLog)
-    const ticketsForLog: SiaeTicketForLog[] = allTickets.map(t => ({
-      id: t.id,
-      fiscalSealCode: t.fiscalSealCode || null,
-      progressiveNumber: t.progressiveNumber || 0,
-      cardCode: t.cardCode || null,
-      emissionChannelCode: t.emissionChannelCode || null,
-      emissionDate: t.emissionDate || new Date(),
-      ticketTypeCode: t.ticketTypeCode || 'R1',
-      sectorCode: t.sectorCode || 'P0',
-      grossAmount: t.grossAmount || '0',
-      netAmount: t.netAmount || null,
-      vatAmount: t.vatAmount || null,
-      prevendita: t.prevendita || null,
-      prevenditaVat: t.prevenditaVat || null,
-      status: t.status || 'sold',
-      cancellationReasonCode: t.cancellationReasonCode || null,
-      cancellationDate: t.cancellationDate || null,
-      isComplimentary: t.isComplimentary || false,
-      row: t.row || null,
-      seatNumber: t.seatNumber || null,
-      participantFirstName: t.participantFirstName || null,
-      participantLastName: t.participantLastName || null,
-      originalTicketId: t.originalTicketId || null,
-      replacedByTicketId: t.replacedByTicketId || null,
-      entertainmentTaxBase: t.entertainmentTaxBase || null,
-    }));
+    // IMPORTANTE: Determinare correttamente lo status per conformità SIAE
+    // Se cancellationReasonCode o cancellationDate sono presenti, il biglietto è annullato
+    const ticketsForLog: SiaeTicketForLog[] = allTickets.map(t => {
+      // Determina lo status corretto: se ha motivo/data annullamento, è annullato
+      let effectiveStatus = t.status || 'emitted';
+      if (!isCancelledStatus(effectiveStatus) && (t.cancellationReasonCode || t.cancellationDate)) {
+        effectiveStatus = 'cancelled'; // Forza status annullato se ha dati di annullamento
+      }
+      
+      return {
+        id: t.id,
+        fiscalSealCode: t.fiscalSealCode || null,
+        progressiveNumber: t.progressiveNumber || 0,
+        cardCode: t.cardCode || null,
+        emissionChannelCode: t.emissionChannelCode || null,
+        emissionDate: t.emissionDate || new Date(),
+        ticketTypeCode: t.ticketTypeCode || 'R1',
+        sectorCode: t.sectorCode || 'P0',
+        grossAmount: t.grossAmount || '0',
+        netAmount: t.netAmount || null,
+        vatAmount: t.vatAmount || null,
+        prevendita: t.prevendita || null,
+        prevenditaVat: t.prevenditaVat || null,
+        status: effectiveStatus,
+        cancellationReasonCode: t.cancellationReasonCode || null,
+        cancellationDate: t.cancellationDate || null,
+        isComplimentary: t.isComplimentary || false,
+        row: t.row || null,
+        seatNumber: t.seatNumber || null,
+        participantFirstName: t.participantFirstName || null,
+        participantLastName: t.participantLastName || null,
+        originalTicketId: t.originalTicketId || null,
+        replacedByTicketId: t.replacedByTicketId || null,
+        entertainmentTaxBase: t.entertainmentTaxBase || null,
+        originalProgressiveNumber: t.progressiveNumber || null,
+      };
+    });
     
     // Prepara evento per generateC1LogXml (formato SiaeEventForLog)
     const eventForLog: SiaeEventForLog = {
