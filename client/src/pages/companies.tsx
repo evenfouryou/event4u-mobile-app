@@ -45,6 +45,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Switch } from "@/components/ui/switch";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Plus, Building2, Edit, Trash2, ArrowLeft, MapPin } from "lucide-react";
 import { useForm } from "react-hook-form";
@@ -105,6 +112,8 @@ export default function Companies() {
       postalCode: '',
       fiscalCode: '',
       active: true,
+      regimeFiscale: 'ordinario',
+      isiDefaultRate: '16',
     },
   });
 
@@ -218,6 +227,8 @@ export default function Companies() {
       postalCode: company.postalCode || '',
       fiscalCode: company.fiscalCode || '',
       active: company.active,
+      regimeFiscale: (company as any).regimeFiscale || 'ordinario',
+      isiDefaultRate: (company as any).isiDefaultRate || '16',
     });
     setDialogOpen(true);
   };
@@ -494,6 +505,63 @@ export default function Companies() {
                     </FormItem>
                   )}
                 />
+
+                {/* Sezione Regime Fiscale IVA */}
+                <div className="space-y-4 rounded-lg border p-4">
+                  <h4 className="font-medium text-sm">Regime Fiscale IVA (DPR 633/72)</h4>
+                  <div className="grid grid-cols-2 gap-4">
+                    <FormField
+                      control={form.control}
+                      name="regimeFiscale"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Regime IVA</FormLabel>
+                          <Select onValueChange={field.onChange} value={field.value || 'ordinario'}>
+                            <FormControl>
+                              <SelectTrigger data-testid="select-company-regime-fiscale">
+                                <SelectValue placeholder="Seleziona regime" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="ordinario">Ordinario (100% base imponibile)</SelectItem>
+                              <SelectItem value="forfettario">Forfettario (50% base imponibile)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <p className="text-xs text-muted-foreground">
+                            Forfettario: volume affari &lt; €25.822
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="isiDefaultRate"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Aliquota ISI Default (%)</FormLabel>
+                          <FormControl>
+                            <Input 
+                              {...field} 
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              max="100"
+                              value={field.value ?? '16'} 
+                              placeholder="16"
+                              data-testid="input-company-isi-rate" 
+                            />
+                          </FormControl>
+                          <p className="text-xs text-muted-foreground">
+                            16% standard per intrattenimenti
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                </div>
+
                 <FormField
                   control={form.control}
                   name="active"
@@ -845,6 +913,61 @@ export default function Companies() {
                   </FormItem>
                 )}
               />
+
+              {/* Sezione Regime Fiscale IVA - Mobile */}
+              <div className="space-y-4 rounded-2xl border p-4">
+                <h4 className="font-medium text-base">Regime Fiscale IVA</h4>
+                <FormField
+                  control={form.control}
+                  name="regimeFiscale"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base">Regime IVA</FormLabel>
+                      <Select onValueChange={field.onChange} value={field.value || 'ordinario'}>
+                        <FormControl>
+                          <SelectTrigger className="h-12 rounded-xl text-base" data-testid="select-company-regime-fiscale-mobile">
+                            <SelectValue placeholder="Seleziona regime" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="ordinario">Ordinario (100%)</SelectItem>
+                          <SelectItem value="forfettario">Forfettario (50%)</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <p className="text-xs text-muted-foreground">
+                        Forfettario: volume affari &lt; €25.822
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="isiDefaultRate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-base">Aliquota ISI Default (%)</FormLabel>
+                      <FormControl>
+                        <Input 
+                          {...field} 
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          max="100"
+                          value={field.value ?? '16'} 
+                          placeholder="16"
+                          className="h-12 rounded-xl text-base"
+                          data-testid="input-company-isi-rate-mobile" 
+                        />
+                      </FormControl>
+                      <p className="text-xs text-muted-foreground">
+                        16% standard per intrattenimenti
+                      </p>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
 
               <FormField
                 control={form.control}
