@@ -390,7 +390,7 @@ function generateSiaeEmailSubject(
 interface SiaeTransmissionEmailOptions {
   to: string;
   companyName: string;
-  transmissionType: 'daily' | 'monthly' | 'corrective';
+  transmissionType: 'daily' | 'monthly' | 'corrective' | 'rca';
   periodDate: Date;
   ticketsCount: number;
   totalAmount: string;
