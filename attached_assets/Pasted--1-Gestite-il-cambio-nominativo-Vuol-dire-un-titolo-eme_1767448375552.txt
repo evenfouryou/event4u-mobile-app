@@ -1,0 +1,75 @@
+### 1. **“Gestite il cambio nominativo”**
+
+Vuol dire:
+
+* un titolo emesso a nome di una persona
+* viene modificato per intestarlo a un’altra persona
+
+⚠️ Fiscalmente non si può “modificare” un titolo già emesso:
+si deve **annullare** e **riemettere**.
+
+---
+
+### 2. **“Annullamento con causale riemissione”**
+
+Significa che:
+
+* il titolo originale viene **annullato**
+* ma **non per errore o rimborso**
+* bensì con una **causale specifica: “riemissione”**
+
+👉 Questo serve a tracciare che l’annullamento è finalizzato alla creazione di un nuovo titolo.
+
+---
+
+### 3. **“Emissione con riferimento al sigillo fiscale del titolo annullato”**
+
+Qui si entra nella parte fiscale.
+
+* Il **sigillo fiscale** è l’identificativo univoco del titolo originale
+* Il **nuovo titolo riemesso** deve:
+
+  * contenere un **riferimento esplicito** al sigillo fiscale del titolo annullato
+
+👉 In questo modo:
+
+* è chiaro che il nuovo titolo **non è una vendita nuova**
+* ma una **sostituzione** di un titolo precedente
+
+---
+
+### 4. **“Mi immagino che il sistema vi debba far vedere i titoli annullati con causale riemissione non ancora agganciati al titolo riemesso”**
+
+Questa è una **aspettativa funzionale** di chi scrive.
+
+Vuol dire che:
+
+* quando un titolo viene annullato con causale “riemissione”
+* ma **non è ancora stato creato il titolo sostitutivo**
+* il sistema dovrebbe:
+
+  * **mostrarlo in una lista**
+  * segnalarlo come “in attesa di riemissione”
+  * impedire che venga dimenticato o gestito due volte
+
+👉 Serve per:
+
+* controllo operativo
+* coerenza fiscale
+* tracciabilità
+
+---
+
+## Riassunto in parole semplici
+
+La frase chiede:
+
+> *“Spiegate come il vostro sistema gestisce il cambio di intestazione di un titolo, descrivendo come viene annullato il titolo originale con causale riemissione, come viene emesso il nuovo titolo collegandolo fiscalmente al precedente, e come il sistema tiene traccia dei titoli annullati in attesa di essere riemessi.”*
+
+---
+
+Se vuoi, posso anche:
+
+* riscriverla in **italiano più semplice**
+* aiutarti a **preparare la risposta tecnica** per un capitolato o una gara
+* oppure tradurla in **linguaggio funzionale/IT**

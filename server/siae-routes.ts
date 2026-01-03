@@ -2583,6 +2583,90 @@ router.get("/api/siae/admin/name-changes/filters", requireAuth, requireSuperAdmi
   }
 });
 
+// SIAE Compliance: Biglietti annullati per riemissione non ancora agganciati al nuovo titolo
+// Per tracciabilità fiscale - mostra i titoli annullati con causale cambio nominativo in attesa di riemissione
+router.get("/api/siae/admin/name-changes/pending-reissue", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
+  try {
+    const { companyId, eventId } = req.query;
+    
+    // Find tickets cancelled for name change (code 10) that don't have a replacement yet
+    // OR name change requests that are pending
+    const conditions: SQL[] = [
+      and(
+        eq(siaeTickets.cancellationReasonCode, '10'), // Cambio nominativo - vecchio titolo
+        isNull(siaeTickets.replacedByTicketId) // Non ancora riemesso
+      )!
+    ];
+    
+    if (companyId) {
+      conditions.push(eq(siaeTicketedEvents.companyId, companyId as string));
+    }
+    if (eventId) {
+      conditions.push(eq(siaeTicketedEvents.eventId, Number(eventId)));
+    }
+    
+    // Get cancelled tickets awaiting reissue
+    const cancelledAwaitingReissue = await db
+      .select({
+        ticket: siaeTickets,
+        ticketedEvent: siaeTicketedEvents,
+        event: events,
+        company: companies,
+      })
+      .from(siaeTickets)
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .innerJoin(companies, eq(siaeTicketedEvents.companyId, companies.id))
+      .where(and(...conditions))
+      .orderBy(desc(siaeTickets.cancellationDate));
+    
+    // Get pending name change requests (not yet processed)
+    const pendingRequests = await db
+      .select({
+        nameChange: siaeNameChanges,
+        ticket: siaeTickets,
+        ticketedEvent: siaeTicketedEvents,
+        event: events,
+        company: companies,
+      })
+      .from(siaeNameChanges)
+      .innerJoin(siaeTickets, eq(siaeNameChanges.originalTicketId, siaeTickets.id))
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .innerJoin(companies, eq(siaeTicketedEvents.companyId, companies.id))
+      .where(eq(siaeNameChanges.status, 'pending'))
+      .orderBy(desc(siaeNameChanges.createdAt));
+    
+    res.json({
+      // Biglietti già annullati ma senza nuovo titolo emesso (anomalia fiscale)
+      cancelledAwaitingReissue: cancelledAwaitingReissue.map(r => ({
+        ...r.ticket,
+        ticketedEvent: r.ticketedEvent,
+        event: r.event,
+        company: r.company,
+        sigilloFiscaleOriginale: r.ticket.sigilloFiscale,
+      })),
+      // Richieste di cambio nominativo in attesa di elaborazione
+      pendingRequests: pendingRequests.map(r => ({
+        ...r.nameChange,
+        ticket: r.ticket,
+        ticketedEvent: r.ticketedEvent,
+        event: r.event,
+        company: r.company,
+        sigilloFiscaleOriginale: r.ticket.sigilloFiscale,
+      })),
+      summary: {
+        cancelledAwaitingReissueCount: cancelledAwaitingReissue.length,
+        pendingRequestsCount: pendingRequests.length,
+        totalPendingReissue: cancelledAwaitingReissue.length + pendingRequests.length,
+      }
+    });
+  } catch (error: any) {
+    console.error('[ADMIN PENDING-REISSUE] Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Process name change (super_admin)
 router.post("/api/siae/admin/name-changes/:id/process", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
   try {
@@ -2658,6 +2742,8 @@ router.post("/api/siae/admin/name-changes/:id/process", requireAuth, requireSupe
       .where(eq(siaeTickets.ticketedEventId, originalTicket.ticketedEventId));
     const nextProgressivo = (maxProgressivo?.max || 0) + 1;
     
+    // SIAE Compliant: New ticket must reference original ticket for fiscal traceability
+    // Per Allegato B: il nuovo titolo deve contenere riferimento esplicito al sigillo fiscale del titolo annullato
     await db.insert(siaeTickets).values({
       id: newTicketId,
       ticketCode: newTicketCode,
@@ -2679,16 +2765,22 @@ router.post("/api/siae/admin/name-changes/:id/process", requireAuth, requireSupe
       paymentStatus: 'paid',
       paymentMethod: originalTicket.paymentMethod,
       orderId: originalTicket.orderId,
+      // RIFERIMENTO FISCALE AL TITOLO ANNULLATO (Allegato B SIAE)
+      originalTicketId: originalTicket.id, // Link al biglietto originale annullato
       soldAt: now,
       createdAt: now,
       updatedAt: now,
     });
     
-    // Annul original ticket (SIAE requirement - similar to resale annulment)
+    // Annul original ticket with SIAE-compliant causale (TAB.5 code '10' = Cambio nominativo)
+    // Per Allegato B: annullamento con causale riemissione + riferimento al nuovo titolo
     await db.update(siaeTickets)
       .set({ 
         status: 'annullato_cambio_nominativo',
-        annullamentoMotivo: `Cambio nominativo completato - Nuovo biglietto: ${newTicketCode}`,
+        cancellationReasonCode: '10', // TAB.5: "Cambio nominativo - vecchio titolo"
+        cancellationDate: now,
+        replacedByTicketId: newTicketId, // Link al biglietto sostitutivo (tracciabilità SIAE)
+        annullamentoMotivo: `Cambio nominativo - Sigillo originale: ${originalTicket.sigilloFiscale || 'N/A'} - Nuovo: ${sealData.sealCode}`,
         annullamentoData: now,
         updatedAt: now
       })
