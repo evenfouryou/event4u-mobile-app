@@ -433,6 +433,14 @@ export function generateC1LogXml(params: C1LogParams): C1LogResult {
     systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT
   );
   
+  // DEBUG: Log per tracciare valori generati
+  console.log('[SIAE C1] CodiceRichiedenteEmissioneSigillo:', {
+    input: systemConfig?.codiceRichiedente,
+    systemCode: systemConfig?.systemCode,
+    output: codiceRichiedente,
+    isValid8Digits: /^[0-9]{8}$/.test(codiceRichiedente)
+  });
+  
   // 2. CartaAttivazione: NON usare "00000000"! Usa cardNumber o avvisa
   // Placeholder documentato solo se entrambi mancano
   const globalCartaAttivazione = cardNumber || null;
