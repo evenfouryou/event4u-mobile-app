@@ -2754,6 +2754,7 @@ router.post("/api/siae/admin/name-changes/:id/process", requireAuth, requireSupe
       ticketCode: newTicketCode,
       ticketedEventId: originalTicket.ticketedEventId,
       ticketTypeId: originalTicket.ticketTypeId,
+      customerId: originalTicket.customerId, // IMPORTANTE: Preserva customerId per rivendita
       participantFirstName: nameChange.newFirstName,
       participantLastName: nameChange.newLastName,
       participantEmail: nameChange.newEmail || originalTicket.participantEmail,
