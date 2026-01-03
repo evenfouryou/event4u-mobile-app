@@ -7014,18 +7014,30 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
       time: event.eventTime ? new Date(event.eventTime) : eventDate,
       venueCode: location?.siaeCode || event.siaeVenueCode || '0000000000001',
       genreCode: event.genreCode || '64',
-      taxationType: event.taxationType || 'I',
+      organizerTaxId: company?.fiscalCode || company?.taxId || siaeConfig?.taxId || '',
+      organizerName: company?.name || siaeConfig?.businessName || 'Organizzatore',
+      tipoTassazione: (event.taxationType as 'S' | 'I') || 'I',
+      ivaPreassolta: (event.ivaPreassolta as 'N' | 'B' | 'F') || 'N',
     };
     
-    // Prepara parametri per generateC1LogXml
+    // Prepara parametri per generateC1LogXml - DEVE corrispondere a C1LogParams interface
+    const companyTaxId = company?.fiscalCode || company?.taxId || siaeConfig?.taxId || '';
+    const companyBusinessName = company?.name || siaeConfig?.businessName || 'Azienda';
+    
     const c1LogParams: C1LogParams = {
+      companyId: event.companyId,
+      eventId: event.id,
       event: eventForLog,
       tickets: ticketsForLog,
-      organizerTaxId: company?.fiscalCode || company?.taxId || siaeConfig?.taxId || '',
-      holderTaxId: siaeConfig?.taxId || company?.fiscalCode || company?.taxId || '',
-      systemCode: siaeConfig?.systemCode || 'EVENT4U1',
-      cardNumber: siaeConfig?.cardNumber || null,
-      ivaPreassolta: event.ivaPreassolta || 'N',
+      systemConfig: {
+        systemCode: siaeConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT,
+        taxId: siaeConfig?.taxId || companyTaxId,
+        businessName: siaeConfig?.businessName || companyBusinessName,
+        codiceRichiedente: undefined, // Verrà generato automaticamente da formatCodiceRichiedente
+      },
+      companyName: companyBusinessName,
+      taxId: companyTaxId,
+      cardNumber: siaeConfig?.cardNumber || undefined,
     };
     
     // Genera XML LogTransazione usando generateC1LogXml
