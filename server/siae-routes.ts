@@ -7157,10 +7157,11 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
 
     // Create transmission record - pass periodDate as Date object
     // Include ticketedEventId to link transmission to event
+    // IMPORTANTE: Per C1 evento (LogTransazione) usare 'rca' per generare risposta SIAE
     const transmission = await siaeStorage.createSiaeTransmission({
       companyId: event.companyId,
       ticketedEventId: id, // Collegamento all'evento SIAE
-      transmissionType: isMonthly ? 'monthly' : 'daily',
+      transmissionType: 'rca', // RCA = Riepilogo Controllo Accessi (C1 evento, genera risposta SIAE)
       periodDate: eventDate,
       fileName: fileName,
       fileContent: signedXmlContent || xmlContent, // XMLDSig firmato o XML originale
@@ -7180,7 +7181,7 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
       const emailResult = await sendSiaeTransmissionEmail({
         to: toEmail,
         companyName: company?.name || 'N/A',
-        transmissionType: isMonthly ? 'monthly' : 'daily',
+        transmissionType: 'rca', // RCA = Riepilogo Controllo Accessi (C1 evento, genera risposta SIAE)
         periodDate: eventDate,
         ticketsCount: reportData.activeTicketsCount,
         totalAmount: reportData.totalRevenue.toFixed(2),
