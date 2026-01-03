@@ -1,6 +1,6 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, formatCodiceRichiedente, normalizeCausaleAnnullamento } from './siae-utils';
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -92,6 +92,67 @@ function getSiaeDestinationEmail(overrideEmail?: string): string {
 
 console.log('[SIAE Routes] Router initialized, registering routes...');
 console.log(`[SIAE Routes] Test mode: ${SIAE_TEST_MODE}, Test email: ${SIAE_TEST_EMAIL}`);
+
+// DEBUG ENDPOINT: Verifica conformità SIAE - NON RICHIEDE AUTENTICAZIONE
+router.get('/api/siae/debug/conformita', async (_req: Request, res: Response) => {
+  try {
+    // Test formatCodiceRichiedente
+    const testCases = [
+      { raw: undefined, systemCode: 'EVENT4U1' },
+      { raw: null, systemCode: 'BRIDGE01' },
+      { raw: '12345678', systemCode: 'TEST' },
+      { raw: 'ABC', systemCode: 'SYS123' },
+    ];
+    
+    const codiceRichiedenteResults = testCases.map(tc => ({
+      input: { raw: tc.raw, systemCode: tc.systemCode },
+      output: formatCodiceRichiedente(tc.raw, tc.systemCode),
+      isValid: /^[0-9]{8}$/.test(formatCodiceRichiedente(tc.raw, tc.systemCode))
+    }));
+    
+    // Test normalizeCausaleAnnullamento
+    const causaleTestCases = ['01', '1', '02', '10', '001', '005', null, undefined, 'ABC'];
+    const causaleResults = causaleTestCases.map(tc => ({
+      input: tc,
+      output: normalizeCausaleAnnullamento(tc),
+      isValid: /^0(0[1-9]|10)$/.test(normalizeCausaleAnnullamento(tc))
+    }));
+    
+    // Get sample cancelled ticket from DB
+    const cancelledTickets = await db.select().from(siaeTickets)
+      .where(eq(siaeTickets.status, 'cancelled'))
+      .limit(3);
+    
+    const ticketAnalysis = cancelledTickets.map(t => ({
+      id: t.id,
+      status: t.status,
+      cancellationReasonCode_raw: t.cancellationReasonCode,
+      cancellationReasonCode_normalized: normalizeCausaleAnnullamento(t.cancellationReasonCode),
+      isValid: /^0(0[1-9]|10)$/.test(normalizeCausaleAnnullamento(t.cancellationReasonCode))
+    }));
+    
+    res.json({
+      success: true,
+      timestamp: new Date().toISOString(),
+      tests: {
+        codiceRichiedenteEmissioneSigillo: {
+          description: 'Deve essere 8 cifre numeriche (TTCCCCCC)',
+          results: codiceRichiedenteResults
+        },
+        causaleAnnullamento: {
+          description: 'Deve essere 3 cifre (001-010)',
+          results: causaleResults
+        },
+        ticketsInDatabase: {
+          description: 'Biglietti annullati nel database',
+          results: ticketAnalysis
+        }
+      }
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
 
 /**
  * Valida e normalizza il Codice Fiscale italiano (16 caratteri)
