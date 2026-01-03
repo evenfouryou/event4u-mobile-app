@@ -2204,7 +2204,7 @@ router.post("/api/siae/tickets", requireAuth, requireOrganizer, async (req: Requ
     // CONTROLLO OBBLIGATORIO: Codice Fiscale Emittente configurato
     const systemConfig = await siaeStorage.getSiaeSystemConfig(ticketedEvent.companyId);
     const company = await storage.getCompany(ticketedEvent.companyId);
-    const taxId = systemConfig?.taxId || company?.taxId;
+    const taxId = systemConfig?.taxId || company?.fiscalCode || company?.taxId;
     
     if (!taxId) {
       return res.status(400).json({ 
@@ -3782,8 +3782,9 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   const company = await storage.getCompany(companyId);
   const companyName = company?.name || 'N/A';
   
-  // CONTROLLO OBBLIGATORIO: Codice Fiscale Emittente
-  const taxId = systemConfig?.taxId || company?.taxId;
+  // CONTROLLO OBBLIGATORIO: Codice Fiscale/P.IVA Emittente
+  // Priorità: systemConfig.taxId > company.fiscalCode (16 char) > company.taxId
+  const taxId = systemConfig?.taxId || company?.fiscalCode || company?.taxId;
   if (!taxId) {
     return { 
       success: false, 
@@ -5539,7 +5540,7 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
     const company = await storage.getCompany(companyId);
     
     // CONTROLLO OBBLIGATORIO: Codice Fiscale Emittente
-    const taxId = systemConfig?.taxId || company?.taxId;
+    const taxId = systemConfig?.taxId || company?.fiscalCode || company?.taxId;
     if (!taxId) {
       return res.status(400).json({ 
         message: "Codice Fiscale Emittente non configurato. Vai su Impostazioni SIAE > Dati Aziendali per configurarlo prima di generare report.",
@@ -5639,7 +5640,7 @@ router.get("/api/siae/ticketed-events/:eventId/reports/xml", requireAuth, requir
     const company = await storage.getCompany(ticketedEvent.companyId);
     
     // CONTROLLO OBBLIGATORIO: Codice Fiscale Emittente
-    const taxId = systemConfig?.taxId || company?.taxId;
+    const taxId = systemConfig?.taxId || company?.fiscalCode || company?.taxId;
     if (!taxId) {
       return res.status(400).json({ 
         message: "Codice Fiscale Emittente non configurato. Vai su Impostazioni SIAE > Dati Aziendali per configurarlo prima di generare report.",
@@ -5745,7 +5746,7 @@ router.get("/api/siae/companies/:companyId/reports/xml/cancellations", requireAu
     const company = await storage.getCompany(companyId);
     
     // CONTROLLO OBBLIGATORIO: Codice Fiscale Emittente
-    const taxId = systemConfig?.taxId || company?.taxId;
+    const taxId = systemConfig?.taxId || company?.fiscalCode || company?.taxId;
     if (!taxId) {
       return res.status(400).json({ 
         message: "Codice Fiscale Emittente non configurato. Vai su Impostazioni SIAE > Dati Aziendali per configurarlo prima di generare report.",
@@ -7596,7 +7597,7 @@ router.post("/api/cashiers/events/:eventId/tickets", requireAuth, async (req: Re
     // CONTROLLO OBBLIGATORIO: Codice Fiscale Emittente configurato
     const systemConfig = await siaeStorage.getSiaeSystemConfig(event.companyId);
     const company = await storage.getCompany(event.companyId);
-    const emitterTaxId = systemConfig?.taxId || company?.taxId;
+    const emitterTaxId = systemConfig?.taxId || company?.fiscalCode || company?.taxId;
     
     if (!emitterTaxId) {
       return res.status(400).json({ 
