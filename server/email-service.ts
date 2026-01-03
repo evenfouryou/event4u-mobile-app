@@ -447,6 +447,7 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
   const reportTypeMap: Record<string, 'giornaliero' | 'mensile' | 'rca'> = {
     'daily': 'giornaliero',
     'monthly': 'mensile',
+    'rca': 'rca',
     'corrective': 'giornaliero', // Correttivo usa stesso formato di giornaliero
   };
   const reportType = reportTypeMap[transmissionType] || 'giornaliero';
@@ -462,6 +463,7 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
   const typeLabels: Record<string, string> = {
     'daily': 'Giornaliera (C1)',
     'monthly': 'Mensile (C1)',
+    'rca': 'RCA Evento (C1)',
     'corrective': 'Correttiva (C1)'
   };
   
@@ -469,6 +471,7 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
   const reportNames: Record<string, string> = {
     'daily': 'RiepilogoGiornaliero',
     'monthly': 'RiepilogoMensile',
+    'rca': 'RiepilogoControlloAccessi',
     'corrective': 'RiepilogoGiornaliero'
   };
   const reportName = reportNames[transmissionType] || 'RiepilogoGiornaliero';
