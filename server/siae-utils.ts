@@ -697,17 +697,73 @@ export function validateC1Report(xml: string): C1ValidationResult {
     errors.push('Dichiarazione XML mancante');
   }
   
-  // Detect report format: RiepilogoControlloAccessi vs RiepilogoGiornaliero/RiepilogoMensile
+  // Detect report format: LogTransazione, RiepilogoControlloAccessi, RiepilogoGiornaliero, RiepilogoMensile
+  const isLog = xml.includes('<LogTransazione');
   const isRCA = xml.includes('<RiepilogoControlloAccessi');
   const isRG = xml.includes('<RiepilogoGiornaliero');
   const isRM = xml.includes('<RiepilogoMensile');
   
-  if (!isRCA && !isRG && !isRM) {
-    errors.push('Elemento radice mancante (atteso RiepilogoControlloAccessi, RiepilogoGiornaliero o RiepilogoMensile)');
+  if (!isLog && !isRCA && !isRG && !isRM) {
+    errors.push('Elemento radice mancante (atteso LogTransazione, RiepilogoControlloAccessi, RiepilogoGiornaliero o RiepilogoMensile)');
   }
   
   // Validate based on format
-  if (isRCA) {
+  if (isLog) {
+    // ============ LogTransazione format (C1 evento) ============
+    // Conforme a Log_v0040_20190627.dtd
+    
+    if (!xml.includes('<!DOCTYPE LogTransazione')) {
+      warnings.push('DOCTYPE LogTransazione mancante');
+    }
+    
+    // Verifica presenza di almeno una Transazione
+    const transactionCount = (xml.match(/<Transazione\s/g) || []).length;
+    if (transactionCount === 0) {
+      errors.push('Nessuna Transazione trovata nel LogTransazione');
+    } else {
+      summary.ticketsCount = transactionCount;
+      summary.hasEvents = true;
+    }
+    
+    // Verifica attributi obbligatori nelle Transazioni
+    const requiredAttrs = ['CFOrganizzatore', 'CFTitolare', 'SistemaEmissione', 'CartaAttivazione', 
+                          'SigilloFiscale', 'DataEmissione', 'OraEmissione', 'NumeroProgressivo',
+                          'TipoTitolo', 'CodiceOrdine', 'CodiceRichiedenteEmissioneSigillo'];
+    for (const attr of requiredAttrs) {
+      if (!xml.includes(`${attr}="`)) {
+        errors.push(`Attributo obbligatorio mancante: ${attr}`);
+      }
+    }
+    
+    // Estrai informazioni dal primo CFTitolare trovato
+    const cfMatch = xml.match(/CFTitolare="([^"]+)"/);
+    if (cfMatch) {
+      summary.taxId = cfMatch[1];
+      summary.hasTitolare = true;
+    }
+    
+    const sysMatch = xml.match(/SistemaEmissione="([^"]+)"/);
+    if (sysMatch) {
+      summary.systemCode = sysMatch[1];
+    }
+    
+    // Somma importi CorrispettivoLordo (in centesimi)
+    const corrMatches = xml.matchAll(/<CorrispettivoLordo>(\d+)<\/CorrispettivoLordo>/g);
+    for (const match of corrMatches) {
+      summary.totalAmount += parseInt(match[1], 10);
+    }
+    
+    // Verifica elementi TitoloAccesso
+    if (!xml.includes('<TitoloAccesso')) {
+      errors.push('Nessun elemento TitoloAccesso trovato');
+    }
+    
+    // Verifica chiusura
+    if (!xml.includes('</LogTransazione>')) {
+      errors.push('Chiusura elemento LogTransazione mancante');
+    }
+    
+  } else if (isRCA) {
     // ============ RiepilogoControlloAccessi format ============
     if (!xml.includes('<!DOCTYPE RiepilogoControlloAccessi')) {
       warnings.push('DOCTYPE RiepilogoControlloAccessi mancante');
