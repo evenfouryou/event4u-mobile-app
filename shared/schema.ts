@@ -88,6 +88,12 @@ export const companies = pgTable("companies", {
   fiscalCode: varchar("fiscal_code", { length: 100 }),
   active: boolean("active").notNull().default(true),
   bridgeToken: varchar("bridge_token", { length: 64 }),
+  // Regime fiscale IVA (DPR 633/72 art. 74-quater) - opzionale, default ordinario
+  // 'ordinario' = IVA calcolata su 100% corrispettivi (base imponibile irripartibile)
+  // 'forfettario' = IVA calcolata su 50% corrispettivi (volume affari < €25.822,84, base imponibile ripartibile)
+  regimeFiscale: varchar("regime_fiscale", { length: 20 }).default('ordinario'),
+  // Aliquota ISI default per intrattenimenti (16% standard) - opzionale
+  isiDefaultRate: decimal("isi_default_rate", { precision: 5, scale: 2 }).default('16'),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1241,6 +1247,10 @@ export const siaeTicketedEvents = pgTable("siae_ticketed_events", {
   taxType: varchar("tax_type", { length: 1 }).notNull().default('S'), // S=spettacolo, I=intrattenimento
   entertainmentIncidence: integer("entertainment_incidence").notNull().default(100), // Incidenza intrattenimento (0-100)
   ivaPreassolta: varchar("iva_preassolta", { length: 1 }).notNull().default('N'), // N, B, F
+  // Aliquota ISI per intrattenimenti - opzionale, eredita da company se null
+  isiRate: decimal("isi_rate", { precision: 5, scale: 2 }), // 16% standard, null = usa default company
+  // Override regime fiscale per evento - opzionale, eredita da company se null
+  regimeFiscaleOverride: varchar("regime_fiscale_override", { length: 20 }), // null = usa company
   // Capienza e nominatività
   totalCapacity: integer("total_capacity").notNull(),
   requiresNominative: boolean("requires_nominative").notNull().default(true),
