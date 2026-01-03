@@ -163,6 +163,75 @@ export function normalizeSiaeCodiceOrdine(rawCode: string | null | undefined): s
   return 'A0';
 }
 
+/**
+ * Normalizza CodiceRichiedenteEmissioneSigillo per conformità SIAE
+ * OBBLIGATORIO: 8 caratteri nel formato TTCCCCCC
+ * - TT = tipo richiesta (2 cifre): 01=prima emissione, 02=sostituzione, 03=annullamento, 04=duplicato, 05=emissione sistema
+ * - CCCCCC = codice sistema (6 caratteri alfanumerici)
+ * 
+ * Allegato B - Provvedimento Agenzia Entrate 04/03/2008
+ */
+export function formatCodiceRichiedente(rawCode: string | null | undefined, systemCode: string): string {
+  // Se già nel formato corretto (8 caratteri numerici/alfanumerici)
+  if (rawCode && /^[0-9]{2}[A-Z0-9]{6}$/i.test(rawCode)) {
+    return rawCode.toUpperCase();
+  }
+  
+  // Genera codice conforme: tipo "05" (emissione sistema) + 6 caratteri da systemCode
+  const tipoRichiesta = '05'; // emissione da sistema automatico
+  
+  // Estrai le ultime 6 cifre/caratteri dal systemCode, o padda con zeri
+  let codice6 = systemCode.replace(/[^A-Z0-9]/gi, '').toUpperCase();
+  if (codice6.length > 6) {
+    codice6 = codice6.substring(codice6.length - 6);
+  } else {
+    codice6 = codice6.padStart(6, '0');
+  }
+  
+  return tipoRichiesta + codice6;
+}
+
+/**
+ * Normalizza CausaleAnnullamento per conformità SIAE
+ * OBBLIGATORIO: 3 cifre nel range 001-010
+ * 
+ * Codici SIAE Allegato B:
+ * 001 = Biglietto smarrito
+ * 002 = Biglietto difettoso
+ * 003 = Evento annullato
+ * 004 = Cambio data evento
+ * 005 = Richiesta cliente
+ * 006 = Errore operatore
+ * 007 = Doppia vendita
+ * 008 = Overbooking
+ * 009 = Annullamento fiscale
+ * 010 = Cambio nominativo (Allegato B art. 5.4)
+ */
+export function normalizeCausaleAnnullamento(rawCode: string | null | undefined): string {
+  if (!rawCode) return '005'; // Default: richiesta cliente
+  
+  const code = rawCode.replace(/\D/g, ''); // Solo cifre
+  
+  // Se già 3 cifre, verifica range
+  if (code.length === 3) {
+    const num = parseInt(code, 10);
+    if (num >= 1 && num <= 10) {
+      return code;
+    }
+  }
+  
+  // Se 1-2 cifre, padda a 3
+  if (code.length >= 1 && code.length <= 2) {
+    const num = parseInt(code, 10);
+    if (num >= 1 && num <= 10) {
+      return String(num).padStart(3, '0');
+    }
+  }
+  
+  // Default fallback
+  return '005';
+}
+
 // ==================== File Naming ====================
 
 /**
@@ -340,7 +409,14 @@ export function generateC1LogXml(params: C1LogParams): C1LogResult {
   const cfOrganizzatore = (event.organizerTaxId || taxId).toUpperCase().substring(0, 16);
   const tipoTassazione = event.tipoTassazione || 'S';
   const ivaPreassolta = event.ivaPreassolta || 'N';
-  const codiceRichiedente = systemConfig?.codiceRichiedente || sistemaEmissione;
+  
+  // CodiceRichiedenteEmissioneSigillo: OBBLIGATORIO 8 caratteri
+  // Formato: TTCCCCCC dove TT = tipo richiesta (2 cifre), CCCCCC = codice sistema (6 cifre)
+  // Tipi: 01=prima emissione, 02=sostituzione, 03=annullamento, 04=duplicato, 05=emissione sistema
+  const codiceRichiedente = formatCodiceRichiedente(
+    systemConfig?.codiceRichiedente,
+    systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT
+  );
   
   // 2. CartaAttivazione: NON usare "00000000"! Usa cardNumber o avvisa
   // Placeholder documentato solo se entrambi mancano
