@@ -305,7 +305,7 @@ function EventGenresTab() {
                   <Badge variant="secondary">
                     {genre.vatRate !== null && genre.vatRate !== undefined 
                       ? `${Number(genre.vatRate)}%` 
-                      : '-'}
+                      : genre.taxType === 'S' ? '10%' : '22%'}
                   </Badge>
                 </TableCell>
                 <TableCell data-testid={`cell-genre-status-${genre.id}`}>
