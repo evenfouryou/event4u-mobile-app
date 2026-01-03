@@ -687,6 +687,34 @@ router.patch("/api/siae/event-genres/:code", requireAuth, requireSuperAdmin, asy
   }
 });
 
+// Imposta IVA standard su tutti i generi (normativa italiana)
+router.post("/api/siae/event-genres/set-standard-vat", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
+  try {
+    // Aliquote IVA standard secondo normativa italiana:
+    // - Spettacolo (S): 10%
+    // - Intrattenimento (I): 22%
+    const genres = await siaeStorage.getSiaeEventGenres();
+    let updated = 0;
+    
+    for (const genre of genres) {
+      const standardVat = genre.taxType === 'S' ? 10 : 22;
+      // Aggiorna solo se vatRate è null/undefined o diverso dallo standard
+      if (genre.vatRate === null || genre.vatRate === undefined || Number(genre.vatRate) !== standardVat) {
+        await siaeStorage.updateSiaeEventGenre(genre.code, { vatRate: standardVat });
+        updated++;
+      }
+    }
+    
+    res.json({ 
+      message: `Aggiornati ${updated} generi con aliquote IVA standard`,
+      updated,
+      total: genres.length
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Sector Codes (TAB.2)
 router.get("/api/siae/sector-codes", async (req: Request, res: Response) => {
   try {
