@@ -501,9 +501,8 @@ export function generateC1LogXml(params: C1LogParams): C1LogResult {
       ? toCentesimi(ticket.entertainmentTaxBase || ticket.grossAmount || 0)
       : 0;
     
-    // Annullamento - verifica tutti gli stati che indicano biglietto annullato/rimborsato
-    const cancelledStatuses = ['cancelled', 'annullato', 'refunded', 'rimborsato', 'voided', 'annullato_rimborso'];
-    const isCancelled = cancelledStatuses.includes(ticket.status?.toLowerCase() || '');
+    // Annullamento - usa costante condivisa SIAE_CANCELLED_STATUSES
+    const isCancelled = isCancelledStatus(ticket.status);
     const annullamento = isCancelled ? 'S' : 'N';
     
     // Posto (opzionale)
@@ -606,6 +605,28 @@ export function generateC1LogXml(params: C1LogParams): C1LogResult {
 // ==================== SIAE Configuration ====================
 
 export const SIAE_SYSTEM_CODE_DEFAULT = 'EVENT4U1';
+
+/**
+ * Stati ticket che indicano annullamento/cancellazione per conteggi SIAE
+ * Usare questa costante in tutto il sistema per coerenza
+ */
+export const SIAE_CANCELLED_STATUSES = [
+  'cancelled',
+  'annullato', 
+  'refunded',
+  'rimborsato',
+  'voided',
+  'annullato_rimborso',
+  'annullato_rivendita'  // Secondary ticketing marketplace
+] as const;
+
+/**
+ * Verifica se uno status indica un biglietto annullato
+ */
+export function isCancelledStatus(status: string | null | undefined): boolean {
+  if (!status) return false;
+  return SIAE_CANCELLED_STATUSES.includes(status.toLowerCase() as any);
+}
 
 // ==================== EFFF Smart Card Data Structure ====================
 // Conforme a Descrizione_contenuto_SmartCardTestxBA-V102.pdf

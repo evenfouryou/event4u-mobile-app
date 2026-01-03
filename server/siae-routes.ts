@@ -1,6 +1,6 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog } from './siae-utils';
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -3989,9 +3989,8 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     // Provvedimento 04/03/2008 - Allegato B: sezione Annullati obbligatoria
     filteredTickets = allTickets.filter(t => t.ticketedEventId === eventId);
     
-    const cancelledStatuses = ['cancelled', 'annullato', 'annullato_rivendita', 'refunded'];
-    const validTicketsCount = filteredTickets.filter(t => !cancelledStatuses.includes(t.status || '')).length;
-    const cancelledTicketsCount = filteredTickets.filter(t => cancelledStatuses.includes(t.status || '')).length;
+    const validTicketsCount = filteredTickets.filter(t => !isCancelledStatus(t.status)).length;
+    const cancelledTicketsCount = filteredTickets.filter(t => isCancelledStatus(t.status)).length;
     console.log(`[SIAE-ROUTES] RCA report for event "${rcaEventName}" - ${filteredTickets.length} total tickets (${validTicketsCount} valid, ${cancelledTicketsCount} annullati - INCLUSI per normativa)`);
   } else {
     // RMG/RPM: Calculate date range and filter
@@ -5104,8 +5103,6 @@ async function generateRcaReportXml(params: RcaReportParams): Promise<string> {
   const progressivoRiepilogo = rcaTransmissions.length + 1;
   const sostituzione = rcaTransmissions.length > 0 ? 'S' : 'N';
   
-  const cancelledStatuses = ['cancelled', 'annullato', 'annullato_rivendita', 'refunded'];
-  
   const ticketsBySector: Map<string, typeof filteredTickets> = new Map();
   const DEFAULT_SECTOR_KEY = '__DEFAULT__';
   
@@ -5138,7 +5135,7 @@ async function generateRcaReportXml(params: RcaReportParams): Promise<string> {
       const tipoTitolo = normalizeSiaeTipoTitolo(ticket.ticketTypeCode, ticket.isComplimentary);
       if (tipoTitolo === 'ABB') continue;
       
-      const isCancelled = cancelledStatuses.includes(ticket.status || '');
+      const isCancelled = isCancelledStatus(ticket.status);
       const targetMap = isCancelled ? cancelledByType : emittedByType;
       
       if (!targetMap.has(tipoTitolo)) {
@@ -5436,11 +5433,9 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
       
       // NORMATIVA SIAE: Per RMG/RPM, i biglietti annullati NON vengono conteggiati in TitoliAccesso
       // ma vengono inclusi nel dataset per tracking. Solo i biglietti emessi validi vanno in TitoliAccesso.
-      const cancelledStatuses = ['cancelled', 'annullato', 'annullato_rivendita', 'refunded'];
-      
       for (const [tipoTitolo, typeTickets] of ticketsByType) {
         // Solo biglietti validi (emessi) vanno in TitoliAccesso
-        const validTickets = typeTickets.filter((t: any) => !cancelledStatuses.includes(t.status || ''));
+        const validTickets = typeTickets.filter((t: any) => !isCancelledStatus(t.status));
         
         if (validTickets.length === 0) continue;
         
