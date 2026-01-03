@@ -2603,9 +2603,25 @@ router.post("/api/siae/admin/name-changes/:id/process", requireAuth, requireSupe
     }
     
     // Create new ticket with updated name
-    // For SIAE compliance: new ticket gets a new progressivo, sigillo will be generated at validation/print
+    // For SIAE compliance: new ticket gets a new progressivo and new sigillo via smart card
+    const now = new Date();
     const newTicketId = crypto.randomUUID();
-    const newTicketCode = `NC-${Date.now().toString(36).toUpperCase()}`;
+    const newTicketCode = `NC-${now.getTime().toString(36).toUpperCase()}`;
+    
+    // Request fiscal seal via bridge (smart card SIAE)
+    const priceInCents = Math.round(parseFloat(originalTicket.price || originalTicket.finalPrice || "0") * 100);
+    let sealData;
+    try {
+      console.log(`[NAME-CHANGE] Requesting fiscal seal for name change, price: ${priceInCents} cents`);
+      sealData = await requestFiscalSeal(priceInCents);
+      console.log(`[NAME-CHANGE] Seal received: ${sealData.sealCode}, counter: ${sealData.counter}`);
+    } catch (sealError: any) {
+      console.error(`[NAME-CHANGE] Failed to get fiscal seal:`, sealError.message);
+      return res.status(503).json({
+        message: `Impossibile generare sigillo fiscale: ${sealError.message.replace(/^[A-Z_]+:\s*/, '')}`,
+        code: sealError.message.split(':')[0] || 'SEAL_ERROR'
+      });
+    }
     
     // Get next progressivo for this event
     const [maxProgressivo] = await db
@@ -2627,22 +2643,26 @@ router.post("/api/siae/admin/name-changes/:id/process", requireAuth, requireSupe
       price: originalTicket.price,
       finalPrice: originalTicket.finalPrice,
       status: 'sold',
-      sigilloFiscale: null, // New sigillo will be generated at validation/print (SIAE compliance)
+      sigilloFiscale: sealData.sealCode, // Real sigillo from smart card SIAE
+      fiscalSealCounter: sealData.counter, // Counter from SIAE card
+      cardCode: sealData.serialNumber, // Card serial number
       progressivoSerata: nextProgressivo, // New progressivo for traceability
       entranceType: originalTicket.entranceType,
       paymentStatus: 'paid',
       paymentMethod: originalTicket.paymentMethod,
       orderId: originalTicket.orderId,
-      soldAt: new Date(),
-      createdAt: new Date(),
-      updatedAt: new Date(),
+      soldAt: now,
+      createdAt: now,
+      updatedAt: now,
     });
     
-    // Mark original ticket as superseded
+    // Annul original ticket (SIAE requirement - similar to resale annulment)
     await db.update(siaeTickets)
       .set({ 
-        status: 'superseded',
-        updatedAt: new Date()
+        status: 'annullato_cambio_nominativo',
+        annullamentoMotivo: `Cambio nominativo completato - Nuovo biglietto: ${newTicketCode}`,
+        annullamentoData: now,
+        updatedAt: now
       })
       .where(eq(siaeTickets.id, originalTicket.id));
     
