@@ -565,8 +565,14 @@ export class SiaeStorage implements ISiaeStorage {
   // ==================== System Configuration ====================
   
   async getSiaeSystemConfig(companyId: string): Promise<SiaeSystemConfig | undefined> {
+    // Prima cerca config specifica per company
     const [config] = await db.select().from(siaeSystemConfig).where(eq(siaeSystemConfig.companyId, companyId));
-    return config;
+    if (config) {
+      return config;
+    }
+    // Fallback: usa configurazione globale (prima riga della tabella)
+    const [globalConfig] = await db.select().from(siaeSystemConfig).limit(1);
+    return globalConfig;
   }
   
   async upsertSiaeSystemConfig(config: InsertSiaeSystemConfig): Promise<SiaeSystemConfig> {
