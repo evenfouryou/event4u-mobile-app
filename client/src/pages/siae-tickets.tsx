@@ -842,6 +842,7 @@ export default function SiaeTicketsPage() {
                     <TableHead>Tipo</TableHead>
                     <TableHead>Nominativo</TableHead>
                     <TableHead>Importo</TableHead>
+                    <TableHead>IVA</TableHead>
                     <TableHead>Data Emissione</TableHead>
                     <TableHead>Stato</TableHead>
                     <TableHead className="text-right">Azioni</TableHead>
@@ -859,6 +860,7 @@ export default function SiaeTicketsPage() {
                           : <span className="text-muted-foreground">-</span>}
                       </TableCell>
                       <TableCell className="font-semibold text-[#FFD700]">€{Number(ticket.grossAmount).toFixed(2)}</TableCell>
+                      <TableCell className="text-muted-foreground">€{Number(ticket.vatAmount || 0).toFixed(2)}</TableCell>
                       <TableCell className="text-sm text-muted-foreground">
                         {ticket.emissionDate && format(new Date(ticket.emissionDate), "dd/MM/yyyy HH:mm", { locale: it })}
                       </TableCell>
