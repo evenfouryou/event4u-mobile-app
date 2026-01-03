@@ -165,30 +165,43 @@ export function normalizeSiaeCodiceOrdine(rawCode: string | null | undefined): s
 
 /**
  * Normalizza CodiceRichiedenteEmissioneSigillo per conformità SIAE
- * OBBLIGATORIO: 8 caratteri nel formato TTCCCCCC
+ * OBBLIGATORIO: 8 CIFRE nel formato TTCCCCCC (tutto numerico)
  * - TT = tipo richiesta (2 cifre): 01=prima emissione, 02=sostituzione, 03=annullamento, 04=duplicato, 05=emissione sistema
- * - CCCCCC = codice sistema (6 caratteri alfanumerici)
+ * - CCCCCC = codice sistema (6 CIFRE numeriche)
  * 
  * Allegato B - Provvedimento Agenzia Entrate 04/03/2008
+ * NOTA: SIAE richiede formato STRETTAMENTE NUMERICO (8 cifre), non alfanumerico
  */
 export function formatCodiceRichiedente(rawCode: string | null | undefined, systemCode: string): string {
-  // Se già nel formato corretto (8 caratteri numerici/alfanumerici)
-  if (rawCode && /^[0-9]{2}[A-Z0-9]{6}$/i.test(rawCode)) {
-    return rawCode.toUpperCase();
+  // Se già nel formato corretto (8 cifre numeriche: 2 tipo + 6 codice)
+  if (rawCode && /^[0-9]{8}$/.test(rawCode)) {
+    return rawCode;
   }
   
-  // Genera codice conforme: tipo "05" (emissione sistema) + 6 caratteri da systemCode
+  // Genera codice conforme: tipo "05" (emissione sistema) + 6 cifre
   const tipoRichiesta = '05'; // emissione da sistema automatico
   
-  // Estrai le ultime 6 cifre/caratteri dal systemCode, o padda con zeri
-  let codice6 = systemCode.replace(/[^A-Z0-9]/gi, '').toUpperCase();
-  if (codice6.length > 6) {
-    codice6 = codice6.substring(codice6.length - 6);
+  // Estrai solo le cifre dal systemCode, genera hash numerico se necessario
+  let cifre = systemCode.replace(/\D/g, ''); // Solo cifre
+  
+  if (cifre.length >= 6) {
+    // Prendi le ultime 6 cifre
+    cifre = cifre.substring(cifre.length - 6);
+  } else if (cifre.length > 0) {
+    // Padda con zeri a sinistra
+    cifre = cifre.padStart(6, '0');
   } else {
-    codice6 = codice6.padStart(6, '0');
+    // Nessuna cifra nel systemCode: genera hash numerico dal nome
+    // Usa semplice hash basato su codici carattere
+    let hash = 0;
+    for (let i = 0; i < systemCode.length; i++) {
+      hash = ((hash << 5) - hash + systemCode.charCodeAt(i)) | 0;
+    }
+    // Converti in 6 cifre positive
+    cifre = String(Math.abs(hash) % 1000000).padStart(6, '0');
   }
   
-  return tipoRichiesta + codice6;
+  return tipoRichiesta + cifre;
 }
 
 /**
