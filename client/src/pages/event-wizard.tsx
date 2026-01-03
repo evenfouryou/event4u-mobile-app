@@ -1409,14 +1409,19 @@ export default function EventWizard() {
                       <CheckCircle className="h-6 w-6 text-green-500" />
                     )}
                   </div>
-                  <div>
+                  <div className="flex-1">
                     <Label className="text-base font-medium">
-                      Imposta sugli Intrattenimenti
+                      Imposta sugli Intrattenimenti (ISI)
                     </Label>
                     <p className={`text-sm mt-0.5 ${siaeTaxType === 'I' ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'}`}>
                       {siaeTaxType === 'I' 
-                        ? 'Dovuta - Aliquota variabile in base al tipo di intrattenimento' 
-                        : 'Non dovuta - Gli spettacoli sono esenti'}
+                        ? 'Dovuta al 16% - Musica NON dal vivo o dal vivo < 51% dell\'orario' 
+                        : 'Non dovuta - Musica dal vivo ≥ 51% dell\'orario di apertura'}
+                    </p>
+                    <p className="text-xs text-muted-foreground mt-1">
+                      {siaeTaxType === 'I' 
+                        ? 'Base imponibile: biglietti + consumazioni + servizi accessori (D.P.R. 640/1972)' 
+                        : 'Spettacolo esente ISI - Solo IVA 10% applicata (D.P.R. 640/1972)'}
                     </p>
                   </div>
                   <Badge 
@@ -1427,7 +1432,7 @@ export default function EventWizard() {
                     }`}
                     data-testid="badge-entertainment-tax"
                   >
-                    {siaeTaxType === 'I' ? 'DOVUTA' : 'ESENTE'}
+                    {siaeTaxType === 'I' ? 'ISI 16%' : 'ESENTE'}
                   </Badge>
                 </div>
               </motion.div>
