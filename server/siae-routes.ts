@@ -4854,16 +4854,22 @@ async function generateRcaReportXml(params: RcaReportParams): Promise<string> {
   const systemEmissionCode = cachedEfff?.systemId || systemConfig?.systemCode || 'EVENT4U1';
   
   // CONFORMITÀ DTD: CFTitolareCA richiede codice fiscale 16 caratteri, non P.IVA 11 cifre
-  // Priorità: EFFF smart card > systemConfig.fiscalCode > taxId (solo se 16 caratteri validi)
+  // Priorità: EFFF smart card > systemConfig.fiscalCode > company.fiscalCode > taxId (solo se 16 caratteri validi)
+  const company = await storage.getCompany(companyId);
   let cfTitolare = cachedEfff?.partnerCodFis;
   if (!cfTitolare && systemConfig?.fiscalCode && systemConfig.fiscalCode.length === 16) {
     cfTitolare = systemConfig.fiscalCode;
   }
+  // Cerca in company.fiscalCode (campo dedicato al codice fiscale)
+  if (!cfTitolare && company?.fiscalCode && company.fiscalCode.length === 16 && /^[A-Z0-9]{16}$/i.test(company.fiscalCode)) {
+    cfTitolare = company.fiscalCode.toUpperCase();
+  }
   if (!cfTitolare && taxId && taxId.length === 16 && /^[A-Z0-9]{16}$/i.test(taxId)) {
-    cfTitolare = taxId;
+    cfTitolare = taxId.toUpperCase();
   }
   if (!cfTitolare) {
     // BLOCCO GENERAZIONE RCA: Codice fiscale valido obbligatorio per conformità DTD
+    console.log(`[RCA] CF non trovato - EFFF: ${cachedEfff?.partnerCodFis}, systemConfig.fiscalCode: ${systemConfig?.fiscalCode}, company.fiscalCode: ${company?.fiscalCode}, taxId: ${taxId}`);
     throw new Error('SIAE_MISSING_FISCAL_CODE: Per generare report RCA è necessario un codice fiscale valido (16 caratteri). Collegare la smart card o configurare il codice fiscale nella sezione Configurazione Sistema SIAE.');
   }
   const denominazioneTitolare = cachedEfff?.partnerName || companyName || '';
