@@ -593,20 +593,24 @@ export function generateC1LogXml(params: C1LogParams): C1LogResult {
       xmlLines.push(`      </Partecipante>`);
     }
     
+    // Chiusura TitoloAccesso
+    xmlLines.push(`    </TitoloAccesso>`);
+    
     // RiferimentoAnnullamento: OBBLIGATORIO quando Annullamento="S" (Allegato B art. 5.4)
+    // NOTA DTD: RiferimentoAnnullamento è figlio DIRETTO di Transazione, NON di TitoloAccesso!
+    // DTD: <!ELEMENT Transazione (TitoloAccesso?, ..., RiferimentoAnnullamento?)>
     if (isCancelled) {
-      xmlLines.push(`      <RiferimentoAnnullamento>`);
+      xmlLines.push(`    <RiferimentoAnnullamento>`);
       // OriginaleRiferimentoAnnullamento: progressivo del biglietto originale
       const originaleRef = ticket.originalProgressiveNumber || ticket.progressiveNumber || ticketIndex;
-      xmlLines.push(`        <OriginaleRiferimentoAnnullamento>${String(originaleRef).padStart(10, '0')}</OriginaleRiferimentoAnnullamento>`);
+      xmlLines.push(`      <OriginaleRiferimentoAnnullamento>${String(originaleRef).padStart(10, '0')}</OriginaleRiferimentoAnnullamento>`);
       // CartaRiferimentoAnnullamento: carta usata per emissione originale
-      xmlLines.push(`        <CartaRiferimentoAnnullamento>${escapeXml(cartaAttivazioneValue)}</CartaRiferimentoAnnullamento>`);
+      xmlLines.push(`      <CartaRiferimentoAnnullamento>${escapeXml(cartaAttivazioneValue)}</CartaRiferimentoAnnullamento>`);
       // CausaleRiferimentoAnnullamento: motivo annullamento (3 cifre)
-      xmlLines.push(`        <CausaleRiferimentoAnnullamento>${causaleAnnullamento}</CausaleRiferimentoAnnullamento>`);
-      xmlLines.push(`      </RiferimentoAnnullamento>`);
+      xmlLines.push(`      <CausaleRiferimentoAnnullamento>${causaleAnnullamento}</CausaleRiferimentoAnnullamento>`);
+      xmlLines.push(`    </RiferimentoAnnullamento>`);
     }
     
-    xmlLines.push(`    </TitoloAccesso>`);
     xmlLines.push(`  </Transazione>`);
   }
   
