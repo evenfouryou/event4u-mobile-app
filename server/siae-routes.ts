@@ -3462,6 +3462,51 @@ router.post("/api/siae/name-changes/:id/process", requireAuth, requireOrganizer,
 
 // ==================== Resales (Customer) ====================
 
+// GET all resales for super_admin (global view with company info)
+router.get("/api/siae/resales/all", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = (req as any).user;
+    if (user?.role !== 'super_admin') {
+      return res.status(403).json({ message: "Accesso riservato a super admin" });
+    }
+    
+    // Get all resales with company and event info
+    const allResales = await db
+      .select({
+        resale: siaeResales,
+        companyId: siaeTicketedEvents.companyId,
+        companyName: companies.name,
+        eventName: events.name,
+        eventDate: events.startDatetime,
+        ticketCode: siaeTickets.ticketCode,
+        sectorName: siaeEventSectors.name,
+      })
+      .from(siaeResales)
+      .innerJoin(siaeTickets, eq(siaeResales.originalTicketId, siaeTickets.id))
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .innerJoin(companies, eq(siaeTicketedEvents.companyId, companies.id))
+      .leftJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
+      .orderBy(desc(siaeResales.listedAt));
+    
+    // Flatten result
+    const result = allResales.map(r => ({
+      ...r.resale,
+      companyId: r.companyId,
+      companyName: r.companyName,
+      eventName: r.eventName,
+      eventDate: r.eventDate,
+      ticketCode: r.ticketCode,
+      sectorName: r.sectorName,
+    }));
+    
+    res.json(result);
+  } catch (error: any) {
+    console.error('[SIAE] Get all resales error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.get("/api/siae/companies/:companyId/resales", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const resales = await siaeStorage.getSiaeResalesByCompany(req.params.companyId);
