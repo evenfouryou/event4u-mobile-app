@@ -1612,8 +1612,27 @@ router.post("/api/public/checkout/confirm", async (req, res) => {
       return res.status(400).json({ message: "Pagamento già completato" });
     }
 
+    if (checkoutSession.status === "processing") {
+      return res.status(400).json({ message: "Pagamento in elaborazione, attendere", code: "PROCESSING" });
+    }
+
     if (checkoutSession.status === "refunded") {
       return res.status(400).json({ message: "Pagamento già stornato", code: "ALREADY_REFUNDED" });
+    }
+
+    // IDEMPOTENZA: Marca subito come "processing" per evitare richieste duplicate
+    const [updatedSession] = await db
+      .update(publicCheckoutSessions)
+      .set({ status: "processing" })
+      .where(and(
+        eq(publicCheckoutSessions.id, checkoutSessionId),
+        eq(publicCheckoutSessions.status, "pending") // Solo se ancora pending
+      ))
+      .returning();
+
+    if (!updatedSession) {
+      // Un'altra richiesta ha già preso il lock
+      return res.status(400).json({ message: "Pagamento già in elaborazione", code: "ALREADY_PROCESSING" });
     }
 
     // Verifica payment intent con Stripe
