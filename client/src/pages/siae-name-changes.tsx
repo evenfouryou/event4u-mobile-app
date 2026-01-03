@@ -46,6 +46,7 @@ import {
   X,
   Search,
   Loader2,
+  Stamp,
 } from "lucide-react";
 import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -235,6 +236,7 @@ export default function SiaeNameChangesPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Biglietto</TableHead>
+                    <TableHead>Sigillo Fiscale</TableHead>
                     <TableHead>Nuovo Nome</TableHead>
                     <TableHead>Nuovo Cognome</TableHead>
                     <TableHead>Tipo Richiedente</TableHead>
@@ -248,6 +250,12 @@ export default function SiaeNameChangesPage() {
                     <TableRow key={request.id} data-testid={`row-request-${request.id}`}>
                       <TableCell className="font-mono text-xs" data-testid={`cell-ticket-${request.id}`}>
                         {request.originalTicketId?.slice(0, 8)}...
+                      </TableCell>
+                      <TableCell data-testid={`cell-sigillo-${request.id}`}>
+                        <div className="flex items-center gap-1">
+                          <Stamp className="h-3 w-3 text-muted-foreground" />
+                          <span className="font-mono text-xs">{(request as any).sigilloFiscaleOriginale || 'N/A'}</span>
+                        </div>
                       </TableCell>
                       <TableCell data-testid={`cell-firstname-${request.id}`}>
                         {request.newFirstName}
