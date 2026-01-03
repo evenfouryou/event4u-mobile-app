@@ -16,7 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage, FormDes
 import { Checkbox } from "@/components/ui/checkbox";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import { Calendar, MapPin, Clock, Repeat, FileText, Save, CheckCircle2, ArrowLeft, ArrowRight, Ticket, Users, Euro, Plus, Trash2, Upload, X, ImageIcon, Loader2, ChevronLeft, Building2 } from "lucide-react";
+import { Calendar, MapPin, Clock, Repeat, FileText, Save, CheckCircle2, CheckCircle, ArrowLeft, ArrowRight, Ticket, Users, Euro, Plus, Trash2, Upload, X, ImageIcon, Loader2, ChevronLeft, Building2, AlertTriangle } from "lucide-react";
 import { Progress } from "@/components/ui/progress";
 import { Label } from "@/components/ui/label";
 import { motion, AnimatePresence } from "framer-motion";
@@ -1390,6 +1390,47 @@ export default function EventWizard() {
                   {siaeTaxType === 'S' ? 'IVA detraibile per lo spettatore' : 'IVA non detraibile'}
                 </p>
               </div>
+
+              {/* Indicazione Imposta sugli Intrattenimenti */}
+              <motion.div 
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                className={`rounded-2xl border-2 p-5 ${
+                  siaeTaxType === 'I' 
+                    ? 'border-amber-500/50 bg-amber-500/10' 
+                    : 'border-green-500/50 bg-green-500/10'
+                }`}
+              >
+                <div className="flex items-center gap-4">
+                  <div className={`p-3 rounded-xl ${siaeTaxType === 'I' ? 'bg-amber-500/20' : 'bg-green-500/20'}`}>
+                    {siaeTaxType === 'I' ? (
+                      <AlertTriangle className="h-6 w-6 text-amber-500" />
+                    ) : (
+                      <CheckCircle className="h-6 w-6 text-green-500" />
+                    )}
+                  </div>
+                  <div>
+                    <Label className="text-base font-medium">
+                      Imposta sugli Intrattenimenti
+                    </Label>
+                    <p className={`text-sm mt-0.5 ${siaeTaxType === 'I' ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'}`}>
+                      {siaeTaxType === 'I' 
+                        ? 'Dovuta - Aliquota variabile in base al tipo di intrattenimento' 
+                        : 'Non dovuta - Gli spettacoli sono esenti'}
+                    </p>
+                  </div>
+                  <Badge 
+                    className={`ml-auto text-base px-4 py-1.5 ${
+                      siaeTaxType === 'I' 
+                        ? 'bg-amber-500 hover:bg-amber-600' 
+                        : 'bg-green-500 hover:bg-green-600'
+                    }`}
+                    data-testid="badge-entertainment-tax"
+                  >
+                    {siaeTaxType === 'I' ? 'DOVUTA' : 'ESENTE'}
+                  </Badge>
+                </div>
+              </motion.div>
 
               <div className="flex items-center justify-between rounded-2xl border-2 p-5">
                 <div className="flex items-center gap-4">
