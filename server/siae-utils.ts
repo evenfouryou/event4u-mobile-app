@@ -301,6 +301,7 @@ export interface SiaeTicketForLog {
   vatAmount?: string | number | null;
   prevendita?: string | number | null;
   prevenditaVat?: string | number | null;
+  entertainmentTaxBase?: string | number | null;
   status: string;
   cancellationReasonCode?: string | null;
   cancellationDate?: Date | string | null;
@@ -310,6 +311,7 @@ export interface SiaeTicketForLog {
   participantFirstName?: string | null;
   participantLastName?: string | null;
   originalTicketId?: string | null;
+  originalProgressiveNumber?: number | null;
   replacedByTicketId?: string | null;
 }
 
@@ -509,8 +511,10 @@ export function generateC1LogXml(params: C1LogParams): C1LogResult {
       ? `${ticket.row}-${ticket.seatNumber}` 
       : (ticket.seatNumber || '');
     
-    // 6. CausaleAnnullamento: includere se biglietto annullato e motivo presente
-    const causaleAnnullamento = ticket.cancellationReasonCode || '';
+    // 6. CausaleAnnullamento: normalizzata a 3 cifre (001-010) per conformità SIAE
+    const causaleAnnullamento = isCancelled 
+      ? normalizeCausaleAnnullamento(ticket.cancellationReasonCode)
+      : '';
     
     // Costruzione attributi Transazione (ordine DTD)
     let transactionAttrs = [
@@ -536,9 +540,9 @@ export function generateC1LogXml(params: C1LogParams): C1LogResult {
       transactionAttrs.push(`Posto="${escapeXml(posto)}"`);
     }
     
-    // 6. CausaleAnnullamento per biglietti annullati
-    if (isCancelled && causaleAnnullamento) {
-      transactionAttrs.push(`CausaleAnnullamento="${escapeXml(causaleAnnullamento)}"`);
+    // 6. CausaleAnnullamento per biglietti annullati (OBBLIGATORIO se annullato)
+    if (isCancelled) {
+      transactionAttrs.push(`CausaleAnnullamento="${causaleAnnullamento}"`);
     }
     
     if (ticket.originalTicketId) {
@@ -566,6 +570,19 @@ export function generateC1LogXml(params: C1LogParams): C1LogResult {
       xmlLines.push(`        <Nome>${escapeXml(ticket.participantFirstName)}</Nome>`);
       xmlLines.push(`        <Cognome>${escapeXml(ticket.participantLastName)}</Cognome>`);
       xmlLines.push(`      </Partecipante>`);
+    }
+    
+    // RiferimentoAnnullamento: OBBLIGATORIO quando Annullamento="S" (Allegato B art. 5.4)
+    if (isCancelled) {
+      xmlLines.push(`      <RiferimentoAnnullamento>`);
+      // OriginaleRiferimentoAnnullamento: progressivo del biglietto originale
+      const originaleRef = ticket.originalProgressiveNumber || ticket.progressiveNumber || ticketIndex;
+      xmlLines.push(`        <OriginaleRiferimentoAnnullamento>${String(originaleRef).padStart(10, '0')}</OriginaleRiferimentoAnnullamento>`);
+      // CartaRiferimentoAnnullamento: carta usata per emissione originale
+      xmlLines.push(`        <CartaRiferimentoAnnullamento>${escapeXml(cartaAttivazioneValue)}</CartaRiferimentoAnnullamento>`);
+      // CausaleRiferimentoAnnullamento: motivo annullamento (3 cifre)
+      xmlLines.push(`        <CausaleRiferimentoAnnullamento>${causaleAnnullamento}</CausaleRiferimentoAnnullamento>`);
+      xmlLines.push(`      </RiferimentoAnnullamento>`);
     }
     
     xmlLines.push(`    </TitoloAccesso>`);
