@@ -6822,45 +6822,86 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
       reportDate: new Date()
     });
 
-    // ===== USA generateC1ReportXml - UNICO generatore C1 corretto =====
-    // Genera XML conforme SIAE usando la funzione helper condivisa
-    // Supporta sia RiepilogoGiornaliero che RiepilogoMensile
+    // ===== USA generateC1LogXml - Formato LogTransazione per RCA =====
+    // Genera XML conforme SIAE DTD Log_v0040_20190627.dtd
+    // LogTransazione (C1 evento) genera risposta da SIAE
     const eventDate = event.eventDate ? new Date(event.eventDate) : new Date();
-    const now = new Date();
-    const oraGenerazione = now.toTimeString().slice(0, 8).replace(/:/g, '');
-    
-    // Prepara i parametri per generateC1ReportXml
-    // IMPORTANTE: passa TUTTI i biglietti (inclusi annullati) - la funzione gestisce il filtraggio
-    // per garantire conformità SIAE con cancellazioni e abbonamenti
-    const c1Params: C1ReportParams = {
-      companyId: event.companyId,
-      reportDate: eventDate,
-      isMonthly,
-      filteredTickets: allTickets, // Passa tutti i biglietti, generateC1ReportXml gestisce il filtraggio
-      systemConfig: siaeConfig,
-      companyName: company?.name || '',
-      taxId: company?.fiscalCode || company?.taxId || siaeConfig?.taxId || '',
-      oraGen: oraGenerazione
-    };
-    
-    // Genera XML usando l'unica funzione corretta
-    const xmlContent = await generateC1ReportXml(c1Params);
     
     // Get progressive number for this transmission
     const transmissionCount = await siaeStorage.getSiaeTransmissionCount(event.companyId);
     const progressivoGenerazione = transmissionCount + 1;
     
+    // Prepara i biglietti per generateC1LogXml (formato SiaeTicketForLog)
+    const ticketsForLog: SiaeTicketForLog[] = allTickets.map(t => ({
+      id: t.id,
+      fiscalSealCode: t.fiscalSealCode || null,
+      progressiveNumber: t.progressiveNumber || 0,
+      cardCode: t.cardCode || null,
+      emissionChannelCode: t.emissionChannelCode || null,
+      emissionDate: t.emissionDate || new Date(),
+      ticketTypeCode: t.ticketTypeCode || 'R1',
+      sectorCode: t.sectorCode || 'P0',
+      grossAmount: t.grossAmount || '0',
+      netAmount: t.netAmount || null,
+      vatAmount: t.vatAmount || null,
+      prevendita: t.prevendita || null,
+      prevenditaVat: t.prevenditaVat || null,
+      status: t.status || 'sold',
+      cancellationReasonCode: t.cancellationReasonCode || null,
+      cancellationDate: t.cancellationDate || null,
+      isComplimentary: t.isComplimentary || false,
+      row: t.row || null,
+      seatNumber: t.seatNumber || null,
+      participantFirstName: t.participantFirstName || null,
+      participantLastName: t.participantLastName || null,
+      originalTicketId: t.originalTicketId || null,
+      replacedByTicketId: t.replacedByTicketId || null,
+      entertainmentTaxBase: t.entertainmentTaxBase || null,
+    }));
+    
+    // Prepara evento per generateC1LogXml (formato SiaeEventForLog)
+    const eventForLog: SiaeEventForLog = {
+      id: event.id,
+      name: event.eventName || 'Evento',
+      date: eventDate,
+      time: event.eventTime ? new Date(event.eventTime) : eventDate,
+      venueCode: location?.siaeCode || event.siaeVenueCode || '0000000000001',
+      genreCode: event.genreCode || '64',
+      taxationType: event.taxationType || 'I',
+    };
+    
+    // Prepara parametri per generateC1LogXml
+    const c1LogParams: C1LogParams = {
+      event: eventForLog,
+      tickets: ticketsForLog,
+      organizerTaxId: company?.fiscalCode || company?.taxId || siaeConfig?.taxId || '',
+      holderTaxId: siaeConfig?.taxId || company?.fiscalCode || company?.taxId || '',
+      systemCode: siaeConfig?.systemCode || 'EVENT4U1',
+      cardNumber: siaeConfig?.cardNumber || null,
+      ivaPreassolta: event.ivaPreassolta || 'N',
+    };
+    
+    // Genera XML LogTransazione usando generateC1LogXml
+    const c1LogResult = generateC1LogXml(c1LogParams);
+    
+    if (!c1LogResult.success) {
+      return res.status(400).json({
+        message: `Generazione LogTransazione fallita: ${c1LogResult.errors.join('; ')}`,
+        errors: c1LogResult.errors,
+        warnings: c1LogResult.warnings
+      });
+    }
+    
+    const xmlContent = c1LogResult.xml;
+    
     // Nome file conforme Allegato C SIAE:
-    // - RMG_AAAA_MM_GG_###.xsi per RiepilogoGiornaliero (giornaliero)
-    // - RPM_AAAA_MM_###.xsi per RiepilogoMensile (mensile)
+    // LOG_AAAA_MM_GG_###.xsi per LogTransazione (C1 evento, genera risposta SIAE)
     // Estensione .p7m aggiunta se firmato digitalmente
     const year = eventDate.getFullYear();
     const month = String(eventDate.getMonth() + 1).padStart(2, '0');
     const day = String(eventDate.getDate()).padStart(2, '0');
     const progressivo = String(progressivoGenerazione).padStart(3, '0');
-    const baseFileName = isMonthly 
-      ? `RPM_${year}_${month}_${progressivo}` // Riepilogo Periodico Mensile
-      : `RMG_${year}_${month}_${day}_${progressivo}`; // Riepilogo Giornaliero
+    const baseFileName = `LOG_${year}_${month}_${day}_${progressivo}`; // LogTransazione
     // fileName will be updated to .xsi.p7m if signed, otherwise .xsi
     let fileName = `${baseFileName}.xsi`;
 
