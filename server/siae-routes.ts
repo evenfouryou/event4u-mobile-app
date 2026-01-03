@@ -5,7 +5,7 @@ import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
 import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions, siaeCashierAllocations, siaeOtpAttempts, siaeNameChanges, siaeResales, publicCartItems, publicCheckoutSessions, publicCustomerSessions, tableBookings, guestListEntries, siaeTransmissions, companies, siaeEmissionChannels, siaeSystemConfig, userFeatures, siaeTicketedEvents, users, siaeEventSectors } from "@shared/schema";
-import { eq, and, or, sql, desc, isNull } from "drizzle-orm";
+import { eq, and, or, sql, desc, isNull, SQL } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { requestFiscalSeal, isCardReadyForSeals, isBridgeConnected, getCachedBridgeStatus, requestXmlSignature } from "./bridge-relay";
