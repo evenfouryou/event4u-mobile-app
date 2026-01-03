@@ -419,7 +419,7 @@ export default function EventWizard() {
             
             if (siaeSectors.length > 0) {
               const selectedGenre = siaeGenres?.find(g => g.code === siaeGenreCode);
-              const genreVatRate = selectedGenre?.vatRate || '22';
+              const genreVatRate = selectedGenre?.vatRate ?? (selectedGenre?.taxType === 'S' ? '10' : '22');
               
               const existingSectorIds = new Set<string>(
                 existingSiaeData.sectors?.map((s: any) => String(s.id)) || []
@@ -468,7 +468,7 @@ export default function EventWizard() {
             // Handle subscription types for existing events
             if (ticketedEventId && siaeSubscriptionTypes.length > 0) {
               const selectedGenre = siaeGenres?.find(g => g.code === siaeGenreCode);
-              const genreVatRate = selectedGenre?.vatRate || '22';
+              const genreVatRate = selectedGenre?.vatRate ?? (selectedGenre?.taxType === 'S' ? '10' : '22');
               
               for (const subType of siaeSubscriptionTypes) {
                 await apiRequest('POST', `/api/siae/ticketed-events/${ticketedEventId}/subscription-types`, {
@@ -493,7 +493,7 @@ export default function EventWizard() {
             
             if (siaeEvent?.id && siaeSectors.length > 0) {
               const selectedGenre = siaeGenres?.find(g => g.code === siaeGenreCode);
-              const genreVatRate = selectedGenre?.vatRate || '22';
+              const genreVatRate = selectedGenre?.vatRate ?? (selectedGenre?.taxType === 'S' ? '10' : '22');
               
               for (const ticket of siaeSectors) {
                 const priceValue = ticket.price || '0';
@@ -516,7 +516,7 @@ export default function EventWizard() {
             // Create subscription types if any
             if (siaeEvent?.id && siaeSubscriptionTypes.length > 0) {
               const selectedGenre = siaeGenres?.find(g => g.code === siaeGenreCode);
-              const genreVatRate = selectedGenre?.vatRate || '22';
+              const genreVatRate = selectedGenre?.vatRate ?? (selectedGenre?.taxType === 'S' ? '10' : '22');
               
               for (const subType of siaeSubscriptionTypes) {
                 await apiRequest('POST', `/api/siae/ticketed-events/${siaeEvent.id}/subscription-types`, {
@@ -1336,9 +1336,11 @@ export default function EventWizard() {
                           <div className="flex items-center gap-3">
                             <span className="font-mono text-base">{genre.code}</span>
                             <span className="text-base">{genre.name}</span>
-                            {genre.vatRate !== null && genre.vatRate !== undefined && (
-                              <Badge variant="outline">IVA {Number(genre.vatRate)}%</Badge>
-                            )}
+                            <Badge variant="outline">
+                              IVA {genre.vatRate !== null && genre.vatRate !== undefined 
+                                ? `${Number(genre.vatRate)}%` 
+                                : genre.taxType === 'S' ? '10%' : '22%'}
+                            </Badge>
                           </div>
                         </SelectItem>
                       ))}
@@ -1362,8 +1364,11 @@ export default function EventWizard() {
                     </div>
                     <Badge className="text-xl px-5 py-2 bg-primary" data-testid="badge-vat-rate">
                       {(() => {
-                        const rate = siaeGenres?.find(g => g.code === siaeGenreCode)?.vatRate;
-                        return rate !== null && rate !== undefined ? `${Number(rate)}%` : 'N/D';
+                        const genre = siaeGenres?.find(g => g.code === siaeGenreCode);
+                        if (!genre) return 'N/D';
+                        const rate = genre.vatRate;
+                        if (rate !== null && rate !== undefined) return `${Number(rate)}%`;
+                        return genre.taxType === 'S' ? '10%' : '22%';
                       })()}
                     </Badge>
                   </div>
