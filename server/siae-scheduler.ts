@@ -27,9 +27,9 @@ function log(message: string) {
 // Usata per nomi file RCA (controllo accessi)
 
 /**
- * Genera subject email conforme a RFC-2822 SIAE
- * Formato: LOG_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY>
- * IMPORTANTE: Usare LOG_ per file con root <LogTransazione>
+ * Genera subject email conforme a RFC-2822 SIAE (Allegato C 1.5.3)
+ * Formato: RCA_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY>
+ * IMPORTANTE: Allegato C specifica che il prefisso è RCA_ per Riepilogo Controllo Accessi
  */
 export function generateSiaeEmailSubject(date: Date, systemCode: string, sequenceNumber: number): string {
   const year = date.getFullYear();
@@ -37,7 +37,7 @@ export function generateSiaeEmailSubject(date: Date, systemCode: string, sequenc
   const day = String(date.getDate()).padStart(2, '0');
   const code = systemCode.padEnd(8, '0').substring(0, 8);
   const seq = String(sequenceNumber).padStart(3, '0');
-  return `LOG_${year}_${month}_${day}_${code}_${seq}_XSI_${SIAE_VERSION}`;
+  return `RCA_${year}_${month}_${day}_${code}_${seq}_XSI_${SIAE_VERSION}`;
 }
 
 /**

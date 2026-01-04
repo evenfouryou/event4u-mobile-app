@@ -249,12 +249,13 @@ export function normalizeCausaleAnnullamento(rawCode: string | null | undefined)
 
 /**
  * Genera nome file conforme Allegato C SIAE (Provvedimento Agenzia Entrate 04/03/2008)
- * - LOG_AAAA_MM_GG_###.xsi per LogTransazione (C1 evento, genera risposta SIAE)
+ * - RCA_AAAA_MM_GG_###.xsi per Riepilogo Controllo Accessi (C1 evento, genera risposta SIAE)
  * - RMG_AAAA_MM_GG_###.xsi per Riepilogo Mensile Giornaliero (silenzioso)
  * - RPM_AAAA_MM_###.xsi per Riepilogo Periodico Mensile (silenzioso)
  * 
- * IMPORTANTE: LogTransazione usa prefisso LOG_ (non RCA_)
- * RCA è il nome concettuale del report ma il file usa LOG_ per root LogTransazione
+ * IMPORTANTE: Allegato C specifica che XXX = "LTA" o "RCA"
+ * Il prefisso RCA_ è obbligatorio per trasmissioni Riepilogo Controllo Accessi
+ * anche se l'elemento XML radice è <LogTransazione>
  * 
  * Per file firmati CAdES-BES: estensione .xsi.p7m
  * Per file non firmati o XMLDSig legacy: estensione .xsi
@@ -286,9 +287,9 @@ export function generateSiaeFileName(
       return `RPM_${year}_${month}_${prog}${extension}`;
     case 'log':
     case 'rca':
-      // LOG = LogTransazione (C1 evento, genera risposta SIAE Log.xsi)
-      // IMPORTANTE: Usare LOG_ per file con root <LogTransazione>
-      return `LOG_${year}_${month}_${day}_${prog}${extension}`;
+      // RCA = Riepilogo Controllo Accessi (C1 evento, genera risposta SIAE Log.xsi)
+      // Allegato C 1.4.1: XXX = "LTA", "RCA" - prefisso RCA_ obbligatorio
+      return `RCA_${year}_${month}_${day}_${prog}${extension}`;
     case 'giornaliero':
     default:
       // RMG = Riepilogo Mensile Giornaliero (silenzioso, nessuna risposta SIAE)
