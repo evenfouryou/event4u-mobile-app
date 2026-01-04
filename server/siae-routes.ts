@@ -4041,54 +4041,76 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
           }
           
           const baseEvent = await storage.getEvent(ticketedEvent.eventId);
-          const location = baseEvent?.locationId ? await storage.getLocation(baseEvent.locationId) : null;
           const allTickets = await siaeStorage.getSiaeTicketsByCompany(transmission.companyId);
           const eventTickets = allTickets.filter(t => t.ticketedEventId === transmission.ticketedEventId);
-          const sectors = await siaeStorage.getSiaeEventSectorsByEvent(transmission.ticketedEventId);
           const systemConfig = await siaeStorage.getSiaeSystemConfig(transmission.companyId);
+          const activationCards = await siaeStorage.getSiaeActivationCardsByCompany(transmission.companyId);
+          const activeCard = activationCards.find(c => c.status === 'active');
+          const taxId = systemConfig?.taxId || company?.fiscalCode || company?.taxId || '';
           
+          // Prepare SiaeEventForLog with correct interface fields
           const eventForLog: SiaeEventForLog = {
-            ticketedEventId: ticketedEvent.id,
-            eventId: ticketedEvent.eventId,
-            nomeEvento: baseEvent?.name || ticketedEvent.id,
-            dataEvento: baseEvent ? new Date(baseEvent.startDatetime) : new Date(),
-            oraEvento: baseEvent ? formatSiaeTimeHHMM(new Date(baseEvent.startDatetime)) : '00:00',
-            codiceLocale: ticketedEvent.venueCode || 'VENUE001',
-            nomeLocale: location?.name || 'Location',
-            tipoGenere: ticketedEvent.eventType || 'MU02',
-            tipologiaOrganizzatore: ticketedEvent.organizerType || 'PE',
-            cfOrganizzatore: ticketedEvent.organizerTaxId || company?.fiscalCode || company?.taxId || '',
-            denominazioneOrganizzatore: ticketedEvent.organizerName || companyName,
+            id: ticketedEvent.id,
+            name: baseEvent?.name || 'N/D',
+            date: baseEvent?.startDatetime ? new Date(baseEvent.startDatetime) : new Date(),
+            time: baseEvent?.startDatetime ? new Date(baseEvent.startDatetime) : null,
+            venueCode: ticketedEvent.siaeLocationCode || '0000000000001',
+            genreCode: ticketedEvent.genreCode || 'S1',
+            organizerTaxId: taxId,
+            organizerName: companyName,
+            tipoTassazione: (ticketedEvent.taxType as 'S' | 'I') || 'S',
+            ivaPreassolta: (ticketedEvent.ivaPreassolta as 'N' | 'B' | 'F') || 'N',
           };
           
+          // Convert tickets to SiaeTicketForLog[] with correct interface fields
           const ticketsForLog: SiaeTicketForLog[] = eventTickets.map(t => {
-            const sector = sectors.find(s => s.id === t.sectorId);
+            // Determina lo status corretto: se ha motivo/data annullamento, è annullato
+            let effectiveStatus = t.status || 'emitted';
+            if (!isCancelledStatus(effectiveStatus) && (t.cancellationReasonCode || t.cancellationDate)) {
+              effectiveStatus = 'cancelled';
+            }
+            
             return {
-              ticketId: t.id,
-              sigilloFiscale: t.sigilloFiscale || '',
-              tipoTitolo: t.ticketType || 'I1',
-              codiceOrdinePosto: sector?.codiceOrdinePosto || '001',
-              prezzo: parseFloat(t.price || '0'),
-              dataEmissione: t.emissionDate ? new Date(t.emissionDate) : new Date(),
-              oraEmissione: t.emissionTime || '00:00',
-              status: t.status,
-              accessoRegistrato: t.accessoRegistrato || false,
-              tipoAccesso: t.tipoAccesso || null,
+              id: t.id,
+              fiscalSealCode: t.fiscalSealCode || null,
+              progressiveNumber: t.progressiveNumber || 1,
+              cardCode: t.cardCode || activeCard?.cardCode || null,
+              emissionChannelCode: t.emissionChannelCode || null,
+              emissionDate: t.emissionDate ? new Date(t.emissionDate) : new Date(),
+              ticketTypeCode: t.ticketTypeCode || 'R1',
+              sectorCode: t.sectorCode || 'A0',
+              grossAmount: t.grossAmount || '0',
+              netAmount: t.netAmount || null,
+              vatAmount: t.vatAmount || null,
+              prevendita: t.prevendita || '0',
+              prevenditaVat: t.prevenditaVat || null,
+              status: effectiveStatus,
+              cancellationReasonCode: t.cancellationReasonCode || null,
+              cancellationDate: t.cancellationDate || null,
+              isComplimentary: t.isComplimentary || false,
+              row: t.row || null,
+              seatNumber: t.seatNumber || null,
+              participantFirstName: t.participantFirstName || null,
+              participantLastName: t.participantLastName || null,
+              originalTicketId: t.originalTicketId || null,
+              replacedByTicketId: t.replacedByTicketId || null,
+              originalProgressiveNumber: t.progressiveNumber || null,
             };
           });
           
-          const rcaResult = await generateRCAXml({
+          // Generate RCA XML (RiepilogoControlloAccessi format)
+          const rcaResult = generateRCAXml({
             companyId: transmission.companyId,
-            companyName,
-            taxId: systemConfig?.taxId || company?.fiscalCode || company?.taxId || '',
-            systemCode: systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT,
+            eventId: ticketedEvent.id,
             event: eventForLog,
             tickets: ticketsForLog,
-            sectors: sectors.map(s => ({
-              id: s.id,
-              codiceOrdinePosto: s.codiceOrdinePosto,
-              capienza: s.capienza || 100,
-            })),
+            systemConfig: {
+              systemCode: systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT,
+              taxId: taxId,
+              businessName: systemConfig?.businessName || companyName,
+            },
+            companyName,
+            taxId,
           });
           
           xmlContent = rcaResult.xml;
@@ -7329,9 +7351,10 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
       reportDate: new Date()
     });
 
-    // ===== USA generateC1LogXml - Formato LogTransazione per RCA =====
-    // Genera XML conforme SIAE DTD Log_v0040_20190627.dtd
-    // LogTransazione (C1 evento) genera risposta da SIAE
+    // ===== USA generateRCAXml - Formato RiepilogoControlloAccessi per RCA =====
+    // Genera XML conforme SIAE DTD ControlloAccessi_v0001_20080626.dtd
+    // RCA (C1 evento) genera risposta da SIAE
+    // NOTA: NON usare generateC1LogXml che genera LogTransazione - causa errore SIAE 40605
     const eventDate = event.eventDate ? new Date(event.eventDate) : new Date();
     
     // Get progressive number for this transmission

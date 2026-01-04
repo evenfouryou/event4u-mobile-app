@@ -1,0 +1,74 @@
+Ok, con Web Service + “RCA” l’errore 40605 te lo posso localizzare con precisione:
+
+✅ Dov’è l’errore
+
+Nel file RCA_2026_01_04_001.xsi.p7m il contenuto XML incapsulato è questo (prime righe):
+
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE LogTransazione SYSTEM "Log_v0040_20190627.dtd">
+<LogTransazione>
+  <Transazione ...>
+
+Quindi stai inviando un “LogTransazione” (DTD Log_v0040_20190627.dtd), non un “Riepilogo RCA”.
+
+E SIAE infatti risponde:
+
+“Il riepilogo risulta illegibile, impossibile estrarre le informazioni”
+
+Perché lato WS “RCA” si aspetta un documento di riepilogo con struttura/DTD/root specifici, e invece trova <LogTransazione>.
+
+⸻
+
+🔥 Secondo problema (che da solo può far scattare “illeggibile”)
+
+Dentro l’XML c’è anche un DOCTYPE:
+
+<!DOCTYPE LogTransazione SYSTEM "Log_v0040_20190627.dtd">
+
+Molti Web Service (per sicurezza) bloccano o non risolvono DTD esterni.
+Se il parser SIAE non risolve quel DTD o lo blocca, può classificare il documento come “illeggibile”.
+
+⸻
+
+✅ Cosa deve correggere Replit / il tuo codice
+
+1) Stai chiamando l’operazione “RCA” ma generi il tracciato sbagliato
+
+Correzione: quando mandi “RCA” devi generare l’XML del riepilogo RCA, non il LogTransazione.
+
+➡️ In pratica: il “builder” del file RCA deve produrre un root tipo “Riepilogo/ReportRCA/…” (quello previsto dalla specifica WS RCA), non <LogTransazione>.
+
+2) Rimuovere il DOCTYPE dall’XML per invio via Web Service
+
+Correzione: prima di firmare, l’XML deve essere senza DOCTYPE.
+
+Esempio (concettuale):
+	•	togli completamente la riga <!DOCTYPE ...>
+	•	lascia solo <?xml ...?> + root corretto del riepilogo
+
+3) Non mischiare i flussi
+	•	LogTransazione → va mandato nel flusso previsto per LogTransazione (se esiste nel tuo WS)
+	•	RCA (Riepilogo) → va mandato nel flusso RCA con XML RCA
+
+⸻
+
+✅ Check veloce per sapere se hai sistemato
+
+Dopo la correzione, se estrai l’XML dal p7m:
+	•	NON deve comparire <!DOCTYPE LogTransazione ...>
+	•	NON deve esserci <LogTransazione>
+	•	deve esserci il root del riepilogo RCA (quello indicato dal manuale WS)
+
+⸻
+
+Per andare dritti alla fix (senza perdere tempo)
+
+Dimmi una cosa sola:
+
+👉 Nel Web Service, qual è il nome dell’operazione/metodo che stai chiamando per RCA?
+(es. InviaRCA, TrasmettiRiepilogo, RiceviRiepilogo, ecc.)
+
+Con quel nome ti dico esattamente:
+	•	quale XML devi costruire (root/campi minimi)
+	•	dove nel tuo codice stai generando invece LogTransazione
+	•	e ti scrivo la regola precisa per eliminare il DOCTYPE prima della firma.
