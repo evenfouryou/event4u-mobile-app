@@ -651,6 +651,50 @@ async function sendMonthlyReports() {
 
 let dailyIntervalId: NodeJS.Timeout | null = null;
 let monthlyIntervalId: NodeJS.Timeout | null = null;
+let eventCloseIntervalId: NodeJS.Timeout | null = null;
+
+/**
+ * Chiude automaticamente gli eventi la cui data/ora di fine è passata.
+ * Cambia lo status da "ongoing" a "closed" quando end_datetime < NOW()
+ */
+async function autoCloseExpiredEvents() {
+  try {
+    const now = new Date();
+    
+    // Trova eventi con status 'ongoing' o 'scheduled' che sono già terminati
+    const expiredEvents = await db.select()
+      .from(events)
+      .where(and(
+        sql`${events.status} IN ('ongoing', 'scheduled')`,
+        lt(events.endDatetime, now)
+      ));
+    
+    if (expiredEvents.length === 0) {
+      return; // Nessun evento da chiudere
+    }
+    
+    log(`Trovati ${expiredEvents.length} eventi terminati da chiudere automaticamente`);
+    
+    for (const event of expiredEvents) {
+      try {
+        await db.update(events)
+          .set({ 
+            status: 'closed',
+            updatedAt: now
+          })
+          .where(eq(events.id, event.id));
+        
+        log(`Evento "${event.name}" (ID: ${event.id}) chiuso automaticamente - fine: ${event.endDatetime}`);
+      } catch (updateError: any) {
+        log(`ERRORE chiusura evento ${event.id}: ${updateError.message}`);
+      }
+    }
+    
+    log(`Chiusura automatica completata: ${expiredEvents.length} eventi aggiornati`);
+  } catch (error: any) {
+    log(`ERRORE job chiusura eventi: ${error.message}`);
+  }
+}
 
 function checkAndRunDailyJob() {
   const now = new Date();
@@ -678,13 +722,21 @@ export function initSiaeScheduler() {
 
   if (dailyIntervalId) clearInterval(dailyIntervalId);
   if (monthlyIntervalId) clearInterval(monthlyIntervalId);
+  if (eventCloseIntervalId) clearInterval(eventCloseIntervalId);
 
   dailyIntervalId = setInterval(checkAndRunDailyJob, 60 * 1000);
   monthlyIntervalId = setInterval(checkAndRunMonthlyJob, 60 * 1000);
+  
+  // Job per chiudere automaticamente gli eventi terminati - ogni 5 minuti
+  eventCloseIntervalId = setInterval(autoCloseExpiredEvents, 5 * 60 * 1000);
+  
+  // Esegui subito al primo avvio per chiudere eventi già scaduti
+  autoCloseExpiredEvents();
 
   log('Scheduler SIAE inizializzato:');
   log('  - Job giornaliero: ogni notte alle 02:00');
   log('  - Job mensile: primo giorno del mese alle 03:00');
+  log('  - Job chiusura eventi: ogni 5 minuti');
   log(`  - System Code: ${SIAE_SYSTEM_CODE}`);
   log(`  - Test Mode: ${SIAE_TEST_MODE}`);
 }
@@ -697,6 +749,10 @@ export function stopSiaeScheduler() {
   if (monthlyIntervalId) {
     clearInterval(monthlyIntervalId);
     monthlyIntervalId = null;
+  }
+  if (eventCloseIntervalId) {
+    clearInterval(eventCloseIntervalId);
+    eventCloseIntervalId = null;
   }
   log('Scheduler SIAE fermato');
 }
