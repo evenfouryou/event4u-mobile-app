@@ -2521,13 +2521,18 @@ router.get("/api/siae/admin/name-changes", requireAuth, requireSuperAdmin, async
       .limit(limitNum)
       .offset(offset);
     
-    // Get total count for pagination
-    const countResult = await db
+    // Get total count for pagination (apply same filters)
+    let countQuery = db
       .select({ count: count() })
       .from(siaeNameChanges)
       .innerJoin(siaeTickets, eq(siaeNameChanges.originalTicketId, siaeTickets.id))
       .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id));
     
+    if (conditions.length > 0) {
+      countQuery = countQuery.where(and(...conditions)) as any;
+    }
+    
+    const countResult = await countQuery;
     const total = countResult[0]?.count || 0;
     
     res.json({
