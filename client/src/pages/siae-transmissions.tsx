@@ -332,6 +332,13 @@ export default function SiaeTransmissionsPage() {
           description: `Il report contiene ${errors.length} errori: ${errors.slice(0, 2).join('; ')}${errors.length > 2 ? '...' : ''}`,
           variant: "destructive",
         });
+      } else if (error.message.includes('FIRMA_OBBLIGATORIA') || error.message.includes('BRIDGE_NON_CONNESSO') || error.message.includes('FIRMA_NON_ABILITATA')) {
+        // Errori specifici della firma S/MIME - mostra istruzioni chiare
+        toast({
+          title: "Firma S/MIME Richiesta",
+          description: "Per ricevere risposta da SIAE: 1) Avvia l'app desktop Event4U 2) Inserisci la Smart Card SIAE 3) Riprova l'invio",
+          variant: "destructive",
+        });
       } else {
         toast({
           title: "Errore",

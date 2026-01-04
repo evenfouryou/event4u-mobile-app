@@ -360,7 +360,7 @@ router.get("/api/siae/debug/test-smtp", async (req: Request, res: Response) => {
   </Evento>
 </RiepilogoControlloAccessi>`;
 
-      await sendSiaeTransmissionEmail({
+      const emailResult = await sendSiaeTransmissionEmail({
         to: testDestination,
         companyName: 'DEBUG TEST',
         transmissionType: 'daily',
@@ -372,6 +372,10 @@ router.get("/api/siae/debug/test-smtp", async (req: Request, res: Response) => {
         signWithSmime: true,
         requireSignature: true,
       });
+      
+      if (!emailResult.success) {
+        throw new Error(emailResult.error || 'Invio email fallito - Firma S/MIME richiesta');
+      }
       
       emailSent = true;
       console.log(`[SIAE-DEBUG] Test email sent successfully to: ${testDestination}`);
@@ -3890,7 +3894,7 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     
     // Send the email to SIAE test environment
     const destinationEmail = getSiaeDestinationEmail(toEmail);
-    await sendSiaeTransmissionEmail({
+    const emailResult = await sendSiaeTransmissionEmail({
       to: destinationEmail,
       companyName,
       transmissionType: transmission.transmissionType as 'daily' | 'monthly' | 'corrective',
@@ -3904,6 +3908,13 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
       signWithSmime: true,
       requireSignature: true,
     });
+    
+    if (!emailResult.success) {
+      return res.status(400).json({ 
+        success: false, 
+        message: emailResult.error || 'Invio email fallito - Firma S/MIME richiesta'
+      });
+    }
     
     console.log(`[SIAE-ROUTES] Transmission sent to: ${destinationEmail}${signatureInfo} (Test mode: ${SIAE_TEST_MODE})`);
     
@@ -4320,6 +4331,22 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : undefined),
   });
   
+  // Controlla se l'invio è fallito (firma S/MIME non disponibile)
+  if (!emailResult.success) {
+    await siaeStorage.updateSiaeTransmission(transmission.id, {
+      status: 'failed',
+      error: emailResult.error || 'Invio email fallito',
+    });
+    return {
+      success: false,
+      statusCode: 400,
+      data: {
+        message: emailResult.error || 'Invio email fallito - Firma S/MIME richiesta',
+        transmissionId: transmission.id,
+      }
+    };
+  }
+  
   const smimeInfo = emailResult.smimeSigned 
     ? ` (S/MIME: ${emailResult.signerEmail})` 
     : ' (NON firmata S/MIME)';
@@ -4532,6 +4559,13 @@ router.post("/api/siae/transmissions/test-email", requireAuth, requireGestore, a
       signWithSmime: true, // Per Allegato C SIAE 1.6.2 - firma S/MIME obbligatoria
       requireSignature: true,
     });
+    
+    if (!emailResult.success) {
+      return res.status(400).json({ 
+        success: false, 
+        message: emailResult.error || 'Invio email fallito - Firma S/MIME richiesta'
+      });
+    }
     
     res.json({
       success: true,
@@ -7199,6 +7233,19 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
         p7mBase64: p7mBase64, // CAdES-BES P7M per allegato email
         signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : undefined),
       });
+
+      // Controlla se l'invio è fallito (firma S/MIME non disponibile)
+      if (!emailResult.success) {
+        await siaeStorage.updateSiaeTransmission(transmission.id, {
+          status: 'failed',
+          error: emailResult.error || 'Invio email fallito',
+        });
+        return res.status(400).json({ 
+          success: false, 
+          message: emailResult.error || 'Invio email fallito - Firma S/MIME richiesta',
+          transmissionId: transmission.id,
+        });
+      }
 
       await siaeStorage.updateSiaeTransmission(transmission.id, {
         status: 'sent',
