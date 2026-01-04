@@ -54,6 +54,15 @@ The system supports CAdES-BES digital signatures for SIAE report compliance, gen
 - **Email transmission**: P7M attachments sent as `application/pkcs7-mime` with proper binary encoding
 - **Offline resilience**: Cached signatures used when bridge is disconnected during resend operations
 
+### S/MIME Email Signatures (via libSIAEp7.dll)
+For SIAE RCA transmissions, emails must be S/MIME signed per Allegato C (Provvedimento 04/03/2008). Key compliance requirements:
+- **Email header "From:" must match certificate email**: Allegato C 1.6.2.a.3 - immutable after S/MIME signature
+- **Valid PKCS#7 structure**: Uses `libSIAEp7.dll` (PKCS7SignML) for RFC 5652 compliant CMS signatures
+- **SHA-256 algorithm**: Modern hash algorithm (micalg=sha-256)
+- **Certificate email extraction**: Multiple patterns supported (SAN: RFC822, email:, rfc822Name=; Subject: E=, EMAIL=, EMAILADDRESS=)
+- **multipart/signed format**: Standard S/MIME v2 structure with smime.p7s attachment
+- **Server-side validation**: Blocks RCA transmission if certificate email unavailable
+
 ### Italian Fiscal Validation
 Server-side validation for Italian fiscal identifiers including Codice Fiscale (16-character) and Partita IVA (11-digit) with checksum algorithms, adhering to Agenzia delle Entrate requirements.
 

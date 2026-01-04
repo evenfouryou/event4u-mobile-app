@@ -114,7 +114,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.14 - CAdES-BES SHA-256 with SigningCertificateV2 (ETSI EN 319 122-1 compliant)");
+            Log("SiaeBridge v3.15 - S/MIME via libSIAEp7.dll + CAdES-BES SHA-256 (ETSI EN 319 122-1 compliant)");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -2060,12 +2060,15 @@ namespace SiaeBridge
         // SIGN S/MIME - Firma S/MIME per email SIAE (Allegato C)
         // Per Provvedimento Agenzia Entrate 04/03/2008, sezione 1.6.1-1.6.2
         // L'email deve essere firmata S/MIME v2 con carta di attivazione
+        // Usa libSIAEp7.dll (PKCS7SignML) per creare firma CMS valida
         // ============================================================
         static string SignSmime(string json)
         {
             if (_slot < 0) return ERR("Nessuna carta rilevata - prima fai CHECK_READER");
 
-            bool tx = false;
+            string inputFile = null;
+            string outputFile = null;
+
             try
             {
                 dynamic req = JsonConvert.DeserializeObject(json);
@@ -2077,7 +2080,12 @@ namespace SiaeBridge
                     return ERR("Contenuto MIME mancante");
                 }
 
-                Log($"SignSmime: slot={_slot}, mimeLength={mimeContent?.Length ?? 0}");
+                if (string.IsNullOrEmpty(pin))
+                {
+                    return ERR("PIN mancante - richiesto per firma S/MIME");
+                }
+
+                Log($"SignSmime (via libSIAEp7): slot={_slot}, mimeLength={mimeContent?.Length ?? 0}");
 
                 int state = isCardIn(_slot);
                 if (!IsCardPresent(state))
@@ -2086,181 +2094,186 @@ namespace SiaeBridge
                     return ERR("Carta rimossa");
                 }
 
-                // Initialize and begin transaction
-                int finRes = FinalizeML(_slot);
-                Log($"  FinalizeML = {finRes}");
+                // Usa libSIAEp7.dll (PKCS7SignML) per creare una firma CMS/PKCS#7 valida
+                // Questa è la stessa libreria usata per CAdES-BES che funziona correttamente
                 
-                int init = Initialize(_slot);
-                Log($"  Initialize = {init}");
+                // Crea file temporanei per input/output
+                string tempDir = Path.GetTempPath();
+                string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
+                inputFile = Path.Combine(tempDir, $"smime_input_{timestamp}.mime");
+                outputFile = Path.Combine(tempDir, $"smime_output_{timestamp}.p7s");
 
-                int txResult = BeginTransactionML(_slot);
-                Log($"  BeginTransactionML = {txResult}");
-                tx = (txResult == 0);
+                // Scrivi il contenuto MIME nel file input
+                File.WriteAllText(inputFile, mimeContent, Encoding.UTF8);
+                Log($"  Input file written: {inputFile} ({mimeContent.Length} bytes)");
 
-                // Select DF PKI (0x1111) for signature operations
-                int sel0000 = LibSiae.SelectML(0x0000, _slot);
-                Log($"  SelectML(0x0000 root) = {sel0000} (0x{sel0000:X4})");
-                
-                int sel1111 = LibSiae.SelectML(0x1111, _slot);
-                Log($"  SelectML(0x1111 DF PKI) = {sel1111} (0x{sel1111:X4})");
-
-                // Verify PIN if provided
-                if (!string.IsNullOrEmpty(pin))
+                // Pulisci PIN
+                pin = new string(pin.Where(char.IsDigit).ToArray());
+                if (pin.Length < 4)
                 {
-                    pin = new string(pin.Where(char.IsDigit).ToArray());
-                    int pinResult = VerifyPINML(1, pin, _slot);
-                    Log($"  VerifyPINML(nPIN=1) = {pinResult} (0x{pinResult:X4})");
-                    
-                    if (pinResult != 0)
-                    {
-                        if (pinResult == 0x6983)
-                            return ERR("PIN bloccato - troppi tentativi errati");
-                        else if (pinResult == 0x6982)
-                            return ERR("PIN errato - autenticazione fallita");
-                        else if (pinResult >= 0x63C0 && pinResult <= 0x63CF)
-                            return ERR($"PIN errato - tentativi rimasti: {pinResult & 0x0F}");
-                        else
-                            return ERR($"Verifica PIN fallita: 0x{pinResult:X4}");
-                    }
-                    Log($"  PIN verified successfully for S/MIME signature");
-                }
-                else
-                {
-                    Log($"  WARNING: No PIN provided for S/MIME signature operation");
+                    return ERR("PIN non valido - deve contenere almeno 4 cifre");
                 }
 
-                // Get the key ID from the smart card
-                byte keyId = LibSiae.GetKeyIDML(_slot);
-                Log($"  GetKeyIDML = {keyId} (0x{keyId:X2})");
-                
-                if (keyId == 0)
-                {
-                    return ERR("GetKeyID ha restituito 0 - nessuna chiave di firma disponibile");
-                }
+                // Chiama PKCS7SignML per creare la firma PKCS#7
+                Log($"  Calling PKCS7SignML with PIN (length={pin.Length})...");
+                int signResult = PKCS7SignML(pin, (uint)_slot, inputFile, outputFile, 1);
+                Log($"  PKCS7SignML result: {signResult} (0x{signResult:X8})");
 
-                // Calculate SHA-256 hash of the MIME content (S/MIME typically uses SHA-256)
-                byte[] mimeBytes = Encoding.UTF8.GetBytes(mimeContent);
-                byte[] hash = new byte[20]; // SHA-1 for compatibility with SIAE card
-                
-                int hashResult = LibSiae.Hash(1, mimeBytes, mimeBytes.Length, hash); // 1 = SHA-1
-                Log($"  Hash(SHA-1) = {hashResult}, hashLen={hash.Length}");
-                
-                if (hashResult != 0)
-                {
-                    return ERR($"Calcolo hash fallito: 0x{hashResult:X4}");
-                }
-
-                // Apply PKCS#1 padding
-                byte[] paddedHash = new byte[128];
-                int padResult = LibSiae.Padding(hash, hash.Length, paddedHash);
-                Log($"  Padding = {padResult} (0x{padResult:X4})");
-                
-                if (padResult != 0)
-                {
-                    return ERR($"Padding fallito: 0x{padResult:X4}");
-                }
-
-                // Sign using the card's private key
-                byte[] signature = new byte[128]; // RSA 1024-bit signature
-                int signResult = LibSiae.SignML(keyId, paddedHash, signature, _slot);
-                Log($"  SignML(keyIndex={keyId}) = {signResult} (0x{signResult:X4})");
-                
                 if (signResult != 0)
                 {
-                    return ERR($"Firma fallita: 0x{signResult:X4}");
+                    // Interpreta codici errore smart card
+                    if (signResult == 0x6983 || signResult == unchecked((int)0x80100068))
+                        return ERR("PIN bloccato - troppi tentativi errati. Usa PUK per sbloccare.");
+                    else if (signResult == 0x6982)
+                        return ERR("PIN errato - autenticazione fallita");
+                    else if (signResult >= 0x63C0 && signResult <= 0x63CF)
+                        return ERR($"PIN errato - tentativi rimasti: {signResult & 0x0F}");
+                    else
+                        return ERR($"Firma S/MIME fallita: errore 0x{signResult:X8}");
                 }
-                
-                Log($"  S/MIME Signature successful with keyIndex={keyId}");
 
-                // Get the certificate
-                byte[] cert = new byte[2048];
-                int certLen = cert.Length;
-                int certResult = LibSiae.GetCertificateML(cert, ref certLen, _slot);
-                Log($"  GetCertificateML = {certResult}, certLen={certLen}");
-                
-                if (certResult != 0 || certLen == 0)
+                // Verifica che il file output esista
+                if (!File.Exists(outputFile))
                 {
-                    return ERR("Impossibile leggere il certificato dalla carta");
+                    return ERR("File firma P7S non creato da PKCS7SignML");
                 }
 
-                byte[] actualCert = new byte[certLen];
-                Array.Copy(cert, actualCert, certLen);
-                string certificateBase64 = Convert.ToBase64String(actualCert);
-                string signatureBase64 = Convert.ToBase64String(signature);
+                // Leggi la firma PKCS#7 dal file output
+                byte[] p7sBytes = File.ReadAllBytes(outputFile);
+                Log($"  P7S signature file read: {p7sBytes.Length} bytes");
 
-                // Extract email from certificate
+                if (p7sBytes.Length < 100)
+                {
+                    return ERR("Firma P7S troppo corta - probabilmente non valida");
+                }
+
+                // Leggi il certificato per estrarre email e nome
                 string signerEmail = "";
                 string signerName = "";
+                
+                int finRes = FinalizeML(_slot);
+                int init = Initialize(_slot);
+                int txResult = BeginTransactionML(_slot);
+                bool tx = (txResult == 0);
+                
                 try
                 {
-                    var x509 = new System.Security.Cryptography.X509Certificates.X509Certificate2(actualCert);
-                    signerName = x509.GetNameInfo(System.Security.Cryptography.X509Certificates.X509NameType.SimpleName, false);
+                    LibSiae.SelectML(0x0000, _slot);
+                    LibSiae.SelectML(0x1111, _slot);
                     
-                    // Try to get email from Subject Alternative Name or Subject
-                    foreach (var ext in x509.Extensions)
+                    byte[] cert = new byte[2048];
+                    int certLen = cert.Length;
+                    int certResult = LibSiae.GetCertificateML(cert, ref certLen, _slot);
+                    
+                    if (certResult == 0 && certLen > 0)
                     {
-                        if (ext.Oid?.Value == "2.5.29.17") // Subject Alternative Name
+                        byte[] actualCert = new byte[certLen];
+                        Array.Copy(cert, actualCert, certLen);
+                        
+                        var x509 = new System.Security.Cryptography.X509Certificates.X509Certificate2(actualCert);
+                        signerName = x509.GetNameInfo(System.Security.Cryptography.X509Certificates.X509NameType.SimpleName, false) ?? "";
+                        
+                        // Cerca email nel SAN (Subject Alternative Name)
+                        foreach (var ext in x509.Extensions)
                         {
-                            var sanString = ext.Format(false);
-                            var match = System.Text.RegularExpressions.Regex.Match(sanString, @"RFC822[^=]*=([^\s,]+)");
-                            if (match.Success)
+                            if (ext.Oid?.Value == "2.5.29.17")
                             {
-                                signerEmail = match.Groups[1].Value;
-                                break;
+                                var sanString = ext.Format(false);
+                                Log($"  SAN extension: {sanString}");
+                                
+                                // Pattern multipli per trovare email
+                                var patterns = new[] {
+                                    @"RFC822[^=]*=([^\s,]+)",
+                                    @"email:([^\s,]+)",
+                                    @"rfc822Name=([^\s,]+)"
+                                };
+                                
+                                foreach (var pattern in patterns)
+                                {
+                                    var match = System.Text.RegularExpressions.Regex.Match(sanString, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                                    if (match.Success)
+                                    {
+                                        signerEmail = match.Groups[1].Value;
+                                        Log($"  Found email in SAN: {signerEmail}");
+                                        break;
+                                    }
+                                }
+                                if (!string.IsNullOrEmpty(signerEmail)) break;
                             }
                         }
-                    }
-                    if (string.IsNullOrEmpty(signerEmail))
-                    {
-                        // Try from Subject E= field
-                        var emailMatch = System.Text.RegularExpressions.Regex.Match(x509.Subject, @"E=([^\s,]+)");
-                        if (emailMatch.Success)
+                        
+                        // Fallback: cerca nel Subject
+                        if (string.IsNullOrEmpty(signerEmail))
                         {
-                            signerEmail = emailMatch.Groups[1].Value;
+                            var subject = x509.Subject;
+                            Log($"  Subject: {subject}");
+                            
+                            var emailPatterns = new[] {
+                                @"E=([^\s,]+)",
+                                @"EMAIL=([^\s,]+)",
+                                @"EMAILADDRESS=([^\s,]+)"
+                            };
+                            
+                            foreach (var pattern in emailPatterns)
+                            {
+                                var match = System.Text.RegularExpressions.Regex.Match(subject, pattern, System.Text.RegularExpressions.RegexOptions.IgnoreCase);
+                                if (match.Success)
+                                {
+                                    signerEmail = match.Groups[1].Value.Trim();
+                                    Log($"  Found email in Subject: {signerEmail}");
+                                    break;
+                                }
+                            }
                         }
+                        
+                        Log($"  Certificate: Name={signerName}, Email={signerEmail}");
                     }
-                    Log($"  Certificate: Name={signerName}, Email={signerEmail}");
                 }
                 catch (Exception certEx)
                 {
                     Log($"  Certificate parsing error: {certEx.Message}");
                 }
+                finally
+                {
+                    if (tx) try { EndTransactionML(_slot); } catch { }
+                }
 
-                // Build the S/MIME signed message (multipart/signed)
+                // Costruisci il messaggio S/MIME multipart/signed
                 string signedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz");
                 string smimeBoundary = $"----=_smime_{Guid.NewGuid():N}";
-                
-                // Create PKCS#7 signature for S/MIME (detached signature)
-                // Note: This creates a simplified S/MIME structure. For full compliance,
-                // use System.Security.Cryptography.Pkcs.SignedCms
-                string pkcs7Signature = CreatePkcs7Signature(signature, actualCert);
-                
-                // Build multipart/signed message
+                string p7sBase64 = Convert.ToBase64String(p7sBytes);
+
                 var smimeBuilder = new StringBuilder();
-                smimeBuilder.AppendLine("MIME-Version: 1.0");
-                smimeBuilder.AppendLine($"Content-Type: multipart/signed; protocol=\"application/pkcs7-signature\"; micalg=sha-1; boundary=\"{smimeBoundary}\"");
-                smimeBuilder.AppendLine();
-                smimeBuilder.AppendLine($"--{smimeBoundary}");
-                smimeBuilder.Append(mimeContent);
-                if (!mimeContent.EndsWith("\r\n"))
-                    smimeBuilder.AppendLine();
-                smimeBuilder.AppendLine();
-                smimeBuilder.AppendLine($"--{smimeBoundary}");
-                smimeBuilder.AppendLine("Content-Type: application/pkcs7-signature; name=\"smime.p7s\"");
-                smimeBuilder.AppendLine("Content-Transfer-Encoding: base64");
-                smimeBuilder.AppendLine("Content-Disposition: attachment; filename=\"smime.p7s\"");
-                smimeBuilder.AppendLine();
+                smimeBuilder.Append("MIME-Version: 1.0\r\n");
+                smimeBuilder.Append($"Content-Type: multipart/signed; protocol=\"application/pkcs7-signature\"; micalg=sha-256; boundary=\"{smimeBoundary}\"\r\n");
+                smimeBuilder.Append("\r\n");
+                smimeBuilder.Append($"--{smimeBoundary}\r\n");
                 
-                // Split base64 into 76-char lines
-                for (int i = 0; i < pkcs7Signature.Length; i += 76)
+                // Aggiungi il contenuto MIME originale (normalizza line endings)
+                string normalizedMime = mimeContent.Replace("\r\n", "\n").Replace("\n", "\r\n");
+                smimeBuilder.Append(normalizedMime);
+                if (!normalizedMime.EndsWith("\r\n"))
+                    smimeBuilder.Append("\r\n");
+                
+                smimeBuilder.Append("\r\n");
+                smimeBuilder.Append($"--{smimeBoundary}\r\n");
+                smimeBuilder.Append("Content-Type: application/pkcs7-signature; name=\"smime.p7s\"\r\n");
+                smimeBuilder.Append("Content-Transfer-Encoding: base64\r\n");
+                smimeBuilder.Append("Content-Disposition: attachment; filename=\"smime.p7s\"\r\n");
+                smimeBuilder.Append("\r\n");
+                
+                // Dividi base64 in righe da 76 caratteri
+                for (int i = 0; i < p7sBase64.Length; i += 76)
                 {
-                    int len = Math.Min(76, pkcs7Signature.Length - i);
-                    smimeBuilder.AppendLine(pkcs7Signature.Substring(i, len));
+                    int len = Math.Min(76, p7sBase64.Length - i);
+                    smimeBuilder.Append(p7sBase64.Substring(i, len));
+                    smimeBuilder.Append("\r\n");
                 }
                 
-                smimeBuilder.AppendLine($"--{smimeBoundary}--");
+                smimeBuilder.Append($"--{smimeBoundary}--\r\n");
 
-                string signedMime = smimeBuilder.ToString().Replace("\n", "\r\n").Replace("\r\r\n", "\r\n");
+                string signedMime = smimeBuilder.ToString();
+                Log($"  S/MIME message built: {signedMime.Length} bytes");
 
                 return JsonConvert.SerializeObject(new
                 {
@@ -2270,57 +2283,28 @@ namespace SiaeBridge
                         signedMime = signedMime,
                         signerEmail = signerEmail,
                         signerName = signerName,
-                        certificateSerial = BitConverter.ToString(actualCert).Substring(0, 20),
-                        signedAt = signedAt
+                        signedAt = signedAt,
+                        format = "S/MIME",
+                        algorithm = "SHA-256"
                     }
                 });
             }
             catch (Exception ex)
             {
-                Log($"SignSmime error: {ex.Message}");
+                Log($"SignSmime error: {ex.Message}\n{ex.StackTrace}");
                 return ERR(ex.Message);
             }
             finally
             {
-                if (tx)
+                // Pulisci file temporanei
+                try
                 {
-                    try
-                    {
-                        EndTransactionML(_slot);
-                        Log("  EndTransactionML done");
-                    }
-                    catch { }
+                    if (inputFile != null && File.Exists(inputFile))
+                        File.Delete(inputFile);
+                    if (outputFile != null && File.Exists(outputFile))
+                        File.Delete(outputFile);
                 }
-            }
-        }
-
-        // ============================================================
-        // Helper: Create PKCS#7 signature structure
-        // ============================================================
-        static string CreatePkcs7Signature(byte[] signature, byte[] certificate)
-        {
-            try
-            {
-                // Use System.Security.Cryptography.Pkcs for proper PKCS#7 structure
-                // For now, return a simplified structure with just the signature
-                // A full implementation would use SignedCms class
-                
-                // Build a minimal PKCS#7 SignedData structure
-                // This is a simplified version - for production, use SignedCms
-                var pkcs7 = new System.Collections.Generic.List<byte>();
-                
-                // For simplicity, we'll just base64 encode the raw signature + cert
-                // In production, this should be a proper ASN.1 PKCS#7 structure
-                var combined = new byte[signature.Length + certificate.Length];
-                Array.Copy(signature, 0, combined, 0, signature.Length);
-                Array.Copy(certificate, 0, combined, signature.Length, certificate.Length);
-                
-                return Convert.ToBase64String(combined);
-            }
-            catch
-            {
-                // Fallback to just the signature
-                return Convert.ToBase64String(signature);
+                catch { }
             }
         }
     }

@@ -6,7 +6,14 @@ Per conformarsi all'Allegato C del Provvedimento Agenzia delle Entrate 04/03/200
 
 L'app desktop Event4U Bridge implementa l'handler `SIGN_SMIME` per firmare i messaggi email con la carta di attivazione.
 
-**Stato implementazione: COMPLETATO** (v3.6)
+**Stato implementazione: COMPLETATO** (v3.15)
+
+## Requisiti Critici (Allegato C SIAE 1.6.2.a.3)
+
+1. **Header "From:" deve corrispondere all'email nel certificato** - Immutabile dopo la firma S/MIME
+2. **Envelope MAIL FROM deve corrispondere all'email nel certificato** - Per validazione SPF/DKIM
+3. **Firma PKCS#7 valida** - Struttura ASN.1/DER conforme RFC 5652 (CMS)
+4. **SHA-256** - Algoritmo di hash per la firma (micalg=sha-256)
 
 ## Requisiti
 
@@ -76,170 +83,60 @@ L'app desktop Event4U Bridge implementa l'handler `SIGN_SMIME` per firmare i mes
 | `SIGNATURE_FAILED` | Errore durante la firma |
 | `READER_ERROR` | Errore comunicazione con lettore smart card |
 
-## Implementazione C# (Esempio)
+## Implementazione C# (via libSIAEp7.dll)
+
+La firma S/MIME utilizza `libSIAEp7.dll` (PKCS7SignML) per creare firme PKCS#7/CMS valide.
+Questo è lo stesso meccanismo usato per le firme CAdES-BES dei report XML.
 
 ```csharp
-using System.Security.Cryptography;
-using System.Security.Cryptography.Pkcs;
-using System.Security.Cryptography.X509Certificates;
-using System.Text;
+// Workflow firma S/MIME:
+// 1. Scrivi contenuto MIME in file temporaneo
+// 2. Chiama PKCS7SignML per creare firma PKCS#7
+// 3. Leggi file P7S risultante
+// 4. Costruisci messaggio multipart/signed
+// 5. Estrai email da certificato per validazione
 
-public class SmimeSignatureHandler
-{
-    public async Task<SmimeSignatureResponse> HandleRequest(SmimeSignatureRequest request)
-    {
-        try
-        {
-            // 1. Ottieni il certificato dalla smart card
-            var certificate = GetSmartCardCertificate();
-            if (certificate == null)
-            {
-                return new SmimeSignatureResponse
-                {
-                    Success = false,
-                    Error = "CERTIFICATE_NOT_FOUND: Certificato di firma non trovato"
-                };
-            }
+[DllImport("libSIAEp7.dll", CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
+static extern int PKCS7SignML(
+    [MarshalAs(UnmanagedType.LPStr)] string pin,
+    uint slot,
+    [MarshalAs(UnmanagedType.LPStr)] string inputFile,
+    [MarshalAs(UnmanagedType.LPStr)] string outputFile,
+    int bInitialize);
 
-            // 2. Verifica validita' certificato
-            if (certificate.NotAfter < DateTime.Now)
-            {
-                return new SmimeSignatureResponse
-                {
-                    Success = false,
-                    Error = "CERTIFICATE_EXPIRED: Certificato scaduto"
-                };
-            }
+// File temporanei creati:
+// - smime_input_{timestamp}.mime  -> contenuto MIME da firmare
+// - smime_output_{timestamp}.p7s  -> firma PKCS#7 risultante
 
-            // 3. Firma il contenuto MIME con S/MIME
-            var signedMime = SignMimeContent(request.MimeContent, certificate);
+// Estrazione email da certificato (pattern multipli):
+var emailPatterns = new[] {
+    // Subject Alternative Name (SAN)
+    @"RFC822[^=]*=([^\s,]+)",
+    @"email:([^\s,]+)", 
+    @"rfc822Name=([^\s,]+)",
+    // Subject DN
+    @"E=([^\s,]+)",
+    @"EMAIL=([^\s,]+)",
+    @"EMAILADDRESS=([^\s,]+)"
+};
+```
 
-            // 4. Estrai informazioni dal certificato
-            var signerEmail = GetEmailFromCertificate(certificate);
-            var signerName = certificate.GetNameInfo(X509NameType.SimpleName, false);
+### Struttura S/MIME Risultante
 
-            return new SmimeSignatureResponse
-            {
-                Success = true,
-                SignatureData = new SmimeSignatureData
-                {
-                    SignedMime = signedMime,
-                    SignerEmail = signerEmail,
-                    SignerName = signerName,
-                    CertificateSerial = certificate.SerialNumber,
-                    SignedAt = DateTime.UtcNow.ToString("o")
-                }
-            };
-        }
-        catch (CryptographicException ex)
-        {
-            return new SmimeSignatureResponse
-            {
-                Success = false,
-                Error = $"SIGNATURE_FAILED: {ex.Message}"
-            };
-        }
-    }
+```
+MIME-Version: 1.0
+Content-Type: multipart/signed; protocol="application/pkcs7-signature"; 
+              micalg=sha-256; boundary="----=_smime_xxx"
 
-    private X509Certificate2 GetSmartCardCertificate()
-    {
-        // Apri lo store delle smart card
-        using var store = new X509Store(StoreName.My, StoreLocation.CurrentUser);
-        store.Open(OpenFlags.ReadOnly);
+------=_smime_xxx
+[contenuto MIME originale con header From: = email certificato]
+------=_smime_xxx
+Content-Type: application/pkcs7-signature; name="smime.p7s"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment; filename="smime.p7s"
 
-        // Cerca certificati con chiave privata su smart card
-        foreach (var cert in store.Certificates)
-        {
-            if (cert.HasPrivateKey)
-            {
-                // Verifica se e' su smart card (CSP specifico)
-                var privateKey = cert.GetRSAPrivateKey();
-                if (privateKey is RSACng rsaCng)
-                {
-                    var keyHandle = rsaCng.Key;
-                    // Verifica provider smart card
-                    if (IsSmartCardKey(keyHandle))
-                    {
-                        return cert;
-                    }
-                }
-            }
-        }
-        return null;
-    }
-
-    private string SignMimeContent(string mimeContent, X509Certificate2 certificate)
-    {
-        // Converti il contenuto MIME in bytes
-        byte[] contentBytes = Encoding.UTF8.GetBytes(mimeContent);
-
-        // Crea il contenuto PKCS#7
-        var contentInfo = new ContentInfo(contentBytes);
-        var signedCms = new SignedCms(contentInfo, detached: true);
-
-        // Crea il firmatario
-        var signer = new CmsSigner(SubjectIdentifierType.IssuerAndSerialNumber, certificate)
-        {
-            DigestAlgorithm = new Oid("2.16.840.1.101.3.4.2.1") // SHA-256
-        };
-
-        // Firma
-        signedCms.ComputeSignature(signer);
-        byte[] signatureBytes = signedCms.Encode();
-        string signatureBase64 = Convert.ToBase64String(signatureBytes);
-
-        // Costruisci il messaggio S/MIME multipart/signed
-        string boundary = $"----=_smime_{Guid.NewGuid():N}";
-        
-        var sb = new StringBuilder();
-        sb.AppendLine($"MIME-Version: 1.0");
-        sb.AppendLine($"Content-Type: multipart/signed; protocol=\"application/pkcs7-signature\"; micalg=sha-256; boundary=\"{boundary}\"");
-        sb.AppendLine();
-        sb.AppendLine($"--{boundary}");
-        sb.Append(mimeContent);
-        sb.AppendLine();
-        sb.AppendLine($"--{boundary}");
-        sb.AppendLine("Content-Type: application/pkcs7-signature; name=\"smime.p7s\"");
-        sb.AppendLine("Content-Transfer-Encoding: base64");
-        sb.AppendLine("Content-Disposition: attachment; filename=\"smime.p7s\"");
-        sb.AppendLine();
-        
-        // Dividi la firma base64 in righe da 76 caratteri
-        for (int i = 0; i < signatureBase64.Length; i += 76)
-        {
-            int length = Math.Min(76, signatureBase64.Length - i);
-            sb.AppendLine(signatureBase64.Substring(i, length));
-        }
-        
-        sb.AppendLine($"--{boundary}--");
-
-        return sb.ToString().Replace("\n", "\r\n");
-    }
-
-    private string GetEmailFromCertificate(X509Certificate2 certificate)
-    {
-        // Cerca l'email nel Subject Alternative Name
-        foreach (var extension in certificate.Extensions)
-        {
-            if (extension.Oid?.Value == "2.5.29.17") // Subject Alternative Name
-            {
-                var asnData = new AsnEncodedData(extension.Oid, extension.RawData);
-                var sanString = asnData.Format(false);
-                // Parse per trovare l'email (RFC822 Name)
-                var match = System.Text.RegularExpressions.Regex.Match(sanString, @"RFC822 Name=([^\s,]+)");
-                if (match.Success)
-                {
-                    return match.Groups[1].Value;
-                }
-            }
-        }
-        
-        // Fallback: cerca nel Subject
-        var subjectMatch = System.Text.RegularExpressions.Regex.Match(
-            certificate.Subject, @"E=([^\s,]+)");
-        return subjectMatch.Success ? subjectMatch.Groups[1].Value : "";
-    }
-}
+[firma PKCS#7 base64 in righe da 76 caratteri]
+------=_smime_xxx--
 ```
 
 ## Requisiti SIAE (Allegato C)
