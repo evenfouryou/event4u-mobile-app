@@ -4009,6 +4009,111 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     const company = await storage.getCompany(transmission.companyId);
     const companyName = company?.name || 'N/A';
     
+    // CRITICAL FIX: Per RCA, verifica che l'XML sia nel formato corretto (RiepilogoControlloAccessi)
+    // e rigeneralo se contiene il vecchio formato errato (LogTransazione)
+    let xmlContent = transmission.fileContent;
+    let regeneratedXml = false;
+    
+    if (transmission.transmissionType === 'rca') {
+      const hasWrongFormat = xmlContent.includes('<LogTransazione');
+      const hasCorrectFormat = xmlContent.includes('<RiepilogoControlloAccessi');
+      
+      console.log(`[SIAE-ROUTES] RCA Resend Check: hasCorrectFormat=${hasCorrectFormat}, hasWrongFormat=${hasWrongFormat}`);
+      
+      if (hasWrongFormat || !hasCorrectFormat) {
+        console.log(`[SIAE-ROUTES] RCA XML has wrong format, attempting to regenerate...`);
+        
+        // Verifica che abbiamo l'eventId per rigenerare
+        if (!transmission.ticketedEventId) {
+          return res.status(400).json({ 
+            message: "Questa trasmissione RCA contiene un formato XML obsoleto (LogTransazione). " +
+                     "Per risolvere, genera una nuova trasmissione RCA dalla pagina dell'evento. " +
+                     "La trasmissione corrotta non può essere reinviata.",
+            code: "RCA_FORMAT_OBSOLETE"
+          });
+        }
+        
+        // Rigenerazione XML RCA
+        try {
+          const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(transmission.ticketedEventId);
+          if (!ticketedEvent) {
+            return res.status(400).json({ message: "Evento SIAE non trovato per rigenerazione XML" });
+          }
+          
+          const baseEvent = await storage.getEvent(ticketedEvent.eventId);
+          const location = baseEvent?.locationId ? await storage.getLocation(baseEvent.locationId) : null;
+          const allTickets = await siaeStorage.getSiaeTicketsByCompany(transmission.companyId);
+          const eventTickets = allTickets.filter(t => t.ticketedEventId === transmission.ticketedEventId);
+          const sectors = await siaeStorage.getSiaeEventSectorsByEvent(transmission.ticketedEventId);
+          const systemConfig = await siaeStorage.getSiaeSystemConfig(transmission.companyId);
+          
+          const eventForLog: SiaeEventForLog = {
+            ticketedEventId: ticketedEvent.id,
+            eventId: ticketedEvent.eventId,
+            nomeEvento: baseEvent?.name || ticketedEvent.id,
+            dataEvento: baseEvent ? new Date(baseEvent.startDatetime) : new Date(),
+            oraEvento: baseEvent ? formatSiaeTimeHHMM(new Date(baseEvent.startDatetime)) : '00:00',
+            codiceLocale: ticketedEvent.venueCode || 'VENUE001',
+            nomeLocale: location?.name || 'Location',
+            tipoGenere: ticketedEvent.eventType || 'MU02',
+            tipologiaOrganizzatore: ticketedEvent.organizerType || 'PE',
+            cfOrganizzatore: ticketedEvent.organizerTaxId || company?.fiscalCode || company?.taxId || '',
+            denominazioneOrganizzatore: ticketedEvent.organizerName || companyName,
+          };
+          
+          const ticketsForLog: SiaeTicketForLog[] = eventTickets.map(t => {
+            const sector = sectors.find(s => s.id === t.sectorId);
+            return {
+              ticketId: t.id,
+              sigilloFiscale: t.sigilloFiscale || '',
+              tipoTitolo: t.ticketType || 'I1',
+              codiceOrdinePosto: sector?.codiceOrdinePosto || '001',
+              prezzo: parseFloat(t.price || '0'),
+              dataEmissione: t.emissionDate ? new Date(t.emissionDate) : new Date(),
+              oraEmissione: t.emissionTime || '00:00',
+              status: t.status,
+              accessoRegistrato: t.accessoRegistrato || false,
+              tipoAccesso: t.tipoAccesso || null,
+            };
+          });
+          
+          const rcaResult = await generateRCAXml({
+            companyId: transmission.companyId,
+            companyName,
+            taxId: systemConfig?.taxId || company?.fiscalCode || company?.taxId || '',
+            systemCode: systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT,
+            event: eventForLog,
+            tickets: ticketsForLog,
+            sectors: sectors.map(s => ({
+              id: s.id,
+              codiceOrdinePosto: s.codiceOrdinePosto,
+              capienza: s.capienza || 100,
+            })),
+          });
+          
+          xmlContent = rcaResult.xml;
+          regeneratedXml = true;
+          
+          // Aggiorna il database con l'XML corretto
+          await siaeStorage.updateSiaeTransmission(id, {
+            fileContent: xmlContent,
+            p7mContent: null, // Invalida la vecchia firma
+            signedAt: null,
+          });
+          
+          console.log(`[SIAE-ROUTES] RCA XML regenerated successfully with ${rcaResult.ticketCount} tickets`);
+          console.log(`[SIAE-ROUTES] Regenerated XML Preview: ${xmlContent.substring(0, 300)}`);
+          
+        } catch (regenError: any) {
+          console.error(`[SIAE-ROUTES] Failed to regenerate RCA XML: ${regenError.message}`);
+          return res.status(400).json({ 
+            message: `Impossibile rigenerare l'XML RCA: ${regenError.message}. Genera una nuova trasmissione dalla pagina dell'evento.`,
+            code: "RCA_REGENERATION_FAILED"
+          });
+        }
+      }
+    }
+    
     // Try to digitally sign the XML using smart card
     let signatureInfo = '';
     let p7mBase64: string | undefined;
@@ -4017,7 +4122,8 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     try {
       if (isBridgeConnected()) {
         console.log(`[SIAE-ROUTES] Bridge connected, attempting digital signature...`);
-        const signatureResult = await requestXmlSignature(transmission.fileContent);
+        // Usa xmlContent (potrebbe essere rigenerato per RCA)
+        const signatureResult = await requestXmlSignature(xmlContent);
         
         // Supporta sia CAdES-BES (nuovo) che XMLDSig (legacy)
         if (signatureResult.p7mBase64) {
@@ -4035,7 +4141,7 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
         // Update transmission with signed content
         if (p7mBase64 || signedXmlContent) {
           await siaeStorage.updateSiaeTransmission(id, {
-            fileContent: signedXmlContent || transmission.fileContent,
+            fileContent: signedXmlContent || xmlContent,
             p7mContent: p7mBase64 || null, // Salva P7M per resend offline
             signatureFormat: p7mBase64 ? 'cades' : 'xmldsig',
             signedAt: new Date(),
@@ -4043,23 +4149,30 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
         }
       } else {
         console.log(`[SIAE-ROUTES] Bridge not connected, checking for existing signature...`);
-        // Se il bridge è offline, prova a usare la firma salvata nel database
-        if (transmission.p7mContent) {
+        // Se il bridge è offline E l'XML NON è stato rigenerato, prova a usare la firma salvata
+        // Se l'XML è stato rigenerato, la vecchia firma non è più valida
+        if (!regeneratedXml && transmission.p7mContent) {
           p7mBase64 = transmission.p7mContent;
           signatureInfo = ' (firma CAdES-BES da cache)';
           console.log(`[SIAE-ROUTES] Using cached CAdES-BES signature from database`);
-        } else if (transmission.signatureFormat === 'xmldsig') {
-          signedXmlContent = transmission.fileContent;
+        } else if (!regeneratedXml && transmission.signatureFormat === 'xmldsig') {
+          signedXmlContent = xmlContent;
           signatureInfo = ' (firma XMLDSig da cache)';
           console.log(`[SIAE-ROUTES] Using cached XMLDSig signature`);
+        } else if (regeneratedXml) {
+          console.log(`[SIAE-ROUTES] XML was regenerated, cached signature is invalid - need fresh signature`);
+          return res.status(400).json({ 
+            message: "L'XML RCA è stato rigenerato con il formato corretto, ma il bridge desktop non è connesso per la nuova firma digitale. Connetti il bridge desktop e riprova.",
+            code: "BRIDGE_REQUIRED_FOR_REGENERATED_XML"
+          });
         } else {
           console.log(`[SIAE-ROUTES] No cached signature found, sending unsigned XML`);
         }
       }
     } catch (signError: any) {
       console.warn(`[SIAE-ROUTES] Digital signature failed: ${signError.message}`);
-      // Fallback a firma salvata se disponibile
-      if (transmission.p7mContent) {
+      // Fallback a firma salvata se disponibile E l'XML non è stato rigenerato
+      if (!regeneratedXml && transmission.p7mContent) {
         p7mBase64 = transmission.p7mContent;
         signatureInfo = ' (firma CAdES-BES da cache dopo errore)';
       }
@@ -4077,7 +4190,7 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
       periodDate: new Date(transmission.periodDate),
       ticketsCount: transmission.ticketsCount || 0,
       totalAmount: transmission.totalAmount || '0',
-      xmlContent: signedXmlContent || transmission.fileContent, // XML originale o XMLDSig firmato
+      xmlContent: signedXmlContent || xmlContent, // Usa xmlContent (potrebbe essere rigenerato)
       transmissionId: transmission.id,
       p7mBase64: p7mBase64, // CAdES-BES P7M per allegato email
       signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : undefined),
