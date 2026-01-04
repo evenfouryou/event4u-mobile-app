@@ -1547,6 +1547,177 @@ router.get("/api/siae/admin/ticketed-events", requireAuth, requireSuperAdmin, as
   }
 });
 
+// Admin endpoint: Get all transactions across all companies with filters (Super Admin only)
+router.get("/api/siae/admin/transactions", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
+  try {
+    const { companyId, eventId, status, paymentMethod, page = '1', limit = '50', dateFrom, dateTo, search } = req.query;
+    
+    // Build query with filters
+    let query = db
+      .select({
+        transaction: siaeTransactions,
+        ticketedEvent: {
+          id: siaeTicketedEvents.id,
+          eventId: siaeTicketedEvents.eventId,
+          companyId: siaeTicketedEvents.companyId,
+        },
+        event: {
+          id: events.id,
+          name: events.name,
+          date: events.date,
+        },
+        company: {
+          id: companies.id,
+          name: companies.name,
+        },
+      })
+      .from(siaeTransactions)
+      .innerJoin(siaeTicketedEvents, eq(siaeTransactions.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .innerJoin(companies, eq(siaeTicketedEvents.companyId, companies.id));
+    
+    // Apply filters
+    const conditions: any[] = [];
+    if (companyId && typeof companyId === 'string') {
+      conditions.push(eq(siaeTicketedEvents.companyId, companyId));
+    }
+    if (eventId && typeof eventId === 'string') {
+      conditions.push(eq(siaeTicketedEvents.eventId, eventId));
+    }
+    if (status && typeof status === 'string') {
+      conditions.push(eq(siaeTransactions.status, status));
+    }
+    if (paymentMethod && typeof paymentMethod === 'string') {
+      conditions.push(eq(siaeTransactions.paymentMethod, paymentMethod));
+    }
+    if (dateFrom && typeof dateFrom === 'string') {
+      conditions.push(gte(siaeTransactions.createdAt, new Date(dateFrom)));
+    }
+    if (dateTo && typeof dateTo === 'string') {
+      conditions.push(lte(siaeTransactions.createdAt, new Date(dateTo)));
+    }
+    if (search && typeof search === 'string' && search.trim()) {
+      const searchTerm = `%${search.trim().toLowerCase()}%`;
+      conditions.push(or(
+        sql`LOWER(${siaeTransactions.transactionCode}) LIKE ${searchTerm}`,
+        sql`LOWER(${siaeTransactions.customerEmail}) LIKE ${searchTerm}`,
+        sql`LOWER(${siaeTransactions.customerUniqueCode}) LIKE ${searchTerm}`
+      ));
+    }
+    
+    if (conditions.length > 0) {
+      query = query.where(and(...conditions)) as any;
+    }
+    
+    // Add ordering and pagination
+    const pageNum = parseInt(page as string) || 1;
+    const limitNum = Math.min(parseInt(limit as string) || 50, 100);
+    const offset = (pageNum - 1) * limitNum;
+    
+    const results = await query
+      .orderBy(desc(siaeTransactions.createdAt))
+      .limit(limitNum)
+      .offset(offset);
+    
+    // Get total count for pagination (apply same filters)
+    let countQuery = db
+      .select({ count: count() })
+      .from(siaeTransactions)
+      .innerJoin(siaeTicketedEvents, eq(siaeTransactions.ticketedEventId, siaeTicketedEvents.id));
+    
+    if (conditions.length > 0) {
+      countQuery = countQuery.where(and(...conditions)) as any;
+    }
+    
+    const countResult = await countQuery;
+    const total = countResult[0]?.count || 0;
+    
+    // Calculate totals for filtered results
+    let totalsQuery = db
+      .select({
+        totalAmount: sql<string>`COALESCE(SUM(${siaeTransactions.totalAmount}), 0)`,
+        ticketsCount: sql<number>`COALESCE(SUM(${siaeTransactions.ticketsCount}), 0)`,
+      })
+      .from(siaeTransactions)
+      .innerJoin(siaeTicketedEvents, eq(siaeTransactions.ticketedEventId, siaeTicketedEvents.id))
+      .where(eq(siaeTransactions.status, 'completed'));
+    
+    if (conditions.length > 0) {
+      // Add completed status to existing conditions for totals
+      const totalsConditions = [...conditions, eq(siaeTransactions.status, 'completed')];
+      totalsQuery = db
+        .select({
+          totalAmount: sql<string>`COALESCE(SUM(${siaeTransactions.totalAmount}), 0)`,
+          ticketsCount: sql<number>`COALESCE(SUM(${siaeTransactions.ticketsCount}), 0)`,
+        })
+        .from(siaeTransactions)
+        .innerJoin(siaeTicketedEvents, eq(siaeTransactions.ticketedEventId, siaeTicketedEvents.id))
+        .where(and(...totalsConditions)) as any;
+    }
+    
+    const totalsResult = await totalsQuery;
+    
+    res.json({
+      transactions: results.map(r => ({
+        ...r.transaction,
+        ticketedEvent: r.ticketedEvent,
+        event: r.event,
+        company: r.company,
+      })),
+      pagination: {
+        page: pageNum,
+        limit: limitNum,
+        total,
+        totalPages: Math.ceil(total / limitNum),
+      },
+      totals: {
+        revenue: totalsResult[0]?.totalAmount || '0',
+        tickets: totalsResult[0]?.ticketsCount || 0,
+      },
+    });
+  } catch (error: any) {
+    console.error('[ADMIN TRANSACTIONS] Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get companies and events for transaction filters
+router.get("/api/siae/admin/transactions/filters", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
+  try {
+    // Get all companies with transactions
+    const companiesWithTransactions = await db
+      .selectDistinct({
+        id: companies.id,
+        name: companies.name,
+      })
+      .from(siaeTransactions)
+      .innerJoin(siaeTicketedEvents, eq(siaeTransactions.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(companies, eq(siaeTicketedEvents.companyId, companies.id))
+      .orderBy(companies.name);
+    
+    // Get all events with transactions
+    const eventsWithTransactions = await db
+      .selectDistinct({
+        id: events.id,
+        name: events.name,
+        companyId: siaeTicketedEvents.companyId,
+      })
+      .from(siaeTransactions)
+      .innerJoin(siaeTicketedEvents, eq(siaeTransactions.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .orderBy(events.name);
+    
+    res.json({
+      companies: companiesWithTransactions,
+      events: eventsWithTransactions,
+      statuses: ['completed', 'pending', 'failed', 'refunded'],
+      paymentMethods: ['card', 'cash', 'bank_transfer', 'paypal'],
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Get ticketing info by event ID (used by event-hub)
 router.get("/api/siae/events/:eventId/ticketing", requireAuth, async (req: Request, res: Response) => {
   try {
