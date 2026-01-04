@@ -4277,7 +4277,8 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   let xml: string;
   
   if (isRCA && eventId) {
-    // RCA: Use new C1 Log format (LogTransazione) per DTD Log_v0040_20190627.dtd
+    // RCA: Use RiepilogoControlloAccessi format per DTD ControlloAccessi_v0001_20080626.dtd
+    // NOTA: NON usare LogTransazione per RCA - causa errore SIAE 40605
     // Fetch ticketed event and base event for SiaeEventForLog
     const rcaTicketedEvent = await siaeStorage.getSiaeTicketedEvent(eventId);
     const rcaEventDetails = rcaTicketedEvent ? await storage.getEvent(rcaTicketedEvent.eventId) : null;
@@ -4369,6 +4370,15 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     }
     
     xml = rcaResult.xml;
+    // CRITICAL DIAGNOSTIC: Verify XML format is RiepilogoControlloAccessi (not LogTransazione)
+    const xmlRoot = xml.substring(0, 300);
+    const isCorrectFormat = xml.includes('<RiepilogoControlloAccessi');
+    const hasWrongFormat = xml.includes('<LogTransazione');
+    console.log(`[SIAE-ROUTES] RCA XML Format Check: isRiepilogoControlloAccessi=${isCorrectFormat}, hasLogTransazione=${hasWrongFormat}`);
+    console.log(`[SIAE-ROUTES] RCA XML Preview: ${xmlRoot}`);
+    if (hasWrongFormat) {
+      console.error(`[SIAE-ROUTES] CRITICAL ERROR: RCA XML contains LogTransazione instead of RiepilogoControlloAccessi!`);
+    }
     console.log(`[SIAE-ROUTES] Generated RiepilogoControlloAccessi for RCA with ${rcaResult.ticketCount} tickets`);
   } else {
     // RMG/RPM: Use existing RiepilogoGiornaliero/RiepilogoMensile format
