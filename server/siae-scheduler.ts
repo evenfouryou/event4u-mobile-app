@@ -476,6 +476,8 @@ async function sendDailyReports() {
             sequenceNumber: progressivo,
             p7mBase64: p7mBase64, // CAdES-BES P7M per allegato email
             signatureFormat: signatureFormat || undefined,
+            signWithSmime: true,
+            requireSignature: true,
           });
 
           // Aggiorna status a 'sent'
@@ -619,6 +621,8 @@ async function sendMonthlyReports() {
             sequenceNumber: progressivo,
             p7mBase64: p7mBase64, // CAdES-BES P7M per allegato email
             signatureFormat: signatureFormat || undefined,
+            signWithSmime: true,
+            requireSignature: true,
           });
 
           // Aggiorna status a 'sent'

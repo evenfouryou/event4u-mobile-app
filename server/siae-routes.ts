@@ -369,6 +369,8 @@ router.get("/api/siae/debug/test-smtp", async (req: Request, res: Response) => {
         totalAmount: '0.00',
         xmlContent: testXml,
         transmissionId: `DEBUG-${Date.now()}`,
+        signWithSmime: true,
+        requireSignature: true,
       });
       
       emailSent = true;
@@ -3899,6 +3901,8 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
       transmissionId: transmission.id,
       p7mBase64: p7mBase64, // CAdES-BES P7M per allegato email
       signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : undefined),
+      signWithSmime: true,
+      requireSignature: true,
     });
     
     console.log(`[SIAE-ROUTES] Transmission sent to: ${destinationEmail}${signatureInfo} (Test mode: ${SIAE_TEST_MODE})`);
@@ -4311,6 +4315,7 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     systemCode: SIAE_SYSTEM_CODE_DEFAULT,
     sequenceNumber: 1,
     signWithSmime: true, // Per Allegato C SIAE 1.6.2 - firma S/MIME obbligatoria
+    requireSignature: true,
     p7mBase64: p7mBase64, // CAdES-BES P7M per allegato email
     signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : undefined),
   });
@@ -4525,6 +4530,7 @@ router.post("/api/siae/transmissions/test-email", requireAuth, requireGestore, a
       systemCode: SIAE_SYSTEM_CODE_DEFAULT,
       sequenceNumber: 1,
       signWithSmime: true, // Per Allegato C SIAE 1.6.2 - firma S/MIME obbligatoria
+      requireSignature: true,
     });
     
     res.json({
@@ -7189,6 +7195,7 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
         xmlContent: signedXmlContent || xmlContent, // XML originale o XMLDSig firmato
         transmissionId: transmission.id,
         signWithSmime: true, // Per Allegato C SIAE 1.6.2 - firma S/MIME obbligatoria
+        requireSignature: true,
         p7mBase64: p7mBase64, // CAdES-BES P7M per allegato email
         signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : undefined),
       });
