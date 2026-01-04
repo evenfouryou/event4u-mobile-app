@@ -62,6 +62,26 @@ For SIAE RCA transmissions, emails must be S/MIME signed per Allegato C (Provved
 - **Certificate email extraction**: Multiple patterns supported (SAN: RFC822, email:, rfc822Name=; Subject: E=, EMAIL=, EMAILADDRESS=)
 - **multipart/signed format**: Standard S/MIME v2 structure with smime.p7s attachment
 - **Server-side validation**: Blocks RCA transmission if certificate email unavailable
+- **External headers preservation**: From/To/Subject headers placed OUTSIDE multipart/signed structure for email client visibility (fixed 2026-01-04, commit f5319092)
+
+#### S/MIME Message Structure (RFC 5751 Compliant)
+```
+From: certificate-email@example.com     ← EXTERNAL (visible to email client)
+To: servertest2@batest.siae.it          ← EXTERNAL (visible to email client)
+Subject: RCA_YYYY_MM_DD_CODE_###...     ← EXTERNAL (visible to email client)
+MIME-Version: 1.0
+Content-Type: multipart/signed; protocol="application/pkcs7-signature"; 
+  micalg=sha-256; boundary="----=_smime_..."
+
+------=_smime_...
+[Body MIME content - THIS IS SIGNED]
+------=_smime_...
+Content-Type: application/pkcs7-signature; name="smime.p7s"
+[Base64 signature]
+------=_smime_...--
+```
+
+**Critical**: External headers (From/To/Subject) are NOT part of the signature and must be placed before MIME-Version. The bridge desktop (`Program.cs SignSmime()`) extracts these headers from the input MIME and places them externally.
 
 ### Italian Fiscal Validation
 Server-side validation for Italian fiscal identifiers including Codice Fiscale (16-character) and Partita IVA (11-digit) with checksum algorithms, adhering to Agenzia delle Entrate requirements.
