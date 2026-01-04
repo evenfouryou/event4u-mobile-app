@@ -1427,13 +1427,37 @@ export function getPendingSmimeRequestsCount(): number {
 /**
  * Get the signer email from the activation card certificate (cached from bridge status)
  * Returns null if bridge is not connected or card not ready
+ * 
+ * NOTA: Il bridge desktop può inviare i dati in diversi formati:
+ * - { type: 'status', data: { cardEmail: '...' } }
+ * - { type: 'status', payload: { cardEmail: '...' } }
+ * - { data: { payload: { cardEmail: '...' } } }
  */
 export function getCardSignerEmail(): string | null {
-  if (!cachedBridgeStatus?.payload) return null;
+  if (!cachedBridgeStatus) return null;
   
-  const payload = cachedBridgeStatus.payload;
-  // The signer email should be exposed in the bridge status from certificate data
-  return payload.cardEmail || payload.certificateEmail || payload.signerEmail || null;
+  // Cerca l'email del certificato in tutte le possibili posizioni
+  // Il bridge desktop può inviare dati in formati diversi
+  const sources = [
+    cachedBridgeStatus.data?.payload,
+    cachedBridgeStatus.payload?.data,
+    cachedBridgeStatus.data,
+    cachedBridgeStatus.payload,
+    cachedBridgeStatus
+  ];
+  
+  for (const source of sources) {
+    if (source) {
+      const email = source.cardEmail || source.certificateEmail || source.signerEmail || source.email;
+      if (email && typeof email === 'string' && email.includes('@')) {
+        console.log(`[Bridge] Found card signer email: ${email}`);
+        return email;
+      }
+    }
+  }
+  
+  console.log(`[Bridge] Card signer email not found in cachedBridgeStatus: ${JSON.stringify(cachedBridgeStatus)}`);
+  return null;
 }
 
 // ==================== EFFF Card Data Request ====================
