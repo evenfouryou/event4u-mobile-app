@@ -572,6 +572,8 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
       // CRITICO: Per Allegato C SIAE 1.6.2.a.3, l'email del mittente DEVE corrispondere
       // esattamente a quella nel certificato pubblico sulla smart card.
       // Se non corrisponde, SIAE NON invia risposta di conferma.
+      // L'header "From:" nel messaggio MIME firmato È IMMUTABILE dopo la firma,
+      // quindi DEVE essere corretto PRIMA di inviare al bridge per la firma.
       
       // Prova a ottenere l'email dal cache dello status del bridge
       let cardEmail = getCardSignerEmail();
@@ -579,15 +581,25 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
       if (cardEmail) {
         console.log(`[EMAIL-SERVICE] Card signer email (from cache): ${cardEmail}`);
       } else {
-        // Email non nel cache - procedi comunque, useremo l'email dalla risposta della firma
-        console.log(`[EMAIL-SERVICE] Card email not in cache - will use signerEmail from S/MIME response`);
+        // CRITICO: Email non nel cache - BLOCCA L'INVIO
+        // Non possiamo procedere senza l'email del certificato perché:
+        // 1. L'header "From:" nel messaggio MIME deve corrispondere all'email del certificato
+        // 2. Dopo la firma S/MIME, gli header sono immutabili
+        // 3. Se l'header "From:" non corrisponde, SIAE non risponde
+        console.log(`[EMAIL-SERVICE] CRITICAL: Card email not available in bridge cache`);
+        console.log(`[EMAIL-SERVICE] Cannot proceed - From header must match certificate email BEFORE signing`);
+        
+        // Informa l'utente di riconnettere l'app desktop per aggiornare il cache
+        throw new Error(
+          'EMAIL_CERTIFICATO_NON_DISPONIBILE: L\'email del certificato smart card non è disponibile. ' +
+          'Riconnetti l\'app desktop Event4U (chiudi e riapri) con la smart card inserita, ' +
+          'poi attendi qualche secondo e riprova. L\'app deve inviare l\'email del certificato al server.'
+        );
       }
       
-      // Se abbiamo l'email del certificato, usala nell'header From
-      // Altrimenti usa l'indirizzo configurato (verrà aggiornato dopo la firma)
-      const initialFromAddress = cardEmail 
-        ? `"Event4U SIAE" <${cardEmail}>`
-        : fromAddress;
+      // Usa SEMPRE l'email del certificato nell'header From
+      // Questo garantisce che il messaggio firmato sia conforme ad Allegato C SIAE 1.6.2.a.3
+      const certFromAddress = `"Event4U SIAE" <${cardEmail}>`;
       
       // Costruisci il messaggio MIME da firmare usando base64 per HTML (supporta UTF-8 completo)
       // Per Allegato C SIAE: CRLF folding e encoding canonico
@@ -599,7 +611,7 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
       const attachmentMimeType = isCAdES ? 'application/pkcs7-mime' : 'application/xml';
       
       const mimeContent = [
-        `From: ${initialFromAddress}`,
+        `From: ${certFromAddress}`,
         `To: ${to}`,
         `Subject: ${emailSubject}`,
         `MIME-Version: 1.0`,
