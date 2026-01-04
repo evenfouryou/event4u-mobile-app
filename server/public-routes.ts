@@ -3175,9 +3175,10 @@ router.get("/api/public/account/tickets/:id", async (req, res) => {
                           (ticket.status === 'emitted' || ticket.status === 'active') && 
                           hoursToEvent >= 24;
     
+    // Rivendita consentita fino a 2 ore prima dell'evento (non ci sono limiti normativi specifici)
     const canResale = ticket.allowsResale && 
                       (ticket.status === 'emitted' || ticket.status === 'active') && 
-                      hoursToEvent >= 48;
+                      hoursToEvent >= 2;
 
     // Verifica se già in rivendita
     const [existingResale] = await db
@@ -3205,7 +3206,7 @@ router.get("/api/public/account/tickets/:id", async (req, res) => {
       nameChangeFee: ticket.nameChangeFee || '0',
       resaleMaxMarkupPercent: 0,
       nameChangeDeadlineHours: 24,
-      resaleDeadlineHours: 48,
+      resaleDeadlineHours: 2,
       canNameChange,
       canResale: canResale && !existingResale,
       isListed: !!existingResale,
@@ -3882,9 +3883,10 @@ router.post("/api/public/account/resale", async (req, res) => {
     const eventStart = new Date(ticket.eventStart);
     const hoursToEvent = (eventStart.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-    if (hoursToEvent < 48) {
+    // Rivendita consentita fino a 2 ore prima dell'evento
+    if (hoursToEvent < 2) {
       return res.status(400).json({ 
-        message: `Rivendita non più disponibile. Scadenza: 48h prima dell'evento` 
+        message: `Rivendita non più disponibile. Scadenza: 2h prima dell'evento` 
       });
     }
 
