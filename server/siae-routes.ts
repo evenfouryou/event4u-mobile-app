@@ -1,6 +1,6 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult } from './siae-utils';
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -4157,8 +4157,9 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
       };
     });
     
-    // Generate C1 Log XML
-    const c1LogResult = generateC1LogXml({
+    // Generate RCA XML (RiepilogoControlloAccessi format - Allegato B Provvedimento 04/03/2008)
+    // NOTA: Usa generateRCAXml invece di generateC1LogXml (deprecato - causa errore SIAE 40605)
+    const rcaResult = generateRCAXml({
       companyId,
       eventId,
       event: eventForLog,
@@ -4167,34 +4168,32 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
         systemCode: systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT,
         taxId: systemConfig?.taxId || taxId,
         businessName: systemConfig?.businessName || companyName,
-        codiceRichiedente: undefined, // SEMPRE undefined per forzare generazione automatica TTCCCCCC
       },
       companyName,
       taxId,
-      cardNumber: activeCard?.cardCode || undefined,
     });
     
-    if (!c1LogResult.success) {
-      console.error(`[SIAE-ROUTES] C1 Log generation failed:`, c1LogResult.errors);
+    if (!rcaResult.success) {
+      console.error(`[SIAE-ROUTES] RCA generation failed:`, rcaResult.errors);
       return {
         success: false,
         statusCode: 400,
-        error: `Generazione C1 Log fallita: ${c1LogResult.errors.join('; ')}`,
+        error: `Generazione RiepilogoControlloAccessi fallita: ${rcaResult.errors.join('; ')}`,
         data: {
-          code: 'C1_LOG_GENERATION_FAILED',
-          errors: c1LogResult.errors,
-          warnings: c1LogResult.warnings,
+          code: 'RCA_GENERATION_FAILED',
+          errors: rcaResult.errors,
+          warnings: rcaResult.warnings,
         }
       };
     }
     
     // Log any warnings
-    if (c1LogResult.warnings.length > 0) {
-      console.log(`[SIAE-ROUTES] C1 Log warnings:`, c1LogResult.warnings);
+    if (rcaResult.warnings.length > 0) {
+      console.log(`[SIAE-ROUTES] RCA warnings:`, rcaResult.warnings);
     }
     
-    xml = c1LogResult.xml;
-    console.log(`[SIAE-ROUTES] Generated C1 LogTransazione for RCA with ${c1LogResult.transactionCount} transactions`);
+    xml = rcaResult.xml;
+    console.log(`[SIAE-ROUTES] Generated RiepilogoControlloAccessi for RCA with ${rcaResult.ticketCount} tickets`);
   } else {
     // RMG/RPM: Use existing RiepilogoGiornaliero/RiepilogoMensile format
     xml = await generateC1ReportXml({
@@ -7079,7 +7078,7 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
       };
     });
     
-    // Prepara evento per generateC1LogXml (formato SiaeEventForLog)
+    // Prepara evento per generateRCAXml (formato SiaeEventForLog)
     const eventForLog: SiaeEventForLog = {
       id: event.id,
       name: event.eventName || 'Evento',
@@ -7093,11 +7092,12 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
       ivaPreassolta: (event.ivaPreassolta as 'N' | 'B' | 'F') || 'N',
     };
     
-    // Prepara parametri per generateC1LogXml - DEVE corrispondere a C1LogParams interface
+    // Prepara parametri per generateRCAXml - Formato RiepilogoControlloAccessi (Allegato B)
+    // NOTA: Usa generateRCAXml invece di generateC1LogXml (deprecato - causa errore SIAE 40605)
     const companyTaxId = company?.fiscalCode || company?.taxId || siaeConfig?.taxId || '';
     const companyBusinessName = company?.name || siaeConfig?.businessName || 'Azienda';
     
-    const c1LogParams: C1LogParams = {
+    const rcaParams: RCAParams = {
       companyId: event.companyId,
       eventId: event.id,
       event: eventForLog,
@@ -7106,25 +7106,25 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
         systemCode: siaeConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT,
         taxId: siaeConfig?.taxId || companyTaxId,
         businessName: siaeConfig?.businessName || companyBusinessName,
-        codiceRichiedente: undefined, // Verrà generato automaticamente da formatCodiceRichiedente
       },
       companyName: companyBusinessName,
       taxId: companyTaxId,
-      cardNumber: siaeConfig?.cardNumber || undefined,
+      progressivo: progressivoGenerazione,
+      venueName: location?.name || event.eventLocation || 'Locale',
     };
     
-    // Genera XML LogTransazione usando generateC1LogXml
-    const c1LogResult = generateC1LogXml(c1LogParams);
+    // Genera XML RiepilogoControlloAccessi usando generateRCAXml
+    const rcaResult = generateRCAXml(rcaParams);
     
-    if (!c1LogResult.success) {
+    if (!rcaResult.success) {
       return res.status(400).json({
-        message: `Generazione LogTransazione fallita: ${c1LogResult.errors.join('; ')}`,
-        errors: c1LogResult.errors,
-        warnings: c1LogResult.warnings
+        message: `Generazione RiepilogoControlloAccessi fallita: ${rcaResult.errors.join('; ')}`,
+        errors: rcaResult.errors,
+        warnings: rcaResult.warnings
       });
     }
     
-    const xmlContent = c1LogResult.xml;
+    const xmlContent = rcaResult.xml;
     
     // Nome file conforme Allegato C SIAE (Provvedimento Agenzia Entrate 04/03/2008):
     // RCA_AAAA_MM_GG_###.xsi.p7m per Riepilogo Controllo Accessi (C1 evento, genera risposta SIAE)

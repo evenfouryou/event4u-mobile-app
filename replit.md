@@ -26,6 +26,34 @@ A SIAE-compliant ticketing and fiscal management system for Italian clubs, adher
 - **RMG (Riepilogo Mensile Giornaliero)**: Daily report aggregating events by day (silent, no response)
 - **RPM (Riepilogo Periodico Mensile)**: Monthly fiscal report (silent, no response)
 
+#### RCA XML Structure (DTD: ControlloAccessi_v0001_20080626.dtd)
+The RCA XML generator (`generateRCAXml` in siae-utils.ts) produces DTD-compliant output:
+```xml
+<RiepilogoControlloAccessi Sostituzione="N">
+  <Titolare>
+    <DenominazioneTitolareCA>, <CFTitolareCA>, <CodiceSistemaCA>,
+    <DataRiepilogo>, <DataGenerazioneRiepilogo>, <OraGenerazioneRiepilogo>,
+    <ProgressivoRiepilogo>
+  </Titolare>
+  <Evento>
+    <CFOrganizzatore>, <DenominazioneOrganizzatore>, <TipologiaOrganizzatore>,
+    <SpettacoloIntrattenimento>, <IncidenzaIntrattenimento>, <DenominazioneLocale>,
+    <CodiceLocale>, <DataEvento>, <OraEvento>, <TipoGenere>, <TitoloEvento>,
+    <Autore>, <Esecutore>, <NazionalitaFilm>, <NumOpereRappresentate>,
+    <SistemaEmissione>
+      <CodiceSistemaEmissione>
+      <Titoli>  <!-- One per sector (CodiceOrdinePosto) -->
+        <CodiceOrdinePosto>, <Capienza>,
+        <TotaleTipoTitolo>+  <!-- One per ticket type (I1, R1, O1) -->
+      </Titoli>*
+    </SistemaEmissione>
+  </Evento>
+</RiepilogoControlloAccessi>
+```
+- **TipoTitolo codes**: I1=Intero (full), R1=Ridotto (discounted), O1=Omaggio (free)
+- **Element order**: Strictly follows DTD sequence specification
+- **Reference files**: `attached_assets/siae_master/siae-master/src/SIAE/templates/RCA_2015_09_22_001.xml`
+
 The transmission UI provides color-coded guidance (green for RCA with response, blue for RMG, amber for RPM) and enforces security validations including company ownership, event closure status, and exclusion of cancelled/annulled tickets from totals. An event approval workflow is in place for SIAE ticketed events.
 
 ### Event Command Center (Event Hub)

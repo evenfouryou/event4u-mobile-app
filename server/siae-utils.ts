@@ -100,29 +100,41 @@ export function toCentesimi(euroAmount: number | string): number {
 
 /**
  * Normalizza TipoTitolo per conformità SIAE
- * Valori validi: R1 (intero), R2 (ridotto), O1 (omaggio), ABB (abbonamento)
+ * Valori validi (da tabella 3 LTA - Lista Titoli Accessi):
+ * - I1, I2, etc. = Intero (biglietto a prezzo pieno)
+ * - R1, R2, etc. = Ridotto (biglietto con sconto)
+ * - O1, O2, etc. = Omaggio (biglietto gratuito)
+ * - ABB = Abbonamento
  */
 export function normalizeSiaeTipoTitolo(rawCode: string | null | undefined, isComplimentary?: boolean): string {
   if (isComplimentary) return 'O1';
-  if (!rawCode) return 'R1';
+  if (!rawCode) return 'I1'; // Default: Intero tipo 1
   
   const code = rawCode.toUpperCase().trim();
   
+  // Se già in formato SIAE (lettera + cifra), usa direttamente
+  if (/^[IRO][0-9]$/.test(code)) {
+    return code;
+  }
+  
   switch (code) {
-    case 'R1':
+    case 'I1':
+    case 'I2':
     case 'INTERO':
     case 'FULL':
     case 'STANDARD':
     case 'NORMAL':
-      return 'R1';
+      return 'I1';
     
+    case 'R1':
     case 'R2':
     case 'RIDOTTO':
     case 'REDUCED':
     case 'DISCOUNT':
-      return 'R2';
+      return 'R1';
     
     case 'O1':
+    case 'O2':
     case 'OMAGGIO':
     case 'FREE':
     case 'COMPLIMENTARY':
@@ -132,10 +144,10 @@ export function normalizeSiaeTipoTitolo(rawCode: string | null | undefined, isCo
     case 'ABB':
     case 'ABBONAMENTO':
     case 'SUBSCRIPTION':
-      return 'ABB';
+      return 'I1'; // Abbonamento trattato come Intero per RCA
     
     default:
-      return 'R1';
+      return 'I1'; // Default: Intero tipo 1
   }
 }
 
@@ -379,6 +391,9 @@ export interface C1LogResult {
 }
 
 /**
+ * @deprecated Use generateRCAXml instead. This function generates LogTransazione format
+ * which is rejected by SIAE with error 40605 "Il riepilogo risulta illegibile".
+ * 
  * Genera XML conforme al DTD Log_v0040_20190627.dtd per trasmissione C1 evento a SIAE
  * 
  * Struttura:
@@ -1292,4 +1307,495 @@ export function analyzeSiaeLog(result: SiaeLogParseResult): SiaeLogStats {
   }
   
   return stats;
+}
+
+// ==================== RiepilogoControlloAccessi XML Generation ====================
+// Conforme a RiepilogoControlloAccessi_v0100_20080201.dtd per trasmissione a SIAE
+// Allegato B - Provvedimento Agenzia delle Entrate 04/03/2008
+
+/**
+ * Parametri per generazione RiepilogoControlloAccessi XML
+ */
+export interface RCAParams {
+  companyId: string;
+  eventId: string;
+  event: SiaeEventForLog;
+  tickets: SiaeTicketForLog[];
+  sectors?: { code: string; name: string; capacity: number }[];
+  systemConfig: {
+    systemCode?: string;
+    taxId?: string;
+    businessName?: string;
+  };
+  companyName: string;
+  taxId: string;
+  progressivo?: number;
+  venueName?: string;
+  author?: string;
+  performer?: string;
+}
+
+/**
+ * Risultato generazione RiepilogoControlloAccessi XML
+ */
+export interface RCAResult {
+  success: boolean;
+  xml: string;
+  ticketCount: number;
+  sectorSummaries: RCASectorSummary[];
+  errors: string[];
+  warnings: string[];
+}
+
+/**
+ * Riepilogo per settore/tipo titolo
+ */
+export interface RCASectorSummary {
+  ordinePosto: string;
+  tipoTitolo: string;
+  capienza: number;
+  totaleLTA: number;
+  noAccessoTradiz: number;
+  automatizzatiTradiz: number;
+  manualiTradiz: number;
+  annullatiTradiz: number;
+}
+
+/**
+ * Mappa OrdinePosto interno a codice SIAE (2 caratteri)
+ * Allegato B - OrdinePosto
+ * PL=Platea, GA=Galleria, PA=Palco, AN=Anello, etc.
+ */
+export function normalizeOrdinePosto(sectorCode: string | null | undefined): string {
+  if (!sectorCode) return 'PL';
+  
+  const code = sectorCode.toUpperCase().trim();
+  
+  // Se già in formato corretto (2 lettere)
+  if (/^[A-Z]{2}$/.test(code)) {
+    return code;
+  }
+  
+  // Mappature comuni
+  const mappings: Record<string, string> = {
+    'PLATEA': 'PL',
+    'GALLERIA': 'GA',
+    'PALCO': 'PA',
+    'LOGGIONE': 'LO',
+    'BALCONATA': 'BA',
+    'PARTERRE': 'PT',
+    'TRIBUNA': 'TR',
+    'ANELLO': 'AN',
+    'CURVA': 'CU',
+    'PRATO': 'PR',
+    'VIP': 'VI',
+    'A0': 'PL',
+    'A1': 'PL',
+    'B0': 'GA',
+    'B1': 'GA',
+    'P0': 'PL',
+    'P1': 'PL',
+  };
+  
+  return mappings[code] || 'PL';
+}
+
+/**
+ * Mappa TipoTitolo interno a codice SIAE per RCA (2 caratteri)
+ * Allegato B - TipoTitolo per RiepilogoControlloAccessi
+ * 
+ * NOTA: I codici SIAE ufficiali sono R1, R2, I1, I2, O1, etc. (da tabella 3 LTA)
+ * R1 = Ridotto tipo 1, I1 = Intero tipo 1, O1 = Omaggio tipo 1
+ * 
+ * Manteniamo i codici originali se già conformi al formato SIAE
+ */
+export function normalizeRCATipoTitolo(ticketTypeCode: string | null | undefined, isComplimentary?: boolean): string {
+  if (isComplimentary) return 'O1'; // Omaggio tipo 1
+  if (!ticketTypeCode) return 'I1'; // Intero tipo 1 (default)
+  
+  const code = ticketTypeCode.toUpperCase().trim();
+  
+  // Se già in formato SIAE (lettera + cifra), usa direttamente
+  if (/^[RIO][0-9]$/.test(code)) {
+    return code;
+  }
+  
+  const mappings: Record<string, string> = {
+    'R1': 'R1',
+    'R2': 'R2',
+    'I1': 'I1',
+    'I2': 'I2',
+    'O1': 'O1',
+    'ABB': 'I1', // Abbonamento -> trattato come Intero per RCA
+    'INTERO': 'I1',
+    'RIDOTTO': 'R1',
+    'OMAGGIO': 'O1',
+    'ABBONAMENTO': 'I1',
+    'FULL': 'I1',
+    'STANDARD': 'I1',
+    'REDUCED': 'R1',
+    'FREE': 'O1',
+    'COMPLIMENTARY': 'O1',
+    'IN': 'I1',
+    'RI': 'R1',
+    'OM': 'O1',
+    'AB': 'I1',
+  };
+  
+  return mappings[code] || 'I1'; // Default: Intero tipo 1
+}
+
+/**
+ * Genera XML conforme al DTD ControlloAccessi_v0001_20080626.dtd per trasmissione a SIAE
+ * 
+ * Struttura ufficiale (conforme al DTD):
+ * - RiepilogoControlloAccessi (con attributo Sostituzione="N"|"S")
+ *   - Titolare: dati del titolare del sistema (ordine elementi specifico!)
+ *   - Evento+: uno o più eventi (non AnagraficaEvento!)
+ *     - SistemaEmissione+: sistemi che hanno emesso biglietti
+ *       - Titoli*: raggruppati per CodiceOrdinePosto (settore)
+ *         - TotaleTipoTitolo+: statistiche per tipo titolo (R1, R2, O1, etc.)
+ *       - Abbonamenti*: simile a Titoli, per abbonamenti
+ * 
+ * IMPORTANTE: Questo formato è richiesto per SIAE (Allegato B Provvedimento 04/03/2008)
+ * Il formato LogTransazione genera errore 40605 "Il riepilogo risulta illegibile"
+ * 
+ * Riferimenti:
+ * - DTD: ControlloAccessi_v0001_20080626.dtd
+ * - Esempio: RCA_2015_09_22_001.xml
+ * 
+ * @param params - Parametri per la generazione del RCA
+ * @returns Oggetto con XML generato, conteggio biglietti e eventuali errori
+ */
+export function generateRCAXml(params: RCAParams): RCAResult {
+  const errors: string[] = [];
+  const warnings: string[] = [];
+  
+  const { event, tickets, sectors, systemConfig, companyName, taxId, progressivo = 1, venueName, author, performer } = params;
+  
+  // Validazione parametri obbligatori
+  if (!event) {
+    errors.push('Evento obbligatorio per generazione RiepilogoControlloAccessi');
+    return { success: false, xml: '', ticketCount: 0, sectorSummaries: [], errors, warnings };
+  }
+  
+  if (!taxId || taxId.length < 11) {
+    errors.push('Codice Fiscale Titolare obbligatorio (11-16 caratteri)');
+    return { success: false, xml: '', ticketCount: 0, sectorSummaries: [], errors, warnings };
+  }
+  
+  // Valori configurazione
+  const sistemaEmissione = systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT;
+  const cfTitolare = taxId.toUpperCase().substring(0, 16);
+  const cfOrganizzatore = (event.organizerTaxId || taxId).toUpperCase().substring(0, 16);
+  const denominazioneTitolare = escapeXml((companyName || systemConfig?.businessName || 'N/D').substring(0, 60));
+  const denominazioneOrganizzatore = escapeXml((event.organizerName || companyName || 'N/D').substring(0, 60));
+  
+  // Date/time generazione
+  const now = new Date();
+  const dataRiepilogo = formatSiaeDateCompact(now);
+  const dataGenerazione = formatSiaeDateCompact(now);
+  const oraGenerazione = formatSiaeTimeCompact(now);
+  
+  // Date/time evento
+  const eventDate = typeof event.date === 'string' ? new Date(event.date) : event.date;
+  const dataEvento = formatSiaeDateCompact(eventDate);
+  let eventTimeValue: Date;
+  if (event.time) {
+    eventTimeValue = typeof event.time === 'string' ? new Date(event.time) : event.time;
+  } else {
+    eventTimeValue = eventDate;
+  }
+  const oraEvento = formatSiaeTimeHHMM(eventTimeValue);
+  
+  // Codici evento
+  const codiceLocale = (event.venueCode || '0000000000001').padStart(13, '0').substring(0, 13);
+  const tipoGenere = (event.genreCode || '77').substring(0, 2);
+  const titoloEvento = escapeXml((event.name || 'Evento').substring(0, 100));
+  const nomeLocale = escapeXml((venueName || event.name || 'Locale').substring(0, 100));
+  const autore = escapeXml((author || event.name || 'N/D').substring(0, 100));
+  const esecutore = escapeXml((performer || event.organizerName || companyName || 'N/D').substring(0, 100));
+  
+  // SpettacoloIntrattenimento: S=spettacolo, I=intrattenimento (default S)
+  const spettacoloIntrattenimento = event.tipoTassazione === 'I' ? 'I' : 'S';
+  
+  // IncidenzaIntrattenimento: percentuale 0-100 (solo per intrattenimento)
+  const incidenzaIntrattenimento = spettacoloIntrattenimento === 'I' ? '50' : '0';
+  
+  // TipologiaOrganizzatore: G=Generico, E=Esercizio, P=Parrocchiale
+  const tipologiaOrganizzatore = 'G';
+  
+  // ==================== Aggregazione biglietti per settore/tipo ====================
+  // Struttura: Map<settore, Map<tipoTitolo, contatori>>
+  interface TicketCounters {
+    totaleLTA: number;
+    noAccessoTradiz: number;
+    noAccessoDigitali: number;
+    automatizzatiTradiz: number;
+    automatizzatiDigitali: number;
+    manualiTradiz: number;
+    manualiDigitali: number;
+    annullatiTradiz: number;
+    annullatiDigitali: number;
+  }
+  
+  interface SectorData {
+    codiceOrdinePosto: string;
+    capienza: number;
+    tipoTitoli: Map<string, TicketCounters>;
+  }
+  
+  const sectorMap = new Map<string, SectorData>();
+  
+  // Calcola capienza per settore dai dati sectors
+  const sectorCapacity = new Map<string, number>();
+  if (sectors && sectors.length > 0) {
+    for (const sector of sectors) {
+      const code = normalizeCodiceOrdinePosto(sector.code);
+      sectorCapacity.set(code, (sectorCapacity.get(code) || 0) + sector.capacity);
+    }
+  }
+  
+  // Aggrega biglietti per settore → tipo titolo
+  for (const ticket of tickets) {
+    const codiceOrdinePosto = normalizeCodiceOrdinePosto(ticket.sectorCode);
+    const tipoTitolo = normalizeSiaeTipoTitolo(ticket.ticketTypeCode, ticket.isComplimentary);
+    
+    // Crea settore se non esiste
+    if (!sectorMap.has(codiceOrdinePosto)) {
+      sectorMap.set(codiceOrdinePosto, {
+        codiceOrdinePosto,
+        capienza: sectorCapacity.get(codiceOrdinePosto) || 1000,
+        tipoTitoli: new Map()
+      });
+    }
+    
+    const sector = sectorMap.get(codiceOrdinePosto)!;
+    
+    // Crea tipo titolo se non esiste
+    if (!sector.tipoTitoli.has(tipoTitolo)) {
+      sector.tipoTitoli.set(tipoTitolo, {
+        totaleLTA: 0,
+        noAccessoTradiz: 0,
+        noAccessoDigitali: 0,
+        automatizzatiTradiz: 0,
+        automatizzatiDigitali: 0,
+        manualiTradiz: 0,
+        manualiDigitali: 0,
+        annullatiTradiz: 0,
+        annullatiDigitali: 0,
+      });
+    }
+    
+    const counters = sector.tipoTitoli.get(tipoTitolo)!;
+    counters.totaleLTA++;
+    
+    // Mappa status a contatori (usiamo solo Tradiz - tradizionale)
+    const status = (ticket.status || '').toLowerCase();
+    
+    if (isCancelledStatus(status)) {
+      counters.annullatiTradiz++;
+    } else if (status === 'validated' || status === 'used' || status === 'usato' || status === 'checked_in') {
+      const isManual = (ticket as any).manualCheckin === true;
+      if (isManual) {
+        counters.manualiTradiz++;
+      } else {
+        counters.automatizzatiTradiz++;
+      }
+    } else {
+      counters.noAccessoTradiz++;
+    }
+  }
+  
+  // Se non ci sono settori, crea uno di default
+  if (sectorMap.size === 0) {
+    sectorMap.set('UN', {
+      codiceOrdinePosto: 'UN',
+      capienza: 1000,
+      tipoTitoli: new Map([['R1', {
+        totaleLTA: 0,
+        noAccessoTradiz: 0,
+        noAccessoDigitali: 0,
+        automatizzatiTradiz: 0,
+        automatizzatiDigitali: 0,
+        manualiTradiz: 0,
+        manualiDigitali: 0,
+        annullatiTradiz: 0,
+        annullatiDigitali: 0,
+      }]])
+    });
+    warnings.push('Nessun biglietto trovato, generato riepilogo vuoto');
+  }
+  
+  // Crea sectorSummaries per compatibilità con interfaccia di ritorno
+  const sectorSummaries: RCASectorSummary[] = [];
+  for (const [, sector] of sectorMap) {
+    for (const [tipoTitolo, counters] of sector.tipoTitoli) {
+      sectorSummaries.push({
+        ordinePosto: sector.codiceOrdinePosto,
+        tipoTitolo,
+        capienza: sector.capienza,
+        totaleLTA: counters.totaleLTA,
+        noAccessoTradiz: counters.noAccessoTradiz,
+        automatizzatiTradiz: counters.automatizzatiTradiz,
+        manualiTradiz: counters.manualiTradiz,
+        annullatiTradiz: counters.annullatiTradiz,
+      });
+    }
+  }
+  
+  // ==================== Generazione XML conforme a DTD ====================
+  const xmlLines: string[] = [];
+  
+  // Intestazione XML (senza DOCTYPE come nell'esempio ufficiale)
+  xmlLines.push('<?xml version="1.0" encoding="UTF-8"?>');
+  
+  // Root element con attributo Sostituzione OBBLIGATORIO
+  xmlLines.push('<RiepilogoControlloAccessi Sostituzione="N">');
+  
+  // ==================== Titolare ====================
+  // ORDINE ESATTO da DTD: DenominazioneTitolareCA, CFTitolareCA, CodiceSistemaCA,
+  // DataRiepilogo, DataGenerazioneRiepilogo, OraGenerazioneRiepilogo, ProgressivoRiepilogo
+  xmlLines.push('    <Titolare>');
+  xmlLines.push(`        <DenominazioneTitolareCA>${denominazioneTitolare}</DenominazioneTitolareCA>`);
+  xmlLines.push(`        <CFTitolareCA>${cfTitolare}</CFTitolareCA>`);
+  xmlLines.push(`        <CodiceSistemaCA>${escapeXml(sistemaEmissione)}</CodiceSistemaCA>`);
+  xmlLines.push(`        <DataRiepilogo>${dataRiepilogo}</DataRiepilogo>`);
+  xmlLines.push(`        <DataGenerazioneRiepilogo>${dataGenerazione}</DataGenerazioneRiepilogo>`);
+  xmlLines.push(`        <OraGenerazioneRiepilogo>${oraGenerazione}</OraGenerazioneRiepilogo>`);
+  xmlLines.push(`        <ProgressivoRiepilogo>${progressivo}</ProgressivoRiepilogo>`);
+  xmlLines.push('    </Titolare>');
+  
+  // ==================== Evento ====================
+  // ORDINE ESATTO da DTD: CFOrganizzatore, DenominazioneOrganizzatore, TipologiaOrganizzatore,
+  // SpettacoloIntrattenimento, IncidenzaIntrattenimento, DenominazioneLocale, CodiceLocale,
+  // DataEvento, OraEvento, TipoGenere, TitoloEvento, Autore, Esecutore,
+  // NazionalitaFilm, NumOpereRappresentate, SistemaEmissione+
+  xmlLines.push('    <Evento>');
+  xmlLines.push(`        <CFOrganizzatore>${cfOrganizzatore}</CFOrganizzatore>`);
+  xmlLines.push(`        <DenominazioneOrganizzatore>${denominazioneOrganizzatore}</DenominazioneOrganizzatore>`);
+  xmlLines.push(`        <TipologiaOrganizzatore>${tipologiaOrganizzatore}</TipologiaOrganizzatore>`);
+  xmlLines.push(`        <SpettacoloIntrattenimento>${spettacoloIntrattenimento}</SpettacoloIntrattenimento>`);
+  xmlLines.push(`        <IncidenzaIntrattenimento>${incidenzaIntrattenimento}</IncidenzaIntrattenimento>`);
+  xmlLines.push(`        <DenominazioneLocale>${nomeLocale}</DenominazioneLocale>`);
+  xmlLines.push(`        <CodiceLocale>${codiceLocale}</CodiceLocale>`);
+  xmlLines.push(`        <DataEvento>${dataEvento}</DataEvento>`);
+  xmlLines.push(`        <OraEvento>${oraEvento}</OraEvento>`);
+  xmlLines.push(`        <TipoGenere>${tipoGenere}</TipoGenere>`);
+  xmlLines.push(`        <TitoloEvento>${titoloEvento}</TitoloEvento>`);
+  xmlLines.push(`        <Autore>${autore}</Autore>`);
+  xmlLines.push(`        <Esecutore>${esecutore}</Esecutore>`);
+  xmlLines.push(`        <NazionalitaFilm>ITA</NazionalitaFilm>`);
+  xmlLines.push(`        <NumOpereRappresentate>1</NumOpereRappresentate>`);
+  
+  // ==================== SistemaEmissione ====================
+  // Contiene: CodiceSistemaEmissione, Titoli*, Abbonamenti*
+  xmlLines.push('        <SistemaEmissione>');
+  xmlLines.push(`            <CodiceSistemaEmissione>${escapeXml(sistemaEmissione)}</CodiceSistemaEmissione>`);
+  
+  // ==================== Titoli (raggruppati per settore) ====================
+  // Ogni settore genera un elemento <Titoli> con N elementi <TotaleTipoTitolo>
+  for (const [, sector] of sectorMap) {
+    xmlLines.push('            <Titoli>');
+    xmlLines.push(`                <CodiceOrdinePosto>${sector.codiceOrdinePosto}</CodiceOrdinePosto>`);
+    xmlLines.push(`                <Capienza>${sector.capienza}</Capienza>`);
+    
+    // TotaleTipoTitolo per ogni tipo in questo settore
+    for (const [tipoTitolo, counters] of sector.tipoTitoli) {
+      xmlLines.push('                <TotaleTipoTitolo>');
+      xmlLines.push(`                    <TipoTitolo>${tipoTitolo}</TipoTitolo>`);
+      xmlLines.push(`                    <TotaleTitoliLTA>${counters.totaleLTA}</TotaleTitoliLTA>`);
+      xmlLines.push(`                    <TotaleTitoliNoAccessoTradiz>${counters.noAccessoTradiz}</TotaleTitoliNoAccessoTradiz>`);
+      xmlLines.push(`                    <TotaleTitoliNoAccessoDigitali>${counters.noAccessoDigitali}</TotaleTitoliNoAccessoDigitali>`);
+      xmlLines.push(`                    <TotaleTitoliAutomatizzatiTradiz>${counters.automatizzatiTradiz}</TotaleTitoliAutomatizzatiTradiz>`);
+      xmlLines.push(`                    <TotaleTitoliAutomatizzatiDigitali>${counters.automatizzatiDigitali}</TotaleTitoliAutomatizzatiDigitali>`);
+      xmlLines.push(`                    <TotaleTitoliManualiTradiz>${counters.manualiTradiz}</TotaleTitoliManualiTradiz>`);
+      xmlLines.push(`                    <TotaleTitoliManualiDigitali>${counters.manualiDigitali}</TotaleTitoliManualiDigitali>`);
+      xmlLines.push(`                    <TotaleTitoliAnnullatiTradiz>${counters.annullatiTradiz}</TotaleTitoliAnnullatiTradiz>`);
+      xmlLines.push(`                    <TotaleTitoliAnnullatiDigitali>${counters.annullatiDigitali}</TotaleTitoliAnnullatiDigitali>`);
+      xmlLines.push(`                    <TotaleTitoliDaspatiTradiz>0</TotaleTitoliDaspatiTradiz>`);
+      xmlLines.push(`                    <TotaleTitoliDaspatiDigitali>0</TotaleTitoliDaspatiDigitali>`);
+      xmlLines.push(`                    <TotaleTitoliRubatiTradiz>0</TotaleTitoliRubatiTradiz>`);
+      xmlLines.push(`                    <TotaleTitoliRubatiDigitali>0</TotaleTitoliRubatiDigitali>`);
+      xmlLines.push(`                    <TotaleTitoliBLTradiz>0</TotaleTitoliBLTradiz>`);
+      xmlLines.push(`                    <TotaleTitoliBLDigitali>0</TotaleTitoliBLDigitali>`);
+      xmlLines.push('                </TotaleTipoTitolo>');
+    }
+    
+    xmlLines.push('            </Titoli>');
+  }
+  
+  // Abbonamenti è opzionale (Abbonamenti*) - non lo includiamo se non usiamo abbonamenti
+  
+  xmlLines.push('        </SistemaEmissione>');
+  xmlLines.push('    </Evento>');
+  xmlLines.push('</RiepilogoControlloAccessi>');
+  
+  const xml = xmlLines.join('\n');
+  
+  return {
+    success: errors.length === 0,
+    xml,
+    ticketCount: tickets.length,
+    sectorSummaries,
+    errors,
+    warnings
+  };
+}
+
+/**
+ * Normalizza CodiceOrdinePosto per conformità DTD SIAE
+ * Formato: 2 caratteri alfanumerici (es. UN, PL, A1, B2)
+ * UN = Unico (posto unico/non numerato)
+ */
+function normalizeCodiceOrdinePosto(sectorCode: string | null | undefined): string {
+  if (!sectorCode) return 'UN';
+  
+  const code = sectorCode.toUpperCase().trim();
+  
+  // Se già in formato corretto (2 caratteri alfanumerici)
+  if (/^[A-Z0-9]{2}$/.test(code)) {
+    return code;
+  }
+  
+  // Mappature comuni
+  const mappings: Record<string, string> = {
+    'UNICO': 'UN',
+    'UNIQUE': 'UN',
+    'GENERAL': 'UN',
+    'GENERALE': 'UN',
+    'PLATEA': 'PL',
+    'GALLERIA': 'GA',
+    'PALCO': 'PA',
+    'LOGGIONE': 'LO',
+    'BALCONATA': 'BA',
+    'PARTERRE': 'PT',
+    'TRIBUNA': 'TR',
+    'ANELLO': 'AN',
+    'CURVA': 'CU',
+    'PRATO': 'PR',
+    'VIP': 'VI',
+    'A0': 'A1',
+    'A': 'A1',
+    'B': 'B1',
+    'C': 'C1',
+    'P0': 'PL',
+    'P1': 'P1',
+  };
+  
+  if (mappings[code]) {
+    return mappings[code];
+  }
+  
+  // Prendi i primi 2 caratteri se la stringa è più lunga
+  if (code.length >= 2) {
+    return code.substring(0, 2);
+  }
+  
+  // Padda con '1' se solo 1 carattere
+  if (code.length === 1) {
+    return code + '1';
+  }
+  
+  return 'UN';
 }
