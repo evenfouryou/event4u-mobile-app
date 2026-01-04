@@ -644,6 +644,32 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
         throw new Error('SMIME_INVALID_RESPONSE: Bridge ha restituito un payload S/MIME non valido');
       }
       
+      // Log primi 500 caratteri per debug header
+      console.log(`[EMAIL-SERVICE] S/MIME payload preview (first 500 chars):\n${smimeData.signedMime.substring(0, 500)}`);
+      
+      // Verifica che gli header To e Subject siano presenti nel messaggio S/MIME
+      const hasToHeader = smimeData.signedMime.toLowerCase().includes('\nto:') || smimeData.signedMime.toLowerCase().startsWith('to:');
+      const hasSubjectHeader = smimeData.signedMime.toLowerCase().includes('\nsubject:') || smimeData.signedMime.toLowerCase().startsWith('subject:');
+      
+      if (!hasToHeader || !hasSubjectHeader) {
+        console.log(`[EMAIL-SERVICE] WARNING: S/MIME payload missing headers - To: ${hasToHeader}, Subject: ${hasSubjectHeader}`);
+        console.log(`[EMAIL-SERVICE] Injecting missing headers into S/MIME message...`);
+        
+        // Il bridge non ha incluso gli header - li aggiungiamo all'inizio del messaggio
+        // Nota: Questo è sicuro perché stiamo aggiungendo header PRIMA del Content-Type che inizia la firma
+        const missingHeaders: string[] = [];
+        if (!hasToHeader) {
+          missingHeaders.push(`To: ${to}`);
+        }
+        if (!hasSubjectHeader) {
+          missingHeaders.push(`Subject: ${emailSubject}`);
+        }
+        
+        // Inserisci gli header mancanti all'inizio del messaggio
+        smimeData.signedMime = missingHeaders.join('\r\n') + '\r\n' + smimeData.signedMime;
+        console.log(`[EMAIL-SERVICE] Injected headers: ${missingHeaders.join(', ')}`);
+      }
+      
       // Verifica struttura multipart/signed (controllo base)
       const hasMultipartSigned = smimeData.signedMime.includes('multipart/signed') || 
                                   smimeData.signedMime.includes('application/pkcs7-mime') ||
