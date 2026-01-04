@@ -569,16 +569,25 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
     try {
       console.log(`[EMAIL-SERVICE] Attempting S/MIME signature for SIAE email to ${to}...`);
       
-      // Verifica che l'email del mittente corrisponda al certificato della carta
+      // CRITICO: Per Allegato C SIAE 1.6.2.a.3, l'email del mittente DEVE corrispondere
+      // esattamente a quella nel certificato pubblico sulla smart card.
+      // Se non corrisponde, SIAE NON invia risposta di conferma.
       const cardEmail = getCardSignerEmail();
-      if (cardEmail) {
-        console.log(`[EMAIL-SERVICE] Card signer email: ${cardEmail}`);
-        // Avviso se l'email configurata non corrisponde al certificato
-        const configuredFrom = process.env.SMTP_FROM || process.env.SMTP_USER;
-        if (configuredFrom && !configuredFrom.includes(cardEmail)) {
-          console.log(`[EMAIL-SERVICE] WARNING: Configured sender (${configuredFrom}) may not match card certificate email (${cardEmail})`);
-        }
+      if (!cardEmail) {
+        throw new Error('CERTIFICATO_EMAIL_NON_DISPONIBILE: Email del certificato smart card non disponibile. Riconnetti il bridge desktop.');
       }
+      
+      console.log(`[EMAIL-SERVICE] Card signer email (from certificate): ${cardEmail}`);
+      
+      // Avviso se l'email configurata non corrisponde al certificato (solo log informativo)
+      const configuredFrom = process.env.SMTP_FROM || process.env.SMTP_USER;
+      if (configuredFrom && !configuredFrom.toLowerCase().includes(cardEmail.toLowerCase())) {
+        console.log(`[EMAIL-SERVICE] INFO: Configured sender (${configuredFrom}) differs from card certificate email (${cardEmail}). Using certificate email for SIAE compliance.`);
+      }
+      
+      // USA L'EMAIL DEL CERTIFICATO nell'header From del messaggio MIME
+      // Questo è OBBLIGATORIO per ricevere risposta da SIAE (Allegato C 1.6.2.a.3)
+      const certFromAddress = `"Event4U SIAE" <${cardEmail}>`;
       
       // Costruisci il messaggio MIME da firmare usando base64 per HTML (supporta UTF-8 completo)
       // Per Allegato C SIAE: CRLF folding e encoding canonico
@@ -590,7 +599,7 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
       const attachmentMimeType = isCAdES ? 'application/pkcs7-mime' : 'application/xml';
       
       const mimeContent = [
-        `From: ${fromAddress}`,
+        `From: ${certFromAddress}`,
         `To: ${to}`,
         `Subject: ${emailSubject}`,
         `MIME-Version: 1.0`,
@@ -643,9 +652,13 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
       
       // Invia il messaggio S/MIME firmato esattamente come restituito dal bridge
       // Per Allegato C SIAE, il messaggio firmato NON deve essere modificato
+      // CRITICO: L'envelope.from DEVE corrispondere all'email del certificato (Allegato C 1.6.2.a.3)
+      const envelopeFrom = smimeData.signerEmail || cardEmail; // Usa sempre email certificato
+      console.log(`[EMAIL-SERVICE] Envelope from (for SIAE compliance): ${envelopeFrom}`);
+      
       const rawMailOptions = {
         envelope: {
-          from: smimeData.signerEmail || fromAddress.replace(/^.*<(.*)>.*$/, '$1'),
+          from: envelopeFrom,
           to: [to]
         },
         raw: smimeData.signedMime // Invia esattamente il payload firmato dal bridge
