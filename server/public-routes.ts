@@ -10,6 +10,7 @@ import {
   isCardReadyForSeals,
   ensureCardReadyForSeals,
   isBridgeConnected,
+  getCachedEfffData,
   type FiscalSealData 
 } from "./bridge-relay";
 import {
@@ -2090,12 +2091,15 @@ router.post("/api/public/checkout/confirm", async (req, res) => {
             console.log(`[PUBLIC] Found card by serialNumber: ${cardId}`);
           } else {
             // Se la carta non esiste nel DB, creala automaticamente
-            console.log(`[PUBLIC] Card not found, creating new card for serialNumber: ${sealData.serialNumber}`);
+            // IMPORTANTE: Usare systemId dalla smart card (EFFF data), non un placeholder
+            const cachedEfff = getCachedEfffData();
+            const systemCode = cachedEfff?.systemId || process.env.SIAE_SYSTEM_CODE || 'EVENT4U1';
+            console.log(`[PUBLIC] Card not found, creating new card for serialNumber: ${sealData.serialNumber}, systemCode: ${systemCode}`);
             const [newCard] = await db
               .insert(siaeActivationCards)
               .values({
                 cardCode: sealData.serialNumber,
-                systemCode: "BRIDGE01",
+                systemCode: systemCode, // Usa systemId dalla smart card
                 companyId: ticketedEvent.companyId,
                 status: "active",
                 activationDate: new Date(),

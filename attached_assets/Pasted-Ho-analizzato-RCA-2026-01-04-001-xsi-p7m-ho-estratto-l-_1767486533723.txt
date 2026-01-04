@@ -1,0 +1,73 @@
+Ho analizzato RCA_2026_01_04_001.xsi.p7m (ho estratto l’XML e l’ho validato).
+
+Cosa risulta dall’analisi
+
+✅ 1) Il file è tecnicamente valido
+	•	Firma .p7m: ok (estraibile e verificabile)
+	•	XML: ben formato
+	•	Valida contro il DTD indicato nel DOCTYPE:
+<!DOCTYPE LogTransazione SYSTEM "Log_v0040_20190627.dtd">
+→ validazione DTD: PASSA (nessun errore strutturale)
+
+❌ 2) L’errore “vero” è che non è un RCA
+
+Nonostante il nome file inizi con RCA_…, dentro c’è:
+	•	DOCTYPE: LogTransazione
+	•	root: <LogTransazione>
+	•	ripetizioni di <Transazione> ... </Transazione>
+
+👉 Quindi questo file è un LOG (LogTransazione), non un “RCA”/riepilogo mensile.
+
+Conseguenza pratica: se tu (o il sistema) lo invii/archivia/etichetta come RCA, lato SIAE può finire nel flusso sbagliato (o non comparire dove te lo aspetti).
+Se ti serve davvero un RCA/“mensile”, la root deve essere un RiepilogoMensile (non LogTransazione).
+
+⸻
+
+Dove sta l’errore dentro il contenuto (campo specifico)
+
+Nel LOG che hai generato c’è un punto sospetto:
+
+⚠️ SistemaEmissione="BRIDGE01"
+
+Questo valore è un’etichetta “umana”, ma in genere SIAE si aspetta il codice sistema legato alla smart card/sistema registrato (il “systemId”). Nella documentazione della smart card è indicato che esistono campi dedicati a identificare il sistema (systemId) e che la card va usata come riferimento operativo (PIN/verify, ecc.).  ￼
+
+👉 Se SistemaEmissione non coincide con l’identificativo registrato, succede spesso questo scenario:
+	•	il file è “formalmente valido”
+	•	viene ricevuto
+	•	ma non viene agganciato correttamente al soggetto/sistema → e tu lo percepisci come “silenzio / nessun riscontro”.
+
+⸻
+
+Invece: le correzioni che avevamo segnalato prima ora sono OK ✅
+
+Su questo file vedo che:
+	•	CodiceRichiedenteEmissioneSigillo="05000001" (schema 2+6 coerente)
+	•	CausaleAnnullamento="001" (3 cifre)
+	•	con Annullamento="S" hai anche <RiferimentoAnnullamento>...</RiferimentoAnnullamento>
+
+Quindi quei 3 problemi qui sono risolti (bene).
+
+⸻
+
+Cosa deve fare Replit (2 fix netti)
+
+FIX A — Non chiamare RCA un LOG
+
+Se root = LogTransazione → è LOG.
+	•	rinominare file come LOG_YYYY_MM_DD...
+	•	instradare/inviare come flusso LOG, non come RCA
+
+FIX B — SistemaEmissione deve essere il systemId reale
+	•	leggere il systemId dalla configurazione/registrazione del sistema (idealmente dalla smart card o dal setup ufficiale)
+	•	sostituire SistemaEmissione="BRIDGE01" con SistemaEmissione="<systemId>" coerente
+
+(Questo allineamento è esattamente il tipo di cosa che evita “file validi ma non agganciati”).  ￼
+
+⸻
+
+Se vuoi la diagnosi 100% senza ipotesi
+
+Dimmi solo questa cosa (una riga):
+	•	tu questo file lo stai inviando come “RCA” o come “LOG”?
+e, se puoi, incollami il valore che consideri “systemId” del tuo sistema (quello che dovrebbe identificarti verso SIAE).
+Con quello ti dico esattamente cosa mettere in SistemaEmissione e come nominare/indirizzare correttamente il flusso.
