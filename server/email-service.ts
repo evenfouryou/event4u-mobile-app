@@ -400,6 +400,7 @@ interface SiaeTransmissionEmailOptions {
   systemCode?: string;
   sequenceNumber?: number;
   signWithSmime?: boolean; // Per Allegato C SIAE - firma S/MIME con carta attivazione
+  requireSignature?: boolean; // Se true, blocca invio se firma S/MIME non disponibile (default: true per RCA)
   // CAdES-BES support: se presente, il file è firmato CAdES-BES (SHA-256)
   p7mBase64?: string; // Contenuto P7M in Base64 (binario CAdES-BES)
   signatureFormat?: 'cades' | 'xmldsig'; // Formato firma (default: autodetect)
@@ -435,9 +436,13 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
     systemCode = DEFAULT_SYSTEM_CODE,
     sequenceNumber = 1,
     signWithSmime = false,
+    requireSignature, // undefined = auto (true per RCA, false per altri)
     p7mBase64,
     signatureFormat
   } = options;
+  
+  // Per RCA (che genera risposta SIAE), la firma è obbligatoria di default
+  const mustSign = requireSignature ?? (transmissionType === 'rca');
 
   // Determina se il file è firmato CAdES-BES (P7M) o XMLDSig legacy
   const isCAdES = !!p7mBase64 || signatureFormat === 'cades';
@@ -659,12 +664,40 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
       
     } catch (smimeError: any) {
       console.log(`[EMAIL-SERVICE] S/MIME signature failed: ${smimeError.message}`);
+      
+      // Se la firma è obbligatoria, blocca l'invio
+      if (mustSign) {
+        console.log(`[EMAIL-SERVICE] BLOCKED: Signature required but failed. Email NOT sent.`);
+        return {
+          success: false,
+          smimeSigned: false,
+          error: `FIRMA_OBBLIGATORIA: ${smimeError.message}. Per ricevere risposta da SIAE, collega l'app desktop con Smart Card inserita.`
+        };
+      }
+      
       console.log(`[EMAIL-SERVICE] Proceeding with unsigned email (SIAE may not send confirmation)`);
       smimeStatus = `FIRMA S/MIME FALLITA: ${smimeError.message}`;
     }
   } else if (signWithSmime) {
+    // Bridge non connesso
+    if (mustSign) {
+      console.log(`[EMAIL-SERVICE] BLOCKED: Signature required but bridge not connected. Email NOT sent.`);
+      return {
+        success: false,
+        smimeSigned: false,
+        error: `BRIDGE_NON_CONNESSO: App desktop Event4U non connessa. Per ricevere risposta da SIAE, avvia l'app desktop con Smart Card inserita.`
+      };
+    }
     console.log(`[EMAIL-SERVICE] S/MIME requested but bridge not connected. Sending unsigned.`);
     smimeStatus = 'BRIDGE NON CONNESSO - NON FIRMATA';
+  } else if (mustSign) {
+    // Firma obbligatoria ma signWithSmime non abilitato
+    console.log(`[EMAIL-SERVICE] BLOCKED: Signature required but signWithSmime not enabled.`);
+    return {
+      success: false,
+      smimeSigned: false,
+      error: `FIRMA_NON_ABILITATA: Per trasmissioni RCA è richiesta la firma S/MIME. Abilita signWithSmime e collega l'app desktop.`
+    };
   }
 
   // Invia l'email non firmata (fallback quando S/MIME non disponibile o fallito)
