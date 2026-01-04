@@ -1,0 +1,38 @@
+libSIAE test starting, slot:0, pin:12345678...
+**CYCLE 1 of 1
+Initialize: 0x00000000 
+Sigillo Fiscale tests...
+pSelectML 0000: 0x00000000
+pSelectML 1112: 0x00000000
+pVerifyPINML 12345678: 0x00000000
+pChangePINML 12345678: 0x00000000
+pVerifyPINML 12345678: 0x00000000
+pChangePINML 12345678: 0x00000000
+pVerifyPINML 12345678: 0x00000000
+pReadCounterML: 0x00000000, 0x00000066
+pReadBalanceML: 0x00000000, 0x00000F8E
+pComputeSigilloML: 0x00000000, cnt:0x00000067
+Sigillo fiscale:D4 C0 6E 8E 24 62 22 C6 
+pReadCounterML: 0x00000000, 0x00000067
+pReadBalanceML: 0x00000000, 0x00001006
+PKI tests...
+pSelectML 0000: 0x00000000
+pSelectML 1111: 0x00000000
+pVerifyPINML 12345678: 0x00000000
+pGetKeyIDML: 0x00000000
+pGetCertificateML NULL: 0x00006A85 (expected SW: 0x6a85)
+pGetCertificateML: 0x00000000
+pHash: 0x00000000
+pPadding: 0x00000000
+pSignML: 0x00000000
+pFinalizeML: 0x00000000
+libSIAE test completed!
+
+**END CYCLE 1 of 1
+
+libSIAEp7 test starting...
+pPKCS7SignML: 0x10002F9D, pSMIMESignML:0x100063E5
+isCardIn: 32
+PKCS7SignML: 0
+SMIMESign: 0
+libSIAEp7 test completed!

@@ -1,0 +1,99 @@
+{
+  "Version": 1,
+  "WorkspaceRootPath": "D:\\sajjad\\EventForYou\\",
+  "Documents": [
+    {
+      "AbsoluteMoniker": "D:0:0:{8B6F13E9-FE44-4844-8529-55512F48CE83}|EventForYou\\EventForYou.csproj|d:\\sajjad\\eventforyou\\eventforyou\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8B6F13E9-FE44-4844-8529-55512F48CE83}|EventForYou\\EventForYou.csproj|solutionrelative:eventforyou\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8B6F13E9-FE44-4844-8529-55512F48CE83}|EventForYou\\EventForYou.csproj|D:\\sajjad\\EventForYou\\eventforyou\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form",
+      "RelativeMoniker": "D:0:0:{8B6F13E9-FE44-4844-8529-55512F48CE83}|EventForYou\\EventForYou.csproj|solutionrelative:eventforyou\\form1.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}|Form"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8B6F13E9-FE44-4844-8529-55512F48CE83}|EventForYou\\EventForYou.csproj|D:\\sajjad\\EventForYou\\eventforyou\\form1.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8B6F13E9-FE44-4844-8529-55512F48CE83}|EventForYou\\EventForYou.csproj|solutionrelative:eventforyou\\form1.designer.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8B6F13E9-FE44-4844-8529-55512F48CE83}|EventForYou\\EventForYou.csproj|D:\\sajjad\\EventForYou\\eventforyou\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{8B6F13E9-FE44-4844-8529-55512F48CE83}|EventForYou\\EventForYou.csproj|solutionrelative:eventforyou\\program.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{8B6F13E9-FE44-4844-8529-55512F48CE83}|EventForYou\\EventForYou.csproj|D:\\sajjad\\EventForYou\\eventforyou\\bin\\x86\\release\\libsiae.dll||{177559E0-D141-11D0-92DF-00A0C9138C45}",
+      "RelativeMoniker": "D:0:0:{8B6F13E9-FE44-4844-8529-55512F48CE83}|EventForYou\\EventForYou.csproj|solutionrelative:eventforyou\\bin\\x86\\release\\libsiae.dll||{177559E0-D141-11D0-92DF-00A0C9138C45}"
+    }
+  ],
+  "DocumentGroupContainers": [
+    {
+      "Orientation": 0,
+      "VerticalTabListWidth": 256,
+      "DocumentGroups": [
+        {
+          "DockedWidth": 200,
+          "SelectedChildIndex": 1,
+          "Children": [
+            {
+              "$type": "Document",
+              "DocumentIndex": 4,
+              "Title": "libSIAE.dll",
+              "DocumentMoniker": "D:\\sajjad\\EventForYou\\EventForYou\\bin\\x86\\Release\\libSIAE.dll",
+              "RelativeDocumentMoniker": "EventForYou\\bin\\x86\\Release\\libSIAE.dll",
+              "ToolTip": "D:\\sajjad\\EventForYou\\EventForYou\\bin\\x86\\Release\\libSIAE.dll",
+              "RelativeToolTip": "EventForYou\\bin\\x86\\Release\\libSIAE.dll",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.001697|",
+              "WhenOpened": "2025-10-28T13:09:25.316Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 0,
+              "Title": "Form1.cs",
+              "DocumentMoniker": "D:\\sajjad\\EventForYou\\EventForYou\\Form1.cs",
+              "RelativeDocumentMoniker": "EventForYou\\Form1.cs",
+              "ToolTip": "D:\\sajjad\\EventForYou\\EventForYou\\Form1.cs",
+              "RelativeToolTip": "EventForYou\\Form1.cs",
+              "ViewState": "AgIAAMkCAAAAAAAAAAAIwNACAAAJAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-19T06:41:50.335Z",
+              "EditorCaption": ""
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "Form1.cs [Design]",
+              "DocumentMoniker": "D:\\sajjad\\EventForYou\\EventForYou\\Form1.cs",
+              "RelativeDocumentMoniker": "EventForYou\\Form1.cs",
+              "ToolTip": "D:\\sajjad\\EventForYou\\EventForYou\\Form1.cs [Design]",
+              "RelativeToolTip": "EventForYou\\Form1.cs [Design]",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-19T06:38:42.834Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 2,
+              "Title": "Form1.Designer.cs",
+              "DocumentMoniker": "D:\\sajjad\\EventForYou\\EventForYou\\Form1.Designer.cs",
+              "RelativeDocumentMoniker": "EventForYou\\Form1.Designer.cs",
+              "ToolTip": "D:\\sajjad\\EventForYou\\EventForYou\\Form1.Designer.cs",
+              "RelativeToolTip": "EventForYou\\Form1.Designer.cs",
+              "ViewState": "AgIAAC0AAAAAAAAAAAAQwDEAAAAVAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-18T08:21:12.308Z"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 3,
+              "Title": "Program.cs",
+              "DocumentMoniker": "D:\\sajjad\\EventForYou\\EventForYou\\Program.cs",
+              "RelativeDocumentMoniker": "EventForYou\\Program.cs",
+              "ToolTip": "D:\\sajjad\\EventForYou\\EventForYou\\Program.cs",
+              "RelativeToolTip": "EventForYou\\Program.cs",
+              "ViewState": "AgIAAAAAAAAAAAAAAAAAABYAAAAAAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-06-18T08:21:01.557Z"
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

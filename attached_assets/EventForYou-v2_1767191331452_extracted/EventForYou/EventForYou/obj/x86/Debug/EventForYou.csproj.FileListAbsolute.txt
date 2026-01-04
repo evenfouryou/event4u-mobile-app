@@ -1,0 +1,14 @@
+D:\sajjad\EventForYou\EventForYou\bin\x86\Debug\EventForYou.exe.config
+D:\sajjad\EventForYou\EventForYou\bin\x86\Debug\EventForYou.exe
+D:\sajjad\EventForYou\EventForYou\bin\x86\Debug\EventForYou.pdb
+D:\sajjad\EventForYou\EventForYou\bin\x86\Debug\Newtonsoft.Json.dll
+D:\sajjad\EventForYou\EventForYou\bin\x86\Debug\Newtonsoft.Json.xml
+D:\sajjad\EventForYou\EventForYou\obj\x86\Debug\EventForYou.csproj.AssemblyReference.cache
+D:\sajjad\EventForYou\EventForYou\obj\x86\Debug\EventForYou.Form1.resources
+D:\sajjad\EventForYou\EventForYou\obj\x86\Debug\EventForYou.Properties.Resources.resources
+D:\sajjad\EventForYou\EventForYou\obj\x86\Debug\EventForYou.csproj.GenerateResource.cache
+D:\sajjad\EventForYou\EventForYou\obj\x86\Debug\EventForYou.csproj.CoreCompileInputs.cache
+D:\sajjad\EventForYou\EventForYou\obj\x86\Debug\EventFor.3A2DEC81.Up2Date
+D:\sajjad\EventForYou\EventForYou\obj\x86\Debug\EventForYou.exe
+D:\sajjad\EventForYou\EventForYou\obj\x86\Debug\EventForYou.pdb
+D:\sajjad\EventForYou\EventForYou\obj\x86\Debug\EventForYou.exe.config

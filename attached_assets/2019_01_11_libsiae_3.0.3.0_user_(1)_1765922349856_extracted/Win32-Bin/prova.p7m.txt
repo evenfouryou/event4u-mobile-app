@@ -1,0 +1,165 @@
+    0:d=0  hl=4 l=1913 cons: SEQUENCE          
+    4:d=1  hl=2 l=   9 prim: OBJECT            :pkcs7-signedData
+   15:d=1  hl=4 l=1898 cons: cont [ 0 ]        
+   19:d=2  hl=4 l=1894 cons: SEQUENCE          
+   23:d=3  hl=2 l=   1 prim: INTEGER           :01
+   26:d=3  hl=2 l=  11 cons: SET               
+   28:d=4  hl=2 l=   9 cons: SEQUENCE          
+   30:d=5  hl=2 l=   5 prim: OBJECT            :sha1
+   37:d=5  hl=2 l=   0 prim: NULL              
+   39:d=3  hl=4 l= 656 cons: SEQUENCE          
+   43:d=4  hl=2 l=   9 prim: OBJECT            :pkcs7-data
+   54:d=4  hl=4 l= 641 cons: cont [ 0 ]        
+   58:d=5  hl=4 l= 637 prim: OCTET STRING      :From:Mario Rossi <mariorossi@prova.it>
+To:Luca Bianchi
+Subject:auguri
+Date:Thu, 3 Sep 2018 10:30:51 +0100
+MIME-Version: 1.0
+Content-Type: multipart/mixed;
+	boundary="----=_NextPart_8F84C6CA24"
+
+This is a multi-part message in MIME format.
+
+------=_NextPart_8F84C6CA24
+Content-Type: text/plain;
+	charset="Windows-1252"
+Content-Transfer-Encoding: quoted-printable
+
+Tantissimi auguri
+
+------=_NextPart_8F84C6CA24
+Content-Type: application/octet-stream;
+	name="test.txt"
+Content-Transfer-Encoding: base64
+Content-Disposition: attachment;
+	filename="test.txt"
+
+VEVTVCBBdHRhY2htZW50DQo=
+------=_NextPart_8F84C6CA24--
+
+  699:d=3  hl=4 l= 792 cons: cont [ 0 ]        
+  703:d=4  hl=4 l= 788 cons: SEQUENCE          
+  707:d=5  hl=4 l= 508 cons: SEQUENCE          
+  711:d=6  hl=2 l=   3 cons: cont [ 0 ]        
+  713:d=7  hl=2 l=   1 prim: INTEGER           :02
+  716:d=6  hl=2 l=  20 prim: INTEGER           :8A821A4093E00393075C2BFB91CE9B5C3D3266
+  738:d=6  hl=2 l=  13 cons: SEQUENCE          
+  740:d=7  hl=2 l=   9 prim: OBJECT            :sha256WithRSAEncryption
+  751:d=7  hl=2 l=   0 prim: NULL              
+  753:d=6  hl=2 l=  81 cons: SEQUENCE          
+  755:d=7  hl=2 l=  11 cons: SET               
+  757:d=8  hl=2 l=   9 cons: SEQUENCE          
+  759:d=9  hl=2 l=   3 prim: OBJECT            :countryName
+  764:d=9  hl=2 l=   2 prim: PRINTABLESTRING   :IT
+  768:d=7  hl=2 l=  15 cons: SET               
+  770:d=8  hl=2 l=  13 cons: SEQUENCE          
+  772:d=9  hl=2 l=   3 prim: OBJECT            :stateOrProvinceName
+  777:d=9  hl=2 l=   6 prim: PRINTABLESTRING   :Napoli
+  785:d=7  hl=2 l=  15 cons: SET               
+  787:d=8  hl=2 l=  13 cons: SEQUENCE          
+  789:d=9  hl=2 l=   3 prim: OBJECT            :localityName
+  794:d=9  hl=2 l=   6 prim: PRINTABLESTRING   :Napoli
+  802:d=7  hl=2 l=  15 cons: SET               
+  804:d=8  hl=2 l=  13 cons: SEQUENCE          
+  806:d=9  hl=2 l=   3 prim: OBJECT            :organizationName
+  811:d=9  hl=2 l=   6 prim: PRINTABLESTRING   :Bit4id
+  819:d=7  hl=2 l=  15 cons: SET               
+  821:d=8  hl=2 l=  13 cons: SEQUENCE          
+  823:d=9  hl=2 l=   3 prim: OBJECT            :commonName
+  828:d=9  hl=2 l=   6 prim: PRINTABLESTRING   :Bit4id
+  836:d=6  hl=2 l=  30 cons: SEQUENCE          
+  838:d=7  hl=2 l=  13 prim: UTCTIME           :180626093712Z
+  853:d=7  hl=2 l=  13 prim: UTCTIME           :220625093712Z
+  868:d=6  hl=2 l=  76 cons: SEQUENCE          
+  870:d=7  hl=2 l=  43 cons: SET               
+  872:d=8  hl=2 l=  41 cons: SEQUENCE          
+  874:d=9  hl=2 l=   3 prim: OBJECT            :commonName
+  879:d=9  hl=2 l=  34 prim: PRINTABLESTRING   :DigitalSignature Certificate - DS1
+  915:d=7  hl=2 l=  29 cons: SET               
+  917:d=8  hl=2 l=  27 cons: SEQUENCE          
+  919:d=9  hl=2 l=   9 prim: OBJECT            :emailAddress
+  930:d=9  hl=2 l=  14 prim: IA5STRING         :gam@bit4id.com
+  946:d=6  hl=3 l= 159 cons: SEQUENCE          
+  949:d=7  hl=2 l=  13 cons: SEQUENCE          
+  951:d=8  hl=2 l=   9 prim: OBJECT            :rsaEncryption
+  962:d=8  hl=2 l=   0 prim: NULL              
+  964:d=7  hl=3 l= 141 prim: BIT STRING        
+ 1108:d=6  hl=2 l= 109 cons: cont [ 3 ]        
+ 1110:d=7  hl=2 l= 107 cons: SEQUENCE          
+ 1112:d=8  hl=2 l=  29 cons: SEQUENCE          
+ 1114:d=9  hl=2 l=   3 prim: OBJECT            :X509v3 Extended Key Usage
+ 1119:d=9  hl=2 l=  22 prim: OCTET STRING      [HEX DUMP]:301406082B0601050507030206082B06010505070304
+ 1143:d=8  hl=2 l=  14 cons: SEQUENCE          
+ 1145:d=9  hl=2 l=   3 prim: OBJECT            :X509v3 Key Usage
+ 1150:d=9  hl=2 l=   1 prim: BOOLEAN           :255
+ 1153:d=9  hl=2 l=   4 prim: OCTET STRING      [HEX DUMP]:030203F8
+ 1159:d=8  hl=2 l=  17 cons: SEQUENCE          
+ 1161:d=9  hl=2 l=   9 prim: OBJECT            :Netscape Cert Type
+ 1172:d=9  hl=2 l=   4 prim: OCTET STRING      [HEX DUMP]:030205A0
+ 1178:d=8  hl=2 l=  12 cons: SEQUENCE          
+ 1180:d=9  hl=2 l=   3 prim: OBJECT            :X509v3 Basic Constraints
+ 1185:d=9  hl=2 l=   1 prim: BOOLEAN           :255
+ 1188:d=9  hl=2 l=   2 prim: OCTET STRING      [HEX DUMP]:3000
+ 1192:d=8  hl=2 l=  25 cons: SEQUENCE          
+ 1194:d=9  hl=2 l=   3 prim: OBJECT            :X509v3 Subject Alternative Name
+ 1199:d=9  hl=2 l=  18 prim: OCTET STRING      [HEX DUMP]:3010810E67616D406269743469642E636F6D
+ 1219:d=5  hl=2 l=  13 cons: SEQUENCE          
+ 1221:d=6  hl=2 l=   9 prim: OBJECT            :sha256WithRSAEncryption
+ 1232:d=6  hl=2 l=   0 prim: NULL              
+ 1234:d=5  hl=4 l= 257 prim: BIT STRING        
+ 1495:d=3  hl=4 l= 418 cons: SET               
+ 1499:d=4  hl=4 l= 414 cons: SEQUENCE          
+ 1503:d=5  hl=2 l=   1 prim: INTEGER           :01
+ 1506:d=5  hl=2 l= 105 cons: SEQUENCE          
+ 1508:d=6  hl=2 l=  81 cons: SEQUENCE          
+ 1510:d=7  hl=2 l=  11 cons: SET               
+ 1512:d=8  hl=2 l=   9 cons: SEQUENCE          
+ 1514:d=9  hl=2 l=   3 prim: OBJECT            :countryName
+ 1519:d=9  hl=2 l=   2 prim: PRINTABLESTRING   :IT
+ 1523:d=7  hl=2 l=  15 cons: SET               
+ 1525:d=8  hl=2 l=  13 cons: SEQUENCE          
+ 1527:d=9  hl=2 l=   3 prim: OBJECT            :stateOrProvinceName
+ 1532:d=9  hl=2 l=   6 prim: PRINTABLESTRING   :Napoli
+ 1540:d=7  hl=2 l=  15 cons: SET               
+ 1542:d=8  hl=2 l=  13 cons: SEQUENCE          
+ 1544:d=9  hl=2 l=   3 prim: OBJECT            :localityName
+ 1549:d=9  hl=2 l=   6 prim: PRINTABLESTRING   :Napoli
+ 1557:d=7  hl=2 l=  15 cons: SET               
+ 1559:d=8  hl=2 l=  13 cons: SEQUENCE          
+ 1561:d=9  hl=2 l=   3 prim: OBJECT            :organizationName
+ 1566:d=9  hl=2 l=   6 prim: PRINTABLESTRING   :Bit4id
+ 1574:d=7  hl=2 l=  15 cons: SET               
+ 1576:d=8  hl=2 l=  13 cons: SEQUENCE          
+ 1578:d=9  hl=2 l=   3 prim: OBJECT            :commonName
+ 1583:d=9  hl=2 l=   6 prim: PRINTABLESTRING   :Bit4id
+ 1591:d=6  hl=2 l=  20 prim: INTEGER           :8A821A4093E00393075C2BFB91CE9B5C3D3266
+ 1613:d=5  hl=2 l=   9 cons: SEQUENCE          
+ 1615:d=6  hl=2 l=   5 prim: OBJECT            :sha1
+ 1622:d=6  hl=2 l=   0 prim: NULL              
+ 1624:d=5  hl=3 l= 144 cons: cont [ 0 ]        
+ 1627:d=6  hl=2 l=  24 cons: SEQUENCE          
+ 1629:d=7  hl=2 l=   9 prim: OBJECT            :contentType
+ 1640:d=7  hl=2 l=  11 cons: SET               
+ 1642:d=8  hl=2 l=   9 prim: OBJECT            :pkcs7-data
+ 1653:d=6  hl=2 l=  28 cons: SEQUENCE          
+ 1655:d=7  hl=2 l=   9 prim: OBJECT            :signingTime
+ 1666:d=7  hl=2 l=  15 cons: SET               
+ 1668:d=8  hl=2 l=  13 prim: UTCTIME           :180903083054Z
+ 1683:d=6  hl=2 l=  35 cons: SEQUENCE          
+ 1685:d=7  hl=2 l=   9 prim: OBJECT            :messageDigest
+ 1696:d=7  hl=2 l=  22 cons: SET               
+ 1698:d=8  hl=2 l=  20 prim: OCTET STRING      [HEX DUMP]:365AF5B4CE29C75497F0356AEB981C61140BFC25
+ 1720:d=6  hl=2 l=  49 cons: SEQUENCE          
+ 1722:d=7  hl=2 l=   9 prim: OBJECT            :S/MIME Capabilities
+ 1733:d=7  hl=2 l=  36 cons: SET               
+ 1735:d=8  hl=2 l=  34 cons: SEQUENCE          
+ 1737:d=9  hl=2 l=  10 cons: SEQUENCE          
+ 1739:d=10 hl=2 l=   8 prim: OBJECT            :des-ede3-cbc
+ 1749:d=9  hl=2 l=   7 cons: SEQUENCE          
+ 1751:d=10 hl=2 l=   5 prim: OBJECT            :des-cbc
+ 1758:d=9  hl=2 l=  11 cons: SEQUENCE          
+ 1760:d=10 hl=2 l=   9 prim: OBJECT            :sha1WithRSAEncryption
+ 1771:d=5  hl=2 l=  13 cons: SEQUENCE          
+ 1773:d=6  hl=2 l=   9 prim: OBJECT            :rsaEncryption
+ 1784:d=6  hl=2 l=   0 prim: NULL              
+ 1786:d=5  hl=3 l= 128 prim: OCTET STRING      [HEX DUMP]:2941ADCF54541C48B13E95B06DD77239C70C7BD27BC8C9D83404FE986328CE91C87013360B2A673A87359652AF2AE18501305C4D05FCB42E8E971C798FA2AFD24D9ACBA5EBB28744D6F3A3B3750977557826EE998E1D35622BC24925965C6EA3BA832A20EDFE476D2D1B3CBBED9EACBF0B3DC3C6E89A3082B8998C4779D93C09

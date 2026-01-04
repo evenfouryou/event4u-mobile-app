@@ -1,0 +1,89 @@
+Certificate:
+    Data:
+        Version: 3 (0x2)
+        Serial Number: 0 (0x0)
+        Signature Algorithm: sha1WithRSAEncryption
+        Issuer: C=IT, ST=Italy, L=Rome, O=SIAE, OU=SIAE - SIETA, CN=SIAE Societa' Italiana degli Autori ed Editori CA-SIETA/emailAddress=sistemiinformativi@siae.it
+        Validity
+            Not Before: Apr  9 13:23:27 2003 GMT
+            Not After : Jul 20 13:23:27 2052 GMT
+        Subject: C=IT, ST=Italy, L=Rome, O=SIAE, OU=SIAE - SIETA, CN=SIAE Societa' Italiana degli Autori ed Editori CA-SIETA/emailAddress=sistemiinformativi@siae.it
+        Subject Public Key Info:
+            Public Key Algorithm: rsaEncryption
+            RSA Public Key: (2048 bit)
+                Modulus (2048 bit):
+                    00:eb:d8:36:ee:4b:ca:35:80:10:2d:30:96:7d:1b:
+                    a4:9b:af:1c:ca:eb:0f:a6:f4:c2:06:b4:8b:10:d3:
+                    b8:1f:ce:ef:ea:33:cc:9a:e5:2e:c0:0d:e0:78:13:
+                    e2:f1:24:56:43:de:64:b6:2f:72:8e:1a:c1:ca:01:
+                    ce:51:0a:34:a7:78:69:58:10:27:5b:d5:83:6f:22:
+                    82:a0:0b:81:6c:e8:20:fa:89:a6:44:3f:cd:ab:65:
+                    e7:78:ac:33:e9:b5:a4:c1:a7:5f:52:bb:d7:47:e6:
+                    4c:fd:d1:9e:27:11:8e:ea:4f:46:b6:7f:aa:1a:7c:
+                    25:70:ed:74:e5:63:3b:f3:ec:85:ab:86:dc:d6:e9:
+                    1a:15:de:dd:1c:a3:a3:76:e1:5d:50:03:c2:24:a4:
+                    12:53:d2:91:2a:e0:c8:bd:34:fb:93:aa:06:e8:14:
+                    a6:0a:f1:26:e4:4c:c9:28:b1:a0:a7:59:62:e5:d9:
+                    d8:92:99:fd:35:93:15:d7:06:f5:14:90:fb:b5:1d:
+                    0d:d3:e1:77:0f:61:e8:4f:11:79:6f:6f:0c:84:2a:
+                    d5:e8:81:b5:17:72:99:e3:e5:97:d6:7b:3e:69:db:
+                    4d:39:94:87:82:82:3e:36:4b:d5:5d:2c:0f:34:ac:
+                    d8:4b:02:09:23:9f:93:5f:17:5f:12:5a:f6:fd:8e:
+                    4e:21
+                Exponent: 65537 (0x10001)
+        X509v3 extensions:
+            X509v3 Subject Key Identifier: 
+                1A:32:34:48:FC:18:FE:AA:68:A5:F1:73:67:19:54:CA:98:2A:0C:B4
+            X509v3 Authority Key Identifier: 
+                keyid:1A:32:34:48:FC:18:FE:AA:68:A5:F1:73:67:19:54:CA:98:2A:0C:B4
+                DirName:/C=IT/ST=Italy/L=Rome/O=SIAE/OU=SIAE - SIETA/CN=SIAE Societa' Italiana degli Autori ed Editori CA-SIETA/emailAddress=sistemiinformativi@siae.it
+                serial:00
+
+            X509v3 Basic Constraints: critical
+                CA:TRUE
+    Signature Algorithm: sha1WithRSAEncryption
+        e7:3d:36:1d:e3:30:cd:f2:fc:6e:a1:8b:44:14:3d:66:6c:2d:
+        5a:24:80:14:b5:d3:37:5c:9b:15:20:bf:88:ff:09:6f:2b:43:
+        d2:11:6e:9b:c8:03:32:6c:4e:9d:28:b1:0c:d7:79:d6:eb:02:
+        30:55:7a:b2:62:23:3c:98:ce:46:11:6a:b1:cc:b8:11:51:bb:
+        89:32:d3:7e:f6:aa:67:9e:75:c8:fa:45:2b:cc:05:6c:c4:e1:
+        f6:f9:0e:93:b9:d6:53:5e:91:9c:ae:b1:a1:ed:95:76:e9:92:
+        fe:c2:0e:e9:6e:d9:b1:3a:f3:29:16:b7:b4:ba:15:5d:58:90:
+        81:1f:2d:61:dc:c1:49:f0:89:d5:27:75:2b:0f:46:90:c6:ff:
+        54:43:f6:b5:78:83:bc:9a:20:56:d2:9d:5e:30:ee:dc:c0:03:
+        e0:e0:a5:10:6d:c9:0b:16:ba:f7:39:37:71:72:6a:ef:c3:6f:
+        83:74:73:69:f1:03:b3:52:4d:0a:a8:7e:9b:09:87:72:90:f0:
+        92:93:10:cb:c8:e2:c2:39:36:f1:f6:6b:df:50:1d:65:5c:61:
+        52:ae:47:f4:56:b4:c7:aa:99:b9:ab:81:69:b1:13:50:f9:7d:
+        99:7d:ea:cf:30:4a:19:09:3e:6a:db:e6:58:15:a8:a2:2b:94:
+        bc:65:c6:01
+-----BEGIN CERTIFICATE-----
+MIIFIjCCBAqgAwIBAgIBADANBgkqhkiG9w0BAQUFADCBvzELMAkGA1UEBhMCSVQx
+DjAMBgNVBAgTBUl0YWx5MQ0wCwYDVQQHEwRSb21lMQ0wCwYDVQQKEwRTSUFFMRUw
+EwYDVQQLEwxTSUFFIC0gU0lFVEExQDA+BgNVBAMTN1NJQUUgU29jaWV0YScgSXRh
+bGlhbmEgZGVnbGkgQXV0b3JpIGVkIEVkaXRvcmkgQ0EtU0lFVEExKTAnBgkqhkiG
+9w0BCQEWGnNpc3RlbWlpbmZvcm1hdGl2aUBzaWFlLml0MCAXDTAzMDQwOTEzMjMy
+N1oYDzIwNTIwNzIwMTMyMzI3WjCBvzELMAkGA1UEBhMCSVQxDjAMBgNVBAgTBUl0
+YWx5MQ0wCwYDVQQHEwRSb21lMQ0wCwYDVQQKEwRTSUFFMRUwEwYDVQQLEwxTSUFF
+IC0gU0lFVEExQDA+BgNVBAMTN1NJQUUgU29jaWV0YScgSXRhbGlhbmEgZGVnbGkg
+QXV0b3JpIGVkIEVkaXRvcmkgQ0EtU0lFVEExKTAnBgkqhkiG9w0BCQEWGnNpc3Rl
+bWlpbmZvcm1hdGl2aUBzaWFlLml0MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIB
+CgKCAQEA69g27kvKNYAQLTCWfRukm68cyusPpvTCBrSLENO4H87v6jPMmuUuwA3g
+eBPi8SRWQ95kti9yjhrBygHOUQo0p3hpWBAnW9WDbyKCoAuBbOgg+ommRD/Nq2Xn
+eKwz6bWkwadfUrvXR+ZM/dGeJxGO6k9Gtn+qGnwlcO105WM78+yFq4bc1ukaFd7d
+HKOjduFdUAPCJKQSU9KRKuDIvTT7k6oG6BSmCvEm5EzJKLGgp1li5dnYkpn9NZMV
+1wb1FJD7tR0N0+F3D2HoTxF5b28MhCrV6IG1F3KZ4+WX1ns+adtNOZSHgoI+NkvV
+XSwPNKzYSwIJI5+TXxdfElr2/Y5OIQIDAQABo4IBIzCCAR8wHQYDVR0OBBYEFBoy
+NEj8GP6qaKXxc2cZVMqYKgy0MIHsBgNVHSMEgeQwgeGAFBoyNEj8GP6qaKXxc2cZ
+VMqYKgy0oYHFpIHCMIG/MQswCQYDVQQGEwJJVDEOMAwGA1UECBMFSXRhbHkxDTAL
+BgNVBAcTBFJvbWUxDTALBgNVBAoTBFNJQUUxFTATBgNVBAsTDFNJQUUgLSBTSUVU
+QTFAMD4GA1UEAxM3U0lBRSBTb2NpZXRhJyBJdGFsaWFuYSBkZWdsaSBBdXRvcmkg
+ZWQgRWRpdG9yaSBDQS1TSUVUQTEpMCcGCSqGSIb3DQEJARYac2lzdGVtaWluZm9y
+bWF0aXZpQHNpYWUuaXSCAQAwDwYDVR0TAQH/BAUwAwEB/zANBgkqhkiG9w0BAQUF
+AAOCAQEA5z02HeMwzfL8bqGLRBQ9ZmwtWiSAFLXTN1ybFSC/iP8JbytD0hFum8gD
+MmxOnSixDNd51usCMFV6smIjPJjORhFqscy4EVG7iTLTfvaqZ551yPpFK8wFbMTh
+9vkOk7nWU16RnK6xoe2VdumS/sIO6W7ZsTrzKRa3tLoVXViQgR8tYdzBSfCJ1Sd1
+Kw9GkMb/VEP2tXiDvJogVtKdXjDu3MAD4OClEG3JCxa69zk3cXJq78Nvg3RzafED
+s1JNCqh+mwmHcpDwkpMQy8jiwjk28fZr31AdZVxhUq5H9Fa0x6qZuauBabETUPl9
+mX3qzzBKGQk+atvmWBWooiuUvGXGAQ==
+-----END CERTIFICATE-----

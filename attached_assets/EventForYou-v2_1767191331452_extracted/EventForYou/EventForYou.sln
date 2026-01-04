@@ -1,0 +1,36 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.14.36212.18
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "EventForYou", "EventForYou\EventForYou.csproj", "{8B6F13E9-FE44-4844-8529-55512F48CE83}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{8EC462FD-D22E-90A8-E5CE-7E832BA40C5D}"
+	ProjectSection(SolutionItems) = preProject
+		EventForYou\bin\Debug\libSIAE.dll = EventForYou\bin\Debug\libSIAE.dll
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x86 = Debug|x86
+		Release|Any CPU = Release|Any CPU
+		Release|x86 = Release|x86
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{8B6F13E9-FE44-4844-8529-55512F48CE83}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{8B6F13E9-FE44-4844-8529-55512F48CE83}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{8B6F13E9-FE44-4844-8529-55512F48CE83}.Debug|x86.ActiveCfg = Debug|x86
+		{8B6F13E9-FE44-4844-8529-55512F48CE83}.Debug|x86.Build.0 = Debug|x86
+		{8B6F13E9-FE44-4844-8529-55512F48CE83}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{8B6F13E9-FE44-4844-8529-55512F48CE83}.Release|Any CPU.Build.0 = Release|Any CPU
+		{8B6F13E9-FE44-4844-8529-55512F48CE83}.Release|x86.ActiveCfg = Release|x86
+		{8B6F13E9-FE44-4844-8529-55512F48CE83}.Release|x86.Build.0 = Release|x86
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {8796E710-CB7D-4A07-9CC3-5AD9E709F399}
+	EndGlobalSection
+EndGlobal
