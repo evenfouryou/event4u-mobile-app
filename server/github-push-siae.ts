@@ -45,7 +45,7 @@ async function getGitHubClient() {
 
 const OWNER = 'evenfouryou';
 const REPO = 'event-four-you-siae-lettore';
-const COMMIT_MESSAGE = 'v3.16.2: Rimuove fallback XMLDSig da desktop-app/main.js e xmlContent da risposta';
+const COMMIT_MESSAGE = 'v3.15: S/MIME via libSIAEp7.dll (PKCS7SignML) + SHA-256 + multi-pattern email extraction';
 
 interface FileUpdate {
   localPath: string;
