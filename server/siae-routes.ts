@@ -7087,13 +7087,14 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     const xmlContent = c1LogResult.xml;
     
     // Nome file conforme Allegato C SIAE (Provvedimento Agenzia Entrate 04/03/2008):
-    // RCA_AAAA_MM_GG_###.xsi.p7m per Riepilogo Controllo Accessi (C1 evento, genera risposta SIAE)
-    // Estensione .p7m aggiunta se firmato digitalmente
+    // LOG_AAAA_MM_GG_###.xsi.p7m per LogTransazione (C1 evento, genera risposta SIAE)
+    // IMPORTANTE: Il prefisso è LOG_ per file con root <LogTransazione>
+    // Estensione .p7m aggiunta se firmato digitalmente CAdES-BES
     const year = eventDate.getFullYear();
     const month = String(eventDate.getMonth() + 1).padStart(2, '0');
     const day = String(eventDate.getDate()).padStart(2, '0');
     const progressivo = String(progressivoGenerazione).padStart(3, '0');
-    const baseFileName = `RCA_${year}_${month}_${day}_${progressivo}`; // Riepilogo Controllo Accessi
+    const baseFileName = `LOG_${year}_${month}_${day}_${progressivo}`; // LogTransazione C1
     // fileName will be updated to .xsi.p7m if signed, otherwise .xsi
     let fileName = `${baseFileName}.xsi`;
 
