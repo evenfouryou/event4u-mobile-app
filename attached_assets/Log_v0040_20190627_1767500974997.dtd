@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % text "(#PCDATA)">
+<!ELEMENT LogTransazione (Transazione*)>
+<!ELEMENT Transazione (TitoloAccesso?, Abbonamento?, BigliettoAbbonamento?, AcquirenteRegistrazione?, AcquirenteTransazione?, RiferimentoAnnullamento?)>
+<!ATTLIST Transazione
+CFOrganizzatore                       CDATA #REQUIRED
+CFTitolare                            CDATA #REQUIRED
+IVAPreassolta                         (N | B | F) #REQUIRED
+TipoTassazione                        (S | I) #REQUIRED
+Valuta                                (E | L) "E"
+SistemaEmissione                      CDATA #REQUIRED
+CartaAttivazione                      CDATA #REQUIRED
+SigilloFiscale                        CDATA #REQUIRED
+DataEmissione                         CDATA #REQUIRED
+OraEmissione                          CDATA #REQUIRED
+NumeroProgressivo                     CDATA #REQUIRED
+TipoTitolo                            CDATA #REQUIRED
+CodiceOrdine                          CDATA #REQUIRED
+Causale                               CDATA #IMPLIED
+Posto                                 CDATA #IMPLIED
+CodiceRichiedenteEmissioneSigillo     CDATA #REQUIRED
+Prestampa                             CDATA #IMPLIED
+ImponibileIntrattenimenti             CDATA #IMPLIED
+OriginaleAnnullato                    CDATA #IMPLIED
+CartaOriginaleAnnullato               CDATA #IMPLIED
+CausaleAnnullamento                   CDATA #IMPLIED
+>
+<!ATTLIST TitoloAccesso
+Annullamento (S | N) "N"
+>
+<!ELEMENT TitoloAccesso (CorrispettivoLordo?, Prevendita?, IVACorrispettivo?, IVAPrevendita?, ImportoFigurativo?, IVAFigurativa?, CodiceLocale, DataEvento, OraEvento, TipoGenere, Titolo, Complementare*,Partecipante?)>
+<!ATTLIST Abbonamento
+Annullamento (S | N) "N"
+>
+<!ELEMENT Abbonamento (CodiceAbbonamento, ProgressivoAbbonamento, Turno, QuantitaEventiAbilitati, Validita, Rateo, RateoIntrattenimenti, RateoIVA, CorrispettivoLordo?, Prevendita?, IVACorrispettivo?, IVAPrevendita?, ImportoFigurativo?, IVAFigurativa?, Partecipante?)>
+<!ATTLIST BigliettoAbbonamento
+Annullamento (S | N) "N"
+>
+<!ELEMENT BigliettoAbbonamento (CodiceLocale, DataEvento, OraEvento, TipoGenere,Titolo, CodiceAbbonamento, ProgressivoAbbonamento, CodiceFiscale, ImportoFigurativo, IVAFigurativa, Partecipante?)>
+<!ELEMENT Complementare (CodicePrestazione,ImportoPrestazione)>
+<!ATTLIST AcquirenteRegistrazione
+Autenticazione (SPID | OTP | BO) #REQUIRED
+>
+<!ELEMENT AcquirenteRegistrazione (CodiceUnivocoAcquirente, IndirizzoIPRegistrazione, DataOraRegistrazione)>
+<!ELEMENT AcquirenteTransazione (CodiceUnivocoNumeroTransazione, CellulareAcquirente?, EmailAcquirente?, IndirizzoIPTransazione?, DataOraInizioCheckout, DataOraEsecuzionePagamento, CRO?, MetodoSpedizioneTitolo, IndirizzoSpedizioneTitolo?)>
+<!ELEMENT RiferimentoAnnullamento (OriginaleRiferimentoAnnullamento, CartaRiferimentoAnnullamento, CausaleRiferimentoAnnullamento)>
+
+
+<!ELEMENT CartaRiferimentoAnnullamento %text;>
+<!ELEMENT CausaleRiferimentoAnnullamento %text;>
+<!ELEMENT CellulareAcquirente %text;>
+<!ELEMENT CodiceAbbonamento %text;>
+<!ELEMENT CodicePrestazione %text;>
+<!ELEMENT CodiceFiscale %text;>
+<!ELEMENT CodiceLocale %text;>
+<!ELEMENT CodiceUnivocoAcquirente %text;>
+<!ELEMENT CodiceUnivocoNumeroTransazione %text;>
+<!ELEMENT CorrispettivoLordo %text;>
+<!ELEMENT CRO %text;>
+<!ELEMENT DataEvento %text;>
+<!ELEMENT DataOraEsecuzionePagamento %text;>
+<!ELEMENT DataOraInizioCheckout %text;>
+<!ELEMENT DataOraRegistrazione %text;>
+<!ELEMENT EmailAcquirente %text;>
+<!ELEMENT ImportoPrestazione %text;>
+<!ELEMENT ImportoFigurativo %text;>
+<!ELEMENT IndirizzoIPRegistrazione %text;>
+<!ELEMENT IndirizzoIPTransazione %text;>
+<!ELEMENT IndirizzoSpedizioneTitolo %text;>
+<!ELEMENT IVACorrispettivo %text;>
+<!ELEMENT IVAFigurativa %text;>
+<!ELEMENT IVAPrevendita %text;>
+<!ELEMENT MetodoSpedizioneTitolo %text;>
+<!ELEMENT OraEvento %text;>
+<!ELEMENT OriginaleAnnullato %text;>
+<!ELEMENT OriginaleRiferimentoAnnullamento %text;>
+<!ELEMENT Prevendita %text;>
+<!ELEMENT ProgressivoAbbonamento %text;>
+<!ELEMENT Quantita %text;>
+<!ELEMENT QuantitaEventiAbilitati %text;>
+<!ELEMENT Rateo %text;>
+<!ELEMENT RateoIntrattenimenti %text;>
+<!ELEMENT RateoIVA %text;>
+<!ELEMENT TipoGenere %text;>
+<!ELEMENT TipoProvento %text;>
+<!ELEMENT Titolo %text;>
+<!ELEMENT Turno EMPTY>
+<!ATTLIST Turno valore (F | L) #REQUIRED>
+<!ELEMENT Validita %text;>
+<!ELEMENT Partecipante (Nome, Cognome)>
+<!ELEMENT Nome %text;>
+<!ELEMENT Cognome %text;>
