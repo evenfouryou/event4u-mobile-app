@@ -3869,7 +3869,8 @@ router.post("/api/public/account/resale", async (req, res) => {
       return res.status(404).json({ message: "Biglietto non trovato" });
     }
 
-    if (ticket.status !== 'emitted') {
+    // Consenti rivendita per biglietti emitted o active (coerente con canResale nel frontend)
+    if (ticket.status !== 'emitted' && ticket.status !== 'active') {
       return res.status(400).json({ message: "Biglietto non valido per rivendita" });
     }
 

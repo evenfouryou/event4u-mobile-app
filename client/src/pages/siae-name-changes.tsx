@@ -96,11 +96,15 @@ export default function SiaeNameChangesPage() {
 
   const processRequestMutation = useMutation({
     mutationFn: async ({ id, status, notes }: { id: string; status: string; notes: string }) => {
-      const response = await apiRequest("PATCH", `/api/siae/name-changes/${id}`, {
-        status,
-        notes,
-        processedAt: new Date().toISOString(),
-        processedByUserId: user?.id,
+      // Usa l'endpoint /process che gestisce il workflow completo:
+      // - Annulla biglietto originale
+      // - Richiede nuovo sigillo fiscale
+      // - Crea nuovo biglietto con i dati del nuovo titolare
+      // - Invia email con nuovo biglietto
+      const action = status === 'completed' ? 'approve' : 'reject';
+      const response = await apiRequest("POST", `/api/siae/name-changes/${id}/process`, {
+        action,
+        rejectionReason: action === 'reject' ? notes : undefined,
       });
       return response.json();
     },
