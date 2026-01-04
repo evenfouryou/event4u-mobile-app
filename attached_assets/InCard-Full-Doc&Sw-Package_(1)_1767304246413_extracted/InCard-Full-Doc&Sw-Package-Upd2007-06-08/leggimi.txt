@@ -1,0 +1,16 @@
+Contenuto del file .zip
+
+Cartella Documentazione:
+- CSP_SIAEp.pdf                   Descrizione del modulo SW che implementa le MScryptoAPI
+- FileSystemSIAE105bp.pdf         Descrizione del File System SIAE
+- libSIAEcard_103p.pdf            Manuale del programmatore della libreria in ANSI C, disponibile in codice sorgente per il supporto di piattaforme diverse da Windows
+- licenzaeGaranziaCSP180p.pdf     Licenza e Garanzia del modulo CSP
+- licenzaegaranziaPKCS11180.pdf   Licenza e Garanzia del modulo PKCS11
+- PKCS#11_SIAEp.pdf               Descrizione del modulo SW che implementa le API standard PKCS#11
+- UserManualIncrypto34p.pdf       Manuale del programmatore della smartcard Incrypto34
+
+Cartella SW:
+- SysGillo PKCS#11 Interfaces.zip Modulo SW PKCS#11
+- SysGillo CSP Interfaces.zip     Modulo SW CSP
+- libSIAECard.zip                 Codici sorgenti della libreria ANSI C
+
