@@ -2239,11 +2239,42 @@ namespace SiaeBridge
                 }
 
                 // Costruisci il messaggio S/MIME multipart/signed
+                // RFC 5751: Gli header From, To, Subject devono essere ESTERNI (prima di MIME-Version)
+                // per essere visibili al client email. Il contenuto firmato va dentro multipart/signed.
                 string signedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz");
                 string smimeBoundary = $"----=_smime_{Guid.NewGuid():N}";
                 string p7sBase64 = Convert.ToBase64String(p7sBytes);
 
+                // Estrai header esterni (From, To, Subject) dal contenuto MIME originale
+                string externalFrom = "";
+                string externalTo = "";
+                string externalSubject = "";
+                
+                var lines = mimeContent.Replace("\r\n", "\n").Split('\n');
+                foreach (var line in lines)
+                {
+                    if (line.StartsWith("From:", StringComparison.OrdinalIgnoreCase))
+                        externalFrom = line;
+                    else if (line.StartsWith("To:", StringComparison.OrdinalIgnoreCase))
+                        externalTo = line;
+                    else if (line.StartsWith("Subject:", StringComparison.OrdinalIgnoreCase))
+                        externalSubject = line;
+                    else if (string.IsNullOrWhiteSpace(line))
+                        break; // Fine header section
+                }
+                
+                Log($"  External headers extracted: From={!string.IsNullOrEmpty(externalFrom)}, To={!string.IsNullOrEmpty(externalTo)}, Subject={!string.IsNullOrEmpty(externalSubject)}");
+
                 var smimeBuilder = new StringBuilder();
+                
+                // ESTERNI: Header visibili al client email (PRIMA di MIME-Version)
+                if (!string.IsNullOrEmpty(externalFrom))
+                    smimeBuilder.Append($"{externalFrom}\r\n");
+                if (!string.IsNullOrEmpty(externalTo))
+                    smimeBuilder.Append($"{externalTo}\r\n");
+                if (!string.IsNullOrEmpty(externalSubject))
+                    smimeBuilder.Append($"{externalSubject}\r\n");
+                
                 smimeBuilder.Append("MIME-Version: 1.0\r\n");
                 smimeBuilder.Append($"Content-Type: multipart/signed; protocol=\"application/pkcs7-signature\"; micalg=sha-256; boundary=\"{smimeBoundary}\"\r\n");
                 smimeBuilder.Append("\r\n");
