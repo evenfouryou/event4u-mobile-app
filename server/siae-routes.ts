@@ -4009,29 +4009,39 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     const company = await storage.getCompany(transmission.companyId);
     const companyName = company?.name || 'N/A';
     
-    // CRITICAL FIX: Per RCA, verifica che l'XML sia nel formato corretto (RiepilogoControlloAccessi)
-    // e rigeneralo se contiene il vecchio formato errato (LogTransazione)
+    // CRITICAL FIX: Verifica che l'XML NON contenga LogTransazione (formato obsoleto)
+    // LogTransazione causa errore SIAE 40605 "Il riepilogo risulta illegibile"
     let xmlContent = transmission.fileContent;
     let regeneratedXml = false;
     
-    if (transmission.transmissionType === 'rca') {
+    // BLOCCO GLOBALE: Se l'XML contiene LogTransazione, è SEMPRE un errore
+    const hasLogTransazione = xmlContent.includes('<LogTransazione');
+    if (hasLogTransazione) {
+      console.error(`[SIAE-ROUTES] CRITICAL: XML contiene LogTransazione (formato obsoleto)!`);
+      console.log(`[SIAE-ROUTES] Transmission type: ${transmission.transmissionType}, eventId: ${transmission.ticketedEventId}`);
+      
+      // Se è RCA con eventId, tenta rigenerazione
+      if (transmission.ticketedEventId) {
+        console.log(`[SIAE-ROUTES] Attempting automatic regeneration for transmission ${id}...`);
+      } else {
+        return res.status(400).json({ 
+          message: "Questa trasmissione contiene un formato XML obsoleto (LogTransazione) che causa errore SIAE 40605. " +
+                   "Per risolvere, genera una NUOVA trasmissione dalla pagina dell'evento. " +
+                   "La trasmissione corrotta non può essere reinviata.",
+          code: "XML_FORMAT_OBSOLETE"
+        });
+      }
+    }
+    
+    // Per trasmissioni con eventId, verifica formato RCA e rigenera se necessario
+    if (transmission.ticketedEventId) {
       const hasWrongFormat = xmlContent.includes('<LogTransazione');
       const hasCorrectFormat = xmlContent.includes('<RiepilogoControlloAccessi');
       
-      console.log(`[SIAE-ROUTES] RCA Resend Check: hasCorrectFormat=${hasCorrectFormat}, hasWrongFormat=${hasWrongFormat}`);
+      console.log(`[SIAE-ROUTES] Resend Check: hasCorrectFormat=${hasCorrectFormat}, hasWrongFormat=${hasWrongFormat}, type=${transmission.transmissionType}`);
       
       if (hasWrongFormat || !hasCorrectFormat) {
-        console.log(`[SIAE-ROUTES] RCA XML has wrong format, attempting to regenerate...`);
-        
-        // Verifica che abbiamo l'eventId per rigenerare
-        if (!transmission.ticketedEventId) {
-          return res.status(400).json({ 
-            message: "Questa trasmissione RCA contiene un formato XML obsoleto (LogTransazione). " +
-                     "Per risolvere, genera una nuova trasmissione RCA dalla pagina dell'evento. " +
-                     "La trasmissione corrotta non può essere reinviata.",
-            code: "RCA_FORMAT_OBSOLETE"
-          });
-        }
+        console.log(`[SIAE-ROUTES] XML has wrong format, attempting to regenerate...`);
         
         // Rigenerazione XML RCA
         try {
