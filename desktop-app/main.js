@@ -1568,9 +1568,18 @@ async function handleRelayCommand(msg) {
       try {
         const smimeRequestId = msg.requestId;
         const smimePayload = msg.payload || {};
+        
+        // Supporto nuovo formato SMIMESignML con parametri separati
+        const smimeFrom = smimePayload.from || '';
+        const smimeTo = smimePayload.to || '';
+        const smimeSubject = smimePayload.subject || '';
+        const smimeBody = smimePayload.body || '';
+        const attachmentBase64 = smimePayload.attachmentBase64 || '';
+        const attachmentName = smimePayload.attachmentName || '';
         const mimeContent = smimePayload.mimeContent || '';
         
-        log.info(`[S/MIME] Signature request: requestId=${smimeRequestId}, mimeLength=${mimeContent.length}`);
+        const isNewFormat = smimeFrom && smimeTo;
+        log.info(`[S/MIME] Signature request: requestId=${smimeRequestId}, format=${isNewFormat ? 'SMIMESignML' : 'legacy'}, from=${smimeFrom}, to=${smimeTo}`);
         
         // Check if bridge is ready
         if (!bridgeProcess || !currentStatus.readerConnected) {
@@ -1623,11 +1632,20 @@ async function handleRelayCommand(msg) {
         
         // Execute S/MIME signature command
         // Pass PIN if available, otherwise let the bridge handle it (card already unlocked)
-        const smimeSignPayload = { 
+        // Supporto nuovo formato SMIMESignML con parametri separati
+        const smimeSignPayload = isNewFormat ? {
+          from: smimeFrom,
+          to: smimeTo,
+          subject: smimeSubject,
+          body: smimeBody,
+          attachmentBase64: attachmentBase64,
+          attachmentName: attachmentName,
+          pin: lastVerifiedPin || ''
+        } : { 
           mimeContent,
           pin: lastVerifiedPin || '' 
         };
-        log.info(`[S/MIME] Sending SIGN_SMIME command...`);
+        log.info(`[S/MIME] Sending SIGN_SMIME command (${isNewFormat ? 'SMIMESignML' : 'legacy'})...`);
         const smimeResult = await sendBridgeCommand(`SIGN_SMIME:${JSON.stringify(smimeSignPayload)}`);
         
         if (smimeResult.success && smimeResult.signature) {
