@@ -627,15 +627,22 @@ export default function SiaeTablesPage() {
   const getExportData = () => {
     switch (activeTab) {
       case 'genres':
+        // Trasforma i dati per includere IVA e ISI formattati
+        const genresForExport = genres.map(g => ({
+          ...g,
+          ivaFormatted: g.vatRate ? `${g.vatRate}%` : 'N/A',
+          isiFormatted: g.taxType === 'I' ? 'ISI 16%' : 'Esente'
+        }));
         return { 
-          data: genres, 
+          data: genresForExport, 
           title: 'TAB.1 - Generi Manifestazione', 
           filename: 'siae_generi_manifestazione',
           columns: [
             { key: 'code', label: 'Codice' },
             { key: 'name', label: 'Nome' },
             { key: 'taxType', label: 'Tipo Imposta' },
-            { key: 'vatRate', label: 'IVA %' },
+            { key: 'ivaFormatted', label: 'IVA' },
+            { key: 'isiFormatted', label: 'ISI' },
             { key: 'active', label: 'Attivo' },
           ]
         };
