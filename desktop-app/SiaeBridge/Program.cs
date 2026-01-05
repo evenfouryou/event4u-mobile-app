@@ -99,6 +99,17 @@ namespace SiaeBridge
         [DllImport("winscard.dll")]
         static extern int SCardReleaseContext(IntPtr hContext);
 
+        [DllImport("winscard.dll", CharSet = CharSet.Unicode)]
+        static extern int SCardConnectW(IntPtr hContext, string szReader, int dwShareMode, int dwPreferredProtocols, ref IntPtr phCard, ref int pdwActiveProtocol);
+
+        [DllImport("winscard.dll")]
+        static extern int SCardDisconnect(IntPtr hCard, int dwDisposition);
+
+        const int SCARD_SHARE_SHARED = 2;
+        const int SCARD_PROTOCOL_T0 = 1;
+        const int SCARD_PROTOCOL_T1 = 2;
+        const int SCARD_LEAVE_CARD = 0;
+
         // ============================================================
         // STATE
         // ============================================================
@@ -247,6 +258,10 @@ namespace SiaeBridge
 
             try
             {
+                Log($"Scanning slots 0-15 for card...");
+                int foundSlot = -1;
+                int lastState = 0;
+                
                 for (int s = 0; s < 16; s++)
                 {
                     try
@@ -254,14 +269,19 @@ namespace SiaeBridge
                         int state = isCardIn(s);
                         string decoded = DecodeCardState(state);
                         Log($"  isCardIn({s}) = {state} (0x{state:X2}) = {decoded}");
+                        lastState = state;
 
                         if (state == 0)
                         {
-                            // No more readers
+                            Log($"  Slot {s}: No reader, stopping scan");
                             break;
                         }
 
-                        if (IsCardPresent(state))
+                        // Check for PRESENT bit (0x20) OR state > 16 (card inserted can have various states)
+                        bool cardDetected = IsCardPresent(state) || (state > SCARD_STATE_EMPTY && state != SCARD_STATE_EMPTY);
+                        Log($"  Slot {s}: cardDetected={cardDetected} (PRESENT bit={(state & SCARD_STATE_PRESENT) != 0}, state>{SCARD_STATE_EMPTY}={state > SCARD_STATE_EMPTY})");
+                        
+                        if (cardDetected)
                         {
                             Log($"  ✓ CARTA PRESENTE in slot {s}!");
 
