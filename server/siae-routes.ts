@@ -2652,6 +2652,70 @@ router.get("/api/siae/transactions/:id", requireAuth, async (req: Request, res: 
   }
 });
 
+// Export transaction XML for SIAE
+router.get("/api/siae/transactions/:id/export-xml", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const transaction = await siaeStorage.getSiaeTransaction(req.params.id);
+    if (!transaction) {
+      return res.status(404).json({ message: "Transazione non trovata" });
+    }
+
+    // Get tickets for this transaction
+    const tickets = await db.select().from(siaeTickets)
+      .where(eq(siaeTickets.transactionId, req.params.id));
+
+    // Get event info
+    const ticketedEvent = await db.select().from(siaeTicketedEvents)
+      .where(eq(siaeTicketedEvents.id, transaction.ticketedEventId))
+      .then(rows => rows[0]);
+
+    let eventName = "Evento";
+    if (ticketedEvent) {
+      const event = await db.select().from(events)
+        .where(eq(events.id, ticketedEvent.eventId))
+        .then(rows => rows[0]);
+      if (event) eventName = event.name;
+    }
+
+    // Generate XML
+    const xmlContent = `<?xml version="1.0" encoding="UTF-8"?>
+<TransazioneSIAE>
+  <Intestazione>
+    <CodiceTransazione>${transaction.transactionCode}</CodiceTransazione>
+    <DataTransazione>${transaction.createdAt ? new Date(transaction.createdAt).toISOString() : ''}</DataTransazione>
+    <StatoTransazione>${transaction.status}</StatoTransazione>
+  </Intestazione>
+  <Evento>
+    <NomeEvento>${eventName}</NomeEvento>
+    <CodiceEvento>${transaction.ticketedEventId}</CodiceEvento>
+  </Evento>
+  <Cliente>
+    <CodiceCliente>${transaction.customerUniqueCode || ''}</CodiceCliente>
+    <Email>${transaction.customerEmail || ''}</Email>
+  </Cliente>
+  <DatiPagamento>
+    <MetodoPagamento>${transaction.paymentMethod}</MetodoPagamento>
+    <ImportoTotale>${transaction.totalAmount}</ImportoTotale>
+    <NumeroBiglietti>${transaction.ticketsCount}</NumeroBiglietti>
+  </DatiPagamento>
+  <Biglietti>
+${tickets.map(ticket => `    <Biglietto>
+      <CodiceBiglietto>${ticket.ticketCode}</CodiceBiglietto>
+      <SigilloFiscale>${ticket.sigilloFiscale || ''}</SigilloFiscale>
+      <Prezzo>${ticket.price || 0}</Prezzo>
+      <Stato>${ticket.status}</Stato>
+      <Partecipante>${ticket.participantFirstName || ''} ${ticket.participantLastName || ''}</Partecipante>
+    </Biglietto>`).join('\n')}
+  </Biglietti>
+</TransazioneSIAE>`;
+
+    res.json({ xml: xmlContent });
+  } catch (error: any) {
+    console.error('[GET /api/siae/transactions/:id/export-xml] Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.post("/api/siae/transactions", async (req: Request, res: Response) => {
   try {
     const data = insertSiaeTransactionSchema.parse(req.body);

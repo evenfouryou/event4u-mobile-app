@@ -72,6 +72,7 @@ import {
   ArrowLeft,
   Loader2,
   Ban,
+  FileText,
 } from "lucide-react";
 import { motion } from "framer-motion";
 import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
@@ -185,6 +186,36 @@ export default function SiaeTransactionsPage() {
   const handleViewTickets = (transaction: SiaeTransaction) => {
     setTransactionForTickets(transaction);
     setTicketsDialogOpen(true);
+  };
+
+  const handleExportXml = async (transaction: SiaeTransaction) => {
+    try {
+      const response = await apiRequest(`/api/siae/transactions/${transaction.id}/export-xml`, {
+        method: 'GET',
+      });
+      
+      const xmlContent = response.xml;
+      const blob = new Blob([xmlContent], { type: 'application/xml' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `transazione_${transaction.transactionCode}_siae.xml`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      document.body.removeChild(a);
+      
+      toast({
+        title: "Export completato",
+        description: `File XML per la transazione ${transaction.transactionCode} scaricato con successo`,
+      });
+    } catch (error) {
+      toast({
+        title: "Errore export",
+        description: "Impossibile generare il file XML per SIAE",
+        variant: "destructive",
+      });
+    }
   };
 
   const getTransactionTickets = (transactionId: string) => {
@@ -456,96 +487,88 @@ export default function SiaeTransactionsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Codice</TableHead>
-                    {isGlobalView && <TableHead>Evento</TableHead>}
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Biglietti</TableHead>
-                    <TableHead>Importo</TableHead>
-                    <TableHead>Pagamento</TableHead>
+                    <TableHead>ID Transazione</TableHead>
+                    <TableHead>Nome Evento</TableHead>
+                    <TableHead>Prezzo Ticket</TableHead>
+                    <TableHead>Ticket Venduti</TableHead>
+                    <TableHead>Guadagno Totale</TableHead>
+                    <TableHead>Data Transazione</TableHead>
                     <TableHead>Stato</TableHead>
-                    <TableHead>Data</TableHead>
                     <TableHead className="text-right">Azioni</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTransactions?.map((transaction) => (
-                    <TableRow key={transaction.id} data-testid={`row-transaction-${transaction.id}`}>
-                      <TableCell className="font-mono text-xs" data-testid={`cell-code-${transaction.id}`}>
-                        {transaction.transactionCode}
-                      </TableCell>
-                      {isGlobalView && (
+                  {filteredTransactions?.map((transaction) => {
+                    const ticketPrice = transaction.ticketsCount > 0 
+                      ? Number(transaction.totalAmount) / transaction.ticketsCount 
+                      : 0;
+                    return (
+                      <TableRow key={transaction.id} data-testid={`row-transaction-${transaction.id}`}>
+                        <TableCell className="font-mono text-xs" data-testid={`cell-id-${transaction.id}`}>
+                          {transaction.transactionCode}
+                        </TableCell>
                         <TableCell data-testid={`cell-event-${transaction.id}`}>
-                          <span className="text-sm truncate max-w-[150px] block">
+                          <span className="text-sm truncate max-w-[180px] block font-medium">
                             {getEventNameForTransaction(transaction.ticketedEventId)}
                           </span>
                         </TableCell>
-                      )}
-                      <TableCell data-testid={`cell-customer-${transaction.id}`}>
-                        <div>
-                          <div className="font-mono text-xs">{transaction.customerUniqueCode}</div>
-                          {transaction.customerEmail && (
-                            <div className="text-xs text-muted-foreground">{transaction.customerEmail}</div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell data-testid={`cell-tickets-${transaction.id}`}>
-                        <span className="flex items-center gap-1">
-                          <Ticket className="w-3 h-3" />
-                          {transaction.ticketsCount}
-                        </span>
-                      </TableCell>
-                      <TableCell data-testid={`cell-amount-${transaction.id}`}>
-                        <span className="flex items-center gap-1 font-medium text-[#FFD700]">
-                          <Euro className="w-3 h-3" />
-                          {Number(transaction.totalAmount).toFixed(2)}
-                        </span>
-                      </TableCell>
-                      <TableCell data-testid={`cell-payment-${transaction.id}`}>
-                        <span className="flex items-center gap-2">
-                          {getPaymentIcon(transaction.paymentMethod)}
-                          {getPaymentLabel(transaction.paymentMethod)}
-                        </span>
-                      </TableCell>
-                      <TableCell data-testid={`cell-status-${transaction.id}`}>
-                        {getStatusBadge(transaction.status)}
-                      </TableCell>
-                      <TableCell data-testid={`cell-date-${transaction.id}`}>
-                        <div className="text-sm">
-                          {transaction.createdAt && format(new Date(transaction.createdAt), "dd/MM/yyyy", { locale: it })}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {transaction.createdAt && format(new Date(transaction.createdAt), "HH:mm", { locale: it })}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedTransaction(transaction);
-                              setIsDetailDialogOpen(true);
-                            }}
-                            title="Dettagli Transazione"
-                            data-testid={`button-view-${transaction.id}`}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          {!isGlobalView && (
+                        <TableCell data-testid={`cell-price-${transaction.id}`}>
+                          <span className="flex items-center gap-1">
+                            <Euro className="w-3 h-3" />
+                            {ticketPrice.toFixed(2)}
+                          </span>
+                        </TableCell>
+                        <TableCell data-testid={`cell-tickets-${transaction.id}`}>
+                          <span className="flex items-center gap-1">
+                            <Ticket className="w-3 h-3" />
+                            {transaction.ticketsCount}
+                          </span>
+                        </TableCell>
+                        <TableCell data-testid={`cell-amount-${transaction.id}`}>
+                          <span className="flex items-center gap-1 font-medium text-[#FFD700]">
+                            <Euro className="w-3 h-3" />
+                            {Number(transaction.totalAmount).toFixed(2)}
+                          </span>
+                        </TableCell>
+                        <TableCell data-testid={`cell-date-${transaction.id}`}>
+                          <div className="text-sm">
+                            {transaction.createdAt && format(new Date(transaction.createdAt), "dd/MM/yyyy", { locale: it })}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {transaction.createdAt && format(new Date(transaction.createdAt), "HH:mm", { locale: it })}
+                          </div>
+                        </TableCell>
+                        <TableCell data-testid={`cell-status-${transaction.id}`}>
+                          {getStatusBadge(transaction.status)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleViewTickets(transaction)}
-                              title="Gestisci Biglietti"
-                              data-testid={`button-tickets-${transaction.id}`}
+                              onClick={() => {
+                                setSelectedTransaction(transaction);
+                                setIsDetailDialogOpen(true);
+                              }}
+                              title="Dettagli Transazione"
+                              data-testid={`button-view-${transaction.id}`}
                             >
-                              <Ticket className="w-4 h-4" />
+                              <Eye className="w-4 h-4" />
                             </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleExportXml(transaction)}
+                              title="Esporta XML per SIAE"
+                              data-testid={`button-export-xml-${transaction.id}`}
+                            >
+                              <FileText className="w-4 h-4 text-chart-2" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </CardContent>
@@ -954,96 +977,88 @@ export default function SiaeTransactionsPage() {
               <Table>
                 <TableHeader>
                   <TableRow className="bg-muted/50">
-                    <TableHead>Codice</TableHead>
-                    {isGlobalView && <TableHead>Evento</TableHead>}
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Biglietti</TableHead>
-                    <TableHead>Importo</TableHead>
-                    <TableHead>Pagamento</TableHead>
+                    <TableHead>ID Transazione</TableHead>
+                    <TableHead>Nome Evento</TableHead>
+                    <TableHead>Prezzo Ticket</TableHead>
+                    <TableHead>Ticket Venduti</TableHead>
+                    <TableHead>Guadagno Totale</TableHead>
+                    <TableHead>Data Transazione</TableHead>
                     <TableHead>Stato</TableHead>
-                    <TableHead>Data</TableHead>
                     <TableHead className="text-right">Azioni</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {filteredTransactions?.map((transaction) => (
-                    <TableRow key={transaction.id} data-testid={`row-transaction-${transaction.id}`}>
-                      <TableCell className="font-mono text-xs" data-testid={`cell-code-${transaction.id}`}>
-                        {transaction.transactionCode}
-                      </TableCell>
-                      {isGlobalView && (
+                  {filteredTransactions?.map((transaction) => {
+                    const ticketPrice = transaction.ticketsCount > 0 
+                      ? Number(transaction.totalAmount) / transaction.ticketsCount 
+                      : 0;
+                    return (
+                      <TableRow key={transaction.id} data-testid={`row-transaction-${transaction.id}`}>
+                        <TableCell className="font-mono text-xs" data-testid={`cell-id-mobile-${transaction.id}`}>
+                          {transaction.transactionCode}
+                        </TableCell>
                         <TableCell data-testid={`cell-event-mobile-${transaction.id}`}>
-                          <span className="text-sm truncate max-w-[120px] block">
+                          <span className="text-sm truncate max-w-[150px] block font-medium">
                             {getEventNameForTransaction(transaction.ticketedEventId)}
                           </span>
                         </TableCell>
-                      )}
-                      <TableCell data-testid={`cell-customer-${transaction.id}`}>
-                        <div>
-                          <div className="font-mono text-xs">{transaction.customerUniqueCode}</div>
-                          {transaction.customerEmail && (
-                            <div className="text-xs text-muted-foreground">{transaction.customerEmail}</div>
-                          )}
-                        </div>
-                      </TableCell>
-                      <TableCell data-testid={`cell-tickets-${transaction.id}`}>
-                        <span className="flex items-center gap-1">
-                          <Ticket className="w-3 h-3" />
-                          {transaction.ticketsCount}
-                        </span>
-                      </TableCell>
-                      <TableCell data-testid={`cell-amount-${transaction.id}`}>
-                        <span className="flex items-center gap-1 font-medium text-[#FFD700]">
-                          <Euro className="w-3 h-3" />
-                          {Number(transaction.totalAmount).toFixed(2)}
-                        </span>
-                      </TableCell>
-                      <TableCell data-testid={`cell-payment-${transaction.id}`}>
-                        <span className="flex items-center gap-2">
-                          {getPaymentIcon(transaction.paymentMethod)}
-                          {getPaymentLabel(transaction.paymentMethod)}
-                        </span>
-                      </TableCell>
-                      <TableCell data-testid={`cell-status-${transaction.id}`}>
-                        {getStatusBadge(transaction.status)}
-                      </TableCell>
-                      <TableCell data-testid={`cell-date-${transaction.id}`}>
-                        <div className="text-sm">
-                          {transaction.createdAt && format(new Date(transaction.createdAt), "dd/MM/yyyy", { locale: it })}
-                        </div>
-                        <div className="text-xs text-muted-foreground">
-                          {transaction.createdAt && format(new Date(transaction.createdAt), "HH:mm", { locale: it })}
-                        </div>
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => {
-                              setSelectedTransaction(transaction);
-                              setIsDetailDialogOpen(true);
-                            }}
-                            title="Dettagli Transazione"
-                            data-testid={`button-view-${transaction.id}`}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          {!isGlobalView && (
+                        <TableCell data-testid={`cell-price-mobile-${transaction.id}`}>
+                          <span className="flex items-center gap-1">
+                            <Euro className="w-3 h-3" />
+                            {ticketPrice.toFixed(2)}
+                          </span>
+                        </TableCell>
+                        <TableCell data-testid={`cell-tickets-mobile-${transaction.id}`}>
+                          <span className="flex items-center gap-1">
+                            <Ticket className="w-3 h-3" />
+                            {transaction.ticketsCount}
+                          </span>
+                        </TableCell>
+                        <TableCell data-testid={`cell-amount-mobile-${transaction.id}`}>
+                          <span className="flex items-center gap-1 font-medium text-[#FFD700]">
+                            <Euro className="w-3 h-3" />
+                            {Number(transaction.totalAmount).toFixed(2)}
+                          </span>
+                        </TableCell>
+                        <TableCell data-testid={`cell-date-mobile-${transaction.id}`}>
+                          <div className="text-sm">
+                            {transaction.createdAt && format(new Date(transaction.createdAt), "dd/MM/yyyy", { locale: it })}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {transaction.createdAt && format(new Date(transaction.createdAt), "HH:mm", { locale: it })}
+                          </div>
+                        </TableCell>
+                        <TableCell data-testid={`cell-status-mobile-${transaction.id}`}>
+                          {getStatusBadge(transaction.status)}
+                        </TableCell>
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
                             <Button
                               variant="ghost"
                               size="icon"
-                              onClick={() => handleViewTickets(transaction)}
-                              title="Gestisci Biglietti"
-                              data-testid={`button-tickets-${transaction.id}`}
+                              onClick={() => {
+                                setSelectedTransaction(transaction);
+                                setIsDetailDialogOpen(true);
+                              }}
+                              title="Dettagli Transazione"
+                              data-testid={`button-view-mobile-${transaction.id}`}
                             >
-                              <Ticket className="w-4 h-4" />
+                              <Eye className="w-4 h-4" />
                             </Button>
-                          )}
-                        </div>
-                      </TableCell>
-                    </TableRow>
-                  ))}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleExportXml(transaction)}
+                              title="Esporta XML per SIAE"
+                              data-testid={`button-export-xml-mobile-${transaction.id}`}
+                            >
+                              <FileText className="w-4 h-4 text-chart-2" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
                 </TableBody>
               </Table>
             </div>

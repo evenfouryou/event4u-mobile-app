@@ -1,0 +1,79 @@
+Progetto SIETA
+Sistema Informatizzato Emissione Titoli d’Accesso
+Software e licenze d’uso per l’utilizzazione delle SmartCard necessarie al funzionamento dei sistemi d’emissione titoli d’accesso.
+
+Materiale per uso della SmartCard (Carta di Attivazione) di prova:
+
+Aggiornamento delle LibSIAECard 11-Gennaio-2019 2019_01_11_libsiae_3.0.3.0_user.zip
+
+InCard–Full–Doc&Sw–Package.zip (Attenzione, 6 MBytes)
+
+InCard–Bd19xl34.zip
+
+Descrizione contenuto SmartCard SIAE di prova per i produttori
+
+Aggiornamento delle LibSIAECard 10–Marzo–2014 2014_03_10_libsiae.zip
+
+Questa versione della libsiae funziona con il nuovo meccanismo delle transazioni di Windows 8.0.
+Dato che in Windows 8 è stato modificato il modo di usare le transaction PCSC, i produttori di sistemi di biglietteria che vogliono essere 100% compatibili dovranno apportare delle modifiche al loro software.
+In caso contrario, funzioni come ComputeSigilloFast() potrebbero non funzionare perfettamente se qualche software diverso dalla libSIAE dovesse prendere il controllo della smartcard.
+
+Aggiornamento del CSP Vers 1.3.1.1 (fix per Windows vers superiore ad XP):
+
+bit4id_ipki_1.3.1.1–siae–csp12.exe (4.5 Mbytes) versione correttiva del 18–Ott–2013, necessaria per sistemi Microsoft Windows con versione superiore ad XP. Tale software aggiorna quello presente tra i file disponibili all’interno dell’archivio InCard–Full–Doc&Sw–Package.zip del paragrafo precedente (file: SysGillo CSP.exe a sua volta presente in SysGillo CSP Interfaces.zip).
+
+Aggiornamento delle LibSIAECard Vers 1.1.0:
+
+libSIAEcard_110.pdf (Documentazione aggiornata della nuova versione della libreria)
+
+libSIAE_src_110.zip (Sorgenti della libreria)
+
+libSIAE_dll_110.zip (dll compilata per ambiente Microsoft Win32)
+
+Differenze tra la versione 1.0.8 e la 1.0.9:
+
+Aggiunta una funzione per leggere il certificato di CA dalla smart card (GetCACertificate)
+Aggiunta una funzione per leggere il certificato di SIAE dalla smart card (GetSIAECertificate)
+Aggiunta una funzione per il "sensing" della presenza della carta (isCardIn)
+Corretti (nella documentazione) i parametri da passare alla funzione Sign.
+
+Differenze tra la versione 1.0.9 e la 1.1.0: Corretto un bug sulla funzione ChangePIN e sulla funzione UnblockPIN
+
+Aggiornamenti per gli utilizzatori del formato XML per la spedizione dei riepiloghi giornalieri e mensili: aggiunta possibilit� di riportare uno o pi� "Altri Proventi Evento" oppure di non riportarne
+
+DTD_20190627.zip
+Elenco dei DTD per il Controllo Accessi in riferimento al Provvedimento dell�Agenzia delle Entrate N. 22799 del 4/03/2008.
+
+DTD_VS.0.01_20081106.zip
+NOTA per gli utenti Microsoft Windows Win2000/XP:
+
+Il certificato "CAInfoCamereRootCertScadenzaAnno2011.cer" È il ROOT certificate della CA Infocamere che ha "generato", e quindi firmato, tutti i certificati di firma presenti a bordo delle SmartCard fornite da SIAE per conto dell’Agenzia delle Entrate. Per chi intendesse utilizzare in produzione (presso i titolari) il software �Outlook Express�, È necessario installare il suddetto certificato nello "store" di Windows cliccando con il tasto destro da �Esplora Risorse� di Windows e poi selezionando �Installa Certificato� ("Install Certificate" per le versioni in inglese). Nel caso non si provvedesse a tale operazione, Windows non renderebbe disponibile il file di firma rilevato a bordo della smartcard, anche se la e–mail È stata correttamente inserita nell’apposito campo dell’account dell’utente ed È stato lanciato il software �InCard sysgillo desktop� che istruisce i registry di Windows a cercare il certificato sulla smartcard InCard.
+
+A partire da Settembre 2004 InfoCamere ha modificato il proprio ROOT CERTIFICATE (emittente) con il seguente "Unicert_InfoCamere_Servizi_di_Certificazione_ 2.cer". Per quanto scritto in precedenza, È necessario il suo utilizzo qualora la SmartCard sia stata emessa dopo tale data, o, in ogni caso ed in particolare in caso di dubbio si potra’ procedere con l’installazione di entrambi i root certificates di infocamere.
+
+A partire da Novembre 2007 InfoCamere ha modificato il proprio ROOT CERTIFICATE (emittente) a causa di una separazione di un ramo d’azienda per cui ora invece che InfoCamere la societa’ di certificazione accreditata CNIPA che fornirà i certificati di firma si chiamerà INFOCERT e quindi il certificato ROOT di infocamere È sostituito con il seguente "InfoCert_Servizi_di_Certificazione.cer". Per quanto scritto in precedenza, È necessario il suo utilizzo qualora la SmartCard sia stata emessa dopo tale data, o, in ogni caso ed in particolare in caso di dubbio si potra’ procedere con l’installazione di tutti e tre i root certificates di infocamere ed ora InfoCert.
+
+2004–10–22 – Elenco codici di errore versione 1.00 trasmessi nel campo "subject:" delle e–mail di ritorno inviate ai sistemi di emissione titoli d’accesso.
+
+2009–04–03
+A far data dal 5 febbraio 2009, il nuovo fornitore di smart card per conto dell’Agenzia delle Entrate è la Società Bit4ID. Tale Società oltre a fornire le carte per i sistemi di Biglietteria Automatizzata, ha già reso disponibili le librerie in versione 3.0 per le quali fornirà anche il supporto I sistemi di biglietteria potranno continuare ad utilizzare le librerie precedentemente distribuite (ed ancora disponibili su questo sito) oppure utilizzare le nuove librerie, che da questa versione 3.0, sono disponibili oltre che per ambiente Win32, e GNU–Linux anche per Macintosh. Si fa notare che questa versione consente non solo la gestione della carta (contatori, dati pubblici, emissione sigilli ecc.), ma anche la creazione dei documenti firmati ".p7m" facilitando notevolmente il lavoro degli sviluppatori del sottosistema crittografico di biglietteria. Con l’occasione si ricorda che per quesiti inerenti gli aspetti tecnici/tecnologici, l’email da utilizzare è Sieta.Tecnologia@siae.it
+
+Pacchetto software LibrerieBit4ID–2009–Feb–05–V.3.0.zip
+
+Il file ’SIAECASIETARootCertScad2052.zip’ disponibile per il download è quello relativo alla nuova CA (Certification Authority) SIAE–SIETA erogatrice dei certificati utilizzati per firmare le email di risposta ai riepiloghi Giornalieri e Mensili contenenti gli eventuali codici di errore.
+Tale rinnovata CA è stata generata in modo tale che possa validare tutti i certificati emessi anche in precedenza. La sua validità è infatti a partire dal 2003 è stata estesa fino al 2052. Al fine di evitare che i sistemi, dopo la scadenza dell’attuale CA (Apr 6 13:23:27 2013 GMT) producano segnalazioni d’errore, sarà necessario procedere alla sostituzione della precedente CA presente sulle vecchie SmartCard prodotte fino al 7 settembre 2012 (a partire dal 10 settembre tutte le SmartCard emesse da SIAE conterranno a bordo il nuovo certificato CA SIAE–SIETA sopra descritto con scadenza 2052.
+Poiché è demandata a ciascun sistema di biglietteria l’architettura di verifica delle catene crittografiche, a titolo di esempio per coloro che avessero adottato sistemi windows per effettuare il controllo delle email di risposta provenienti da SIAE, l’operazione di aggiornamento richiederebbe l’installazione in tale ambiente del certificato CA suddetto nello ’storÈ dei certificati di windows.  Ciò consiste semplicemente nell’estrazione dal file ZIP presente in quest’area e nel doppio click sul file .cer rispondendo con i default (’ok’ od ’avanti’) a tutte le domande poste dall’interfaccia windows (si tratta di premere qualche [INVIO]). Tale operazione andrebbe effettuata sui soli server ai quali è demandata la ricezione dei messaggi provenienti da SIAE.
+Per i sistemi che utilizzano il certificato della CA presente a bordo delle Smart Card, questi purché utilizzino SC prodotte in data successiva al 10 settembre 2012, avranno già a bordo il nuovo certificato e non sarà necessaria quindi alcuna operazione di aggiornamento.
+Per coloro che ne abbiano necessità, si prega di procedere quanto prima e di fare riferimento, come di consueto, alla distribution list SIETA.Tecnologia@siae.it nel caso di dubbi o chiarimenti che si dovessero rendere necessari.
+
+Nuovo certificato CA–SIAE–SIETA–2012 Scad 2052.zip
+
+2015–05–15 – Da Maggio 2015, la società InfoCert ha deciso di adeguare la CA (Certification Authority) di produzione dei certificati di firma dedicati alle Biglietterie Automatizzate (SIETA), alla normativa emanata dalla AGID (AGenzia per l’Italia Digitale) adottando il nuovo algoritmo di MAC SHA256 per la validazione dei contenuti digitali. Tale "nuovo" algoritmo è divenuto obbligatorio in base alla Deliberazione n. 45 del 21 maggio 2009 del Cnipa (aggiornata mediante Determinazione Commissariale 28 luglio 2010).
+
+Ciò che cambierà all’interno sia del certificato della CA che dei certificati da questa emessi, sarà l’algoritmo di hashing (SHA–256) ovvero il "Signature Algorithm: sha256WithRSAEncryption�. Ciò varrà quindi sia per la CA che per tutti i certificati emessi dalla stessa che via via verranno resi disponibili a bordo delle Carte di Attivazione rilasciate ai titolari dei sistemi delle biglietterie automatizzate.
+
+Come al solito, sarà necessario provvedere alla sua installazione (in particolare) sui Sistemi di Biglietteria che lavorano in ambiente Microsoft Windows, di non generare errori al momento di firmare ed inviare i riepiloghi con i nuovi certificati.
+
+L’installazione del file SIETA_CA_Produz2015–DER.cer presente all’interno del pacchetto SIETA_CA_Produz2015.zip, si potrà effettuare mediante un semplice doppio click ed accettando tutti i default del sistema Windows. Tale certificato andrà a far parte dello store dei certificati windows come CA affidabile (trusted) e quindi consentirà al sistema di biglietteria di firmare con certificati emessi da questa stessa senza warning/errori.
+
+SIAE inizierà a produrre (personalizzare) e distribuire per conto dell’Agenzia delle Entrate Carte di Attivazione contenenti certificati con SHA–256 a partire dal 4 giugno 2015.
