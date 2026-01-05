@@ -78,9 +78,12 @@ The system supports CAdES-BES digital signatures for SIAE report compliance, gen
 - **File-based workflow**: XML written to temp file → PKCS7SignML creates P7M → read and Base64 encode
 - **Error handling**: Interprets smart card error codes (0x6983=PIN blocked, 0x6982=wrong PIN, 0x63Cx=attempts remaining)
 - **Signature persistence**: P7M content stored in `siaeTransmissions.p7mContent` for offline resend
-- **Dual-format support**: Maintains XMLDSig fallback for legacy compatibility
+- **CAdES-BES ONLY (2025)**: No XMLDSig fallback - SIAE requires SHA-256 CAdES-BES detached signatures (fixes Error 40605)
 - **Email transmission**: P7M attachments sent as `application/pkcs7-mime` with proper binary encoding
 - **Offline resilience**: Cached signatures used when bridge is disconnected during resend operations
+- **RCA DTD Compliance**: XML remains unmodified (DTD: `RiepilogoControlloAccessi` allows only `Titolare, Evento+`), signature is detached P7M
+
+**Error 40605 Resolution (2026-01-05)**: The legacy XMLDSig approach embedded a `<Signature>` element inside the XML, violating the RCA DTD schema which only allows `(Titolare, Evento+)` children. The fix uses CAdES-BES detached signatures via `libSIAEp7.dll` + BouncyCastle, keeping the XML DTD-compliant while the P7M wraps both XML and signature in a standard PKCS#7 container.
 
 ### S/MIME Email Signatures (via libSIAEp7.dll)
 For SIAE RCA transmissions, emails must be S/MIME signed per Allegato C (Provvedimento 04/03/2008). Key compliance requirements:
