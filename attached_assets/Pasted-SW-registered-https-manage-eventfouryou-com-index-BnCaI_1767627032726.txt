@@ -1,0 +1,117 @@
+SW registered: https://manage.eventfouryou.com/
+index-BnCaIaN3.js:1084 [DEBUG SC] Fetching initial status via HTTP...
+index-BnCaIaN3.js:1084 [DEBUG SC] ====== SMART CARD CONNECTION START ======
+index-BnCaIaN3.js:1084 [DEBUG SC] URL: wss://manage.eventfouryou.com/ws/bridge
+index-BnCaIaN3.js:1084 [DEBUG SC] Cookies present: YES
+index-BnCaIaN3.js:1084 [DEBUG SC] Cookie value: _ga=GA1.1.962813290.1739208627; _fbp=fb.1.17397993...
+index-BnCaIaN3.js:1084 [DEBUG SC] WebSocket created, state: 0
+index-BnCaIaN3.js:1084 [DEBUG SC] HTTP status received: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 264,
+  "cardBalance": 423561,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "cardEmail": "tickefouryou@gmail.com",
+  "cardCertificateCN": "PETRELLI/JONATHAN/PTRJTH93M11I156B",
+  "cardCertificateExpiry": "2028-03-06",
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+index-BnCaIaN3.js:1084 [DEBUG SC] HTTP - cardSerial: 4130313238343837
+index-BnCaIaN3.js:1084 [DEBUG SC] HTTP - cardCounter: 264
+index-BnCaIaN3.js:1084 [DEBUG SC] HTTP - cardBalance: 423561
+index-BnCaIaN3.js:1084 [DEBUG SC] HTTP - cardKeyId: 129
+index-BnCaIaN3.js:1084 [DEBUG SC] HTTP - cardInserted: true
+index-BnCaIaN3.js:1084 [DEBUG SC] WebSocket OPEN! State: 1
+index-BnCaIaN3.js:1084 [DEBUG SC] Sending get_status request...
+index-BnCaIaN3.js:1084 [DEBUG SC] MESSAGE RECEIVED: {"type":"connection_status","bridgeConnected":true,"connected":true,"message":"Bridge desktop app is connected"}
+index-BnCaIaN3.js:1084 [DEBUG SC] Parsed message type: connection_status
+index-BnCaIaN3.js:1084 [DEBUG SC] Handling bridge/connection status: connection_status Object
+index-BnCaIaN3.js:1084 [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+index-BnCaIaN3.js:1084 [DEBUG SC] Message type: connection_status
+index-BnCaIaN3.js:1084 [DEBUG SC] msg.connected: true
+index-BnCaIaN3.js:1084 [DEBUG SC] msg.bridgeConnected: true
+index-BnCaIaN3.js:1084 [DEBUG SC] isConnected (final): true
+index-BnCaIaN3.js:1084 [DEBUG SC] Full message: {"type":"connection_status","bridgeConnected":true,"connected":true,"message":"Bridge desktop app is connected"}
+index-BnCaIaN3.js:1084 [DEBUG SC] Bridge IS connected - updating status to CONNECTED
+index-BnCaIaN3.js:1084 [DEBUG SC] Status after update: {"connected":true,"relayConnected":true,"readerDetected":true,"cardInserted":true,"readerName":null,"cardAtr":null,"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardType":"Smart Card SIAE","lastCheck":"2026-01-05T15:29:44.118Z","error":null,"bridgeConnected":true,"canEmitRealSeals":true,"demoMode":false}
+index-BnCaIaN3.js:1084 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"car
+index-BnCaIaN3.js:1084 [DEBUG SC] Parsed message type: status
+index-BnCaIaN3.js:1084 [DEBUG SC] Handling status message
+index-BnCaIaN3.js:1084 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-BnCaIaN3.js:1084 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 264,
+  "cardBalance": 423561,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "cardEmail": "tickefouryou@gmail.com",
+  "cardCertificateCN": "PETRELLI/JONATHAN/PTRJTH93M11I156B",
+  "cardCertificateExpiry": "2028-03-06",
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+index-BnCaIaN3.js:1084 [DEBUG SC] data.cardSerial: 4130313238343837
+index-BnCaIaN3.js:1084 [DEBUG SC] data.cardCounter: 264
+index-BnCaIaN3.js:1084 [DEBUG SC] data.cardBalance: 423561
+index-BnCaIaN3.js:1084 [DEBUG SC] data.cardKeyId: 129
+index-BnCaIaN3.js:1084 [DEBUG SC] data.cardInserted: true
+index-BnCaIaN3.js:1084 [DEBUG SC] data.readerDetected: undefined
+index-BnCaIaN3.js:1084 [DEBUG SC] data.readerConnected: true
+index-BnCaIaN3.js:1084 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","toCompanyId":"super_admin","toUserId":"9d593553-939f-47cc-9b08-7cf92e5b6f68","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":
+index-BnCaIaN3.js:1084 [DEBUG SC] Parsed message type: status
+index-BnCaIaN3.js:1084 [DEBUG SC] Handling status message
+index-BnCaIaN3.js:1084 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-BnCaIaN3.js:1084 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 264,
+  "cardBalance": 423561,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "cardEmail": "tickefouryou@gmail.com",
+  "cardCertificateCN": "PETRELLI/JONATHAN/PTRJTH93M11I156B",
+  "cardCertificateExpiry": "2028-03-06",
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+index-BnCaIaN3.js:1084 [DEBUG SC] data.cardSerial: 4130313238343837
+index-BnCaIaN3.js:1084 [DEBUG SC] data.cardCounter: 264
+index-BnCaIaN3.js:1084 [DEBUG SC] data.cardBalance: 423561
+index-BnCaIaN3.js:1084 [DEBUG SC] data.cardKeyId: 129
+index-BnCaIaN3.js:1084 [DEBUG SC] data.cardInserted: true
+index-BnCaIaN3.js:1084 [DEBUG SC] data.readerDetected: undefined
+index-BnCaIaN3.js:1084 [DEBUG SC] data.readerConnected: true
+index-BnCaIaN3.js:1084 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-BnCaIaN3.js:1084 [DEBUG SC] Parsed message type: ping
+index-BnCaIaN3.js:1084 [DEBUG SC] Ping received, sending pong
+/api/siae/companies/4186e56b-d6bd-4d1d-b7d6-f0b22ec12b91/transmissions/send-c1:1  Failed to load resource: the server responded with a status of 400 ()Understand this error
+index-BnCaIaN3.js:1084 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-BnCaIaN3.js:1084 [DEBUG SC] Parsed message type: ping
+index-BnCaIaN3.js:1084 [DEBUG SC] Ping received, sending pong
+index-BnCaIaN3.js:1084 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-BnCaIaN3.js:1084 [DEBUG SC] Parsed message type: pong
+index-BnCaIaN3.js:1084 [DEBUG SC] Pong received
+index-BnCaIaN3.js:1084 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-BnCaIaN3.js:1084 [DEBUG SC] Parsed message type: ping
+index-BnCaIaN3.js:1084 [DEBUG SC] Ping received, sending pong
