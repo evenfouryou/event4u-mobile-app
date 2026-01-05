@@ -4009,39 +4009,15 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     const company = await storage.getCompany(transmission.companyId);
     const companyName = company?.name || 'N/A';
     
-    // CRITICAL FIX: Verifica che l'XML NON contenga LogTransazione (formato obsoleto)
+    // CRITICAL FIX: Rigenera SEMPRE l'XML obbligatoriamente per garantire formato corretto
     // LogTransazione causa errore SIAE 40605 "Il riepilogo risulta illegibile"
     let xmlContent = transmission.fileContent;
     let regeneratedXml = false;
     
-    // BLOCCO GLOBALE: Se l'XML contiene LogTransazione, è SEMPRE un errore
-    const hasLogTransazione = xmlContent.includes('<LogTransazione');
-    if (hasLogTransazione) {
-      console.error(`[SIAE-ROUTES] CRITICAL: XML contiene LogTransazione (formato obsoleto)!`);
-      console.log(`[SIAE-ROUTES] Transmission type: ${transmission.transmissionType}, eventId: ${transmission.ticketedEventId}`);
-      
-      // Se è RCA con eventId, tenta rigenerazione
-      if (transmission.ticketedEventId) {
-        console.log(`[SIAE-ROUTES] Attempting automatic regeneration for transmission ${id}...`);
-      } else {
-        return res.status(400).json({ 
-          message: "Questa trasmissione contiene un formato XML obsoleto (LogTransazione) che causa errore SIAE 40605. " +
-                   "Per risolvere, genera una NUOVA trasmissione dalla pagina dell'evento. " +
-                   "La trasmissione corrotta non può essere reinviata.",
-          code: "XML_FORMAT_OBSOLETE"
-        });
-      }
-    }
-    
-    // Per trasmissioni con eventId, verifica formato RCA e rigenera se necessario
+    // RIGENERAZIONE OBBLIGATORIA: Se abbiamo eventId, rigenera SEMPRE l'XML
     if (transmission.ticketedEventId) {
-      const hasWrongFormat = xmlContent.includes('<LogTransazione');
-      const hasCorrectFormat = xmlContent.includes('<RiepilogoControlloAccessi');
-      
-      console.log(`[SIAE-ROUTES] Resend Check: hasCorrectFormat=${hasCorrectFormat}, hasWrongFormat=${hasWrongFormat}, type=${transmission.transmissionType}`);
-      
-      if (hasWrongFormat || !hasCorrectFormat) {
-        console.log(`[SIAE-ROUTES] XML has wrong format, attempting to regenerate...`);
+      console.log(`[SIAE-ROUTES] RIGENERAZIONE OBBLIGATORIA XML per trasmissione ${id}...`);
+      console.log(`[SIAE-ROUTES] Transmission type: ${transmission.transmissionType}, eventId: ${transmission.ticketedEventId}`);
         
         // Rigenerazione XML RCA
         try {
@@ -4133,16 +4109,15 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
             signedAt: null,
           });
           
-          console.log(`[SIAE-ROUTES] RCA XML regenerated successfully with ${rcaResult.ticketCount} tickets`);
-          console.log(`[SIAE-ROUTES] Regenerated XML Preview: ${xmlContent.substring(0, 300)}`);
-          
-        } catch (regenError: any) {
-          console.error(`[SIAE-ROUTES] Failed to regenerate RCA XML: ${regenError.message}`);
-          return res.status(400).json({ 
-            message: `Impossibile rigenerare l'XML RCA: ${regenError.message}. Genera una nuova trasmissione dalla pagina dell'evento.`,
-            code: "RCA_REGENERATION_FAILED"
-          });
-        }
+        console.log(`[SIAE-ROUTES] RCA XML regenerated successfully with ${rcaResult.ticketCount} tickets`);
+        console.log(`[SIAE-ROUTES] Regenerated XML Preview: ${xmlContent.substring(0, 300)}`);
+        
+      } catch (regenError: any) {
+        console.error(`[SIAE-ROUTES] Failed to regenerate RCA XML: ${regenError.message}`);
+        return res.status(400).json({ 
+          message: `Impossibile rigenerare l'XML RCA: ${regenError.message}. Genera una nuova trasmissione dalla pagina dell'evento.`,
+          code: "RCA_REGENERATION_FAILED"
+        });
       }
     }
     
@@ -7385,7 +7360,7 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     const transmissionCount = await siaeStorage.getSiaeTransmissionCount(event.companyId);
     const progressivoGenerazione = transmissionCount + 1;
     
-    // Prepara i biglietti per generateC1LogXml (formato SiaeTicketForLog)
+    // Prepara i biglietti per generateRCAXml (formato SiaeTicketForLog)
     // IMPORTANTE: Determinare correttamente lo status per conformità SIAE
     // Se cancellationReasonCode o cancellationDate sono presenti, il biglietto è annullato
     const ticketsForLog: SiaeTicketForLog[] = allTickets.map(t => {
