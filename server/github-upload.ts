@@ -71,6 +71,7 @@ function readDesktopFileBinary(filename: string): string {
 // Get text files to upload from local desktop-app directory
 function getFilesToUpload(): Record<string, string> {
   return {
+    // Root level files (used by build)
     'main.js': readDesktopFile('main.js'),
     'preload.js': readDesktopFile('preload.js'),
     'index.html': readDesktopFile('index.html'),
@@ -83,7 +84,19 @@ function getFilesToUpload(): Record<string, string> {
     '.github/workflows/build.yml': readDesktopFile('.github/workflows/build.yml'),
     'SiaeBridge/SiaeBridge.csproj': readDesktopFile('SiaeBridge/SiaeBridge.csproj'),
     'SiaeBridge/Program.cs': readDesktopFile('SiaeBridge/Program.cs'),
-    'SiaeBridge/LibSiae.cs': readDesktopFile('SiaeBridge/LibSiae.cs')
+    'SiaeBridge/LibSiae.cs': readDesktopFile('SiaeBridge/LibSiae.cs'),
+    // desktop-app subfolder (mirror for reference)
+    'desktop-app/main.js': readDesktopFile('main.js'),
+    'desktop-app/preload.js': readDesktopFile('preload.js'),
+    'desktop-app/index.html': readDesktopFile('index.html'),
+    'desktop-app/styles.css': readDesktopFile('styles.css'),
+    'desktop-app/renderer.js': readDesktopFile('renderer.js'),
+    'desktop-app/package.json': readDesktopFile('package.json'),
+    'desktop-app/BUILD_INSTRUCTIONS.md': readDesktopFile('BUILD_INSTRUCTIONS.md'),
+    'desktop-app/build-local.ps1': readDesktopFile('build-local.ps1'),
+    'desktop-app/SiaeBridge/SiaeBridge.csproj': readDesktopFile('SiaeBridge/SiaeBridge.csproj'),
+    'desktop-app/SiaeBridge/Program.cs': readDesktopFile('SiaeBridge/Program.cs'),
+    'desktop-app/SiaeBridge/LibSiae.cs': readDesktopFile('SiaeBridge/LibSiae.cs')
   };
 }
 
