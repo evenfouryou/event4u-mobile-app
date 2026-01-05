@@ -99,7 +99,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.16 - FIX: isCardIn() returns boolean (1=present), not bitmask");
+            Log("SiaeBridge v3.17 - FIX: Restored v3.15 card detection logic (break on state<=0)");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -231,55 +231,53 @@ namespace SiaeBridge
                         string decoded = DecodeCardState(state);
                         Log($"  isCardIn({s}) = {state} = {decoded}");
 
-                        if (state == 0)
+                        // state <= 0 means no reader at this slot, stop scanning
+                        if (state <= 0)
                         {
-                            // No card in this slot, try next
-                            continue;
+                            Log($"  No reader at slot {s}, stopping scan");
+                            break;
                         }
 
-                        // libSIAE.dll returns >0 when card is present
-                        if (IsCardPresent(state))
+                        // state > 0 means card is present (libSIAE returns 1 for card present)
+                        Log($"  ✓ CARTA PRESENTE in slot {s}!");
+
+                        // Reset card state before initialize
+                        int finRes = FinalizeML(s);
+                        Log($"  FinalizeML({s}) = {finRes}");
+                        
+                        // Try to initialize
+                        Log($"  Trying Initialize({s})...");
+                        int init = Initialize(s);
+                        Log($"  Initialize({s}) = {init} (0x{init:X4})");
+
+                        _slot = s;
+
+                        if (init == 0 || init == 3) // 0=OK, 3=already initialized
                         {
-                            Log($"  ✓ CARTA PRESENTE in slot {s}!");
-
-                            // Reset card state before initialize
-                            int finRes = FinalizeML(s);
-                            Log($"  FinalizeML({s}) = {finRes}");
-                            
-                            // Try to initialize
-                            Log($"  Trying Initialize({s})...");
-                            int init = Initialize(s);
-                            Log($"  Initialize({s}) = {init} (0x{init:X4})");
-
-                            _slot = s;
-
-                            if (init == 0 || init == 3) // 0=OK, 3=already initialized
+                            return JsonConvert.SerializeObject(new
                             {
-                                return JsonConvert.SerializeObject(new
-                                {
-                                    success = true,
-                                    readerConnected = true,
-                                    cardPresent = true,
-                                    slot = s,
-                                    cardState = decoded,
-                                    initResult = init,
-                                    message = "Carta SIAE rilevata e pronta!"
-                                });
-                            }
-                            else
+                                success = true,
+                                readerConnected = true,
+                                cardPresent = true,
+                                slot = s,
+                                cardState = decoded,
+                                initResult = init,
+                                message = "Carta SIAE rilevata e pronta!"
+                            });
+                        }
+                        else
+                        {
+                            return JsonConvert.SerializeObject(new
                             {
-                                return JsonConvert.SerializeObject(new
-                                {
-                                    success = true,
-                                    readerConnected = true,
-                                    cardPresent = true,
-                                    slot = s,
-                                    cardState = decoded,
-                                    initResult = init,
-                                    warning = $"Initialize returned 0x{init:X4}",
-                                    message = "Carta rilevata (init warning)"
-                                });
-                            }
+                                success = true,
+                                readerConnected = true,
+                                cardPresent = true,
+                                slot = s,
+                                cardState = decoded,
+                                initResult = init,
+                                warning = $"Initialize returned 0x{init:X4}",
+                                message = "Carta rilevata (init warning)"
+                            });
                         }
                     }
                     catch (Exception ex)
