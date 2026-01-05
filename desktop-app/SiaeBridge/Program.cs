@@ -99,7 +99,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.17 - FIX: Restored v3.15 card detection logic (break on state<=0)");
+            Log("SiaeBridge v3.18 - FIX: Added DLL copy to output in .csproj (libSIAE.dll was missing)");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");

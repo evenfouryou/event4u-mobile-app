@@ -18,4 +18,10 @@
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.5.1" />
   </ItemGroup>
 
+  <!-- Copy SIAE DLLs to output directory -->
+  <ItemGroup>
+    <None Include="prebuilt\libSIAE.dll" CopyToOutputDirectory="Always" CopyToPublishDirectory="Always" />
+    <None Include="prebuilt\libSIAEp7.dll" CopyToOutputDirectory="Always" CopyToPublishDirectory="Always" />
+  </ItemGroup>
+
 </Project>
