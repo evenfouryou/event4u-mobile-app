@@ -2075,9 +2075,76 @@ namespace SiaeBridge
                 string mimeContent = req.mimeContent;
                 string pin = req.pin;
 
+                // NUOVO: Supporto formato SMIMESignML con parametri separati
+                string smimeFrom = req.from;
+                string smimeTo = req.to;
+                string smimeSubject = req.subject;
+                string smimeBody = req.body;
+                string attachmentBase64 = req.attachmentBase64;
+                string attachmentName = req.attachmentName;
+
+                // Se abbiamo i nuovi parametri, costruisci il mimeContent
+                if (!string.IsNullOrEmpty(smimeFrom) && !string.IsNullOrEmpty(smimeTo))
+                {
+                    Log($"SignSmime: Using SMIMESignML format - from={smimeFrom}, to={smimeTo}");
+                    
+                    var mimeBuilder = new StringBuilder();
+                    string boundary = $"----=_Part_{Guid.NewGuid():N}";
+                    
+                    // Header email
+                    mimeBuilder.Append($"From: {smimeFrom}\r\n");
+                    mimeBuilder.Append($"To: {smimeTo}\r\n");
+                    mimeBuilder.Append($"Subject: {smimeSubject ?? "RCA Transmission"}\r\n");
+                    mimeBuilder.Append("MIME-Version: 1.0\r\n");
+                    
+                    if (!string.IsNullOrEmpty(attachmentBase64) && !string.IsNullOrEmpty(attachmentName))
+                    {
+                        // Email con allegato - multipart/mixed
+                        mimeBuilder.Append($"Content-Type: multipart/mixed; boundary=\"{boundary}\"\r\n");
+                        mimeBuilder.Append("\r\n");
+                        
+                        // Parte body
+                        mimeBuilder.Append($"--{boundary}\r\n");
+                        mimeBuilder.Append("Content-Type: text/plain; charset=utf-8\r\n");
+                        mimeBuilder.Append("Content-Transfer-Encoding: 8bit\r\n");
+                        mimeBuilder.Append("\r\n");
+                        mimeBuilder.Append(smimeBody ?? "SIAE RCA Transmission");
+                        mimeBuilder.Append("\r\n\r\n");
+                        
+                        // Parte allegato P7M
+                        mimeBuilder.Append($"--{boundary}\r\n");
+                        mimeBuilder.Append($"Content-Type: application/pkcs7-mime; name=\"{attachmentName}\"\r\n");
+                        mimeBuilder.Append("Content-Transfer-Encoding: base64\r\n");
+                        mimeBuilder.Append($"Content-Disposition: attachment; filename=\"{attachmentName}\"\r\n");
+                        mimeBuilder.Append("\r\n");
+                        
+                        // Formatta base64 in righe da 76 caratteri
+                        for (int i = 0; i < attachmentBase64.Length; i += 76)
+                        {
+                            int len = Math.Min(76, attachmentBase64.Length - i);
+                            mimeBuilder.Append(attachmentBase64.Substring(i, len));
+                            mimeBuilder.Append("\r\n");
+                        }
+                        
+                        mimeBuilder.Append($"--{boundary}--\r\n");
+                    }
+                    else
+                    {
+                        // Email senza allegato - text/plain
+                        mimeBuilder.Append("Content-Type: text/plain; charset=utf-8\r\n");
+                        mimeBuilder.Append("Content-Transfer-Encoding: 8bit\r\n");
+                        mimeBuilder.Append("\r\n");
+                        mimeBuilder.Append(smimeBody ?? "SIAE RCA Transmission");
+                        mimeBuilder.Append("\r\n");
+                    }
+                    
+                    mimeContent = mimeBuilder.ToString();
+                    Log($"  Built MIME content from SMIMESignML params: {mimeContent.Length} bytes");
+                }
+
                 if (string.IsNullOrEmpty(mimeContent))
                 {
-                    return ERR("Contenuto MIME mancante");
+                    return ERR("Contenuto MIME mancante - servono mimeContent oppure from/to/subject/body");
                 }
 
                 if (string.IsNullOrEmpty(pin))

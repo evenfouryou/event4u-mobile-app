@@ -1,0 +1,156 @@
+2026-01-05 16:02:35.47
+2fa5bc08
+User
+<RiepilogoControlloAccessi Sostituzione="N">
+2026-01-05 16:02:35.47
+2fa5bc08
+User
+[Bridge-Audit] xml_signature: requested - requestId=sig_1767625355474_1498sj4tl
+2026-01-05 16:02:35.47
+2fa5bc08
+User
+[Bridge] XML signature request sent successfully, waiting for response...
+2026-01-05 16:02:35.47
+2fa5bc08
+User
+[Bridge] Sending XML signature request to bridge: requestId=sig_1767625355474_1498sj4tl
+2026-01-05 16:02:37.55
+2fa5bc08
+User
+[Bridge] Message received: type=ping
+2026-01-05 16:02:40.17
+2fa5bc08
+User
+[Bridge] XML signature request completed: requestId=sig_1767625355474_1498sj4tl, format=CAdES-BES, duration=4700ms
+2026-01-05 16:02:40.17
+2fa5bc08
+User
+[Bridge] Message received: type=SIGNATURE_RESPONSE
+2026-01-05 16:02:40.17
+2fa5bc08
+User
+[SIAE-ROUTES] CAdES-BES signature created for C1 RCA evento "Prova 28/12 pt 2"
+2026-01-05 16:02:40.17
+2fa5bc08
+User
+[Bridge-Audit] xml_signature: completed - requestId=sig_1767625355474_1498sj4tl
+2026-01-05 16:02:40.17
+2fa5bc08
+User
+[Bridge] XML Signature response received: requestId=sig_1767625355474_1498sj4tl
+2026-01-05 16:02:40.24
+2fa5bc08
+User
+[Bridge] cachedBridgeStatus: {"type":"status","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardAtr":null,"cardEmail":"tickefouryou@gmail.com","cardCertificateCN":"PETRELLI/JONATHAN/PTRJTH93M11I156B","cardCertificateExpiry":"2028-03-06","demoMode":false,"canEmitTickets":true,"relayConnected":true,"pinLocked":false,"pinRequired":false}}
+2026-01-05 16:02:40.24
+2fa5bc08
+User
+[EMAIL-SERVICE] Attempting S/MIME signature for SIAE email to servertest2@batest.siae.it...
+2026-01-05 16:02:40.24
+2fa5bc08
+User
+[Bridge] Card ready check for S/MIME: {"ready":true,"error":null}
+2026-01-05 16:02:40.24
+2fa5bc08
+User
+[Bridge] Sending S/MIME signature request to bridge: requestId=smime_1767625360243_rk75rd1fm
+2026-01-05 16:02:40.24
+2fa5bc08
+User
+[Bridge] Card ready for seals!
+2026-01-05 16:02:40.24
+2fa5bc08
+User
+[Bridge] Found card signer email: tickefouryou@gmail.com
+2026-01-05 16:02:40.24
+2fa5bc08
+User
+[Bridge] globalBridge exists: true
+2026-01-05 16:02:40.24
+2fa5bc08
+User
+[Bridge] requestSmimeSignature called, format=SMIMESignML, recipient=servertest2@batest.siae.it
+2026-01-05 16:02:40.24
+2fa5bc08
+User
+[Bridge] Using SMIMESignML format: from="Event4U SIAE" <tickefouryou@gmail.com>, to=servertest2@batest.siae.it, subject=RCA_2026_01_05_EVENT4U1_001_XSI_V.01.00...
+2026-01-05 16:02:40.24
+2fa5bc08
+User
+[EMAIL-SERVICE] Card signer email (from cache): tickefouryou@gmail.com
+2026-01-05 16:02:40.24
+2fa5bc08
+User
+[Bridge] Extracted status: {"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardAtr":null,"cardEmail":"tickefouryou@gmail.com","cardCertificateCN":"PETRELLI/JONATHAN/PTRJTH93M11I156B","cardCertificateExpiry":"2028-03-06","demoMode":false,"canEmitTickets":true,"relayConnected":true,"pinLocked":false,"pinRequired":false}
+2026-01-05 16:02:40.24
+2fa5bc08
+User
+[Bridge] Normalized values: readerConnected=true, cardInserted=true
+2026-01-05 16:02:40.24
+2fa5bc08
+User
+[Bridge] isCardReadyForSeals called
+2026-01-05 16:02:40.24
+2fa5bc08
+User
+[Bridge] Requesting S/MIME signature: requestId=smime_1767625360243_rk75rd1fm
+2026-01-05 16:02:40.24
+2fa5bc08
+User
+[Bridge-Audit] smime_signature: requested - requestId=smime_1767625360243_rk75rd1fm
+2026-01-05 16:02:40.24
+2fa5bc08
+User
+[Bridge] S/MIME signature request sent successfully, waiting for response...
+2026-01-05 16:02:42.73
+2fa5bc08
+User
+[Bridge] Pong received from userId=9d593553-939f-47cc-9b08-7cf92e5b6f68, lastPing updated
+2026-01-05 16:02:42.73
+2fa5bc08
+User
+[Bridge] Message received: type=pong
+2026-01-05 16:02:42.74
+2fa5bc08
+User
+[Bridge] Message received: type=pong
+2026-01-05 16:02:43.81
+2fa5bc08
+User
+[Bridge] Message received: type=SMIME_SIGNATURE_RESPONSE
+2026-01-05 16:02:43.81
+2fa5bc08
+User
+[Bridge] S/MIME Signature response received: requestId=smime_1767625360243_rk75rd1fm
+2026-01-05 16:02:43.81
+2fa5bc08
+User
+[EMAIL-SERVICE] S/MIME signature failed: SIGNATURE_UNKNOWN_ERROR: Contenuto MIME mancante
+2026-01-05 16:02:43.81
+2fa5bc08
+User
+[Bridge] S/MIME signature request failed: requestId=smime_1767625360243_rk75rd1fm, code=SIGNATURE_UNKNOWN_ERROR, error=Contenuto MIME mancante
+2026-01-05 16:02:43.81
+2fa5bc08
+User
+[EMAIL-SERVICE] BLOCKED: Signature required but failed. Email NOT sent.
+2026-01-05 16:02:43.81
+2fa5bc08
+User
+[Bridge-Audit] smime_signature: failed - requestId=smime_1767625360243_rk75rd1fm error=SIGNATURE_UNKNOWN_ERROR
+2026-01-05 16:02:43.88
+2fa5bc08
+User
+3:02:43 PM [express] POST /api/siae/companies/4186e56b-d6bd-4d1d-b7d6-f0b22ec12b91/transmissions/sen…
+2026-01-05 16:02:43.88
+2fa5bc08
+User
+3:02:43 PM [express] POST /api/siae/companies/4186e56b-d6bd-4d1d-b7d6-f0b22ec12b91/transmissions/sen…
+2026-01-05 16:02:46.60
+2fa5bc08
+User
+[Bridge] Message received: type=ping
+2026-01-05 16:02:47.98
+2fa5bc08
+User
+[Bridge] Message received: type=ping
