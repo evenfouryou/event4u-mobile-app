@@ -1,6 +1,19 @@
 import nodemailer from 'nodemailer';
 import { isBridgeConnected, requestSmimeSignature, getCardSignerEmail } from './bridge-relay';
 
+/**
+ * Formatta una stringa Base64 in righe da 76 caratteri per MIME (RFC 2045)
+ * CRITICO: Senza questa formattazione, righe lunghissime possono essere
+ * troncate/corrotte durante la trasmissione email, causando errore SIAE 40605
+ */
+function formatBase64ForMime(base64: string, lineLength: number = 76): string {
+  const lines: string[] = [];
+  for (let i = 0; i < base64.length; i += lineLength) {
+    lines.push(base64.substring(i, i + lineLength));
+  }
+  return lines.join('\r\n');
+}
+
 // Transporter principale per email generiche (info@eventfouryou.com)
 export const emailTransporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST || 'smtp.gmail.com',
@@ -603,11 +616,15 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
       
       // Costruisci il messaggio MIME da firmare usando base64 per HTML (supporta UTF-8 completo)
       // Per Allegato C SIAE: CRLF folding e encoding canonico
+      // CRITICO: Il Base64 DEVE essere formattato in righe da 76 caratteri (RFC 2045)
+      // Senza questa formattazione, righe lunghissime causano errore SIAE 40605 "illeggibile"
       const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const htmlBodyBase64 = Buffer.from(htmlBody, 'utf-8').toString('base64');
+      const htmlBodyBase64 = formatBase64ForMime(Buffer.from(htmlBody, 'utf-8').toString('base64'));
       
       // Per CAdES-BES: usa il P7M base64 direttamente, altrimenti codifica XML in base64
-      const attachmentBase64 = isCAdES && p7mBase64 ? p7mBase64 : Buffer.from(xmlContent, 'utf-8').toString('base64');
+      // IMPORTANTE: Formatta SEMPRE in righe da 76 caratteri per conformità MIME
+      const rawBase64 = isCAdES && p7mBase64 ? p7mBase64 : Buffer.from(xmlContent, 'utf-8').toString('base64');
+      const attachmentBase64 = formatBase64ForMime(rawBase64);
       const attachmentMimeType = isCAdES ? 'application/pkcs7-mime' : 'application/xml';
       
       const mimeContent = [
