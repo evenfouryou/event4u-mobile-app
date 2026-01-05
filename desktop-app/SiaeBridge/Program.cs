@@ -2239,18 +2239,61 @@ namespace SiaeBridge
                 }
 
                 // Costruisci il messaggio S/MIME multipart/signed
+                // CRITICO RFC 5751: Gli header From/To/Subject devono essere ESTERNI alla struttura multipart/signed
+                // Questi header sono visibili al client email e NON fanno parte del contenuto firmato
                 string signedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz");
                 string smimeBoundary = $"----=_smime_{Guid.NewGuid():N}";
                 string p7sBase64 = Convert.ToBase64String(p7sBytes);
 
+                // Estrai gli header esterni dal messaggio MIME originale
+                // Gli header esterni NON fanno parte della firma S/MIME - sono per il client email
+                string normalizedMime = mimeContent.Replace("\r\n", "\n").Replace("\n", "\r\n");
+                
+                string externalFrom = "";
+                string externalTo = "";
+                string externalSubject = "";
+                string bodyMime = normalizedMime;
+                
+                // Cerca e estrai gli header principali dal messaggio originale
+                var lines = normalizedMime.Split(new[] { "\r\n" }, StringSplitOptions.None);
+                int headerEndIndex = 0;
+                for (int i = 0; i < lines.Length; i++)
+                {
+                    var line = lines[i];
+                    if (string.IsNullOrEmpty(line))
+                    {
+                        // Fine degli header
+                        headerEndIndex = i;
+                        break;
+                    }
+                    
+                    if (line.StartsWith("From:", StringComparison.OrdinalIgnoreCase))
+                        externalFrom = line;
+                    else if (line.StartsWith("To:", StringComparison.OrdinalIgnoreCase))
+                        externalTo = line;
+                    else if (line.StartsWith("Subject:", StringComparison.OrdinalIgnoreCase))
+                        externalSubject = line;
+                }
+                
+                Log($"  External headers: From={!string.IsNullOrEmpty(externalFrom)}, To={!string.IsNullOrEmpty(externalTo)}, Subject={!string.IsNullOrEmpty(externalSubject)}");
+
                 var smimeBuilder = new StringBuilder();
+                
+                // PRIMA: Header esterni (visibili al client email, NON firmati)
+                if (!string.IsNullOrEmpty(externalFrom))
+                    smimeBuilder.Append($"{externalFrom}\r\n");
+                if (!string.IsNullOrEmpty(externalTo))
+                    smimeBuilder.Append($"{externalTo}\r\n");
+                if (!string.IsNullOrEmpty(externalSubject))
+                    smimeBuilder.Append($"{externalSubject}\r\n");
+                
+                // DOPO: Header MIME per multipart/signed
                 smimeBuilder.Append("MIME-Version: 1.0\r\n");
                 smimeBuilder.Append($"Content-Type: multipart/signed; protocol=\"application/pkcs7-signature\"; micalg=sha-256; boundary=\"{smimeBoundary}\"\r\n");
                 smimeBuilder.Append("\r\n");
                 smimeBuilder.Append($"--{smimeBoundary}\r\n");
                 
-                // Aggiungi il contenuto MIME originale (normalizza line endings)
-                string normalizedMime = mimeContent.Replace("\r\n", "\n").Replace("\n", "\r\n");
+                // Aggiungi il contenuto MIME originale (questo è il contenuto FIRMATO)
                 smimeBuilder.Append(normalizedMime);
                 if (!normalizedMime.EndsWith("\r\n"))
                     smimeBuilder.Append("\r\n");
