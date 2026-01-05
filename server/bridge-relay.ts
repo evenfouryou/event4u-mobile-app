@@ -1277,9 +1277,22 @@ export async function requestSmimeSignature(
   params: SmimeSignatureParams | string, 
   recipientEmail: string
 ): Promise<SmimeSignatureData> {
-  // Supporta sia il nuovo formato (object) che il vecchio (mimeContent string) per compatibilità
-  const isNewFormat = typeof params === 'object';
-  const mimeContent = isNewFormat ? '' : params;
+  // Validazione strutturale rigorosa per il nuovo formato SMIMESignML
+  const isNewFormat = typeof params === 'object' && params !== null &&
+    typeof (params as SmimeSignatureParams).from === 'string' &&
+    typeof (params as SmimeSignatureParams).to === 'string' &&
+    typeof (params as SmimeSignatureParams).subject === 'string' &&
+    (params as SmimeSignatureParams).from.length > 0 &&
+    (params as SmimeSignatureParams).to.length > 0;
+  
+  // Se è un oggetto ma non ha i campi richiesti, rifiuta subito
+  if (typeof params === 'object' && params !== null && !isNewFormat) {
+    const p = params as any;
+    console.error(`[Bridge] Invalid SMIMESignML params: from=${typeof p.from}, to=${typeof p.to}, subject=${typeof p.subject}`);
+    throw new Error('SMIME_INVALID_PARAMS: Parametri SMIMESignML non validi. Richiesti: from, to, subject (stringhe non vuote)');
+  }
+  
+  const mimeContent = isNewFormat ? '' : (params as string);
   
   console.log(`[Bridge] requestSmimeSignature called, format=${isNewFormat ? 'SMIMESignML' : 'legacy'}, recipient=${recipientEmail}`);
   
