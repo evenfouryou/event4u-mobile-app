@@ -84,12 +84,14 @@ export default function SiaeTransactionsPage() {
   const [, navigate] = useLocation();
   const [, params] = useRoute("/siae/transactions/:eventId");
   const eventId = params?.eventId || "";
+  const isGlobalView = !eventId;
   
   const [selectedTransaction, setSelectedTransaction] = useState<SiaeTransaction | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [dateRange, setDateRange] = useState<string>("all");
+  const [selectedEventFilter, setSelectedEventFilter] = useState<string>("all");
   
   const [cancelTicketDialogOpen, setCancelTicketDialogOpen] = useState(false);
   const [ticketToCancel, setTicketToCancel] = useState<SiaeTicket | null>(null);
@@ -97,6 +99,16 @@ export default function SiaeTransactionsPage() {
   const [cancelNote, setCancelNote] = useState("");
   const [ticketsDialogOpen, setTicketsDialogOpen] = useState(false);
   const [transactionForTickets, setTransactionForTickets] = useState<SiaeTransaction | null>(null);
+
+  const { data: allTicketedEvents } = useQuery<SiaeTicketedEvent[]>({
+    queryKey: ['/api/siae/ticketed-events'],
+    enabled: isGlobalView,
+  });
+
+  const { data: allEvents } = useQuery<Event[]>({
+    queryKey: ['/api/events'],
+    enabled: isGlobalView,
+  });
 
   const { data: ticketedEvent } = useQuery<SiaeTicketedEvent>({
     queryKey: ['/api/siae/ticketed-events', eventId],
@@ -108,15 +120,32 @@ export default function SiaeTransactionsPage() {
     enabled: !!ticketedEvent?.eventId,
   });
 
-  const { data: transactions, isLoading: transactionsLoading, refetch: refetchTransactions } = useQuery<SiaeTransaction[]>({
+  const { data: globalTransactions, isLoading: globalTransactionsLoading, refetch: refetchGlobalTransactions } = useQuery<SiaeTransaction[]>({
+    queryKey: ['/api/siae/transactions'],
+    enabled: isGlobalView,
+  });
+
+  const { data: eventTransactions, isLoading: eventTransactionsLoading, refetch: refetchEventTransactions } = useQuery<SiaeTransaction[]>({
     queryKey: ['/api/siae/ticketed-events', eventId, 'transactions'],
     enabled: !!eventId,
   });
+
+  const transactions = isGlobalView ? globalTransactions : eventTransactions;
+  const transactionsLoading = isGlobalView ? globalTransactionsLoading : eventTransactionsLoading;
+  const refetchTransactions = isGlobalView ? refetchGlobalTransactions : refetchEventTransactions;
 
   const { data: allTickets = [] } = useQuery<SiaeTicket[]>({
     queryKey: ['/api/siae/ticketed-events', eventId, 'tickets'],
     enabled: !!eventId,
   });
+
+  const getEventNameForTransaction = (ticketedEventId: string | null) => {
+    if (!ticketedEventId) return "-";
+    const te = allTicketedEvents?.find(e => e.id === ticketedEventId);
+    if (!te) return "Evento sconosciuto";
+    const ev = allEvents?.find(e => e.id === te.eventId);
+    return ev?.name || "Evento sconosciuto";
+  };
 
   const cancelTicketMutation = useMutation({
     mutationFn: async ({ ticketId, reason }: { ticketId: string; reason: string }) => {
@@ -226,6 +255,8 @@ export default function SiaeTransactionsPage() {
 
     const matchesStatus = statusFilter === "all" || transaction.status === statusFilter;
 
+    const matchesEvent = !isGlobalView || selectedEventFilter === "all" || transaction.ticketedEventId === selectedEventFilter;
+
     let matchesDate = true;
     if (dateRange !== "all" && transaction.createdAt) {
       const transactionDate = new Date(transaction.createdAt);
@@ -245,7 +276,7 @@ export default function SiaeTransactionsPage() {
       }
     }
 
-    return matchesSearch && matchesStatus && matchesDate;
+    return matchesSearch && matchesStatus && matchesDate && matchesEvent;
   });
 
   const stats = {
@@ -268,7 +299,9 @@ export default function SiaeTransactionsPage() {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-3xl font-bold">Transazioni SIAE</h1>
-            <p className="text-muted-foreground">{baseEvent?.name || "Caricamento..."}</p>
+            <p className="text-muted-foreground">
+              {isGlobalView ? "Tutte le transazioni" : (baseEvent?.name || "Caricamento...")}
+            </p>
           </div>
           <Button variant="outline" data-testid="button-export">
             <Download className="w-4 h-4 mr-2" />
@@ -292,6 +325,27 @@ export default function SiaeTransactionsPage() {
                   />
                 </div>
               </div>
+              {isGlobalView && (
+                <div className="w-full md:w-56">
+                  <Label className="mb-2 block">Evento</Label>
+                  <Select value={selectedEventFilter} onValueChange={setSelectedEventFilter}>
+                    <SelectTrigger data-testid="select-event-filter">
+                      <SelectValue placeholder="Tutti gli eventi" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tutti gli eventi</SelectItem>
+                      {allTicketedEvents?.map((te) => {
+                        const ev = allEvents?.find(e => e.id === te.eventId);
+                        return (
+                          <SelectItem key={te.id} value={te.id}>
+                            {ev?.name || te.id}
+                          </SelectItem>
+                        );
+                      })}
+                    </SelectContent>
+                  </Select>
+                </div>
+              )}
               <div className="w-full md:w-40">
                 <Label className="mb-2 block">Stato</Label>
                 <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -403,6 +457,7 @@ export default function SiaeTransactionsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Codice</TableHead>
+                    {isGlobalView && <TableHead>Evento</TableHead>}
                     <TableHead>Cliente</TableHead>
                     <TableHead>Biglietti</TableHead>
                     <TableHead>Importo</TableHead>
@@ -418,6 +473,13 @@ export default function SiaeTransactionsPage() {
                       <TableCell className="font-mono text-xs" data-testid={`cell-code-${transaction.id}`}>
                         {transaction.transactionCode}
                       </TableCell>
+                      {isGlobalView && (
+                        <TableCell data-testid={`cell-event-${transaction.id}`}>
+                          <span className="text-sm truncate max-w-[150px] block">
+                            {getEventNameForTransaction(transaction.ticketedEventId)}
+                          </span>
+                        </TableCell>
+                      )}
                       <TableCell data-testid={`cell-customer-${transaction.id}`}>
                         <div>
                           <div className="font-mono text-xs">{transaction.customerUniqueCode}</div>
@@ -469,15 +531,17 @@ export default function SiaeTransactionsPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleViewTickets(transaction)}
-                            title="Gestisci Biglietti"
-                            data-testid={`button-tickets-${transaction.id}`}
-                          >
-                            <Ticket className="w-4 h-4" />
-                          </Button>
+                          {!isGlobalView && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewTickets(transaction)}
+                              title="Gestisci Biglietti"
+                              data-testid={`button-tickets-${transaction.id}`}
+                            >
+                              <Ticket className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>
@@ -729,7 +793,7 @@ export default function SiaeTransactionsPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
             <p className="text-muted-foreground mt-1 text-sm sm:text-base">
-              {baseEvent?.name || "Caricamento..."}
+              {isGlobalView ? "Tutte le transazioni" : (baseEvent?.name || "Caricamento...")}
             </p>
           </div>
           <Button variant="outline" className="w-full sm:w-auto" data-testid="button-export">
@@ -754,6 +818,27 @@ export default function SiaeTransactionsPage() {
                 />
               </div>
             </div>
+            {isGlobalView && (
+              <div className="w-full md:w-56">
+                <label className="text-sm font-medium mb-2 block">Evento</label>
+                <Select value={selectedEventFilter} onValueChange={setSelectedEventFilter}>
+                  <SelectTrigger data-testid="select-event-filter-mobile">
+                    <SelectValue placeholder="Tutti gli eventi" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tutti gli eventi</SelectItem>
+                    {allTicketedEvents?.map((te) => {
+                      const ev = allEvents?.find(e => e.id === te.eventId);
+                      return (
+                        <SelectItem key={te.id} value={te.id}>
+                          {ev?.name || te.id}
+                        </SelectItem>
+                      );
+                    })}
+                  </SelectContent>
+                </Select>
+              </div>
+            )}
             <div className="w-full md:w-40">
               <label className="text-sm font-medium mb-2 block">Stato</label>
               <Select value={statusFilter} onValueChange={setStatusFilter}>
@@ -870,6 +955,7 @@ export default function SiaeTransactionsPage() {
                 <TableHeader>
                   <TableRow className="bg-muted/50">
                     <TableHead>Codice</TableHead>
+                    {isGlobalView && <TableHead>Evento</TableHead>}
                     <TableHead>Cliente</TableHead>
                     <TableHead>Biglietti</TableHead>
                     <TableHead>Importo</TableHead>
@@ -885,6 +971,13 @@ export default function SiaeTransactionsPage() {
                       <TableCell className="font-mono text-xs" data-testid={`cell-code-${transaction.id}`}>
                         {transaction.transactionCode}
                       </TableCell>
+                      {isGlobalView && (
+                        <TableCell data-testid={`cell-event-mobile-${transaction.id}`}>
+                          <span className="text-sm truncate max-w-[120px] block">
+                            {getEventNameForTransaction(transaction.ticketedEventId)}
+                          </span>
+                        </TableCell>
+                      )}
                       <TableCell data-testid={`cell-customer-${transaction.id}`}>
                         <div>
                           <div className="font-mono text-xs">{transaction.customerUniqueCode}</div>
@@ -936,15 +1029,17 @@ export default function SiaeTransactionsPage() {
                           >
                             <Eye className="w-4 h-4" />
                           </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleViewTickets(transaction)}
-                            title="Gestisci Biglietti"
-                            data-testid={`button-tickets-${transaction.id}`}
-                          >
-                            <Ticket className="w-4 h-4" />
-                          </Button>
+                          {!isGlobalView && (
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => handleViewTickets(transaction)}
+                              title="Gestisci Biglietti"
+                              data-testid={`button-tickets-${transaction.id}`}
+                            >
+                              <Ticket className="w-4 h-4" />
+                            </Button>
+                          )}
                         </div>
                       </TableCell>
                     </TableRow>

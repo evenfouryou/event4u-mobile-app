@@ -322,6 +322,7 @@ function Router() {
               <Route path="/siae/tickets/:eventId" component={SiaeTickets} />
               <Route path="/siae/ticket-types/:eventId" component={SiaeTicketTypes} />
               <Route path="/siae/transactions/:eventId" component={SiaeTransactions} />
+              <Route path="/siae/transactions" component={SiaeTransactions} />
               <Route path="/siae/name-changes" component={SiaeNameChanges} />
               <Route path="/siae/resales" component={SiaeResales} />
               <Route path="/siae/box-office" component={SiaeBoxOffice} />
