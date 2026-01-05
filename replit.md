@@ -127,6 +127,7 @@ A marketplace for ticket resale complying with Italian Allegato B regulations. K
 - **Fiscal compliance**: Original ticket annulled with `annullato_rivendita` status, new ticket emitted with fresh fiscal seal (`sigilloFiscaleRivendita`)
 - **Seller payout**: Automatic wallet credit minus 5% platform fee via `siaeWalletTransactions`
 - **C1 report integration**: Resale annulments included in cancelled tickets count for SIAE reporting
+- **Auto-expiration**: Scheduler job (`autoExpireResales` in siae-scheduler.ts) automatically expires listed resales 1 hour before event start to protect buyers/sellers (runs every 5 minutes)
 - **UI components**: `ResaleMarketplace` on public event pages with SIAE verification badges, success page at `/account/resale-success`
 
 ### Scanner Management Module

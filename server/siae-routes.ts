@@ -5,7 +5,7 @@ import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
 import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions, siaeCashierAllocations, siaeOtpAttempts, siaeNameChanges, siaeResales, publicCartItems, publicCheckoutSessions, publicCustomerSessions, tableBookings, guestListEntries, siaeTransmissions, companies, siaeEmissionChannels, siaeSystemConfig, userFeatures, siaeTicketedEvents, users, siaeEventSectors } from "@shared/schema";
-import { eq, and, or, sql, desc, isNull, SQL, gte, lte, count } from "drizzle-orm";
+import { eq, and, or, sql, desc, isNull, SQL, gte, lte, count, inArray } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
 import { requestFiscalSeal, isCardReadyForSeals, isBridgeConnected, getCachedBridgeStatus, requestXmlSignature } from "./bridge-relay";
@@ -2592,6 +2592,54 @@ router.get("/api/siae/ticketed-events/:eventId/transactions", requireAuth, requi
   }
 });
 
+// GET all transactions for a company (for admin/gestore views)
+router.get("/api/siae/transactions", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const { companyId } = req.query;
+    
+    // Super admin can see all, gestore sees only their company
+    let targetCompanyId: string | undefined;
+    if (user.role === 'super_admin') {
+      targetCompanyId = companyId as string | undefined;
+    } else if (user.companyId) {
+      targetCompanyId = user.companyId;
+    } else {
+      return res.status(403).json({ message: "Accesso non autorizzato" });
+    }
+    
+    // Get all ticketed events for this company
+    const ticketedEventIds: string[] = [];
+    if (targetCompanyId) {
+      const companyEvents = await db
+        .select({ id: siaeTicketedEvents.id })
+        .from(siaeTicketedEvents)
+        .where(eq(siaeTicketedEvents.companyId, targetCompanyId));
+      ticketedEventIds.push(...companyEvents.map(e => e.id));
+    } else {
+      // Super admin without filter - get all
+      const allEvents = await db.select({ id: siaeTicketedEvents.id }).from(siaeTicketedEvents);
+      ticketedEventIds.push(...allEvents.map(e => e.id));
+    }
+    
+    if (ticketedEventIds.length === 0) {
+      return res.json([]);
+    }
+    
+    // Get all transactions for these events
+    const transactions = await db
+      .select()
+      .from(siaeTransactions)
+      .where(inArray(siaeTransactions.ticketedEventId, ticketedEventIds))
+      .orderBy(desc(siaeTransactions.createdAt));
+    
+    res.json(transactions);
+  } catch (error: any) {
+    console.error('[GET /api/siae/transactions] Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.get("/api/siae/transactions/:id", requireAuth, async (req: Request, res: Response) => {
   try {
     const transaction = await siaeStorage.getSiaeTransaction(req.params.id);
@@ -2643,6 +2691,7 @@ router.get("/api/siae/admin/name-changes", requireAuth, requireSuperAdmin, async
           participantFirstName: siaeTickets.participantFirstName,
           participantLastName: siaeTickets.participantLastName,
           ticketedEventId: siaeTickets.ticketedEventId,
+          sigilloFiscale: siaeTickets.sigilloFiscale,
         },
         ticketedEvent: {
           id: siaeTicketedEvents.id,

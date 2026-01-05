@@ -1,6 +1,6 @@
 import { db } from "./db";
-import { siaeTicketedEvents, siaeTransmissions, events, companies, siaeEventSectors, siaeTickets } from "@shared/schema";
-import { eq, and, sql, gte, lt, desc } from "drizzle-orm";
+import { siaeTicketedEvents, siaeTransmissions, events, companies, siaeEventSectors, siaeTickets, siaeResales } from "@shared/schema";
+import { eq, and, sql, gte, lt, desc, lte } from "drizzle-orm";
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { sendSiaeTransmissionEmail } from "./email-service";
@@ -652,6 +652,7 @@ async function sendMonthlyReports() {
 let dailyIntervalId: NodeJS.Timeout | null = null;
 let monthlyIntervalId: NodeJS.Timeout | null = null;
 let eventCloseIntervalId: NodeJS.Timeout | null = null;
+let resaleExpirationIntervalId: NodeJS.Timeout | null = null;
 
 /**
  * Chiude automaticamente gli eventi la cui data/ora di fine è passata.
@@ -696,6 +697,59 @@ async function autoCloseExpiredEvents() {
   }
 }
 
+/**
+ * Scade automaticamente i biglietti in rivendita 1 ora prima dell'inizio evento.
+ * Cambia lo status da "listed" a "expired" per proteggere venditore e acquirente.
+ */
+async function autoExpireResales() {
+  try {
+    const now = new Date();
+    const oneHourFromNow = new Date(now.getTime() + 60 * 60 * 1000);
+    
+    // Trova resales con status 'listed' i cui eventi iniziano in meno di 1 ora
+    // Join: siaeResales -> siaeTickets -> siaeTicketedEvents -> events
+    const expiringResales = await db.select({
+      resaleId: siaeResales.id,
+      eventName: events.name,
+      eventStart: events.startDatetime,
+    })
+    .from(siaeResales)
+    .innerJoin(siaeTickets, eq(siaeResales.originalTicketId, siaeTickets.id))
+    .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+    .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+    .where(and(
+      eq(siaeResales.status, 'listed'),
+      lte(events.startDatetime, oneHourFromNow)
+    ));
+    
+    if (expiringResales.length === 0) {
+      return; // Nessun resale da scadere
+    }
+    
+    log(`Trovati ${expiringResales.length} biglietti in rivendita da far scadere (evento inizia in meno di 1 ora)`);
+    
+    for (const resale of expiringResales) {
+      try {
+        await db.update(siaeResales)
+          .set({ 
+            status: 'expired',
+            expiresAt: now,
+            updatedAt: now
+          })
+          .where(eq(siaeResales.id, resale.resaleId));
+        
+        log(`Rivendita ${resale.resaleId} scaduta - evento "${resale.eventName}" inizia alle ${resale.eventStart}`);
+      } catch (updateError: any) {
+        log(`ERRORE scadenza rivendita ${resale.resaleId}: ${updateError.message}`);
+      }
+    }
+    
+    log(`Scadenza automatica rivendite completata: ${expiringResales.length} biglietti rimossi dal marketplace`);
+  } catch (error: any) {
+    log(`ERRORE job scadenza rivendite: ${error.message}`);
+  }
+}
+
 function checkAndRunDailyJob() {
   const now = new Date();
   const hour = now.getHours();
@@ -723,6 +777,7 @@ export function initSiaeScheduler() {
   if (dailyIntervalId) clearInterval(dailyIntervalId);
   if (monthlyIntervalId) clearInterval(monthlyIntervalId);
   if (eventCloseIntervalId) clearInterval(eventCloseIntervalId);
+  if (resaleExpirationIntervalId) clearInterval(resaleExpirationIntervalId);
 
   dailyIntervalId = setInterval(checkAndRunDailyJob, 60 * 1000);
   monthlyIntervalId = setInterval(checkAndRunMonthlyJob, 60 * 1000);
@@ -730,13 +785,18 @@ export function initSiaeScheduler() {
   // Job per chiudere automaticamente gli eventi terminati - ogni 5 minuti
   eventCloseIntervalId = setInterval(autoCloseExpiredEvents, 5 * 60 * 1000);
   
-  // Esegui subito al primo avvio per chiudere eventi già scaduti
+  // Job per scadenza automatica rivendite 1h prima evento - ogni 5 minuti
+  resaleExpirationIntervalId = setInterval(autoExpireResales, 5 * 60 * 1000);
+  
+  // Esegui subito al primo avvio per chiudere eventi già scaduti e scadere rivendite
   autoCloseExpiredEvents();
+  autoExpireResales();
 
   log('Scheduler SIAE inizializzato:');
   log('  - Job giornaliero: ogni notte alle 02:00');
   log('  - Job mensile: primo giorno del mese alle 03:00');
   log('  - Job chiusura eventi: ogni 5 minuti');
+  log('  - Job scadenza rivendite: ogni 5 minuti (1h prima evento)');
   log(`  - System Code: ${SIAE_SYSTEM_CODE}`);
   log(`  - Test Mode: ${SIAE_TEST_MODE}`);
 }
@@ -753,6 +813,10 @@ export function stopSiaeScheduler() {
   if (eventCloseIntervalId) {
     clearInterval(eventCloseIntervalId);
     eventCloseIntervalId = null;
+  }
+  if (resaleExpirationIntervalId) {
+    clearInterval(resaleExpirationIntervalId);
+    resaleExpirationIntervalId = null;
   }
   log('Scheduler SIAE fermato');
 }

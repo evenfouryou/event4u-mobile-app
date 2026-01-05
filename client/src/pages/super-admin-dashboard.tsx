@@ -391,7 +391,7 @@ export default function SuperAdminDashboard() {
                 <Button
                   variant="outline"
                   className="flex flex-col items-center gap-2 h-auto py-4"
-                  onClick={() => setLocation('/siae-config')}
+                  onClick={() => setLocation('/siae/system-config')}
                   data-testid="link-siae-config"
                 >
                   <Settings className="w-5 h-5 text-primary" />
@@ -771,7 +771,7 @@ export default function SuperAdminDashboard() {
                   className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/30 hover-elevate"
                   whileTap={{ scale: 0.96 }}
                   transition={springTransition}
-                  onClick={() => { triggerHaptic('light'); setLocation('/siae-config'); }}
+                  onClick={() => { triggerHaptic('light'); setLocation('/siae/system-config'); }}
                   data-testid="link-siae-config"
                 >
                   <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
