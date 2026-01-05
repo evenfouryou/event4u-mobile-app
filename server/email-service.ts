@@ -614,47 +614,40 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
       // Questo garantisce che il messaggio firmato sia conforme ad Allegato C SIAE 1.6.2.a.3
       const certFromAddress = `"Event4U SIAE" <${cardEmail}>`;
       
-      // Costruisci il messaggio MIME da firmare usando base64 per HTML (supporta UTF-8 completo)
-      // Per Allegato C SIAE: CRLF folding e encoding canonico
-      // CRITICO: Il Base64 DEVE essere formattato in righe da 76 caratteri (RFC 2045)
-      // Senza questa formattazione, righe lunghissime causano errore SIAE 40605 "illeggibile"
-      const boundary = `----=_Part_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      const htmlBodyBase64 = formatBase64ForMime(Buffer.from(htmlBody, 'utf-8').toString('base64'));
+      // Prepara i parametri per SMIMESignML (API corretta per SIAE)
+      // SMIMESignML crea direttamente un messaggio S/MIME RFC822 compliant
+      // Questo evita errori 40605 causati dalla costruzione manuale del MIME
       
       // Per CAdES-BES: usa il P7M base64 direttamente, altrimenti codifica XML in base64
-      // IMPORTANTE: Formatta SEMPRE in righe da 76 caratteri per conformità MIME
       const rawBase64 = isCAdES && p7mBase64 ? p7mBase64 : Buffer.from(xmlContent, 'utf-8').toString('base64');
-      const attachmentBase64 = formatBase64ForMime(rawBase64);
-      const attachmentMimeType = isCAdES ? 'application/pkcs7-mime' : 'application/xml';
+      const attachmentBase64Content = rawBase64; // SMIMESignML gestisce l'encoding
       
-      const mimeContent = [
-        `From: ${certFromAddress}`,
-        `To: ${to}`,
-        `Subject: ${emailSubject}`,
-        `MIME-Version: 1.0`,
-        `Content-Type: multipart/mixed; boundary="${boundary}"`,
-        `X-SIAE-TransmissionId: ${transmissionId}`,
-        `X-SIAE-SystemCode: ${systemCode}`,
-        `X-SIAE-SequenceNumber: ${sequenceNumber}`,
+      // Corpo email semplice (text/plain per SMIMESignML)
+      // SMIMESignML richiede testo ASCII-7bit nel body
+      const plainBody = [
+        `Trasmissione SIAE RCA - ${reportName}`,
         ``,
-        `--${boundary}`,
-        `Content-Type: text/html; charset=utf-8`,
-        `Content-Transfer-Encoding: base64`,
+        `Data: ${new Date().toLocaleDateString('it-IT')}`,
+        `Evento: ${reportName}`,
+        `Transmission ID: ${transmissionId}`,
+        `System Code: ${systemCode}`,
+        `Sequence: ${sequenceNumber}`,
         ``,
-        htmlBodyBase64,
+        `Il file ${fileName} e' allegato a questa email.`,
+        `Formato conforme a Provvedimento Agenzia delle Entrate 04/03/2008 (Allegato B)`,
         ``,
-        `--${boundary}`,
-        `Content-Type: ${attachmentMimeType}; name="${fileName}"`,
-        `Content-Disposition: attachment; filename="${fileName}"`,
-        `Content-Transfer-Encoding: base64`,
-        ``,
-        attachmentBase64,
-        ``,
-        `--${boundary}--`
+        `Event4U - Sistema Gestione Fiscale SIAE`
       ].join('\r\n');
       
-      // Richiedi firma S/MIME al Desktop Bridge
-      const smimeData = await requestSmimeSignature(mimeContent, to);
+      // Richiedi firma S/MIME al Desktop Bridge con SMIMESignML
+      const smimeData = await requestSmimeSignature({
+        from: certFromAddress,
+        to: to,
+        subject: emailSubject,
+        body: plainBody,
+        attachmentBase64: attachmentBase64Content,
+        attachmentName: fileName
+      }, to);
       
       // Valida che il bridge abbia restituito un payload S/MIME valido
       if (!smimeData.signedMime || smimeData.signedMime.length < 100) {

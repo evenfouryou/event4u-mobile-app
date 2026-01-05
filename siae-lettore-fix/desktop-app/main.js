@@ -1622,11 +1622,39 @@ async function handleRelayCommand(msg) {
         }
         
         // Execute S/MIME signature command
-        // Pass PIN if available, otherwise let the bridge handle it (card already unlocked)
-        const smimeSignPayload = { 
-          mimeContent,
-          pin: lastVerifiedPin || '' 
-        };
+        // Supporta sia nuovo formato SMIMESignML che legacy mimeContent
+        const smimeSignPayload = {};
+        
+        // Nuovo formato: parametri separati per SMIMESignML
+        if (smimePayload.from && smimePayload.to) {
+          smimeSignPayload.from = smimePayload.from;
+          smimeSignPayload.to = smimePayload.to;
+          smimeSignPayload.subject = smimePayload.subject || '';
+          smimeSignPayload.body = smimePayload.body || '';
+          smimeSignPayload.attachmentBase64 = smimePayload.attachmentBase64 || '';
+          smimeSignPayload.attachmentName = smimePayload.attachmentName || '';
+          log.info(`[S/MIME] Using SMIMESignML format: from=${smimePayload.from}, to=${smimePayload.to}`);
+        } else if (mimeContent) {
+          // Fallback: legacy formato mimeContent
+          smimeSignPayload.mimeContent = mimeContent;
+          log.warn(`[S/MIME] Using LEGACY mimeContent format - may cause SIAE errors!`);
+        } else {
+          log.error(`[S/MIME] No valid payload: neither SMIMESignML params nor mimeContent provided`);
+          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            relayWs.send(JSON.stringify({
+              type: 'SMIME_SIGNATURE_RESPONSE',
+              requestId: smimeRequestId,
+              payload: { 
+                success: false, 
+                error: 'Payload email non valido - mancano parametri' 
+              }
+            }));
+          }
+          return;
+        }
+        
+        smimeSignPayload.pin = lastVerifiedPin || '';
+        
         log.info(`[S/MIME] Sending SIGN_SMIME command...`);
         const smimeResult = await sendBridgeCommand(`SIGN_SMIME:${JSON.stringify(smimeSignPayload)}`);
         

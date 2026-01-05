@@ -1249,10 +1249,22 @@ function generateSmimeRequestId(): string {
 }
 
 /**
+ * Parametri per S/MIME firmato con SMIMESignML
+ */
+interface SmimeSignatureParams {
+  from: string;           // Email mittente (deve corrispondere al certificato)
+  to: string;             // Email destinatario
+  subject: string;        // Oggetto email
+  body: string;           // Corpo email (text/html ASCII-7bit)
+  attachmentBase64?: string; // Allegato in base64 (opzionale)
+  attachmentName?: string;   // Nome file allegato (opzionale)
+}
+
+/**
  * Request S/MIME signature from the desktop bridge (SIAE smart card)
- * The entire email MIME content is signed with the activation card's certificate.
+ * Uses SMIMESignML API from libSIAEp7.dll for proper RFC822 S/MIME creation.
  * 
- * @param mimeContent - Complete MIME message (headers + body) to be signed
+ * @param params - S/MIME parameters (from, to, subject, body, attachment)
  * @param recipientEmail - Email address of the recipient (for logging/validation)
  * @returns Promise resolving to signed MIME message and certificate info
  * 
@@ -1262,10 +1274,14 @@ function generateSmimeRequestId(): string {
  * - a.3. L'indirizzo email del mittente deve corrispondere a quello nel certificato
  */
 export async function requestSmimeSignature(
-  mimeContent: string, 
+  params: SmimeSignatureParams | string, 
   recipientEmail: string
 ): Promise<SmimeSignatureData> {
-  console.log(`[Bridge] requestSmimeSignature called, MIME length=${mimeContent.length}, recipient=${recipientEmail}`);
+  // Supporta sia il nuovo formato (object) che il vecchio (mimeContent string) per compatibilità
+  const isNewFormat = typeof params === 'object';
+  const mimeContent = isNewFormat ? '' : params;
+  
+  console.log(`[Bridge] requestSmimeSignature called, format=${isNewFormat ? 'SMIMESignML' : 'legacy'}, recipient=${recipientEmail}`);
   
   const requestId = generateSmimeRequestId();
   const requestedAt = new Date();
@@ -1335,14 +1351,36 @@ export async function requestSmimeSignature(
     
     // Send request to bridge
     try {
-      const smimeMessage = {
-        type: 'REQUEST_SMIME_SIGNATURE',
-        requestId,
-        payload: {
+      let smimePayload: any;
+      
+      if (isNewFormat) {
+        // Nuovo formato: SMIMESignML con parametri separati
+        const p = params as SmimeSignatureParams;
+        smimePayload = {
+          from: p.from,
+          to: p.to,
+          subject: p.subject,
+          body: p.body,
+          attachmentBase64: p.attachmentBase64 || '',
+          attachmentName: p.attachmentName || '',
+          recipientEmail,
+          timestamp: new Date().toISOString()
+        };
+        console.log(`[Bridge] Using SMIMESignML format: from=${p.from}, to=${p.to}, subject=${p.subject?.substring(0, 50)}...`);
+      } else {
+        // Vecchio formato: mimeContent (legacy, deprecato)
+        smimePayload = {
           mimeContent,
           recipientEmail,
           timestamp: new Date().toISOString()
-        }
+        };
+        console.log(`[Bridge] WARNING: Using legacy mimeContent format - may cause SIAE errors`);
+      }
+      
+      const smimeMessage = {
+        type: 'REQUEST_SMIME_SIGNATURE',
+        requestId,
+        payload: smimePayload
       };
       console.log(`[Bridge] Sending S/MIME signature request to bridge: requestId=${requestId}`);
       globalBridge!.ws.send(JSON.stringify(smimeMessage));
