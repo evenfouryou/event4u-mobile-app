@@ -400,7 +400,7 @@ export default function SuperAdminDashboard() {
                 <Button
                   variant="outline"
                   className="flex flex-col items-center gap-2 h-auto py-4"
-                  onClick={() => setLocation('/siae-tables')}
+                  onClick={() => setLocation('/siae/tables')}
                   data-testid="link-siae-tables"
                 >
                   <ClipboardList className="w-5 h-5 text-accent" />
@@ -409,7 +409,7 @@ export default function SuperAdminDashboard() {
                 <Button
                   variant="outline"
                   className="flex flex-col items-center gap-2 h-auto py-4"
-                  onClick={() => setLocation('/siae-activation-cards')}
+                  onClick={() => setLocation('/siae/activation-cards')}
                   data-testid="link-siae-cards"
                 >
                   <CreditCard className="w-5 h-5 text-chart-1" />
@@ -418,7 +418,7 @@ export default function SuperAdminDashboard() {
                 <Button
                   variant="outline"
                   className="flex flex-col items-center gap-2 h-auto py-4"
-                  onClick={() => setLocation('/siae-transmissions')}
+                  onClick={() => setLocation('/siae/transmissions')}
                   data-testid="link-siae-transmissions"
                 >
                   <Send className="w-5 h-5 text-chart-2" />
@@ -427,7 +427,7 @@ export default function SuperAdminDashboard() {
                 <Button
                   variant="outline"
                   className="flex flex-col items-center gap-2 h-auto py-4"
-                  onClick={() => setLocation('/siae-report-c1')}
+                  onClick={() => setLocation('/siae/ticketed-events')}
                   data-testid="link-siae-report-c1"
                 >
                   <FileText className="w-5 h-5 text-chart-3" />
@@ -436,7 +436,7 @@ export default function SuperAdminDashboard() {
                 <Button
                   variant="outline"
                   className="flex flex-col items-center gap-2 h-auto py-4"
-                  onClick={() => setLocation('/siae-audit-logs')}
+                  onClick={() => setLocation('/siae/audit-logs')}
                   data-testid="link-siae-audit"
                 >
                   <Shield className="w-5 h-5 text-chart-4" />
@@ -784,7 +784,7 @@ export default function SuperAdminDashboard() {
                   className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/30 hover-elevate"
                   whileTap={{ scale: 0.96 }}
                   transition={springTransition}
-                  onClick={() => { triggerHaptic('light'); setLocation('/siae-tables'); }}
+                  onClick={() => { triggerHaptic('light'); setLocation('/siae/tables'); }}
                   data-testid="link-siae-tables"
                 >
                   <div className="w-10 h-10 rounded-xl bg-accent/10 flex items-center justify-center">
@@ -797,7 +797,7 @@ export default function SuperAdminDashboard() {
                   className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/30 hover-elevate"
                   whileTap={{ scale: 0.96 }}
                   transition={springTransition}
-                  onClick={() => { triggerHaptic('light'); setLocation('/siae-activation-cards'); }}
+                  onClick={() => { triggerHaptic('light'); setLocation('/siae/activation-cards'); }}
                   data-testid="link-siae-cards"
                 >
                   <div className="w-10 h-10 rounded-xl bg-chart-1/10 flex items-center justify-center">
@@ -810,7 +810,7 @@ export default function SuperAdminDashboard() {
                   className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/30 hover-elevate"
                   whileTap={{ scale: 0.96 }}
                   transition={springTransition}
-                  onClick={() => { triggerHaptic('light'); setLocation('/siae-transmissions'); }}
+                  onClick={() => { triggerHaptic('light'); setLocation('/siae/transmissions'); }}
                   data-testid="link-siae-transmissions"
                 >
                   <div className="w-10 h-10 rounded-xl bg-chart-2/10 flex items-center justify-center">
@@ -823,7 +823,7 @@ export default function SuperAdminDashboard() {
                   className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/30 hover-elevate"
                   whileTap={{ scale: 0.96 }}
                   transition={springTransition}
-                  onClick={() => { triggerHaptic('light'); setLocation('/siae-report-c1'); }}
+                  onClick={() => { triggerHaptic('light'); setLocation('/siae/ticketed-events'); }}
                   data-testid="link-siae-report-c1"
                 >
                   <div className="w-10 h-10 rounded-xl bg-chart-3/10 flex items-center justify-center">
@@ -836,7 +836,7 @@ export default function SuperAdminDashboard() {
                   className="flex flex-col items-center gap-2 p-4 rounded-2xl bg-muted/30 hover-elevate"
                   whileTap={{ scale: 0.96 }}
                   transition={springTransition}
-                  onClick={() => { triggerHaptic('light'); setLocation('/siae-audit-logs'); }}
+                  onClick={() => { triggerHaptic('light'); setLocation('/siae/audit-logs'); }}
                   data-testid="link-siae-audit"
                 >
                   <div className="w-10 h-10 rounded-xl bg-chart-4/10 flex items-center justify-center">
