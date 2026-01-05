@@ -219,8 +219,8 @@ function generateXMLContent(reportData: any): string {
   }
 
   // Genera XML conforme a RiepilogoControlloAccessi DTD
+  // NOTA: Nessun DOCTYPE - i Web Service SIAE non risolvono DTD esterni (XXE protection)
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE RiepilogoControlloAccessi SYSTEM "RiepilogoControlloAccessi_v0100_20080201.dtd">
 <RiepilogoControlloAccessi Sostituzione="N">
   <Titolare>
     <DenominazioneTitolareCA>${escapeXml(company?.name || 'N/A')}</DenominazioneTitolareCA>
