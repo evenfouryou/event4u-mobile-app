@@ -473,11 +473,11 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
     'corrective': 'Correttiva (C1)'
   };
   
-  // Nome report per header email
+  // Nome report per header email - usa i nomi corretti DTD
   const reportNames: Record<string, string> = {
     'daily': 'RiepilogoGiornaliero',
     'monthly': 'RiepilogoMensile',
-    'rca': 'LogTransazione', // C1 evento - genera risposta SIAE
+    'rca': 'RiepilogoControlloAccessi', // DTD: ControlloAccessi_v0001_20080626.dtd
     'corrective': 'RiepilogoGiornaliero'
   };
   const reportName = reportNames[transmissionType] || 'RiepilogoGiornaliero';
