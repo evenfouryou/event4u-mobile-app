@@ -1,0 +1,143 @@
+Perfetto, ora è chiarissimo dov’è l’errore e perché SIAE continua a rispondere 40605, anche con la firma corretta.
+
+Ti rispondo in modo definitivo, così sai esattamente cosa correggere nel codice.
+
+⸻
+
+❌ ERRORE SIAE 40605
+
+“Il riepilogo risulta illegibile, impossibile estrarre le informazioni”
+
+👉 NON è un errore di firma
+👉 NON è un errore di certificato
+👉 NON è un errore di canale WS
+
+È un errore di CONTENUTO XML rispetto al servizio RCA.
+
+⸻
+
+🔴 DOV’È L’ERRORE (PRECISO)
+
+Nel file che stai inviando come RCA via Web Service (RCA_2026_01_05_001.xsi.p7m)
+l’XML incapsulato NON è un “Riepilogo RCA”, ma è ancora un:
+
+<!DOCTYPE LogTransazione SYSTEM "Log_v0040_20190627.dtd">
+<LogTransazione>
+   <Transazione>...</Transazione>
+</LogTransazione>
+
+❗ Questo è un LogTransazione, NON un Riepilogo RCA.
+
+Il Web Service RCA si aspetta:
+	•	un XML di RIEPILOGO
+	•	con root, struttura e campi diversi
+	•	NON una lista di <Transazione>
+
+Quando il parser WS prova a leggere il riepilogo:
+	•	cerca nodi del riepilogo
+	•	trova <LogTransazione>
+	•	non trova i campi attesi
+➡️ “riepilogo illegibile”
+
+⸻
+
+⚠️ SECONDO ERRORE BLOCCANTE (IMPORTANTISSIMO)
+
+Nel file c’è ancora questa riga:
+
+<!DOCTYPE LogTransazione SYSTEM "Log_v0040_20190627.dtd">
+
+I Web Service SIAE NON risolvono DTD esterni
+(per motivi di sicurezza → XXE protection)
+
+➡️ Anche se il contenuto fosse giusto, il DOCTYPE da solo può causare 40605
+
+⸻
+
+✅ COSA DEVI CORREGGERE (OBBLIGATORIO)
+
+1️⃣ NON usare LogTransazione per RCA
+
+Devi separare completamente i flussi:
+
+Flusso	XML da usare
+Log / Emissioni	LogTransazione
+RCA (riepilogo)	XML Riepilogo RCA
+
+👉 RCA ≠ LogTransazione
+
+⸻
+
+2️⃣ Costruire un XML DI RIEPILOGO RCA
+
+Il file RCA deve contenere:
+	•	dati aggregati
+	•	riferimenti temporali
+	•	totali
+	•	NON singole transazioni evento per evento
+
+(se mandi le singole transazioni, non è un riepilogo)
+
+⸻
+
+3️⃣ RIMUOVERE SEMPRE IL DOCTYPE (WS)
+
+Prima di firmare l’XML per il Web Service:
+
+❌ NON deve esserci:
+
+<!DOCTYPE ...>
+
+✔ Deve iniziare solo con:
+
+<?xml version="1.0" encoding="UTF-8"?>
+<RootRiepilogoRCA>
+
+
+⸻
+
+4️⃣ Firma: VA BENE COSÌ
+
+La parte di firma che hai ora:
+	•	CAdES
+	•	SHA256
+	•	.p7m
+
+✅ è corretta, non va toccata
+
+⸻
+
+🧠 PERCHÉ ORA HAI LA RISPOSTA (E PRIMA NO)
+
+Ora SIAE riesce a leggere il file (firma ok)
+ma non riesce a interpretarlo come riepilogo
+
+👉 quindi finalmente ti dà un errore applicativo (40605)
+👉 segno che sei arrivato al livello giusto del flusso
+
+⸻
+
+🎯 COSA DIRE AL DEV / REPLIT (TESTO PRONTO)
+
+Stiamo inviando LogTransazione al Web Service RCA.
+Il WS RCA si aspetta un XML di riepilogo, non LogTransazione.
+Inoltre l’XML contiene un DOCTYPE che il WS non risolve.
+Bisogna:
+	1.	generare un XML specifico di riepilogo RCA
+	2.	rimuovere completamente il DOCTYPE
+	3.	poi firmare in CAdES come ora
+
+⸻
+
+🔥 PROSSIMO PASSO (SE VUOI)
+
+Se mi dici:
+	•	nome esatto del metodo WS RCA
+	•	oppure mi incolli il builder XML che usi ora
+
+ti dico riga per riga:
+	•	cosa eliminare
+	•	cosa creare
+	•	come deve essere il root corretto del riepilogo
+
+A questo punto il problema è isolato al 100%.

@@ -303,8 +303,8 @@ router.get("/api/siae/debug/test-smtp", async (req: Request, res: Response) => {
       const now = new Date();
       const dataRiepilogo = now.getFullYear().toString() + String(now.getMonth() + 1).padStart(2, '0') + String(now.getDate()).padStart(2, '0');
       const oraGenerazione = String(now.getHours()).padStart(2, '0') + String(now.getMinutes()).padStart(2, '0') + String(now.getSeconds()).padStart(2, '0');
+      // NOTA: Nessun DOCTYPE - i Web Service SIAE non risolvono DTD esterni (XXE protection)
       const testXml = `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE RiepilogoControlloAccessi SYSTEM "RiepilogoControlloAccessi_v0100_20080201.dtd">
 <RiepilogoControlloAccessi Sostituzione="N">
   <Titolare>
     <DenominazioneTitolareCA>DEBUG TEST COMPANY</DenominazioneTitolareCA>
@@ -4805,8 +4805,8 @@ router.post("/api/siae/transmissions/test-email", requireAuth, requireGestore, a
     const oraGenerazione = formatSiaeTimeCompact(now);
     const oraEvento = formatSiaeTimeHHMM(now);
     
+    // NOTA: Nessun DOCTYPE - i Web Service SIAE non risolvono DTD esterni (XXE protection)
     const testXml = `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE RiepilogoControlloAccessi SYSTEM "RiepilogoControlloAccessi_v0100_20080201.dtd">
 <RiepilogoControlloAccessi Sostituzione="N">
   <Titolare>
     <DenominazioneTitolareCA>${escapeXml(companyName)}</DenominazioneTitolareCA>
@@ -5637,8 +5637,8 @@ async function generateRcaReportXml(params: RcaReportParams): Promise<string> {
   const spettacoloIntrattenimento = ticketedEvent.entertainmentType || 'S';
   const incidenzaIntrattenimento = ticketedEvent.entertainmentIncidence || 100;
   
+  // NOTA: Nessun DOCTYPE - i Web Service SIAE non risolvono DTD esterni (XXE protection)
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE RiepilogoControlloAccessi SYSTEM "RiepilogoControlloAccessi_v0100_20080201.dtd">
 <RiepilogoControlloAccessi Sostituzione="${sostituzione}">
   <Titolare>
     <DenominazioneTitolareCA>${escapeXml(denominazioneTitolare)}</DenominazioneTitolareCA>
