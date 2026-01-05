@@ -85,15 +85,16 @@ The system supports CAdES-BES digital signatures for SIAE report compliance, gen
 
 **Error 40605 Resolution (2026-01-05)**: The legacy XMLDSig approach embedded a `<Signature>` element inside the XML, violating the RCA DTD schema which only allows `(Titolare, Evento+)` children. The fix uses CAdES-BES detached signatures via `libSIAEp7.dll` + BouncyCastle, keeping the XML DTD-compliant while the P7M wraps both XML and signature in a standard PKCS#7 container.
 
-### S/MIME Email Signatures (via libSIAEp7.dll)
+### S/MIME Email Signatures (via libSIAEp7.dll SMIMESignML)
 For SIAE RCA transmissions, emails must be S/MIME signed per Allegato C (Provvedimento 04/03/2008). Key compliance requirements:
+- **SMIMESignML API (2026-01-05)**: Uses native `SMIMESignML` function from libSIAEp7.dll for RFC822-compliant S/MIME creation, replacing manual MIME construction
 - **Email header "From:" must match certificate email**: Allegato C 1.6.2.a.3 - immutable after S/MIME signature
-- **Valid PKCS#7 structure**: Uses `libSIAEp7.dll` (PKCS7SignML) for RFC 5652 compliant CMS signatures
+- **Separate parameters**: Server sends from, to, subject, body, attachmentBase64, attachmentName separately; bridge creates compliant message
 - **SHA-256 algorithm**: Modern hash algorithm (micalg=sha-256)
 - **Certificate email extraction**: Multiple patterns supported (SAN: RFC822, email:, rfc822Name=; Subject: E=, EMAIL=, EMAILADDRESS=)
-- **multipart/signed format**: Standard S/MIME v2 structure with smime.p7s attachment
+- **Structural validation**: Server validates SMIMESignML params before sending to bridge, failing fast with actionable errors
+- **Backward compatibility**: Legacy mimeContent format still supported but deprecated (causes warning in logs)
 - **Server-side validation**: Blocks RCA transmission if certificate email unavailable
-- **External headers preservation**: From/To/Subject headers placed OUTSIDE multipart/signed structure for email client visibility (fixed 2026-01-04, commit f5319092)
 
 #### S/MIME Message Structure (RFC 5751 Compliant)
 ```
