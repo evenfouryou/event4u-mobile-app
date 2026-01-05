@@ -4136,6 +4136,20 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
       }
     }
     
+    // CRITICAL FIX: Rimuovi DOCTYPE dall'XML se presente
+    // I Web Service SIAE non risolvono DTD esterni (XXE protection) - causa errore 40605
+    if (xmlContent.includes('<!DOCTYPE')) {
+      console.log(`[SIAE-ROUTES] Removing DOCTYPE from XML (WS SIAE non risolve DTD esterni)`);
+      xmlContent = xmlContent.replace(/<!DOCTYPE[^>]*>/g, '');
+      // Aggiorna il database con l'XML senza DOCTYPE
+      await siaeStorage.updateSiaeTransmission(id, {
+        fileContent: xmlContent,
+        p7mContent: null, // Invalida la vecchia firma
+        signedAt: null,
+      });
+      regeneratedXml = true; // Forza nuova firma
+    }
+    
     // Try to digitally sign the XML using smart card
     let signatureInfo = '';
     let p7mBase64: string | undefined;
