@@ -23,21 +23,6 @@ namespace SiaeBridge
     class Program
     {
         // ============================================================
-        // SCARD_STATE flags from Windows Smart Card API
-        // ============================================================
-        const int SCARD_STATE_UNAWARE = 0x0000;
-        const int SCARD_STATE_IGNORE = 0x0001;
-        const int SCARD_STATE_CHANGED = 0x0002;
-        const int SCARD_STATE_UNKNOWN = 0x0004;
-        const int SCARD_STATE_UNAVAILABLE = 0x0008;
-        const int SCARD_STATE_EMPTY = 0x0010;      // 16 - no card
-        const int SCARD_STATE_PRESENT = 0x0020;    // 32 - card present!
-        const int SCARD_STATE_ATRMATCH = 0x0040;
-        const int SCARD_STATE_EXCLUSIVE = 0x0080;
-        const int SCARD_STATE_INUSE = 0x0100;
-        const int SCARD_STATE_MUTE = 0x0200;
-
-        // ============================================================
         // IMPORT libSIAE.dll - StdCall calling convention (confirmed)
         // ============================================================
         private const string DLL = "libSIAE.dll";
@@ -99,17 +84,6 @@ namespace SiaeBridge
         [DllImport("winscard.dll")]
         static extern int SCardReleaseContext(IntPtr hContext);
 
-        [DllImport("winscard.dll", CharSet = CharSet.Unicode)]
-        static extern int SCardConnectW(IntPtr hContext, string szReader, int dwShareMode, int dwPreferredProtocols, ref IntPtr phCard, ref int pdwActiveProtocol);
-
-        [DllImport("winscard.dll")]
-        static extern int SCardDisconnect(IntPtr hCard, int dwDisposition);
-
-        const int SCARD_SHARE_SHARED = 2;
-        const int SCARD_PROTOCOL_T0 = 1;
-        const int SCARD_PROTOCOL_T1 = 2;
-        const int SCARD_LEAVE_CARD = 0;
-
         // ============================================================
         // STATE
         // ============================================================
@@ -125,7 +99,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.15 - S/MIME via libSIAEp7.dll + CAdES-BES SHA-256 (ETSI EN 319 122-1 compliant)");
+            Log("SiaeBridge v3.16 - FIX: isCardIn() returns boolean (1=present), not bitmask");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -172,32 +146,23 @@ namespace SiaeBridge
         }
 
         // ============================================================
-        // Check if card is present using SCARD_STATE bitmask
+        // Check if card is present
         // ============================================================
         static bool IsCardPresent(int state)
         {
-            // isCardIn returns SCARD_STATE bitmask:
-            // - 0 means no readers or error
-            // - 16 (0x10) = SCARD_STATE_EMPTY = no card
-            // - 32 (0x20) = SCARD_STATE_PRESENT = card present!
-            // - Can be combined: 34 = PRESENT | CHANGED
-            return (state & SCARD_STATE_PRESENT) != 0;
+            // libSIAE.dll isCardIn() returns:
+            // - 0 = no card or no reader
+            // - 1 = card present (simple boolean, NOT a bitmask!)
+            // - Other non-zero values also indicate card present
+            return state > 0;
         }
 
         static string DecodeCardState(int state)
         {
-            if (state == 0) return "NO_READER";
-            var flags = new System.Collections.Generic.List<string>();
-            if ((state & SCARD_STATE_CHANGED) != 0) flags.Add("CHANGED");
-            if ((state & SCARD_STATE_UNKNOWN) != 0) flags.Add("UNKNOWN");
-            if ((state & SCARD_STATE_UNAVAILABLE) != 0) flags.Add("UNAVAILABLE");
-            if ((state & SCARD_STATE_EMPTY) != 0) flags.Add("EMPTY");
-            if ((state & SCARD_STATE_PRESENT) != 0) flags.Add("PRESENT");
-            if ((state & SCARD_STATE_ATRMATCH) != 0) flags.Add("ATRMATCH");
-            if ((state & SCARD_STATE_EXCLUSIVE) != 0) flags.Add("EXCLUSIVE");
-            if ((state & SCARD_STATE_INUSE) != 0) flags.Add("INUSE");
-            if ((state & SCARD_STATE_MUTE) != 0) flags.Add("MUTE");
-            return flags.Count > 0 ? string.Join("|", flags) : $"0x{state:X2}";
+            // libSIAE.dll returns simple values: 0=no card, 1=card present
+            if (state == 0) return "NO_CARD";
+            if (state == 1) return "CARD_PRESENT";
+            return $"PRESENT({state})";
         }
 
         // ============================================================
@@ -258,30 +223,22 @@ namespace SiaeBridge
 
             try
             {
-                Log($"Scanning slots 0-15 for card...");
-                int foundSlot = -1;
-                int lastState = 0;
-                
                 for (int s = 0; s < 16; s++)
                 {
                     try
                     {
                         int state = isCardIn(s);
                         string decoded = DecodeCardState(state);
-                        Log($"  isCardIn({s}) = {state} (0x{state:X2}) = {decoded}");
-                        lastState = state;
+                        Log($"  isCardIn({s}) = {state} = {decoded}");
 
                         if (state == 0)
                         {
-                            Log($"  Slot {s}: No reader, stopping scan");
-                            break;
+                            // No card in this slot, try next
+                            continue;
                         }
 
-                        // Check for PRESENT bit (0x20) OR state > 16 (card inserted can have various states)
-                        bool cardDetected = IsCardPresent(state) || (state > SCARD_STATE_EMPTY && state != SCARD_STATE_EMPTY);
-                        Log($"  Slot {s}: cardDetected={cardDetected} (PRESENT bit={(state & SCARD_STATE_PRESENT) != 0}, state>{SCARD_STATE_EMPTY}={state > SCARD_STATE_EMPTY})");
-                        
-                        if (cardDetected)
+                        // libSIAE.dll returns >0 when card is present
+                        if (IsCardPresent(state))
                         {
                             Log($"  ✓ CARTA PRESENTE in slot {s}!");
 
