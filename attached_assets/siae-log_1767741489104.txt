@@ -1,0 +1,299 @@
+[2026-01-07 00:17:49.980] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-07 00:17:49.981] [info]  Auto-reading card data...
+[2026-01-07 00:17:49.981] [info]  >> Command: CHECK_READER
+[2026-01-07 00:17:50.028] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT(32)","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-07 00:17:50.029] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-07 00:17:50.030] [info]  Auto-reading card data...
+[2026-01-07 00:17:50.031] [info]  >> Command: READ_CARD
+[2026-01-07 00:17:50.927] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:50.931] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 264,
+  balance: 423561,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-07 00:17:50.934] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:50.937] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-07 00:17:50.939] [info]  >> Command: SIGN_SMIME:{"from":"\"Event4U SIAE\" <tickefouryou@gmail.com>","to":"servertest2@batest.siae.it","subject":"RCA_2026_01_06_EVENT4U1_001_XSI_V.01.00","body":"Trasmissione SIAE RCA - RiepilogoControlloAccessi\r\n\r\nData: 06/01/2026\r\nEvento: RiepilogoControlloAccessi\r\nTransmission ID: cb5eda12-d238-4810-8b78-8d1a12500323\r\nSystem Code: EVENT4U1\r\nSequence: 1\r\n\r\nIl file RCA_2026_01_06_001.xsi.p7m e' allegato a questa email.\r\nFormato conforme a Provvedimento Agenzia delle Entrate 04/03/2008 (Allegato B)\r\n\r\nEvent4U - Sistema Gestione Fiscale SIAE","attachmentBase64":"MIIVrgYJKoZIhvcNAQcCoIIVnzCCFZsCAQExDzANBglghkgBZQMEAgEFADCCDCYGCSqGSIb3DQEHAaCCDBcEggwTPD94bWwgdmVyc2lvbj0iMS4wIiBlbmNvZGluZz0iSVNPLTg4NTktMSI/Pg0KPCFET0NUWVBFIFJpZXBpbG9nb0NvbnRyb2xsb0FjY2Vzc2kgU1lTVEVNICJDb250cm9sbG9BY2Nlc3NpX3YwMDAxXzIwMDgwNjI2LmR0ZCI+DQo8UmllcGlsb2dvQ29udHJvbGxvQWNjZXNzaSBTb3N0aXR1emlvbmU9Ik4iPg0KICAgIDxUaXRvbGFyZT4NCiAgICAgICAgPERlbm9taW5hemlvbmVUaXRvbGFyZUNBPkV2ZW50NFUgRGVtbzwvRGVub21pbmF6aW9uZVRpdG9sYXJlQ0E+DQogICAgICAgIDxDRlRpdG9sYXJlQ0E+UFRSSlRIOTNNMTFJMTU2QjwvQ0ZUaXRvbGFyZUNBPg0KICAgICAgICA8Q29kaWNlU2lzdGVtYUNBPkVWRU5UNFUxPC9Db2RpY2VTaXN0ZW1hQ0E+DQogICAgICAgIDxEYXRhUmllcGlsb2dvPjIwMjYwMTA2PC9EYXRhUmllcGlsb2dvPg0KICAgICAgICA8RGF0YUdlbmVyYXppb25lUmllcGlsb2dvPjIwMjYwMTA2PC9EYXRhR2VuZXJhemlvbmVSaWVwaWxvZ28+DQogICAgICAgIDxPcmFHZW5lcmF6aW9uZVJpZXBpbG9nbz4yMzE3NDQ8L09yYUdlbmVyYXppb25lUmllcGlsb2dvPg0KICAgICAgICA8UHJvZ3Jlc3Npdm9SaWVwaWxvZ28+MTwvUHJvZ3Jlc3Npdm9SaWVwaWxvZ28+DQogICAgPC9UaXRvbGFyZT4NCiAgICA8RXZlbnRvPg0KICAgICAgICA8Q0ZPcmdhbml6emF0b3JlPlBUUkpUSDkzTTExSTE1NkI8L0NGT3JnYW5penphdG9yZT4NCiAgICAgICAgPERlbm9taW5hemlvbmVPcmdhbml6emF0b3JlPkV2ZW50NFUgRGVtbzwvRGVub21pbmF6aW9uZU9yZ2FuaXp6YXRvcmU+DQogICAgICAgIDxUaXBvbG9naWFPcmdhbml6emF0b3JlPkc8L1RpcG9sb2dpYU9yZ2FuaXp6YXRvcmU+DQogICAgICAgIDxTcGV0dGFjb2xvSW50cmF0dGVuaW1lbnRvPkk8L1NwZXR0YWNvbG9JbnRyYXR0ZW5pbWVudG8+DQogICAgICAgIDxJbmNpZGVuemFJbnRyYXR0ZW5pbWVudG8+NTA8L0luY2lkZW56YUludHJhdHRlbmltZW50bz4NCiAgICAgICAgPERlbm9taW5hemlvbmVMb2NhbGU+UHJvdmEgR3JhdHVpdGE8L0Rlbm9taW5hemlvbmVMb2NhbGU+DQogICAgICAgIDxDb2RpY2VMb2NhbGU+MDAwMDAwMDAwMDAwMTwvQ29kaWNlTG9jYWxlPg0KICAgICAgICA8RGF0YUV2ZW50bz4yMDI1MTIxNzwvRGF0YUV2ZW50bz4NCiAgICAgICAgPE9yYUV2ZW50bz4yMDQ3PC9PcmFFdmVudG8+DQogICAgICAgIDxUaXBvR2VuZXJlPjYwPC9UaXBvR2VuZXJlPg0KICAgICAgICA8VGl0b2xvRXZlbnRvPlByb3ZhIEdyYXR1aXRhPC9UaXRvbG9FdmVudG8+DQogICAgICAgIDxBdXRvcmU+UHJvdmEgR3JhdHVpdGE8L0F1dG9yZT4NCiAgICAgICAgPEVzZWN1dG9yZT5FdmVudDRVIERlbW88L0VzZWN1dG9yZT4NCiAgICAgICAgPE5hemlvbmFsaXRhRmlsbT5JVEE8L05hemlvbmFsaXRhRmlsbT4NCiAgICAgICAgPE51bU9wZXJlUmFwcHJlc2VudGF0ZT4xPC9OdW1PcGVyZVJhcHByZXNlbnRhdGU+DQogICAgICAgIDxTaXN0ZW1hRW1pc3Npb25lPg0KICAgICAgICAgICAgPENvZGljZVNpc3RlbWFFbWlzc2lvbmU+RVZFTlQ0VTE8L0NvZGljZVNpc3RlbWFFbWlzc2lvbmU+DQogICAgICAgICAgICA8VGl0b2xpPg0KICAgICAgICAgICAgICAgIDxDb2RpY2VPcmRpbmVQb3N0bz5QVTwvQ29kaWNlT3JkaW5lUG9zdG8+DQogICAgICAgICAgICAgICAgPENhcGllbnphPjEwMDA8L0NhcGllbnphPg0KICAgICAgICAgICAgICAgIDxUb3RhbGVUaXBvVGl0b2xvPg0KICAgICAgICAgICAgICAgICAgICA8VGlwb1RpdG9sbz5JMTwvVGlwb1RpdG9sbz4NCiAgICAgICAgICAgICAgICAgICAgPFRvdGFsZVRpdG9saUxUQT41PC9Ub3RhbGVUaXRvbGlMVEE+DQogICAgICAgICAgICAgICAgICAgIDxUb3RhbGVUaXRvbGlOb0FjY2Vzc29UcmFkaXo+MTwvVG90YWxlVGl0b2xpTm9BY2Nlc3NvVHJhZGl6Pg0KICAgICAgICAgICAgICAgICAgICA8VG90YWxlVGl0b2xpTm9BY2Nlc3NvRGlnaXRhbGk+MDwvVG90YWxlVGl0b2xpTm9BY2Nlc3NvRGlnaXRhbGk+DQogICAgICAgICAgICAgICAgICAgIDxUb3RhbGVUaXRvbGlBdXRvbWF0aXp6YXRpVHJhZGl6PjA8L1RvdGFsZVRpdG9saUF1dG9tYXRpenphdGlUcmFkaXo+DQogICAgICAgICAgICAgICAgICAgIDxUb3RhbGVUaXRvbGlBdXRvbWF0aXp6YXRpRGlnaXRhbGk+MDwvVG90YWxlVGl0b2xpQXV0b21hdGl6emF0aURpZ2l0YWxpPg0KICAgICAgICAgICAgICAgICAgICA8VG90YWxlVGl0b2xpTWFudWFsaVRyYWRpej4wPC9Ub3RhbGVUaXRvbGlNYW51YWxpVHJhZGl6Pg0KICAgICAgICAgICAgICAgICAgICA8VG90YWxlVGl0b2xpTWFudWFsaURpZ2l0YWxpPjA8L1RvdGFsZVRpdG9saU1hbnVhbGlEaWdpdGFsaT4NCiAgICAgICAgICAgICAgICAgICAgPFRvdGFsZVRpdG9saUFubnVsbGF0aVRyYWRpej40PC9Ub3RhbGVUaXRvbGlBbm51bGxhdGlUcmFkaXo+DQogICAgICAgICAgICAgICAgICAgIDxUb3RhbGVUaXRvbGlBbm51bGxhdGlEaWdpdGFsaT4wPC9Ub3RhbGVUaXRvbGlBbm51bGxhdGlEaWdpdGFsaT4NCiAgICAgICAgICAgICAgICAgICAgPFRvdGFsZVRpdG9saURhc3BhdGlUcmFkaXo+MDwvVG90YWxlVGl0b2xpRGFzcGF0aVRyYWRpej4NCiAgICAgICAgICAgICAgICAgICAgPFRvdGFsZVRpdG9saURhc3BhdGlEaWdpdGFsaT4wPC9Ub3RhbGVUaXRvbGlEYXNwYXRpRGlnaXRhbGk+DQogICAgICAgICAgICAgICAgICAgIDxUb3RhbGVUaXRvbGlSdWJhdGlUcmFkaXo+MDwvVG90YWxlVGl0b2xpUnViYXRpVHJhZGl6Pg0KICAgICAgICAgICAgICAgICAgICA8VG90YWxlVGl0b2xpUnViYXRpRGlnaXRhbGk+MDwvVG90YWxlVGl0b2xpUnViYXRpRGlnaXRhbGk+DQogICAgICAgICAgICAgICAgICAgIDxUb3RhbGVUaXRvbGlCTFRyYWRpej4wPC9Ub3RhbGVUaXRvbGlCTFRyYWRpej4NCiAgICAgICAgICAgICAgICAgICAgPFRvdGFsZVRpdG9saUJMRGlnaXRhbGk+MDwvVG90YWxlVGl0b2xpQkxEaWdpdGFsaT4NCiAgICAgICAgICAgICAgICA8L1RvdGFsZVRpcG9UaXRvbG8+DQogICAgICAgICAgICA8L1RpdG9saT4NCiAgICAgICAgPC9TaXN0ZW1hRW1pc3Npb25lPg0KICAgIDwvRXZlbnRvPg0KPC9SaWVwaWxvZ29Db250cm9sbG9BY2Nlc3NpPqCCBrwwgga4MIIEoKADAgECAgIJ+TANBgkqhkiG9w0BAQsFADCBljELMAkGA1UEBhMCSVQxGDAWBgNVBAoMD0luZm9DZXJ0IFMucC5BLjEfMB0GA1UECwwWVHJ1c3QgU2VydmljZSBQcm92aWRlcjEaMBgGA1UEYQwRVkFUSVQtMDc5NDUyMTEwMDYxMDAuBgNVBAMMJ0luZm9DZXJ0IENlcnRpZmljYXRpb24gU2VydmljZXMgQ0EgNCBDTDAeFw0yNTAzMDYwOTQzNTFaFw0yODAzMDUyMzAwMDBaMIIBFjErMCkGA1UEAwwiUEVUUkVMTEkvSk9OQVRIQU4vUFRSSlRIOTNNMTFJMTU2QjERMA8GA1UEBAwIUEVUUkVMTEkxETAPBgNVBCoMCEpPTkFUSEFOMSEwHwYDVQQKDBhTSUFFL1NJRVRBIC0gVVNPIElOVEVSTk8xHzAdBgNVBAsMFkhVUkFFWCBTUkwvMDIxMjA4MjA0MzIxCzAJBgNVBAYTAklUMRowGAYDVQQFExFQMDAwNDAxMC9BMDEyODQ4NzElMCMGCSqGSIb3DQEJARYWdGlja2Vmb3Vy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","attachmentName":"RCA_2026_01_06_001.xsi.p7m","pin":"75399990"}
+[2026-01-07 00:17:51.105] [info]  [Bridge] {"success":false,"error":"SMIMESignML fallito: errore 0x0000FFFF"}
+[2026-01-07 00:17:51.106] [info]  << Response: { success: false, error: 'SMIMESignML fallito: errore 0x0000FFFF' }
+[2026-01-07 00:17:51.107] [error] [S/MIME] Signature failed: SMIMESignML fallito: errore 0x0000FFFF
+[2026-01-07 00:17:51.108] [info]  >> Command: CHECK_READER
+[2026-01-07 00:17:51.158] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT(32)","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-07 00:17:51.159] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-07 00:17:51.160] [info]  Auto-reading card data...
+[2026-01-07 00:17:51.161] [info]  >> Command: READ_CARD
+[2026-01-07 00:17:52.041] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:52.043] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 264,
+  balance: 423561,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-07 00:17:52.045] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:52.046] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-07 00:17:52.048] [info]  >> Command: CHECK_READER
+[2026-01-07 00:17:52.102] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT(32)","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-07 00:17:52.103] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-07 00:17:52.103] [info]  >> Command: READ_CARD
+[2026-01-07 00:17:52.773] [info]  IPC: checkReader
+[2026-01-07 00:17:52.995] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:52.997] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 264,
+  balance: 423561,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-07 00:17:52.999] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:53.001] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-07 00:17:53.003] [info]  >> Command: READ_CARD
+[2026-01-07 00:17:53.897] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:53.899] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 264,
+  balance: 423561,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-07 00:17:53.901] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:53.902] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-07 00:17:53.903] [info]  >> Command: READ_CARD
+[2026-01-07 00:17:54.783] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:54.785] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 264,
+  balance: 423561,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-07 00:17:54.787] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:54.788] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-07 00:17:54.789] [info]  >> Command: READ_CARD
+[2026-01-07 00:17:55.654] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:55.655] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 264,
+  balance: 423561,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-07 00:17:55.655] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:55.656] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-07 00:17:55.656] [info]  >> Command: CHECK_READER
+[2026-01-07 00:17:55.701] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT(32)","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-07 00:17:55.701] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-07 00:17:55.702] [info]  Auto-reading card data...
+[2026-01-07 00:17:55.703] [info]  >> Command: READ_CARD
+[2026-01-07 00:17:55.767] [info]  IPC: checkReader
+[2026-01-07 00:17:56.557] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:56.558] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 264,
+  balance: 423561,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-07 00:17:56.559] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:56.559] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-07 00:17:56.560] [info]  >> Command: CHECK_READER
+[2026-01-07 00:17:56.605] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT(32)","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-07 00:17:56.606] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-07 00:17:56.606] [info]  Auto-reading card data...
+[2026-01-07 00:17:56.607] [info]  >> Command: CHECK_READER
+[2026-01-07 00:17:56.654] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT(32)","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-07 00:17:56.654] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-07 00:17:56.655] [info]  Auto-reading card data...
+[2026-01-07 00:17:56.656] [info]  >> Command: CHECK_READER
+[2026-01-07 00:17:56.701] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT(32)","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-07 00:17:56.702] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-07 00:17:56.703] [info]  >> Command: CHECK_READER
+[2026-01-07 00:17:56.749] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT(32)","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-07 00:17:56.749] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-07 00:17:56.750] [info]  Auto-reading card data...
+[2026-01-07 00:17:56.751] [info]  >> Command: CHECK_READER
+[2026-01-07 00:17:56.795] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT(32)","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-07 00:17:56.795] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-07 00:17:56.796] [info]  Auto-reading card data...
+[2026-01-07 00:17:56.796] [info]  >> Command: CHECK_READER
+[2026-01-07 00:17:56.842] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT(32)","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-07 00:17:56.843] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-07 00:17:56.843] [info]  Auto-reading card data...
+[2026-01-07 00:17:56.844] [info]  >> Command: READ_CARD
+[2026-01-07 00:17:57.709] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:57.710] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 264,
+  balance: 423561,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-07 00:17:57.711] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:57.712] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-07 00:17:57.713] [info]  >> Command: CHECK_READER
+[2026-01-07 00:17:57.762] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT(32)","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-07 00:17:57.763] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-07 00:17:57.763] [info]  >> Command: READ_CARD
+[2026-01-07 00:17:58.350] [info]  IPC: checkReader
+[2026-01-07 00:17:58.640] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:58.641] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 264,
+  balance: 423561,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-07 00:17:58.643] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:58.644] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-07 00:17:58.645] [info]  >> Command: READ_CARD
+[2026-01-07 00:17:59.519] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:59.520] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 264,
+  balance: 423561,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-07 00:17:59.520] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-07 00:17:59.521] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-07 00:17:59.522] [info]  >> Command: CHECK_READER
+[2026-01-07 00:17:59.570] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT(32)","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-07 00:17:59.571] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT(32)',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-07 00:17:59.571] [info]  Auto-reading card data...
+[2026-01-07 00:17:59.571] [info]  >> Command: READ_CARD

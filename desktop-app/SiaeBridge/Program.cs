@@ -111,6 +111,20 @@ namespace SiaeBridge
         static extern int _putenv([MarshalAs(UnmanagedType.LPStr)] string envstring);
 
         // ============================================================
+        // v3.28 FIX: DefineDosDevice per creare drive virtuali
+        // Questo workaround fa sì che tmpnam() generi path scrivibili
+        // tmpnam(NULL) restituisce "\smaXXXX.tmp" che diventa DRIVELETTER:\smaXXXX.tmp
+        // Se il drive corrente è un virtual drive mappato al temp, funziona!
+        // ============================================================
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Auto)]
+        static extern bool DefineDosDevice(uint dwFlags, string lpDeviceName, string lpTargetPath);
+        
+        const uint DDD_RAW_TARGET_PATH = 0x00000001;
+        const uint DDD_REMOVE_DEFINITION = 0x00000002;
+        const uint DDD_EXACT_MATCH_ON_REMOVE = 0x00000004;
+        const uint DDD_NO_BROADCAST_SYSTEM = 0x00000008;
+
+        // ============================================================
         // STATE
         // ============================================================
         static int _slot = -1;
@@ -125,7 +139,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.27 - FIX: _putenv(_P_tmpdir) per tmpnam() in SMIMESignML");
+            Log("SiaeBridge v3.28 - FIX: Virtual Drive per tmpnam() in SMIMESignML");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -2116,7 +2130,7 @@ namespace SiaeBridge
 
             try
             {
-                Log($"=== SignSmime v3.27 START ===");
+                Log($"=== SignSmime v3.28 START ===");
                 
                 dynamic req = JsonConvert.DeserializeObject(json);
                 string pin = req.pin;
@@ -2150,7 +2164,7 @@ namespace SiaeBridge
                 if (pin.Length < 4)
                     return ERR("PIN non valido - deve contenere almeno 4 cifre");
 
-                Log($"SignSmime (via SMIMESignML nativo v3.27): from={smimeFrom}, to={smimeTo}");
+                Log($"SignSmime (via SMIMESignML nativo v3.28): from={smimeFrom}, to={smimeTo}");
                 Log($"  Subject: {smimeSubject ?? "(none)"}");
                 Log($"  Body length: {smimeBody?.Length ?? 0}");
                 Log($"  Attachment: {attachmentName ?? "(none)"}, base64 length: {attachmentBase64?.Length ?? 0}");
@@ -2198,44 +2212,85 @@ namespace SiaeBridge
                 body = body.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", "\r\n");
                 Log($"  Body after normalization: {body.Length} chars");
 
-                // v3.27 FIX CRITICO: Forza _P_tmpdir via msvcrt._putenv
-                // tmpnam(NULL) su Windows restituisce "\smaXXXX.tmp" che diventa C:\smaXXXX.tmp
-                // TMP/TEMP NON influenzano tmpnam()! Bisogna impostare _P_tmpdir interno al CRT
-                // NOTA: _P_tmpdir DEVE terminare con backslash
+                // v3.28 FIX CRITICO: Virtual Drive per tmpnam()
+                // tmpnam(NULL) su Windows restituisce "\smaXXXX.tmp" che diventa DRIVELETTER:\smaXXXX.tmp
+                // Se cambiamo il drive corrente a un virtual drive mappato al temp folder,
+                // allora "\smaXXXX.tmp" diventa "S:\smaXXXX.tmp" che è scrivibile!
                 string originalDir = Directory.GetCurrentDirectory();
                 Log($"  Original CWD: {originalDir}");
                 
-                // Assicura che tempDir termini con backslash per _P_tmpdir
-                string tempDirWithSlash = tempDir.EndsWith("\\") ? tempDir : tempDir + "\\";
+                // Trova una lettera di drive disponibile (da S: a Z:)
+                string virtualDriveLetter = null;
+                string virtualDriveTarget = null;
+                bool virtualDriveCreated = false;
                 
                 try
                 {
-                    // Imposta _P_tmpdir che è la variabile interna usata da tmpnam()
-                    string putenvArg = $"_P_tmpdir={tempDirWithSlash}";
-                    int putenvResult = _putenv(putenvArg);
-                    Log($"  _putenv(\"{putenvArg}\") = {putenvResult}");
+                    // Il target deve essere in formato NT device path: \??\C:\Users\...
+                    string tempDirClean = tempDir.TrimEnd('\\');
+                    virtualDriveTarget = $@"\??\{tempDirClean}";
                     
-                    if (putenvResult != 0)
+                    // Cerca una lettera disponibile da S: a Z:
+                    for (char letter = 'S'; letter <= 'Z'; letter++)
                     {
-                        Log($"  WARNING: _putenv failed! tmpnam() may still use C:\\");
+                        string driveName = $"{letter}:";
+                        string drivePath = $"{letter}:\\";
+                        
+                        // Verifica se il drive esiste già
+                        if (!Directory.Exists(drivePath))
+                        {
+                            // Crea il virtual drive
+                            bool created = DefineDosDevice(DDD_RAW_TARGET_PATH | DDD_NO_BROADCAST_SYSTEM, driveName, virtualDriveTarget);
+                            if (created)
+                            {
+                                virtualDriveLetter = driveName;
+                                virtualDriveCreated = true;
+                                Log($"  ✓ Virtual drive {driveName} created -> {tempDirClean}");
+                                
+                                // Verifica che funzioni
+                                if (Directory.Exists(drivePath))
+                                {
+                                    // Cambia directory al virtual drive
+                                    Directory.SetCurrentDirectory(drivePath);
+                                    Log($"  ✓ Working directory changed to: {Directory.GetCurrentDirectory()}");
+                                    
+                                    // Test di scrittura
+                                    string testFile = $"{drivePath}smime_test_{DateTime.Now.Ticks}.tmp";
+                                    File.WriteAllText(testFile, "test");
+                                    if (File.Exists(testFile))
+                                    {
+                                        File.Delete(testFile);
+                                        Log($"  ✓ Write test PASSED on virtual drive {driveName}");
+                                    }
+                                    break;
+                                }
+                                else
+                                {
+                                    Log($"  WARNING: Virtual drive {driveName} created but not accessible");
+                                    // Rimuovi e prova la prossima lettera
+                                    DefineDosDevice(DDD_REMOVE_DEFINITION | DDD_NO_BROADCAST_SYSTEM, driveName, null);
+                                    virtualDriveCreated = false;
+                                }
+                            }
+                            else
+                            {
+                                int err = System.Runtime.InteropServices.Marshal.GetLastWin32Error();
+                                Log($"  WARNING: DefineDosDevice({driveName}) failed, error={err}");
+                            }
+                        }
                     }
                     
-                    // Cambia anche la working directory per sicurezza
-                    Directory.SetCurrentDirectory(tempDir);
-                    Log($"  Working directory changed to: {Directory.GetCurrentDirectory()}");
-                    
-                    // Verifica: prova a creare un file temporaneo per vedere dove va
-                    string testTmpPath = Path.Combine(tempDir, $"smime_test_{DateTime.Now.Ticks}.tmp");
-                    File.WriteAllText(testTmpPath, "test");
-                    if (File.Exists(testTmpPath))
+                    if (!virtualDriveCreated)
                     {
-                        File.Delete(testTmpPath);
-                        Log($"  ✓ Temp file write test PASSED in: {tempDir}");
+                        Log($"  WARNING: Could not create virtual drive, falling back to temp directory");
+                        Directory.SetCurrentDirectory(tempDir);
+                        Log($"  Working directory changed to: {Directory.GetCurrentDirectory()}");
                     }
                 }
-                catch (Exception envEx)
+                catch (Exception vdEx)
                 {
-                    Log($"  WARNING: Could not set _P_tmpdir/directory: {envEx.Message}");
+                    Log($"  WARNING: Virtual drive setup failed: {vdEx.Message}");
+                    try { Directory.SetCurrentDirectory(tempDir); } catch { }
                 }
 
                 // Reset card state before SMIMESignML call
@@ -2277,11 +2332,21 @@ namespace SiaeBridge
 
                 Log($"  SMIMESignML result: {signResult} (0x{signResult:X8})");
                 
-                // Ripristina directory originale
+                // Ripristina directory originale e rimuovi virtual drive
                 try
                 {
                     Directory.SetCurrentDirectory(originalDir);
                     Log($"  Restored CWD to: {originalDir}");
+                    
+                    // Rimuovi il virtual drive se è stato creato
+                    if (virtualDriveCreated && virtualDriveLetter != null)
+                    {
+                        bool removed = DefineDosDevice(DDD_REMOVE_DEFINITION | DDD_NO_BROADCAST_SYSTEM, virtualDriveLetter, null);
+                        if (removed)
+                            Log($"  ✓ Virtual drive {virtualDriveLetter} removed");
+                        else
+                            Log($"  WARNING: Could not remove virtual drive {virtualDriveLetter}");
+                    }
                 }
                 catch (Exception restoreEx)
                 {
