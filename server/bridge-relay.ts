@@ -1261,6 +1261,7 @@ export interface SmimeSignatureData {
   signerName: string;           // Common Name from the signing certificate  
   certificateSerial: string;    // Serial number of the signing certificate
   signedAt: string;             // ISO timestamp of when signature was created
+  generator?: string;           // Generator type (e.g., 'SMIMESignML-native')
 }
 
 interface PendingSmimeRequest {
@@ -1481,7 +1482,8 @@ export function handleSmimeSignatureResponse(
       signerEmail: signatureData.signerEmail || '',
       signerName: signatureData.signerName || '',
       certificateSerial: signatureData.certificateSerial || '',
-      signedAt: signatureData.signedAt || new Date().toISOString()
+      signedAt: signatureData.signedAt || new Date().toISOString(),
+      generator: signatureData.generator  // 'SMIMESignML-native' se generato da libreria SIAE
     });
   } else {
     // Parse the error for structured handling

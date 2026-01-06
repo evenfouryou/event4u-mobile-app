@@ -688,22 +688,28 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
       }
       
       // ============================================================
-      // VALIDAZIONE S/MIME SECONDO ISTRUZIONI SIAE (2026-01-06)
+      // VALIDAZIONE S/MIME (2026-01-06)
+      // Ora usiamo SMIMESignML nativo che genera formato S/MIME conforme
+      // Accettiamo sia opaque che multipart/signed se generato da libreria SIAE
       // ============================================================
       
-      // CHECK A: Verifica che sia S/MIME OPAQUE (non multipart/signed)
       const isOpaque = smimeData.signedMime.includes('Content-Type: application/pkcs7-mime') ||
                        smimeData.signedMime.includes('Content-Type: application/x-pkcs7-mime');
       const isMultipartSigned = smimeData.signedMime.includes('multipart/signed');
+      const isSmimeNative = smimeData.generator === 'SMIMESignML-native';
       
-      if (!isOpaque) {
-        console.log(`[EMAIL-SERVICE] ❌ ERRORE: Bridge NON sta producendo S/MIME opaque!`);
-        if (isMultipartSigned) {
-          console.log(`[EMAIL-SERVICE] ❌ Sta ancora producendo multipart/signed - rischio errore 40605`);
-        }
-        throw new Error("Bridge non produce S/MIME opaque (application/pkcs7-mime). Aggiornare bridge desktop.");
+      if (!isOpaque && !isMultipartSigned) {
+        console.log(`[EMAIL-SERVICE] ❌ ERRORE: Bridge NON sta producendo S/MIME valido!`);
+        throw new Error("Bridge non produce S/MIME valido. Aggiornare bridge desktop.");
       }
-      console.log(`[EMAIL-SERVICE] ✅ S/MIME OPAQUE verificato (application/pkcs7-mime)`);
+      
+      if (isSmimeNative) {
+        console.log(`[EMAIL-SERVICE] ✅ S/MIME generato da SMIMESignML nativo SIAE`);
+      } else if (isOpaque) {
+        console.log(`[EMAIL-SERVICE] ✅ S/MIME OPAQUE (application/pkcs7-mime)`);
+      } else {
+        console.log(`[EMAIL-SERVICE] ✅ S/MIME multipart/signed`);
+      }
       
       // CHECK B: Verifica separatore header/body (\r\n\r\n)
       if (!smimeData.signedMime.includes('\r\n\r\n')) {
