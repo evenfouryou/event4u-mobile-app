@@ -2,6 +2,7 @@ import { WebSocketServer, WebSocket } from 'ws';
 import type { Server } from 'http';
 import type { IncomingMessage } from 'http';
 import { parse as parseCookie } from 'cookie';
+import { createHash } from 'crypto';
 import { db } from './db';
 import { companies, sessions } from '@shared/schema';
 import { eq } from 'drizzle-orm';
@@ -1180,9 +1181,8 @@ export function handleSignatureResponse(requestId: string, success: boolean, sig
     // INTEGRITY CHECK: Calcola SHA-256 del P7M ricevuto per diagnostica trasmissione
     if (isCAdES && signatureData.p7mBase64) {
       try {
-        const crypto = require('crypto');
         const p7mBuffer = Buffer.from(signatureData.p7mBase64, 'base64');
-        const sha256Hash = crypto.createHash('sha256').update(p7mBuffer).digest('hex');
+        const sha256Hash = createHash('sha256').update(p7mBuffer).digest('hex');
         console.log(`[Bridge] [INTEGRITY] P7M received from desktop:`);
         console.log(`[Bridge] [INTEGRITY]   - Size: ${p7mBuffer.length} bytes`);
         console.log(`[Bridge] [INTEGRITY]   - Base64 length: ${signatureData.p7mBase64.length} chars`);
