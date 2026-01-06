@@ -3464,6 +3464,7 @@ export const guestListEntries = pgTable("guest_list_entries", {
   lastName: varchar("last_name", { length: 100 }).notNull(),
   phone: varchar("phone", { length: 20 }),
   email: varchar("email", { length: 255 }),
+  gender: varchar("gender", { length: 1 }), // 'M' o 'F'
   // Accompagnatori
   plusOnes: integer("plus_ones").notNull().default(0), // Numero accompagnatori
   plusOnesNames: text("plus_ones_names").array().default(sql`ARRAY[]::text[]`),
