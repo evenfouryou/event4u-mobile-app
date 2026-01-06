@@ -1,0 +1,138 @@
+Sì: ho controllato **il file RCA** che mi hai caricato e soprattutto **il codice del “lettore/bridge”** (`event-four-you-siae-lettore-main 2.zip`). Il punto è questo:
+
+> **Il tuo RCA `.p7m` è leggibile e corretto come file firmato.**
+> Ma **la tua email S/MIME (come la costruisce il bridge) è la parte che molto probabilmente si rompe**, e quando SIAE non riesce a validare/estrarre correttamente il contenuto finisce in un errore generico tipo **40605**.
+
+Qui sotto ti dico **cosa non va nel codice** e **cosa devi cambiare**, in modo pratico.
+
+---
+
+## 1) Il tuo XML “RCA” NON è il problema principale
+
+Ho estratto l’XML interno da `RCA_2026_01_06_001.xsi.p7m`: è **ben formato**, root:
+
+```xml
+<RiepilogoControlloAccessi Sostituzione="N">
+```
+
+Niente DOCTYPE, nessun carattere strano, tutto ASCII.
+Quindi **non è “illeggibile” per encoding**.
+
+---
+
+## 2) Il problema grosso sta in `SignSmime()` nel bridge C#
+
+Nel tuo `SiaeBridge/Program.cs` (funzione `SignSmime`) fai:
+
+1. costruisci un “body MIME” (`mimeContent`)
+2. lo scrivi su file (ISO-8859-1)
+3. chiami `PKCS7SignML(...)` e ottieni un file `.p7s`
+4. poi crei un messaggio **multipart/signed** e metti quella firma come `smime.p7s`
+
+### Perché è fragile / spesso “messaggio corrotto”
+
+Perché nel multipart/signed la prima parte **deve essere IDENTICA byte-per-byte** a quella firmata.
+Nel tuo codice stesso lo ammetti:
+
+```csharp
+if (!bodyMime.EndsWith("\r\n")) {
+   Log("WARNING ... adding it will invalidate signature!");
+}
+```
+
+Quindi basta una singola differenza (CRLF, encoding, re-wrap base64, nodemailer che “tocca” MIME) e il destinatario vede **firma corrotta**.
+
+E tu mi hai detto infatti che la mail risulta “messaggio corrotto”.
+
+> Se la firma S/MIME è corrotta, SIAE spesso non riesce a estrarre/validare il contenuto → **40605**.
+
+---
+
+# ✅ FIX VERO (consigliato): invia S/MIME “OPAQUE” (`application/pkcs7-mime`)
+
+Visto che tu stai già usando `PKCS7SignML` (che è pensato per creare un **SignedData “attaccato”**), la soluzione più robusta è:
+
+### NON usare `multipart/signed`
+
+✅ Usa un’unica parte:
+
+**Content-Type: `application/pkcs7-mime; smime-type=signed-data`**
+
+Così:
+
+* il contenuto firmato sta *dentro* al PKCS7
+* niente problemi di CRLF della prima parte
+* niente “boundary” che può cambiare
+* niente librerie che ti rompono la firma
+
+### Patch (cosa cambiare nel tuo `SignSmime`)
+
+Dopo che leggi `p7sBytes` dal file output, **NON costruire multipart/signed**.
+Costruisci invece così:
+
+```csharp
+// p7sBytes in realtà va trattato come PKCS7 signed-data "opaque"
+string pkcs7B64 = Convert.ToBase64String(p7sBytes);
+
+var sb = new StringBuilder();
+sb.Append($"From: {externalFrom}\r\n");
+sb.Append($"To: {externalTo}\r\n");
+sb.Append($"Subject: {externalSubject}\r\n");
+sb.Append("MIME-Version: 1.0\r\n");
+sb.Append("Content-Type: application/pkcs7-mime; smime-type=signed-data; name=\"smime.p7m\"\r\n");
+sb.Append("Content-Transfer-Encoding: base64\r\n");
+sb.Append("Content-Disposition: attachment; filename=\"smime.p7m\"\r\n");
+sb.Append("\r\n");
+
+// 76 chars per riga
+for (int i = 0; i < pkcs7B64.Length; i += 76)
+{
+    int len = Math.Min(76, pkcs7B64.Length - i);
+    sb.Append(pkcs7B64.Substring(i, len));
+    sb.Append("\r\n");
+}
+
+string signedMime = sb.ToString();
+```
+
+✅ Questa è una mail S/MIME “classica” e robusta.
+
+---
+
+## 3) FIX necessario lato invio (Replit/server)
+
+Anche se il bridge produce `signedMime`, **se poi Replit invia con una libreria che ricostruisce il MIME**, rovini tutto.
+
+### Regola
+
+> Devi inviare **RAW** (RFC822) esattamente com’è.
+
+Se usi Node/Nodemailer:
+
+* devi usare l’invio “raw source”, non `text/attachments` che ricostruiscono.
+
+---
+
+## 4) Un controllo super semplice che puoi fare subito
+
+Tu mi hai caricato anche `smime.p7s` in passato: se fai questa prova e fallisce, è conferma che S/MIME è il problema:
+
+Su Windows:
+
+```bat
+certutil -dump smime.p7s
+```
+
+Se non lo riconosce come PKCS7 SignedData → “messaggio corrotto” certo.
+
+---
+
+# Per chiuderla davvero: mi serve una sola cosa
+
+Dimmi **come Replit invia l’email**:
+
+* usi **nodemailer**?
+* usi una chiamata API di un provider (Sendgrid/Mailgun)?
+* usi SMTP diretto?
+
+Incollami 20–30 righe della funzione di invio e ti dico **esattamente** come renderla “RAW” (così SIAE smette di rispondere 40605).

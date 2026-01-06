@@ -2312,26 +2312,29 @@ namespace SiaeBridge
                     if (tx) try { EndTransactionML(_slot); } catch { }
                 }
 
-                // Costruisci il messaggio S/MIME multipart/signed
-                // CRITICO RFC 5751: Gli header From/To/Subject devono essere ESTERNI alla struttura multipart/signed
-                // Questi header sono visibili al client email e NON fanno parte del contenuto firmato
-                string signedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz");
-                string smimeBoundary = $"----=_smime_{Guid.NewGuid():N}";
-                string p7sBase64 = Convert.ToBase64String(p7sBytes);
-
-                // Il mimeContent costruito sopra NON contiene header From/To/Subject
-                // È già il body MIME puro che è stato firmato da PKCS7SignML
-                // CRITICO: NON normalizzare il contenuto dopo la firma - deve essere identico byte per byte
-                // a ciò che è stato scritto nel file input per PKCS7SignML
-                string bodyMime = mimeContent;
+                // ============================================================
+                // FIX 2026-01-06: Usa S/MIME OPAQUE invece di multipart/signed
+                // SIAE spesso restituisce errore 40605 con multipart/signed perché:
+                // - Problemi CRLF
+                // - Librerie che modificano il MIME dopo la firma
+                // - Boundary che cambiano
+                // 
+                // SOLUZIONE: application/pkcs7-mime; smime-type=signed-data
+                // Il contenuto firmato sta DENTRO al PKCS7 - nessun problema di sync
+                // ============================================================
                 
-                Log($"  Building S/MIME message: From={!string.IsNullOrEmpty(externalFrom)}, To={!string.IsNullOrEmpty(externalTo)}, Subject={!string.IsNullOrEmpty(externalSubject)}");
-                Log($"  Body MIME size: {bodyMime.Length} bytes (this is what was signed)");
+                string signedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz");
+                
+                // PKCS7SignML crea un SignedData "attached" - contiene contenuto + firma
+                // Lo usiamo direttamente come corpo dell'email S/MIME opaque
+                string pkcs7Base64 = Convert.ToBase64String(p7sBytes);
+                
+                Log($"  Building S/MIME OPAQUE message (application/pkcs7-mime)");
+                Log($"  P7M size: {p7sBytes.Length} bytes, Base64 size: {pkcs7Base64.Length} chars");
 
                 var smimeBuilder = new StringBuilder();
                 
-                // PRIMA: Header esterni (visibili al client email, NON firmati)
-                // Questi provengono dalle variabili salvate quando abbiamo costruito mimeContent
+                // Header esterni (NON firmati, visibili al client email)
                 if (!string.IsNullOrEmpty(externalFrom))
                     smimeBuilder.Append($"From: {externalFrom}\r\n");
                 if (!string.IsNullOrEmpty(externalTo))
@@ -2339,49 +2342,23 @@ namespace SiaeBridge
                 if (!string.IsNullOrEmpty(externalSubject))
                     smimeBuilder.Append($"Subject: {externalSubject}\r\n");
                 
-                // DOPO: Header MIME per multipart/signed
+                // S/MIME opaque: tutto il contenuto firmato è dentro il PKCS7
                 smimeBuilder.Append("MIME-Version: 1.0\r\n");
-                smimeBuilder.Append($"Content-Type: multipart/signed; protocol=\"application/pkcs7-signature\"; micalg=sha-256; boundary=\"{smimeBoundary}\"\r\n");
-                smimeBuilder.Append("\r\n");
-                smimeBuilder.Append($"--{smimeBoundary}\r\n");
-                
-                // Aggiungi il body MIME - questo è ESATTAMENTE il contenuto che è stato firmato
-                // CRITICO RFC 5751: Il contenuto della prima parte DEVE essere identico byte-per-byte
-                // a quello che è stato firmato con PKCS7SignML. NESSUNA modifica consentita!
-                smimeBuilder.Append(bodyMime);
-                
-                // RFC 2046: "The boundary delimiter MUST be preceded by a CRLF"
-                // Se bodyMime già termina con CRLF, il boundary lo segue direttamente
-                // Se NON termina con CRLF, dobbiamo aggiungerne uno (ma questo invalida la firma!)
-                if (bodyMime.EndsWith("\r\n"))
-                {
-                    // Body termina con CRLF - il boundary segue direttamente sulla nuova riga
-                    smimeBuilder.Append($"--{smimeBoundary}\r\n");
-                }
-                else
-                {
-                    // ATTENZIONE: Aggiungere CRLF qui significa che il contenuto nel messaggio
-                    // non corrisponde a quello firmato - la firma sarà INVALIDA!
-                    Log("  WARNING: bodyMime does not end with CRLF - adding it will invalidate signature!");
-                    smimeBuilder.Append($"\r\n--{smimeBoundary}\r\n");
-                }
-                smimeBuilder.Append("Content-Type: application/pkcs7-signature; name=\"smime.p7s\"\r\n");
+                smimeBuilder.Append("Content-Type: application/pkcs7-mime; smime-type=signed-data; name=\"smime.p7m\"\r\n");
                 smimeBuilder.Append("Content-Transfer-Encoding: base64\r\n");
-                smimeBuilder.Append("Content-Disposition: attachment; filename=\"smime.p7s\"\r\n");
+                smimeBuilder.Append("Content-Disposition: attachment; filename=\"smime.p7m\"\r\n");
                 smimeBuilder.Append("\r\n");
                 
-                // Dividi base64 in righe da 76 caratteri
-                for (int i = 0; i < p7sBase64.Length; i += 76)
+                // Base64 in righe da 76 caratteri (standard RFC)
+                for (int i = 0; i < pkcs7Base64.Length; i += 76)
                 {
-                    int len = Math.Min(76, p7sBase64.Length - i);
-                    smimeBuilder.Append(p7sBase64.Substring(i, len));
+                    int len = Math.Min(76, pkcs7Base64.Length - i);
+                    smimeBuilder.Append(pkcs7Base64.Substring(i, len));
                     smimeBuilder.Append("\r\n");
                 }
-                
-                smimeBuilder.Append($"--{smimeBoundary}--\r\n");
 
                 string signedMime = smimeBuilder.ToString();
-                Log($"  S/MIME message built: {signedMime.Length} bytes");
+                Log($"  S/MIME OPAQUE message built: {signedMime.Length} bytes");
 
                 return JsonConvert.SerializeObject(new
                 {
