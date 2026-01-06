@@ -104,6 +104,13 @@ namespace SiaeBridge
         static extern int SCardReleaseContext(IntPtr hContext);
 
         // ============================================================
+        // MSVCRT _putenv - per forzare _P_tmpdir usato da tmpnam()
+        // v3.27 FIX: tmpnam(NULL) ignora TMP/TEMP, usa _P_tmpdir interno
+        // ============================================================
+        [DllImport("msvcrt.dll", CallingConvention = CallingConvention.Cdecl)]
+        static extern int _putenv([MarshalAs(UnmanagedType.LPStr)] string envstring);
+
+        // ============================================================
         // STATE
         // ============================================================
         static int _slot = -1;
@@ -118,7 +125,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.25 - FIX: ASCII-7bit body + bInitialize=1 per SMIMESignML");
+            Log("SiaeBridge v3.27 - FIX: _putenv(_P_tmpdir) per tmpnam() in SMIMESignML");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -2109,7 +2116,7 @@ namespace SiaeBridge
 
             try
             {
-                Log($"=== SignSmime v3.26 START ===");
+                Log($"=== SignSmime v3.27 START ===");
                 
                 dynamic req = JsonConvert.DeserializeObject(json);
                 string pin = req.pin;
@@ -2143,7 +2150,7 @@ namespace SiaeBridge
                 if (pin.Length < 4)
                     return ERR("PIN non valido - deve contenere almeno 4 cifre");
 
-                Log($"SignSmime (via SMIMESignML nativo v3.26): from={smimeFrom}, to={smimeTo}");
+                Log($"SignSmime (via SMIMESignML nativo v3.27): from={smimeFrom}, to={smimeTo}");
                 Log($"  Subject: {smimeSubject ?? "(none)"}");
                 Log($"  Body length: {smimeBody?.Length ?? 0}");
                 Log($"  Attachment: {attachmentName ?? "(none)"}, base64 length: {attachmentBase64?.Length ?? 0}");
@@ -2191,27 +2198,44 @@ namespace SiaeBridge
                 body = body.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", "\r\n");
                 Log($"  Body after normalization: {body.Length} chars");
 
-                // v3.26 FIX: Forza tmpnam() a usare directory TEMP impostando variabili d'ambiente
-                // tmpnam(NULL) su Windows usa TMP/TEMP per il prefisso del path
-                string originalTmp = Environment.GetEnvironmentVariable("TMP");
-                string originalTemp = Environment.GetEnvironmentVariable("TEMP");
+                // v3.27 FIX CRITICO: Forza _P_tmpdir via msvcrt._putenv
+                // tmpnam(NULL) su Windows restituisce "\smaXXXX.tmp" che diventa C:\smaXXXX.tmp
+                // TMP/TEMP NON influenzano tmpnam()! Bisogna impostare _P_tmpdir interno al CRT
+                // NOTA: _P_tmpdir DEVE terminare con backslash
                 string originalDir = Directory.GetCurrentDirectory();
-                Log($"  Original TMP: {originalTmp}");
-                Log($"  Original TEMP: {originalTemp}");
                 Log($"  Original CWD: {originalDir}");
+                
+                // Assicura che tempDir termini con backslash per _P_tmpdir
+                string tempDirWithSlash = tempDir.EndsWith("\\") ? tempDir : tempDir + "\\";
                 
                 try
                 {
-                    // Setta TMP e TEMP alla directory temp dell'utente
-                    Environment.SetEnvironmentVariable("TMP", tempDir);
-                    Environment.SetEnvironmentVariable("TEMP", tempDir);
+                    // Imposta _P_tmpdir che è la variabile interna usata da tmpnam()
+                    string putenvArg = $"_P_tmpdir={tempDirWithSlash}";
+                    int putenvResult = _putenv(putenvArg);
+                    Log($"  _putenv(\"{putenvArg}\") = {putenvResult}");
+                    
+                    if (putenvResult != 0)
+                    {
+                        Log($"  WARNING: _putenv failed! tmpnam() may still use C:\\");
+                    }
+                    
+                    // Cambia anche la working directory per sicurezza
                     Directory.SetCurrentDirectory(tempDir);
-                    Log($"  Set TMP/TEMP to: {tempDir}");
                     Log($"  Working directory changed to: {Directory.GetCurrentDirectory()}");
+                    
+                    // Verifica: prova a creare un file temporaneo per vedere dove va
+                    string testTmpPath = Path.Combine(tempDir, $"smime_test_{DateTime.Now.Ticks}.tmp");
+                    File.WriteAllText(testTmpPath, "test");
+                    if (File.Exists(testTmpPath))
+                    {
+                        File.Delete(testTmpPath);
+                        Log($"  ✓ Temp file write test PASSED in: {tempDir}");
+                    }
                 }
                 catch (Exception envEx)
                 {
-                    Log($"  WARNING: Could not set environment/directory: {envEx.Message}");
+                    Log($"  WARNING: Could not set _P_tmpdir/directory: {envEx.Message}");
                 }
 
                 // Reset card state before SMIMESignML call
@@ -2253,17 +2277,15 @@ namespace SiaeBridge
 
                 Log($"  SMIMESignML result: {signResult} (0x{signResult:X8})");
                 
-                // Ripristina directory originale e variabili d'ambiente
+                // Ripristina directory originale
                 try
                 {
                     Directory.SetCurrentDirectory(originalDir);
-                    if (originalTmp != null) Environment.SetEnvironmentVariable("TMP", originalTmp);
-                    if (originalTemp != null) Environment.SetEnvironmentVariable("TEMP", originalTemp);
-                    Log($"  Restored CWD/TMP/TEMP");
+                    Log($"  Restored CWD to: {originalDir}");
                 }
                 catch (Exception restoreEx)
                 {
-                    Log($"  WARNING: Could not restore environment: {restoreEx.Message}");
+                    Log($"  WARNING: Could not restore directory: {restoreEx.Message}");
                 }
 
                 if (signResult != 0)
