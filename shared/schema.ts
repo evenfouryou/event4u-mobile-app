@@ -1177,6 +1177,7 @@ export const siaeCustomers = pgTable("siae_customers", {
   passwordHash: varchar("password_hash", { length: 255 }),
   firstName: varchar("first_name", { length: 100 }).notNull(),
   lastName: varchar("last_name", { length: 100 }).notNull(),
+  gender: varchar("gender", { length: 1 }), // 'M' o 'F'
   birthDate: timestamp("birth_date"),
   birthPlace: varchar("birth_place", { length: 255 }), // ISO 3166 conforme
   // Stato verifica

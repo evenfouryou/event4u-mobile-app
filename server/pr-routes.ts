@@ -2,6 +2,7 @@
 import { Router, Request, Response, NextFunction } from "express";
 import { prStorage } from "./pr-storage";
 import { storage } from "./storage";
+import { db } from "./db";
 import {
   insertEventStaffAssignmentSchema,
   insertEventFloorplanSchema,
@@ -9,8 +10,10 @@ import {
   insertTableBookingSchema,
   insertGuestListSchema,
   insertGuestListEntrySchema,
+  siaeCustomers,
 } from "@shared/schema";
 import { z } from "zod";
+import { like, or, eq } from "drizzle-orm";
 
 const router = Router();
 
@@ -773,6 +776,107 @@ router.get("/api/pr/events/:eventId/stats", requireAuth, async (req: Request, re
     res.json(stats);
   } catch (error: any) {
     console.error("Error getting PR stats:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== Customer Search ====================
+
+// Search customer by phone (partial or complete)
+router.get("/api/pr/customers/search", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { phone } = req.query;
+    
+    if (!phone || typeof phone !== 'string' || phone.length < 3) {
+      return res.json({ found: false, customer: null });
+    }
+    
+    // Search for customer by phone (partial match)
+    const customers = await db.select({
+      id: siaeCustomers.id,
+      firstName: siaeCustomers.firstName,
+      lastName: siaeCustomers.lastName,
+      gender: siaeCustomers.gender,
+      phone: siaeCustomers.phone,
+      birthDate: siaeCustomers.birthDate,
+    })
+    .from(siaeCustomers)
+    .where(like(siaeCustomers.phone, `%${phone}%`))
+    .limit(5);
+    
+    if (customers.length === 0) {
+      return res.json({ found: false, customer: null });
+    }
+    
+    // If exact match exists, prioritize it
+    const exactMatch = customers.find(c => c.phone === phone);
+    const customer = exactMatch || customers[0];
+    
+    res.json({
+      found: true,
+      customer: {
+        id: customer.id,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        gender: customer.gender,
+        phone: customer.phone,
+        birthDate: customer.birthDate,
+      },
+      suggestions: customers.length > 1 ? customers : undefined,
+    });
+  } catch (error: any) {
+    console.error("Error searching customer:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Create quick customer (for new guest registration)
+router.post("/api/pr/customers/quick-create", requireAuth, requirePr, async (req: Request, res: Response) => {
+  try {
+    const { phone, firstName, lastName, gender, birthDate } = req.body;
+    
+    if (!phone || !firstName || !lastName) {
+      return res.status(400).json({ error: "Telefono, nome e cognome richiesti" });
+    }
+    
+    // Check if phone already exists
+    const existing = await db.select({ id: siaeCustomers.id })
+      .from(siaeCustomers)
+      .where(eq(siaeCustomers.phone, phone))
+      .limit(1);
+    
+    if (existing.length > 0) {
+      return res.status(400).json({ error: "Telefono già registrato", customerId: existing[0].id });
+    }
+    
+    // Generate unique code
+    const uniqueCode = `PR_${Date.now().toString(36).toUpperCase()}_${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    
+    // Create customer with minimal data
+    const [customer] = await db.insert(siaeCustomers).values({
+      phone,
+      firstName,
+      lastName,
+      gender: gender || null,
+      birthDate: birthDate ? new Date(birthDate) : null,
+      email: `${uniqueCode.toLowerCase()}@placeholder.temp`, // Placeholder email
+      uniqueCode,
+      authenticationType: 'BO', // Back-office registration
+      registrationCompleted: false,
+      phoneVerified: false,
+      emailVerified: false,
+    }).returning();
+    
+    res.status(201).json({
+      id: customer.id,
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      gender: customer.gender,
+      phone: customer.phone,
+      birthDate: customer.birthDate,
+    });
+  } catch (error: any) {
+    console.error("Error creating quick customer:", error);
     res.status(500).json({ error: error.message });
   }
 });

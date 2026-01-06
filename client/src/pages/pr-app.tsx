@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -8,6 +8,31 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { cn } from "@/lib/utils";
+
+interface CustomerSearchResult {
+  id: string;
+  firstName: string;
+  lastName: string;
+  gender: string | null;
+  phone: string;
+  birthDate: string | null;
+}
+
+function useDebounce<T>(value: T, delay: number): T {
+  const [debouncedValue, setDebouncedValue] = useState<T>(value);
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedValue(value);
+    }, delay);
+
+    return () => {
+      clearTimeout(handler);
+    };
+  }, [value, delay]);
+
+  return debouncedValue;
+}
 import {
   MobileAppLayout,
   MobileHeader,
@@ -83,6 +108,8 @@ const guestEntryFormSchema = z.object({
   gender: z.enum(["M", "F"]).optional(),
   plusOnes: z.coerce.number().min(0, "Non può essere negativo").default(0),
   notes: z.string().optional(),
+  customerId: z.string().optional(),
+  birthDate: z.string().optional(),
 });
 
 type GuestEntryFormData = z.infer<typeof guestEntryFormSchema>;
@@ -440,6 +467,14 @@ export default function PrAppPage() {
   const [selectedTableId, setSelectedTableId] = useState<string | null>(null);
   const [contactToAdd, setContactToAdd] = useState<PrContact | null>(null);
   
+  const [customerSearchPhone, setCustomerSearchPhone] = useState("");
+  const [customerSearchResult, setCustomerSearchResult] = useState<CustomerSearchResult | null>(null);
+  const [isSearchingCustomer, setIsSearchingCustomer] = useState(false);
+  const [customerNotFound, setCustomerNotFound] = useState(false);
+  const [showNewCustomerFields, setShowNewCustomerFields] = useState(false);
+  
+  const debouncedPhone = useDebounce(customerSearchPhone, 500);
+  
   const [contacts, setContacts] = useState<PrContact[]>(() => {
     const saved = localStorage.getItem('pr_contacts');
     return saved ? JSON.parse(saved) : [];
@@ -547,8 +582,66 @@ export default function PrAppPage() {
       gender: undefined,
       plusOnes: 0,
       notes: "",
+      customerId: "",
+      birthDate: "",
     },
   });
+
+  useEffect(() => {
+    const searchCustomer = async () => {
+      if (debouncedPhone.length < 3) {
+        setCustomerSearchResult(null);
+        setCustomerNotFound(false);
+        setShowNewCustomerFields(false);
+        return;
+      }
+
+      setIsSearchingCustomer(true);
+      try {
+        const response = await fetch(`/api/pr/customers/search?phone=${encodeURIComponent(debouncedPhone)}`);
+        const data = await response.json();
+        
+        if (data.found && data.customer) {
+          setCustomerSearchResult(data.customer);
+          setCustomerNotFound(false);
+          setShowNewCustomerFields(false);
+        } else {
+          setCustomerSearchResult(null);
+          setCustomerNotFound(true);
+          setShowNewCustomerFields(true);
+        }
+      } catch (error) {
+        console.error("Error searching customer:", error);
+        setCustomerSearchResult(null);
+        setCustomerNotFound(false);
+      } finally {
+        setIsSearchingCustomer(false);
+      }
+    };
+
+    searchCustomer();
+  }, [debouncedPhone]);
+
+  const handleUseCustomerData = () => {
+    if (customerSearchResult) {
+      guestForm.setValue("firstName", customerSearchResult.firstName);
+      guestForm.setValue("lastName", customerSearchResult.lastName);
+      guestForm.setValue("phone", customerSearchResult.phone);
+      if (customerSearchResult.gender === 'M' || customerSearchResult.gender === 'F') {
+        guestForm.setValue("gender", customerSearchResult.gender);
+      }
+      guestForm.setValue("customerId", customerSearchResult.id);
+      triggerHaptic('success');
+      toast({ title: "Dati cliente applicati" });
+    }
+  };
+
+  const resetCustomerSearch = () => {
+    setCustomerSearchPhone("");
+    setCustomerSearchResult(null);
+    setCustomerNotFound(false);
+    setShowNewCustomerFields(false);
+  };
 
   const bookingForm = useForm<BookingFormData>({
     resolver: zodResolver(bookingFormSchema),
@@ -574,7 +667,28 @@ export default function PrAppPage() {
 
   const addGuestMutation = useMutation({
     mutationFn: async (data: GuestEntryFormData) => {
-      const response = await apiRequest("POST", `/api/pr/guest-lists/${selectedListId}/entries`, data);
+      let customerId = data.customerId;
+      
+      if (showNewCustomerFields && !customerId && data.phone && data.firstName && data.lastName) {
+        try {
+          const customerResponse = await apiRequest("POST", "/api/pr/customers/quick-create", {
+            phone: data.phone,
+            firstName: data.firstName,
+            lastName: data.lastName,
+            gender: data.gender,
+            birthDate: data.birthDate || null,
+          });
+          const newCustomer = await customerResponse.json();
+          customerId = newCustomer.id;
+        } catch (error) {
+          console.log("Could not create customer, proceeding without customerId");
+        }
+      }
+      
+      const response = await apiRequest("POST", `/api/pr/guest-lists/${selectedListId}/entries`, {
+        ...data,
+        customerId: customerId || undefined,
+      });
       return response.json();
     },
     onSuccess: () => {
@@ -582,6 +696,7 @@ export default function PrAppPage() {
       toast({ title: "Ospite aggiunto" });
       setIsAddGuestOpen(false);
       guestForm.reset();
+      resetCustomerSearch();
       queryClient.invalidateQueries({ queryKey: ["/api/pr/guest-lists", selectedListId, "entries"] });
       refetchLists();
     },
@@ -1096,7 +1211,7 @@ export default function PrAppPage() {
 
       <BottomSheet
         open={isAddGuestOpen}
-        onClose={() => setIsAddGuestOpen(false)}
+        onClose={() => { setIsAddGuestOpen(false); resetCustomerSearch(); }}
         title={contactToAdd ? "Aggiungi dalla Rubrica" : "Nuovo Ospite"}
       >
         <Form {...guestForm}>
@@ -1104,6 +1219,105 @@ export default function PrAppPage() {
             onSubmit={guestForm.handleSubmit((data) => addGuestMutation.mutate(data))}
             className="p-4 space-y-4"
           >
+            <FormField
+              control={guestForm.control}
+              name="phone"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Telefono</FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <Input 
+                        {...field} 
+                        type="tel" 
+                        className="h-12 pr-10" 
+                        data-testid="input-guest-phone"
+                        onChange={(e) => {
+                          field.onChange(e);
+                          setCustomerSearchPhone(e.target.value);
+                        }}
+                      />
+                      {isSearchingCustomer && (
+                        <div className="absolute right-3 top-1/2 -translate-y-1/2">
+                          <Loader2 className="h-4 w-4 animate-spin text-muted-foreground" />
+                        </div>
+                      )}
+                    </div>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {customerSearchResult && (
+              <Card className="border-green-500/50 bg-green-500/10">
+                <CardContent className="p-4">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-green-500/20 flex items-center justify-center">
+                        <CheckCircle2 className="h-5 w-5 text-green-500" />
+                      </div>
+                      <div>
+                        <p className="font-medium text-green-700 dark:text-green-400">
+                          Cliente trovato
+                        </p>
+                        <p className="text-sm text-foreground">
+                          {customerSearchResult.firstName} {customerSearchResult.lastName}
+                        </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          {customerSearchResult.gender && (
+                            <Badge 
+                              variant="outline" 
+                              className={cn(
+                                "text-xs px-1.5 border-0",
+                                customerSearchResult.gender === 'M' 
+                                  ? "bg-blue-500/20 text-blue-500" 
+                                  : "bg-pink-500/20 text-pink-500"
+                              )}
+                            >
+                              {customerSearchResult.gender === 'M' ? 'Maschio' : 'Femmina'}
+                            </Badge>
+                          )}
+                          <span className="text-xs text-muted-foreground">
+                            {customerSearchResult.phone}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                    <HapticButton
+                      type="button"
+                      size="sm"
+                      onClick={handleUseCustomerData}
+                      data-testid="button-use-customer-data"
+                    >
+                      <CheckCircle2 className="h-4 w-4 mr-1" />
+                      Usa dati
+                    </HapticButton>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {customerNotFound && customerSearchPhone.length >= 3 && (
+              <Card className="border-yellow-500/50 bg-yellow-500/10">
+                <CardContent className="p-4">
+                  <div className="flex items-center gap-3">
+                    <div className="h-10 w-10 rounded-full bg-yellow-500/20 flex items-center justify-center">
+                      <UserPlus className="h-5 w-5 text-yellow-600 dark:text-yellow-400" />
+                    </div>
+                    <div>
+                      <p className="font-medium text-yellow-700 dark:text-yellow-400">
+                        Nuovo cliente
+                      </p>
+                      <p className="text-sm text-muted-foreground">
+                        Completa i dati per registrare il cliente
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={guestForm.control}
@@ -1135,20 +1349,6 @@ export default function PrAppPage() {
 
             <FormField
               control={guestForm.control}
-              name="phone"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Telefono</FormLabel>
-                  <FormControl>
-                    <Input {...field} type="tel" className="h-12" data-testid="input-guest-phone" />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={guestForm.control}
               name="email"
               render={({ field }) => (
                 <FormItem>
@@ -1177,6 +1377,27 @@ export default function PrAppPage() {
                 </FormItem>
               )}
             />
+
+            {showNewCustomerFields && (
+              <FormField
+                control={guestForm.control}
+                name="birthDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Data di nascita</FormLabel>
+                    <FormControl>
+                      <Input 
+                        {...field} 
+                        type="date" 
+                        className="h-12" 
+                        data-testid="input-guest-birthdate" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            )}
 
             <FormField
               control={guestForm.control}
