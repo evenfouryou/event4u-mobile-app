@@ -118,7 +118,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.24 - FIX: Reset card state + bInitialize=0 per SMIMESignML");
+            Log("SiaeBridge v3.25 - FIX: ASCII-7bit body + bInitialize=1 per SMIMESignML");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -2170,7 +2170,15 @@ namespace SiaeBridge
                 }
 
                 // Body del messaggio (ASCII 7-bit come richiesto dalla documentazione)
-                string body = smimeBody ?? "SIAE RCA Transmission";
+                // FIX v3.25: Forza encoding ASCII-7bit - rimuove caratteri non-ASCII
+                string rawBody = smimeBody ?? "SIAE RCA Transmission";
+                string body = new string(rawBody.Where(c => c < 128).ToArray());
+                if (body.Length != rawBody.Length)
+                {
+                    Log($"  WARNING: Body contained non-ASCII chars, stripped from {rawBody.Length} to {body.Length}");
+                }
+                // Ensure CRLF line endings
+                body = body.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", "\r\n");
 
                 // FIX 2026-01-06: SMIMESignML usa internamente tmpnam(NULL) che crea file
                 // nella directory corrente. Se l'app è in una cartella non scrivibile
@@ -2209,8 +2217,10 @@ namespace SiaeBridge
                 Log($"    otherHeaders=(null)");
                 Log($"    body length={body.Length}");
                 Log($"    attachments={attachments}");
-                Log($"    flags=0, init=0");
+                Log($"    flags=0, init=1");
 
+                // FIX v3.25: Usa bInitialize=1 - SMIMESignML potrebbe aver bisogno di inizializzare
+                // la propria sessione internamente (diversa da Initialize/FinalizeML)
                 int signResult = SMIMESignML(
                     pin,
                     (uint)_slot,
@@ -2222,7 +2232,7 @@ namespace SiaeBridge
                     body,
                     attachments,    // path ai file allegati
                     0,              // flags
-                    0               // bInitialize=0 (già inizializzato manualmente)
+                    1               // bInitialize=1 (FIX v3.25: lascia che SMIMESignML gestisca init)
                 );
 
                 Log($"  SMIMESignML result: {signResult} (0x{signResult:X8})");
@@ -2279,7 +2289,8 @@ namespace SiaeBridge
                 string signerEmail = "";
                 string signerName = "";
                 
-                int finRes = FinalizeML(_slot);
+                // Riusa variabile finRes già dichiarata sopra
+                finRes = FinalizeML(_slot);
                 int init = Initialize(_slot);
                 int txResult = BeginTransactionML(_slot);
                 bool tx = (txResult == 0);
