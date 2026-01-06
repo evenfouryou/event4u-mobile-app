@@ -1,0 +1,131 @@
+Perfetto: grazie, questa è la svolta. Se RCA SIAE non usa SOAP/WS ma email S/MIME firmata, allora i due errori che descrivi (“40605 riepilogo illeggibile” + “messaggio corrotto”) puntano quasi sempre a questo:
+
+Stai firmando un contenuto, ma poi il contenuto viene modificato (anche di 1 byte) prima dell’invio, oppure stai costruendo una firma PKCS#7 “finta” (non SignedData valido).
+
+Con S/MIME basta cambiare:
+	•	CRLF ↔ LF
+	•	charset dichiarato vs bytes reali
+	•	spazi, boundary MIME, header folding
+	•	content-transfer-encoding
+…e il destinatario vede “messaggio corrotto” / firma non verificabile. E SIAE, non riuscendo a leggere correttamente l’allegato o il testo, può rispondere con 40605.
+
+Qui sotto ti dico cosa controllare e cosa correggere nel codice, con priorità.
+
+⸻
+
+1) Punto critico n.1: NON devi “inventarti” la firma S/MIME
+
+Nel tuo sistema, la richiesta REQUEST_SMIME_SIGNATURE suggerisce che il bridge generi la firma S/MIME.
+
+✅ Bene, ma deve generare un vero PKCS#7 SignedData (S/MIME standard), non:
+	•	concatenazioni di firma+certificato,
+	•	base64 fatto a mano,
+	•	strutture non “SignedCms”.
+
+Se fai “firma custom”, i client mail (e SIAE) dicono “messaggio corrotto”.
+
+Fix tecnico (obbligatorio):
+	•	In C# usa System.Security.Cryptography.Pkcs.SignedCms in modalità detached (multipart/signed) oppure signedData “opaque” (application/pkcs7-mime).
+	•	In alternativa BouncyCastle.
+
+⸻
+
+2) Punto critico n.2: dopo la firma NON devi toccare più NIENTE
+
+Questo è l’errore più comune: firmi la mail, poi la mandi con una libreria (es. nodemailer) che:
+	•	ricodifica charset,
+	•	normalizza line endings,
+	•	cambia boundary,
+	•	rifà base64,
+	•	cambia header.
+
+Risultato: firma S/MIME = corrotta.
+
+✅ Regola d’oro:
+
+Il bridge deve produrre l’email “RAW” finale (RFC822 bytes) già firmata.
+Il server deve inviare quei bytes tali e quali via SMTP (DATA), senza ricostruire il MIME.
+
+Cosa dire a Replit/dev
+	•	Se oggi Replit invia usando librerie “comode” (nodemailer ecc.), è facile che rompa la firma.
+	•	Serve invio “raw source” dell’email.
+
+⸻
+
+3) Punto critico n.3: charset e dichiarazione XML
+
+Nel tuo REQUEST_XML_SIGNATURE vedo:
+
+"xmlContent": "<?xml version=\"1.0\" encoding=\"ISO-8859-1\"?>..."
+
+Questo è pericolosissimo se poi:
+	•	in realtà l’XML è in UTF-8,
+	•	oppure contiene caratteri non rappresentabili in ISO-8859-1 (accenti/emoji/char speciali),
+	•	oppure viene serializzato in UTF-8 ma dichiara ISO-8859-1.
+
+➡️ Per SIAE il “riepilogo” può diventare illeggibile.
+
+✅ Fix:
+	•	Decidi uno standard: UTF-8 ovunque (consigliato).
+	•	L’XML deve avere dichiarazione:
+
+<?xml version="1.0" encoding="UTF-8"?>
+
+e i bytes reali devono essere UTF-8.
+
+⸻
+
+4) Punto critico n.4: allegato P7M deve essere base64 dei BYTES, non testo
+
+Nel REQUEST_SMIME_SIGNATURE mandi:
+
+"attachmentBase64": "MIIx..."
+
+✅ Deve essere base64 dei bytes del file .p7m.
+❌ Se invece è base64 di una stringa (UTF-8) che contiene base64, o se l’hai “ri-encodata”, corrompi.
+
+Check pratico:
+	•	Decodifica attachmentBase64 e salva come .p7m
+	•	Apri con Notepad: deve essere illeggibile (binario)
+	•	(meglio) certutil -dump file.p7m deve dire PKCS7 SignedData
+
+⸻
+
+5) Formato S/MIME corretto (quello che SIAE si aspetta)
+
+Ci sono due formati validi. SIAE di solito accetta entrambi, ma devi farne uno standard:
+
+Opzione A (molto comune): multipart/signed (detached)
+	•	Prima parte: il messaggio/oggetto (testo + allegato)
+	•	Seconda parte: application/pkcs7-signature (smime.p7s)
+
+Opzione B: application/pkcs7-mime (opaque)
+	•	Tutto dentro un unico blob signedData
+
+➡️ Se stai mandando “smime.p7s” come allegato a caso, o stai firmando solo il body e non l’allegato, SIAE può dire “corrotto”.
+
+⸻
+
+6) Perché SIAE ti dà sempre 40605 anche se il P7M è giusto
+
+Se l’email S/MIME è corrotta:
+	•	loro non riescono a validare/estrarre correttamente il payload
+	•	e la risposta applicativa diventa generica: “riepilogo illeggibile” (40605)
+
+Quindi finché non sistemi S/MIME RAW invariato, resterai nel loop.
+
+⸻
+
+Cosa voglio da te per chiuderla (senza altre domande inutili)
+
+Incollami uno di questi (basta 1):
+	1.	Il sorgente RAW dell’email inviata (anche solo le prime ~120 righe con gli header + Content-Type/boundary + dove sta la signature).
+Oppure:
+	2.	Il pezzo di codice Replit che invia l’email (nodemailer? smtp raw?)
+
+Con quello ti dico riga per riga:
+	•	dove si rompe la firma (CRLF, boundary, encoding)
+	•	e come trasformare il flusso in: Bridge → produce EML firmata → server invia RAW senza toccare.
+
+Se vuoi una direttiva immediata per Replit:
+	•	non deve costruire MIME, deve solo inviare il MIME già firmato dal bridge.

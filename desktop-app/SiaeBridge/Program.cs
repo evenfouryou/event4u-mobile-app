@@ -99,7 +99,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.19 - FIX: ISO-8859-1 encoding, smime-type=signed-data for SIAE Allegato C");
+            Log("SiaeBridge v3.20 - FIX: S/MIME signature integrity - no CRLF modification after signing");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -2346,13 +2346,25 @@ namespace SiaeBridge
                 smimeBuilder.Append($"--{smimeBoundary}\r\n");
                 
                 // Aggiungi il body MIME - questo è ESATTAMENTE il contenuto che è stato firmato
-                // CRITICO: bodyMime deve essere identico a ciò che è stato scritto in inputFile per PKCS7SignML
+                // CRITICO RFC 5751: Il contenuto della prima parte DEVE essere identico byte-per-byte
+                // a quello che è stato firmato con PKCS7SignML. NESSUNA modifica consentita!
                 smimeBuilder.Append(bodyMime);
-                if (!bodyMime.EndsWith("\r\n"))
-                    smimeBuilder.Append("\r\n");
                 
-                smimeBuilder.Append("\r\n");
-                smimeBuilder.Append($"--{smimeBoundary}\r\n");
+                // RFC 2046: "The boundary delimiter MUST be preceded by a CRLF"
+                // Se bodyMime già termina con CRLF, il boundary lo segue direttamente
+                // Se NON termina con CRLF, dobbiamo aggiungerne uno (ma questo invalida la firma!)
+                if (bodyMime.EndsWith("\r\n"))
+                {
+                    // Body termina con CRLF - il boundary segue direttamente sulla nuova riga
+                    smimeBuilder.Append($"--{smimeBoundary}\r\n");
+                }
+                else
+                {
+                    // ATTENZIONE: Aggiungere CRLF qui significa che il contenuto nel messaggio
+                    // non corrisponde a quello firmato - la firma sarà INVALIDA!
+                    Log("  WARNING: bodyMime does not end with CRLF - adding it will invalidate signature!");
+                    smimeBuilder.Append($"\r\n--{smimeBoundary}\r\n");
+                }
                 smimeBuilder.Append("Content-Type: application/pkcs7-signature; name=\"smime.p7s\"\r\n");
                 smimeBuilder.Append("Content-Transfer-Encoding: base64\r\n");
                 smimeBuilder.Append("Content-Disposition: attachment; filename=\"smime.p7s\"\r\n");
