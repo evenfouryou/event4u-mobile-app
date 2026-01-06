@@ -6,8 +6,9 @@ import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/useAuth";
+import { usePrAuth } from "@/hooks/usePrAuth";
 import { cn } from "@/lib/utils";
+import { useLocation } from "wouter";
 
 interface CustomerSearchResult {
   id: string;
@@ -33,6 +34,7 @@ function useDebounce<T>(value: T, delay: number): T {
 
   return debouncedValue;
 }
+
 import {
   MobileAppLayout,
   MobileHeader,
@@ -58,11 +60,21 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { ScrollArea } from "@/components/ui/scroll-area";
 import {
   Home,
   ListChecks,
@@ -84,12 +96,21 @@ import {
   Users,
   Trash2,
   ChevronRight,
+  Wallet,
+  Euro,
+  TrendingUp,
+  Banknote,
+  RefreshCw,
+  Lock,
+  LogOut,
+  User,
+  Settings,
 } from "lucide-react";
 import { format, isToday, isTomorrow } from "date-fns";
 import { it } from "date-fns/locale";
 import type { GuestList, GuestListEntry, Event, EventTable, TableBooking, EventStaffAssignment } from "@shared/schema";
 
-type TabType = 'home' | 'liste' | 'tavoli' | 'rubrica';
+type TabType = 'home' | 'liste' | 'tavoli' | 'wallet' | 'profilo';
 
 interface PrContact {
   id: string;
@@ -99,6 +120,33 @@ interface PrContact {
   email?: string;
   gender?: 'M' | 'F';
 }
+
+interface WalletData {
+  pendingEarnings: number;
+  paidEarnings: number;
+  totalEarnings: number;
+  availableForPayout: number;
+  thisMonthReservations: number;
+  thisMonthEarnings: number;
+  recentPayouts: Payout[];
+}
+
+interface Payout {
+  id: string;
+  amount: string;
+  status: string;
+  createdAt: string;
+  processedAt?: string;
+  notes?: string;
+  reservationCount?: number;
+}
+
+const formatCurrency = (amount: number) => {
+  return new Intl.NumberFormat('it-IT', {
+    style: 'currency',
+    currency: 'EUR',
+  }).format(amount);
+};
 
 const guestEntryFormSchema = z.object({
   firstName: z.string().min(1, "Nome obbligatorio"),
@@ -152,6 +200,17 @@ const staggerContainer = {
     opacity: 1,
     transition: { staggerChildren: 0.05 },
   },
+};
+
+const cardVariants = {
+  hidden: { opacity: 0, y: 20, scale: 0.95 },
+  visible: { 
+    opacity: 1, 
+    y: 0, 
+    scale: 1,
+    transition: springTransition,
+  },
+  tap: { scale: 0.98 },
 };
 
 function GenderToggle({ value, onChange }: { value?: 'M' | 'F'; onChange: (v: 'M' | 'F') => void }) {
@@ -451,7 +510,18 @@ function ContactCard({ contact, onAddToList }: {
 
 export default function PrAppPage() {
   const { toast } = useToast();
-  const { user } = useAuth();
+  const [, setLocation] = useLocation();
+  const { 
+    prProfile, 
+    isLoading: authLoading, 
+    isAuthenticated, 
+    logout, 
+    isLoggingOut, 
+    updateProfile, 
+    isUpdatingProfile, 
+    changePassword, 
+    isChangingPassword 
+  } = usePrAuth();
   
   const [activeTab, setActiveTab] = useState<TabType>('home');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
@@ -473,6 +543,14 @@ export default function PrAppPage() {
   const [customerNotFound, setCustomerNotFound] = useState(false);
   const [showNewCustomerFields, setShowNewCustomerFields] = useState(false);
   
+  const [isPayoutDialogOpen, setIsPayoutDialogOpen] = useState(false);
+  const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
+  const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [newEmail, setNewEmail] = useState("");
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  
   const debouncedPhone = useDebounce(customerSearchPhone, 500);
   
   const [contacts, setContacts] = useState<PrContact[]>(() => {
@@ -485,16 +563,21 @@ export default function PrAppPage() {
     localStorage.setItem('pr_contacts', JSON.stringify(newContacts));
   }, []);
 
+  useEffect(() => {
+    if (!authLoading && !isAuthenticated) {
+      setLocation("/login");
+    }
+  }, [authLoading, isAuthenticated, setLocation]);
+
   const { data: assignments = [], isLoading: loadingAssignments } = useQuery<EventStaffAssignment[]>({
     queryKey: ["/api/pr/my-assignments"],
+    enabled: isAuthenticated,
   });
 
   const { data: events = [], isLoading: loadingEvents } = useQuery<Event[]>({
     queryKey: ["/api/events"],
+    enabled: isAuthenticated,
     select: (data: Event[]) => {
-      if (user?.role === 'gestore' || user?.role === 'super_admin') {
-        return data;
-      }
       const assignedEventIds = assignments.map(a => a.eventId);
       return data.filter(e => assignedEventIds.includes(e.id));
     },
@@ -502,22 +585,32 @@ export default function PrAppPage() {
 
   const { data: guestLists = [], isLoading: loadingLists, refetch: refetchLists } = useQuery<GuestList[]>({
     queryKey: ["/api/pr/events", selectedEventId, "guest-lists"],
-    enabled: !!selectedEventId,
+    enabled: !!selectedEventId && isAuthenticated,
   });
 
   const { data: entries = [], isLoading: loadingEntries, refetch: refetchEntries } = useQuery<GuestListEntry[]>({
     queryKey: ["/api/pr/guest-lists", selectedListId, "entries"],
-    enabled: !!selectedListId,
+    enabled: !!selectedListId && isAuthenticated,
   });
 
   const { data: tables = [], isLoading: loadingTables, refetch: refetchTables } = useQuery<EventTable[]>({
     queryKey: ["/api/pr/events", selectedEventId, "tables"],
-    enabled: !!selectedEventId,
+    enabled: !!selectedEventId && isAuthenticated,
   });
 
   const { data: bookings = [], refetch: refetchBookings } = useQuery<TableBooking[]>({
     queryKey: ["/api/pr/events", selectedEventId, "bookings"],
-    enabled: !!selectedEventId,
+    enabled: !!selectedEventId && isAuthenticated,
+  });
+
+  const { data: wallet, isLoading: loadingWallet, refetch: refetchWallet, isRefetching: isRefetchingWallet } = useQuery<WalletData>({
+    queryKey: ["/api/pr/wallet"],
+    enabled: isAuthenticated,
+  });
+
+  const { data: allPayouts = [], isLoading: loadingPayouts } = useQuery<Payout[]>({
+    queryKey: ["/api/pr/payouts"],
+    enabled: isAuthenticated,
   });
 
   const selectedEvent = useMemo(() => 
@@ -765,6 +858,31 @@ export default function PrAppPage() {
     },
   });
 
+  const requestPayoutMutation = useMutation({
+    mutationFn: async () => {
+      const response = await apiRequest("POST", "/api/pr/payouts");
+      return response.json();
+    },
+    onSuccess: () => {
+      triggerHaptic('success');
+      toast({
+        title: "Richiesta inviata",
+        description: "La tua richiesta di pagamento è stata inviata con successo.",
+      });
+      queryClient.invalidateQueries({ queryKey: ["/api/pr/wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pr/payouts"] });
+      setIsPayoutDialogOpen(false);
+    },
+    onError: (error: Error) => {
+      triggerHaptic('error');
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile inviare la richiesta di pagamento.",
+        variant: "destructive",
+      });
+    },
+  });
+
   const handleEventSelect = (eventId: string) => {
     setSelectedEventId(eventId);
     setSelectedListId("");
@@ -787,7 +905,7 @@ export default function PrAppPage() {
 
   const handleAddContactToList = (contact: PrContact) => {
     if (!selectedListId) {
-      toast({ title: "Seleziona una lista", variant: "destructive" });
+      toast({ title: "Seleziona prima un evento e una lista", variant: "destructive" });
       return;
     }
     setContactToAdd(contact);
@@ -822,7 +940,93 @@ export default function PrAppPage() {
     toast({ title: "Contatto eliminato" });
   };
 
-  const isLoading = loadingAssignments || loadingEvents;
+  const handleAddEmail = () => {
+    if (!newEmail) return;
+    triggerHaptic('medium');
+    updateProfile({ email: newEmail }, {
+      onSuccess: () => {
+        toast({
+          title: "Email aggiunta",
+          description: "La tua email è stata aggiunta con successo.",
+        });
+        setIsEmailDialogOpen(false);
+        setNewEmail("");
+      },
+      onError: (error: Error) => {
+        toast({
+          title: "Errore",
+          description: error.message || "Impossibile aggiungere l'email.",
+          variant: "destructive",
+        });
+      },
+    });
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmPassword) {
+      toast({
+        title: "Errore",
+        description: "Le password non corrispondono.",
+        variant: "destructive",
+      });
+      return;
+    }
+    triggerHaptic('medium');
+    try {
+      await changePassword({ currentPassword, newPassword });
+      toast({
+        title: "Password cambiata",
+        description: "La tua password è stata cambiata con successo.",
+      });
+      setIsPasswordDialogOpen(false);
+      setCurrentPassword("");
+      setNewPassword("");
+      setConfirmPassword("");
+    } catch (error: any) {
+      toast({
+        title: "Errore",
+        description: error.message || "Impossibile cambiare la password.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleLogout = () => {
+    triggerHaptic('medium');
+    logout();
+  };
+
+  const handleRequestPayout = () => {
+    triggerHaptic('medium');
+    setIsPayoutDialogOpen(true);
+  };
+
+  const confirmPayout = () => {
+    triggerHaptic('medium');
+    requestPayoutMutation.mutate();
+  };
+
+  const handleRefreshWallet = () => {
+    triggerHaptic('medium');
+    refetchWallet();
+  };
+
+  const getPayoutStatusBadge = (status: string) => {
+    switch (status) {
+      case 'pending':
+        return <Badge className="bg-yellow-500/20 text-yellow-400 border-yellow-500/30 text-xs">In Attesa</Badge>;
+      case 'processing':
+        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-xs">In Elaborazione</Badge>;
+      case 'completed':
+        return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30 text-xs">Completato</Badge>;
+      case 'rejected':
+        return <Badge className="bg-red-500/20 text-red-400 border-red-500/30 text-xs">Rifiutato</Badge>;
+      default:
+        return <Badge variant="outline" className="text-xs">{status}</Badge>;
+    }
+  };
+
+  const isLoading = loadingAssignments || loadingEvents || authLoading;
 
   const header = useMemo(() => {
     if (selectedEventId && selectedEvent) {
@@ -832,25 +1036,45 @@ export default function PrAppPage() {
           subtitle={format(new Date(selectedEvent.startDatetime), "d MMM yyyy", { locale: it })}
           showBackButton
           onBack={handleBackToEvents}
-          showUserMenu
         />
       );
     }
+    
+    const titleMap: Record<TabType, string> = {
+      home: "Eventi",
+      liste: "Liste",
+      tavoli: "Tavoli",
+      wallet: "Wallet",
+      profilo: "Profilo",
+    };
+    
     return (
       <MobileHeader
-        title="PR App"
-        subtitle={user?.firstName ? `Ciao, ${user.firstName}` : undefined}
-        showUserMenu
+        title={titleMap[activeTab]}
+        subtitle={prProfile?.firstName ? `Ciao, ${prProfile.firstName}` : undefined}
+        rightAction={
+          activeTab === 'wallet' ? (
+            <HapticButton
+              variant="ghost"
+              size="icon"
+              onClick={handleRefreshWallet}
+              disabled={isRefetchingWallet}
+              data-testid="button-refresh-wallet"
+            >
+              <RefreshCw className={cn("h-5 w-5", isRefetchingWallet && "animate-spin")} />
+            </HapticButton>
+          ) : undefined
+        }
       />
     );
-  }, [selectedEventId, selectedEvent, user?.firstName]);
+  }, [selectedEventId, selectedEvent, prProfile?.firstName, activeTab, isRefetchingWallet]);
 
   const bottomNav = (
     <MobileBottomBar>
       <MobileNavItem
         icon={Home}
-        label="Home"
-        active={activeTab === 'home' && !selectedEventId}
+        label="Eventi"
+        active={activeTab === 'home'}
         onClick={() => {
           if (selectedEventId) handleBackToEvents();
           else handleTabChange('home');
@@ -876,17 +1100,23 @@ export default function PrAppPage() {
         data-testid="nav-tavoli"
       />
       <MobileNavItem
-        icon={BookUser}
-        label="Rubrica"
-        active={activeTab === 'rubrica'}
-        onClick={() => handleTabChange('rubrica')}
-        badge={contacts.length > 0 ? contacts.length : undefined}
-        data-testid="nav-rubrica"
+        icon={Wallet}
+        label="Wallet"
+        active={activeTab === 'wallet'}
+        onClick={() => handleTabChange('wallet')}
+        data-testid="nav-wallet"
+      />
+      <MobileNavItem
+        icon={User}
+        label="Profilo"
+        active={activeTab === 'profilo'}
+        onClick={() => handleTabChange('profilo')}
+        data-testid="nav-profilo"
       />
     </MobileBottomBar>
   );
 
-  if (isLoading) {
+  if (isLoading || authLoading) {
     return (
       <MobileAppLayout header={header} footer={bottomNav}>
         <div className="py-4 space-y-4">
@@ -896,6 +1126,10 @@ export default function PrAppPage() {
         </div>
       </MobileAppLayout>
     );
+  }
+
+  if (!isAuthenticated) {
+    return null;
   }
 
   const renderHomeTab = () => (
@@ -933,7 +1167,7 @@ export default function PrAppPage() {
           <ListChecks className="h-16 w-16 text-muted-foreground mb-4" />
           <h3 className="text-xl font-semibold mb-2">Seleziona un evento</h3>
           <p className="text-muted-foreground">
-            Torna alla Home e seleziona un evento
+            Torna agli Eventi e seleziona un evento
           </p>
           <HapticButton 
             className="mt-4" 
@@ -941,7 +1175,7 @@ export default function PrAppPage() {
             data-testid="button-go-home"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Vai alla Home
+            Vai agli Eventi
           </HapticButton>
         </div>
       );
@@ -1035,7 +1269,7 @@ export default function PrAppPage() {
           <Armchair className="h-16 w-16 text-muted-foreground mb-4" />
           <h3 className="text-xl font-semibold mb-2">Seleziona un evento</h3>
           <p className="text-muted-foreground">
-            Torna alla Home e seleziona un evento
+            Torna agli Eventi e seleziona un evento
           </p>
           <HapticButton 
             className="mt-4" 
@@ -1043,7 +1277,7 @@ export default function PrAppPage() {
             data-testid="button-go-home-tables"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
-            Vai alla Home
+            Vai agli Eventi
           </HapticButton>
         </div>
       );
@@ -1127,58 +1361,327 @@ export default function PrAppPage() {
     );
   };
 
-  const renderRubricaTab = () => (
+  const renderWalletTab = () => (
     <div className="py-4 space-y-4 pb-24">
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
-        <Input
-          placeholder="Cerca contatto..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          className="pl-10 h-12"
-          data-testid="input-search-contact"
-        />
-      </div>
+      <motion.div
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+        className="w-full"
+      >
+        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-primary/20 via-primary/10 to-background border border-primary/30 p-6">
+          <div className="absolute top-0 right-0 w-32 h-32 bg-primary/10 rounded-full -translate-y-1/2 translate-x-1/2" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-primary/5 rounded-full translate-y-1/2 -translate-x-1/2" />
+          
+          <div className="relative z-10 space-y-4">
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-10 rounded-full bg-primary/20 flex items-center justify-center">
+                <Wallet className="w-5 h-5 text-primary" />
+              </div>
+              <span className="text-sm font-medium text-muted-foreground">Saldo Disponibile</span>
+            </div>
+            
+            <div>
+              <p 
+                className="text-4xl font-bold text-primary tabular-nums"
+                data-testid="text-wallet-balance"
+              >
+                {formatCurrency(wallet?.availableForPayout || 0)}
+              </p>
+              <p className="text-sm text-muted-foreground mt-1" data-testid="text-pending-earnings">
+                Guadagni in sospeso: {formatCurrency(wallet?.pendingEarnings || 0)}
+              </p>
+            </div>
 
-      {filteredContacts.length === 0 ? (
-        <div className="text-center py-12">
-          <BookUser className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-          <h3 className="text-lg font-semibold mb-2">
-            {searchQuery ? "Nessun risultato" : "Rubrica vuota"}
-          </h3>
-          <p className="text-muted-foreground mb-4">
-            {searchQuery ? "Prova a cercare altro" : "Aggiungi il primo contatto"}
-          </p>
+            <div className="flex items-center justify-between pt-4 border-t border-border/50">
+              <div>
+                <p className="text-xs text-muted-foreground">Totale Guadagnato</p>
+                <p className="text-lg font-semibold text-foreground" data-testid="text-paid-earnings">
+                  {formatCurrency(wallet?.totalEarnings || 0)}
+                </p>
+              </div>
+              <HapticButton
+                onClick={handleRequestPayout}
+                disabled={!wallet?.availableForPayout || wallet.availableForPayout <= 0}
+                className="gap-2"
+                hapticType="medium"
+                data-testid="button-request-payout"
+              >
+                <Banknote className="w-4 h-4" />
+                Richiedi
+              </HapticButton>
+            </div>
+          </div>
         </div>
-      ) : (
+      </motion.div>
+
+      <div className="grid grid-cols-2 gap-4">
         <motion.div
-          variants={staggerContainer}
+          variants={cardVariants}
           initial="hidden"
           animate="visible"
-          className="space-y-3"
+          transition={{ delay: 0.1 }}
         >
-          {filteredContacts.map((contact) => (
-            <ContactCard
-              key={contact.id}
-              contact={contact}
-              onAddToList={() => handleAddContactToList(contact)}
-            />
-          ))}
+          <Card className="glass-card border-white/10">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-emerald-500/10 flex items-center justify-center shrink-0">
+                  <Users className="w-5 h-5 text-emerald-400" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-2xl font-bold text-foreground tabular-nums">
+                    {wallet?.thisMonthReservations || 0}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">Prenotazioni mese</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </motion.div>
-      )}
 
-      <FloatingActionButton
-        onClick={() => { contactForm.reset(); setIsAddContactOpen(true); }}
-        data-testid="fab-add-contact"
+        <motion.div
+          variants={cardVariants}
+          initial="hidden"
+          animate="visible"
+          transition={{ delay: 0.15 }}
+        >
+          <Card className="glass-card border-white/10">
+            <CardContent className="pt-4 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center shrink-0">
+                  <TrendingUp className="w-5 h-5 text-primary" />
+                </div>
+                <div className="min-w-0">
+                  <p className="text-2xl font-bold text-foreground tabular-nums">
+                    {formatCurrency(wallet?.thisMonthEarnings || 0)}
+                  </p>
+                  <p className="text-xs text-muted-foreground truncate">Guadagni mese</p>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      <Card className="glass-card border-white/10">
+        <CardHeader className="pb-3">
+          <CardTitle className="text-lg flex items-center gap-2">
+            <Clock className="w-5 h-5 text-primary" />
+            Ultimi Pagamenti
+          </CardTitle>
+        </CardHeader>
+        <CardContent data-testid="list-payouts">
+          {loadingPayouts ? (
+            <div className="space-y-3">
+              {[1, 2].map((i) => <Skeleton key={i} className="h-16 w-full rounded-xl" />)}
+            </div>
+          ) : allPayouts.length === 0 ? (
+            <div className="text-center py-6 text-muted-foreground">
+              <Banknote className="w-10 h-10 mx-auto mb-2 opacity-50" />
+              <p className="text-sm">Nessun pagamento</p>
+            </div>
+          ) : (
+            <div className="space-y-3">
+              {allPayouts.slice(0, 5).map((payout) => (
+                <div
+                  key={payout.id}
+                  className="flex items-center justify-between p-3 rounded-xl bg-muted/30 border border-border/30"
+                  data-testid={`payout-item-${payout.id}`}
+                >
+                  <div className="min-w-0 flex-1">
+                    <p className="font-medium text-foreground">
+                      {formatCurrency(parseFloat(payout.amount))}
+                    </p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(payout.createdAt), "d MMM yyyy", { locale: it })}
+                    </p>
+                  </div>
+                  {getPayoutStatusBadge(payout.status)}
+                </div>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  );
+
+  const renderProfiloTab = () => (
+    <div className="py-4 space-y-4 pb-24">
+      <motion.div
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
       >
-        <Plus className="h-6 w-6" />
-      </FloatingActionButton>
+        <Card className="glass-card border-white/10">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <User className="w-5 h-5 text-primary" />
+              Il Mio Profilo
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4" data-testid="profile-info">
+            <div className="flex items-center gap-4">
+              <div className="w-16 h-16 rounded-full bg-primary/10 flex items-center justify-center">
+                <User className="w-8 h-8 text-primary" />
+              </div>
+              <div>
+                <h3 className="text-xl font-bold">
+                  {prProfile?.firstName} {prProfile?.lastName}
+                </h3>
+                <p className="text-sm text-muted-foreground">
+                  Codice PR: {prProfile?.prCode}
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-3 pt-4">
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30">
+                <Phone className="w-5 h-5 text-muted-foreground" />
+                <span>{prProfile?.phone || "Non specificato"}</span>
+              </div>
+              
+              <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/30">
+                <Mail className="w-5 h-5 text-muted-foreground" />
+                {prProfile?.email ? (
+                  <span>{prProfile.email}</span>
+                ) : (
+                  <HapticButton
+                    variant="link"
+                    className="p-0 h-auto text-primary"
+                    onClick={() => setIsEmailDialogOpen(true)}
+                    data-testid="button-add-email"
+                  >
+                    Aggiungi email
+                  </HapticButton>
+                )}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <motion.div
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.1 }}
+      >
+        <Card className="glass-card border-white/10">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <BookUser className="w-5 h-5 text-primary" />
+              Rubrica ({contacts.length})
+            </CardTitle>
+          </CardHeader>
+          <CardContent data-testid="rubrica-section">
+            {contacts.length === 0 ? (
+              <div className="text-center py-6 text-muted-foreground">
+                <BookUser className="w-10 h-10 mx-auto mb-2 opacity-50" />
+                <p className="text-sm">Rubrica vuota</p>
+              </div>
+            ) : (
+              <ScrollArea className="h-[200px]">
+                <div className="space-y-2">
+                  {contacts.slice(0, 10).map((contact) => (
+                    <div
+                      key={contact.id}
+                      className="flex items-center justify-between p-3 rounded-xl bg-muted/30"
+                    >
+                      <div className="min-w-0 flex-1">
+                        <p className="font-medium truncate">
+                          {contact.firstName} {contact.lastName}
+                        </p>
+                        <p className="text-xs text-muted-foreground">{contact.phone}</p>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {contact.gender && (
+                          <Badge 
+                            variant="outline" 
+                            className={cn(
+                              "text-xs px-1.5 border-0",
+                              contact.gender === 'M' ? "bg-blue-500/20 text-blue-400" : "bg-pink-500/20 text-pink-400"
+                            )}
+                          >
+                            {contact.gender}
+                          </Badge>
+                        )}
+                        <HapticButton
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => handleDeleteContact(contact.id)}
+                          data-testid={`button-delete-contact-${contact.id}`}
+                        >
+                          <Trash2 className="w-4 h-4 text-destructive" />
+                        </HapticButton>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </ScrollArea>
+            )}
+            <HapticButton
+              variant="outline"
+              className="w-full mt-4 gap-2"
+              onClick={() => { contactForm.reset(); setIsAddContactOpen(true); }}
+              data-testid="button-add-contact"
+            >
+              <Plus className="w-4 h-4" />
+              Aggiungi Contatto
+            </HapticButton>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <motion.div
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
+        transition={{ delay: 0.2 }}
+      >
+        <Card className="glass-card border-white/10">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <Settings className="w-5 h-5 text-primary" />
+              Impostazioni
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <HapticButton
+              variant="outline"
+              className="w-full justify-start gap-3"
+              onClick={() => setIsPasswordDialogOpen(true)}
+              data-testid="button-change-password"
+            >
+              <Lock className="w-4 h-4" />
+              Cambia Password
+            </HapticButton>
+            
+            <HapticButton
+              variant="destructive"
+              className="w-full justify-start gap-3"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              hapticType="error"
+              data-testid="button-logout"
+            >
+              {isLoggingOut ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <LogOut className="w-4 h-4" />
+              )}
+              Esci
+            </HapticButton>
+          </CardContent>
+        </Card>
+      </motion.div>
     </div>
   );
 
   const renderContent = () => {
-    if (!selectedEventId && activeTab !== 'home' && activeTab !== 'rubrica') {
-      return renderHomeTab();
+    if (!selectedEventId && (activeTab === 'liste' || activeTab === 'tavoli')) {
+      if (activeTab === 'liste') return renderListeTab();
+      if (activeTab === 'tavoli') return renderTavoliTab();
     }
 
     switch (activeTab) {
@@ -1188,8 +1691,10 @@ export default function PrAppPage() {
         return renderListeTab();
       case 'tavoli':
         return renderTavoliTab();
-      case 'rubrica':
-        return renderRubricaTab();
+      case 'wallet':
+        return renderWalletTab();
+      case 'profilo':
+        return renderProfiloTab();
       default:
         return renderHomeTab();
     }
@@ -1264,24 +1769,6 @@ export default function PrAppPage() {
                         <p className="text-sm text-foreground">
                           {customerSearchResult.firstName} {customerSearchResult.lastName}
                         </p>
-                        <div className="flex items-center gap-2 mt-1">
-                          {customerSearchResult.gender && (
-                            <Badge 
-                              variant="outline" 
-                              className={cn(
-                                "text-xs px-1.5 border-0",
-                                customerSearchResult.gender === 'M' 
-                                  ? "bg-blue-500/20 text-blue-500" 
-                                  : "bg-pink-500/20 text-pink-500"
-                              )}
-                            >
-                              {customerSearchResult.gender === 'M' ? 'Maschio' : 'Femmina'}
-                            </Badge>
-                          )}
-                          <span className="text-xs text-muted-foreground">
-                            {customerSearchResult.phone}
-                          </span>
-                        </div>
                       </div>
                     </div>
                     <HapticButton
@@ -1291,7 +1778,7 @@ export default function PrAppPage() {
                       data-testid="button-use-customer-data"
                     >
                       <CheckCircle2 className="h-4 w-4 mr-1" />
-                      Usa dati
+                      Usa
                     </HapticButton>
                   </div>
                 </CardContent>
@@ -1310,7 +1797,7 @@ export default function PrAppPage() {
                         Nuovo cliente
                       </p>
                       <p className="text-sm text-muted-foreground">
-                        Completa i dati per registrare il cliente
+                        Completa i dati per registrare
                       </p>
                     </div>
                   </div>
@@ -1689,6 +2176,148 @@ export default function PrAppPage() {
           </form>
         </Form>
       </BottomSheet>
+
+      <Dialog open={isPayoutDialogOpen} onOpenChange={setIsPayoutDialogOpen}>
+        <DialogContent className="mx-4" data-testid="dialog-payout">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Banknote className="w-5 h-5 text-primary" />
+              Richiedi Pagamento
+            </DialogTitle>
+            <DialogDescription>
+              Stai per richiedere un pagamento di {formatCurrency(wallet?.availableForPayout || 0)}.
+              Questa azione non può essere annullata.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <HapticButton
+              variant="outline"
+              onClick={() => setIsPayoutDialogOpen(false)}
+              data-testid="button-cancel-payout"
+            >
+              Annulla
+            </HapticButton>
+            <HapticButton
+              onClick={confirmPayout}
+              disabled={requestPayoutMutation.isPending}
+              hapticType="success"
+              data-testid="button-confirm-payout"
+            >
+              {requestPayoutMutation.isPending ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : null}
+              Conferma Richiesta
+            </HapticButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isEmailDialogOpen} onOpenChange={setIsEmailDialogOpen}>
+        <DialogContent className="mx-4" data-testid="dialog-email">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Mail className="w-5 h-5 text-primary" />
+              Aggiungi Email
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4">
+            <Label htmlFor="email">Email</Label>
+            <Input
+              id="email"
+              type="email"
+              value={newEmail}
+              onChange={(e) => setNewEmail(e.target.value)}
+              placeholder="nome@esempio.com"
+              className="mt-2"
+              data-testid="input-new-email"
+            />
+          </div>
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <HapticButton
+              variant="outline"
+              onClick={() => setIsEmailDialogOpen(false)}
+            >
+              Annulla
+            </HapticButton>
+            <HapticButton
+              onClick={handleAddEmail}
+              disabled={isUpdatingProfile || !newEmail}
+              hapticType="success"
+              data-testid="button-save-email"
+            >
+              {isUpdatingProfile ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : null}
+              Salva
+            </HapticButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isPasswordDialogOpen} onOpenChange={setIsPasswordDialogOpen}>
+        <DialogContent className="mx-4" data-testid="dialog-password">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Lock className="w-5 h-5 text-primary" />
+              Cambia Password
+            </DialogTitle>
+          </DialogHeader>
+          <div className="py-4 space-y-4">
+            <div>
+              <Label htmlFor="currentPassword">Password Attuale</Label>
+              <Input
+                id="currentPassword"
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                className="mt-2"
+                data-testid="input-current-password"
+              />
+            </div>
+            <div>
+              <Label htmlFor="newPassword">Nuova Password</Label>
+              <Input
+                id="newPassword"
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                className="mt-2"
+                data-testid="input-new-password"
+              />
+            </div>
+            <div>
+              <Label htmlFor="confirmPassword">Conferma Password</Label>
+              <Input
+                id="confirmPassword"
+                type="password"
+                value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)}
+                className="mt-2"
+                data-testid="input-confirm-password"
+              />
+            </div>
+          </div>
+          <DialogFooter className="flex gap-2 sm:gap-0">
+            <HapticButton
+              variant="outline"
+              onClick={() => setIsPasswordDialogOpen(false)}
+            >
+              Annulla
+            </HapticButton>
+            <HapticButton
+              onClick={handleChangePassword}
+              disabled={isChangingPassword || !currentPassword || !newPassword || !confirmPassword}
+              hapticType="success"
+              data-testid="button-save-password"
+            >
+              {isChangingPassword ? (
+                <Loader2 className="w-4 h-4 animate-spin mr-2" />
+              ) : null}
+              Cambia Password
+            </HapticButton>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </MobileAppLayout>
   );
 }
