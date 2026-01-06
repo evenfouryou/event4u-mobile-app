@@ -37,7 +37,7 @@ import {
 import { 
   ArrowLeft, Save, MapPin, Globe, Ticket, 
   Map, Plus, Trash2, Edit, Upload, Image,
-  Square, Circle, Table2, Users, Star, Loader2
+  Square, Circle, Table2, Users, Star, Loader2, Grid3X3
 } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -851,13 +851,23 @@ export default function LocationDetail() {
                           </Button>
                         </>
                       ) : (
-                        <Button
-                          onClick={() => setIsDrawing(true)}
-                          data-testid="button-start-drawing"
-                        >
-                          <Plus className="h-4 w-4 mr-2" />
-                          Nuova Zona
-                        </Button>
+                        <>
+                          <Button
+                            variant="outline"
+                            onClick={() => setLocationNav(`/editor/floor-plans/${selectedFloorPlan.id}`)}
+                            data-testid="button-advanced-editor"
+                          >
+                            <Grid3X3 className="h-4 w-4 mr-2" />
+                            Editor Posti
+                          </Button>
+                          <Button
+                            onClick={() => setIsDrawing(true)}
+                            data-testid="button-start-drawing"
+                          >
+                            <Plus className="h-4 w-4 mr-2" />
+                            Nuova Zona
+                          </Button>
+                        </>
                       )}
                     </div>
                   </CardHeader>

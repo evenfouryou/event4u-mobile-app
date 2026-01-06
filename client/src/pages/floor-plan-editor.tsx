@@ -66,6 +66,20 @@ interface FloorPlanZone {
   isSelectable: boolean;
 }
 
+interface FloorPlanSeat {
+  id: string;
+  zoneId: string;
+  seatLabel: string;
+  row: string | null;
+  seatNumber: number | null;
+  posX: string;
+  posY: string;
+  isAccessible: boolean;
+  isBlocked: boolean;
+  isActive: boolean;
+  sortOrder: number | null;
+}
+
 interface FloorPlan {
   id: string;
   name: string;
@@ -145,6 +159,12 @@ export default function FloorPlanEditor() {
   const [showSmartAssist, setShowSmartAssist] = useState(false);
   const [hoveredZoneId, setHoveredZoneId] = useState<string | null>(null);
   
+  const [zoneSeats, setZoneSeats] = useState<FloorPlanSeat[]>([]);
+  const [seatRows, setSeatRows] = useState(5);
+  const [seatsPerRow, setSeatsPerRow] = useState(10);
+  const [showSeatEditDialog, setShowSeatEditDialog] = useState(false);
+  const [editingSeat, setEditingSeat] = useState<FloorPlanSeat | null>(null);
+  
   const [scale, setScale] = useState(1);
   const [translate, setTranslate] = useState({ x: 0, y: 0 });
   const [isDragging, setIsDragging] = useState(false);
@@ -177,6 +197,68 @@ export default function FloorPlanEditor() {
     heatmapData.heatmap.forEach(hz => map.set(hz.zoneId, hz));
     return map;
   }, [heatmapData]);
+
+  const { data: seatsData, refetch: refetchSeats } = useQuery<FloorPlanSeat[]>({
+    queryKey: ['/api/admin/zones', selectedZoneId, 'seats'],
+    enabled: !!selectedZoneId,
+  });
+
+  useEffect(() => {
+    if (seatsData) {
+      setZoneSeats(seatsData);
+    } else {
+      setZoneSeats([]);
+    }
+  }, [seatsData]);
+
+  const generateSeatsMutation = useMutation({
+    mutationFn: async ({ zoneId, rows, seatsPerRow }: { zoneId: string; rows: number; seatsPerRow: number }) => {
+      const res = await apiRequest('POST', `/api/admin/zones/${zoneId}/seats/generate`, {
+        rows,
+        seatsPerRow,
+        startRow: 'A',
+        labelFormat: '{row}{seat}',
+      });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      setZoneSeats(data.seats);
+      toast({ title: "Posti generati", description: `${data.count} posti creati con successo` });
+    },
+    onError: () => {
+      toast({ title: "Errore", description: "Impossibile generare i posti", variant: "destructive" });
+    },
+  });
+
+  const updateSeatMutation = useMutation({
+    mutationFn: async ({ seatId, updates }: { seatId: string; updates: Partial<FloorPlanSeat> }) => {
+      const res = await apiRequest('PATCH', `/api/admin/seats/${seatId}`, updates);
+      return res.json();
+    },
+    onSuccess: (updated) => {
+      setZoneSeats(prev => prev.map(s => s.id === updated.id ? updated : s));
+      setShowSeatEditDialog(false);
+      setEditingSeat(null);
+      toast({ title: "Posto aggiornato", description: `${updated.seatLabel} modificato con successo` });
+    },
+    onError: () => {
+      toast({ title: "Errore", description: "Impossibile aggiornare il posto", variant: "destructive" });
+    },
+  });
+
+  const deleteSeatsMutation = useMutation({
+    mutationFn: async (zoneId: string) => {
+      const res = await apiRequest('DELETE', `/api/admin/zones/${zoneId}/seats`);
+      return res.json();
+    },
+    onSuccess: () => {
+      setZoneSeats([]);
+      toast({ title: "Posti eliminati", description: "Tutti i posti sono stati rimossi" });
+    },
+    onError: () => {
+      toast({ title: "Errore", description: "Impossibile eliminare i posti", variant: "destructive" });
+    },
+  });
 
   const getZoneFillColor = useCallback((zone: FloorPlanZone) => {
     if (showHeatmap && heatmapZones.has(zone.id)) {
@@ -814,6 +896,46 @@ export default function FloorPlanEditor() {
                   </g>
                 )}
 
+                {selectedZoneId && selectedZone && zoneSeats.length > 0 && (
+                  <g>
+                    {zoneSeats.map((seat) => {
+                      const minX = Math.min(...selectedZone.coordinates.map(c => c.x));
+                      const maxX = Math.max(...selectedZone.coordinates.map(c => c.x));
+                      const minY = Math.min(...selectedZone.coordinates.map(c => c.y));
+                      const maxY = Math.max(...selectedZone.coordinates.map(c => c.y));
+                      const zoneWidth = maxX - minX;
+                      const zoneHeight = maxY - minY;
+                      const seatX = minX + (parseFloat(seat.posX) / 100) * zoneWidth;
+                      const seatY = minY + (parseFloat(seat.posY) / 100) * zoneHeight;
+                      
+                      let fillColor = '#22c55e';
+                      if (seat.isBlocked) fillColor = '#ef4444';
+                      else if (seat.isAccessible) fillColor = '#3b82f6';
+                      
+                      return (
+                        <circle
+                          key={seat.id}
+                          cx={seatX}
+                          cy={seatY}
+                          r={0.6}
+                          fill={fillColor}
+                          stroke="white"
+                          strokeWidth="0.1"
+                          className="cursor-pointer transition-all hover:r-[0.8]"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingSeat(seat);
+                            setShowSeatEditDialog(true);
+                          }}
+                          data-testid={`seat-${seat.id}`}
+                        >
+                          <title>{seat.seatLabel}</title>
+                        </circle>
+                      );
+                    })}
+                  </g>
+                )}
+
                 {isDrawing && drawingPoints.length > 0 && (
                   <g>
                     <polyline
@@ -964,6 +1086,87 @@ export default function FloorPlanEditor() {
                     data-testid="input-zone-sector"
                   />
                 </div>
+
+                <div className="pt-4 border-t border-border space-y-3">
+                  <Label className="text-sm font-semibold">Gestione Posti</Label>
+                  
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="space-y-1">
+                      <Label htmlFor="seat-rows" className="text-xs text-muted-foreground">File</Label>
+                      <Input
+                        id="seat-rows"
+                        type="number"
+                        min={1}
+                        max={26}
+                        value={seatRows}
+                        onChange={(e) => setSeatRows(Math.max(1, parseInt(e.target.value) || 1))}
+                        data-testid="input-seat-rows"
+                      />
+                    </div>
+                    <div className="space-y-1">
+                      <Label htmlFor="seats-per-row" className="text-xs text-muted-foreground">Posti/fila</Label>
+                      <Input
+                        id="seats-per-row"
+                        type="number"
+                        min={1}
+                        max={50}
+                        value={seatsPerRow}
+                        onChange={(e) => setSeatsPerRow(Math.max(1, parseInt(e.target.value) || 1))}
+                        data-testid="input-seats-per-row"
+                      />
+                    </div>
+                  </div>
+                  
+                  <Button
+                    size="sm"
+                    className="w-full"
+                    onClick={() => {
+                      if (selectedZoneId) {
+                        generateSeatsMutation.mutate({ zoneId: selectedZoneId, rows: seatRows, seatsPerRow });
+                      }
+                    }}
+                    disabled={generateSeatsMutation.isPending}
+                    data-testid="button-generate-seats"
+                  >
+                    <Grid3X3 className="w-4 h-4 mr-2" />
+                    {generateSeatsMutation.isPending ? 'Generazione...' : `Genera ${seatRows * seatsPerRow} Posti`}
+                  </Button>
+                  
+                  {zoneSeats.length > 0 && (
+                    <div className="space-y-2">
+                      <div className="flex items-center justify-between text-xs text-muted-foreground">
+                        <span>{zoneSeats.length} posti</span>
+                        <div className="flex gap-2">
+                          <span className="flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full bg-green-500" /> Attivo
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full bg-blue-500" /> Accessibile
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <span className="w-2 h-2 rounded-full bg-red-500" /> Bloccato
+                          </span>
+                        </div>
+                      </div>
+                      
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        className="w-full text-destructive"
+                        onClick={() => {
+                          if (selectedZoneId && confirm('Eliminare tutti i posti di questa zona?')) {
+                            deleteSeatsMutation.mutate(selectedZoneId);
+                          }
+                        }}
+                        disabled={deleteSeatsMutation.isPending}
+                        data-testid="button-delete-seats"
+                      >
+                        <Trash2 className="w-4 h-4 mr-2" />
+                        Elimina tutti i posti
+                      </Button>
+                    </div>
+                  )}
+                </div>
                 
                 <div className="flex items-center gap-2 pt-2">
                   <Button
@@ -1080,6 +1283,100 @@ export default function FloorPlanEditor() {
           }}
         />
       )}
+
+      <Dialog open={showSeatEditDialog} onOpenChange={(open) => {
+        setShowSeatEditDialog(open);
+        if (!open) setEditingSeat(null);
+      }}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Modifica Posto</DialogTitle>
+          </DialogHeader>
+          {editingSeat && (
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label htmlFor="seat-label">Etichetta</Label>
+                <Input
+                  id="seat-label"
+                  value={editingSeat.seatLabel}
+                  onChange={(e) => setEditingSeat({ ...editingSeat, seatLabel: e.target.value })}
+                  data-testid="input-seat-label"
+                />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div className="space-y-2">
+                  <Label htmlFor="seat-row">Fila</Label>
+                  <Input
+                    id="seat-row"
+                    value={editingSeat.row || ''}
+                    onChange={(e) => setEditingSeat({ ...editingSeat, row: e.target.value || null })}
+                    data-testid="input-seat-row"
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="seat-number">Numero</Label>
+                  <Input
+                    id="seat-number"
+                    type="number"
+                    value={editingSeat.seatNumber || ''}
+                    onChange={(e) => setEditingSeat({ ...editingSeat, seatNumber: e.target.value ? parseInt(e.target.value) : null })}
+                    data-testid="input-seat-number"
+                  />
+                </div>
+              </div>
+              <div className="space-y-3 pt-2">
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="seat-accessible"
+                    checked={editingSeat.isAccessible}
+                    onChange={(e) => setEditingSeat({ ...editingSeat, isAccessible: e.target.checked })}
+                    className="w-4 h-4 rounded border-border"
+                    data-testid="checkbox-seat-accessible"
+                  />
+                  <Label htmlFor="seat-accessible" className="text-sm">Posto accessibile (disabili)</Label>
+                </div>
+                <div className="flex items-center gap-3">
+                  <input
+                    type="checkbox"
+                    id="seat-blocked"
+                    checked={editingSeat.isBlocked}
+                    onChange={(e) => setEditingSeat({ ...editingSeat, isBlocked: e.target.checked })}
+                    className="w-4 h-4 rounded border-border"
+                    data-testid="checkbox-seat-blocked"
+                  />
+                  <Label htmlFor="seat-blocked" className="text-sm">Posto bloccato (non vendibile)</Label>
+                </div>
+              </div>
+            </div>
+          )}
+          <DialogFooter className="gap-2">
+            <Button variant="outline" onClick={() => setShowSeatEditDialog(false)} data-testid="button-cancel-seat-edit">
+              Annulla
+            </Button>
+            <Button 
+              onClick={() => {
+                if (editingSeat) {
+                  updateSeatMutation.mutate({
+                    seatId: editingSeat.id,
+                    updates: {
+                      seatLabel: editingSeat.seatLabel,
+                      row: editingSeat.row,
+                      seatNumber: editingSeat.seatNumber,
+                      isAccessible: editingSeat.isAccessible,
+                      isBlocked: editingSeat.isBlocked,
+                    },
+                  });
+                }
+              }}
+              disabled={updateSeatMutation.isPending}
+              data-testid="button-save-seat"
+            >
+              {updateSeatMutation.isPending ? 'Salvataggio...' : 'Salva'}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

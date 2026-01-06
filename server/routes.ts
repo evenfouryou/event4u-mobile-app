@@ -2246,6 +2246,94 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Generate seats grid for a zone
+  app.post('/api/admin/zones/:zoneId/seats/generate', isAuthenticated, async (req: any, res) => {
+    try {
+      const { zoneId } = req.params;
+      const { rows, seatsPerRow, startRow = 'A', labelFormat = '{row}{seat}' } = req.body;
+
+      if (!rows || !seatsPerRow || rows < 1 || seatsPerRow < 1) {
+        return res.status(400).json({ message: "Specificare numero file e posti per fila validi" });
+      }
+
+      // Delete existing seats in the zone
+      await db.delete(floorPlanSeats).where(eq(floorPlanSeats.zoneId, zoneId));
+
+      const seatsToInsert = [];
+      for (let r = 0; r < rows; r++) {
+        const rowLetter = String.fromCharCode(startRow.charCodeAt(0) + r);
+        for (let s = 1; s <= seatsPerRow; s++) {
+          seatsToInsert.push({
+            zoneId,
+            seatLabel: labelFormat.replace('{row}', rowLetter).replace('{seat}', s.toString()),
+            row: rowLetter,
+            seatNumber: s,
+            posX: ((s - 0.5) / seatsPerRow * 100).toFixed(4),
+            posY: ((r + 0.5) / rows * 100).toFixed(4),
+            isAccessible: false,
+            isBlocked: false,
+            isActive: true,
+            sortOrder: r * seatsPerRow + s,
+          });
+        }
+      }
+
+      const inserted = await db.insert(floorPlanSeats).values(seatsToInsert).returning();
+      res.json({ count: inserted.length, seats: inserted });
+    } catch (error: any) {
+      console.error("Error generating seats:", error);
+      res.status(500).json({ message: error.message || "Impossibile generare i posti" });
+    }
+  });
+
+  // Update a single seat
+  app.patch('/api/admin/seats/:seatId', isAuthenticated, async (req: any, res) => {
+    try {
+      const { seatId } = req.params;
+      const updates = req.body;
+      
+      const [updated] = await db.update(floorPlanSeats)
+        .set({ ...updates, updatedAt: new Date() })
+        .where(eq(floorPlanSeats.id, seatId))
+        .returning();
+      
+      if (!updated) {
+        return res.status(404).json({ message: "Posto non trovato" });
+      }
+      res.json(updated);
+    } catch (error) {
+      console.error("Error updating seat:", error);
+      res.status(500).json({ message: "Impossibile aggiornare il posto" });
+    }
+  });
+
+  // Get seats for a zone (admin route)
+  app.get('/api/admin/zones/:zoneId/seats', isAuthenticated, async (req: any, res) => {
+    try {
+      const { zoneId } = req.params;
+      const seats = await db.select()
+        .from(floorPlanSeats)
+        .where(eq(floorPlanSeats.zoneId, zoneId))
+        .orderBy(floorPlanSeats.sortOrder);
+      res.json(seats);
+    } catch (error) {
+      console.error("Error fetching seats:", error);
+      res.status(500).json({ message: "Impossibile recuperare i posti" });
+    }
+  });
+
+  // Delete all seats in a zone (admin route)
+  app.delete('/api/admin/zones/:zoneId/seats', isAuthenticated, async (req: any, res) => {
+    try {
+      const { zoneId } = req.params;
+      await db.delete(floorPlanSeats).where(eq(floorPlanSeats.zoneId, zoneId));
+      res.json({ success: true });
+    } catch (error) {
+      console.error("Error deleting seats:", error);
+      res.status(500).json({ message: "Impossibile eliminare i posti" });
+    }
+  });
+
   // ===== EVENT ZONE MAPPINGS =====
   
   // Get zone mappings for an event
