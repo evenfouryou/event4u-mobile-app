@@ -139,7 +139,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.28 - FIX: Virtual Drive per tmpnam() in SMIMESignML");
+            Log("SiaeBridge v3.29 - FIX: From con display name + Allegato formato nome|percorso");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -2130,7 +2130,7 @@ namespace SiaeBridge
 
             try
             {
-                Log($"=== SignSmime v3.28 START ===");
+                Log($"=== SignSmime v3.29 START ===");
                 
                 dynamic req = JsonConvert.DeserializeObject(json);
                 string pin = req.pin;
@@ -2143,13 +2143,14 @@ namespace SiaeBridge
                 string attachmentBase64 = req.attachmentBase64;
                 string attachmentName = req.attachmentName;
 
-                // FIX 2026-01-06: SMIMESignML richiede SOLO l'email senza nome visualizzato
-                // Input può essere: "Display Name" <email@example.com> oppure solo email@example.com
-                // Estrai solo l'indirizzo email per ENTRAMBI from e to
-                string smimeFrom = ExtractEmailAddress(smimeFromRaw);
-                string smimeTo = ExtractEmailAddress(smimeToRaw);
-                Log($"  From field normalization: '{smimeFromRaw}' -> '{smimeFrom}'");
-                Log($"  To field normalization: '{smimeToRaw}' -> '{smimeTo}'");
+                // v3.29 FIX: Passa il From ESATTAMENTE come ricevuto (incluso display name)
+                // La documentazione SIAE dice: Es.1: "Giuseppe Verdi" <gverdi@xcom.it> Es.2: gverdi@xcom.it
+                // Il test ufficiale usa: "Mario Rossi <mariorossi@prova.it>"
+                // NON dobbiamo estrarre solo l'email - dobbiamo passare il formato completo RFC822
+                string smimeFrom = smimeFromRaw?.Trim() ?? "";
+                string smimeTo = smimeToRaw?.Trim() ?? "";
+                Log($"  From (passthrough): '{smimeFrom}'");
+                Log($"  To (passthrough): '{smimeTo}' ");
 
                 // Validazioni
                 if (string.IsNullOrEmpty(smimeFrom))
@@ -2184,16 +2185,20 @@ namespace SiaeBridge
                 Log($"  Temp directory: {tempDir}");
                 Log($"  Output file: {outputFile}");
                 
-                // Prepara allegato se presente - usa stringa vuota se non c'è allegato
-                // NOTA: smime.cpp fa strlen(szAttachments) senza null check, quindi NON passare NULL!
-                string attachments = "";  // stringa vuota, NON null
+                // v3.29 FIX: Allegato nel formato "nome|percorso" come da documentazione SIAE
+                // La documentazione dice: "nome allegato1.txt|c:percorsoallegato1.txt"
+                // Il test ufficiale usa: "test.txt|c:\\test.txt"
+                // NON dobbiamo passare solo il percorso!
+                string attachments = "";  // stringa vuota, NON null (smime.cpp fa strlen senza null check)
                 if (!string.IsNullOrEmpty(attachmentBase64) && !string.IsNullOrEmpty(attachmentName))
                 {
                     attachmentTempFile = Path.Combine(tempDir, attachmentName);
                     byte[] attachmentBytes = Convert.FromBase64String(attachmentBase64);
                     File.WriteAllBytes(attachmentTempFile, attachmentBytes);
-                    attachments = attachmentTempFile;
+                    // FORMATO CORRETTO: "nomevisualizzato|percorso"
+                    attachments = $"{attachmentName}|{attachmentTempFile}";
                     Log($"  Attachment saved to temp: {attachmentTempFile} ({attachmentBytes.Length} bytes)");
+                    Log($"  Attachment string for SMIMESignML: '{attachments}'");
                 }
                 else
                 {
