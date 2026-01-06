@@ -99,7 +99,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.18 - FIX: Added DLL copy to output in .csproj (libSIAE.dll was missing)");
+            Log("SiaeBridge v3.19 - FIX: ISO-8859-1 encoding, smime-type=signed-data for SIAE Allegato C");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -2103,19 +2103,19 @@ namespace SiaeBridge
                         mimeBuilder.Append($"Content-Type: multipart/mixed; boundary=\"{boundary}\"\r\n");
                         mimeBuilder.Append("\r\n");
                         
-                        // Parte body
+                        // Parte body - ISO-8859-1 per conformità SIAE Allegato C
                         mimeBuilder.Append($"--{boundary}\r\n");
-                        mimeBuilder.Append("Content-Type: text/plain; charset=utf-8\r\n");
+                        mimeBuilder.Append("Content-Type: text/plain; charset=ISO-8859-1\r\n");
                         mimeBuilder.Append("Content-Transfer-Encoding: 8bit\r\n");
                         mimeBuilder.Append("\r\n");
                         mimeBuilder.Append(smimeBody ?? "SIAE RCA Transmission");
                         mimeBuilder.Append("\r\n\r\n");
                         
                         // Parte allegato P7M - usa application/pkcs7-mime per file CAdES-BES
-                        // SIAE Allegato C richiede Content-Type corretto per estrarre il riepilogo
+                        // SIAE Allegato C richiede smime-type=signed-data per identificare correttamente il file
                         mimeBuilder.Append($"--{boundary}\r\n");
                         string mimeType = attachmentName.EndsWith(".p7m", StringComparison.OrdinalIgnoreCase) 
-                            ? "application/pkcs7-mime" 
+                            ? "application/pkcs7-mime; smime-type=signed-data" 
                             : "application/octet-stream";
                         mimeBuilder.Append($"Content-Type: {mimeType}; name=\"{attachmentName}\"\r\n");
                         mimeBuilder.Append("Content-Transfer-Encoding: base64\r\n");
@@ -2135,7 +2135,8 @@ namespace SiaeBridge
                     else
                     {
                         // Email senza allegato - text/plain (SENZA header From/To/Subject)
-                        mimeBuilder.Append("Content-Type: text/plain; charset=utf-8\r\n");
+                        // ISO-8859-1 per conformità SIAE Allegato C
+                        mimeBuilder.Append("Content-Type: text/plain; charset=ISO-8859-1\r\n");
                         mimeBuilder.Append("Content-Transfer-Encoding: 8bit\r\n");
                         mimeBuilder.Append("\r\n");
                         mimeBuilder.Append(smimeBody ?? "SIAE RCA Transmission");
@@ -2175,8 +2176,10 @@ namespace SiaeBridge
                 outputFile = Path.Combine(tempDir, $"smime_output_{timestamp}.p7s");
 
                 // Scrivi il contenuto MIME nel file input
-                File.WriteAllText(inputFile, mimeContent, Encoding.UTF8);
-                Log($"  Input file written: {inputFile} ({mimeContent.Length} bytes)");
+                // CRITICO: Usa ISO-8859-1 (Latin-1) come richiesto da SIAE Allegato C
+                // UTF-8 con BOM causa errore 40605 "Il riepilogo risulta illegibile"
+                File.WriteAllText(inputFile, mimeContent, Encoding.GetEncoding("ISO-8859-1"));
+                Log($"  Input file written (ISO-8859-1): {inputFile} ({mimeContent.Length} bytes)");
 
                 // Pulisci PIN
                 pin = new string(pin.Where(char.IsDigit).ToArray());
