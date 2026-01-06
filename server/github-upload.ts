@@ -104,6 +104,7 @@ function getFilesToUpload(): Record<string, string> {
 function getBinaryFilesToUpload(): Record<string, string> {
   return {
     'SiaeBridge/prebuilt/libSIAE.dll': readDesktopFileBinary('SiaeBridge/prebuilt/libSIAE.dll'),
+    'SiaeBridge/prebuilt/libSIAEp7.dll': readDesktopFileBinary('SiaeBridge/prebuilt/libSIAEp7.dll'),
     'SiaeBridge/prebuilt/Newtonsoft.Json.dll': readDesktopFileBinary('SiaeBridge/prebuilt/Newtonsoft.Json.dll'),
     'icon.png': readDesktopFileBinary('icon.png'),
     'desktop-app/icon.png': readDesktopFileBinary('icon.png')
@@ -194,13 +195,11 @@ export async function updateSmartCardReaderRepo(): Promise<{ success: boolean; r
           await new Promise(resolve => setTimeout(resolve, 500));
         } catch (e: any) {
           lastError = e;
-          // Skip workflow files when GitHub returns 403/404 (token lacks workflow scope)
-          if (filename.startsWith('.github/workflows/') && (e.status === 403 || e.status === 404 || e.message?.includes('workflow'))) {
-            console.log(`  ⚠ Workflow file skipped (requires workflow scope - add manually via GitHub UI)`);
-            workflowSkipped = true;
-            break;
-          }
           console.log(`  Attempt ${attempt + 1}/3 failed for ${filename}: ${e.message}`);
+          // Log full error for workflow files
+          if (filename.startsWith('.github/workflows/')) {
+            console.log(`  Workflow error details: status=${e.status}, message=${e.message}`);
+          }
           await new Promise(resolve => setTimeout(resolve, 2000));
         }
       }

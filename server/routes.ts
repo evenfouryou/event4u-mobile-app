@@ -7864,6 +7864,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // GitHub: Get workflow file content for manual update
+  app.get('/api/github/workflow-content', async (req: any, res) => {
+    try {
+      const fs = await import('fs');
+      const path = await import('path');
+      const workflowPath = path.join(process.cwd(), 'desktop-app', '.github', 'workflows', 'build.yml');
+      const content = fs.readFileSync(workflowPath, 'utf-8');
+      
+      res.json({
+        success: true,
+        content,
+        editUrl: 'https://github.com/evenfouryou/event-four-you-siae-lettore/edit/main/.github/workflows/build.yml',
+        message: 'Copy this content to GitHub workflow file'
+      });
+    } catch (error: any) {
+      res.status(500).json({ success: false, error: error.message });
+    }
+  });
+
   // GitHub: Create Smart Card Reader repository (no auth required - setup utility)
   app.post('/api/github/create-smart-card-repo', async (req: any, res) => {
     try {
