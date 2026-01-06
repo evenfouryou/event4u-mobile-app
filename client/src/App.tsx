@@ -90,7 +90,6 @@ import PrTables from "@/pages/pr-tables";
 import PrStaff from "@/pages/pr-staff";
 import PrMyEvents from "@/pages/pr-my-events";
 import PrEvents from "@/pages/pr-events";
-import PrWallet from "@/pages/pr-wallet";
 import PrApp from "@/pages/pr-app";
 import DownloadSmartCardApp from "@/pages/download-smart-card-app";
 import SchoolBadgeManager from "@/pages/school-badge-manager";
@@ -186,7 +185,6 @@ function Router() {
         <Route path="/locali/:id" component={PublicVenueDetail} />
         <Route path="/locali" component={PublicVenues} />
         <Route path="/download-smart-card" component={DownloadSmartCardApp} />
-        <Route path="/pr/wallet" component={PrWallet} />
         <Route path="/badge-error" component={SchoolBadgeError} />
         <Route path="/badge/verify" component={SchoolBadgeVerify} />
         <Route path="/badge/view/:code" component={SchoolBadgeView} />
@@ -251,7 +249,6 @@ function Router() {
                 <Route path="/pr/staff" component={PrStaff} />
                 <Route path="/pr/my-events" component={PrMyEvents} />
                 <Route path="/pr/events" component={PrEvents} />
-                <Route path="/pr-wallet" component={PrWallet} />
                 <Route path="/pr-dashboard" component={PrDashboard} />
                 <Route path="/events/:id/panel" component={StaffPrEventPanel} />
                 <Route path="/staff-pr-home" component={StaffPrHome} />
@@ -391,7 +388,6 @@ function Router() {
               <Route path="/pr/staff" component={PrStaff} />
               <Route path="/pr/my-events" component={PrMyEvents} />
               <Route path="/pr/events" component={PrEvents} />
-              <Route path="/pr-wallet" component={PrWallet} />
               <Route path="/pr-app" component={PrApp} />
               <Route path="/marketing/email" component={MarketingEmailPage} />
               <Route path="/loyalty/admin" component={LoyaltyAdminPage} />
