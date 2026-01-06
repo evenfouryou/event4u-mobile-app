@@ -2359,6 +2359,18 @@ namespace SiaeBridge
 
                 string signedMime = smimeBuilder.ToString();
                 Log($"  S/MIME OPAQUE message built: {signedMime.Length} bytes");
+                
+                // DEBUG: Log prime 25 righe per verifica CRLF e struttura
+                var debugLines = signedMime.Split(new[] { "\r\n" }, StringSplitOptions.None);
+                Log($"  === S/MIME OUTPUT (prime 25 righe) ===");
+                for (int i = 0; i < Math.Min(25, debugLines.Length); i++)
+                {
+                    string line = debugLines[i];
+                    // Tronca righe lunghe (base64) per leggibilità
+                    if (line.Length > 80) line = line.Substring(0, 77) + "...";
+                    Log($"  {i + 1,2}: [{line}]");
+                }
+                Log($"  === FINE DEBUG ===");
 
                 return JsonConvert.SerializeObject(new
                 {

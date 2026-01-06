@@ -687,13 +687,39 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
         console.log(`[EMAIL-SERVICE] Email will be sent but recipient may see "(no subject)" and BCC routing`);
       }
       
-      // Verifica struttura multipart/signed (controllo base)
-      const hasMultipartSigned = smimeData.signedMime.includes('multipart/signed') || 
-                                  smimeData.signedMime.includes('application/pkcs7-mime') ||
-                                  smimeData.signedMime.includes('application/x-pkcs7-mime');
-      if (!hasMultipartSigned) {
-        console.log(`[EMAIL-SERVICE] WARNING: S/MIME payload may not have standard multipart/signed structure`);
+      // ============================================================
+      // VALIDAZIONE S/MIME SECONDO ISTRUZIONI SIAE (2026-01-06)
+      // ============================================================
+      
+      // CHECK A: Verifica che sia S/MIME OPAQUE (non multipart/signed)
+      const isOpaque = smimeData.signedMime.includes('Content-Type: application/pkcs7-mime') ||
+                       smimeData.signedMime.includes('Content-Type: application/x-pkcs7-mime');
+      const isMultipartSigned = smimeData.signedMime.includes('multipart/signed');
+      
+      if (!isOpaque) {
+        console.log(`[EMAIL-SERVICE] ❌ ERRORE: Bridge NON sta producendo S/MIME opaque!`);
+        if (isMultipartSigned) {
+          console.log(`[EMAIL-SERVICE] ❌ Sta ancora producendo multipart/signed - rischio errore 40605`);
+        }
+        throw new Error("Bridge non produce S/MIME opaque (application/pkcs7-mime). Aggiornare bridge desktop.");
       }
+      console.log(`[EMAIL-SERVICE] ✅ S/MIME OPAQUE verificato (application/pkcs7-mime)`);
+      
+      // CHECK B: Verifica separatore header/body (\r\n\r\n)
+      if (!smimeData.signedMime.includes('\r\n\r\n')) {
+        console.log(`[EMAIL-SERVICE] ❌ ERRORE: RAW senza separatore header/body (\\r\\n\\r\\n)`);
+        throw new Error("Messaggio S/MIME senza separatore header/body. Verificare bridge desktop.");
+      }
+      console.log(`[EMAIL-SERVICE] ✅ Separatore header/body presente`);
+      
+      // CHECK C: Log prime righe e dimensione per debug
+      const rawLines = smimeData.signedMime.split('\r\n');
+      const headerEndIndex = rawLines.findIndex(line => line === '');
+      const headerLines = rawLines.slice(0, Math.min(headerEndIndex > 0 ? headerEndIndex : 10, 15));
+      console.log(`[EMAIL-SERVICE] === S/MIME HEADER (prime ${headerLines.length} righe) ===`);
+      headerLines.forEach((line, i) => console.log(`  ${i + 1}: ${line}`));
+      console.log(`[EMAIL-SERVICE] === FINE HEADER ===`);
+      console.log(`[EMAIL-SERVICE] Dimensione totale RAW: ${smimeData.signedMime.length} bytes`);
       
       smimeResult = {
         signed: true,
@@ -705,20 +731,27 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
       
       console.log(`[EMAIL-SERVICE] S/MIME signature obtained from ${smimeData.signerName} <${smimeData.signerEmail}>`);
       
-      // Invia il messaggio S/MIME firmato esattamente come restituito dal bridge
-      // Per Allegato C SIAE, il messaggio firmato NON deve essere modificato
+      // ============================================================
+      // INVIO RAW SECONDO ISTRUZIONI SIAE
+      // ============================================================
+      
       // CRITICO: L'envelope.from DEVE corrispondere all'email del certificato (Allegato C 1.6.2.a.3)
-      const envelopeFrom = smimeData.signerEmail || cardEmail; // Usa sempre email certificato
+      const envelopeFrom = smimeData.signerEmail || cardEmail;
       console.log(`[EMAIL-SERVICE] Envelope from (for SIAE compliance): ${envelopeFrom}`);
       
+      // NORMALIZZAZIONE CRLF: garantisce \r\n consistente
+      const normalizedRaw = smimeData.signedMime.replace(/\r?\n/g, '\r\n');
+      
+      // Invia come Buffer per evitare qualsiasi trasformazione encoding
       const rawMailOptions = {
         envelope: {
           from: envelopeFrom,
           to: [to]
         },
-        raw: smimeData.signedMime // Invia esattamente il payload firmato dal bridge
+        raw: Buffer.from(normalizedRaw, 'utf8')
       };
       
+      console.log(`[EMAIL-SERVICE] Sending RAW S/MIME (${normalizedRaw.length} bytes) to ${to}`);
       await siaeEmailTransporter.sendMail(rawMailOptions);
       console.log(`[EMAIL-SERVICE] S/MIME signed email sent successfully to ${to} via SIAE SMTP`);
       

@@ -1,0 +1,187 @@
+Ok Jonathan — qui sotto trovi **cosa deve fare Replit, in modo dettagliato e operativo**, per far funzionare la trasmissione RCA via **email S/MIME firmata** senza “messaggio corrotto” e senza 40605.
+
+> Punto chiave: **Replit NON deve mai ricostruire MIME**, deve solo **far firmare al bridge** e poi **spedire RAW identico**.
+
+---
+
+# 0) Obiettivo “tecnico” (se manca questo, SIAE scarta)
+
+Replit deve inviare una email che sia **S/MIME standard**, cioè:
+
+* oppure **opaque**: `Content-Type: application/pkcs7-mime; smime-type=signed-data`
+* oppure **multipart/signed** perfetto byte-per-byte (ma è molto fragile)
+
+✅ Ti consiglio **opaque** (più robusto).
+⚠️ Dai tuoi log finora stai ancora inviando **multipart/signed**, quindi l’errore può persistere anche se Replit fa tutto bene.
+
+---
+
+# 1) Replit: flusso corretto end-to-end (passi obbligatori)
+
+## Step 1 — Genera e salva il file RCA `.p7m` (CAdES)
+
+1. Replit manda al bridge:
+
+```json
+{
+  "type": "REQUEST_XML_SIGNATURE",
+  "requestId": "...",
+  "payload": { "xmlContent": "...", "pin": "..." }
+}
+```
+
+2. Replit riceve `p7mBase64`.
+3. Replit deve salvare **in binario**:
+
+```js
+fs.writeFileSync(outPath, Buffer.from(p7mBase64, "base64"));
+```
+
+✅ Check: aprendo il `.p7m` con Notepad deve essere illeggibile.
+
+---
+
+## Step 2 — Chiedi al bridge di costruire la mail S/MIME già pronta
+
+Replit manda al bridge:
+
+```json
+{
+  "type": "REQUEST_SMIME_SIGNATURE",
+  "requestId": "...",
+  "payload": {
+    "from": "\"Event4U SIAE\" <email@certificato.it>",
+    "to": "servertest2@batest.siae.it",
+    "subject": "RCA_....",
+    "body": "Trasmissione SIAE RCA...",
+    "attachmentBase64": "<base64 del FILE .p7m>",
+    "attachmentName": "RCA_....xsi.p7m",
+    "pin": "..."
+  }
+}
+```
+
+📌 IMPORTANTISSIMO:
+
+* `attachmentBase64` deve essere **base64 dei bytes del file .p7m**, non stringhe/testi.
+* il bridge deve rispondere con `signedMime` (RAW RFC822 completo).
+
+---
+
+## Step 3 — Replit deve inviare **RAW** senza toccare nulla
+
+Con nodemailer, sì: usare `raw` va bene.
+
+Per evitare qualunque casino di newline / encoding, fai così:
+
+```js
+const raw = smimeData.signedMime.replace(/\r?\n/g, "\r\n");
+await transporter.sendMail({
+  envelope: { from: envelopeFrom, to: [to] },
+  raw: Buffer.from(raw, "utf8"),
+});
+```
+
+✅ Qui Replit deve:
+
+* NON aggiungere header
+* NON aggiungere allegati
+* NON impostare `text`, `html`, `attachments`
+* NON usare `from/to/subject` di nodemailer (devono stare dentro RAW già fatto)
+
+---
+
+# 2) Replit: controlli automatici (devono essere nel codice)
+
+## Check A — Verifica che la mail sia davvero “opaque”
+
+Prima di inviare, Replit deve controllare:
+
+```js
+if (!raw.includes("Content-Type: application/pkcs7-mime")) {
+  throw new Error("Bridge NON sta producendo S/MIME opaque. Sta ancora producendo multipart/signed.");
+}
+```
+
+Se invece vedi:
+`Content-Type: multipart/signed; protocol="application/pkcs7-signature"`
+allora **non sei in opaque**, e sei di nuovo nel rischio “corrotto”.
+
+---
+
+## Check B — Verifica che ci sia la riga vuota header/body
+
+Deve esistere `\r\n\r\n` dopo gli header. Se manca:
+
+```js
+if (!raw.includes("\r\n\r\n")) throw new Error("RAW senza separatore header/body");
+```
+
+---
+
+## Check C — Log “prime righe” e dimensione
+
+Replit deve loggare:
+
+* primi 15–20 header lines (senza base64)
+* dimensione totale del RAW
+
+Così capisci subito se cambia qualcosa.
+
+---
+
+# 3) Replit: SMTP (questo può sabotare tutto anche se RAW è perfetto)
+
+### Se usi **smtp.gmail.com**
+
+⚠️ Gmail spesso:
+
+* riscrive `From`/`Sender`
+* non permette envelope-from arbitrario
+* può rifiutare o alterare l’identità
+
+Per SIAE (e soprattutto per “certificati”) è molto meglio usare:
+✅ SMTP della mailbox reale del mittente (o PEC/provider associato)
+
+**Regola:**
+
+> `envelope.from` e header `From:` devono essere **coerenti** e accettati dal server SMTP.
+
+Se Gmail non è proprietario di quella mailbox, ti può rovinare tutto senza dirtelo in modo chiaro.
+
+---
+
+# 4) Replit: cosa NON deve fare (errori tipici)
+
+❌ Non inviare l’allegato `.p7m` con `attachments:` di nodemailer (perché ricostruisce il MIME)
+❌ Non usare `text/html/subject` di nodemailer (perché ricostruisce header e body)
+❌ Non trasformare base64 con urlencoding o form-urlencoded da nessuna parte
+❌ Non “trim” o normalizzare a `\n` soltanto
+
+---
+
+# 5) “Se faccio tutto questo e ho ancora 40605?”
+
+Allora rimangono solo 2 cause:
+
+1. **Il bridge sta ancora producendo multipart/signed** (dai tuoi log precedenti è così) → quindi non hai ancora applicato davvero l’opaque.
+2. L’SMTP (Gmail o altro) altera envelope/header o blocca l’identità del mittente.
+
+---
+
+# Checklist finale da dare a Replit (copiabile)
+
+1. Salvare `.p7m` da `p7mBase64` come bytes (`Buffer.from(...,"base64")`)
+2. Chiedere al bridge `REQUEST_SMIME_SIGNATURE` e ottenere `signedMime`
+3. Prima di inviare: `signedMime` deve contenere `Content-Type: application/pkcs7-mime` (opaque)
+4. Inviare con nodemailer SOLO `raw: Buffer.from(CRLF_normalizzato)` e SOLO `envelope`
+5. Usare SMTP del mittente reale (evitare Gmail se il From non è un alias autorizzato)
+
+---
+
+Se vuoi, incollami **la funzione Replit completa** (quella che:
+
+* riceve `signedMime`
+* fa `sendMail`
+* gestisce transporter/env)
+  e te la riscrivo io “a prova di SIAE”, riga per riga.
