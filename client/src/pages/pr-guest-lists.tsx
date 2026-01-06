@@ -81,9 +81,37 @@ const guestEntryFormSchema = z.object({
   lastName: z.string().min(1, "Cognome obbligatorio"),
   email: z.string().email("Email non valida").optional().or(z.literal("")),
   phone: z.string().optional(),
+  gender: z.enum(["M", "F"]).optional(),
   plusOnes: z.coerce.number().min(0, "Non può essere negativo").default(0),
   notes: z.string().optional(),
 });
+
+function GenderToggle({ value, onChange }: { value?: 'M' | 'F'; onChange: (v: 'M' | 'F') => void }) {
+  return (
+    <div className="flex rounded-lg overflow-hidden border border-border">
+      <button
+        type="button"
+        className={`flex-1 py-2 px-4 text-sm font-medium transition-colors ${
+          value === 'M' ? 'bg-blue-600 text-white' : 'bg-transparent text-muted-foreground hover:bg-muted'
+        }`}
+        onClick={() => onChange('M')}
+        data-testid="toggle-gender-m"
+      >
+        M
+      </button>
+      <button
+        type="button"
+        className={`flex-1 py-2 px-4 text-sm font-medium transition-colors ${
+          value === 'F' ? 'bg-pink-600 text-white' : 'bg-transparent text-muted-foreground hover:bg-muted'
+        }`}
+        onClick={() => onChange('F')}
+        data-testid="toggle-gender-f"
+      >
+        F
+      </button>
+    </div>
+  );
+}
 
 type GuestEntryFormData = z.infer<typeof guestEntryFormSchema>;
 
@@ -190,6 +218,7 @@ export default function PrGuestListsPage() {
       lastName: "",
       email: "",
       phone: "",
+      gender: undefined,
       plusOnes: 0,
       notes: "",
     },
@@ -729,6 +758,22 @@ export default function PrGuestListsPage() {
                       <FormLabel>Telefono (opzionale)</FormLabel>
                       <FormControl>
                         <Input placeholder="+39 333 1234567" {...field} data-testid="input-guest-phone" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={guestForm.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Sesso</FormLabel>
+                      <FormControl>
+                        <GenderToggle
+                          value={field.value}
+                          onChange={(v) => field.onChange(v)}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -1324,6 +1369,22 @@ export default function PrGuestListsPage() {
                         className="h-14 rounded-2xl text-base" 
                         {...field} 
                         data-testid="input-guest-phone" 
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+              <FormField
+                control={guestForm.control}
+                name="gender"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-base">Sesso</FormLabel>
+                    <FormControl>
+                      <GenderToggle
+                        value={field.value}
+                        onChange={(v) => field.onChange(v)}
                       />
                     </FormControl>
                     <FormMessage />
