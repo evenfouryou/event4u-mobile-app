@@ -709,11 +709,14 @@ export default function SiaeTablesPage() {
       case 'genres':
         // Trasforma i dati per includere IVA e ISI formattati
         const genresForExport = genres.map(g => {
-          // Formatta IVA senza decimali se è un numero intero
-          let ivaFormatted = 'N/A';
+          // Formatta IVA - usa valore specifico o default basato su taxType
+          let ivaFormatted: string;
           if (g.vatRate !== null && g.vatRate !== undefined) {
             const vatNum = Number(g.vatRate);
             ivaFormatted = Number.isInteger(vatNum) ? `${vatNum}%` : `${vatNum.toFixed(2)}%`;
+          } else {
+            // Default: Spettacoli 10%, Intrattenimento 22%
+            ivaFormatted = g.taxType === 'S' ? '10%' : '22%';
           }
           return {
             ...g,
