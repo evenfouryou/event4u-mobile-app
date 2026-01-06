@@ -118,7 +118,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.22 - FIX: SetCurrentDirectory(TEMP) per SMIMESignML tmpnam()");
+            Log("SiaeBridge v3.23 - FIX: ExtractEmailAddress per SMIMESignML (solo email, no display name)");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -220,6 +220,32 @@ namespace SiaeBridge
 
         static string OK(object data) => JsonConvert.SerializeObject(new { success = true, data });
         static string ERR(string msg) => JsonConvert.SerializeObject(new { success = false, error = msg });
+
+        // ============================================================
+        // HELPER: Extract email address from RFC 5322 formatted string
+        // Input formats: "Display Name" <email@example.com> OR email@example.com
+        // Output: just the email address (email@example.com)
+        // ============================================================
+        static string ExtractEmailAddress(string input)
+        {
+            if (string.IsNullOrEmpty(input))
+                return null;
+
+            input = input.Trim();
+
+            // Check for <email> format: "Display Name" <email@example.com> or Display Name <email@example.com>
+            int startBracket = input.IndexOf('<');
+            int endBracket = input.IndexOf('>');
+            
+            if (startBracket >= 0 && endBracket > startBracket)
+            {
+                // Extract content between < and >
+                return input.Substring(startBracket + 1, endBracket - startBracket - 1).Trim();
+            }
+
+            // No brackets, assume it's already a plain email address
+            return input;
+        }
 
         // ============================================================
         // CHECK READER
@@ -2087,18 +2113,26 @@ namespace SiaeBridge
                 string pin = req.pin;
 
                 // Parametri S/MIME
-                string smimeFrom = req.from;
-                string smimeTo = req.to;
+                string smimeFromRaw = req.from;
+                string smimeToRaw = req.to;
                 string smimeSubject = req.subject;
                 string smimeBody = req.body;
                 string attachmentBase64 = req.attachmentBase64;
                 string attachmentName = req.attachmentName;
 
+                // FIX 2026-01-06: SMIMESignML richiede SOLO l'email senza nome visualizzato
+                // Input può essere: "Display Name" <email@example.com> oppure solo email@example.com
+                // Estrai solo l'indirizzo email per ENTRAMBI from e to
+                string smimeFrom = ExtractEmailAddress(smimeFromRaw);
+                string smimeTo = ExtractEmailAddress(smimeToRaw);
+                Log($"  From field normalization: '{smimeFromRaw}' -> '{smimeFrom}'");
+                Log($"  To field normalization: '{smimeToRaw}' -> '{smimeTo}'");
+
                 // Validazioni
                 if (string.IsNullOrEmpty(smimeFrom))
-                    return ERR("Campo 'from' mancante - richiesto per S/MIME");
+                    return ERR("Campo 'from' mancante o formato non valido - richiesto email semplice per S/MIME");
                 if (string.IsNullOrEmpty(smimeTo))
-                    return ERR("Campo 'to' mancante - richiesto per S/MIME");
+                    return ERR("Campo 'to' mancante o formato non valido - richiesto email semplice per S/MIME");
                 if (string.IsNullOrEmpty(pin))
                     return ERR("PIN mancante - richiesto per firma S/MIME");
 
