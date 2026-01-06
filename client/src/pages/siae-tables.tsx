@@ -23,8 +23,9 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
-import { Plus, Pencil, Music, MapPin, Ticket, Briefcase, XCircle, Loader2, Percent, Download, FileText } from "lucide-react";
+import { Plus, Pencil, Music, MapPin, Ticket, Briefcase, XCircle, Loader2, Percent, Download, FileText, FileSpreadsheet } from "lucide-react";
 import jsPDF from "jspdf";
+import ExcelJS from "exceljs";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -612,6 +613,85 @@ function exportToPDF(data: any[], title: string, filename: string, columns: { ke
   doc.save(`${filename}.pdf`);
 }
 
+async function exportToExcel(data: any[], title: string, filename: string, columns: { key: string; label: string }[]) {
+  const workbook = new ExcelJS.Workbook();
+  workbook.creator = 'Event4U';
+  workbook.created = new Date();
+  
+  const worksheet = workbook.addWorksheet(title.substring(0, 31)); // Excel sheet name max 31 chars
+  
+  // Add title row
+  worksheet.mergeCells('A1', String.fromCharCode(64 + columns.length) + '1');
+  const titleCell = worksheet.getCell('A1');
+  titleCell.value = title;
+  titleCell.font = { bold: true, size: 14 };
+  titleCell.alignment = { horizontal: 'center' };
+  
+  // Add date row
+  worksheet.mergeCells('A2', String.fromCharCode(64 + columns.length) + '2');
+  const dateCell = worksheet.getCell('A2');
+  dateCell.value = `Generato il: ${new Date().toLocaleDateString('it-IT')}`;
+  dateCell.font = { size: 10, italic: true };
+  dateCell.alignment = { horizontal: 'center' };
+  
+  // Add header row
+  const headerRow = worksheet.addRow(columns.map(col => col.label));
+  headerRow.font = { bold: true };
+  headerRow.eachCell((cell) => {
+    cell.fill = {
+      type: 'pattern',
+      pattern: 'solid',
+      fgColor: { argb: 'FF4472C4' }
+    };
+    cell.font = { bold: true, color: { argb: 'FFFFFFFF' } };
+    cell.border = {
+      top: { style: 'thin' },
+      left: { style: 'thin' },
+      bottom: { style: 'thin' },
+      right: { style: 'thin' }
+    };
+  });
+  
+  // Add data rows
+  data.forEach((item) => {
+    const rowData = columns.map(col => {
+      let value = item[col.key];
+      if (value === null || value === undefined) return '-';
+      if (typeof value === 'boolean') return value ? 'Sì' : 'No';
+      return value;
+    });
+    const row = worksheet.addRow(rowData);
+    row.eachCell((cell) => {
+      cell.border = {
+        top: { style: 'thin' },
+        left: { style: 'thin' },
+        bottom: { style: 'thin' },
+        right: { style: 'thin' }
+      };
+    });
+  });
+  
+  // Auto-fit columns
+  worksheet.columns.forEach((column) => {
+    let maxLength = 10;
+    column.eachCell?.({ includeEmpty: true }, (cell) => {
+      const cellValue = cell.value ? String(cell.value) : '';
+      maxLength = Math.max(maxLength, cellValue.length + 2);
+    });
+    column.width = Math.min(maxLength, 40);
+  });
+  
+  // Generate and download
+  const buffer = await workbook.xlsx.writeBuffer();
+  const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement('a');
+  link.href = url;
+  link.download = `${filename}.xlsx`;
+  link.click();
+  URL.revokeObjectURL(url);
+}
+
 export default function SiaeTablesPage() {
   const isMobile = useIsMobile();
   const { toast } = useToast();
@@ -628,11 +708,20 @@ export default function SiaeTablesPage() {
     switch (activeTab) {
       case 'genres':
         // Trasforma i dati per includere IVA e ISI formattati
-        const genresForExport = genres.map(g => ({
-          ...g,
-          ivaFormatted: g.vatRate ? `${g.vatRate}%` : 'N/A',
-          isiFormatted: g.taxType === 'I' ? 'ISI 16%' : 'Esente'
-        }));
+        const genresForExport = genres.map(g => {
+          // Formatta IVA senza decimali se è un numero intero
+          let ivaFormatted = 'N/A';
+          if (g.vatRate !== null && g.vatRate !== undefined) {
+            const vatNum = Number(g.vatRate);
+            ivaFormatted = Number.isInteger(vatNum) ? `${vatNum}%` : `${vatNum.toFixed(2)}%`;
+          }
+          return {
+            ...g,
+            taxTypeFormatted: g.taxType === 'S' ? 'Spettacolo' : 'Intrattenimento',
+            ivaFormatted,
+            isiFormatted: g.taxType === 'I' ? 'ISI 16%' : 'Esente'
+          };
+        });
         return { 
           data: genresForExport, 
           title: 'TAB.1 - Generi Manifestazione', 
@@ -640,7 +729,7 @@ export default function SiaeTablesPage() {
           columns: [
             { key: 'code', label: 'Codice' },
             { key: 'name', label: 'Nome' },
-            { key: 'taxType', label: 'Tipo Imposta' },
+            { key: 'taxTypeFormatted', label: 'Tipo Imposta' },
             { key: 'ivaFormatted', label: 'IVA' },
             { key: 'isiFormatted', label: 'ISI' },
             { key: 'active', label: 'Attivo' },
@@ -720,6 +809,20 @@ export default function SiaeTablesPage() {
     toast({ title: "Export PDF completato" });
   };
 
+  const handleExportExcel = async () => {
+    const { data, title, filename, columns } = getExportData();
+    if (data.length === 0) {
+      toast({ title: "Nessun dato da esportare", variant: "destructive" });
+      return;
+    }
+    try {
+      await exportToExcel(data, title, filename, columns);
+      toast({ title: "Export Excel completato" });
+    } catch (error) {
+      toast({ title: "Errore nell'export Excel", variant: "destructive" });
+    }
+  };
+
   if (!isMobile) {
     return (
       <div className="container mx-auto p-6 space-y-6" data-testid="page-siae-tables">
@@ -733,11 +836,15 @@ export default function SiaeTablesPage() {
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleExportCSV} data-testid="button-export-csv">
               <Download className="w-4 h-4 mr-2" />
-              Esporta CSV
+              CSV
+            </Button>
+            <Button variant="outline" onClick={handleExportExcel} data-testid="button-export-excel">
+              <FileSpreadsheet className="w-4 h-4 mr-2" />
+              Excel
             </Button>
             <Button variant="outline" onClick={handleExportPDF} data-testid="button-export-pdf">
               <FileText className="w-4 h-4 mr-2" />
-              Esporta PDF
+              PDF
             </Button>
           </div>
         </div>
@@ -807,6 +914,9 @@ export default function SiaeTablesPage() {
           <div className="flex gap-1">
             <Button variant="outline" size="sm" onClick={handleExportCSV} data-testid="button-export-csv-mobile">
               <Download className="w-4 h-4" />
+            </Button>
+            <Button variant="outline" size="sm" onClick={handleExportExcel} data-testid="button-export-excel-mobile">
+              <FileSpreadsheet className="w-4 h-4" />
             </Button>
             <Button variant="outline" size="sm" onClick={handleExportPDF} data-testid="button-export-pdf-mobile">
               <FileText className="w-4 h-4" />
