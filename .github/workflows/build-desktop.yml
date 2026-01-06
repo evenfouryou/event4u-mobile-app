@@ -16,7 +16,7 @@ jobs:
       - name: Setup .NET
         uses: actions/setup-dotnet@v4
         with:
-          dotnet-version: '6.0.x'
+          dotnet-version: '8.0.x'
 
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -28,15 +28,15 @@ jobs:
         run: |
           echo "=== Compiling SiaeBridge (x86) ==="
           dotnet restore
-          dotnet build -c Release
+          dotnet build -c Release -r win-x86 --self-contained false
           echo ""
           echo "=== Output files ==="
-          dir bin\Release\net472\
+          dir bin\Release\net8.0-windows\win-x86\
 
       - name: Copy prebuilt DLLs
         shell: pwsh
         run: |
-          $outDir = "desktop-app/SiaeBridge/bin/Release/net472"
+          $outDir = "desktop-app/SiaeBridge/bin/Release/net8.0-windows/win-x86"
           
           # Copy libSIAE.dll from prebuilt
           $libSiae = "desktop-app/SiaeBridge/prebuilt/libSIAE.dll"
@@ -65,8 +65,8 @@ jobs:
       - name: Verify required files
         shell: pwsh
         run: |
-          $dir = "desktop-app/SiaeBridge/bin/Release/net472"
-          $required = @("SiaeBridge.exe", "libSIAE.dll", "libSIAEp7.dll", "Newtonsoft.Json.dll")
+          $dir = "desktop-app/SiaeBridge/bin/Release/net8.0-windows/win-x86"
+          $required = @("SiaeBridge.exe", "libSIAE.dll", "libSIAEp7.dll")
           
           $missing = @()
           foreach ($f in $required) {
