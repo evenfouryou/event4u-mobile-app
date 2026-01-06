@@ -1177,6 +1177,36 @@ export function handleSignatureResponse(requestId: string, success: boolean, sig
     const isCAdES = !!signatureData.p7mBase64;
     console.log(`[Bridge] XML signature request completed: requestId=${requestId}, format=${isCAdES ? 'CAdES-BES' : 'XMLDSig'}, duration=${durationMs}ms`);
     
+    // INTEGRITY CHECK: Calcola SHA-256 del P7M ricevuto per diagnostica trasmissione
+    if (isCAdES && signatureData.p7mBase64) {
+      try {
+        const crypto = require('crypto');
+        const p7mBuffer = Buffer.from(signatureData.p7mBase64, 'base64');
+        const sha256Hash = crypto.createHash('sha256').update(p7mBuffer).digest('hex');
+        console.log(`[Bridge] [INTEGRITY] P7M received from desktop:`);
+        console.log(`[Bridge] [INTEGRITY]   - Size: ${p7mBuffer.length} bytes`);
+        console.log(`[Bridge] [INTEGRITY]   - Base64 length: ${signatureData.p7mBase64.length} chars`);
+        console.log(`[Bridge] [INTEGRITY]   - SHA-256: ${sha256Hash}`);
+        
+        // Verifica struttura base del P7M (PKCS#7 / CMS SignedData)
+        // Il P7M deve iniziare con SEQUENCE (0x30) seguito da OID per signedData
+        const firstByte = p7mBuffer[0];
+        const isValidAsn1 = firstByte === 0x30; // SEQUENCE tag in DER/BER
+        console.log(`[Bridge] [INTEGRITY]   - Valid ASN.1 SEQUENCE: ${isValidAsn1}`);
+        
+        // Check for SignedData OID (1.2.840.113549.1.7.2) at expected position
+        const signedDataOid = Buffer.from([0x2A, 0x86, 0x48, 0x86, 0xF7, 0x0D, 0x01, 0x07, 0x02]);
+        const hasSignedDataOid = p7mBuffer.includes(signedDataOid);
+        console.log(`[Bridge] [INTEGRITY]   - Contains signedData OID: ${hasSignedDataOid}`);
+        
+        if (!isValidAsn1 || !hasSignedDataOid) {
+          console.log(`[Bridge] [INTEGRITY] WARNING: P7M structure may be invalid!`);
+        }
+      } catch (hashError: any) {
+        console.log(`[Bridge] [INTEGRITY] Failed to compute SHA-256: ${hashError.message}`);
+      }
+    }
+    
     // Update audit entry for success
     pending.auditEntry.status = 'completed';
     pending.auditEntry.completedAt = completedAt;

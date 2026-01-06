@@ -1812,7 +1812,15 @@ namespace SiaeBridge
                 byte[] p7mBytes = pkcs7ContentInfo.GetDerEncoded();
                 string p7mBase64 = Convert.ToBase64String(p7mBytes);
 
-                Log($"  ✓ CAdES-BES P7M created: {p7mBytes.Length} bytes");
+                // Calcola SHA-256 per diagnostica integrità trasmissione
+                using (var sha256 = System.Security.Cryptography.SHA256.Create())
+                {
+                    byte[] hash = sha256.ComputeHash(p7mBytes);
+                    string hashHex = BitConverter.ToString(hash).Replace("-", "").ToLower();
+                    Log($"  ✓ CAdES-BES P7M created: {p7mBytes.Length} bytes");
+                    Log($"  [INTEGRITY] P7M SHA-256: {hashHex}");
+                    Log($"  [INTEGRITY] Base64 length: {p7mBase64.Length} chars");
+                }
                 Log($"  ContentType: signedData (1.2.840.113549.1.7.2)");
                 Log($"  DigestAlgorithm: SHA-256 (2.16.840.1.101.3.4.2.1)");
                 Log($"  SignatureAlgorithm: sha256WithRSAEncryption (1.2.840.113549.1.1.11)");
@@ -1904,7 +1912,15 @@ namespace SiaeBridge
                 string p7mBase64 = Convert.ToBase64String(p7mBytes);
                 string signedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz");
 
-                Log($"  ✓ P7M created successfully: {p7mBytes.Length} bytes");
+                // Calcola SHA-256 per diagnostica integrità trasmissione
+                using (var sha256 = System.Security.Cryptography.SHA256.Create())
+                {
+                    byte[] hash = sha256.ComputeHash(p7mBytes);
+                    string hashHex = BitConverter.ToString(hash).Replace("-", "").ToLower();
+                    Log($"  ✓ P7M created successfully: {p7mBytes.Length} bytes");
+                    Log($"  [INTEGRITY] P7M SHA-256: {hashHex}");
+                    Log($"  [INTEGRITY] Base64 length: {p7mBase64.Length} chars");
+                }
 
                 return (true, p7mBase64, null, signedAt);
             }

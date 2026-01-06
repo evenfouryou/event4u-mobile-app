@@ -622,6 +622,21 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
       const rawBase64 = isCAdES && p7mBase64 ? p7mBase64 : Buffer.from(xmlContent, 'utf-8').toString('base64');
       const attachmentBase64Content = rawBase64; // SMIMESignML gestisce l'encoding
       
+      // INTEGRITY CHECK: Log SHA-256 prima dell'invio per diagnostica trasmissione
+      if (isCAdES && p7mBase64) {
+        try {
+          const crypto = await import('crypto');
+          const p7mBuffer = Buffer.from(p7mBase64, 'base64');
+          const sha256Hash = crypto.createHash('sha256').update(p7mBuffer).digest('hex');
+          console.log(`[EMAIL-SERVICE] [INTEGRITY] P7M pre-send check:`);
+          console.log(`[EMAIL-SERVICE] [INTEGRITY]   - Size: ${p7mBuffer.length} bytes`);
+          console.log(`[EMAIL-SERVICE] [INTEGRITY]   - Base64 length: ${p7mBase64.length} chars`);
+          console.log(`[EMAIL-SERVICE] [INTEGRITY]   - SHA-256: ${sha256Hash}`);
+        } catch (hashError: any) {
+          console.log(`[EMAIL-SERVICE] [INTEGRITY] Failed to compute SHA-256: ${hashError.message}`);
+        }
+      }
+      
       // Corpo email semplice (text/plain per SMIMESignML)
       // SMIMESignML richiede testo ASCII-7bit nel body
       const plainBody = [
