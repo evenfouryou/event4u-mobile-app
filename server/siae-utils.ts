@@ -1647,8 +1647,13 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   // ==================== Generazione XML conforme a DTD ====================
   const xmlLines: string[] = [];
   
-  // Intestazione XML (senza DOCTYPE come nell'esempio ufficiale)
-  xmlLines.push('<?xml version="1.0" encoding="UTF-8"?>');
+  // Intestazione XML con encoding ISO-8859-1 come richiesto da SIAE (Allegato C)
+  // IMPORTANTE: SIAE richiede Latin-1, non UTF-8
+  xmlLines.push('<?xml version="1.0" encoding="ISO-8859-1"?>');
+  
+  // DOCTYPE obbligatorio per validazione DTD SIAE
+  // Riferimento: ControlloAccessi_v0001_20080626.dtd
+  xmlLines.push('<!DOCTYPE RiepilogoControlloAccessi SYSTEM "ControlloAccessi_v0001_20080626.dtd">');
   
   // Root element con attributo Sostituzione OBBLIGATORIO
   xmlLines.push('<RiepilogoControlloAccessi Sostituzione="N">');
@@ -1731,7 +1736,9 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   xmlLines.push('    </Evento>');
   xmlLines.push('</RiepilogoControlloAccessi>');
   
-  const xml = xmlLines.join('\n');
+  // IMPORTANTE: Usa CRLF come terminatore di riga (obbligatorio per SIAE)
+  // RFC 5751 e Allegato C richiedono CRLF nei messaggi S/MIME
+  const xml = xmlLines.join('\r\n');
   
   return {
     success: errors.length === 0,
