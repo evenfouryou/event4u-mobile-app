@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!ENTITY % text "(#PCDATA)">
+<!ELEMENT LogSigillo (Sigillo*)>
+<!ELEMENT Sigillo %text;>
+<!ATTLIST Sigillo
+CFOrganizzatore                             CDATA #REQUIRED
+CFTitolare                                  CDATA #REQUIRED
+SistemaEmissione                            CDATA #REQUIRED
+CartaAttivazione                            CDATA #REQUIRED
+SigilloFiscale                              CDATA #REQUIRED
+DataEmissione                               CDATA #REQUIRED
+OraEmissione                                CDATA #REQUIRED
+NumeroProgressivo                           CDATA #REQUIRED
+TipoTitolo                                  CDATA #REQUIRED
+CodiceOrdine                                CDATA #REQUIRED
+CorrispettivoLordo                          CDATA #REQUIRED
+CodiceRichiedenteEmissioneSigillo           CDATA #REQUIRED
+OriginaleAnnullato                          CDATA #IMPLIED
+CartaOriginaleAnnullato                     CDATA #IMPLIED
+CausaleAnnullamento                         CDATA #IMPLIED
+>
