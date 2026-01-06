@@ -86,6 +86,24 @@ jobs:
             exit 1
           }
 
+      - name: Prepare resources folder for Electron
+        shell: pwsh
+        run: |
+          $srcDir = "desktop-app/SiaeBridge/bin/Release/net8.0-windows/win-x86"
+          $destDir = "desktop-app/resources"
+          
+          # Create resources folder
+          New-Item -ItemType Directory -Path $destDir -Force | Out-Null
+          Write-Host "Created resources folder: $destDir"
+          
+          # Copy all SiaeBridge files
+          Copy-Item "$srcDir/*" $destDir -Recurse -Force
+          Write-Host "✓ Copied SiaeBridge files to resources"
+          
+          echo ""
+          echo "=== Resources folder contents ==="
+          Get-ChildItem $destDir | Format-Table Name, Length
+
       - name: Install Node dependencies
         working-directory: desktop-app
         run: npm install
