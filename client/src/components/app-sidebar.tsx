@@ -36,6 +36,10 @@ import {
   Printer,
   Wallet,
   CheckCircle,
+  Megaphone,
+  Gift,
+  Share2,
+  PackageOpen,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -333,6 +337,34 @@ export function AppSidebar() {
         icon: Printer,
         url: "/printer-settings",
         group: "Gestione",
+      }
+    );
+
+    // Marketing Module - always visible for gestore
+    menuItems.push(
+      {
+        title: "Marketing Dashboard",
+        icon: Megaphone,
+        url: "/marketing/dashboard",
+        group: "Marketing",
+      },
+      {
+        title: "Programma Fedeltà",
+        icon: Gift,
+        url: "/loyalty/admin",
+        group: "Marketing",
+      },
+      {
+        title: "Programma Referral",
+        icon: Share2,
+        url: "/referral/admin",
+        group: "Marketing",
+      },
+      {
+        title: "Bundle Prodotti",
+        icon: PackageOpen,
+        url: "/bundles/admin",
+        group: "Marketing",
       }
     );
 
