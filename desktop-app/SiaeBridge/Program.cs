@@ -2074,52 +2074,52 @@ namespace SiaeBridge
                 string attachmentBase64 = req.attachmentBase64;
                 string attachmentName = req.attachmentName;
 
-                // Se abbiamo i nuovi parametri, costruisci il mimeContent
-                // CRITICO: Per S/MIME multipart/signed, il contenuto da firmare NON deve includere
-                // gli header esterni (From/To/Subject). Solo il body MIME viene firmato.
-                // Gli header esterni verranno aggiunti DOPO la firma.
-                string externalFrom = "";
-                string externalTo = "";
-                string externalSubject = "";
+                // FIX 2026-01-06: IL CONTENUTO FIRMATO DEVE INCLUDERE TUTTI GLI HEADER
+                // Dall'esempio SIAE ufficiale (prova.eml), il contenuto dentro il PKCS7 include:
+                // From, To, Subject, Date, MIME-Version, Content-Type, e tutto il body
+                // NON sono "header esterni" - TUTTO viene firmato insieme
                 
                 if (!string.IsNullOrEmpty(smimeFrom) && !string.IsNullOrEmpty(smimeTo))
                 {
-                    Log($"SignSmime: Using SMIMESignML format - from={smimeFrom}, to={smimeTo}");
-                    
-                    // Salva gli header esterni per dopo (non firmati)
-                    externalFrom = smimeFrom;
-                    externalTo = smimeTo;
-                    externalSubject = smimeSubject ?? "RCA Transmission";
+                    Log($"SignSmime: Using SIAE format - from={smimeFrom}, to={smimeTo}");
+                    Log($"  FIX: Including ALL headers in signed content (as per SIAE prova.eml example)");
                     
                     var mimeBuilder = new StringBuilder();
                     string boundary = $"----=_Part_{Guid.NewGuid():N}";
+                    string dateHeader = DateTime.Now.ToString("ddd, d MMM yyyy HH:mm:ss zzz", System.Globalization.CultureInfo.InvariantCulture);
                     
-                    // NON includere From/To/Subject qui - questi sono header esterni per il client email
-                    // Il body MIME inizia da Content-Type e include tutto il contenuto firmato
+                    // TUTTI gli header vanno nel contenuto firmato (senza spazi dopo i due punti, come nell'esempio SIAE)
+                    mimeBuilder.Append($"From:{smimeFrom}\r\n");
+                    mimeBuilder.Append($"To:{smimeTo}\r\n");
+                    mimeBuilder.Append($"Subject:{smimeSubject ?? "RCA Transmission"}\r\n");
+                    mimeBuilder.Append($"Date:{dateHeader}\r\n");
+                    mimeBuilder.Append("MIME-Version: 1.0\r\n");
                     
                     if (!string.IsNullOrEmpty(attachmentBase64) && !string.IsNullOrEmpty(attachmentName))
                     {
-                        // Email con allegato - multipart/mixed (SENZA header From/To/Subject)
-                        mimeBuilder.Append($"Content-Type: multipart/mixed; boundary=\"{boundary}\"\r\n");
+                        // Email con allegato - multipart/mixed
+                        mimeBuilder.Append($"Content-Type: multipart/mixed;\r\n");
+                        mimeBuilder.Append($"\tboundary=\"{boundary}\"\r\n");
+                        mimeBuilder.Append("\r\n");
+                        mimeBuilder.Append("This is a multi-part message in MIME format.\r\n");
                         mimeBuilder.Append("\r\n");
                         
-                        // Parte body - ISO-8859-1 per conformità SIAE Allegato C
+                        // Parte body - Windows-1252 come nell'esempio SIAE
                         mimeBuilder.Append($"--{boundary}\r\n");
-                        mimeBuilder.Append("Content-Type: text/plain; charset=ISO-8859-1\r\n");
-                        mimeBuilder.Append("Content-Transfer-Encoding: 8bit\r\n");
+                        mimeBuilder.Append("Content-Type: text/plain;\r\n");
+                        mimeBuilder.Append("\tcharset=\"Windows-1252\"\r\n");
+                        mimeBuilder.Append("Content-Transfer-Encoding: quoted-printable\r\n");
                         mimeBuilder.Append("\r\n");
                         mimeBuilder.Append(smimeBody ?? "SIAE RCA Transmission");
-                        mimeBuilder.Append("\r\n\r\n");
+                        mimeBuilder.Append("\r\n");
                         
-                        // Parte allegato P7M - usa application/pkcs7-mime per file CAdES-BES
-                        // SIAE Allegato C richiede smime-type=signed-data per identificare correttamente il file
+                        // Parte allegato 
                         mimeBuilder.Append($"--{boundary}\r\n");
-                        string mimeType = attachmentName.EndsWith(".p7m", StringComparison.OrdinalIgnoreCase) 
-                            ? "application/pkcs7-mime; smime-type=signed-data" 
-                            : "application/octet-stream";
-                        mimeBuilder.Append($"Content-Type: {mimeType}; name=\"{attachmentName}\"\r\n");
+                        mimeBuilder.Append("Content-Type: application/octet-stream;\r\n");
+                        mimeBuilder.Append($"\tname=\"{attachmentName}\"\r\n");
                         mimeBuilder.Append("Content-Transfer-Encoding: base64\r\n");
-                        mimeBuilder.Append($"Content-Disposition: attachment; filename=\"{attachmentName}\"\r\n");
+                        mimeBuilder.Append("Content-Disposition: attachment;\r\n");
+                        mimeBuilder.Append($"\tfilename=\"{attachmentName}\"\r\n");
                         mimeBuilder.Append("\r\n");
                         
                         // Formatta base64 in righe da 76 caratteri
@@ -2134,17 +2134,26 @@ namespace SiaeBridge
                     }
                     else
                     {
-                        // Email senza allegato - text/plain (SENZA header From/To/Subject)
-                        // ISO-8859-1 per conformità SIAE Allegato C
-                        mimeBuilder.Append("Content-Type: text/plain; charset=ISO-8859-1\r\n");
-                        mimeBuilder.Append("Content-Transfer-Encoding: 8bit\r\n");
+                        // Email senza allegato - text/plain
+                        mimeBuilder.Append("Content-Type: text/plain;\r\n");
+                        mimeBuilder.Append("\tcharset=\"Windows-1252\"\r\n");
+                        mimeBuilder.Append("Content-Transfer-Encoding: quoted-printable\r\n");
                         mimeBuilder.Append("\r\n");
                         mimeBuilder.Append(smimeBody ?? "SIAE RCA Transmission");
                         mimeBuilder.Append("\r\n");
                     }
                     
                     mimeContent = mimeBuilder.ToString();
-                    Log($"  Built MIME body (without external headers) for signing: {mimeContent.Length} bytes");
+                    Log($"  Built complete MIME message (with headers) for signing: {mimeContent.Length} bytes");
+                    
+                    // Debug: log prime 10 righe
+                    var previewLines = mimeContent.Split(new[] { "\r\n" }, StringSplitOptions.None);
+                    Log($"  === MIME TO SIGN (prime 10 righe) ===");
+                    for (int i = 0; i < Math.Min(10, previewLines.Length); i++)
+                    {
+                        Log($"  {i + 1,2}: [{previewLines[i]}]");
+                    }
+                    Log($"  === FINE PREVIEW ===");
                 }
 
                 if (string.IsNullOrEmpty(mimeContent))
@@ -2313,40 +2322,50 @@ namespace SiaeBridge
                 }
 
                 // ============================================================
-                // FIX 2026-01-06: Usa S/MIME OPAQUE invece di multipart/signed
-                // SIAE spesso restituisce errore 40605 con multipart/signed perché:
-                // - Problemi CRLF
-                // - Librerie che modificano il MIME dopo la firma
-                // - Boundary che cambiano
-                // 
-                // SOLUZIONE: application/pkcs7-mime; smime-type=signed-data
-                // Il contenuto firmato sta DENTRO al PKCS7 - nessun problema di sync
+                // FIX 2026-01-06: Formato S/MIME OPAQUE conforme all'esempio SIAE prova.eml
+                // Usa application/x-pkcs7-mime (con x-) come nell'esempio ufficiale
+                // Il contenuto firmato (che ORA include tutti gli header) sta DENTRO al PKCS7
                 // ============================================================
                 
                 string signedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz");
                 
                 // PKCS7SignML crea un SignedData "attached" - contiene contenuto + firma
-                // Lo usiamo direttamente come corpo dell'email S/MIME opaque
                 string pkcs7Base64 = Convert.ToBase64String(p7sBytes);
                 
-                Log($"  Building S/MIME OPAQUE message (application/pkcs7-mime)");
+                Log($"  Building S/MIME OPAQUE message (application/x-pkcs7-mime)");
                 Log($"  P7M size: {p7sBytes.Length} bytes, Base64 size: {pkcs7Base64.Length} chars");
 
                 var smimeBuilder = new StringBuilder();
                 
-                // Header esterni (NON firmati, visibili al client email)
-                if (!string.IsNullOrEmpty(externalFrom))
-                    smimeBuilder.Append($"From: {externalFrom}\r\n");
-                if (!string.IsNullOrEmpty(externalTo))
-                    smimeBuilder.Append($"To: {externalTo}\r\n");
-                if (!string.IsNullOrEmpty(externalSubject))
-                    smimeBuilder.Append($"Subject: {externalSubject}\r\n");
+                // Estrai gli header dal contenuto firmato per l'envelope esterno
+                // Questi header sono GIA' inclusi nel contenuto firmato, ma servono anche
+                // nell'envelope per il routing dell'email
+                string extractedFrom = "";
+                string extractedTo = "";
+                string extractedSubject = "";
+                var contentLines = mimeContent.Split(new[] { "\r\n" }, StringSplitOptions.None);
+                foreach (var line in contentLines)
+                {
+                    if (line.StartsWith("From:")) extractedFrom = line.Substring(5);
+                    else if (line.StartsWith("To:")) extractedTo = line.Substring(3);
+                    else if (line.StartsWith("Subject:")) extractedSubject = line.Substring(8);
+                    else if (string.IsNullOrEmpty(line)) break; // Fine header
+                }
                 
-                // S/MIME opaque: tutto il contenuto firmato è dentro il PKCS7
+                // Header envelope (stessi del contenuto firmato)
+                smimeBuilder.Append($"From:{extractedFrom}\r\n");
+                smimeBuilder.Append($"To:{extractedTo}\r\n");
+                smimeBuilder.Append($"Subject:{extractedSubject}\r\n");
+                smimeBuilder.Append($"Date:{DateTime.Now.ToString("ddd, d MMM yyyy HH:mm:ss zzz", System.Globalization.CultureInfo.InvariantCulture)}\r\n");
+                
+                // S/MIME opaque con x- prefix come nell'esempio SIAE
                 smimeBuilder.Append("MIME-Version: 1.0\r\n");
-                smimeBuilder.Append("Content-Type: application/pkcs7-mime; smime-type=signed-data; name=\"smime.p7m\"\r\n");
+                smimeBuilder.Append("Content-Type: application/x-pkcs7-mime;\r\n");
+                smimeBuilder.Append("\tsmime-type=signed-data;\r\n");
+                smimeBuilder.Append("\tname=\"smime.p7m\"\r\n");
                 smimeBuilder.Append("Content-Transfer-Encoding: base64\r\n");
-                smimeBuilder.Append("Content-Disposition: attachment; filename=\"smime.p7m\"\r\n");
+                smimeBuilder.Append("Content-Disposition: attachment;\r\n");
+                smimeBuilder.Append("\tfilename=\"smime.p7m\"\r\n");
                 smimeBuilder.Append("\r\n");
                 
                 // Base64 in righe da 76 caratteri (standard RFC)
