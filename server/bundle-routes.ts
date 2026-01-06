@@ -356,6 +356,62 @@ router.get("/api/bundles/stats", async (req, res) => {
   }
 });
 
+// GET /api/bundles/purchases - Lista tutti gli acquisti della company
+router.get("/api/bundles/purchases", async (req, res) => {
+  try {
+    if (!req.isAuthenticated || !req.isAuthenticated()) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+
+    const user = req.user as any;
+    if (!user.companyId) {
+      return res.status(400).json({ message: "Utente non associato a una company" });
+    }
+
+    // Get all bundles for company
+    const bundles = await db
+      .select({ id: productBundles.id, name: productBundles.name })
+      .from(productBundles)
+      .where(eq(productBundles.companyId, user.companyId));
+
+    const bundleIds = bundles.map((b) => b.id);
+
+    if (bundleIds.length === 0) {
+      return res.json([]);
+    }
+
+    const purchases = await db
+      .select({
+        id: bundlePurchases.id,
+        bundleId: bundlePurchases.bundleId,
+        quantity: bundlePurchases.quantity,
+        groupSize: bundlePurchases.groupSize,
+        totalPrice: bundlePurchases.totalPrice,
+        status: bundlePurchases.status,
+        createdAt: bundlePurchases.createdAt,
+        customerEmail: siaeCustomers.email,
+        customerFirstName: siaeCustomers.firstName,
+        customerLastName: siaeCustomers.lastName,
+      })
+      .from(bundlePurchases)
+      .leftJoin(siaeCustomers, eq(bundlePurchases.customerId, siaeCustomers.id))
+      .where(sql`${bundlePurchases.bundleId} = ANY(${bundleIds})`)
+      .orderBy(desc(bundlePurchases.createdAt))
+      .limit(100);
+
+    // Add bundle name to each purchase
+    const purchasesWithBundleName = purchases.map((p) => ({
+      ...p,
+      bundleName: bundles.find((b) => b.id === p.bundleId)?.name || "Unknown",
+    }));
+
+    res.json(purchasesWithBundleName);
+  } catch (error) {
+    console.error("Error fetching all bundle purchases:", error);
+    res.status(500).json({ message: "Errore nel recupero degli acquisti" });
+  }
+});
+
 // GET /api/bundles/:id/purchases - Lista acquisti del bundle
 router.get("/api/bundles/:id/purchases", async (req, res) => {
   try {

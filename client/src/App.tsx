@@ -107,6 +107,7 @@ import MarketingEmailPage from "@/pages/marketing-email";
 import LoyaltyAdminPage from "@/pages/loyalty-admin";
 import ReferralAdminPage from "@/pages/referral-admin";
 import BundlesAdminPage from "@/pages/bundles-admin";
+import MarketingDashboard from "@/pages/marketing-dashboard";
 import StripeAdmin from "@/pages/stripe-admin";
 import ScannerHome from "@/pages/scanner-home";
 import ScannerHistory from "@/pages/scanner-history";
@@ -350,6 +351,7 @@ function Router() {
               <Route path="/loyalty/admin" component={LoyaltyAdminPage} />
               <Route path="/referral/admin" component={ReferralAdminPage} />
               <Route path="/bundles/admin" component={BundlesAdminPage} />
+              <Route path="/marketing/dashboard" component={MarketingDashboard} />
               <Route path="/school-badges" component={SchoolBadgeManager} />
               <Route path="/school-badges/scanner" component={SchoolBadgeScanner} />
               <Route path="/badge-error" component={SchoolBadgeError} />

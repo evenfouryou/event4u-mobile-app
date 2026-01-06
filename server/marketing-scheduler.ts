@@ -28,8 +28,8 @@ async function sendEventReminderEmails() {
       .from(siaeTicketedEvents)
       .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
       .where(and(
-        gte(events.date, now),
-        lte(events.date, in24Hours)
+        gte(events.startDatetime, now),
+        lte(events.startDatetime, in24Hours)
       ));
     
     for (const { ticketedEvent, event } of upcomingEvents) {
@@ -56,7 +56,7 @@ async function sendEventReminderEmails() {
         if (REMINDER_SENT_CACHE.has(emailCacheKey)) continue;
         
         try {
-          const eventDate = event.date ? new Date(event.date) : null;
+          const eventDate = event.startDatetime ? new Date(event.startDatetime) : null;
           const formattedDate = eventDate 
             ? eventDate.toLocaleDateString('it-IT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })
             : 'Data da definire';
@@ -137,8 +137,8 @@ async function sendPostEventFollowUpEmails() {
       .from(siaeTicketedEvents)
       .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
       .where(and(
-        gte(events.date, yesterday),
-        lte(events.date, now)
+        gte(events.startDatetime, yesterday),
+        lte(events.startDatetime, now)
       ));
     
     for (const { ticketedEvent, event } of recentEvents) {
