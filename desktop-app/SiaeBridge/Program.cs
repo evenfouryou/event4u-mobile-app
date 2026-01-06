@@ -118,7 +118,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.21 - FIX: Usa SMIMESignML nativo SIAE per S/MIME conformi");
+            Log("SiaeBridge v3.22 - FIX: SetCurrentDirectory(TEMP) per SMIMESignML tmpnam()");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -2138,6 +2138,24 @@ namespace SiaeBridge
                 // Body del messaggio (ASCII 7-bit come richiesto dalla documentazione)
                 string body = smimeBody ?? "SIAE RCA Transmission";
 
+                // FIX 2026-01-06: SMIMESignML usa internamente tmpnam(NULL) che crea file
+                // nella directory corrente. Se l'app è in una cartella non scrivibile
+                // (es. Program Files), la creazione fallisce con 0xFFFF.
+                // SOLUZIONE: Cambiare la directory corrente a TEMP prima della chiamata.
+                string originalDir = Directory.GetCurrentDirectory();
+                Log($"  Original working directory: {originalDir}");
+                Log($"  Changing to temp directory for SMIMESignML internal files: {tempDir}");
+                
+                try
+                {
+                    Directory.SetCurrentDirectory(tempDir);
+                    Log($"  Working directory changed to: {Directory.GetCurrentDirectory()}");
+                }
+                catch (Exception cwdEx)
+                {
+                    Log($"  WARNING: Could not change directory: {cwdEx.Message}");
+                }
+
                 // Chiama SMIMESignML - funzione SIAE nativa per S/MIME conforme
                 Log($"  Calling SMIMESignML...");
                 Log($"    pin=***, slot={_slot}");
@@ -2165,6 +2183,17 @@ namespace SiaeBridge
                 );
 
                 Log($"  SMIMESignML result: {signResult} (0x{signResult:X8})");
+                
+                // Ripristina directory originale
+                try
+                {
+                    Directory.SetCurrentDirectory(originalDir);
+                    Log($"  Restored working directory: {Directory.GetCurrentDirectory()}");
+                }
+                catch (Exception restoreEx)
+                {
+                    Log($"  WARNING: Could not restore directory: {restoreEx.Message}");
+                }
 
                 if (signResult != 0)
                 {
