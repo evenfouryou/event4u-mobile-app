@@ -229,6 +229,47 @@ function Router() {
     );
   }
 
+  // PR and Capo Staff dedicated routes
+  if ((user as any)?.role === 'pr' || (user as any)?.role === 'capo_staff') {
+    return (
+      <SidebarProvider style={style}>
+        <div className="flex h-screen w-full">
+          <AppSidebar />
+          <div className="flex flex-col flex-1">
+            <header className="flex items-center justify-between p-4 border-b gap-2">
+              <SidebarTrigger data-testid="button-sidebar-toggle" />
+              <div className="flex items-center gap-3">
+                <ThemeToggle />
+              </div>
+            </header>
+            <main className="flex-1 overflow-auto pb-20 md:pb-0">
+              <Switch>
+                <Route path="/staff-pr-home" component={StaffPrHome} />
+                <Route path="/pr/guest-lists" component={PrGuestLists} />
+                <Route path="/pr/tables" component={PrTables} />
+                <Route path="/pr/staff" component={PrStaff} />
+                <Route path="/pr/my-events" component={PrMyEvents} />
+                <Route path="/pr/events" component={PrEvents} />
+                <Route path="/pr-wallet" component={PrWallet} />
+                <Route path="/events/:id/panel" component={StaffPrEventPanel} />
+                <Route path="/settings" component={Settings} />
+                <Route path="/scanner/scan/:eventId" component={ScannerScan} />
+                <Route path="/scanner/scanned/:eventId" component={ScannerScanned} />
+                <Route path="/scanner/tickets/:eventId" component={ScannerTickets} />
+                <Route path="/scanner" component={ScannerHome} />
+                <Route path="/">
+                  <Redirect to="/staff-pr-home" />
+                </Route>
+                <Route component={NotFound} />
+              </Switch>
+            </main>
+            {isMobile && <MobileBottomNav />}
+          </div>
+        </div>
+      </SidebarProvider>
+    );
+  }
+
   // Customer portal routes (role: cliente)
   if ((user as any)?.role === 'cliente') {
     // Wrapper component to provide AccountLayout for standalone pages
