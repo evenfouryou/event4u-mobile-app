@@ -575,7 +575,8 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
 
   // Prepara opzioni email base - usa SIAE SMTP per le trasmissioni (corrisponde al certificato smart card)
   const siaeSmtpUser = process.env.SIAE_SMTP_USER || process.env.SMTP_USER;
-  const fromAddress = process.env.SIAE_SMTP_FROM || `"Event4U SIAE" <${siaeSmtpUser || 'noreply@event4u.it'}>`;
+  // v3.30 FIX: Senza virgolette come da file test SIAE
+  const fromAddress = process.env.SIAE_SMTP_FROM || `Event4U SIAE <${siaeSmtpUser || 'noreply@event4u.it'}>`;
   
   // Se richiesta firma S/MIME e bridge connesso, tenta di firmare l'email
   if (signWithSmime && isBridgeConnected()) {
@@ -612,7 +613,8 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
       
       // Usa SEMPRE l'email del certificato nell'header From
       // Questo garantisce che il messaggio firmato sia conforme ad Allegato C SIAE 1.6.2.a.3
-      const certFromAddress = `"Event4U SIAE" <${cardEmail}>`;
+      // v3.30 FIX: Rimuove virgolette dal display name - file test SIAE usa "Mario Rossi <email>" SENZA virgolette
+      const certFromAddress = `Event4U SIAE <${cardEmail}>`;
       
       // Prepara i parametri per SMIMESignML (API corretta per SIAE)
       // SMIMESignML crea direttamente un messaggio S/MIME RFC822 compliant
