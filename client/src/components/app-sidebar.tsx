@@ -462,7 +462,7 @@ export function AppSidebar() {
         group: "Gestione",
       },
       {
-        title: "Liste Ospiti",
+        title: "Liste",
         icon: ListChecks,
         url: "/pr/guest-lists",
         group: "Gestione PR",
@@ -504,7 +504,7 @@ export function AppSidebar() {
         group: "Gestione",
       },
       {
-        title: "Liste Ospiti",
+        title: "Liste",
         icon: ListChecks,
         url: "/pr/guest-lists",
         group: "Gestione PR",
@@ -546,7 +546,7 @@ export function AppSidebar() {
         group: "Gestione",
       },
       {
-        title: "Liste Ospiti",
+        title: "Liste",
         icon: ListChecks,
         url: "/pr/guest-lists",
         group: "Gestione PR",

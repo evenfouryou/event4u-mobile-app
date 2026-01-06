@@ -2414,7 +2414,7 @@ export default function EventHub() {
             </TabsTrigger>
             <TabsTrigger value="guests" data-testid="tab-guests">
               <Users className="h-4 w-4 mr-2" />
-              Ospiti
+              Liste
             </TabsTrigger>
             <TabsTrigger value="tables" data-testid="tab-tables">
               <Armchair className="h-4 w-4 mr-2" />
@@ -6109,7 +6109,7 @@ export default function EventHub() {
                   { id: 'overview', label: 'Panoramica', icon: LayoutDashboard },
                   { id: 'biglietteria', label: 'Biglietteria', icon: Ticket },
                   { id: 'cashiers', label: 'Cassieri', icon: Banknote },
-                  { id: 'guests', label: 'Ospiti', icon: Users },
+                  { id: 'guests', label: 'Liste', icon: Users },
                   { id: 'tables', label: 'Tavoli', icon: Armchair },
                   { id: 'staff', label: 'Staff', icon: Shield },
                   { id: 'pr', label: 'PR', icon: Megaphone },

@@ -107,7 +107,7 @@ export function MobileBottomNav() {
     navItems = [
       { icon: Home, label: "Home", href: "/staff-pr-home" },
       { icon: Calendar, label: "Eventi", href: "/staff-pr-home" },
-      { icon: ListChecks, label: "Ospiti", href: "/pr/guest-lists", isFab: true },
+      { icon: ListChecks, label: "Liste", href: "/pr/guest-lists", isFab: true },
       { icon: Users, label: "Team", href: "/pr/staff" },
       { icon: User, label: "Profilo", href: "/settings" },
     ];
