@@ -2314,8 +2314,12 @@ namespace SiaeBridge
                 string bodyMime = normalizedMime;
                 
                 // Cerca e estrai gli header principali dal messaggio originale
+                // CRITICO: Separa header esterni (From/To/Subject) dal body MIME
+                // Solo il body (da Content-Type in poi) deve essere firmato
                 var lines = normalizedMime.Split(new[] { "\r\n" }, StringSplitOptions.None);
                 int headerEndIndex = 0;
+                int contentTypeIndex = -1;
+                
                 for (int i = 0; i < lines.Length; i++)
                 {
                     var line = lines[i];
@@ -2332,6 +2336,36 @@ namespace SiaeBridge
                         externalTo = line;
                     else if (line.StartsWith("Subject:", StringComparison.OrdinalIgnoreCase))
                         externalSubject = line;
+                    else if (line.StartsWith("Content-Type:", StringComparison.OrdinalIgnoreCase) && contentTypeIndex < 0)
+                        contentTypeIndex = i;
+                }
+                
+                // Estrai solo il body MIME (da Content-Type in poi, escludendo From/To/Subject/MIME-Version)
+                // Questo è il contenuto che deve essere firmato S/MIME
+                if (contentTypeIndex >= 0)
+                {
+                    // Ricostruisci solo dal Content-Type in poi
+                    var bodyLines = new List<string>();
+                    for (int i = contentTypeIndex; i < lines.Length; i++)
+                    {
+                        bodyLines.Add(lines[i]);
+                    }
+                    bodyMime = string.Join("\r\n", bodyLines);
+                    Log($"  Extracted body MIME starting from Content-Type (line {contentTypeIndex}), {bodyMime.Length} bytes");
+                }
+                else
+                {
+                    // Fallback: usa tutto dopo la prima riga vuota (fine header)
+                    if (headerEndIndex > 0 && headerEndIndex < lines.Length - 1)
+                    {
+                        var bodyLines = new List<string>();
+                        for (int i = headerEndIndex; i < lines.Length; i++)
+                        {
+                            bodyLines.Add(lines[i]);
+                        }
+                        bodyMime = string.Join("\r\n", bodyLines);
+                    }
+                    Log($"  Using fallback body extraction, {bodyMime.Length} bytes");
                 }
                 
                 Log($"  External headers: From={!string.IsNullOrEmpty(externalFrom)}, To={!string.IsNullOrEmpty(externalTo)}, Subject={!string.IsNullOrEmpty(externalSubject)}");
@@ -2352,9 +2386,10 @@ namespace SiaeBridge
                 smimeBuilder.Append("\r\n");
                 smimeBuilder.Append($"--{smimeBoundary}\r\n");
                 
-                // Aggiungi il contenuto MIME originale (questo è il contenuto FIRMATO)
-                smimeBuilder.Append(normalizedMime);
-                if (!normalizedMime.EndsWith("\r\n"))
+                // Aggiungi SOLO il body MIME (senza header From/To/Subject) - questo è il contenuto FIRMATO
+                // RFC 5751: La prima parte di multipart/signed deve essere il MIME body, non un messaggio completo
+                smimeBuilder.Append(bodyMime);
+                if (!bodyMime.EndsWith("\r\n"))
                     smimeBuilder.Append("\r\n");
                 
                 smimeBuilder.Append("\r\n");
