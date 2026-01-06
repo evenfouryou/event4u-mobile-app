@@ -739,19 +739,28 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
       const envelopeFrom = smimeData.signerEmail || cardEmail;
       console.log(`[EMAIL-SERVICE] Envelope from (for SIAE compliance): ${envelopeFrom}`);
       
-      // NORMALIZZAZIONE CRLF: garantisce \r\n consistente
-      const normalizedRaw = smimeData.signedMime.replace(/\r?\n/g, '\r\n');
+      // IMPORTANTE: NON normalizzare il messaggio S/MIME dopo la firma!
+      // La normalizzazione corrompe il contenuto firmato causando errore SIAE 40605
+      // Il bridge deve già inviare il messaggio con CRLF corretti
+      const rawMessage = smimeData.signedMime;
       
-      // Invia come Buffer per evitare qualsiasi trasformazione encoding
+      // Verifica che il messaggio abbia CRLF corretti (warning only, non modificare)
+      const hasMixedLineEndings = rawMessage.includes('\r\n') && rawMessage.includes('\n') && 
+                                  !rawMessage.split('\r\n').every(line => !line.includes('\n'));
+      if (hasMixedLineEndings) {
+        console.log(`[EMAIL-SERVICE] ⚠️ WARNING: Messaggio con line endings misti. Bridge potrebbe aver inviato dati corrotti.`);
+      }
+      
+      // Invia come Buffer binario per evitare qualsiasi trasformazione
       const rawMailOptions = {
         envelope: {
           from: envelopeFrom,
           to: [to]
         },
-        raw: Buffer.from(normalizedRaw, 'utf8')
+        raw: Buffer.from(rawMessage, 'binary')
       };
       
-      console.log(`[EMAIL-SERVICE] Sending RAW S/MIME (${normalizedRaw.length} bytes) to ${to}`);
+      console.log(`[EMAIL-SERVICE] Sending RAW S/MIME (${rawMessage.length} bytes) to ${to}`);
       await siaeEmailTransporter.sendMail(rawMailOptions);
       console.log(`[EMAIL-SERVICE] S/MIME signed email sent successfully to ${to} via SIAE SMTP`);
       
