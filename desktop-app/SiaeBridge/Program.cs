@@ -2102,9 +2102,10 @@ namespace SiaeBridge
                         mimeBuilder.Append(smimeBody ?? "SIAE RCA Transmission");
                         mimeBuilder.Append("\r\n\r\n");
                         
-                        // Parte allegato P7M
+                        // Parte allegato P7M - usa application/octet-stream per file binari firmati
+                        // NOTA: application/pkcs7-mime è per S/MIME enveloped, non per allegati P7M
                         mimeBuilder.Append($"--{boundary}\r\n");
-                        mimeBuilder.Append($"Content-Type: application/pkcs7-mime; name=\"{attachmentName}\"\r\n");
+                        mimeBuilder.Append($"Content-Type: application/octet-stream; name=\"{attachmentName}\"\r\n");
                         mimeBuilder.Append("Content-Transfer-Encoding: base64\r\n");
                         mimeBuilder.Append($"Content-Disposition: attachment; filename=\"{attachmentName}\"\r\n");
                         mimeBuilder.Append("\r\n");
