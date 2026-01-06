@@ -2075,22 +2075,31 @@ namespace SiaeBridge
                 string attachmentName = req.attachmentName;
 
                 // Se abbiamo i nuovi parametri, costruisci il mimeContent
+                // CRITICO: Per S/MIME multipart/signed, il contenuto da firmare NON deve includere
+                // gli header esterni (From/To/Subject). Solo il body MIME viene firmato.
+                // Gli header esterni verranno aggiunti DOPO la firma.
+                string externalFrom = "";
+                string externalTo = "";
+                string externalSubject = "";
+                
                 if (!string.IsNullOrEmpty(smimeFrom) && !string.IsNullOrEmpty(smimeTo))
                 {
                     Log($"SignSmime: Using SMIMESignML format - from={smimeFrom}, to={smimeTo}");
                     
+                    // Salva gli header esterni per dopo (non firmati)
+                    externalFrom = smimeFrom;
+                    externalTo = smimeTo;
+                    externalSubject = smimeSubject ?? "RCA Transmission";
+                    
                     var mimeBuilder = new StringBuilder();
                     string boundary = $"----=_Part_{Guid.NewGuid():N}";
                     
-                    // Header email
-                    mimeBuilder.Append($"From: {smimeFrom}\r\n");
-                    mimeBuilder.Append($"To: {smimeTo}\r\n");
-                    mimeBuilder.Append($"Subject: {smimeSubject ?? "RCA Transmission"}\r\n");
-                    mimeBuilder.Append("MIME-Version: 1.0\r\n");
+                    // NON includere From/To/Subject qui - questi sono header esterni per il client email
+                    // Il body MIME inizia da Content-Type e include tutto il contenuto firmato
                     
                     if (!string.IsNullOrEmpty(attachmentBase64) && !string.IsNullOrEmpty(attachmentName))
                     {
-                        // Email con allegato - multipart/mixed
+                        // Email con allegato - multipart/mixed (SENZA header From/To/Subject)
                         mimeBuilder.Append($"Content-Type: multipart/mixed; boundary=\"{boundary}\"\r\n");
                         mimeBuilder.Append("\r\n");
                         
@@ -2103,7 +2112,6 @@ namespace SiaeBridge
                         mimeBuilder.Append("\r\n\r\n");
                         
                         // Parte allegato P7M - usa application/octet-stream per file binari firmati
-                        // NOTA: application/pkcs7-mime è per S/MIME enveloped, non per allegati P7M
                         mimeBuilder.Append($"--{boundary}\r\n");
                         mimeBuilder.Append($"Content-Type: application/octet-stream; name=\"{attachmentName}\"\r\n");
                         mimeBuilder.Append("Content-Transfer-Encoding: base64\r\n");
@@ -2122,7 +2130,7 @@ namespace SiaeBridge
                     }
                     else
                     {
-                        // Email senza allegato - text/plain
+                        // Email senza allegato - text/plain (SENZA header From/To/Subject)
                         mimeBuilder.Append("Content-Type: text/plain; charset=utf-8\r\n");
                         mimeBuilder.Append("Content-Transfer-Encoding: 8bit\r\n");
                         mimeBuilder.Append("\r\n");
@@ -2131,7 +2139,7 @@ namespace SiaeBridge
                     }
                     
                     mimeContent = mimeBuilder.ToString();
-                    Log($"  Built MIME content from SMIMESignML params: {mimeContent.Length} bytes");
+                    Log($"  Built MIME body (without external headers) for signing: {mimeContent.Length} bytes");
                 }
 
                 if (string.IsNullOrEmpty(mimeContent))
@@ -2304,81 +2312,24 @@ namespace SiaeBridge
                 string smimeBoundary = $"----=_smime_{Guid.NewGuid():N}";
                 string p7sBase64 = Convert.ToBase64String(p7sBytes);
 
-                // Estrai gli header esterni dal messaggio MIME originale
-                // Gli header esterni NON fanno parte della firma S/MIME - sono per il client email
-                string normalizedMime = mimeContent.Replace("\r\n", "\n").Replace("\n", "\r\n");
+                // Il mimeContent costruito sopra NON contiene header From/To/Subject
+                // È già il body MIME puro che è stato firmato da PKCS7SignML
+                // Lo normalizziamo solo per garantire line endings corretti
+                string bodyMime = mimeContent.Replace("\r\n", "\n").Replace("\n", "\r\n");
                 
-                string externalFrom = "";
-                string externalTo = "";
-                string externalSubject = "";
-                string bodyMime = normalizedMime;
-                
-                // Cerca e estrai gli header principali dal messaggio originale
-                // CRITICO: Separa header esterni (From/To/Subject) dal body MIME
-                // Solo il body (da Content-Type in poi) deve essere firmato
-                var lines = normalizedMime.Split(new[] { "\r\n" }, StringSplitOptions.None);
-                int headerEndIndex = 0;
-                int contentTypeIndex = -1;
-                
-                for (int i = 0; i < lines.Length; i++)
-                {
-                    var line = lines[i];
-                    if (string.IsNullOrEmpty(line))
-                    {
-                        // Fine degli header
-                        headerEndIndex = i;
-                        break;
-                    }
-                    
-                    if (line.StartsWith("From:", StringComparison.OrdinalIgnoreCase))
-                        externalFrom = line;
-                    else if (line.StartsWith("To:", StringComparison.OrdinalIgnoreCase))
-                        externalTo = line;
-                    else if (line.StartsWith("Subject:", StringComparison.OrdinalIgnoreCase))
-                        externalSubject = line;
-                    else if (line.StartsWith("Content-Type:", StringComparison.OrdinalIgnoreCase) && contentTypeIndex < 0)
-                        contentTypeIndex = i;
-                }
-                
-                // Estrai solo il body MIME (da Content-Type in poi, escludendo From/To/Subject/MIME-Version)
-                // Questo è il contenuto che deve essere firmato S/MIME
-                if (contentTypeIndex >= 0)
-                {
-                    // Ricostruisci solo dal Content-Type in poi
-                    var bodyLines = new List<string>();
-                    for (int i = contentTypeIndex; i < lines.Length; i++)
-                    {
-                        bodyLines.Add(lines[i]);
-                    }
-                    bodyMime = string.Join("\r\n", bodyLines);
-                    Log($"  Extracted body MIME starting from Content-Type (line {contentTypeIndex}), {bodyMime.Length} bytes");
-                }
-                else
-                {
-                    // Fallback: usa tutto dopo la prima riga vuota (fine header)
-                    if (headerEndIndex > 0 && headerEndIndex < lines.Length - 1)
-                    {
-                        var bodyLines = new List<string>();
-                        for (int i = headerEndIndex; i < lines.Length; i++)
-                        {
-                            bodyLines.Add(lines[i]);
-                        }
-                        bodyMime = string.Join("\r\n", bodyLines);
-                    }
-                    Log($"  Using fallback body extraction, {bodyMime.Length} bytes");
-                }
-                
-                Log($"  External headers: From={!string.IsNullOrEmpty(externalFrom)}, To={!string.IsNullOrEmpty(externalTo)}, Subject={!string.IsNullOrEmpty(externalSubject)}");
+                Log($"  Building S/MIME message: From={!string.IsNullOrEmpty(externalFrom)}, To={!string.IsNullOrEmpty(externalTo)}, Subject={!string.IsNullOrEmpty(externalSubject)}");
+                Log($"  Body MIME size: {bodyMime.Length} bytes (this is what was signed)");
 
                 var smimeBuilder = new StringBuilder();
                 
                 // PRIMA: Header esterni (visibili al client email, NON firmati)
+                // Questi provengono dalle variabili salvate quando abbiamo costruito mimeContent
                 if (!string.IsNullOrEmpty(externalFrom))
-                    smimeBuilder.Append($"{externalFrom}\r\n");
+                    smimeBuilder.Append($"From: {externalFrom}\r\n");
                 if (!string.IsNullOrEmpty(externalTo))
-                    smimeBuilder.Append($"{externalTo}\r\n");
+                    smimeBuilder.Append($"To: {externalTo}\r\n");
                 if (!string.IsNullOrEmpty(externalSubject))
-                    smimeBuilder.Append($"{externalSubject}\r\n");
+                    smimeBuilder.Append($"Subject: {externalSubject}\r\n");
                 
                 // DOPO: Header MIME per multipart/signed
                 smimeBuilder.Append("MIME-Version: 1.0\r\n");
@@ -2386,8 +2337,8 @@ namespace SiaeBridge
                 smimeBuilder.Append("\r\n");
                 smimeBuilder.Append($"--{smimeBoundary}\r\n");
                 
-                // Aggiungi SOLO il body MIME (senza header From/To/Subject) - questo è il contenuto FIRMATO
-                // RFC 5751: La prima parte di multipart/signed deve essere il MIME body, non un messaggio completo
+                // Aggiungi il body MIME - questo è ESATTAMENTE il contenuto che è stato firmato
+                // CRITICO: bodyMime deve essere identico a ciò che è stato scritto in inputFile per PKCS7SignML
                 smimeBuilder.Append(bodyMime);
                 if (!bodyMime.EndsWith("\r\n"))
                     smimeBuilder.Append("\r\n");
