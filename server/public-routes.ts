@@ -39,6 +39,9 @@ import {
   venueFloorPlans,
   floorPlanZones,
   eventZoneMappings,
+  floorPlanSeats,
+  seatHolds,
+  eventSeatStatus,
 } from "@shared/schema";
 import { eq, and, gt, lt, desc, sql, gte, lte, or, isNull } from "drizzle-orm";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
@@ -4814,6 +4817,541 @@ router.post("/api/public/reservations", async (req, res) => {
     });
   } catch (error: any) {
     console.error("[PUBLIC] Create reservation error:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ==================== SEAT SELECTION API ====================
+
+// GET /api/public/events/:eventId/seats - Get all seats with their status
+router.get("/api/public/events/:eventId/seats", async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const sessionId = getOrCreateSessionId(req, res);
+    const now = new Date();
+
+    const [ticketedEvent] = await db
+      .select({
+        id: siaeTicketedEvents.id,
+        eventId: siaeTicketedEvents.eventId,
+        ticketingStatus: siaeTicketedEvents.ticketingStatus,
+      })
+      .from(siaeTicketedEvents)
+      .where(eq(siaeTicketedEvents.id, eventId));
+
+    if (!ticketedEvent) {
+      return res.status(404).json({ message: "Evento non trovato" });
+    }
+
+    const [event] = await db
+      .select({
+        locationId: events.locationId,
+      })
+      .from(events)
+      .where(eq(events.id, ticketedEvent.eventId));
+
+    if (!event) {
+      return res.status(404).json({ message: "Evento non trovato" });
+    }
+
+    const [floorPlan] = await db
+      .select()
+      .from(venueFloorPlans)
+      .where(
+        and(
+          eq(venueFloorPlans.locationId, event.locationId),
+          eq(venueFloorPlans.isDefault, true),
+          eq(venueFloorPlans.isActive, true)
+        )
+      );
+
+    if (!floorPlan) {
+      return res.json({
+        floorPlan: null,
+        zones: [],
+        sectors: [],
+        message: "Nessuna planimetria configurata per questo evento"
+      });
+    }
+
+    const zones = await db
+      .select()
+      .from(floorPlanZones)
+      .where(
+        and(
+          eq(floorPlanZones.floorPlanId, floorPlan.id),
+          eq(floorPlanZones.isActive, true)
+        )
+      );
+
+    const zoneMappings = await db
+      .select()
+      .from(eventZoneMappings)
+      .where(
+        and(
+          eq(eventZoneMappings.ticketedEventId, eventId),
+          eq(eventZoneMappings.isActive, true)
+        )
+      );
+
+    const mappingsByZone = new Map(zoneMappings.map(m => [m.zoneId, m]));
+
+    const sectors = await db
+      .select()
+      .from(siaeEventSectors)
+      .where(eq(siaeEventSectors.ticketedEventId, eventId));
+
+    const sectorsById = new Map(sectors.map(s => [s.id, s]));
+
+    const zonesWithSeats = await Promise.all(zones.map(async (zone) => {
+      const seats = await db
+        .select()
+        .from(floorPlanSeats)
+        .where(
+          and(
+            eq(floorPlanSeats.zoneId, zone.id),
+            eq(floorPlanSeats.isActive, true)
+          )
+        );
+
+      const seatStatuses = await db
+        .select()
+        .from(eventSeatStatus)
+        .where(
+          and(
+            eq(eventSeatStatus.ticketedEventId, eventId),
+            eq(eventSeatStatus.zoneId, zone.id)
+          )
+        );
+
+      const statusBySeat = new Map(seatStatuses.map(s => [s.seatId, s]));
+
+      const activeHolds = await db
+        .select()
+        .from(seatHolds)
+        .where(
+          and(
+            eq(seatHolds.ticketedEventId, eventId),
+            eq(seatHolds.zoneId, zone.id),
+            eq(seatHolds.status, 'active'),
+            gt(seatHolds.expiresAt, now)
+          )
+        );
+
+      const holdsBySeat = new Map(activeHolds.map(h => [h.seatId, h]));
+
+      const mapping = mappingsByZone.get(zone.id);
+      const sector = mapping ? sectorsById.get(mapping.sectorId) : null;
+
+      const seatsWithStatus = seats.map(seat => {
+        const seatStatus = statusBySeat.get(seat.id);
+        const hold = holdsBySeat.get(seat.id);
+
+        let status: 'available' | 'held' | 'sold' | 'blocked' = 'available';
+        let isMyHold = false;
+
+        if (seat.isBlocked) {
+          status = 'blocked';
+        } else if (seatStatus) {
+          if (seatStatus.status === 'sold') {
+            status = 'sold';
+          } else if (seatStatus.status === 'held' && hold) {
+            status = 'held';
+            isMyHold = hold.sessionId === sessionId;
+          } else if (seatStatus.status === 'blocked') {
+            status = 'blocked';
+          }
+        } else if (hold) {
+          status = 'held';
+          isMyHold = hold.sessionId === sessionId;
+        }
+
+        return {
+          id: seat.id,
+          seatLabel: seat.seatLabel,
+          row: seat.row,
+          seatNumber: seat.seatNumber,
+          posX: seat.posX,
+          posY: seat.posY,
+          status,
+          isMyHold,
+          isAccessible: seat.isAccessible,
+          holdExpiresAt: isMyHold && hold ? hold.expiresAt : null,
+        };
+      });
+
+      return {
+        id: zone.id,
+        name: zone.name,
+        zoneType: zone.zoneType,
+        coordinates: zone.coordinates,
+        fillColor: zone.fillColor,
+        strokeColor: zone.strokeColor,
+        opacity: zone.opacity,
+        capacity: zone.capacity,
+        sectorId: mapping?.sectorId || null,
+        sectorName: sector?.sectorName || null,
+        price: mapping?.priceOverride || sector?.priceIntero || null,
+        seats: seatsWithStatus,
+      };
+    }));
+
+    const sectorsResponse = sectors.map(s => ({
+      id: s.id,
+      name: s.sectorName,
+      sectorCode: s.sectorCode,
+      priceIntero: s.priceIntero,
+      priceRidotto: s.priceRidotto,
+      ticketType: s.ticketType,
+    }));
+
+    res.json({
+      floorPlan: {
+        id: floorPlan.id,
+        name: floorPlan.name,
+        imageUrl: floorPlan.imageUrl,
+        width: floorPlan.imageWidth,
+        height: floorPlan.imageHeight,
+      },
+      zones: zonesWithSeats,
+      sectors: sectorsResponse,
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Get seats error:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// POST /api/public/events/:eventId/seats/:seatId/hold - Create a temporary hold on a seat
+router.post("/api/public/events/:eventId/seats/:seatId/hold", async (req, res) => {
+  try {
+    const { eventId, seatId } = req.params;
+    const sessionId = getOrCreateSessionId(req, res);
+    const now = new Date();
+    const expiresAt = new Date(now.getTime() + 10 * 60 * 1000);
+
+    const [seat] = await db
+      .select()
+      .from(floorPlanSeats)
+      .where(eq(floorPlanSeats.id, seatId));
+
+    if (!seat) {
+      return res.status(404).json({ message: "Posto non trovato" });
+    }
+
+    if (seat.isBlocked) {
+      return res.status(400).json({ message: "Posto non disponibile" });
+    }
+
+    const [existingStatus] = await db
+      .select()
+      .from(eventSeatStatus)
+      .where(
+        and(
+          eq(eventSeatStatus.ticketedEventId, eventId),
+          eq(eventSeatStatus.seatId, seatId)
+        )
+      );
+
+    if (existingStatus && existingStatus.status === 'sold') {
+      return res.status(400).json({ message: "Posto già venduto" });
+    }
+
+    const [existingHold] = await db
+      .select()
+      .from(seatHolds)
+      .where(
+        and(
+          eq(seatHolds.ticketedEventId, eventId),
+          eq(seatHolds.seatId, seatId),
+          eq(seatHolds.status, 'active'),
+          gt(seatHolds.expiresAt, now)
+        )
+      );
+
+    if (existingHold) {
+      if (existingHold.sessionId === sessionId) {
+        return res.json({
+          holdId: existingHold.id,
+          expiresAt: existingHold.expiresAt,
+          message: "Hai già una prenotazione su questo posto"
+        });
+      }
+      return res.status(400).json({ message: "Posto già prenotato da un altro utente" });
+    }
+
+    const [ticketedEvent] = await db
+      .select({ id: siaeTicketedEvents.id })
+      .from(siaeTicketedEvents)
+      .where(eq(siaeTicketedEvents.id, eventId));
+
+    if (!ticketedEvent) {
+      return res.status(404).json({ message: "Evento non trovato" });
+    }
+
+    const [mapping] = await db
+      .select()
+      .from(eventZoneMappings)
+      .where(
+        and(
+          eq(eventZoneMappings.ticketedEventId, eventId),
+          eq(eventZoneMappings.zoneId, seat.zoneId)
+        )
+      );
+
+    let priceSnapshot = null;
+    if (mapping) {
+      if (mapping.priceOverride) {
+        priceSnapshot = mapping.priceOverride;
+      } else {
+        const [sector] = await db
+          .select({ priceIntero: siaeEventSectors.priceIntero })
+          .from(siaeEventSectors)
+          .where(eq(siaeEventSectors.id, mapping.sectorId));
+        priceSnapshot = sector?.priceIntero || null;
+      }
+    }
+
+    const [newHold] = await db.insert(seatHolds).values({
+      ticketedEventId: eventId,
+      sectorId: mapping?.sectorId || null,
+      seatId: seatId,
+      zoneId: seat.zoneId,
+      sessionId: sessionId,
+      holdType: 'cart',
+      quantity: 1,
+      priceSnapshot: priceSnapshot,
+      expiresAt: expiresAt,
+      status: 'active',
+    }).returning();
+
+    if (existingStatus) {
+      await db.update(eventSeatStatus)
+        .set({
+          status: 'held',
+          currentHoldId: newHold.id,
+          holdExpiresAt: expiresAt,
+          updatedAt: now,
+        })
+        .where(eq(eventSeatStatus.id, existingStatus.id));
+    } else {
+      await db.insert(eventSeatStatus).values({
+        ticketedEventId: eventId,
+        seatId: seatId,
+        zoneId: seat.zoneId,
+        sectorId: mapping?.sectorId || null,
+        status: 'held',
+        currentHoldId: newHold.id,
+        holdExpiresAt: expiresAt,
+      });
+    }
+
+    res.status(201).json({
+      holdId: newHold.id,
+      expiresAt: expiresAt,
+      seatLabel: seat.seatLabel,
+      price: priceSnapshot,
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Create hold error:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// DELETE /api/public/events/:eventId/seats/:seatId/hold - Release a hold
+router.delete("/api/public/events/:eventId/seats/:seatId/hold", async (req, res) => {
+  try {
+    const { eventId, seatId } = req.params;
+    const sessionId = getOrCreateSessionId(req, res);
+    const now = new Date();
+
+    const [existingHold] = await db
+      .select()
+      .from(seatHolds)
+      .where(
+        and(
+          eq(seatHolds.ticketedEventId, eventId),
+          eq(seatHolds.seatId, seatId),
+          eq(seatHolds.status, 'active'),
+          gt(seatHolds.expiresAt, now)
+        )
+      );
+
+    if (!existingHold) {
+      return res.status(404).json({ message: "Hold non trovato" });
+    }
+
+    if (existingHold.sessionId !== sessionId) {
+      return res.status(403).json({ message: "Non hai i permessi per rilasciare questo hold" });
+    }
+
+    await db.update(seatHolds)
+      .set({
+        status: 'released',
+        updatedAt: now,
+      })
+      .where(eq(seatHolds.id, existingHold.id));
+
+    await db.update(eventSeatStatus)
+      .set({
+        status: 'available',
+        currentHoldId: null,
+        holdExpiresAt: null,
+        updatedAt: now,
+      })
+      .where(
+        and(
+          eq(eventSeatStatus.ticketedEventId, eventId),
+          eq(eventSeatStatus.seatId, seatId)
+        )
+      );
+
+    res.json({ success: true, message: "Hold rilasciato con successo" });
+  } catch (error: any) {
+    console.error("[PUBLIC] Release hold error:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// POST /api/public/events/:eventId/holds/extend - Extend all holds for current session
+router.post("/api/public/events/:eventId/holds/extend", async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const sessionId = getOrCreateSessionId(req, res);
+    const now = new Date();
+    const extensionMinutes = 5;
+    const maxExtensions = 2;
+
+    const activeHolds = await db
+      .select()
+      .from(seatHolds)
+      .where(
+        and(
+          eq(seatHolds.ticketedEventId, eventId),
+          eq(seatHolds.sessionId, sessionId),
+          eq(seatHolds.status, 'active'),
+          gt(seatHolds.expiresAt, now)
+        )
+      );
+
+    if (activeHolds.length === 0) {
+      return res.status(404).json({ message: "Nessun hold attivo da estendere" });
+    }
+
+    const holdsToExtend = activeHolds.filter(h => h.extendedCount < maxExtensions);
+    
+    if (holdsToExtend.length === 0) {
+      return res.status(400).json({ 
+        message: "Hai già raggiunto il numero massimo di estensioni",
+        maxExtensions 
+      });
+    }
+
+    const extendedHolds: { holdId: string; newExpiresAt: Date }[] = [];
+
+    for (const hold of holdsToExtend) {
+      const newExpiresAt = new Date(hold.expiresAt.getTime() + extensionMinutes * 60 * 1000);
+
+      await db.update(seatHolds)
+        .set({
+          expiresAt: newExpiresAt,
+          extendedCount: hold.extendedCount + 1,
+          updatedAt: now,
+        })
+        .where(eq(seatHolds.id, hold.id));
+
+      await db.update(eventSeatStatus)
+        .set({
+          holdExpiresAt: newExpiresAt,
+          updatedAt: now,
+        })
+        .where(eq(eventSeatStatus.currentHoldId, hold.id));
+
+      extendedHolds.push({
+        holdId: hold.id,
+        newExpiresAt,
+      });
+    }
+
+    const skippedCount = activeHolds.length - holdsToExtend.length;
+
+    res.json({
+      success: true,
+      extendedCount: extendedHolds.length,
+      skippedCount,
+      holds: extendedHolds,
+      extensionMinutes,
+      message: `${extendedHolds.length} hold estesi di ${extensionMinutes} minuti`,
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Extend holds error:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// GET /api/public/events/:eventId/my-holds - Get current session's holds
+router.get("/api/public/events/:eventId/my-holds", async (req, res) => {
+  try {
+    const { eventId } = req.params;
+    const sessionId = getOrCreateSessionId(req, res);
+    const now = new Date();
+
+    const myHolds = await db
+      .select({
+        holdId: seatHolds.id,
+        seatId: seatHolds.seatId,
+        zoneId: seatHolds.zoneId,
+        sectorId: seatHolds.sectorId,
+        expiresAt: seatHolds.expiresAt,
+        extendedCount: seatHolds.extendedCount,
+        priceSnapshot: seatHolds.priceSnapshot,
+        createdAt: seatHolds.createdAt,
+      })
+      .from(seatHolds)
+      .where(
+        and(
+          eq(seatHolds.ticketedEventId, eventId),
+          eq(seatHolds.sessionId, sessionId),
+          eq(seatHolds.status, 'active'),
+          gt(seatHolds.expiresAt, now)
+        )
+      );
+
+    const holdsWithDetails = await Promise.all(myHolds.map(async (hold) => {
+      let seatLabel = null;
+      if (hold.seatId) {
+        const [seat] = await db
+          .select({ seatLabel: floorPlanSeats.seatLabel })
+          .from(floorPlanSeats)
+          .where(eq(floorPlanSeats.id, hold.seatId));
+        seatLabel = seat?.seatLabel || null;
+      }
+
+      let zoneName = null;
+      if (hold.zoneId) {
+        const [zone] = await db
+          .select({ name: floorPlanZones.name })
+          .from(floorPlanZones)
+          .where(eq(floorPlanZones.id, hold.zoneId));
+        zoneName = zone?.name || null;
+      }
+
+      return {
+        ...hold,
+        seatLabel,
+        zoneName,
+        remainingSeconds: Math.max(0, Math.floor((hold.expiresAt.getTime() - now.getTime()) / 1000)),
+        canExtend: hold.extendedCount < 2,
+      };
+    }));
+
+    res.json({
+      holds: holdsWithDetails,
+      totalHolds: holdsWithDetails.length,
+      sessionId: sessionId.substring(0, 8) + '...', // Masked for security
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Get my holds error:", error);
     res.status(500).json({ message: error.message });
   }
 });

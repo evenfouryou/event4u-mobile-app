@@ -1839,6 +1839,9 @@ export default function PublicEventDetailPage() {
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   
+  // Hold system state - tracks hold info for each selected seat
+  const [holdInfo, setHoldInfo] = useState<Record<string, { holdId: string; expiresAt: string }>>({});
+  
   // Operational Mode State
   const isOperationalMode = useMemo(() => {
     if (typeof window !== 'undefined') {
@@ -1956,6 +1959,92 @@ export default function PublicEventDetailPage() {
     return statusMap;
   }, [seatStatuses]);
 
+  // Hold System Mutations
+  const createHoldMutation = useMutation({
+    mutationFn: async (seatId: string) => {
+      const res = await apiRequest("POST", `/api/public/events/${event?.id}/seats/${seatId}/hold`);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/public/events", params.id] });
+    },
+  });
+
+  const releaseHoldMutation = useMutation({
+    mutationFn: async (seatId: string) => {
+      await apiRequest("DELETE", `/api/public/events/${event?.id}/seats/${seatId}/hold`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/public/events", params.id] });
+    },
+  });
+
+  const extendHoldsMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("POST", `/api/public/events/${event?.id}/holds/extend`);
+      return res.json();
+    },
+    onSuccess: (data) => {
+      if (data?.holds) {
+        const newHoldInfo: Record<string, { holdId: string; expiresAt: string }> = {};
+        data.holds.forEach((hold: any) => {
+          if (hold.seatId) {
+            newHoldInfo[hold.seatId] = { holdId: hold.id, expiresAt: hold.expiresAt };
+          }
+        });
+        setHoldInfo(prev => ({ ...prev, ...newHoldInfo }));
+      }
+      toast({
+        title: "Tempo esteso",
+        description: "Hai altri 10 minuti per completare l'acquisto.",
+      });
+    },
+    onError: () => {
+      toast({
+        title: "Impossibile estendere",
+        description: "Non è stato possibile estendere il tempo.",
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Handle hold expiration
+  const handleHoldExpire = useCallback((seatId: string) => {
+    setSelectedSeatIds(prev => prev.filter(id => id !== seatId));
+    setHoldInfo(prev => {
+      const newInfo = { ...prev };
+      delete newInfo[seatId];
+      return newInfo;
+    });
+    toast({
+      title: "Opzione scaduta",
+      description: "Il tempo per il posto selezionato è scaduto.",
+      variant: "destructive",
+    });
+  }, [toast]);
+
+  // Handle manual release
+  const handleReleaseHold = useCallback(async (seatId: string) => {
+    try {
+      await releaseHoldMutation.mutateAsync(seatId);
+      setSelectedSeatIds(prev => prev.filter(id => id !== seatId));
+      setHoldInfo(prev => {
+        const newInfo = { ...prev };
+        delete newInfo[seatId];
+        return newInfo;
+      });
+    } catch (error) {
+      console.error('Failed to release hold:', error);
+    }
+  }, [releaseHoldMutation]);
+
+  // Get the earliest expiring hold for countdown display
+  const earliestHoldExpiry = useMemo(() => {
+    const holdTimes = Object.values(holdInfo).map(h => new Date(h.expiresAt).getTime());
+    if (holdTimes.length === 0) return null;
+    return new Date(Math.min(...holdTimes)).toISOString();
+  }, [holdInfo]);
+
   const selectedSector = event?.sectors.find(s => s.id === selectedSectorId) || event?.sectors[0];
   const selectedSeat = selectedSector?.seats.find(s => selectedSeatIds.includes(s.id)) || null;
 
@@ -1977,22 +2066,73 @@ export default function PublicEventDetailPage() {
     }
   };
 
-  const handleSeatClick = (seatId: string, seat: Seat) => {
+  const handleSeatClick = async (seatId: string, seat: Seat) => {
     // In operational mode, open the seat info panel instead of selecting
     if (isOperationalMode) {
       setOperationalSeatId(seatId);
       setIsSeatPanelOpen(true);
       return;
     }
+
+    const isSelected = selectedSeatIds.includes(seatId);
     
-    setSelectedSeatIds(prev => {
-      if (prev.includes(seatId)) {
-        return prev.filter(id => id !== seatId);
-      } else {
-        return [seatId];
+    if (isSelected) {
+      // Release hold when deselecting
+      try {
+        await releaseHoldMutation.mutateAsync(seatId);
+        setSelectedSeatIds(prev => prev.filter(id => id !== seatId));
+        setHoldInfo(prev => {
+          const newInfo = { ...prev };
+          delete newInfo[seatId];
+          return newInfo;
+        });
+        triggerHaptic('light');
+      } catch (error: any) {
+        console.error('Failed to release hold:', error);
+        // Still allow local deselection even if release fails
+        setSelectedSeatIds(prev => prev.filter(id => id !== seatId));
+        setHoldInfo(prev => {
+          const newInfo = { ...prev };
+          delete newInfo[seatId];
+          return newInfo;
+        });
       }
-    });
+    } else {
+      // Create hold when selecting
+      try {
+        const result = await createHoldMutation.mutateAsync(seatId);
+        setSelectedSeatIds(prev => [...prev, seatId]);
+        // Save hold info for timer
+        if (result?.hold) {
+          setHoldInfo(prev => ({ 
+            ...prev, 
+            [seatId]: { 
+              holdId: result.hold.id, 
+              expiresAt: result.hold.expiresAt 
+            } 
+          }));
+        }
+        triggerHaptic('success');
+        
+        toast({
+          title: "Posto riservato",
+          description: "Hai 10 minuti per completare l'acquisto.",
+        });
+      } catch (error: any) {
+        triggerHaptic('error');
+        const errorMessage = error?.message || "Posto non disponibile";
+        toast({
+          title: "Impossibile selezionare",
+          description: errorMessage.includes('already held') 
+            ? "Questo posto è già stato selezionato da un altro utente." 
+            : errorMessage,
+          variant: "destructive",
+        });
+        return;
+      }
+    }
     
+    // Update sector selection
     const sector = event?.sectors.find(s => s.seats.some(st => st.id === seatId));
     if (sector) {
       setSelectedSectorId(sector.id);
@@ -3071,6 +3211,24 @@ export default function PublicEventDetailPage() {
           style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
           data-testid="sticky-cta-mobile"
         >
+          {/* Hold countdown timer bar - shown when there are selected seats with holds */}
+          {selectedSeatIds.length > 0 && earliestHoldExpiry && (
+            <div className="px-4 pt-3 pb-1">
+              <HoldCountdownTimer
+                expiresAt={earliestHoldExpiry}
+                onExpire={() => {
+                  selectedSeatIds.forEach(seatId => handleHoldExpire(seatId));
+                }}
+                onExtend={() => extendHoldsMutation.mutate()}
+                onRelease={() => {
+                  selectedSeatIds.forEach(seatId => handleReleaseHold(seatId));
+                }}
+                canExtend={!extendHoldsMutation.isPending}
+                data-testid="hold-countdown-timer"
+              />
+            </div>
+          )}
+          
           <div className="flex items-center justify-between gap-4 p-4">
             <div className="flex-1 min-w-0">
               {selectedSector ? (
@@ -3078,22 +3236,16 @@ export default function PublicEventDetailPage() {
                   <p className="text-xs text-muted-foreground uppercase tracking-wider truncate" data-testid="text-selected-sector-name">
                     {selectedSector.name}
                   </p>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 flex-wrap">
                     <p className="text-2xl font-bold bg-gradient-to-r from-yellow-400 to-orange-400 bg-clip-text text-transparent" data-testid="text-cta-total">
                       €{totalPrice.toFixed(2)}
                     </p>
-                    {selectedSeat && (() => {
-                      const holdInfo = seatStatusMap.get(selectedSeat.id);
-                      if (holdInfo && holdInfo.status === 'held' && holdInfo.sessionId === mySessionId && holdInfo.expiresAt) {
-                        return (
-                          <HoldCountdownTimer
-                            expiresAt={holdInfo.expiresAt}
-                            compact
-                          />
-                        );
-                      }
-                      return null;
-                    })()}
+                    {selectedSeat && holdInfo[selectedSeat.id] && (
+                      <Badge className="bg-primary/20 text-primary border-primary/30 text-xs">
+                        <Timer className="w-3 h-3 mr-1" />
+                        In opzione
+                      </Badge>
+                    )}
                     {(() => {
                       const remaining = event.totalCapacity - event.ticketsSold;
                       if (remaining < 20 && !selectedSeat) {
@@ -3119,11 +3271,11 @@ export default function PublicEventDetailPage() {
             </div>
             <Button
               onClick={handlePurchase}
-              disabled={!canPurchase || isAdding}
+              disabled={!canPurchase || isAdding || createHoldMutation.isPending}
               className="h-14 px-8 rounded-xl text-lg font-bold shadow-lg shadow-primary/25 shrink-0"
               data-testid="button-purchase"
             >
-              {isAdding ? (
+              {isAdding || createHoldMutation.isPending ? (
                 <div className="w-6 h-6 border-2 border-primary-foreground/30 border-t-primary-foreground rounded-full animate-spin" />
               ) : (
                 <>
