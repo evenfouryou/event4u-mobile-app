@@ -3066,31 +3066,11 @@ export default function EventHub() {
                                 {nameChanges.length === 0 ? (
                                   <p className="text-center text-muted-foreground py-4">Nessuna richiesta di cambio nominativo</p>
                                 ) : (
-                                  <Table>
-                                    <TableHeader>
-                                      <TableRow>
-                                        <TableHead>Data</TableHead>
-                                        <TableHead>Biglietto</TableHead>
-                                        <TableHead>Nuovo Intestatario</TableHead>
-                                        <TableHead>Costo</TableHead>
-                                        <TableHead>Stato</TableHead>
-                                        <TableHead>Azioni</TableHead>
-                                      </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                      {nameChanges.map((change) => (
-                                        <TableRow key={change.id} data-testid={`row-name-change-${change.id}`}>
-                                          <TableCell className="text-sm">
-                                            {change.createdAt ? format(new Date(change.createdAt), 'dd/MM/yyyy HH:mm', { locale: it }) : '-'}
-                                          </TableCell>
-                                          <TableCell className="font-mono text-xs">
-                                            {change.originalTicketId?.substring(0, 8)}...
-                                          </TableCell>
-                                          <TableCell>
-                                            <span className="font-medium">{change.newFirstName} {change.newLastName}</span>
-                                          </TableCell>
-                                          <TableCell>€{Number(change.fee || 2.5).toFixed(2)}</TableCell>
-                                          <TableCell>
+                                  <div className="space-y-4">
+                                    {nameChanges.map((change: any) => (
+                                      <div key={change.id} className="border rounded-lg p-4 space-y-3" data-testid={`card-name-change-${change.id}`}>
+                                        <div className="flex items-center justify-between">
+                                          <div className="flex items-center gap-2">
                                             <Badge variant={
                                               change.status === 'completed' ? 'default' :
                                               change.status === 'rejected' ? 'destructive' : 'secondary'
@@ -3098,37 +3078,81 @@ export default function EventHub() {
                                               {change.status === 'completed' ? 'Completato' :
                                                change.status === 'rejected' ? 'Rifiutato' : 'In Attesa'}
                                             </Badge>
-                                          </TableCell>
-                                          <TableCell>
-                                            {change.status === 'pending' && (
-                                              <div className="flex items-center gap-1">
-                                                <Button
-                                                  size="icon"
-                                                  variant="ghost"
-                                                  className="h-7 w-7 text-green-600 hover:text-green-700"
-                                                  onClick={() => processNameChangeMutation.mutate({ id: change.id, action: 'approve' })}
-                                                  disabled={processNameChangeMutation.isPending}
-                                                  data-testid={`button-approve-name-change-${change.id}`}
-                                                >
-                                                  <Check className="h-4 w-4" />
-                                                </Button>
-                                                <Button
-                                                  size="icon"
-                                                  variant="ghost"
-                                                  className="h-7 w-7 text-red-600 hover:text-red-700"
-                                                  onClick={() => processNameChangeMutation.mutate({ id: change.id, action: 'reject' })}
-                                                  disabled={processNameChangeMutation.isPending}
-                                                  data-testid={`button-reject-name-change-${change.id}`}
-                                                >
-                                                  <X className="h-4 w-4" />
-                                                </Button>
+                                            <span className="text-sm text-muted-foreground">
+                                              {change.createdAt ? format(new Date(change.createdAt), 'dd/MM/yyyy HH:mm', { locale: it }) : '-'}
+                                            </span>
+                                          </div>
+                                          {change.status === 'pending' && (
+                                            <div className="flex items-center gap-1">
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="text-green-600 border-green-600 hover:bg-green-50"
+                                                onClick={() => processNameChangeMutation.mutate({ id: change.id, action: 'approve' })}
+                                                disabled={processNameChangeMutation.isPending}
+                                                data-testid={`button-approve-name-change-${change.id}`}
+                                              >
+                                                <Check className="h-4 w-4 mr-1" />
+                                                Approva
+                                              </Button>
+                                              <Button
+                                                size="sm"
+                                                variant="outline"
+                                                className="text-red-600 border-red-600 hover:bg-red-50"
+                                                onClick={() => processNameChangeMutation.mutate({ id: change.id, action: 'reject' })}
+                                                disabled={processNameChangeMutation.isPending}
+                                                data-testid={`button-reject-name-change-${change.id}`}
+                                              >
+                                                <X className="h-4 w-4 mr-1" />
+                                                Rifiuta
+                                              </Button>
+                                            </div>
+                                          )}
+                                        </div>
+                                        
+                                        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                                          <div className="p-3 border rounded-lg bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800">
+                                            <div className="flex items-center gap-2 mb-2">
+                                              <Badge variant="destructive" className="text-xs">VECCHIO</Badge>
+                                              <Badge variant="outline" className="text-xs line-through">Annullato</Badge>
+                                            </div>
+                                            <div className="space-y-1 text-sm">
+                                              <p><span className="text-muted-foreground">Intestatario:</span> <span className="font-medium">{change.originalTicket?.participantFirstName} {change.originalTicket?.participantLastName}</span></p>
+                                              <p><span className="text-muted-foreground">Prog.:</span> <span className="font-mono line-through">{change.originalTicket?.progressiveNumber || '-'}</span></p>
+                                              <p><span className="text-muted-foreground">Sigillo:</span> <span className="font-mono text-xs line-through">{change.originalTicket?.sigilloFiscale || 'N/D'}</span></p>
+                                            </div>
+                                          </div>
+                                          
+                                          <div className="flex justify-center">
+                                            <div className="flex items-center gap-2 text-muted-foreground">
+                                              <ArrowRight className="h-6 w-6" />
+                                            </div>
+                                          </div>
+                                          
+                                          <div className={`p-3 border rounded-lg ${change.newTicket ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' : 'bg-muted/50 border-dashed'}`}>
+                                            <div className="flex items-center gap-2 mb-2">
+                                              <Badge variant={change.newTicket ? 'default' : 'secondary'} className="text-xs">NUOVO</Badge>
+                                              {change.newTicket && <Badge variant="outline" className="text-xs text-green-600">Valido</Badge>}
+                                            </div>
+                                            {change.newTicket ? (
+                                              <div className="space-y-1 text-sm">
+                                                <p><span className="text-muted-foreground">Intestatario:</span> <span className="font-medium">{change.newFirstName} {change.newLastName}</span></p>
+                                                <p><span className="text-muted-foreground">Prog.:</span> <span className="font-mono font-bold">{change.newTicket?.progressiveNumber || '-'}</span></p>
+                                                <p><span className="text-muted-foreground">Sigillo:</span> <span className="font-mono text-xs">{change.newTicket?.sigilloFiscale || 'N/D'}</span></p>
                                               </div>
+                                            ) : (
+                                              <p className="text-sm text-muted-foreground italic">In attesa di emissione</p>
                                             )}
-                                          </TableCell>
-                                        </TableRow>
-                                      ))}
-                                    </TableBody>
-                                  </Table>
+                                          </div>
+                                        </div>
+                                        
+                                        <div className="flex items-center justify-between pt-2 border-t text-sm text-muted-foreground">
+                                          <span>Costo cambio: <span className="font-medium text-foreground">€{Number(change.fee || 0).toFixed(2)}</span></span>
+                                          {change.paidAt && <span>Pagato il {format(new Date(change.paidAt), 'dd/MM/yyyy', { locale: it })}</span>}
+                                        </div>
+                                      </div>
+                                    ))}
+                                  </div>
                                 )}
                               </div>
                             )}
@@ -3264,6 +3288,7 @@ export default function EventHub() {
                             <SelectItem value="valid">Validi</SelectItem>
                             <SelectItem value="used">Usati</SelectItem>
                             <SelectItem value="cancelled">Annullati</SelectItem>
+                            <SelectItem value="name_changed">Cambio Nominativo</SelectItem>
                           </SelectContent>
                         </Select>
                         <DropdownMenu>

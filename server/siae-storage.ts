@@ -230,8 +230,8 @@ export interface ISiaeStorage {
   // ==================== Name Changes ====================
   
   getSiaeNameChanges(ticketId: string): Promise<SiaeNameChange[]>;
-  getSiaeNameChangesByCompany(companyId: string): Promise<SiaeNameChange[]>;
-  getSiaeNameChangesByEvent(ticketedEventId: string): Promise<SiaeNameChange[]>;
+  getSiaeNameChangesByCompany(companyId: string): Promise<any[]>;
+  getSiaeNameChangesByEvent(ticketedEventId: string): Promise<any[]>;
   createSiaeNameChange(change: InsertSiaeNameChange): Promise<SiaeNameChange>;
   updateSiaeNameChange(id: string, change: Partial<SiaeNameChange>): Promise<SiaeNameChange | undefined>;
   
@@ -1133,14 +1133,61 @@ export class SiaeStorage implements ISiaeStorage {
       .then(rows => rows.map(r => ({ ...r.nameChange, sigilloFiscaleOriginale: r.sigilloFiscaleOriginale })));
   }
   
-  async getSiaeNameChangesByEvent(ticketedEventId: string): Promise<SiaeNameChange[]> {
-    return await db.select({ nameChange: siaeNameChanges })
+  async getSiaeNameChangesByEvent(ticketedEventId: string): Promise<any[]> {
+    const rows = await db.select({ 
+      nameChange: siaeNameChanges,
+      originalTicketId: siaeTickets.id,
+      originalTicketCode: siaeTickets.ticketCode,
+      originalSigilloFiscale: siaeTickets.sigilloFiscale,
+      originalProgressiveNumber: siaeTickets.progressiveNumber,
+      originalStatus: siaeTickets.status,
+      originalParticipantFirstName: siaeTickets.participantFirstName,
+      originalParticipantLastName: siaeTickets.participantLastName,
+    })
       .from(siaeNameChanges)
       .innerJoin(siaeTickets, eq(siaeNameChanges.originalTicketId, siaeTickets.id))
       .innerJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
       .where(eq(siaeEventSectors.ticketedEventId, ticketedEventId))
-      .orderBy(desc(siaeNameChanges.createdAt))
-      .then(rows => rows.map(r => r.nameChange));
+      .orderBy(desc(siaeNameChanges.createdAt));
+    
+    // For each name change, fetch the new ticket if it exists
+    const results = await Promise.all(rows.map(async (r) => {
+      let newTicket = null;
+      
+      if (r.nameChange.newTicketId) {
+        const [newTicketRow] = await db.select({
+          id: siaeTickets.id,
+          ticketCode: siaeTickets.ticketCode,
+          sigilloFiscale: siaeTickets.sigilloFiscale,
+          progressiveNumber: siaeTickets.progressiveNumber,
+          status: siaeTickets.status,
+          participantFirstName: siaeTickets.participantFirstName,
+          participantLastName: siaeTickets.participantLastName,
+        })
+          .from(siaeTickets)
+          .where(eq(siaeTickets.id, r.nameChange.newTicketId));
+        
+        if (newTicketRow) {
+          newTicket = newTicketRow;
+        }
+      }
+      
+      return {
+        ...r.nameChange,
+        originalTicket: {
+          id: r.originalTicketId,
+          ticketCode: r.originalTicketCode,
+          sigilloFiscale: r.originalSigilloFiscale,
+          progressiveNumber: r.originalProgressiveNumber,
+          status: r.originalStatus,
+          participantFirstName: r.originalParticipantFirstName,
+          participantLastName: r.originalParticipantLastName,
+        },
+        newTicket,
+      };
+    }));
+    
+    return results;
   }
   
   async createSiaeNameChange(change: InsertSiaeNameChange): Promise<SiaeNameChange> {

@@ -3221,6 +3221,85 @@ router.get("/api/public/account/tickets/:id", async (req, res) => {
         or(eq(siaeResales.status, 'listed'), eq(siaeResales.status, 'pending'))
       ));
 
+    // Query per i cambi nominativi collegati a questo biglietto
+    const nameChangeHistory = await db
+      .select({
+        id: siaeNameChanges.id,
+        originalTicketId: siaeNameChanges.originalTicketId,
+        newTicketId: siaeNameChanges.newTicketId,
+        newFirstName: siaeNameChanges.newFirstName,
+        newLastName: siaeNameChanges.newLastName,
+        newEmail: siaeNameChanges.newEmail,
+        status: siaeNameChanges.status,
+        processedAt: siaeNameChanges.processedAt,
+        createdAt: siaeNameChanges.createdAt,
+      })
+      .from(siaeNameChanges)
+      .where(
+        or(
+          eq(siaeNameChanges.originalTicketId, id),
+          eq(siaeNameChanges.newTicketId, id)
+        )
+      )
+      .orderBy(desc(siaeNameChanges.createdAt));
+
+    // Se questo biglietto è un sostituto (newTicketId = questo ticket)
+    let previousTicket: { id: string; sigilloFiscale: string | null; progressiveNumber: number | null } | null = null;
+    let nameChangeDate: string | null = null;
+    
+    const nameChangeAsNew = nameChangeHistory.find(nc => nc.newTicketId === id && nc.status === 'completed');
+    if (nameChangeAsNew) {
+      nameChangeDate = nameChangeAsNew.processedAt ? new Date(nameChangeAsNew.processedAt).toISOString() : null;
+      
+      // Recupera i dati del biglietto originale
+      const [originalTicketData] = await db
+        .select({
+          id: siaeTickets.id,
+          fiscalSealCode: siaeTickets.fiscalSealCode,
+          progressiveNumber: siaeFiscalSeals.progressiveNumber,
+        })
+        .from(siaeTickets)
+        .leftJoin(siaeFiscalSeals, eq(siaeFiscalSeals.id, siaeTickets.fiscalSealId))
+        .where(eq(siaeTickets.id, nameChangeAsNew.originalTicketId));
+      
+      if (originalTicketData) {
+        previousTicket = {
+          id: originalTicketData.id,
+          sigilloFiscale: originalTicketData.fiscalSealCode,
+          progressiveNumber: originalTicketData.progressiveNumber,
+        };
+      }
+    }
+
+    // Se questo biglietto è stato sostituito (originalTicketId = questo ticket)
+    let replacedBy: { id: string; sigilloFiscale: string | null; progressiveNumber: number | null } | null = null;
+    
+    const nameChangeAsOriginal = nameChangeHistory.find(nc => nc.originalTicketId === id && nc.status === 'completed');
+    if (nameChangeAsOriginal && nameChangeAsOriginal.newTicketId) {
+      if (!nameChangeDate) {
+        nameChangeDate = nameChangeAsOriginal.processedAt ? new Date(nameChangeAsOriginal.processedAt).toISOString() : null;
+      }
+      
+      // Recupera i dati del nuovo biglietto
+      const [newTicketData] = await db
+        .select({
+          id: siaeTickets.id,
+          fiscalSealCode: siaeTickets.fiscalSealCode,
+          progressiveNumber: siaeFiscalSeals.progressiveNumber,
+        })
+        .from(siaeTickets)
+        .leftJoin(siaeFiscalSeals, eq(siaeFiscalSeals.id, siaeTickets.fiscalSealId))
+        .where(eq(siaeTickets.id, nameChangeAsOriginal.newTicketId));
+      
+      if (newTicketData) {
+        replacedBy = {
+          id: newTicketData.id,
+          sigilloFiscale: newTicketData.fiscalSealCode,
+          progressiveNumber: newTicketData.progressiveNumber,
+        };
+      }
+    }
+
     const emissionDateTime = ticket.emissionDate 
       ? new Date(ticket.emissionDate).toISOString() 
       : null;
@@ -3244,6 +3323,11 @@ router.get("/api/public/account/tickets/:id", async (req, res) => {
       isListed: !!existingResale,
       existingResale: existingResale || null,
       hoursToEvent: Math.floor(hoursToEvent),
+      // Name change information
+      nameChangeHistory,
+      previousTicket,
+      replacedBy,
+      nameChangeDate,
     });
   } catch (error: any) {
     console.error("[PUBLIC] Get ticket detail error:", error);
