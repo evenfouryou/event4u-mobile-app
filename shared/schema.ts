@@ -5734,3 +5734,510 @@ export type EventTimelineItem = typeof eventTimelineItems.$inferSelect;
 export type InsertEventTimelineItem = z.infer<typeof insertEventTimelineItemSchema>;
 export type EventFaqItem = typeof eventFaqItems.$inferSelect;
 export type InsertEventFaqItem = z.infer<typeof insertEventFaqItemSchema>;
+
+// ==================== MODULO MARKETING ====================
+
+// ========== 1. EMAIL MARKETING ==========
+
+export const marketingEmailTemplates = pgTable("marketing_email_templates", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  name: varchar("name", { length: 100 }).notNull(),
+  subject: varchar("subject", { length: 200 }).notNull(),
+  htmlContent: text("html_content").notNull(),
+  type: varchar("type", { length: 30 }).notNull().default('newsletter'),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const marketingEmailTemplatesRelations = relations(marketingEmailTemplates, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [marketingEmailTemplates.companyId],
+    references: [companies.id],
+  }),
+  campaigns: many(marketingEmailCampaigns),
+}));
+
+export const marketingEmailCampaigns = pgTable("marketing_email_campaigns", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  templateId: varchar("template_id").references(() => marketingEmailTemplates.id),
+  name: varchar("name", { length: 100 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default('draft'),
+  scheduledAt: timestamp("scheduled_at"),
+  sentAt: timestamp("sent_at"),
+  eventId: varchar("event_id").references(() => events.id),
+  triggerType: varchar("trigger_type", { length: 30 }),
+  recipientCount: integer("recipient_count").default(0),
+  openCount: integer("open_count").default(0),
+  clickCount: integer("click_count").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const marketingEmailCampaignsRelations = relations(marketingEmailCampaigns, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [marketingEmailCampaigns.companyId],
+    references: [companies.id],
+  }),
+  template: one(marketingEmailTemplates, {
+    fields: [marketingEmailCampaigns.templateId],
+    references: [marketingEmailTemplates.id],
+  }),
+  event: one(events, {
+    fields: [marketingEmailCampaigns.eventId],
+    references: [events.id],
+  }),
+  logs: many(marketingEmailLogs),
+}));
+
+export const marketingEmailLogs = pgTable("marketing_email_logs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  campaignId: varchar("campaign_id").references(() => marketingEmailCampaigns.id),
+  customerId: varchar("customer_id").references(() => siaeCustomers.id),
+  email: varchar("email", { length: 255 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default('pending'),
+  sentAt: timestamp("sent_at"),
+  openedAt: timestamp("opened_at"),
+  clickedAt: timestamp("clicked_at"),
+  errorMessage: text("error_message"),
+});
+
+export const marketingEmailLogsRelations = relations(marketingEmailLogs, ({ one }) => ({
+  campaign: one(marketingEmailCampaigns, {
+    fields: [marketingEmailLogs.campaignId],
+    references: [marketingEmailCampaigns.id],
+  }),
+  customer: one(siaeCustomers, {
+    fields: [marketingEmailLogs.customerId],
+    references: [siaeCustomers.id],
+  }),
+}));
+
+// ========== 2. PROGRAMMA FEDELTÀ ==========
+
+export const loyaltyPrograms = pgTable("loyalty_programs", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id).unique(),
+  name: varchar("name", { length: 100 }).notNull().default('Programma Fedeltà'),
+  pointsPerEuro: decimal("points_per_euro", { precision: 5, scale: 2 }).notNull().default('1'),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const loyaltyProgramsRelations = relations(loyaltyPrograms, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [loyaltyPrograms.companyId],
+    references: [companies.id],
+  }),
+  tiers: many(loyaltyTiers),
+  points: many(loyaltyPoints),
+  rewards: many(loyaltyRewards),
+}));
+
+export const loyaltyTiers = pgTable("loyalty_tiers", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  programId: varchar("program_id").notNull().references(() => loyaltyPrograms.id),
+  name: varchar("name", { length: 50 }).notNull(),
+  minPoints: integer("min_points").notNull().default(0),
+  discountPercent: decimal("discount_percent", { precision: 5, scale: 2 }).default('0'),
+  benefits: text("benefits"),
+  color: varchar("color", { length: 7 }).default('#CD7F32'),
+  sortOrder: integer("sort_order").default(0),
+});
+
+export const loyaltyTiersRelations = relations(loyaltyTiers, ({ one }) => ({
+  program: one(loyaltyPrograms, {
+    fields: [loyaltyTiers.programId],
+    references: [loyaltyPrograms.id],
+  }),
+}));
+
+export const loyaltyPoints = pgTable("loyalty_points", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  customerId: varchar("customer_id").notNull().references(() => siaeCustomers.id),
+  programId: varchar("program_id").notNull().references(() => loyaltyPrograms.id),
+  totalPoints: integer("total_points").notNull().default(0),
+  lifetimePoints: integer("lifetime_points").notNull().default(0),
+  currentTierId: varchar("current_tier_id").references(() => loyaltyTiers.id),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const loyaltyPointsRelations = relations(loyaltyPoints, ({ one }) => ({
+  customer: one(siaeCustomers, {
+    fields: [loyaltyPoints.customerId],
+    references: [siaeCustomers.id],
+  }),
+  program: one(loyaltyPrograms, {
+    fields: [loyaltyPoints.programId],
+    references: [loyaltyPrograms.id],
+  }),
+  currentTier: one(loyaltyTiers, {
+    fields: [loyaltyPoints.currentTierId],
+    references: [loyaltyTiers.id],
+  }),
+}));
+
+export const loyaltyPointLedger = pgTable("loyalty_point_ledger", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  customerId: varchar("customer_id").notNull().references(() => siaeCustomers.id),
+  programId: varchar("program_id").notNull().references(() => loyaltyPrograms.id),
+  points: integer("points").notNull(),
+  type: varchar("type", { length: 30 }).notNull(),
+  referenceId: varchar("reference_id"),
+  description: varchar("description", { length: 200 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const loyaltyPointLedgerRelations = relations(loyaltyPointLedger, ({ one }) => ({
+  customer: one(siaeCustomers, {
+    fields: [loyaltyPointLedger.customerId],
+    references: [siaeCustomers.id],
+  }),
+  program: one(loyaltyPrograms, {
+    fields: [loyaltyPointLedger.programId],
+    references: [loyaltyPrograms.id],
+  }),
+}));
+
+export const loyaltyRewards = pgTable("loyalty_rewards", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  programId: varchar("program_id").notNull().references(() => loyaltyPrograms.id),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  pointsCost: integer("points_cost").notNull(),
+  type: varchar("type", { length: 30 }).notNull(),
+  value: decimal("value", { precision: 10, scale: 2 }),
+  imageUrl: varchar("image_url", { length: 500 }),
+  availableQuantity: integer("available_quantity"),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const loyaltyRewardsRelations = relations(loyaltyRewards, ({ one }) => ({
+  program: one(loyaltyPrograms, {
+    fields: [loyaltyRewards.programId],
+    references: [loyaltyPrograms.id],
+  }),
+}));
+
+// ========== 3. REFERRAL PROGRAM ==========
+
+export const referralCodes = pgTable("referral_codes", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  customerId: varchar("customer_id").notNull().references(() => siaeCustomers.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  code: varchar("code", { length: 20 }).notNull().unique(),
+  usageCount: integer("usage_count").notNull().default(0),
+  totalEarnings: decimal("total_earnings", { precision: 10, scale: 2 }).default('0'),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const referralCodesRelations = relations(referralCodes, ({ one, many }) => ({
+  customer: one(siaeCustomers, {
+    fields: [referralCodes.customerId],
+    references: [siaeCustomers.id],
+  }),
+  company: one(companies, {
+    fields: [referralCodes.companyId],
+    references: [companies.id],
+  }),
+  trackings: many(referralTracking),
+}));
+
+export const referralTracking = pgTable("referral_tracking", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  referralCodeId: varchar("referral_code_id").notNull().references(() => referralCodes.id),
+  referrerId: varchar("referrer_id").notNull().references(() => siaeCustomers.id),
+  referredCustomerId: varchar("referred_customer_id").notNull().references(() => siaeCustomers.id),
+  status: varchar("status", { length: 20 }).notNull().default('pending'),
+  referrerRewardPoints: integer("referrer_reward_points").default(0),
+  referredDiscountPercent: decimal("referred_discount_percent", { precision: 5, scale: 2 }).default('10'),
+  convertedAt: timestamp("converted_at"),
+  rewardedAt: timestamp("rewarded_at"),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const referralTrackingRelations = relations(referralTracking, ({ one }) => ({
+  referralCode: one(referralCodes, {
+    fields: [referralTracking.referralCodeId],
+    references: [referralCodes.id],
+  }),
+  referrer: one(siaeCustomers, {
+    fields: [referralTracking.referrerId],
+    references: [siaeCustomers.id],
+  }),
+  referredCustomer: one(siaeCustomers, {
+    fields: [referralTracking.referredCustomerId],
+    references: [siaeCustomers.id],
+  }),
+}));
+
+export const referralSettings = pgTable("referral_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id).unique(),
+  isActive: boolean("is_active").notNull().default(true),
+  referrerRewardPoints: integer("referrer_reward_points").notNull().default(100),
+  referredDiscountPercent: decimal("referred_discount_percent", { precision: 5, scale: 2 }).notNull().default('10'),
+  minPurchaseAmount: decimal("min_purchase_amount", { precision: 10, scale: 2 }).default('0'),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const referralSettingsRelations = relations(referralSettings, ({ one }) => ({
+  company: one(companies, {
+    fields: [referralSettings.companyId],
+    references: [companies.id],
+  }),
+}));
+
+// ========== 4. BUNDLE/PACCHETTI ==========
+
+export const productBundles = pgTable("product_bundles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  type: varchar("type", { length: 30 }).notNull(),
+  basePrice: decimal("base_price", { precision: 10, scale: 2 }).notNull(),
+  originalPrice: decimal("original_price", { precision: 10, scale: 2 }),
+  minGroupSize: integer("min_group_size").default(1),
+  maxGroupSize: integer("max_group_size"),
+  imageUrl: varchar("image_url", { length: 500 }),
+  isActive: boolean("is_active").notNull().default(true),
+  validFrom: timestamp("valid_from"),
+  validTo: timestamp("valid_to"),
+  availableQuantity: integer("available_quantity"),
+  soldCount: integer("sold_count").notNull().default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const productBundlesRelations = relations(productBundles, ({ one, many }) => ({
+  company: one(companies, {
+    fields: [productBundles.companyId],
+    references: [companies.id],
+  }),
+  items: many(productBundleItems),
+  purchases: many(bundlePurchases),
+}));
+
+export const productBundleItems = pgTable("product_bundle_items", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bundleId: varchar("bundle_id").notNull().references(() => productBundles.id),
+  itemType: varchar("item_type", { length: 30 }).notNull(),
+  itemName: varchar("item_name", { length: 100 }).notNull(),
+  quantity: integer("quantity").notNull().default(1),
+  sectorId: varchar("sector_id"),
+  productId: varchar("product_id"),
+  sortOrder: integer("sort_order").default(0),
+});
+
+export const productBundleItemsRelations = relations(productBundleItems, ({ one }) => ({
+  bundle: one(productBundles, {
+    fields: [productBundleItems.bundleId],
+    references: [productBundles.id],
+  }),
+}));
+
+export const bundlePurchases = pgTable("bundle_purchases", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  bundleId: varchar("bundle_id").notNull().references(() => productBundles.id),
+  customerId: varchar("customer_id").references(() => siaeCustomers.id),
+  eventId: varchar("event_id").references(() => events.id),
+  transactionId: varchar("transaction_id"),
+  groupSize: integer("group_size").default(1),
+  totalPrice: decimal("total_price", { precision: 10, scale: 2 }).notNull(),
+  status: varchar("status", { length: 20 }).notNull().default('pending'),
+  qrCode: varchar("qr_code", { length: 100 }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const bundlePurchasesRelations = relations(bundlePurchases, ({ one }) => ({
+  bundle: one(productBundles, {
+    fields: [bundlePurchases.bundleId],
+    references: [productBundles.id],
+  }),
+  customer: one(siaeCustomers, {
+    fields: [bundlePurchases.customerId],
+    references: [siaeCustomers.id],
+  }),
+  event: one(events, {
+    fields: [bundlePurchases.eventId],
+    references: [events.id],
+  }),
+}));
+
+// ========== 5. ANALYTICS MARKETING ==========
+
+export const marketingDailyStats = pgTable("marketing_daily_stats", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  date: varchar("date", { length: 10 }).notNull(),
+  channel: varchar("channel", { length: 30 }).notNull(),
+  impressions: integer("impressions").default(0),
+  clicks: integer("clicks").default(0),
+  conversions: integer("conversions").default(0),
+  revenue: decimal("revenue", { precision: 12, scale: 2 }).default('0'),
+  newCustomers: integer("new_customers").default(0),
+  returningCustomers: integer("returning_customers").default(0),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const marketingDailyStatsRelations = relations(marketingDailyStats, ({ one }) => ({
+  company: one(companies, {
+    fields: [marketingDailyStats.companyId],
+    references: [companies.id],
+  }),
+}));
+
+export const customerSegments = pgTable("customer_segments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  name: varchar("name", { length: 100 }).notNull(),
+  description: text("description"),
+  filterRules: text("filter_rules"),
+  customerCount: integer("customer_count").default(0),
+  isAutomatic: boolean("is_automatic").notNull().default(false),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const customerSegmentsRelations = relations(customerSegments, ({ one }) => ({
+  company: one(companies, {
+    fields: [customerSegments.companyId],
+    references: [companies.id],
+  }),
+}));
+
+// ========== INSERT SCHEMAS - MARKETING ==========
+
+export const insertMarketingEmailTemplateSchema = createInsertSchema(marketingEmailTemplates).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertMarketingEmailCampaignSchema = createInsertSchema(marketingEmailCampaigns).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMarketingEmailLogSchema = createInsertSchema(marketingEmailLogs).omit({
+  id: true,
+});
+
+export const insertLoyaltyProgramSchema = createInsertSchema(loyaltyPrograms).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertLoyaltyTierSchema = createInsertSchema(loyaltyTiers).omit({
+  id: true,
+});
+
+export const insertLoyaltyPointsSchema = createInsertSchema(loyaltyPoints).omit({
+  id: true,
+  updatedAt: true,
+});
+
+export const insertLoyaltyPointLedgerSchema = createInsertSchema(loyaltyPointLedger).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertLoyaltyRewardSchema = createInsertSchema(loyaltyRewards).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertReferralCodeSchema = createInsertSchema(referralCodes).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertReferralTrackingSchema = createInsertSchema(referralTracking).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertReferralSettingsSchema = createInsertSchema(referralSettings).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProductBundleSchema = createInsertSchema(productBundles).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertProductBundleItemSchema = createInsertSchema(productBundleItems).omit({
+  id: true,
+});
+
+export const insertBundlePurchaseSchema = createInsertSchema(bundlePurchases).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const insertMarketingDailyStatsSchema = createInsertSchema(marketingDailyStats).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const insertCustomerSegmentSchema = createInsertSchema(customerSegments).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+// ========== TYPES - MARKETING ==========
+
+export type MarketingEmailTemplate = typeof marketingEmailTemplates.$inferSelect;
+export type InsertMarketingEmailTemplate = z.infer<typeof insertMarketingEmailTemplateSchema>;
+
+export type MarketingEmailCampaign = typeof marketingEmailCampaigns.$inferSelect;
+export type InsertMarketingEmailCampaign = z.infer<typeof insertMarketingEmailCampaignSchema>;
+
+export type MarketingEmailLog = typeof marketingEmailLogs.$inferSelect;
+export type InsertMarketingEmailLog = z.infer<typeof insertMarketingEmailLogSchema>;
+
+export type LoyaltyProgram = typeof loyaltyPrograms.$inferSelect;
+export type InsertLoyaltyProgram = z.infer<typeof insertLoyaltyProgramSchema>;
+
+export type LoyaltyTier = typeof loyaltyTiers.$inferSelect;
+export type InsertLoyaltyTier = z.infer<typeof insertLoyaltyTierSchema>;
+
+export type LoyaltyPoints = typeof loyaltyPoints.$inferSelect;
+export type InsertLoyaltyPoints = z.infer<typeof insertLoyaltyPointsSchema>;
+
+export type LoyaltyPointLedger = typeof loyaltyPointLedger.$inferSelect;
+export type InsertLoyaltyPointLedger = z.infer<typeof insertLoyaltyPointLedgerSchema>;
+
+export type LoyaltyReward = typeof loyaltyRewards.$inferSelect;
+export type InsertLoyaltyReward = z.infer<typeof insertLoyaltyRewardSchema>;
+
+export type ReferralCode = typeof referralCodes.$inferSelect;
+export type InsertReferralCode = z.infer<typeof insertReferralCodeSchema>;
+
+export type ReferralTracking = typeof referralTracking.$inferSelect;
+export type InsertReferralTracking = z.infer<typeof insertReferralTrackingSchema>;
+
+export type ReferralSettings = typeof referralSettings.$inferSelect;
+export type InsertReferralSettings = z.infer<typeof insertReferralSettingsSchema>;
+
+export type ProductBundle = typeof productBundles.$inferSelect;
+export type InsertProductBundle = z.infer<typeof insertProductBundleSchema>;
+
+export type ProductBundleItem = typeof productBundleItems.$inferSelect;
+export type InsertProductBundleItem = z.infer<typeof insertProductBundleItemSchema>;
+
+export type BundlePurchase = typeof bundlePurchases.$inferSelect;
+export type InsertBundlePurchase = z.infer<typeof insertBundlePurchaseSchema>;
+
+export type MarketingDailyStats = typeof marketingDailyStats.$inferSelect;
+export type InsertMarketingDailyStats = z.infer<typeof insertMarketingDailyStatsSchema>;
+
+export type CustomerSegment = typeof customerSegments.$inferSelect;
+export type InsertCustomerSegment = z.infer<typeof insertCustomerSegmentSchema>;
