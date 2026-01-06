@@ -27,18 +27,21 @@ async function getAccessToken() {
 }
 
 // File da caricare per il progetto desktop
+// Formato: { local: path locale, remote: path nel repository GitHub }
 const filesToUpload = [
-  '.github/workflows/build-desktop.yml',
-  'desktop-app/package.json',
-  'desktop-app/main.js',
-  'desktop-app/preload.js',
-  'desktop-app/index.html',
-  'desktop-app/styles.css',
-  'desktop-app/renderer.js',
-  'desktop-app/SiaeBridge/SiaeBridge.csproj',
-  'desktop-app/SiaeBridge/Program.cs',
-  'desktop-app/SiaeBridge/LibSiae.cs',
-  'desktop-app/SiaeBridge/README.md',
+  // GitHub Actions workflow - deve essere in .github/workflows/ nel repo
+  { local: 'desktop-app/.github/workflows/build.yml', remote: '.github/workflows/build.yml' },
+  // Electron app files - root del repo
+  { local: 'desktop-app/package.json', remote: 'package.json' },
+  { local: 'desktop-app/main.js', remote: 'main.js' },
+  { local: 'desktop-app/preload.js', remote: 'preload.js' },
+  { local: 'desktop-app/index.html', remote: 'index.html' },
+  { local: 'desktop-app/styles.css', remote: 'styles.css' },
+  { local: 'desktop-app/renderer.js', remote: 'renderer.js' },
+  // SiaeBridge .NET project
+  { local: 'desktop-app/SiaeBridge/SiaeBridge.csproj', remote: 'SiaeBridge/SiaeBridge.csproj' },
+  { local: 'desktop-app/SiaeBridge/Program.cs', remote: 'SiaeBridge/Program.cs' },
+  { local: 'desktop-app/SiaeBridge/LibSiae.cs', remote: 'SiaeBridge/LibSiae.cs' },
 ];
 
 async function main() {
@@ -71,11 +74,11 @@ async function main() {
   await new Promise(r => setTimeout(r, 1000));
   
   // Ora carica tutti i file uno per uno
-  for (const filePath of filesToUpload) {
-    const fullPath = path.join('/home/runner/workspace', filePath);
+  for (const file of filesToUpload) {
+    const fullPath = path.join('/home/runner/workspace', file.local);
     
     if (!fs.existsSync(fullPath)) {
-      console.log(`⚠️  File non trovato: ${filePath}`);
+      console.log(`⚠️  File non trovato: ${file.local}`);
       continue;
     }
     
@@ -85,7 +88,7 @@ async function main() {
       // Prova a ottenere il file esistente per il SHA
       let sha: string | undefined;
       try {
-        const { data: existing } = await octokit.repos.getContent({ owner, repo, path: filePath });
+        const { data: existing } = await octokit.repos.getContent({ owner, repo, path: file.remote });
         if ('sha' in existing) {
           sha = existing.sha;
         }
@@ -95,50 +98,53 @@ async function main() {
       
       await octokit.repos.createOrUpdateFileContents({
         owner, repo,
-        path: filePath,
-        message: `Add ${filePath}`,
+        path: file.remote,
+        message: `Update ${file.remote}`,
         content: Buffer.from(content).toString('base64'),
         sha
       });
       
-      console.log(`✅ ${filePath}`);
+      console.log(`✅ ${file.remote}`);
     } catch (e: any) {
-      console.log(`❌ ${filePath}: ${e.message}`);
+      console.log(`❌ ${file.remote}: ${e.message}`);
     }
   }
   
-  // Carica anche libSIAE.dll
-  const dllPath = '/home/runner/workspace/attached_assets';
-  if (fs.existsSync(dllPath)) {
-    const dllFiles = fs.readdirSync(dllPath)
-      .filter(f => f.toLowerCase().includes('libsiae') && f.endsWith('.dll'));
+  // Carica le DLL prebuilt per il bridge SIAE
+  const dllsToUpload = [
+    { local: 'desktop-app/SiaeBridge/prebuilt/libSIAE.dll', remote: 'SiaeBridge/prebuilt/libSIAE.dll' },
+    { local: 'desktop-app/SiaeBridge/prebuilt/libSIAEp7.dll', remote: 'SiaeBridge/prebuilt/libSIAEp7.dll' },
+    { local: 'desktop-app/SiaeBridge/prebuilt/Newtonsoft.Json.dll', remote: 'SiaeBridge/prebuilt/Newtonsoft.Json.dll' },
+  ];
+  
+  for (const dll of dllsToUpload) {
+    const fullPath = path.join('/home/runner/workspace', dll.local);
     
-    for (const dllFile of dllFiles) {
-      const fullPath = path.join(dllPath, dllFile);
-      const content = fs.readFileSync(fullPath);
-      
+    if (!fs.existsSync(fullPath)) {
+      console.log(`⚠️  DLL non trovata: ${dll.local}`);
+      continue;
+    }
+    
+    const content = fs.readFileSync(fullPath);
+    
+    try {
+      let sha: string | undefined;
       try {
-        let sha: string | undefined;
-        try {
-          const { data: existing } = await octokit.repos.getContent({ 
-            owner, repo, 
-            path: `attached_assets/${dllFile}` 
-          });
-          if ('sha' in existing) sha = existing.sha;
-        } catch {}
-        
-        await octokit.repos.createOrUpdateFileContents({
-          owner, repo,
-          path: `attached_assets/${dllFile}`,
-          message: `Add ${dllFile}`,
-          content: content.toString('base64'),
-          sha
-        });
-        
-        console.log(`✅ attached_assets/${dllFile}`);
-      } catch (e: any) {
-        console.log(`❌ ${dllFile}: ${e.message}`);
-      }
+        const { data: existing } = await octokit.repos.getContent({ owner, repo, path: dll.remote });
+        if ('sha' in existing) sha = existing.sha;
+      } catch {}
+      
+      await octokit.repos.createOrUpdateFileContents({
+        owner, repo,
+        path: dll.remote,
+        message: `Update ${dll.remote}`,
+        content: content.toString('base64'),
+        sha
+      });
+      
+      console.log(`✅ ${dll.remote}`);
+    } catch (e: any) {
+      console.log(`❌ ${dll.remote}: ${e.message}`);
     }
   }
   
