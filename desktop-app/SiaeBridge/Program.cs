@@ -118,7 +118,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.23 - FIX: ExtractEmailAddress per SMIMESignML (solo email, no display name)");
+            Log("SiaeBridge v3.24 - FIX: Reset card state + bInitialize=0 per SMIMESignML");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -2190,7 +2190,16 @@ namespace SiaeBridge
                     Log($"  WARNING: Could not change directory: {cwdEx.Message}");
                 }
 
+                // Reset card state before SMIMESignML call
+                // FIX v3.24: La carta potrebbe essere in uno stato transazione dopo PKCS7SignML
+                Log($"  Resetting card state before SMIMESignML...");
+                int finRes = FinalizeML(_slot);
+                Log($"  FinalizeML = {finRes}");
+                int initRes = Initialize(_slot);
+                Log($"  Initialize = {initRes}");
+                
                 // Chiama SMIMESignML - funzione SIAE nativa per S/MIME conforme
+                // Usa bInitialize=0 perché abbiamo già inizializzato sopra
                 Log($"  Calling SMIMESignML...");
                 Log($"    pin=***, slot={_slot}");
                 Log($"    outputFile={outputFile}");
@@ -2200,7 +2209,7 @@ namespace SiaeBridge
                 Log($"    otherHeaders=(null)");
                 Log($"    body length={body.Length}");
                 Log($"    attachments={attachments}");
-                Log($"    flags=0, init=1");
+                Log($"    flags=0, init=0");
 
                 int signResult = SMIMESignML(
                     pin,
@@ -2213,7 +2222,7 @@ namespace SiaeBridge
                     body,
                     attachments,    // path ai file allegati
                     0,              // flags
-                    1               // bInitialize
+                    0               // bInitialize=0 (già inizializzato manualmente)
                 );
 
                 Log($"  SMIMESignML result: {signResult} (0x{signResult:X8})");
