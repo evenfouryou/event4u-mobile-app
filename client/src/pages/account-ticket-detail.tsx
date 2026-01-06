@@ -564,19 +564,12 @@ export default function AccountTicketDetail() {
                       <p className="text-center text-sm text-muted-foreground">
                         Questo biglietto è stato annullato a seguito di cambio nominativo
                       </p>
-                      <div className="pt-2">
-                        <Button
-                          variant="outline"
-                          className="w-full"
-                          onClick={() => navigate(`/account/tickets/${ticket.replacedBy!.id}`)}
-                          data-testid="button-view-new-ticket"
-                        >
-                          Vedi nuovo biglietto
-                          <span className="ml-2 text-xs text-muted-foreground">
-                            (Sigillo: {ticket.replacedBy.sigilloFiscale})
-                          </span>
-                        </Button>
-                      </div>
+                      <p className="text-sm text-center">
+                        Sigillo: <span className="line-through text-muted-foreground">{ticket.fiscalSealCode}</span>
+                      </p>
+                      <p className="text-xs text-center text-muted-foreground italic">
+                        Il nuovo biglietto è stato trasferito al nuovo intestatario
+                      </p>
                     </div>
                   )}
                 </CardContent>
@@ -954,18 +947,12 @@ export default function AccountTicketDetail() {
                   <p className="text-center text-sm text-muted-foreground">
                     Questo biglietto è stato annullato a seguito di cambio nominativo
                   </p>
-                  <HapticButton
-                    variant="outline"
-                    className="w-full min-h-[48px] rounded-xl"
-                    onClick={() => navigate(`/account/tickets/${ticket.replacedBy!.id}`)}
-                    data-testid="button-view-new-ticket-mobile"
-                    hapticType="light"
-                  >
-                    Vedi nuovo biglietto
-                    <span className="ml-2 text-xs text-muted-foreground">
-                      (Sigillo: {ticket.replacedBy.sigilloFiscale})
-                    </span>
-                  </HapticButton>
+                  <p className="text-sm text-center">
+                    Sigillo: <span className="line-through text-muted-foreground">{ticket.fiscalSealCode}</span>
+                  </p>
+                  <p className="text-xs text-center text-muted-foreground italic">
+                    Il nuovo biglietto è stato trasferito al nuovo intestatario
+                  </p>
                 </div>
               )}
             </motion.div>
