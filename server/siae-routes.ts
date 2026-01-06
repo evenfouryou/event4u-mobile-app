@@ -4,7 +4,7 @@ import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTime
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
-import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions, siaeCashierAllocations, siaeOtpAttempts, siaeNameChanges, siaeResales, publicCartItems, publicCheckoutSessions, publicCustomerSessions, tableBookings, guestListEntries, siaeTransmissions, companies, siaeEmissionChannels, siaeSystemConfig, userFeatures, siaeTicketedEvents, users, siaeEventSectors } from "@shared/schema";
+import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions, siaeCashierAllocations, siaeOtpAttempts, siaeNameChanges, siaeResales, publicCartItems, publicCheckoutSessions, publicCustomerSessions, tableBookings, guestListEntries, siaeTransmissions, companies, siaeEmissionChannels, siaeSystemConfig, userFeatures, siaeTicketedEvents, users, siaeEventSectors, floorPlanSeats, siaeSeats, floorPlanZones } from "@shared/schema";
 import { eq, and, or, sql, desc, isNull, SQL, gte, lte, count, inArray } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -2331,6 +2331,151 @@ router.delete("/api/siae/sectors/:sectorId/seats", requireAuth, requireOrganizer
     
     res.json({ message: `Eliminati ${seats.length} posti dal settore` });
   } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// POST /api/siae/sectors/:sectorId/sync-seats - Sincronizza posti da floor plan a settore SIAE
+router.post("/api/siae/sectors/:sectorId/sync-seats", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { sectorId } = req.params;
+    const { zoneId } = req.body;
+    
+    if (!zoneId) {
+      return res.status(400).json({ message: "ID zona floor plan richiesto" });
+    }
+    
+    // 1. Verifica che il settore esista e sia numerato
+    const [sector] = await db.select().from(siaeEventSectors).where(eq(siaeEventSectors.id, sectorId));
+    if (!sector) {
+      return res.status(404).json({ message: "Settore non trovato" });
+    }
+    if (!sector.isNumbered) {
+      return res.status(400).json({ message: "Il settore non è numerato. Solo i settori numerati possono sincronizzare i posti." });
+    }
+    
+    // 2. Verifica che la zona esista
+    const [zone] = await db.select().from(floorPlanZones).where(eq(floorPlanZones.id, zoneId));
+    if (!zone) {
+      return res.status(404).json({ message: "Zona floor plan non trovata" });
+    }
+    
+    // 3. SIAE Compliance: Check if any tickets exist for this sector
+    const [ticketCount] = await db
+      .select({ count: sql<number>`count(*)` })
+      .from(siaeTickets)
+      .where(eq(siaeTickets.sectorId, sectorId));
+    
+    if (ticketCount && ticketCount.count > 0) {
+      return res.status(400).json({ 
+        message: "Sincronizzazione non consentita: sono stati emessi biglietti per questo settore. Per conformità SIAE, i dati dei posti non possono essere modificati.",
+        code: "SIAE_TICKETS_EXIST"
+      });
+    }
+    
+    // 4. Carica i posti dalla zona del floor plan
+    const floorPlanSeatsData = await db.select().from(floorPlanSeats).where(eq(floorPlanSeats.zoneId, zoneId));
+    if (floorPlanSeatsData.length === 0) {
+      return res.status(400).json({ message: "Nessun posto trovato nella zona selezionata" });
+    }
+    
+    // 5. Elimina posti esistenti del settore
+    await db.delete(siaeSeats).where(eq(siaeSeats.sectorId, sectorId));
+    
+    // 6. Copia i posti dal floor plan al settore SIAE
+    const seatsToInsert = floorPlanSeatsData.map(fpSeat => ({
+      sectorId,
+      floorPlanSeatId: fpSeat.id,
+      row: fpSeat.row,
+      seatNumber: fpSeat.seatNumber?.toString() || fpSeat.seatLabel,
+      seatLabel: fpSeat.seatLabel,
+      posX: fpSeat.posX,
+      posY: fpSeat.posY,
+      status: fpSeat.isBlocked ? 'blocked' : 'available',
+      isAccessible: fpSeat.isAccessible || false,
+    }));
+    
+    const inserted = await db.insert(siaeSeats).values(seatsToInsert).returning();
+    
+    // 7. Aggiorna capacità e posti disponibili del settore
+    const availableCount = inserted.filter(s => s.status === 'available').length;
+    await db.update(siaeEventSectors)
+      .set({ 
+        capacity: inserted.length, 
+        availableSeats: availableCount 
+      })
+      .where(eq(siaeEventSectors.id, sectorId));
+    
+    res.json({ 
+      success: true, 
+      count: inserted.length,
+      availableSeats: availableCount,
+      zoneName: zone.name,
+      message: `${inserted.length} posti sincronizzati con successo dalla zona "${zone.name}"`
+    });
+  } catch (error: any) {
+    console.error("[SIAE-ROUTES] Error syncing seats from floor plan:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// GET /api/siae/sectors/:sectorId/available-zones - Ottieni zone disponibili per sincronizzazione
+router.get("/api/siae/sectors/:sectorId/available-zones", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { sectorId } = req.params;
+    
+    // Ottieni il settore per trovare l'evento
+    const [sector] = await db.select().from(siaeEventSectors).where(eq(siaeEventSectors.id, sectorId));
+    if (!sector) {
+      return res.status(404).json({ message: "Settore non trovato" });
+    }
+    
+    // Ottieni l'evento per trovare la location
+    const [ticketedEvent] = await db.select().from(siaeTicketedEvents).where(eq(siaeTicketedEvents.id, sector.ticketedEventId));
+    if (!ticketedEvent || !ticketedEvent.locationId) {
+      return res.json({ zones: [] });
+    }
+    
+    // Import venueFloorPlans
+    const { venueFloorPlans } = await import("@shared/schema");
+    
+    // Ottieni i floor plan della location
+    const floorPlans = await db.select().from(venueFloorPlans).where(eq(venueFloorPlans.locationId, ticketedEvent.locationId));
+    if (floorPlans.length === 0) {
+      return res.json({ zones: [] });
+    }
+    
+    // Ottieni tutte le zone con posti dei floor plan
+    const zones = await db
+      .select({
+        id: floorPlanZones.id,
+        name: floorPlanZones.name,
+        zoneType: floorPlanZones.zoneType,
+        floorPlanId: floorPlanZones.floorPlanId,
+        capacity: floorPlanZones.capacity,
+      })
+      .from(floorPlanZones)
+      .where(inArray(floorPlanZones.floorPlanId, floorPlans.map(fp => fp.id)));
+    
+    // Per ogni zona, conta i posti
+    const zonesWithSeats = await Promise.all(zones.map(async (zone) => {
+      const [seatCount] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(floorPlanSeats)
+        .where(eq(floorPlanSeats.zoneId, zone.id));
+      
+      return {
+        ...zone,
+        seatsCount: seatCount?.count || 0,
+      };
+    }));
+    
+    // Filtra solo le zone che hanno posti
+    const zonesWithSeatsFiltered = zonesWithSeats.filter(z => z.seatsCount > 0);
+    
+    res.json({ zones: zonesWithSeatsFiltered });
+  } catch (error: any) {
+    console.error("[SIAE-ROUTES] Error fetching available zones:", error);
     res.status(500).json({ message: error.message });
   }
 });

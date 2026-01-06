@@ -770,6 +770,11 @@ export default function EventHub() {
   const [isEditSectorDialogOpen, setIsEditSectorDialogOpen] = useState(false);
   const [editingSectorData, setEditingSectorData] = useState<any>(null);
 
+  // Sync Seats dialog state
+  const [isSyncSeatsDialogOpen, setIsSyncSeatsDialogOpen] = useState(false);
+  const [syncSeatsSectorId, setSyncSeatsSectorId] = useState<string | null>(null);
+  const [selectedZoneIdForSync, setSelectedZoneIdForSync] = useState<string>("");
+
   // Subscription type creation dialog state
   const [isSubscriptionTypeDialogOpen, setIsSubscriptionTypeDialogOpen] = useState(false);
 
@@ -1055,6 +1060,44 @@ export default function EventHub() {
       toast({ title: "Errore", description: error.message, variant: "destructive" });
     },
   });
+
+  // Query for available zones for sync seats
+  const { data: availableZonesData, isLoading: zonesLoading } = useQuery<{ zones: Array<{ id: string; name: string; zoneType: string; seatsCount: number }> }>({
+    queryKey: ['/api/siae/sectors', syncSeatsSectorId, 'available-zones'],
+    enabled: !!syncSeatsSectorId && isSyncSeatsDialogOpen,
+  });
+
+  // Mutation for syncing seats from floor plan
+  const syncSeatsMutation = useMutation({
+    mutationFn: async ({ sectorId, zoneId }: { sectorId: string; zoneId: string }) => {
+      const response = await apiRequest("POST", `/api/siae/sectors/${sectorId}/sync-seats`, { zoneId });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/events', id, 'ticketing'] });
+      setIsSyncSeatsDialogOpen(false);
+      setSyncSeatsSectorId(null);
+      setSelectedZoneIdForSync("");
+      toast({ 
+        title: "Posti sincronizzati", 
+        description: data.message || `${data.count} posti importati con successo`
+      });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Errore sincronizzazione", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const handleOpenSyncSeatsDialog = (sectorId: string) => {
+    setSyncSeatsSectorId(sectorId);
+    setSelectedZoneIdForSync("");
+    setIsSyncSeatsDialogOpen(true);
+  };
+
+  const handleSyncSeats = () => {
+    if (!syncSeatsSectorId || !selectedZoneIdForSync) return;
+    syncSeatsMutation.mutate({ sectorId: syncSeatsSectorId, zoneId: selectedZoneIdForSync });
+  };
 
   const handleEditSector = (sectorId: string | null) => {
     if (!sectorId) return;
@@ -2612,6 +2655,15 @@ export default function EventHub() {
                                               <Hash className="h-4 w-4 mr-2" />
                                               Modifica Capienza
                                             </DropdownMenuItem>
+                                            {sector.isNumbered && (
+                                              <DropdownMenuItem 
+                                                onSelect={() => handleOpenSyncSeatsDialog(sector.id)}
+                                                data-testid={`button-sync-seats-${sector.id}`}
+                                              >
+                                                <RefreshCw className="h-4 w-4 mr-2" />
+                                                Sincronizza Posti da Mappa
+                                              </DropdownMenuItem>
+                                            )}
                                             <DropdownMenuSeparator />
                                             <DropdownMenuItem onSelect={() => {
                                               updateSectorMutation.mutate({
@@ -3238,6 +3290,15 @@ export default function EventHub() {
                               <Hash className="h-4 w-4 mr-2" />
                               Modifica Capienza
                             </DropdownMenuItem>
+                            {ticketedEvent?.sectors?.find(s => s.id === selectedSectorId)?.isNumbered && (
+                              <DropdownMenuItem 
+                                onSelect={() => selectedSectorId && handleOpenSyncSeatsDialog(selectedSectorId)}
+                                data-testid="button-sync-seats-sector"
+                              >
+                                <RefreshCw className="h-4 w-4 mr-2" />
+                                Sincronizza Posti da Mappa
+                              </DropdownMenuItem>
+                            )}
                             <DropdownMenuSeparator />
                             <DropdownMenuItem onSelect={() => {
                               const sector = ticketedEvent?.sectors?.find(s => s.id === selectedSectorId);
@@ -5409,6 +5470,78 @@ export default function EventHub() {
                 </DialogFooter>
               </form>
             </Form>
+          </DialogContent>
+        </Dialog>
+
+        {/* Sync Seats Dialog - Desktop */}
+        <Dialog open={isSyncSeatsDialogOpen} onOpenChange={setIsSyncSeatsDialogOpen}>
+          <DialogContent className="sm:max-w-[500px]">
+            <DialogHeader>
+              <DialogTitle>Sincronizza Posti da Mappa</DialogTitle>
+              <DialogDescription>
+                Seleziona una zona della planimetria per importare i posti nel settore.
+                I posti esistenti verranno sostituiti.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {zonesLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : (availableZonesData?.zones?.length || 0) === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <p>Nessuna zona con posti trovata.</p>
+                  <p className="text-sm mt-2">Configura prima i posti nell'editor della planimetria.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <label className="text-sm font-medium">Seleziona Zona</label>
+                  <Select value={selectedZoneIdForSync} onValueChange={setSelectedZoneIdForSync}>
+                    <SelectTrigger data-testid="select-zone-for-sync">
+                      <SelectValue placeholder="Seleziona una zona" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {availableZonesData?.zones?.map((zone) => (
+                        <SelectItem key={zone.id} value={zone.id}>
+                          {zone.name} ({zone.seatsCount} posti)
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                  {selectedZoneIdForSync && (
+                    <div className="bg-muted/50 p-3 rounded-md text-sm">
+                      <p>
+                        Verranno importati{" "}
+                        <strong>
+                          {availableZonesData?.zones?.find(z => z.id === selectedZoneIdForSync)?.seatsCount || 0}
+                        </strong>{" "}
+                        posti dalla zona selezionata.
+                      </p>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+            <DialogFooter className="pt-4">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsSyncSeatsDialogOpen(false)}
+              >
+                Annulla
+              </Button>
+              <Button 
+                onClick={handleSyncSeats}
+                disabled={!selectedZoneIdForSync || syncSeatsMutation.isPending}
+                data-testid="button-confirm-sync-seats"
+              >
+                {syncSeatsMutation.isPending ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Sincronizzazione...</>
+                ) : (
+                  'Sincronizza Posti'
+                )}
+              </Button>
+            </DialogFooter>
           </DialogContent>
         </Dialog>
 
