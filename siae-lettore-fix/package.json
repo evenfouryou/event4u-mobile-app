@@ -51,7 +51,7 @@
     ],
     "extraResources": [
       {
-        "from": "resources",
+        "from": "SiaeBridge-build",
         "to": "SiaeBridge",
         "filter": ["**/*"]
       }
