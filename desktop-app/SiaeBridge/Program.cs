@@ -2111,9 +2111,13 @@ namespace SiaeBridge
                         mimeBuilder.Append(smimeBody ?? "SIAE RCA Transmission");
                         mimeBuilder.Append("\r\n\r\n");
                         
-                        // Parte allegato P7M - usa application/octet-stream per file binari firmati
+                        // Parte allegato P7M - usa application/pkcs7-mime per file CAdES-BES
+                        // SIAE Allegato C richiede Content-Type corretto per estrarre il riepilogo
                         mimeBuilder.Append($"--{boundary}\r\n");
-                        mimeBuilder.Append($"Content-Type: application/octet-stream; name=\"{attachmentName}\"\r\n");
+                        string mimeType = attachmentName.EndsWith(".p7m", StringComparison.OrdinalIgnoreCase) 
+                            ? "application/pkcs7-mime" 
+                            : "application/octet-stream";
+                        mimeBuilder.Append($"Content-Type: {mimeType}; name=\"{attachmentName}\"\r\n");
                         mimeBuilder.Append("Content-Transfer-Encoding: base64\r\n");
                         mimeBuilder.Append($"Content-Disposition: attachment; filename=\"{attachmentName}\"\r\n");
                         mimeBuilder.Append("\r\n");
@@ -2314,8 +2318,9 @@ namespace SiaeBridge
 
                 // Il mimeContent costruito sopra NON contiene header From/To/Subject
                 // È già il body MIME puro che è stato firmato da PKCS7SignML
-                // Lo normalizziamo solo per garantire line endings corretti
-                string bodyMime = mimeContent.Replace("\r\n", "\n").Replace("\n", "\r\n");
+                // CRITICO: NON normalizzare il contenuto dopo la firma - deve essere identico byte per byte
+                // a ciò che è stato scritto nel file input per PKCS7SignML
+                string bodyMime = mimeContent;
                 
                 Log($"  Building S/MIME message: From={!string.IsNullOrEmpty(externalFrom)}, To={!string.IsNullOrEmpty(externalTo)}, Subject={!string.IsNullOrEmpty(externalSubject)}");
                 Log($"  Body MIME size: {bodyMime.Length} bytes (this is what was signed)");
