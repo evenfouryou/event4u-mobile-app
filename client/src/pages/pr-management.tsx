@@ -322,8 +322,8 @@ export default function PrManagement() {
         title: "Impersonazione attivata",
         description: "Stai ora operando come questo PR",
       });
-      // Redirect to PR wallet
-      window.location.href = "/pr/wallet";
+      // Redirect to unified PR app
+      window.location.href = "/pr-app";
     },
     onError: (error: any) => {
       toast({

@@ -69,7 +69,7 @@ export default function Login() {
         });
         triggerHaptic('success');
         queryClient.invalidateQueries({ queryKey: ["/api/pr/me"] });
-        window.location.href = '/pr/wallet';
+        window.location.href = '/pr-app';
         return;
       } else if (loginMethod === 'username') {
         // Username login - try SIAE cashier endpoint first, then fallback to auth/login
