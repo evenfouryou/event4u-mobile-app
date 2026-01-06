@@ -122,9 +122,13 @@ function addToLogBuffer(level, message) {
   if (logBuffer.length > MAX_LOG_BUFFER) {
     logBuffer.shift();
   }
-  // Send to renderer if window exists
-  if (mainWindow && mainWindow.webContents) {
-    mainWindow.webContents.send('log:entry', entry);
+  // Send to renderer if window exists and not destroyed
+  try {
+    if (mainWindow && !mainWindow.isDestroyed() && mainWindow.webContents && !mainWindow.webContents.isDestroyed()) {
+      mainWindow.webContents.send('log:entry', entry);
+    }
+  } catch (e) {
+    // Window was destroyed, ignore
   }
 }
 
