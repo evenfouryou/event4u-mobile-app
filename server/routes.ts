@@ -19,6 +19,8 @@ import billingRoutes from "./billing-routes";
 import digitalTemplateRoutes from "./digital-template-routes";
 import reservationBookingRoutes from "./reservation-booking-routes";
 import ticketingRoutes from "./ticketing-routes";
+import marketingRoutes from "./marketing-routes";
+import { startMarketingScheduler } from "./marketing-scheduler";
 import { setupTicketingWebSocket } from "./ticketing-websocket";
 import { startHoldCleanupJob } from "./hold-service";
 import {
@@ -159,6 +161,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register ticketing routes (sistema HOLD, heatmap, recommendations)
   app.use(ticketingRoutes);
+  
+  // Register marketing routes (email campaigns, templates)
+  app.use(marketingRoutes);
+  
+  // Start marketing email scheduler
+  startMarketingScheduler();
 
   // Health check endpoint for Replit Deploy
   app.get('/api/health', (_req, res) => {

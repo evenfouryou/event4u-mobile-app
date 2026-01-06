@@ -103,6 +103,7 @@ import TicketVerify from "@/pages/ticket-verify";
 import PrinterSettings from "@/pages/printer-settings";
 import TemplateBuilder from "@/pages/template-builder";
 import DigitalTemplateBuilder from "@/pages/digital-template-builder";
+import MarketingEmailPage from "@/pages/marketing-email";
 import StripeAdmin from "@/pages/stripe-admin";
 import ScannerHome from "@/pages/scanner-home";
 import ScannerHistory from "@/pages/scanner-history";
@@ -342,6 +343,7 @@ function Router() {
               <Route path="/pr/events" component={PrEvents} />
               <Route path="/pr-wallet" component={PrWallet} />
               <Route path="/pr-app" component={PrApp} />
+              <Route path="/marketing/email" component={MarketingEmailPage} />
               <Route path="/school-badges" component={SchoolBadgeManager} />
               <Route path="/school-badges/scanner" component={SchoolBadgeScanner} />
               <Route path="/badge-error" component={SchoolBadgeError} />
