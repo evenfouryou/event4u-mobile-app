@@ -2109,6 +2109,8 @@ namespace SiaeBridge
 
             try
             {
+                Log($"=== SignSmime v3.26 START ===");
+                
                 dynamic req = JsonConvert.DeserializeObject(json);
                 string pin = req.pin;
 
@@ -2141,12 +2143,13 @@ namespace SiaeBridge
                 if (pin.Length < 4)
                     return ERR("PIN non valido - deve contenere almeno 4 cifre");
 
-                Log($"SignSmime (via SMIMESignML nativo): from={smimeFrom}, to={smimeTo}");
+                Log($"SignSmime (via SMIMESignML nativo v3.26): from={smimeFrom}, to={smimeTo}");
                 Log($"  Subject: {smimeSubject ?? "(none)"}");
                 Log($"  Body length: {smimeBody?.Length ?? 0}");
                 Log($"  Attachment: {attachmentName ?? "(none)"}, base64 length: {attachmentBase64?.Length ?? 0}");
 
                 int state = isCardIn(_slot);
+                Log($"  Card state check: {state}");
                 if (!IsCardPresent(state))
                 {
                     _slot = -1;
@@ -2157,9 +2160,12 @@ namespace SiaeBridge
                 string tempDir = Path.GetTempPath();
                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
                 outputFile = Path.Combine(tempDir, $"smime_output_{timestamp}.eml");
+                Log($"  Temp directory: {tempDir}");
+                Log($"  Output file: {outputFile}");
                 
-                // Prepara allegato se presente
-                string attachments = "";
+                // Prepara allegato se presente - usa stringa vuota se non c'è allegato
+                // NOTA: smime.cpp fa strlen(szAttachments) senza null check, quindi NON passare NULL!
+                string attachments = "";  // stringa vuota, NON null
                 if (!string.IsNullOrEmpty(attachmentBase64) && !string.IsNullOrEmpty(attachmentName))
                 {
                     attachmentTempFile = Path.Combine(tempDir, attachmentName);
@@ -2167,6 +2173,10 @@ namespace SiaeBridge
                     File.WriteAllBytes(attachmentTempFile, attachmentBytes);
                     attachments = attachmentTempFile;
                     Log($"  Attachment saved to temp: {attachmentTempFile} ({attachmentBytes.Length} bytes)");
+                }
+                else
+                {
+                    Log($"  No attachment - passing empty string to SMIMESignML");
                 }
 
                 // Body del messaggio (ASCII 7-bit come richiesto dalla documentazione)
@@ -2179,48 +2189,54 @@ namespace SiaeBridge
                 }
                 // Ensure CRLF line endings
                 body = body.Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", "\r\n");
+                Log($"  Body after normalization: {body.Length} chars");
 
-                // FIX 2026-01-06: SMIMESignML usa internamente tmpnam(NULL) che crea file
-                // nella directory corrente. Se l'app è in una cartella non scrivibile
-                // (es. Program Files), la creazione fallisce con 0xFFFF.
-                // SOLUZIONE: Cambiare la directory corrente a TEMP prima della chiamata.
+                // v3.26 FIX: Forza tmpnam() a usare directory TEMP impostando variabili d'ambiente
+                // tmpnam(NULL) su Windows usa TMP/TEMP per il prefisso del path
+                string originalTmp = Environment.GetEnvironmentVariable("TMP");
+                string originalTemp = Environment.GetEnvironmentVariable("TEMP");
                 string originalDir = Directory.GetCurrentDirectory();
-                Log($"  Original working directory: {originalDir}");
-                Log($"  Changing to temp directory for SMIMESignML internal files: {tempDir}");
+                Log($"  Original TMP: {originalTmp}");
+                Log($"  Original TEMP: {originalTemp}");
+                Log($"  Original CWD: {originalDir}");
                 
                 try
                 {
+                    // Setta TMP e TEMP alla directory temp dell'utente
+                    Environment.SetEnvironmentVariable("TMP", tempDir);
+                    Environment.SetEnvironmentVariable("TEMP", tempDir);
                     Directory.SetCurrentDirectory(tempDir);
+                    Log($"  Set TMP/TEMP to: {tempDir}");
                     Log($"  Working directory changed to: {Directory.GetCurrentDirectory()}");
                 }
-                catch (Exception cwdEx)
+                catch (Exception envEx)
                 {
-                    Log($"  WARNING: Could not change directory: {cwdEx.Message}");
+                    Log($"  WARNING: Could not set environment/directory: {envEx.Message}");
                 }
 
                 // Reset card state before SMIMESignML call
-                // FIX v3.24: La carta potrebbe essere in uno stato transazione dopo PKCS7SignML
                 Log($"  Resetting card state before SMIMESignML...");
                 int finRes = FinalizeML(_slot);
-                Log($"  FinalizeML = {finRes}");
+                Log($"  FinalizeML = {finRes} (0x{finRes:X8})");
                 int initRes = Initialize(_slot);
-                Log($"  Initialize = {initRes}");
+                Log($"  Initialize = {initRes} (0x{initRes:X8})");
                 
-                // Chiama SMIMESignML - funzione SIAE nativa per S/MIME conforme
-                // Usa bInitialize=0 perché abbiamo già inizializzato sopra
-                Log($"  Calling SMIMESignML...");
-                Log($"    pin=***, slot={_slot}");
-                Log($"    outputFile={outputFile}");
-                Log($"    from={smimeFrom}");
-                Log($"    to={smimeTo}");
-                Log($"    subject={smimeSubject ?? "(null)"}");
-                Log($"    otherHeaders=(null)");
-                Log($"    body length={body.Length}");
-                Log($"    attachments={attachments}");
-                Log($"    flags=0, init=1");
+                // v3.26: Log tutti i parametri prima della chiamata
+                Log($"  === SMIMESignML CALL PARAMETERS ===");
+                Log($"    pin length: {pin?.Length ?? 0}");
+                Log($"    slot: {_slot}");
+                Log($"    outputFile: {outputFile}");
+                Log($"    from: [{smimeFrom}] (len={smimeFrom?.Length ?? 0})");
+                Log($"    to: [{smimeTo}] (len={smimeTo?.Length ?? 0})");
+                Log($"    subject: [{smimeSubject}] (len={smimeSubject?.Length ?? 0})");
+                Log($"    otherHeaders: (null)");
+                Log($"    body: (inline string, len={body.Length})");
+                Log($"    attachments: [{attachments}] (len={attachments?.Length ?? 0})");
+                Log($"    flags: 0");
+                Log($"    bInitialize: 1");
+                Log($"  === CALLING SMIMESignML NOW ===");
 
-                // FIX v3.25: Usa bInitialize=1 - SMIMESignML potrebbe aver bisogno di inizializzare
-                // la propria sessione internamente (diversa da Initialize/FinalizeML)
+                // bInitialize=1: lascia che SMIMESignML gestisca l'inizializzazione interna
                 int signResult = SMIMESignML(
                     pin,
                     (uint)_slot,
@@ -2230,22 +2246,24 @@ namespace SiaeBridge
                     smimeSubject ?? "RCA Transmission",
                     null,           // otherHeaders (opzionale)
                     body,
-                    attachments,    // path ai file allegati
+                    attachments,    // stringa vuota se non ci sono allegati
                     0,              // flags
-                    1               // bInitialize=1 (FIX v3.25: lascia che SMIMESignML gestisca init)
+                    1               // bInitialize=1 (SMIMESignML gestisce init)
                 );
 
                 Log($"  SMIMESignML result: {signResult} (0x{signResult:X8})");
                 
-                // Ripristina directory originale
+                // Ripristina directory originale e variabili d'ambiente
                 try
                 {
                     Directory.SetCurrentDirectory(originalDir);
-                    Log($"  Restored working directory: {Directory.GetCurrentDirectory()}");
+                    if (originalTmp != null) Environment.SetEnvironmentVariable("TMP", originalTmp);
+                    if (originalTemp != null) Environment.SetEnvironmentVariable("TEMP", originalTemp);
+                    Log($"  Restored CWD/TMP/TEMP");
                 }
                 catch (Exception restoreEx)
                 {
-                    Log($"  WARNING: Could not restore directory: {restoreEx.Message}");
+                    Log($"  WARNING: Could not restore environment: {restoreEx.Message}");
                 }
 
                 if (signResult != 0)
