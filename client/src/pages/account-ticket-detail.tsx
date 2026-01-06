@@ -29,6 +29,8 @@ import {
   RotateCcw,
   QrCode,
   ArrowLeft,
+  UserCog,
+  ArrowDown,
 } from "lucide-react";
 import { SiApple, SiGoogle } from "react-icons/si";
 import { DigitalTicketCard } from "@/components/DigitalTicketCard";
@@ -71,6 +73,17 @@ interface TicketDetail {
   ticketingManager: string | null;
   progressiveNumber: number | null;
   emissionDateTime: string | null;
+  previousTicket: {
+    id: string;
+    sigilloFiscale: string;
+    progressiveNumber: number;
+  } | null;
+  replacedBy: {
+    id: string;
+    sigilloFiscale: string;
+    progressiveNumber: number;
+  } | null;
+  nameChangeDate: string | null;
 }
 
 const springConfig = {
@@ -497,6 +510,79 @@ export default function AccountTicketDetail() {
               </CardContent>
             </Card>
 
+            {(ticket.previousTicket || ticket.replacedBy) && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <UserCog className="w-5 h-5" />
+                    Storico Cambio Nominativo
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  {ticket.previousTicket && (
+                    <>
+                      {ticket.nameChangeDate && (
+                        <p className="text-sm text-muted-foreground">
+                          Data cambio: {format(new Date(ticket.nameChangeDate), "d MMMM yyyy 'ore' HH:mm", { locale: it })}
+                        </p>
+                      )}
+                      <div className="rounded-lg bg-red-50 dark:bg-red-950/30 p-4 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Badge variant="destructive" data-testid="badge-old-ticket-cancelled">ANNULLATO</Badge>
+                          <span className="text-sm text-muted-foreground">Biglietto precedente</span>
+                        </div>
+                        <p className="text-sm">
+                          Sigillo: <span className="line-through text-muted-foreground" data-testid="text-old-sigillo">{ticket.previousTicket.sigilloFiscale}</span>
+                        </p>
+                        <p className="text-sm">
+                          Progressivo: <span className="line-through text-muted-foreground" data-testid="text-old-progressivo">#{ticket.previousTicket.progressiveNumber}</span>
+                        </p>
+                        <p className="text-xs text-muted-foreground italic">Questo biglietto sostituisce il precedente</p>
+                      </div>
+                      <div className="flex justify-center py-2">
+                        <ArrowDown className="w-6 h-6 text-muted-foreground" />
+                      </div>
+                      <div className="rounded-lg bg-green-50 dark:bg-green-950/30 p-4 space-y-2">
+                        <div className="flex items-center gap-2">
+                          <Badge className="bg-green-600 hover:bg-green-600" data-testid="badge-new-ticket-valid">VALIDO</Badge>
+                          <span className="text-sm text-muted-foreground">Biglietto attuale</span>
+                        </div>
+                        <p className="text-sm">
+                          Sigillo: <span className="font-medium" data-testid="text-current-sigillo">{ticket.fiscalSealCode}</span>
+                        </p>
+                        <p className="text-sm">
+                          Progressivo: <span className="font-medium" data-testid="text-current-progressivo">#{ticket.progressiveNumber}</span>
+                        </p>
+                      </div>
+                    </>
+                  )}
+                  {ticket.replacedBy && (
+                    <div className="rounded-lg bg-red-50 dark:bg-red-950/30 p-4 space-y-3">
+                      <div className="flex items-center justify-center">
+                        <Badge variant="destructive" className="text-base px-4 py-1" data-testid="badge-replaced-cancelled">ANNULLATO</Badge>
+                      </div>
+                      <p className="text-center text-sm text-muted-foreground">
+                        Questo biglietto è stato annullato a seguito di cambio nominativo
+                      </p>
+                      <div className="pt-2">
+                        <Button
+                          variant="outline"
+                          className="w-full"
+                          onClick={() => navigate(`/account/tickets/${ticket.replacedBy!.id}`)}
+                          data-testid="button-view-new-ticket"
+                        >
+                          Vedi nuovo biglietto
+                          <span className="ml-2 text-xs text-muted-foreground">
+                            (Sigillo: {ticket.replacedBy.sigilloFiscale})
+                          </span>
+                        </Button>
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
             <Card>
               <CardHeader>
                 <CardTitle>Informazioni Evento</CardTitle>
@@ -811,6 +897,79 @@ export default function AccountTicketDetail() {
               </div>
             </div>
           </motion.div>
+
+          {(ticket.previousTicket || ticket.replacedBy) && (
+            <motion.div 
+              className="bg-card rounded-2xl p-4 space-y-4"
+              variants={fadeInUp}
+            >
+              <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
+                <UserCog className="w-5 h-5" />
+                Storico Cambio Nominativo
+              </h3>
+              
+              {ticket.previousTicket && (
+                <div className="space-y-3">
+                  {ticket.nameChangeDate && (
+                    <p className="text-sm text-muted-foreground">
+                      Data cambio: {format(new Date(ticket.nameChangeDate), "d MMMM yyyy 'ore' HH:mm", { locale: it })}
+                    </p>
+                  )}
+                  <div className="rounded-lg bg-red-50 dark:bg-red-950/30 p-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Badge variant="destructive" data-testid="badge-old-ticket-cancelled-mobile">ANNULLATO</Badge>
+                      <span className="text-sm text-muted-foreground">Biglietto precedente</span>
+                    </div>
+                    <p className="text-sm">
+                      Sigillo: <span className="line-through text-muted-foreground" data-testid="text-old-sigillo-mobile">{ticket.previousTicket.sigilloFiscale}</span>
+                    </p>
+                    <p className="text-sm">
+                      Progressivo: <span className="line-through text-muted-foreground" data-testid="text-old-progressivo-mobile">#{ticket.previousTicket.progressiveNumber}</span>
+                    </p>
+                    <p className="text-xs text-muted-foreground italic">Questo biglietto sostituisce il precedente</p>
+                  </div>
+                  <div className="flex justify-center py-2">
+                    <ArrowDown className="w-6 h-6 text-muted-foreground" />
+                  </div>
+                  <div className="rounded-lg bg-green-50 dark:bg-green-950/30 p-4 space-y-2">
+                    <div className="flex items-center gap-2">
+                      <Badge className="bg-green-600 hover:bg-green-600" data-testid="badge-new-ticket-valid-mobile">VALIDO</Badge>
+                      <span className="text-sm text-muted-foreground">Biglietto attuale</span>
+                    </div>
+                    <p className="text-sm">
+                      Sigillo: <span className="font-medium" data-testid="text-current-sigillo-mobile">{ticket.fiscalSealCode}</span>
+                    </p>
+                    <p className="text-sm">
+                      Progressivo: <span className="font-medium" data-testid="text-current-progressivo-mobile">#{ticket.progressiveNumber}</span>
+                    </p>
+                  </div>
+                </div>
+              )}
+              
+              {ticket.replacedBy && (
+                <div className="rounded-lg bg-red-50 dark:bg-red-950/30 p-4 space-y-3">
+                  <div className="flex items-center justify-center">
+                    <Badge variant="destructive" className="text-base px-4 py-1" data-testid="badge-replaced-cancelled-mobile">ANNULLATO</Badge>
+                  </div>
+                  <p className="text-center text-sm text-muted-foreground">
+                    Questo biglietto è stato annullato a seguito di cambio nominativo
+                  </p>
+                  <HapticButton
+                    variant="outline"
+                    className="w-full min-h-[48px] rounded-xl"
+                    onClick={() => navigate(`/account/tickets/${ticket.replacedBy!.id}`)}
+                    data-testid="button-view-new-ticket-mobile"
+                    hapticType="light"
+                  >
+                    Vedi nuovo biglietto
+                    <span className="ml-2 text-xs text-muted-foreground">
+                      (Sigillo: {ticket.replacedBy.sigilloFiscale})
+                    </span>
+                  </HapticButton>
+                </div>
+              )}
+            </motion.div>
+          )}
 
           <motion.div 
             className="bg-card rounded-2xl p-4 space-y-4"
