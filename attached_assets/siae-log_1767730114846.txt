@@ -1,0 +1,299 @@
+}
+[2026-01-06 21:08:05.561] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-06 21:08:05.562] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-06 21:08:05.562] [info]  >> Command: CHECK_READER
+[2026-01-06 21:08:05.609] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-06 21:08:05.609] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-06 21:08:05.667] [info]  >> Command: CHECK_READER
+[2026-01-06 21:08:05.714] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-06 21:08:05.715] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-06 21:08:05.715] [info]  Auto-reading card data...
+[2026-01-06 21:08:05.716] [info]  >> Command: READ_CARD
+[2026-01-06 21:08:06.579] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-06 21:08:06.579] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 264,
+  balance: 423561,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-06 21:08:06.580] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-06 21:08:06.581] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-06 21:08:06.678] [info]  >> Command: CHECK_READER
+[2026-01-06 21:08:06.726] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-06 21:08:06.727] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-06 21:08:06.727] [info]  Auto-reading card data...
+[2026-01-06 21:08:06.728] [info]  >> Command: READ_CARD
+[2026-01-06 21:08:07.584] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-06 21:08:07.585] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 264,
+  balance: 423561,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-06 21:08:07.586] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-06 21:08:07.587] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-06 21:08:07.691] [info]  >> Command: CHECK_READER
+[2026-01-06 21:08:07.738] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-06 21:08:07.739] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-06 21:08:07.739] [info]  Auto-reading card data...
+[2026-01-06 21:08:07.740] [info]  >> Command: READ_CARD
+[2026-01-06 21:08:07.859] [info]  IPC: checkReader
+[2026-01-06 21:08:08.596] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-06 21:08:08.596] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 264,
+  balance: 423561,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-06 21:08:08.597] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-06 21:08:08.597] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-06 21:08:08.598] [info]  >> Command: CHECK_READER
+[2026-01-06 21:08:08.647] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-06 21:08:08.648] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-06 21:08:08.703] [info]  >> Command: CHECK_READER
+[2026-01-06 21:08:08.749] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-06 21:08:08.749] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-06 21:08:08.750] [info]  Auto-reading card data...
+[2026-01-06 21:08:08.750] [info]  >> Command: READ_CARD
+[2026-01-06 21:08:09.605] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-06 21:08:09.606] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 264,
+  balance: 423561,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-06 21:08:09.606] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-06 21:08:09.607] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-06 21:08:09.707] [info]  >> Command: CHECK_READER
+[2026-01-06 21:08:09.753] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-06 21:08:09.753] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-06 21:08:09.754] [info]  Auto-reading card data...
+[2026-01-06 21:08:09.755] [info]  >> Command: READ_CARD
+[2026-01-06 21:08:10.608] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-06 21:08:10.609] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 264,
+  balance: 423561,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-06 21:08:10.609] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-06 21:08:10.610] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-06 21:08:10.720] [info]  >> Command: CHECK_READER
+[2026-01-06 21:08:10.766] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-06 21:08:10.766] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-06 21:08:10.767] [info]  Auto-reading card data...
+[2026-01-06 21:08:10.767] [info]  >> Command: READ_CARD
+[2026-01-06 21:08:10.859] [info]  IPC: checkReader
+[2026-01-06 21:08:11.637] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-06 21:08:11.637] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 264,
+  balance: 423561,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-06 21:08:11.638] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-06 21:08:11.638] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-06 21:08:11.639] [info]  >> Command: CHECK_READER
+[2026-01-06 21:08:11.685] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-06 21:08:11.686] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-06 21:08:11.734] [info]  >> Command: CHECK_READER
+[2026-01-06 21:08:11.780] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-06 21:08:11.780] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-06 21:08:11.781] [info]  Auto-reading card data...
+[2026-01-06 21:08:11.781] [info]  >> Command: READ_CARD
+[2026-01-06 21:08:12.635] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-06 21:08:12.636] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 264,
+  balance: 423561,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-06 21:08:12.636] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-06 21:08:12.636] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-06 21:08:12.748] [info]  >> Command: CHECK_READER
+[2026-01-06 21:08:12.793] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-06 21:08:12.793] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-06 21:08:12.794] [info]  Auto-reading card data...
+[2026-01-06 21:08:12.794] [info]  >> Command: READ_CARD
+[2026-01-06 21:08:13.101] [info]  Relay message received: pong
+[2026-01-06 21:08:13.102] [debug] Received pong, connection alive
+[2026-01-06 21:08:13.648] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-06 21:08:13.648] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 264,
+  balance: 423561,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-06 21:08:13.648] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-06 21:08:13.649] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-06 21:08:13.758] [info]  >> Command: CHECK_READER
+[2026-01-06 21:08:13.803] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-06 21:08:13.804] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-06 21:08:13.804] [info]  Auto-reading card data...
+[2026-01-06 21:08:13.805] [info]  >> Command: READ_CARD
+[2026-01-06 21:08:13.866] [info]  IPC: checkReader
+[2026-01-06 21:08:14.657] [info]  [Bridge] {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-06 21:08:14.658] [info]  << Response: {
+  success: true,
+  serialNumber: '4130313238343837',
+  counter: 264,
+  balance: 423561,
+  keyId: 129,
+  slot: 0,
+  counterError: null,
+  balanceError: null
+}
+[2026-01-06 21:08:14.658] [info]  READ_CARD result: {"success":true,"serialNumber":"4130313238343837","counter":264,"balance":423561,"keyId":129,"slot":0,"counterError":null,"balanceError":null}
+[2026-01-06 21:08:14.659] [info]  Card data extracted: {"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardSlot":0}
+[2026-01-06 21:08:14.659] [info]  >> Command: CHECK_READER
+[2026-01-06 21:08:14.704] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-06 21:08:14.705] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-06 21:08:14.760] [info]  >> Command: CHECK_READER
+[2026-01-06 21:08:14.806] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":true,"slot":0,"cardState":"PRESENT","initResult":0,"message":"Carta SIAE rilevata e pronta!"}
+[2026-01-06 21:08:14.806] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: true,
+  slot: 0,
+  cardState: 'PRESENT',
+  initResult: 0,
+  message: 'Carta SIAE rilevata e pronta!'
+}
+[2026-01-06 21:08:14.807] [info]  Auto-reading card data...
+[2026-01-06 21:08:14.807] [info]  >> Command: READ_CARD
