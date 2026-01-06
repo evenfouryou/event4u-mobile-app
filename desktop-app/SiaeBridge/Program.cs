@@ -74,6 +74,25 @@ namespace SiaeBridge
             [MarshalAs(UnmanagedType.LPStr)] string szOutputFileName,
             int bInitialize);
 
+        // ============================================================
+        // SMIMESignML - FUNZIONE NATIVA SIAE per S/MIME conformi!
+        // Genera direttamente email RFC822 S/MIME firmate
+        // Vedi libsiaep7.h per la documentazione completa
+        // ============================================================
+        [DllImport(DLL_P7, CallingConvention = CallingConvention.StdCall, CharSet = CharSet.Ansi)]
+        static extern int SMIMESignML(
+            [MarshalAs(UnmanagedType.LPStr)] string pin,
+            uint slot,
+            [MarshalAs(UnmanagedType.LPStr)] string szOutputFilePath,  // File output RFC822 S/MIME
+            [MarshalAs(UnmanagedType.LPStr)] string szFrom,            // Header From:
+            [MarshalAs(UnmanagedType.LPStr)] string szTo,              // Header To:
+            [MarshalAs(UnmanagedType.LPStr)] string szSubject,         // Header Subject: [opzionale]
+            [MarshalAs(UnmanagedType.LPStr)] string szOtherHeaders,    // Altri header [opzionale]
+            [MarshalAs(UnmanagedType.LPStr)] string szBody,            // Body del messaggio
+            [MarshalAs(UnmanagedType.LPStr)] string szAttachments,     // Files allegati separati da ';'
+            uint dwFlags,                                               // Flags
+            int bInitialize);                                          // Initialize (1=sì)
+
         // Windows API
         [DllImport("winscard.dll", CharSet = CharSet.Unicode)]
         static extern int SCardListReadersW(IntPtr hContext, string mszGroups, byte[] mszReaders, ref int pcchReaders);
@@ -99,7 +118,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.20 - FIX: S/MIME signature integrity - no CRLF modification after signing");
+            Log("SiaeBridge v3.21 - FIX: Usa SMIMESignML nativo SIAE per S/MIME conformi");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -2051,22 +2070,23 @@ namespace SiaeBridge
         // SIGN S/MIME - Firma S/MIME per email SIAE (Allegato C)
         // Per Provvedimento Agenzia Entrate 04/03/2008, sezione 1.6.1-1.6.2
         // L'email deve essere firmata S/MIME v2 con carta di attivazione
-        // Usa libSIAEp7.dll (PKCS7SignML) per creare firma CMS valida
+        // 
+        // FIX 2026-01-06: Usa SMIMESignML nativo invece di PKCS7SignML + costruzione manuale
+        // SMIMESignML è la funzione SIAE che genera direttamente email RFC822 S/MIME conformi
         // ============================================================
         static string SignSmime(string json)
         {
             if (_slot < 0) return ERR("Nessuna carta rilevata - prima fai CHECK_READER");
 
-            string inputFile = null;
+            string attachmentTempFile = null;
             string outputFile = null;
 
             try
             {
                 dynamic req = JsonConvert.DeserializeObject(json);
-                string mimeContent = req.mimeContent;
                 string pin = req.pin;
 
-                // NUOVO: Supporto formato SMIMESignML con parametri separati
+                // Parametri S/MIME
                 string smimeFrom = req.from;
                 string smimeTo = req.to;
                 string smimeSubject = req.subject;
@@ -2074,99 +2094,23 @@ namespace SiaeBridge
                 string attachmentBase64 = req.attachmentBase64;
                 string attachmentName = req.attachmentName;
 
-                // FIX 2026-01-06: IL CONTENUTO FIRMATO DEVE INCLUDERE TUTTI GLI HEADER
-                // Dall'esempio SIAE ufficiale (prova.eml), il contenuto dentro il PKCS7 include:
-                // From, To, Subject, Date, MIME-Version, Content-Type, e tutto il body
-                // NON sono "header esterni" - TUTTO viene firmato insieme
-                
-                if (!string.IsNullOrEmpty(smimeFrom) && !string.IsNullOrEmpty(smimeTo))
-                {
-                    Log($"SignSmime: Using SIAE format - from={smimeFrom}, to={smimeTo}");
-                    Log($"  FIX: Including ALL headers in signed content (as per SIAE prova.eml example)");
-                    
-                    var mimeBuilder = new StringBuilder();
-                    string boundary = $"----=_Part_{Guid.NewGuid():N}";
-                    string dateHeader = DateTime.Now.ToString("ddd, d MMM yyyy HH:mm:ss zzz", System.Globalization.CultureInfo.InvariantCulture);
-                    
-                    // TUTTI gli header vanno nel contenuto firmato (senza spazi dopo i due punti, come nell'esempio SIAE)
-                    mimeBuilder.Append($"From:{smimeFrom}\r\n");
-                    mimeBuilder.Append($"To:{smimeTo}\r\n");
-                    mimeBuilder.Append($"Subject:{smimeSubject ?? "RCA Transmission"}\r\n");
-                    mimeBuilder.Append($"Date:{dateHeader}\r\n");
-                    mimeBuilder.Append("MIME-Version: 1.0\r\n");
-                    
-                    if (!string.IsNullOrEmpty(attachmentBase64) && !string.IsNullOrEmpty(attachmentName))
-                    {
-                        // Email con allegato - multipart/mixed
-                        mimeBuilder.Append($"Content-Type: multipart/mixed;\r\n");
-                        mimeBuilder.Append($"\tboundary=\"{boundary}\"\r\n");
-                        mimeBuilder.Append("\r\n");
-                        mimeBuilder.Append("This is a multi-part message in MIME format.\r\n");
-                        mimeBuilder.Append("\r\n");
-                        
-                        // Parte body - Windows-1252 come nell'esempio SIAE
-                        mimeBuilder.Append($"--{boundary}\r\n");
-                        mimeBuilder.Append("Content-Type: text/plain;\r\n");
-                        mimeBuilder.Append("\tcharset=\"Windows-1252\"\r\n");
-                        mimeBuilder.Append("Content-Transfer-Encoding: quoted-printable\r\n");
-                        mimeBuilder.Append("\r\n");
-                        mimeBuilder.Append(smimeBody ?? "SIAE RCA Transmission");
-                        mimeBuilder.Append("\r\n");
-                        
-                        // Parte allegato 
-                        mimeBuilder.Append($"--{boundary}\r\n");
-                        mimeBuilder.Append("Content-Type: application/octet-stream;\r\n");
-                        mimeBuilder.Append($"\tname=\"{attachmentName}\"\r\n");
-                        mimeBuilder.Append("Content-Transfer-Encoding: base64\r\n");
-                        mimeBuilder.Append("Content-Disposition: attachment;\r\n");
-                        mimeBuilder.Append($"\tfilename=\"{attachmentName}\"\r\n");
-                        mimeBuilder.Append("\r\n");
-                        
-                        // Formatta base64 in righe da 76 caratteri
-                        for (int i = 0; i < attachmentBase64.Length; i += 76)
-                        {
-                            int len = Math.Min(76, attachmentBase64.Length - i);
-                            mimeBuilder.Append(attachmentBase64.Substring(i, len));
-                            mimeBuilder.Append("\r\n");
-                        }
-                        
-                        mimeBuilder.Append($"--{boundary}--\r\n");
-                    }
-                    else
-                    {
-                        // Email senza allegato - text/plain
-                        mimeBuilder.Append("Content-Type: text/plain;\r\n");
-                        mimeBuilder.Append("\tcharset=\"Windows-1252\"\r\n");
-                        mimeBuilder.Append("Content-Transfer-Encoding: quoted-printable\r\n");
-                        mimeBuilder.Append("\r\n");
-                        mimeBuilder.Append(smimeBody ?? "SIAE RCA Transmission");
-                        mimeBuilder.Append("\r\n");
-                    }
-                    
-                    mimeContent = mimeBuilder.ToString();
-                    Log($"  Built complete MIME message (with headers) for signing: {mimeContent.Length} bytes");
-                    
-                    // Debug: log prime 10 righe
-                    var previewLines = mimeContent.Split(new[] { "\r\n" }, StringSplitOptions.None);
-                    Log($"  === MIME TO SIGN (prime 10 righe) ===");
-                    for (int i = 0; i < Math.Min(10, previewLines.Length); i++)
-                    {
-                        Log($"  {i + 1,2}: [{previewLines[i]}]");
-                    }
-                    Log($"  === FINE PREVIEW ===");
-                }
-
-                if (string.IsNullOrEmpty(mimeContent))
-                {
-                    return ERR("Contenuto MIME mancante - servono mimeContent oppure from/to/subject/body");
-                }
-
+                // Validazioni
+                if (string.IsNullOrEmpty(smimeFrom))
+                    return ERR("Campo 'from' mancante - richiesto per S/MIME");
+                if (string.IsNullOrEmpty(smimeTo))
+                    return ERR("Campo 'to' mancante - richiesto per S/MIME");
                 if (string.IsNullOrEmpty(pin))
-                {
                     return ERR("PIN mancante - richiesto per firma S/MIME");
-                }
 
-                Log($"SignSmime (via libSIAEp7): slot={_slot}, mimeLength={mimeContent?.Length ?? 0}");
+                // Pulisci PIN
+                pin = new string(pin.Where(char.IsDigit).ToArray());
+                if (pin.Length < 4)
+                    return ERR("PIN non valido - deve contenere almeno 4 cifre");
+
+                Log($"SignSmime (via SMIMESignML nativo): from={smimeFrom}, to={smimeTo}");
+                Log($"  Subject: {smimeSubject ?? "(none)"}");
+                Log($"  Body length: {smimeBody?.Length ?? 0}");
+                Log($"  Attachment: {attachmentName ?? "(none)"}, base64 length: {attachmentBase64?.Length ?? 0}");
 
                 int state = isCardIn(_slot);
                 if (!IsCardPresent(state))
@@ -2175,32 +2119,52 @@ namespace SiaeBridge
                     return ERR("Carta rimossa");
                 }
 
-                // Usa libSIAEp7.dll (PKCS7SignML) per creare una firma CMS/PKCS#7 valida
-                // Questa è la stessa libreria usata per CAdES-BES che funziona correttamente
-                
-                // Crea file temporanei per input/output
+                // Prepara file temporanei
                 string tempDir = Path.GetTempPath();
                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
-                inputFile = Path.Combine(tempDir, $"smime_input_{timestamp}.mime");
-                outputFile = Path.Combine(tempDir, $"smime_output_{timestamp}.p7s");
-
-                // Scrivi il contenuto MIME nel file input
-                // CRITICO: Usa ISO-8859-1 (Latin-1) come richiesto da SIAE Allegato C
-                // UTF-8 con BOM causa errore 40605 "Il riepilogo risulta illegibile"
-                File.WriteAllText(inputFile, mimeContent, Encoding.GetEncoding("ISO-8859-1"));
-                Log($"  Input file written (ISO-8859-1): {inputFile} ({mimeContent.Length} bytes)");
-
-                // Pulisci PIN
-                pin = new string(pin.Where(char.IsDigit).ToArray());
-                if (pin.Length < 4)
+                outputFile = Path.Combine(tempDir, $"smime_output_{timestamp}.eml");
+                
+                // Prepara allegato se presente
+                string attachments = "";
+                if (!string.IsNullOrEmpty(attachmentBase64) && !string.IsNullOrEmpty(attachmentName))
                 {
-                    return ERR("PIN non valido - deve contenere almeno 4 cifre");
+                    attachmentTempFile = Path.Combine(tempDir, attachmentName);
+                    byte[] attachmentBytes = Convert.FromBase64String(attachmentBase64);
+                    File.WriteAllBytes(attachmentTempFile, attachmentBytes);
+                    attachments = attachmentTempFile;
+                    Log($"  Attachment saved to temp: {attachmentTempFile} ({attachmentBytes.Length} bytes)");
                 }
 
-                // Chiama PKCS7SignML per creare la firma PKCS#7
-                Log($"  Calling PKCS7SignML with PIN (length={pin.Length})...");
-                int signResult = PKCS7SignML(pin, (uint)_slot, inputFile, outputFile, 1);
-                Log($"  PKCS7SignML result: {signResult} (0x{signResult:X8})");
+                // Body del messaggio (ASCII 7-bit come richiesto dalla documentazione)
+                string body = smimeBody ?? "SIAE RCA Transmission";
+
+                // Chiama SMIMESignML - funzione SIAE nativa per S/MIME conforme
+                Log($"  Calling SMIMESignML...");
+                Log($"    pin=***, slot={_slot}");
+                Log($"    outputFile={outputFile}");
+                Log($"    from={smimeFrom}");
+                Log($"    to={smimeTo}");
+                Log($"    subject={smimeSubject ?? "(null)"}");
+                Log($"    otherHeaders=(null)");
+                Log($"    body length={body.Length}");
+                Log($"    attachments={attachments}");
+                Log($"    flags=0, init=1");
+
+                int signResult = SMIMESignML(
+                    pin,
+                    (uint)_slot,
+                    outputFile,
+                    smimeFrom,
+                    smimeTo,
+                    smimeSubject ?? "RCA Transmission",
+                    null,           // otherHeaders (opzionale)
+                    body,
+                    attachments,    // path ai file allegati
+                    0,              // flags
+                    1               // bInitialize
+                );
+
+                Log($"  SMIMESignML result: {signResult} (0x{signResult:X8})");
 
                 if (signResult != 0)
                 {
@@ -2212,23 +2176,32 @@ namespace SiaeBridge
                     else if (signResult >= 0x63C0 && signResult <= 0x63CF)
                         return ERR($"PIN errato - tentativi rimasti: {signResult & 0x0F}");
                     else
-                        return ERR($"Firma S/MIME fallita: errore 0x{signResult:X8}");
+                        return ERR($"SMIMESignML fallito: errore 0x{signResult:X8}");
                 }
 
                 // Verifica che il file output esista
                 if (!File.Exists(outputFile))
                 {
-                    return ERR("File firma P7S non creato da PKCS7SignML");
+                    return ERR("File S/MIME non creato da SMIMESignML");
                 }
 
-                // Leggi la firma PKCS#7 dal file output
-                byte[] p7sBytes = File.ReadAllBytes(outputFile);
-                Log($"  P7S signature file read: {p7sBytes.Length} bytes");
+                // Leggi l'email S/MIME generata nativamente
+                string signedMime = File.ReadAllText(outputFile, Encoding.GetEncoding("ISO-8859-1"));
+                Log($"  S/MIME file read: {signedMime.Length} chars");
 
-                if (p7sBytes.Length < 100)
+                if (signedMime.Length < 100)
                 {
-                    return ERR("Firma P7S troppo corta - probabilmente non valida");
+                    return ERR("S/MIME troppo corto - probabilmente non valido");
                 }
+
+                // Log prime 15 righe per debug
+                var previewLines = signedMime.Split(new[] { "\r\n" }, StringSplitOptions.None);
+                Log($"  === S/MIME OUTPUT (prime 15 righe) ===");
+                for (int i = 0; i < Math.Min(15, previewLines.Length); i++)
+                {
+                    Log($"  {i + 1,2}: [{previewLines[i]}]");
+                }
+                Log($"  === FINE PREVIEW ===");
 
                 // Leggi il certificato per estrarre email e nome
                 string signerEmail = "";
@@ -2321,75 +2294,11 @@ namespace SiaeBridge
                     if (tx) try { EndTransactionML(_slot); } catch { }
                 }
 
-                // ============================================================
-                // FIX 2026-01-06: Formato S/MIME OPAQUE conforme all'esempio SIAE prova.eml
-                // Usa application/x-pkcs7-mime (con x-) come nell'esempio ufficiale
-                // Il contenuto firmato (che ORA include tutti gli header) sta DENTRO al PKCS7
-                // ============================================================
+                // SMIMESignML ha generato direttamente l'email S/MIME conforme RFC822
+                // Non serve costruire manualmente - la libreria SIAE lo fa nativamente
                 
                 string signedAt = DateTime.Now.ToString("yyyy-MM-ddTHH:mm:sszzz");
-                
-                // PKCS7SignML crea un SignedData "attached" - contiene contenuto + firma
-                string pkcs7Base64 = Convert.ToBase64String(p7sBytes);
-                
-                Log($"  Building S/MIME OPAQUE message (application/x-pkcs7-mime)");
-                Log($"  P7M size: {p7sBytes.Length} bytes, Base64 size: {pkcs7Base64.Length} chars");
-
-                var smimeBuilder = new StringBuilder();
-                
-                // Estrai gli header dal contenuto firmato per l'envelope esterno
-                // Questi header sono GIA' inclusi nel contenuto firmato, ma servono anche
-                // nell'envelope per il routing dell'email
-                string extractedFrom = "";
-                string extractedTo = "";
-                string extractedSubject = "";
-                var contentLines = mimeContent.Split(new[] { "\r\n" }, StringSplitOptions.None);
-                foreach (var line in contentLines)
-                {
-                    if (line.StartsWith("From:")) extractedFrom = line.Substring(5);
-                    else if (line.StartsWith("To:")) extractedTo = line.Substring(3);
-                    else if (line.StartsWith("Subject:")) extractedSubject = line.Substring(8);
-                    else if (string.IsNullOrEmpty(line)) break; // Fine header
-                }
-                
-                // Header envelope (stessi del contenuto firmato)
-                smimeBuilder.Append($"From:{extractedFrom}\r\n");
-                smimeBuilder.Append($"To:{extractedTo}\r\n");
-                smimeBuilder.Append($"Subject:{extractedSubject}\r\n");
-                smimeBuilder.Append($"Date:{DateTime.Now.ToString("ddd, d MMM yyyy HH:mm:ss zzz", System.Globalization.CultureInfo.InvariantCulture)}\r\n");
-                
-                // S/MIME opaque con x- prefix come nell'esempio SIAE
-                smimeBuilder.Append("MIME-Version: 1.0\r\n");
-                smimeBuilder.Append("Content-Type: application/x-pkcs7-mime;\r\n");
-                smimeBuilder.Append("\tsmime-type=signed-data;\r\n");
-                smimeBuilder.Append("\tname=\"smime.p7m\"\r\n");
-                smimeBuilder.Append("Content-Transfer-Encoding: base64\r\n");
-                smimeBuilder.Append("Content-Disposition: attachment;\r\n");
-                smimeBuilder.Append("\tfilename=\"smime.p7m\"\r\n");
-                smimeBuilder.Append("\r\n");
-                
-                // Base64 in righe da 76 caratteri (standard RFC)
-                for (int i = 0; i < pkcs7Base64.Length; i += 76)
-                {
-                    int len = Math.Min(76, pkcs7Base64.Length - i);
-                    smimeBuilder.Append(pkcs7Base64.Substring(i, len));
-                    smimeBuilder.Append("\r\n");
-                }
-
-                string signedMime = smimeBuilder.ToString();
-                Log($"  S/MIME OPAQUE message built: {signedMime.Length} bytes");
-                
-                // DEBUG: Log prime 25 righe per verifica CRLF e struttura
-                var debugLines = signedMime.Split(new[] { "\r\n" }, StringSplitOptions.None);
-                Log($"  === S/MIME OUTPUT (prime 25 righe) ===");
-                for (int i = 0; i < Math.Min(25, debugLines.Length); i++)
-                {
-                    string line = debugLines[i];
-                    // Tronca righe lunghe (base64) per leggibilità
-                    if (line.Length > 80) line = line.Substring(0, 77) + "...";
-                    Log($"  {i + 1,2}: [{line}]");
-                }
-                Log($"  === FINE DEBUG ===");
+                Log($"  ✓ S/MIME nativo generato correttamente via SMIMESignML");
 
                 return JsonConvert.SerializeObject(new
                 {
@@ -2401,7 +2310,8 @@ namespace SiaeBridge
                         signerName = signerName,
                         signedAt = signedAt,
                         format = "S/MIME",
-                        algorithm = "SHA-256"
+                        algorithm = "SHA-256",
+                        generator = "SMIMESignML-native"  // Indica che è stato generato nativamente
                     }
                 });
             }
@@ -2415,8 +2325,8 @@ namespace SiaeBridge
                 // Pulisci file temporanei
                 try
                 {
-                    if (inputFile != null && File.Exists(inputFile))
-                        File.Delete(inputFile);
+                    if (attachmentTempFile != null && File.Exists(attachmentTempFile))
+                        File.Delete(attachmentTempFile);
                     if (outputFile != null && File.Exists(outputFile))
                         File.Delete(outputFile);
                 }
