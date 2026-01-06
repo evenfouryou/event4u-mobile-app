@@ -44,15 +44,18 @@ jobs:
             Copy-Item $libSiae "$outDir/libSIAE.dll" -Force
             Write-Host "✓ Copied libSIAE.dll from prebuilt"
           } else {
-            # Try attached_assets as fallback
-            $libSiae2 = Get-ChildItem "attached_assets" -Filter "libSIAE*.dll" | Select-Object -First 1
-            if ($libSiae2) {
-              Copy-Item $libSiae2.FullName "$outDir/libSIAE.dll" -Force
-              Write-Host "✓ Copied libSIAE.dll from attached_assets"
-            } else {
-              Write-Host "✗ libSIAE.dll NOT FOUND!"
-              exit 1
-            }
+            Write-Host "✗ libSIAE.dll NOT FOUND!"
+            exit 1
+          }
+          
+          # Copy libSIAEp7.dll from prebuilt (CRITICAL for SMIMESignML/PKCS7SignML)
+          $libSiaep7 = "desktop-app/SiaeBridge/prebuilt/libSIAEp7.dll"
+          if (Test-Path $libSiaep7) {
+            Copy-Item $libSiaep7 "$outDir/libSIAEp7.dll" -Force
+            Write-Host "✓ Copied libSIAEp7.dll from prebuilt"
+          } else {
+            Write-Host "✗ libSIAEp7.dll NOT FOUND - S/MIME signing will fail!"
+            exit 1
           }
           
           echo ""
@@ -63,7 +66,7 @@ jobs:
         shell: pwsh
         run: |
           $dir = "desktop-app/SiaeBridge/bin/Release/net472"
-          $required = @("SiaeBridge.exe", "libSIAE.dll", "Newtonsoft.Json.dll")
+          $required = @("SiaeBridge.exe", "libSIAE.dll", "libSIAEp7.dll", "Newtonsoft.Json.dll")
           
           $missing = @()
           foreach ($f in $required) {
