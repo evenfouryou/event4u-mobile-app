@@ -229,7 +229,7 @@ function Router() {
     );
   }
 
-  // PR and Capo Staff dedicated routes
+  // PR and Capo Staff dedicated routes - Mobile-first interface with full navigation
   if ((user as any)?.role === 'pr' || (user as any)?.role === 'capo_staff') {
     return (
       <SidebarProvider style={style}>
@@ -244,21 +244,26 @@ function Router() {
             </header>
             <main className="flex-1 overflow-auto pb-20 md:pb-0">
               <Switch>
-                <Route path="/staff-pr-home" component={StaffPrHome} />
+                {/* Mobile-first PrApp come interfaccia principale */}
+                <Route path="/pr-app" component={PrApp} />
                 <Route path="/pr/guest-lists" component={PrGuestLists} />
                 <Route path="/pr/tables" component={PrTables} />
                 <Route path="/pr/staff" component={PrStaff} />
                 <Route path="/pr/my-events" component={PrMyEvents} />
                 <Route path="/pr/events" component={PrEvents} />
                 <Route path="/pr-wallet" component={PrWallet} />
+                <Route path="/pr-dashboard" component={PrDashboard} />
                 <Route path="/events/:id/panel" component={StaffPrEventPanel} />
+                <Route path="/staff-pr-home" component={StaffPrHome} />
                 <Route path="/settings" component={Settings} />
                 <Route path="/scanner/scan/:eventId" component={ScannerScan} />
                 <Route path="/scanner/scanned/:eventId" component={ScannerScanned} />
                 <Route path="/scanner/tickets/:eventId" component={ScannerTickets} />
+                <Route path="/scanner/stats/:eventId?" component={ScannerStats} />
                 <Route path="/scanner" component={ScannerHome} />
                 <Route path="/">
-                  <Redirect to="/staff-pr-home" />
+                  {/* Redirect to mobile-first PR app */}
+                  <Redirect to="/pr-app" />
                 </Route>
                 <Route component={NotFound} />
               </Switch>

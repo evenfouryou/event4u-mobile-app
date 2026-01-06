@@ -1643,7 +1643,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       const features = await storage.getUserFeatures(userId);
       if (!features) {
-        // Return default features if none exist (beverage always enabled by default)
+        // Return default features if none exist (aligned with schema defaults)
         return res.json({
           userId: userId,
           beverageEnabled: true,
@@ -1652,6 +1652,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           cassaEnabled: false,
           nightFileEnabled: false,
           siaeEnabled: false,
+          scannerEnabled: true,  // Default true per schema
+          prEnabled: true,       // Default true per schema
+          badgesEnabled: true,   // Default true per schema
+          templateEnabled: true, // Default true per schema
+          cassaBigliettiEnabled: true, // Default true per schema
         });
       }
       res.json(features);
@@ -1665,7 +1670,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const features = await storage.getUserFeatures(req.params.userId);
       if (!features) {
-        // Return default features if none exist
+        // Return default features if none exist (aligned with schema defaults)
         return res.json({
           userId: req.params.userId,
           beverageEnabled: true,
@@ -1674,6 +1679,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
           cassaEnabled: false,
           nightFileEnabled: false,
           siaeEnabled: false,
+          scannerEnabled: true,  // Default true per schema
+          prEnabled: true,       // Default true per schema
+          badgesEnabled: true,   // Default true per schema
+          templateEnabled: true, // Default true per schema
+          cassaBigliettiEnabled: true, // Default true per schema
         });
       }
       res.json(features);
