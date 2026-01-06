@@ -1,0 +1,54 @@
+[Bridge] Normalized values: readerConnected=true, cardInserted=true
+[Bridge] Card ready for seals!
+[Bridge] Card ready check for signature: {"ready":true,"error":null}
+[Bridge] Requesting XML signature: requestId=sig_1767737588500_2psse6wky
+[Bridge-Audit] xml_signature: requested - requestId=sig_1767737588500_2psse6wky
+[Bridge] Sending XML signature request to bridge: requestId=sig_1767737588500_2psse6wky
+[Bridge] XML signature request sent successfully, waiting for response...
+[Bridge] Message received: type=ping
+[Bridge] Message received: type=SIGNATURE_RESPONSE
+[Bridge] XML Signature response received: requestId=sig_1767737588500_2psse6wky
+[Bridge] XML signature request completed: requestId=sig_1767737588500_2psse6wky, format=CAdES-BES, duration=4504ms
+[Bridge] [INTEGRITY] P7M received from desktop:
+[Bridge] [INTEGRITY]   - Size: 5554 bytes
+[Bridge] [INTEGRITY]   - Base64 length: 7408 chars
+[Bridge] [INTEGRITY]   - SHA-256: 00489838dfa9ed2d1e9796223daafc47912e64dafd00114c385ef63f1b5ce5d3
+[Bridge] [INTEGRITY]   - Valid ASN.1 SEQUENCE: true
+[Bridge] [INTEGRITY]   - Contains signedData OID: true
+[Bridge-Audit] xml_signature: completed - requestId=sig_1767737588500_2psse6wky
+[SIAE-ROUTES] CAdES-BES signature created for C1 RCA evento "Prova Gratuita"
+[EMAIL-SERVICE] Attempting S/MIME signature for SIAE email to servertest2@batest.siae.it...
+[Bridge] Found card signer email: tickefouryou@gmail.com
+[EMAIL-SERVICE] Card signer email (from cache): tickefouryou@gmail.com
+[EMAIL-SERVICE] [INTEGRITY] P7M pre-send check:
+[EMAIL-SERVICE] [INTEGRITY]   - Size: 5554 bytes
+[EMAIL-SERVICE] [INTEGRITY]   - Base64 length: 7408 chars
+[EMAIL-SERVICE] [INTEGRITY]   - SHA-256: 00489838dfa9ed2d1e9796223daafc47912e64dafd00114c385ef63f1b5ce5d3
+[Bridge] requestSmimeSignature called, format=SMIMESignML, recipient=servertest2@batest.siae.it
+[Bridge] isCardReadyForSeals called
+[Bridge] globalBridge exists: true
+[Bridge] cachedBridgeStatus: {"type":"status","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardAtr":null,"cardEmail":"tickefouryou@gmail.com","cardCertificateCN":"PETRELLI/JONATHAN/PTRJTH93M11I156B","cardCertificateExpiry":"2028-03-06","demoMode":false,"canEmitTickets":true,"relayConnected":true,"pinLocked":false,"pinRequired":false}}
+[Bridge] Extracted status: {"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":"4130313238343837","cardCounter":264,"cardBalance":423561,"cardKeyId":129,"cardAtr":null,"cardEmail":"tickefouryou@gmail.com","cardCertificateCN":"PETRELLI/JONATHAN/PTRJTH93M11I156B","cardCertificateExpiry":"2028-03-06","demoMode":false,"canEmitTickets":true,"relayConnected":true,"pinLocked":false,"pinRequired":false}
+[Bridge] Normalized values: readerConnected=true, cardInserted=true
+[Bridge] Card ready for seals!
+[Bridge] Card ready check for S/MIME: {"ready":true,"error":null}
+[Bridge] Requesting S/MIME signature: requestId=smime_1767737593036_orxiv9sgm
+[Bridge-Audit] smime_signature: requested - requestId=smime_1767737593036_orxiv9sgm
+[Bridge] Using SMIMESignML format: from="Event4U SIAE" <tickefouryou@gmail.com>, to=servertest2@batest.siae.it, subject=RCA_2026_01_06_EVENT4U1_001_XSI_V.01.00...
+[Bridge] Sending S/MIME signature request to bridge: requestId=smime_1767737593036_orxiv9sgm
+[Bridge] S/MIME signature request sent successfully, waiting for response...
+[Bridge] Message received: type=SMIME_SIGNATURE_RESPONSE
+[Bridge] S/MIME Signature response received: requestId=smime_1767737593036_orxiv9sgm
+[Bridge] S/MIME signature request failed: requestId=smime_1767737593036_orxiv9sgm, code=SIGNATURE_FAILED, error=Firma digitale fallita. Riprovare.
+[Bridge-Audit] smime_signature: failed - requestId=smime_1767737593036_orxiv9sgm error=SIGNATURE_FAILED
+[EMAIL-SERVICE] S/MIME signature failed: SIGNATURE_FAILED: Firma digitale fallita. Riprovare.
+[EMAIL-SERVICE] BLOCKED: Signature required but failed. Email NOT sent.
+10:13:16 PM [express] POST /api/siae/companies/67952894-0d84-4e62-81bf-bfec9a282c1e/transmissions/sen…
+[Bridge] Message received: type=pong
+[Bridge] Message received: type=pong
+[Bridge] Pong received from userId=fae97c35-e437-4d6c-b630-490e1ba1b917, lastPing updated
+[Bridge] Message received: type=ping
+[Bridge] Message received: type=pong
+[Bridge] Message received: type=pong
+[Bridge] Pong received from userId=fae97c35-e437-4d6c-b630-490e1ba1b917, lastPing updated
+[Bridge] Message received: type=ping
