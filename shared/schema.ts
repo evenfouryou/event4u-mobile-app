@@ -5996,9 +5996,10 @@ export const referralSettingsRelations = relations(referralSettings, ({ one }) =
 export const productBundles = pgTable("product_bundles", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   companyId: varchar("company_id").notNull().references(() => companies.id),
+  ticketedEventId: varchar("ticketed_event_id").references(() => siaeTicketedEvents.id),
   name: varchar("name", { length: 100 }).notNull(),
   description: text("description"),
-  type: varchar("type", { length: 30 }).notNull(),
+  type: varchar("type", { length: 30 }).notNull(), // ticket_drink, group_discount, vip_table
   basePrice: decimal("base_price", { precision: 10, scale: 2 }).notNull(),
   originalPrice: decimal("original_price", { precision: 10, scale: 2 }),
   minGroupSize: integer("min_group_size").default(1),
@@ -6016,6 +6017,10 @@ export const productBundlesRelations = relations(productBundles, ({ one, many })
   company: one(companies, {
     fields: [productBundles.companyId],
     references: [companies.id],
+  }),
+  ticketedEvent: one(siaeTicketedEvents, {
+    fields: [productBundles.ticketedEventId],
+    references: [siaeTicketedEvents.id],
   }),
   items: many(productBundleItems),
   purchases: many(bundlePurchases),

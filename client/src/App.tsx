@@ -104,6 +104,8 @@ import PrinterSettings from "@/pages/printer-settings";
 import TemplateBuilder from "@/pages/template-builder";
 import DigitalTemplateBuilder from "@/pages/digital-template-builder";
 import MarketingEmailPage from "@/pages/marketing-email";
+import LoyaltyAdminPage from "@/pages/loyalty-admin";
+import ReferralAdminPage from "@/pages/referral-admin";
 import StripeAdmin from "@/pages/stripe-admin";
 import ScannerHome from "@/pages/scanner-home";
 import ScannerHistory from "@/pages/scanner-history";
@@ -344,6 +346,8 @@ function Router() {
               <Route path="/pr-wallet" component={PrWallet} />
               <Route path="/pr-app" component={PrApp} />
               <Route path="/marketing/email" component={MarketingEmailPage} />
+              <Route path="/loyalty/admin" component={LoyaltyAdminPage} />
+              <Route path="/referral/admin" component={ReferralAdminPage} />
               <Route path="/school-badges" component={SchoolBadgeManager} />
               <Route path="/school-badges/scanner" component={SchoolBadgeScanner} />
               <Route path="/badge-error" component={SchoolBadgeError} />

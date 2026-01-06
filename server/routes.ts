@@ -20,6 +20,9 @@ import digitalTemplateRoutes from "./digital-template-routes";
 import reservationBookingRoutes from "./reservation-booking-routes";
 import ticketingRoutes from "./ticketing-routes";
 import marketingRoutes from "./marketing-routes";
+import loyaltyRoutes from "./loyalty-routes";
+import referralRoutes from "./referral-routes";
+import bundleRoutes from "./bundle-routes";
 import { startMarketingScheduler } from "./marketing-scheduler";
 import { setupTicketingWebSocket } from "./ticketing-websocket";
 import { startHoldCleanupJob } from "./hold-service";
@@ -164,6 +167,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Register marketing routes (email campaigns, templates)
   app.use(marketingRoutes);
+  
+  // Loyalty routes
+  app.use(loyaltyRoutes);
+  app.use(referralRoutes);
+  
+  // Bundle routes
+  app.use(bundleRoutes);
   
   // Start marketing email scheduler
   startMarketingScheduler();

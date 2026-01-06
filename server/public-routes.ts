@@ -13,6 +13,8 @@ import {
   getCachedEfffData,
   type FiscalSealData 
 } from "./bridge-relay";
+import { creditLoyaltyPoints } from "./loyalty-routes";
+import { convertReferralOnPurchase, getPendingReferralDiscount } from "./referral-routes";
 import {
   siaeTicketedEvents,
   siaeEventSectors,
@@ -2227,6 +2229,33 @@ router.post("/api/public/checkout/confirm", async (req, res) => {
         completedAt: new Date(),
       })
       .where(eq(publicCheckoutSessions.id, checkoutSessionId));
+
+    // Accredita punti fedeltà
+    try {
+      await creditLoyaltyPoints(
+        customer.id,
+        ticketedEvent.companyId,
+        parseFloat(checkoutSession.totalAmount?.toString() || "0"),
+        transaction.id,
+        `Acquisto biglietti - ${tickets.length} biglietto/i`
+      );
+    } catch (loyaltyError) {
+      console.error("[PUBLIC] Error crediting loyalty points:", loyaltyError);
+    }
+
+    // Converti referral se presente (primo acquisto con codice referral)
+    try {
+      const referralResult = await convertReferralOnPurchase(
+        customer.id,
+        transaction.id,
+        parseFloat(checkoutSession.totalAmount?.toString() || "0")
+      );
+      if (referralResult.converted) {
+        console.log(`[PUBLIC] Referral converted: referrer=${referralResult.referrerId}, points=${referralResult.pointsCredited}`);
+      }
+    } catch (referralError) {
+      console.error("[PUBLIC] Error converting referral:", referralError);
+    }
 
     // Get event details for email
     const [eventDetails] = await db
