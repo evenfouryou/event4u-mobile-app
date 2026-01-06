@@ -1,0 +1,106 @@
+Ok, rianalisi **a fondo** fatta su `RCA_2026_01_06_001.xsi.p7m` + sul tuo esito **40605** .
+
+## 1) Il `.p7m` è tecnicamente valido (firma OK)
+
+* È **PKCS#7 / CMS SignedData** (DER).
+* Digest **SHA-256**.
+* Il contenuto è effettivamente incapsulato e si estrae correttamente (“Verification successful”).
+
+Quindi **non è** un XML rinominato e **non è** un P7M “testo”.
+
+## 2) L’XML interno è leggibile e NON contiene più DOCTYPE
+
+Ho estratto il contenuto: è questo formato (riassunto fedele):
+
+```xml
+<?xml version="1.0" encoding="UTF-8"?>
+<RiepilogoControlloAccessi Sostituzione="N">
+  <Titolare>...<DataRiepilogo>20260106</DataRiepilogo>...</Titolare>
+  <Evento>...<CodiceLocale>0000000000001</CodiceLocale>...<SistemaEmissione>...</SistemaEmissione></Evento>
+</RiepilogoControlloAccessi>
+```
+
+✅ Quindi **non è più** il vecchio `LogTransazione` e **non c’è** `<!DOCTYPE ...>`.
+
+> Questo rende l’errore 40605 ancora più indicativo: il problema è **o nello schema atteso dal WS RCA**, **o nel modo in cui lo stai trasmettendo**.
+
+## 3) Cosa “stona” davvero e può causare il 40605
+
+### A) Il P7M contiene SOLO il certificato del firmatario (catena incompleta)
+
+Nel CMS ho trovato **solo** il certificato “PETRELLI/JONATHAN …” emesso da “InfoCert CA 4 CL”, **senza** certificati intermedi/root nella busta.
+
+Molti sistemi accettano comunque (perché hanno già la CA), ma alcuni WS (specie se configurati in modo rigido) vogliono nel CMS anche **la chain** (intermediate).
+Quando la validazione fallisce, alcuni sistemi rispondono con un errore “generico” tipo “riepilogo illeggibile” perché **non entrano nemmeno nella lettura del contenuto**.
+
+✅ Fix: genera il P7M includendo almeno l’intermedio della CA (chain).
+
+---
+
+### B) Il WS RCA potrebbe richiedere **namespace/XSD specifico** e/o ordine campi rigidissimo
+
+Il tuo XML non usa namespace (`xmlns=...`). Se il WS RCA valida contro XSD con namespace obbligatorio, per loro è “illeggibile”.
+
+✅ Fix: serve validare l’XML **contro l’XSD ufficiale del servizio RCA** (non “a intuito”). Se vuoi, lo agganciamo appena mi dici che versione specifica usa il tuo WS (o se mi mandi l’XSD/WSDL).
+
+---
+
+### C) Possibile corruzione in trasmissione (questo spiega “messaggio corrotto” e 40605)
+
+Anche con un P7M perfetto, se il tuo backend:
+
+* fa URL encoding del base64 (`+` → spazio),
+* lo mette in form-urlencoded,
+* lo spezza/normalizza line endings,
+* o manda il file come testo invece che `base64Binary` nel SOAP,
+
+SIAE riceve un P7M diverso e risponde “illeggibile”.
+
+✅ Fix “da laboratorio” (decisivo):
+
+1. calcola **SHA-256 del file p7m** prima di inviare
+2. calcola **SHA-256 del p7m ricostruito** lato server prima della chiamata SOAP
+   Devono essere IDENTICI. Se non lo sono, stai corrompendo il payload.
+
+---
+
+# Cosa devi fare adesso (ordine che ti fa uscire dal loop)
+
+## Step 1 — Aggiungi la catena certificati nel P7M
+
+Nel generatore P7M (lib/bridge) devi includere anche l’intermediate CA (se la libreria lo consente).
+Se la libreria non lo consente, puoi:
+
+* passare una “cert chain” quando firmi (se previsto),
+* oppure cambiare metodo di creazione CMS (SignedCms/BouncyCastle) includendo `certificates`.
+
+## Step 2 — Verifica WS: base64Binary “pulito”
+
+* **NO** form-urlencoded
+* **NO** URL encoding del base64
+* SOAP field deve essere `xsd:base64Binary`
+
+## Step 3 — Validazione XSD
+
+Serve l’XSD/WSDL del servizio RCA che stai usando per controllare:
+
+* root element esatto
+* namespace
+* ordine dei nodi
+* formati/length (es. `CodiceLocale`, `OraEvento`, ecc.)
+
+---
+
+## Per chiudere al 100%, mi serve 1 cosa sola
+
+Incollami **il pezzo di SOAP request** (anche log) della chiamata RCA **con i tag**, cioè:
+
+* nome metodo
+* nome del campo dove metti il file (es. `<fileRCA>` / `<riepilogo>` ecc.)
+* come lo incapsuli (base64 in-line?)
+
+Con quello ti dico *esattamente*:
+
+* se stai mettendo il P7M nel tag giusto,
+* se stai corrompendo il base64,
+* e se ti manca il namespace/XSD.
