@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="ISO-8859-1"?>
+<!DOCTYPE RiepilogoControlloAccessi SYSTEM "ControlloAccessi_v0001_20080626.dtd">
+<RiepilogoControlloAccessi Sostituzione="N">
+    <Titolare>
+        <DenominazioneTitolareCA>Hyper Events</DenominazioneTitolareCA>
+        <CFTitolareCA>02120820432</CFTitolareCA>
+        <CodiceSistemaCA>P0004010</CodiceSistemaCA>
+        <DataRiepilogo>20260104</DataRiepilogo>
+        <DataGenerazioneRiepilogo>20260107</DataGenerazioneRiepilogo>
+        <OraGenerazioneRiepilogo>231504</OraGenerazioneRiepilogo>
+        <ProgressivoRiepilogo>1</ProgressivoRiepilogo>
+    </Titolare>
+    <Evento>
+        <CFOrganizzatore>02120820432</CFOrganizzatore>
+        <DenominazioneOrganizzatore>Hyper Events</DenominazioneOrganizzatore>
+        <TipologiaOrganizzatore>G</TipologiaOrganizzatore>
+        <SpettacoloIntrattenimento>I</SpettacoloIntrattenimento>
+        <IncidenzaIntrattenimento>50</IncidenzaIntrattenimento>
+        <DenominazioneLocale>Prova 28/12 pt 2</DenominazioneLocale>
+        <CodiceLocale>0000000000001</CodiceLocale>
+        <DataEvento>20260104</DataEvento>
+        <OraEvento>0810</OraEvento>
+        <TipoGenere>64</TipoGenere>
+        <TitoloEvento>Prova 28/12 pt 2</TitoloEvento>
+        <Autore>Prova 28/12 pt 2</Autore>
+        <Esecutore>Hyper Events</Esecutore>
+        <NazionalitaFilm>ITA</NazionalitaFilm>
+        <NumOpereRappresentate>1</NumOpereRappresentate>
+        <SistemaEmissione>
+            <CodiceSistemaEmissione>P0004010</CodiceSistemaEmissione>
+            <Titoli>
+                <CodiceOrdinePosto>PU</CodiceOrdinePosto>
+                <Capienza>1000</Capienza>
+                <TotaleTipoTitolo>
+                    <TipoTitolo>I1</TipoTitolo>
+                    <TotaleTitoliLTA>6</TotaleTitoliLTA>
+                    <TotaleTitoliNoAccessoTradiz>3</TotaleTitoliNoAccessoTradiz>
+                    <TotaleTitoliNoAccessoDigitali>0</TotaleTitoliNoAccessoDigitali>
+                    <TotaleTitoliAutomatizzatiTradiz>0</TotaleTitoliAutomatizzatiTradiz>
+                    <TotaleTitoliAutomatizzatiDigitali>0</TotaleTitoliAutomatizzatiDigitali>
+                    <TotaleTitoliManualiTradiz>0</TotaleTitoliManualiTradiz>
+                    <TotaleTitoliManualiDigitali>0</TotaleTitoliManualiDigitali>
+                    <TotaleTitoliAnnullatiTradiz>3</TotaleTitoliAnnullatiTradiz>
+                    <TotaleTitoliAnnullatiDigitali>0</TotaleTitoliAnnullatiDigitali>
+                    <TotaleTitoliDaspatiTradiz>0</TotaleTitoliDaspatiTradiz>
+                    <TotaleTitoliDaspatiDigitali>0</TotaleTitoliDaspatiDigitali>
+                    <TotaleTitoliRubatiTradiz>0</TotaleTitoliRubatiTradiz>
+                    <TotaleTitoliRubatiDigitali>0</TotaleTitoliRubatiDigitali>
+                    <TotaleTitoliBLTradiz>0</TotaleTitoliBLTradiz>
+                    <TotaleTitoliBLDigitali>0</TotaleTitoliBLDigitali>
+                </TotaleTipoTitolo>
+            </Titoli>
+        </SistemaEmissione>
+    </Evento>
+</RiepilogoControlloAccessi>

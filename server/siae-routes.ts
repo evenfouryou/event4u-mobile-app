@@ -5937,6 +5937,13 @@ async function generateRcaReportXml(params: RcaReportParams): Promise<string> {
   const spettacoloIntrattenimento = ticketedEvent.entertainmentType || 'S';
   const incidenzaIntrattenimento = ticketedEvent.entertainmentIncidence || 100;
   
+  // Per tipoGenere 77/78 (discoteca/intrattenimento), Autore/Esecutore/NazionalitaFilm non previsti
+  // SIAE Warning 2108/2110/2112/2114: usare '-' per evitare warning
+  const isDiscotecaIntrattenimento = tipoGenere === '77' || tipoGenere === '78';
+  const autoreValue = isDiscotecaIntrattenimento ? '-' : '-';
+  const esecutoreValue = isDiscotecaIntrattenimento ? '-' : '-';
+  const nazionalitaFilmValue = isDiscotecaIntrattenimento ? '-' : 'ITA';
+  
   // NOTA: Nessun DOCTYPE - i Web Service SIAE non risolvono DTD esterni (XXE protection)
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
 <RiepilogoControlloAccessi Sostituzione="${sostituzione}">
@@ -5961,9 +5968,9 @@ async function generateRcaReportXml(params: RcaReportParams): Promise<string> {
     <OraEvento>${oraEvento}</OraEvento>
     <TipoGenere>${escapeXml(tipoGenere)}</TipoGenere>
     <TitoloEvento>${escapeXml(eventDetails.name)}</TitoloEvento>
-    <Autore></Autore>
-    <Esecutore></Esecutore>
-    <NazionalitaFilm></NazionalitaFilm>
+    <Autore>${autoreValue}</Autore>
+    <Esecutore>${esecutoreValue}</Esecutore>
+    <NazionalitaFilm>${nazionalitaFilmValue}</NazionalitaFilm>
     <NumOpereRappresentate>1</NumOpereRappresentate>
     <SistemaEmissione CFTitolare="${escapeXml(cfTitolare)}" CodiceSistema="${escapeXml(systemEmissionCode)}">${titolXml}
     </SistemaEmissione>
