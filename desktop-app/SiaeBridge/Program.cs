@@ -129,6 +129,8 @@ namespace SiaeBridge
         // ============================================================
         static int _slot = -1;
         static StreamWriter _log;
+        static bool _vcRuntimeMissing = false;
+        static string _vcRuntimeError = null;
 
         // ============================================================
         // MAIN
@@ -139,10 +141,13 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.36 - FIX: Improved smart card detection logic");
+            Log("SiaeBridge v3.37 - FIX: VC++ Runtime dependency check");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
+            
+            // v3.37: Check VC++ Runtime availability early
+            CheckVCRuntimeDependencies();
 
             string dllPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "libSIAE.dll");
             if (File.Exists(dllPath))
@@ -183,6 +188,81 @@ namespace SiaeBridge
         static void Log(string msg)
         {
             try { _log?.WriteLine($"[{DateTime.Now:HH:mm:ss.fff}] {msg}"); } catch { }
+        }
+
+        // ============================================================
+        // v3.37: Check VC++ Runtime dependencies
+        // libSIAE.dll is a native C++ DLL that requires VC++ Runtime
+        // Error 0x8007000B = "Bad Image Format" usually means missing dependencies
+        // ============================================================
+        static void CheckVCRuntimeDependencies()
+        {
+            try
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                
+                // Check for common VC++ runtime DLLs that libSIAE might depend on
+                string[] vcRuntimePaths = new[]
+                {
+                    Path.Combine(baseDir, "msvcr100.dll"),   // VC++ 2010
+                    Path.Combine(baseDir, "msvcp100.dll"),
+                    Path.Combine(baseDir, "msvcr120.dll"),   // VC++ 2013
+                    Path.Combine(baseDir, "msvcp120.dll"),
+                    Path.Combine(baseDir, "vcruntime140.dll"), // VC++ 2015-2022
+                    Path.Combine(baseDir, "msvcp140.dll"),
+                };
+                
+                Log("Checking VC++ Runtime dependencies...");
+                foreach (string path in vcRuntimePaths)
+                {
+                    string fileName = Path.GetFileName(path);
+                    if (File.Exists(path))
+                        Log($"  ✓ {fileName} found locally");
+                }
+                
+                // Try to load libSIAE.dll to detect dependency issues early
+                string libSiaePath = Path.Combine(baseDir, "libSIAE.dll");
+                if (File.Exists(libSiaePath))
+                {
+                    try
+                    {
+                        // Try calling a simple function to force DLL load
+                        int testResult = isCardIn(0);
+                        Log($"  ✓ libSIAE.dll loaded successfully (test isCardIn(0) = {testResult})");
+                    }
+                    catch (DllNotFoundException ex)
+                    {
+                        _vcRuntimeMissing = true;
+                        _vcRuntimeError = $"DllNotFoundException: {ex.Message}";
+                        Log($"  ✗ libSIAE.dll dependency error: {ex.Message}");
+                    }
+                    catch (BadImageFormatException ex)
+                    {
+                        _vcRuntimeMissing = true;
+                        _vcRuntimeError = $"BadImageFormatException: {ex.Message}";
+                        Log($"  ✗ libSIAE.dll architecture mismatch: {ex.Message}");
+                    }
+                    catch (Exception ex)
+                    {
+                        // 0x8007000B = HRESULT for ERROR_BAD_FORMAT
+                        if (ex.HResult == unchecked((int)0x8007000B) || ex.Message.Contains("formato non corretto"))
+                        {
+                            _vcRuntimeMissing = true;
+                            _vcRuntimeError = "VC++ Runtime mancante. Installare Visual C++ Redistributable 2015-2022 (x86)";
+                            Log($"  ✗ ERRORE 0x8007000B: {_vcRuntimeError}");
+                            Log($"  → Download: https://aka.ms/vs/17/release/vc_redist.x86.exe");
+                        }
+                        else
+                        {
+                            Log($"  ? libSIAE.dll test exception: {ex.GetType().Name}: {ex.Message}");
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Log($"CheckVCRuntimeDependencies error: {ex.Message}");
+            }
         }
 
         // ============================================================
@@ -270,7 +350,7 @@ namespace SiaeBridge
 
         // ============================================================
         // CHECK READER
-        // v3.36 FIX: Improved card detection logic
+        // v3.37 FIX: VC++ Runtime dependency check + improved detection
         // isCardIn() returns:
         //   0 = no reader at slot OR reader present but no card
         //   32 (SCARD_STATE_PRESENT) = card is present
@@ -278,6 +358,21 @@ namespace SiaeBridge
         // ============================================================
         static string CheckReader()
         {
+            // v3.37: Check if VC++ Runtime is missing (detected at startup)
+            if (_vcRuntimeMissing)
+            {
+                Log($"  VC++ Runtime error detected: {_vcRuntimeError}");
+                return JsonConvert.SerializeObject(new
+                {
+                    success = false,
+                    readerConnected = false,
+                    cardPresent = false,
+                    error = "VC_RUNTIME_MISSING",
+                    message = "Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe",
+                    downloadUrl = "https://aka.ms/vs/17/release/vc_redist.x86.exe"
+                });
+            }
+
             bool hasReaders = CheckWindowsSmartCardReaders();
             Log($"Windows readers: {hasReaders}");
 
@@ -368,6 +463,24 @@ namespace SiaeBridge
                     catch (Exception ex)
                     {
                         Log($"  Slot {s} error: {ex.Message}");
+                        
+                        // v3.37: Detect VC++ Runtime missing error
+                        if (ex.HResult == unchecked((int)0x8007000B) || ex.Message.Contains("formato non corretto"))
+                        {
+                            _vcRuntimeMissing = true;
+                            _vcRuntimeError = "VC++ Runtime mancante";
+                            Log($"  ✗ ERRORE 0x8007000B rilevato: VC++ Runtime non installato");
+                            return JsonConvert.SerializeObject(new
+                            {
+                                success = false,
+                                readerConnected = false,
+                                cardPresent = false,
+                                error = "VC_RUNTIME_MISSING",
+                                message = "Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe",
+                                downloadUrl = "https://aka.ms/vs/17/release/vc_redist.x86.exe"
+                            });
+                        }
+                        
                         // Don't break on exceptions - try next slot
                         continue;
                     }
@@ -416,6 +529,23 @@ namespace SiaeBridge
                     catch (Exception ex)
                     {
                         Log($"  Fallback slot {s} error: {ex.Message}");
+                        
+                        // v3.37: Detect VC++ Runtime missing error in fallback
+                        if (ex.HResult == unchecked((int)0x8007000B) || ex.Message.Contains("formato non corretto"))
+                        {
+                            _vcRuntimeMissing = true;
+                            _vcRuntimeError = "VC++ Runtime mancante";
+                            Log($"  ✗ ERRORE 0x8007000B rilevato in fallback: VC++ Runtime non installato");
+                            return JsonConvert.SerializeObject(new
+                            {
+                                success = false,
+                                readerConnected = false,
+                                cardPresent = false,
+                                error = "VC_RUNTIME_MISSING",
+                                message = "Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe",
+                                downloadUrl = "https://aka.ms/vs/17/release/vc_redist.x86.exe"
+                            });
+                        }
                     }
                 }
 
