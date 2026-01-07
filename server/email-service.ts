@@ -354,52 +354,18 @@ export async function sendPasswordResetEmail(options: PasswordResetEmailOptions)
 // Conforme a Allegato C - Provvedimento Agenzia delle Entrate 04/03/2008
 // Usa funzioni condivise da siae-utils.ts per nomi file corretti
 
-import { generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT } from './siae-utils';
+import { 
+  generateSiaeAttachmentName, 
+  generateSiaeSubject, 
+  SIAE_SYSTEM_CODE_DEFAULT 
+} from './siae-utils';
 
-const SIAE_VERSION = 'V.01.00';
 const DEFAULT_SYSTEM_CODE = SIAE_SYSTEM_CODE_DEFAULT;
 
-// generateSiaeFileName importata da siae-utils.ts
-// Supporta: 'giornaliero' -> RMG_, 'mensile' -> RPM_, 'rca'/'log' -> RCA_
-
-/**
- * Genera subject email conforme a RFC-2822 SIAE (Allegato C - Provvedimento 04/03/2008)
- * Formato dipende dal tipo di report:
- * - RMG giornaliero: RMG_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY> (silenzioso)
- * - RPM mensile: RPM_<AAAA>_<MM>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY> (silenzioso)
- * - RCA evento: RCA_<AAAA>_<MM>_<GG>_<SSSSSSSS>_<###>_<TTT>_V.<XX>.<YY> (genera risposta SIAE)
- */
-function generateSiaeEmailSubject(
-  transmissionType: 'daily' | 'monthly' | 'corrective' | 'rca',
-  date: Date, 
-  systemCode: string, 
-  sequenceNumber: number
-): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const code = systemCode.padEnd(8, '0').substring(0, 8);
-  const seq = String(sequenceNumber).padStart(3, '0');
-  
-  // Determina il prefisso corretto in base al tipo (Allegato C SIAE)
-  let prefix: string;
-  let datePart: string;
-  
-  if (transmissionType === 'monthly') {
-    prefix = 'RPM'; // Riepilogo Periodico Mensile (silenzioso)
-    datePart = `${year}_${month}`; // Solo anno e mese per mensile
-  } else if (transmissionType === 'rca') {
-    // RCA = Riepilogo Controllo Accessi (C1 evento che genera risposta SIAE)
-    prefix = 'RCA';
-    datePart = `${year}_${month}_${day}`;
-  } else {
-    // daily o corrective -> RMG (Riepilogo Mensile Giornaliero, silenzioso)
-    prefix = 'RMG';
-    datePart = `${year}_${month}_${day}`;
-  }
-  
-  return `${prefix}_${datePart}_${code}_${seq}_XSI_${SIAE_VERSION}`;
-}
+// ==================== File Naming SIAE (Allegato C) ====================
+// generateSiaeAttachmentName: per nome file allegato (formato breve)
+// generateSiaeSubject: per Subject email (formato completo)
+// IMPORTANTE: Sono DUE formati diversi secondo la documentazione SIAE!
 
 interface SiaeTransmissionEmailOptions {
   to: string;
@@ -471,13 +437,17 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
   };
   const reportType = reportTypeMap[transmissionType] || 'giornaliero';
   
-  // Nome file conforme a Allegato C SIAE (RMG_ giornaliero, RPM_ mensile, RCA_ evento)
-  // .xsi.p7m solo per CAdES-BES, .xsi per XMLDSig legacy o non firmato
+  // Nome file conforme a Allegato C SIAE (Sezione 1.4.1)
+  // FORMATO ALLEGATO (breve): RCA_AAAA_MM_GG_###.xsi.p7m
+  // DIVERSO dal Subject che ha formato completo!
   const effectiveSignatureFormat = isCAdES ? 'cades' : (isXmlDsig ? 'xmldsig' : null);
-  const fileName = generateSiaeFileName(reportType, periodDate, sequenceNumber, effectiveSignatureFormat, systemCode);
+  const fileName = generateSiaeAttachmentName(reportType, periodDate, sequenceNumber, effectiveSignatureFormat);
   
-  // Subject conforme a RFC-2822 SIAE con prefisso corretto
-  const emailSubject = generateSiaeEmailSubject(transmissionType, periodDate, systemCode, sequenceNumber);
+  // Subject conforme a RFC-2822 SIAE (Sezione 1.5.3)
+  // FORMATO SUBJECT (completo): RCA_AAAA_MM_GG_SSSSSSSS_###_XSI_V.01.00
+  const emailSubject = generateSiaeSubject(reportType, periodDate, sequenceNumber, systemCode);
+  
+  console.log(`[EMAIL-SERVICE] SIAE file naming: attachmentName=${fileName}, subject=${emailSubject}`);
 
   const typeLabels: Record<string, string> = {
     'daily': 'Giornaliera (C1)',

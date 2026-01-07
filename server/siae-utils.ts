@@ -260,25 +260,99 @@ export function normalizeCausaleAnnullamento(rawCode: string | null | undefined)
 // ==================== File Naming ====================
 
 /**
- * Genera nome file conforme Allegato C SIAE (Provvedimento Agenzia Entrate 04/03/2008)
- * Formato completo: XXX_AAAA_MM_GG_SSSSSSSS_###_TTT_V.XX.YY.ext
+ * Genera NOME FILE ALLEGATO conforme Allegato C SIAE (Sezione 1.4.1)
+ * 
+ * FORMATO ALLEGATO (breve): XXX_AAAA_MM_GG_###.TTT.p7m
+ * Esempio: RCA_2008_02_01_001.xsi.p7m
+ * 
+ * NOTA: Questo è DIVERSO dal Subject email che ha formato completo!
  * 
  * - XXX = Prefisso (RCA, RMG, RPM)
  * - AAAA_MM_GG = Data
- * - SSSSSSSS = Codice Sistema (es. EVENT4U1)
- * - ### = Progressivo (001, 002, ...)
- * - TTT = Tipo (XSI)
- * - V.XX.YY = Versione (V.01.00)
+ * - ### = Progressivo (001-999)
+ * - TTT = Tipo file (xsi per XML SIAE)
+ * - .p7m = estensione per file firmati CAdES
+ */
+export function generateSiaeAttachmentName(
+  reportType: 'giornaliero' | 'mensile' | 'rca' | 'log',
+  date: Date,
+  progressivo: number,
+  signatureFormat?: 'cades' | 'xmldsig' | null
+): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const prog = String(progressivo).padStart(3, '0');
+  
+  // Estensione: .xsi.p7m per CAdES, .xsi per non firmato
+  const extension = signatureFormat === 'cades' ? '.xsi.p7m' : '.xsi';
+  
+  // Formato breve allegato: XXX_AAAA_MM_GG_###.xsi.p7m
+  switch (reportType) {
+    case 'mensile':
+      // RPM = Riepilogo Periodico Mensile
+      return `RPM_${year}_${month}_${prog}${extension}`;
+    case 'log':
+    case 'rca':
+      // RCA = Riepilogo Controllo Accessi
+      return `RCA_${year}_${month}_${day}_${prog}${extension}`;
+    case 'giornaliero':
+    default:
+      // RMG = Riepilogo Mensile Giornaliero
+      return `RMG_${year}_${month}_${day}_${prog}${extension}`;
+  }
+}
+
+/**
+ * Genera SUBJECT EMAIL conforme Allegato C SIAE (Sezione 1.5.3)
  * 
- * Esempi:
- * - RCA_2026_01_06_EVENT4U1_001_XSI_V.01.00.p7m (CAdES-BES)
- * - RMG_2026_01_06_EVENT4U1_001_XSI_V.01.00.xsi (non firmato)
+ * FORMATO SUBJECT (completo): RCA_<AAAA>_<MM>_<GG>_<CodiceSistema8cifre>_<###>_<EST>_V.<XX>.<YY>
+ * Esempio: RCA_2008_02_01_00001234_001_XSI_V.01.00
  * 
- * Per file firmati CAdES-BES: estensione .p7m
- * Per file non firmati o XMLDSig legacy: estensione .xsi
+ * - Codice Sistema: SEMPRE 8 caratteri con zeri iniziali se numerico
+ * - EST = Estensione (XSI per XML, TXT per ASCII)
+ * - V.XX.YY = Versione formato (V.01.00)
+ */
+export function generateSiaeSubject(
+  reportType: 'giornaliero' | 'mensile' | 'rca' | 'log',
+  date: Date,
+  progressivo: number,
+  systemCode?: string
+): string {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const day = String(date.getDate()).padStart(2, '0');
+  const prog = String(progressivo).padStart(3, '0');
+  
+  // Codice sistema: se numerico, pad a 8 cifre con zeri
+  // Se alfanumerico (es. EVENT4U1), usa così com'è (già 8 caratteri)
+  let sysCode = systemCode || SIAE_SYSTEM_CODE_DEFAULT;
+  if (/^\d+$/.test(sysCode)) {
+    sysCode = sysCode.padStart(8, '0');
+  }
+  
+  const version = 'V.01.00';
+  const tipo = 'XSI';
+  
+  // Formato Subject completo: XXX_AAAA_MM_GG_SSSSSSSS_###_TTT_V.XX.YY
+  switch (reportType) {
+    case 'mensile':
+      return `RPM_${year}_${month}_${sysCode}_${prog}_${tipo}_${version}`;
+    case 'log':
+    case 'rca':
+      return `RCA_${year}_${month}_${day}_${sysCode}_${prog}_${tipo}_${version}`;
+    case 'giornaliero':
+    default:
+      return `RMG_${year}_${month}_${day}_${sysCode}_${prog}_${tipo}_${version}`;
+  }
+}
+
+/**
+ * LEGACY: Mantiene compatibilità con codice esistente
+ * Reindirizza a generateSiaeSubject per il Subject (non per allegato!)
  * 
- * NOTA: XMLDSig è deprecato e NON accettato da SIAE dal 2025
- * Solo CAdES-BES con SHA-256 produce file P7M validi
+ * @deprecated Usa generateSiaeAttachmentName per il nome file allegato
+ *             e generateSiaeSubject per il Subject email
  */
 export function generateSiaeFileName(
   reportType: 'giornaliero' | 'mensile' | 'rca' | 'log',
@@ -287,36 +361,10 @@ export function generateSiaeFileName(
   signatureFormat?: 'cades' | 'xmldsig' | null,
   systemCode?: string
 ): string {
-  const year = date.getFullYear();
-  const month = String(date.getMonth() + 1).padStart(2, '0');
-  const day = String(date.getDate()).padStart(2, '0');
-  const prog = String(progressivo).padStart(3, '0');
-  const sysCode = systemCode || SIAE_SYSTEM_CODE_DEFAULT;
-  const version = 'V.01.00';
-  const tipo = 'XSI';
-  
-  // Solo CAdES-BES produce veri file P7M
-  const extension = signatureFormat === 'cades' ? '.p7m' : '.xsi';
-  
-  if (signatureFormat === 'xmldsig') {
-    console.warn('[SIAE-UTILS] ATTENZIONE: XMLDSig e DEPRECATO e rifiutato da SIAE. Aggiornare il bridge desktop a v3.14+ per CAdES-BES con SHA-256.');
-  }
-  
-  // Formato completo: XXX_AAAA_MM_GG_SSSSSSSS_###_TTT_V.XX.YY.ext
-  switch (reportType) {
-    case 'mensile':
-      // RPM = Riepilogo Periodico Mensile (silenzioso, nessuna risposta SIAE)
-      // RPM non ha giorno, solo mese
-      return `RPM_${year}_${month}_${sysCode}_${prog}_${tipo}_${version}${extension}`;
-    case 'log':
-    case 'rca':
-      // RCA = Riepilogo Controllo Accessi (C1 evento, genera risposta SIAE Log.xsi)
-      return `RCA_${year}_${month}_${day}_${sysCode}_${prog}_${tipo}_${version}${extension}`;
-    case 'giornaliero':
-    default:
-      // RMG = Riepilogo Mensile Giornaliero (silenzioso, nessuna risposta SIAE)
-      return `RMG_${year}_${month}_${day}_${sysCode}_${prog}_${tipo}_${version}${extension}`;
-  }
+  // BREAKING CHANGE: Ora restituisce il formato corretto per ALLEGATO
+  // Prima restituiva il formato Subject anche per allegato (SBAGLIATO)
+  console.log('[SIAE-UTILS] generateSiaeFileName now returns attachment format (not subject)');
+  return generateSiaeAttachmentName(reportType, date, progressivo, signatureFormat);
 }
 
 // ==================== C1 Log XML Generation ====================
