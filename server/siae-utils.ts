@@ -1575,8 +1575,16 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   const tipoGenere = (event.genreCode || '77').substring(0, 2);
   const titoloEvento = escapeXml((event.name || 'Evento').substring(0, 100));
   const nomeLocale = escapeXml((venueName || event.name || 'Locale').substring(0, 100));
-  const autore = escapeXml((author || event.name || 'N/D').substring(0, 100));
-  const esecutore = escapeXml((performer || event.organizerName || companyName || 'N/D').substring(0, 100));
+  
+  // Per tipoGenere 77 (discoteca/intrattenimento), Autore non è previsto - usare '-'
+  // SIAE Warning 2108: "Autore non previsto per il Tipo Evento"
+  const isDiscotecaIntrattenimento = tipoGenere === '77' || tipoGenere === '78';
+  const autore = isDiscotecaIntrattenimento ? '-' : escapeXml((author || event.name || '-').substring(0, 100));
+  const esecutore = escapeXml((performer || event.organizerName || companyName || '-').substring(0, 100));
+  
+  // NazionalitaFilm: per discoteca/intrattenimento usare '-' (campo non applicabile)
+  // SIAE Warning 2112/2114: "Nazionalita' del Film non prevista per il Tipo Evento"
+  const nazionalitaFilm = isDiscotecaIntrattenimento ? '-' : 'ITA';
   
   // SpettacoloIntrattenimento: S=spettacolo, I=intrattenimento (default S)
   const spettacoloIntrattenimento = event.tipoTassazione === 'I' ? 'I' : 'S';
@@ -1752,7 +1760,7 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   xmlLines.push(`        <TitoloEvento>${titoloEvento}</TitoloEvento>`);
   xmlLines.push(`        <Autore>${autore}</Autore>`);
   xmlLines.push(`        <Esecutore>${esecutore}</Esecutore>`);
-  xmlLines.push(`        <NazionalitaFilm>ITA</NazionalitaFilm>`);
+  xmlLines.push(`        <NazionalitaFilm>${nazionalitaFilm}</NazionalitaFilm>`);
   xmlLines.push(`        <NumOpereRappresentate>1</NumOpereRappresentate>`);
   
   // ==================== SistemaEmissione ====================
