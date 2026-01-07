@@ -139,7 +139,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.35 - FIX SIAE 40605: Header S/MIME con nome file RCA corretto");
+            Log("SiaeBridge v3.36 - FIX: Improved smart card detection logic");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -270,6 +270,11 @@ namespace SiaeBridge
 
         // ============================================================
         // CHECK READER
+        // v3.36 FIX: Improved card detection logic
+        // isCardIn() returns:
+        //   0 = no reader at slot OR reader present but no card
+        //   32 (SCARD_STATE_PRESENT) = card is present
+        // We now scan ALL slots and also try Initialize() as fallback
         // ============================================================
         static string CheckReader()
         {
@@ -289,22 +294,36 @@ namespace SiaeBridge
 
             try
             {
+                int consecutiveZeros = 0;
+                const int MAX_CONSECUTIVE_ZEROS = 3; // Stop after 3 consecutive zeros (likely no more readers)
+                
+                // First pass: scan using isCardIn
                 for (int s = 0; s < 16; s++)
                 {
                     try
                     {
                         int state = isCardIn(s);
                         string decoded = DecodeCardState(state);
-                        Log($"  isCardIn({s}) = {state} = {decoded}");
+                        Log($"  isCardIn({s}) = {state} (0x{state:X4}) = {decoded}");
 
-                        // state <= 0 means no reader at this slot, stop scanning
                         if (state <= 0)
                         {
-                            Log($"  No reader at slot {s}, stopping scan");
-                            break;
+                            consecutiveZeros++;
+                            Log($"  Slot {s}: no card or no reader (consecutive zeros: {consecutiveZeros})");
+                            
+                            // Continue scanning a few more slots before giving up
+                            if (consecutiveZeros >= MAX_CONSECUTIVE_ZEROS)
+                            {
+                                Log($"  Reached {MAX_CONSECUTIVE_ZEROS} consecutive zeros, stopping isCardIn scan");
+                                break;
+                            }
+                            continue; // Try next slot instead of breaking
                         }
 
-                        // state > 0 means card is present (libSIAE returns 1 for card present)
+                        // Reset consecutive zero counter
+                        consecutiveZeros = 0;
+
+                        // state > 0 means card is present (libSIAE returns SCARD_STATE_PRESENT = 32)
                         Log($"  ✓ CARTA PRESENTE in slot {s}!");
 
                         // Reset card state before initialize
@@ -349,7 +368,54 @@ namespace SiaeBridge
                     catch (Exception ex)
                     {
                         Log($"  Slot {s} error: {ex.Message}");
-                        break;
+                        // Don't break on exceptions - try next slot
+                        continue;
+                    }
+                }
+
+                // Second pass: Windows sees readers but isCardIn returned 0 for all
+                // Try Initialize() directly as fallback (some drivers behave differently)
+                Log("  Fallback: trying Initialize() directly on slots 0-2...");
+                for (int s = 0; s < 3; s++)
+                {
+                    try
+                    {
+                        // First finalize any stale state
+                        FinalizeML(s);
+                        
+                        int init = Initialize(s);
+                        Log($"  Fallback Initialize({s}) = {init} (0x{init:X4})");
+                        
+                        if (init == 0 || init == 3) // Success or already initialized
+                        {
+                            _slot = s;
+                            
+                            // Try to read serial number to confirm card is present
+                            byte[] sn = new byte[8];
+                            int snResult = GetSNML(sn, s);
+                            Log($"  Fallback GetSNML({s}) = {snResult}");
+                            
+                            if (snResult == 0)
+                            {
+                                string serialNumber = BitConverter.ToString(sn).Replace("-", "");
+                                Log($"  ✓ CARTA TROVATA via fallback! SN: {serialNumber}");
+                                return JsonConvert.SerializeObject(new
+                                {
+                                    success = true,
+                                    readerConnected = true,
+                                    cardPresent = true,
+                                    slot = s,
+                                    cardState = "FALLBACK_DETECTED",
+                                    initResult = init,
+                                    serialNumber = serialNumber,
+                                    message = "Carta SIAE rilevata!"
+                                });
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Log($"  Fallback slot {s} error: {ex.Message}");
                     }
                 }
 
