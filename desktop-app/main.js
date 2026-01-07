@@ -1741,6 +1741,88 @@ async function handleRelayCommand(msg) {
         }
       }
       break;
+    
+    case 'READ_EFFF':
+      // Read EFFF anagrafica data from Smart Card (15 fields)
+      try {
+        const efffRequestId = msg.requestId || '';
+        log.info(`[EFFF] Reading EFFF data from card via relay, requestId=${efffRequestId}`);
+        
+        // Check if bridge is ready
+        if (!bridgeProcess || !currentStatus.readerConnected) {
+          log.error(`[EFFF] Bridge not ready: bridge=${!!bridgeProcess}, reader=${currentStatus.readerConnected}`);
+          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            relayWs.send(JSON.stringify({
+              type: 'EFFF_RESPONSE',
+              requestId: efffRequestId,
+              payload: { 
+                success: false, 
+                error: 'App desktop Event4U non connessa o lettore non disponibile' 
+              }
+            }));
+          }
+          return;
+        }
+        
+        if (!currentStatus.cardInserted) {
+          log.error(`[EFFF] No card inserted for EFFF read`);
+          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            relayWs.send(JSON.stringify({
+              type: 'EFFF_RESPONSE',
+              requestId: efffRequestId,
+              payload: { 
+                success: false, 
+                error: 'Smart Card SIAE non inserita' 
+              }
+            }));
+          }
+          return;
+        }
+        
+        // Execute EFFF read command
+        const efffResult = await sendBridgeCommand('READ_EFFF');
+        
+        if (efffResult.success && efffResult.efffData) {
+          log.info(`[EFFF] EFFF read success: systemId=${efffResult.efffData.systemId}, siaeEmail=${efffResult.efffData.siaeEmail}`);
+          
+          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            relayWs.send(JSON.stringify({
+              type: 'EFFF_RESPONSE',
+              requestId: efffRequestId,
+              payload: {
+                success: true,
+                efffData: efffResult.efffData,
+                isTestCard: efffResult.isTestCard || false
+              }
+            }));
+          }
+        } else {
+          log.error(`[EFFF] EFFF read failed: ${efffResult.error || 'Unknown error'}`);
+          if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+            relayWs.send(JSON.stringify({
+              type: 'EFFF_RESPONSE',
+              requestId: efffRequestId,
+              payload: { 
+                success: false, 
+                error: efffResult.error || 'Errore lettura EFFF' 
+              }
+            }));
+          }
+        }
+      } catch (efffErr) {
+        log.error(`[EFFF] Exception reading EFFF via relay: ${efffErr.message}`);
+        if (relayWs && relayWs.readyState === WebSocket.OPEN) {
+          relayWs.send(JSON.stringify({
+            type: 'EFFF_RESPONSE',
+            requestId: msg.requestId || '',
+            payload: { 
+              success: false, 
+              error: efffErr.message 
+            }
+          }));
+        }
+      }
+      break;
       
     default:
       log.warn('Unknown relay command:', msg.type);
