@@ -1,0 +1,68 @@
+4s
+Run npm run build
+  
+> event-four-you-siae-lettore@3.29.0 build
+> electron-builder --win
+  • electron-builder  version=24.13.3 os=10.0.26100
+  • artifacts will be published if draft release exists  reason=CI detected
+  • loaded configuration  file=package.json ("build" field)
+  • packaging       platform=win32 arch=x64 electron=28.3.3 appOutDir=dist\win-unpacked
+  • downloading     url=https://github.com/electron/electron/releases/download/v28.3.3/electron-v28.3.3-win32-x64.zip size=108 MB parts=8
+  • downloaded      url=https://github.com/electron/electron/releases/download/v28.3.3/electron-v28.3.3-win32-x64.zip duration=312ms
+  • asar usage is disabled — this is strongly not recommended  solution=enable asar and use asarUnpack to unpack files that must be externally available
+  • asar usage is disabled — this is strongly not recommended  solution=enable asar and use asarUnpack to unpack files that must be externally available
+  ⨯ image: unknown format
+github.com/develar/go-fs-util.CloseAndCheckError
+	/Volumes/data/go/pkg/mod/github.com/develar/go-fs-util@v0.0.0-20190620175131-69a2d4542206/fs.go:117
+github.com/develar/app-builder/pkg/icons.DecodeImageAndClose
+	/Volumes/data/Documents/app-builder/pkg/icons/image-util.go:90
+github.com/develar/app-builder/pkg/icons.LoadImage
+	/Volumes/data/Documents/app-builder/pkg/icons/image-util.go:61
+github.com/develar/app-builder/pkg/icons.loadImage
+	/Volumes/data/Documents/app-builder/pkg/icons/icon-converter.go:334
+github.com/develar/app-builder/pkg/icons.configureInputInfoFromSingleFile
+	/Volumes/data/Documents/app-builder/pkg/icons/icon-converter.go:316
+github.com/develar/app-builder/pkg/icons.doConvertIcon
+	/Volumes/data/Documents/app-builder/pkg/icons/icon-converter.go:241
+github.com/develar/app-builder/pkg/icons.ConvertIcon
+	/Volumes/data/Documents/app-builder/pkg/icons/icon-converter.go:56
+github.com/develar/app-builder/pkg/icons.ConfigureCommand.func1
+	/Volumes/data/Documents/app-builder/pkg/icons/icon-converter.go:33
+github.com/alecthomas/kingpin.(*actionMixin).applyActions
+	/Volumes/data/go/pkg/mod/github.com/alecthomas/kingpin@v2.2.6+incompatible/actions.go:28
+github.com/alecthomas/kingpin.(*Application).applyActions
+	/Volumes/data/go/pkg/mod/github.com/alecthomas/kingpin@v2.2.6+incompatible/app.go:557
+github.com/alecthomas/kingpin.(*Application).execute
+	/Volumes/data/go/pkg/mod/github.com/alecthomas/kingpin@v2.2.6+incompatible/app.go:390
+github.com/alecthomas/kingpin.(*Application).Parse
+	/Volumes/data/go/pkg/mod/github.com/alecthomas/kingpin@v2.2.6+incompatible/app.go:222
+main.main
+	/Volumes/data/Documents/app-builder/main.go:90
+runtime.main
+	/usr/local/Cellar/go/1.17/libexec/src/runtime/proc.go:255
+runtime.goexit
+	/usr/local/Cellar/go/1.17/libexec/src/runtime/asm_amd64.s:1581  
+  ⨯ D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\node_modules\app-builder-bin\win\x64\app-builder.exe process failed ERR_ELECTRON_BUILDER_CANNOT_EXECUTE
+Exit code:
+1  failedTask=build stackTrace=Error: D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\node_modules\app-builder-bin\win\x64\app-builder.exe process failed ERR_ELECTRON_BUILDER_CANNOT_EXECUTE
+Exit code:
+1
+    at ChildProcess.<anonymous> (D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\node_modules\builder-util\src\util.ts:252:14)
+    at Object.onceWrapper (node:events:639:26)
+    at ChildProcess.emit (node:events:524:28)
+    at ChildProcess.cp.emit (D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\node_modules\cross-spawn\lib\enoent.js:34:29)
+    at maybeClose (node:internal/child_process:1104:16)
+    at Process.ChildProcess._handle.onexit (node:internal/child_process:304:5)
+From previous event:
+    at processImmediate (node:internal/timers:483:21)
+From previous event:
+    at WinPackager.signApp (D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\node_modules\app-builder-lib\src\winPackager.ts:384:27)
+    at WinPackager.doSignAfterPack (D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\node_modules\app-builder-lib\src\platformPackager.ts:336:32)
+    at WinPackager.doPack (D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\node_modules\app-builder-lib\src\platformPackager.ts:321:7)
+    at WinPackager.pack (D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\node_modules\app-builder-lib\src\platformPackager.ts:140:5)
+    at Packager.doBuild (D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\node_modules\app-builder-lib\src\packager.ts:445:9)
+    at executeFinally (D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\node_modules\builder-util\src\promise.ts:12:14)
+    at Packager._build (D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\node_modules\app-builder-lib\src\packager.ts:379:31)
+    at Packager.build (D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\node_modules\app-builder-lib\src\packager.ts:340:12)
+    at executeFinally (D:\a\event-four-you-siae-lettore\event-four-you-siae-lettore\desktop-app\node_modules\builder-util\src\promise.ts:12:14)
+Error: Process completed with exit code 1.
