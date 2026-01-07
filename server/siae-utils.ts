@@ -734,101 +734,39 @@ export function isCancelledStatus(status: string | null | undefined): boolean {
 }
 
 /**
- * Mappa codice genere interno a TipoGenere SIAE valido
- * Conforme a Allegato A - Tabella 1 Provvedimento 23/07/2001
+ * Normalizza codice genere SIAE a formato 2 cifre
+ * I codici SIAE sono definiti nella tabella siae_event_genres e sono già validi.
+ * Questa funzione si limita a normalizzare il formato (padding a 2 cifre).
  * 
- * Codici SIAE validi (2 caratteri numerici):
- * - 77: Discoteche, sale da ballo
- * - 78: Sale giochi, biliardi
- * - 01-19: Spettacoli teatrali
- * - 20-39: Cinema  
- * - 40-59: Concerti
- * - 60-69: Sport
- * - 70-76: Altri intrattenimenti
+ * Codici SIAE secondo Allegato A - Tabella 1 Provvedimento 23/07/2001:
+ * - 01-04: Cinema
+ * - 05-29: Sport
+ * - 30-40: Giochi e scommesse (Intrattenimento)
+ * - 41-44: Musei e gallerie
+ * - 45-59: Teatro e concerti
+ * - 60-69: Ballo e intrattenimento musicale (DISCOTECA = 61)
+ * - 70-79: Fiere, mostre, parchi
  * 
- * IMPORTANTE: Per discoteche/club usare SEMPRE 77
+ * IMPORTANTE: Per discoteche/club il codice corretto è 61 (Ballo con musica preregistrata)
  */
 export function mapToSiaeTipoGenere(genreCode: string | null | undefined): string {
-  if (!genreCode) return '77'; // Default: discoteca
+  if (!genreCode) return '61'; // Default: discoteca (ballo con musica preregistrata)
   
   const code = genreCode.trim();
   
-  // Se già un codice SIAE valido (2 cifre), verifica che sia valido
+  // Se è un codice numerico, normalizza a 2 cifre
+  if (/^\d{1,2}$/.test(code)) {
+    return code.padStart(2, '0');
+  }
+  
+  // Se è già 2 cifre, ritorna così com'è
   if (/^\d{2}$/.test(code)) {
-    const num = parseInt(code);
-    // Codici validi secondo Tabella 1: 01-78
-    if (num >= 1 && num <= 78) {
-      return code.padStart(2, '0');
-    }
-    // Codice numerico non valido -> default discoteca
-    console.warn(`[SIAE] TipoGenere ${code} non valido, usando 77 (discoteca)`);
-    return '77';
+    return code;
   }
   
-  // Mappatura codici interni/testuali a codici SIAE
-  const mappings: Record<string, string> = {
-    // Discoteca/Intrattenimento (default per club)
-    'discoteca': '77',
-    'disco': '77',
-    'club': '77',
-    'nightclub': '77',
-    'sala_ballo': '77',
-    'dance': '77',
-    'DI': '77',
-    '60': '77', // Legacy mapping
-    '61': '77', // Legacy mapping
-    
-    // Concerti
-    'concerto': '09',
-    'concert': '09',
-    'live': '09',
-    'musica': '09',
-    'CO': '09',
-    '30': '09',
-    
-    // Teatro
-    'teatro': '01',
-    'theatre': '01',
-    'spettacolo': '01',
-    'TE': '01',
-    '10': '01',
-    
-    // Cinema
-    'cinema': '20',
-    'film': '20',
-    'CI': '20',
-    '20': '20',
-    
-    // Sport
-    'sport': '70',
-    'sportivo': '70',
-    'SP': '70',
-    '40': '70',
-    
-    // Sale giochi
-    'giochi': '78',
-    'games': '78',
-    'biliardo': '78',
-    
-    // Altro
-    'altro': '76',
-    'other': '76',
-    'AL': '76',
-    '50': '76',
-  };
-  
-  const mapped = mappings[code.toLowerCase()];
-  if (mapped) return mapped;
-  
-  // Se inizia con lettere, prova a mappare
-  if (/^[A-Z]{2}$/i.test(code)) {
-    const upperCode = code.toUpperCase();
-    if (mappings[upperCode]) return mappings[upperCode];
-  }
-  
-  // Fallback: discoteca
-  console.warn(`[SIAE] TipoGenere '${code}' non riconosciuto, usando 77 (discoteca)`);
-  return '77';
+  // Per codici non numerici (legacy), usa default discoteca
+  console.warn(`[SIAE] TipoGenere '${code}' non numerico, usando 61 (discoteca)`);
+  return '61';
 }
 
 // ==================== EFFF Smart Card Data Structure ====================
@@ -1676,15 +1614,20 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   const titoloEvento = escapeXml((event.name || 'Evento').substring(0, 100));
   const nomeLocale = escapeXml((venueName || event.name || 'Locale').substring(0, 100));
   
-  // Per tipoGenere 77 (discoteca/intrattenimento), Autore non è previsto - usare '-'
-  // SIAE Warning 2108: "Autore non previsto per il Tipo Evento"
-  const isDiscotecaIntrattenimento = tipoGenere === '77' || tipoGenere === '78';
-  const autore = isDiscotecaIntrattenimento ? '-' : escapeXml((author || event.name || '-').substring(0, 100));
-  const esecutore = escapeXml((performer || event.organizerName || companyName || '-').substring(0, 100));
+  // Per tipoGenere Intrattenimento, Autore/Esecutore/NazionalitaFilm non sono previsti
+  // SIAE Warning 2108/2110/2112/2114: usare '-' per evitare warning
+  // Codici Intrattenimento: 30-40 (giochi), 60-69 (ballo/discoteca), 70-74 (fiere/mostre), 79 (luna park)
+  const genreNum = parseInt(tipoGenere);
+  const isIntrattenimento = (genreNum >= 30 && genreNum <= 40) || 
+                            (genreNum >= 60 && genreNum <= 69) || 
+                            (genreNum >= 70 && genreNum <= 74) || 
+                            genreNum === 79;
+  const autore = isIntrattenimento ? '-' : escapeXml((author || event.name || '-').substring(0, 100));
+  const esecutore = isIntrattenimento ? '-' : escapeXml((performer || event.organizerName || companyName || '-').substring(0, 100));
   
-  // NazionalitaFilm: per discoteca/intrattenimento usare '-' (campo non applicabile)
+  // NazionalitaFilm: per intrattenimento usare '-' (campo non applicabile)
   // SIAE Warning 2112/2114: "Nazionalita' del Film non prevista per il Tipo Evento"
-  const nazionalitaFilm = isDiscotecaIntrattenimento ? '-' : 'ITA';
+  const nazionalitaFilm = isIntrattenimento ? '-' : 'ITA';
   
   // SpettacoloIntrattenimento: S=spettacolo, I=intrattenimento (default S)
   const spettacoloIntrattenimento = event.tipoTassazione === 'I' ? 'I' : 'S';

@@ -5937,12 +5937,17 @@ async function generateRcaReportXml(params: RcaReportParams): Promise<string> {
   const spettacoloIntrattenimento = ticketedEvent.entertainmentType || 'S';
   const incidenzaIntrattenimento = ticketedEvent.entertainmentIncidence || 100;
   
-  // Per tipoGenere 77/78 (discoteca/intrattenimento), Autore/Esecutore/NazionalitaFilm non previsti
+  // Per tipoGenere Intrattenimento (60-69, 30-40), Autore/Esecutore/NazionalitaFilm non previsti
   // SIAE Warning 2108/2110/2112/2114: usare '-' per evitare warning
-  const isDiscotecaIntrattenimento = tipoGenere === '77' || tipoGenere === '78';
-  const autoreValue = isDiscotecaIntrattenimento ? '-' : '-';
-  const esecutoreValue = isDiscotecaIntrattenimento ? '-' : '-';
-  const nazionalitaFilmValue = isDiscotecaIntrattenimento ? '-' : 'ITA';
+  // Codici Intrattenimento: 30-40 (giochi), 60-69 (ballo/discoteca), 70-74 (fiere/mostre), 79 (luna park)
+  const genreNum = parseInt(tipoGenere);
+  const isIntrattenimento = (genreNum >= 30 && genreNum <= 40) || 
+                            (genreNum >= 60 && genreNum <= 69) || 
+                            (genreNum >= 70 && genreNum <= 74) || 
+                            genreNum === 79;
+  const autoreValue = isIntrattenimento ? '-' : '-';
+  const esecutoreValue = isIntrattenimento ? '-' : '-';
+  const nazionalitaFilmValue = isIntrattenimento ? '-' : 'ITA';
   
   // NOTA: Nessun DOCTYPE - i Web Service SIAE non risolvono DTD esterni (XXE protection)
   const xml = `<?xml version="1.0" encoding="UTF-8"?>

@@ -41,13 +41,18 @@ The system supports CAdES-BES digital signatures for SIAE report compliance, gen
 #### SIAE S/MIME Email Format (2026-01-07 Critical Fix)
 **Critical discovery**: SIAE requires **one signature** (S/MIME), not two (CAdES + S/MIME). The previous flow created `S/MIME(P7M(XML))` = double signature = Error 40605 "riepilogo illeggibile". The correct flow is: XML → SMIMESignML → S/MIME opaque (single signature). Note: Section 1.4.1 (.xsi.p7m) applies to CD-R storage only, not email. For email: attachment is `.xsi` (XML), Subject uses full format `RCA_AAAA_MM_GG_SSSSSSSS_###_XSI_V.01.00`. Key functions: `generateSiaeAttachmentName()` and `generateSiaeSubject()` in `siae-utils.ts`.
 
-#### SIAE TipoGenere Mapping (2026-01-08 Fix Error 2101)
-**Error 2101**: "Tipo evento diverso da quelli previsti nella tabella 1 all.A provv. 23/7/2001". The system now uses centralized `mapToSiaeTipoGenere()` function in `siae-utils.ts` that:
-- Maps all internal/legacy genre codes to valid SIAE 2-digit numeric codes (01-78)
-- Valid codes: 77=Discoteca, 01=Teatro, 09=Concerti, 20=Cinema, 70=Sport, 76=Altro
-- Handles both numeric legacy codes (60, 61, etc.) and text codes (discoteca, club, etc.)
-- Default: 77 (discoteca) for unmapped/unknown codes
-- Applied in: `siae-utils.ts`, `siae-scheduler.ts`, `siae-routes.ts`
+#### SIAE TipoGenere Codes (2026-01-08)
+The system uses official SIAE genre codes from table `siae_event_genres` (Allegato A - Tabella 1, Provvedimento 23/07/2001):
+- **01-04**: Cinema (01=Cinema, 02=Cinema d'essai, etc.)
+- **05-29**: Sport (05=Calcio Serie A/B, etc.)
+- **30-40**: Giochi e scommesse (Intrattenimento)
+- **41-44**: Musei e gallerie
+- **45-59**: Teatro e concerti (45=Teatro prosa, 53=Concerti musica leggera)
+- **60-69**: Ballo e intrattenimento musicale (**61=Discoteca** - Ballo con musica preregistrata)
+- **70-79**: Fiere, mostre, parchi
+
+Function `mapToSiaeTipoGenere()` normalizes codes to 2-digit format. Default: 61 (discoteca).
+For Intrattenimento codes (30-40, 60-69, 70-74, 79), Autore/Esecutore/NazionalitaFilm use '-' to avoid warnings 2108/2110/2112/2114.
 
 ### Italian Fiscal Validation
 Server-side validation for Italian fiscal identifiers, including Codice Fiscale and Partita IVA, incorporating checksum algorithms compliant with Agenzia delle Entrate requirements.
