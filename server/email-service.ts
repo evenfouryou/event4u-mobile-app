@@ -616,27 +616,33 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
       // v3.30 FIX: Rimuove virgolette dal display name - file test SIAE usa "Mario Rossi <email>" SENZA virgolette
       const certFromAddress = `Event4U SIAE <${cardEmail}>`;
       
-      // Prepara i parametri per SMIMESignML (API corretta per SIAE)
-      // SMIMESignML crea direttamente un messaggio S/MIME RFC822 compliant
-      // Questo evita errori 40605 causati dalla costruzione manuale del MIME
-      
-      // Per CAdES-BES: usa il P7M base64 direttamente, altrimenti codifica XML in base64
-      const rawBase64 = isCAdES && p7mBase64 ? p7mBase64 : Buffer.from(xmlContent, 'utf-8').toString('base64');
-      const attachmentBase64Content = rawBase64; // SMIMESignML gestisce l'encoding
+      // ============================================================
+      // v3.52 FIX CORRETTO: SMIMESignML firma l'EMAIL (S/MIME), NON l'allegato!
+      // L'allegato P7M deve essere creato separatamente da PKCS7SignML.
+      // 
+      // Flusso corretto:
+      // 1. PKCS7SignML crea il P7M dall'XML (firma CAdES sull'allegato)
+      // 2. SMIMESignML crea l'email S/MIME con il P7M come allegato
+      //
+      // Se abbiamo il P7M pre-firmato, lo usiamo. Altrimenti passiamo l'XML.
+      // ============================================================
+      const attachmentBase64Content = isCAdES && p7mBase64 ? p7mBase64 : Buffer.from(xmlContent, 'utf-8').toString('base64');
+      console.log(`[EMAIL-SERVICE] v3.52: Using ${isCAdES && p7mBase64 ? 'pre-signed P7M' : 'raw XML'} as attachment`);
       
       // INTEGRITY CHECK: Log SHA-256 prima dell'invio per diagnostica trasmissione
-      if (isCAdES && p7mBase64) {
-        try {
-          const crypto = await import('crypto');
-          const p7mBuffer = Buffer.from(p7mBase64, 'base64');
-          const sha256Hash = crypto.createHash('sha256').update(p7mBuffer).digest('hex');
-          console.log(`[EMAIL-SERVICE] [INTEGRITY] P7M pre-send check:`);
-          console.log(`[EMAIL-SERVICE] [INTEGRITY]   - Size: ${p7mBuffer.length} bytes`);
-          console.log(`[EMAIL-SERVICE] [INTEGRITY]   - Base64 length: ${p7mBase64.length} chars`);
-          console.log(`[EMAIL-SERVICE] [INTEGRITY]   - SHA-256: ${sha256Hash}`);
-        } catch (hashError: any) {
-          console.log(`[EMAIL-SERVICE] [INTEGRITY] Failed to compute SHA-256: ${hashError.message}`);
-        }
+      try {
+        const crypto = await import('crypto');
+        const buffer = isCAdES && p7mBase64 
+          ? Buffer.from(p7mBase64, 'base64') 
+          : Buffer.from(xmlContent, 'utf-8');
+        const sha256Hash = crypto.createHash('sha256').update(buffer).digest('hex');
+        console.log(`[EMAIL-SERVICE] [INTEGRITY] Attachment pre-send check:`);
+        console.log(`[EMAIL-SERVICE] [INTEGRITY]   - Type: ${isCAdES && p7mBase64 ? 'P7M (CAdES)' : 'XML'}`);
+        console.log(`[EMAIL-SERVICE] [INTEGRITY]   - Size: ${buffer.length} bytes`);
+        console.log(`[EMAIL-SERVICE] [INTEGRITY]   - Base64 length: ${attachmentBase64Content.length} chars`);
+        console.log(`[EMAIL-SERVICE] [INTEGRITY]   - SHA-256: ${sha256Hash}`);
+      } catch (hashError: any) {
+        console.log(`[EMAIL-SERVICE] [INTEGRITY] Failed to compute SHA-256: ${hashError.message}`);
       }
       
       // Corpo email semplice (text/plain per SMIMESignML)

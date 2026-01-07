@@ -141,7 +141,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.51 - FIX: scan ALL 16 slots without early break");
+            Log("SiaeBridge v3.52 - FIX: scan ALL 16 slots without early break");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -2440,10 +2440,17 @@ namespace SiaeBridge
                     try { Directory.SetCurrentDirectory(tempDir); } catch { }
                 }
 
-                // v3.35 FIX CRITICO: Ora che siamo nella directory di lavoro corretta,
-                // salviamo l'allegato con SOLO il nome file (senza path).
-                // SMIMESignML usa il nome file dal percorso, quindi passando solo il nome
-                // l'allegato nell'email avrà esattamente il nome file SIAE richiesto.
+                // ============================================================
+                // v3.52 FIX CRITICO: Configura SMIMESignML con metadata corretti
+                // per evitare post-processing che invalida la firma S/MIME!
+                //
+                // Formato attachments: path|displayName|content-type
+                // - path: percorso del file allegato
+                // - displayName: nome file come apparirà nell'email
+                // - content-type: tipo MIME dell'allegato
+                //
+                // Usiamo application/pkcs7-mime per file P7M (CAdES)
+                // ============================================================
                 if (attachmentBytesToWrite != null && !string.IsNullOrEmpty(attachmentName))
                 {
                     // Salva nella directory di lavoro corrente (virtual drive o temp)
@@ -2451,14 +2458,19 @@ namespace SiaeBridge
                     attachmentTempFile = Path.Combine(currentWorkDir, attachmentName);
                     File.WriteAllBytes(attachmentTempFile, attachmentBytesToWrite);
                     
-                    // v3.35 FIX: Passa SOLO il nome file, non il path completo!
-                    // SMIMESignML troverà il file nella directory corrente.
-                    // Il formato "displayName|filePath" con path relativo funziona correttamente.
-                    attachments = $"{attachmentName}|{attachmentName}";
+                    // v3.52 FIX: Passa il formato completo con content-type!
+                    // Formato: path|displayName|content-type
+                    // Questo evita di dover fare post-processing che invalida la firma S/MIME
+                    string contentType = attachmentName.EndsWith(".p7m", StringComparison.OrdinalIgnoreCase)
+                        ? "application/pkcs7-mime"
+                        : "application/xml";
                     
-                    Log($"  v3.35 FIX: Attachment saved to workdir: {attachmentTempFile}");
-                    Log($"  v3.35 FIX: Attachment string uses ONLY filename: '{attachments}'");
-                    Log($"  v3.35 FIX: This ensures SMIMESignML uses '{attachmentName}' as attachment name in email");
+                    attachments = $"{attachmentName}|{attachmentName}|{contentType}";
+                    
+                    Log($"  v3.52 FIX: Attachment saved to workdir: {attachmentTempFile}");
+                    Log($"  v3.52 FIX: Attachment string with metadata: '{attachments}'");
+                    Log($"  v3.52 FIX: Content-Type: {contentType}");
+                    Log($"  v3.52 FIX: This configures SMIMESignML BEFORE signing to avoid invalidating signature");
                 }
 
                 // Reset card state before SMIMESignML call
@@ -2564,37 +2576,33 @@ namespace SiaeBridge
                 }
 
                 // ============================================================
-                // v3.35 FIX CRITICO: Post-processing header S/MIME per SIAE
-                // SMIMESignML genera header con nome generico "smime.p7m"
-                // ma SIAE richiede il nome file RCA effettivo negli header
-                // (es. RCA_2025_12_17_EVENT4U1_001_XSI_V.01.00.p7m)
+                // v3.52 FIX: NESSUN POST-PROCESSING dell'email S/MIME!
+                // Qualsiasi modifica al contenuto DOPO la firma SMIMESignML
+                // INVALIDA la firma e causa errore SIAE 40605 "messaggio alterato"!
+                //
+                // I metadata (filename, content-type) sono ora configurati PRIMA
+                // della firma tramite il parametro attachments con formato:
+                // path|displayName|content-type
                 // ============================================================
                 if (!string.IsNullOrEmpty(attachmentName))
                 {
-                    Log($"  v3.35 FIX: Post-processing S/MIME headers for SIAE compliance");
+                    Log($"  v3.52 FIX: NO post-processing - signature integrity preserved");
+                    Log($"  v3.52 FIX: Attachment metadata was set BEFORE signing via attachments parameter");
                     
-                    // 1. Sostituisci application/x-pkcs7-mime con application/pkcs7-mime (rimuovi x-)
-                    if (signedMime.Contains("application/x-pkcs7-mime"))
-                    {
-                        signedMime = signedMime.Replace("application/x-pkcs7-mime", "application/pkcs7-mime");
-                        Log($"  v3.35 FIX: Replaced 'application/x-pkcs7-mime' -> 'application/pkcs7-mime'");
-                    }
+                    // Solo logging diagnostico - NESSUNA modifica al contenuto!
+                    bool hasCorrectFilename = signedMime.Contains($"filename=\"{attachmentName}\"") ||
+                                               signedMime.Contains($"name=\"{attachmentName}\"");
+                    bool hasCorrectContentType = signedMime.Contains("application/pkcs7-mime");
                     
-                    // 2. Sostituisci name="smime.p7m" con il nome file RCA reale
-                    if (signedMime.Contains("name=\"smime.p7m\""))
-                    {
-                        signedMime = signedMime.Replace("name=\"smime.p7m\"", $"name=\"{attachmentName}\"");
-                        Log($"  v3.35 FIX: Replaced name=\"smime.p7m\" -> name=\"{attachmentName}\"");
-                    }
+                    if (hasCorrectFilename)
+                        Log($"  v3.52 CHECK: ✓ Correct filename in S/MIME: {attachmentName}");
+                    else
+                        Log($"  v3.52 WARNING: Filename not found in S/MIME - SMIMESignML may have used different name");
                     
-                    // 3. Sostituisci filename="smime.p7m" con il nome file RCA reale
-                    if (signedMime.Contains("filename=\"smime.p7m\""))
-                    {
-                        signedMime = signedMime.Replace("filename=\"smime.p7m\"", $"filename=\"{attachmentName}\"");
-                        Log($"  v3.35 FIX: Replaced filename=\"smime.p7m\" -> filename=\"{attachmentName}\"");
-                    }
-                    
-                    Log($"  v3.35 FIX: S/MIME headers updated for SIAE compliance");
+                    if (hasCorrectContentType)
+                        Log($"  v3.52 CHECK: ✓ Correct content-type: application/pkcs7-mime");
+                    else
+                        Log($"  v3.52 WARNING: Content-type 'application/pkcs7-mime' not found - may cause issues");
                 }
 
                 // Log prime 15 righe per debug (dopo il post-processing)
