@@ -182,6 +182,8 @@ function generateXMLContent(reportData: any): string {
   const systemCode = cachedEfffData?.systemId || ticketedEvent.systemCode || SIAE_SYSTEM_CODE;
   // Prefer partnerCodFis from EFFF for tax ID
   const taxId = cachedEfffData?.partnerCodFis || company?.taxId || 'XXXXXXXXXXXXXXXX';
+  // Prefer partnerName from EFFF > systemConfig.businessName > company.name (fix warning 2606)
+  const businessName = cachedEfffData?.partnerName || ticketedEvent.businessName || company?.name || 'N/A';
   
   // Date/time in formato SIAE
   const dataRiepilogo = formatSiaeDateCompact(reportDate);
@@ -223,7 +225,7 @@ function generateXMLContent(reportData: any): string {
   let xml = `<?xml version="1.0" encoding="UTF-8"?>
 <RiepilogoControlloAccessi Sostituzione="N">
   <Titolare>
-    <DenominazioneTitolareCA>${escapeXml(company?.name || 'N/A')}</DenominazioneTitolareCA>
+    <DenominazioneTitolareCA>${escapeXml(businessName)}</DenominazioneTitolareCA>
     <CFTitolareCA>${escapeXml(taxId)}</CFTitolareCA>
     <CodiceSistemaCA>${escapeXml(systemCode)}</CodiceSistemaCA>
     <DataRiepilogo>${dataRiepilogo}</DataRiepilogo>
@@ -233,7 +235,7 @@ function generateXMLContent(reportData: any): string {
   </Titolare>
   <Evento>
     <CFOrganizzatore>${escapeXml(taxId)}</CFOrganizzatore>
-    <DenominazioneOrganizzatore>${escapeXml(company?.name || 'N/A')}</DenominazioneOrganizzatore>
+    <DenominazioneOrganizzatore>${escapeXml(businessName)}</DenominazioneOrganizzatore>
     <TipologiaOrganizzatore>${ticketedEvent.organizerType || 'G'}</TipologiaOrganizzatore>
     <SpettacoloIntrattenimento>${spettacoloIntrattenimento}</SpettacoloIntrattenimento>
     <IncidenzaIntrattenimento>${incidenzaIntrattenimento}</IncidenzaIntrattenimento>

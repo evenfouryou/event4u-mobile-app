@@ -1548,8 +1548,9 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   const sistemaEmissione = systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT;
   const cfTitolare = taxId.toUpperCase().substring(0, 16);
   const cfOrganizzatore = (event.organizerTaxId || taxId).toUpperCase().substring(0, 16);
-  const denominazioneTitolare = escapeXml((companyName || systemConfig?.businessName || 'N/D').substring(0, 60));
-  const denominazioneOrganizzatore = escapeXml((event.organizerName || companyName || 'N/D').substring(0, 60));
+  // PRIORITÀ: systemConfig.businessName > companyName (fix warning 2606)
+  const denominazioneTitolare = escapeXml((systemConfig?.businessName || companyName || 'N/D').substring(0, 60));
+  const denominazioneOrganizzatore = escapeXml((event.organizerName || systemConfig?.businessName || companyName || 'N/D').substring(0, 60));
   
   // Date/time evento (usato anche per DataRiepilogo - DEVE coincidere con nome file!)
   const eventDate = typeof event.date === 'string' ? new Date(event.date) : event.date;
