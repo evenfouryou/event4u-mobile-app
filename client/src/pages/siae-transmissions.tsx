@@ -117,6 +117,7 @@ export default function SiaeTransmissionsPage() {
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
+  const [forceSubstitution, setForceSubstitution] = useState<boolean>(false);
 
   const isSuperAdmin = user?.role === 'super_admin';
   const companyId = isSuperAdmin ? selectedCompanyId : user?.companyId;
@@ -287,12 +288,13 @@ export default function SiaeTransmissionsPage() {
   });
 
   const sendC1Mutation = useMutation({
-    mutationFn: async ({ date, toEmail, type, eventId }: { date: string; toEmail: string; type: 'daily' | 'monthly' | 'rca'; eventId?: string }) => {
+    mutationFn: async ({ date, toEmail, type, eventId, forceSubstitution }: { date: string; toEmail: string; type: 'daily' | 'monthly' | 'rca'; eventId?: string; forceSubstitution?: boolean }) => {
       const response = await apiRequest("POST", `/api/siae/companies/${companyId}/transmissions/send-c1`, {
         date,
         toEmail,
         type,
         eventId,
+        forceSubstitution,
       });
       const data = await response.json();
       if (!response.ok) {
@@ -1062,6 +1064,26 @@ export default function SiaeTransmissionsPage() {
                 <Label>Email Destinatario SIAE</Label>
                 <Input type="email" value={dailyEmail} onChange={(e) => setDailyEmail(e.target.value)} data-testid="input-c1-email" />
               </div>
+              
+              {/* Checkbox Forza Sostituzione per errore 40604 */}
+              <div className="flex items-center space-x-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                <input
+                  type="checkbox"
+                  id="forceSubstitution"
+                  checked={forceSubstitution}
+                  onChange={(e) => setForceSubstitution(e.target.checked)}
+                  className="h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                  data-testid="checkbox-force-substitution"
+                />
+                <div className="flex-1">
+                  <Label htmlFor="forceSubstitution" className="text-sm font-medium cursor-pointer">
+                    Forza Sostituzione (Sostituzione="S")
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Usa per reinviare un report già elaborato (errore 40604)
+                  </p>
+                </div>
+              </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsSendDailyDialogOpen(false)}>Annulla</Button>
@@ -1071,7 +1093,8 @@ export default function SiaeTransmissionsPage() {
                     date: c1Type === 'rca' ? new Date().toISOString().split('T')[0] : dailyDate, 
                     toEmail: dailyEmail, 
                     type: c1Type,
-                    eventId: c1Type === 'rca' ? selectedEventId : undefined 
+                    eventId: c1Type === 'rca' ? selectedEventId : undefined,
+                    forceSubstitution
                   });
                 }}
                 disabled={
@@ -2030,6 +2053,26 @@ export default function SiaeTransmissionsPage() {
                 data-testid="input-c1-email-mobile"
               />
             </div>
+            
+            {/* Checkbox Forza Sostituzione per errore 40604 - Mobile */}
+            <div className="flex items-center space-x-3 p-3 bg-amber-500/10 rounded-lg border border-amber-500/30">
+              <input
+                type="checkbox"
+                id="forceSubstitutionMobile"
+                checked={forceSubstitution}
+                onChange={(e) => setForceSubstitution(e.target.checked)}
+                className="h-5 w-5 rounded border-amber-400"
+                data-testid="checkbox-force-substitution-mobile"
+              />
+              <div className="flex-1">
+                <Label htmlFor="forceSubstitutionMobile" className="text-sm font-medium cursor-pointer">
+                  Forza Sostituzione
+                </Label>
+                <p className="text-xs text-muted-foreground">
+                  Per reinviare report già elaborato (errore 40604)
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="flex gap-3 pt-4">
@@ -2050,7 +2093,8 @@ export default function SiaeTransmissionsPage() {
                 date: c1Type === 'rca' ? new Date().toISOString().split('T')[0] : dailyDate, 
                 toEmail: dailyEmail, 
                 type: c1Type,
-                eventId: c1Type === 'rca' ? selectedEventId : undefined 
+                eventId: c1Type === 'rca' ? selectedEventId : undefined,
+                forceSubstitution
               })}
               disabled={
                 (c1Type === 'rca' ? !selectedEventId : !dailyDate) || 

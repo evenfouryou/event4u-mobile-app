@@ -1429,6 +1429,7 @@ export interface RCAParams {
   venueName?: string;
   author?: string;
   performer?: string;
+  forceSubstitution?: boolean; // Forza Sostituzione="S" per reinvio report già elaborati (errore 40604)
 }
 
 /**
@@ -1567,7 +1568,7 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   const errors: string[] = [];
   const warnings: string[] = [];
   
-  const { event, tickets, sectors, systemConfig, companyName, taxId, progressivo = 1, venueName, author, performer } = params;
+  const { event, tickets, sectors, systemConfig, companyName, taxId, progressivo = 1, venueName, author, performer, forceSubstitution = false } = params;
   
   // Validazione parametri obbligatori
   if (!event) {
@@ -1769,7 +1770,13 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   xmlLines.push('<!DOCTYPE RiepilogoControlloAccessi SYSTEM "ControlloAccessi_v0001_20080626.dtd">');
   
   // Root element con attributo Sostituzione OBBLIGATORIO
-  xmlLines.push('<RiepilogoControlloAccessi Sostituzione="N">');
+  // Se forceSubstitution=true, usa "S" per reinviare report già elaborati (errore 40604)
+  const sostituzioneValue = forceSubstitution ? 'S' : 'N';
+  xmlLines.push(`<RiepilogoControlloAccessi Sostituzione="${sostituzioneValue}">`);
+  
+  if (forceSubstitution) {
+    warnings.push('Sostituzione forzata: il report sostituirà quello precedentemente elaborato');
+  }
   
   // ==================== Titolare ====================
   // ORDINE ESATTO da DTD: DenominazioneTitolareCA, CFTitolareCA, CodiceSistemaCA,

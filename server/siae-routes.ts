@@ -4513,6 +4513,7 @@ interface SendC1Params {
   type?: 'daily' | 'monthly' | 'rca';
   eventId?: string; // Required for RCA type
   signWithSmartCard?: boolean;
+  forceSubstitution?: boolean; // Forza Sostituzione="S" per reinvio report già elaborati (errore 40604)
 }
 
 async function handleSendC1Transmission(params: SendC1Params): Promise<{
@@ -4521,7 +4522,7 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   data?: any;
   error?: string;
 }> {
-  const { companyId, date, toEmail, type = 'daily', eventId, signWithSmartCard = true } = params;
+  const { companyId, date, toEmail, type = 'daily', eventId, signWithSmartCard = true, forceSubstitution = false } = params;
   const isMonthly = type === 'monthly';
   const isRCA = type === 'rca';
   
@@ -4740,6 +4741,7 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
       },
       companyName,
       taxId,
+      forceSubstitution, // Forza Sostituzione="S" per reinvio (errore 40604)
     });
     
     if (!rcaResult.success) {
@@ -5033,9 +5035,9 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
 router.post("/api/siae/companies/:companyId/transmissions/send-c1", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const { companyId } = req.params;
-    const { date, toEmail, type = 'daily', eventId, signWithSmartCard = true } = req.body;
+    const { date, toEmail, type = 'daily', eventId, signWithSmartCard = true, forceSubstitution = false } = req.body;
     
-    console.log(`[SIAE-ROUTES] send-c1 request received - type: ${type}, eventId: ${eventId}, companyId: ${companyId}`);
+    console.log(`[SIAE-ROUTES] send-c1 request received - type: ${type}, eventId: ${eventId}, companyId: ${companyId}, forceSubstitution: ${forceSubstitution}`);
     
     const result = await handleSendC1Transmission({
       companyId,
@@ -5044,6 +5046,7 @@ router.post("/api/siae/companies/:companyId/transmissions/send-c1", requireAuth,
       type,
       eventId, // Required for RCA type
       signWithSmartCard,
+      forceSubstitution, // Forza Sostituzione="S" per reinvio (errore 40604)
     });
     
     if (result.success) {
