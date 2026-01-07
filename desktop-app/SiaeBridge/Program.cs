@@ -2165,7 +2165,7 @@ namespace SiaeBridge
                 if (pin.Length < 4)
                     return ERR("PIN non valido - deve contenere almeno 4 cifre");
 
-                Log($"SignSmime (via SMIMESignML nativo v3.28): from={smimeFrom}, to={smimeTo}");
+                Log($"SignSmime (via SMIMESignML nativo v3.32): from={smimeFrom}, to={smimeTo}");
                 Log($"  Subject: {smimeSubject ?? "(none)"}");
                 Log($"  Body length: {smimeBody?.Length ?? 0}");
                 Log($"  Attachment: {attachmentName ?? "(none)"}, base64 length: {attachmentBase64?.Length ?? 0}");
@@ -2185,20 +2185,23 @@ namespace SiaeBridge
                 Log($"  Temp directory: {tempDir}");
                 Log($"  Output file: {outputFile}");
                 
-                // v3.31 FIX: Allegato nel formato "percorso|nome" (ordine invertito rispetto a documentazione)
-                // La documentazione SIAE dice "nome|percorso" ma l'implementazione sembra invertita!
-                // Test empirico: l'output mostrava il percorso come nome file
-                // Proviamo: "c:\\path\\file.p7m|displayname.p7m"
+                // v3.32 FIX: Formato corretto "nome|percorso" come da documentazione SIAE
+                // Documentazione: "nome allegato1.txt|c:percorsoallegato1.txt"
+                // Esempio ufficiale: "test.txt|c:\\test.txt"
+                // IMPORTANTE: Il file temp deve avere un nome DIVERSO dal nome desiderato!
+                // Altrimenti la libreria potrebbe usare il nome del file invece del parametro.
                 string attachments = "";  // stringa vuota, NON null (smime.cpp fa strlen senza null check)
                 if (!string.IsNullOrEmpty(attachmentBase64) && !string.IsNullOrEmpty(attachmentName))
                 {
-                    attachmentTempFile = Path.Combine(tempDir, attachmentName);
+                    // Salva con nome temp GENERICO (non il nome finale desiderato)
+                    attachmentTempFile = Path.Combine(tempDir, $"siae_att_{timestamp}.p7m");
                     byte[] attachmentBytes = Convert.FromBase64String(attachmentBase64);
                     File.WriteAllBytes(attachmentTempFile, attachmentBytes);
-                    // v3.31: Prova ordine invertito "percorso|nome" 
-                    attachments = $"{attachmentTempFile}|{attachmentName}";
+                    // v3.32: Formato corretto "nome|percorso" come da documentazione
+                    attachments = $"{attachmentName}|{attachmentTempFile}";
                     Log($"  Attachment saved to temp: {attachmentTempFile} ({attachmentBytes.Length} bytes)");
-                    Log($"  Attachment string for SMIMESignML (v3.31 inverted): '{attachments}'");
+                    Log($"  Attachment display name: {attachmentName}");
+                    Log($"  Attachment string for SMIMESignML (v3.32 name|path): '{attachments}'");
                 }
                 else
                 {
