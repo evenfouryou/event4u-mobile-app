@@ -1411,6 +1411,7 @@ export async function requestSmimeSignature(
           timestamp: new Date().toISOString()
         };
         console.log(`[Bridge] Using SMIMESignML format: from=${p.from}, to=${p.to}, subject=${p.subject?.substring(0, 50)}...`);
+        console.log(`[Bridge] SIAE FILE NAME SENT TO BRIDGE: "${p.attachmentName}" (${p.attachmentName?.length || 0} chars)`);
       } else {
         // Vecchio formato: mimeContent (legacy, deprecato)
         smimePayload = {

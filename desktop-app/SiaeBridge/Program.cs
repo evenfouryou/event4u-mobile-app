@@ -2130,7 +2130,7 @@ namespace SiaeBridge
 
             try
             {
-                Log($"=== SignSmime v3.29 START ===");
+                Log($"=== SignSmime v3.33 START ===");
                 
                 dynamic req = JsonConvert.DeserializeObject(json);
                 string pin = req.pin;
@@ -2185,22 +2185,27 @@ namespace SiaeBridge
                 Log($"  Temp directory: {tempDir}");
                 Log($"  Output file: {outputFile}");
                 
-                // v3.32 FIX: Formato corretto "nome|percorso" come da documentazione SIAE
-                // Documentazione: "nome allegato1.txt|c:percorsoallegato1.txt"
+                // v3.33 FIX: La libreria SMIMESignML usa il nome file dal percorso, NON il display name!
+                // Quindi il file temporaneo deve avere il nome file ESATTO richiesto da SIAE.
+                // Formato nome file SIAE: RCA_YYYY_MM_DD_SYSTEMCODE_###_XSI_V.XX.YY.xsi (o .p7m)
+                // Documentazione formato attachments: "nome allegato1.txt|c:percorsoallegato1.txt"
                 // Esempio ufficiale: "test.txt|c:\\test.txt"
-                // IMPORTANTE: Il file temp deve avere un nome DIVERSO dal nome desiderato!
-                // Altrimenti la libreria potrebbe usare il nome del file invece del parametro.
                 string attachments = "";  // stringa vuota, NON null (smime.cpp fa strlen senza null check)
                 if (!string.IsNullOrEmpty(attachmentBase64) && !string.IsNullOrEmpty(attachmentName))
                 {
-                    // Salva con nome temp GENERICO (non il nome finale desiderato)
-                    attachmentTempFile = Path.Combine(tempDir, $"siae_att_{timestamp}.p7m");
+                    // v3.33 FIX: Usa il nome file ESATTO come nome del file temporaneo
+                    // La libreria SMIMESignML SIAE ignora il primo parametro (display name) e usa
+                    // il nome del file dal percorso! Quindi dobbiamo salvare il file con il nome corretto.
+                    // Riferimento: il programma lettore SIAE richiede esattamente il formato:
+                    // RCA_YYYY_MM_DD_SYSTEMCODE_###_XSI_V.XX.YY.xsi (o .p7m per firma CAdES-BES)
+                    attachmentTempFile = Path.Combine(tempDir, attachmentName);
                     byte[] attachmentBytes = Convert.FromBase64String(attachmentBase64);
                     File.WriteAllBytes(attachmentTempFile, attachmentBytes);
                     // v3.32: Formato corretto "nome|percorso" come da documentazione
                     attachments = $"{attachmentName}|{attachmentTempFile}";
                     Log($"  Attachment saved to temp: {attachmentTempFile} ({attachmentBytes.Length} bytes)");
                     Log($"  Attachment display name: {attachmentName}");
+                    Log($"  v3.33 FIX: Temp file uses correct SIAE filename to ensure SMIMESignML uses it");
                     Log($"  Attachment string for SMIMESignML (v3.32 name|path): '{attachments}'");
                 }
                 else
