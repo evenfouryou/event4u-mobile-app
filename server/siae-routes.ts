@@ -7706,16 +7706,11 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     const xmlContent = rcaResult.xml;
     
     // Nome file conforme Allegato C SIAE (Provvedimento Agenzia Entrate 04/03/2008):
-    // RCA_AAAA_MM_GG_###.xsi.p7m per Riepilogo Controllo Accessi (C1 evento, genera risposta SIAE)
-    // IMPORTANTE: Allegato C 1.4.1 specifica XXX = "LTA" o "RCA" - prefisso RCA_ obbligatorio
-    // Estensione .p7m aggiunta se firmato digitalmente CAdES-BES
-    const year = eventDate.getFullYear();
-    const month = String(eventDate.getMonth() + 1).padStart(2, '0');
-    const day = String(eventDate.getDate()).padStart(2, '0');
-    const progressivo = String(progressivoGenerazione).padStart(3, '0');
-    const baseFileName = `RCA_${year}_${month}_${day}_${progressivo}`; // Allegato C conforme
-    // fileName will be updated to .xsi.p7m if signed, otherwise .xsi
-    let fileName = `${baseFileName}.xsi`;
+    // Formato: RCA_AAAA_MM_GG_SSSSSSSS_###_XSI_V.XX.YY.p7m
+    // Usa generateSiaeFileName per garantire formato corretto
+    const systemCode = siaeConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT;
+    // fileName will be updated to .p7m if signed, otherwise .xsi
+    let fileName = generateSiaeFileName('rca', eventDate, progressivoGenerazione, null, systemCode);
 
     // Check if digital signature is requested via smart card
     const { signWithSmartCard } = req.body;
@@ -7763,8 +7758,8 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
           certificateData: signature.certificateData || '',
           signedAt: signature.signedAt
         };
-        // Update filename to .xsi.p7m for signed files per Allegato C SIAE
-        fileName = `${baseFileName}.xsi.p7m`;
+        // Update filename to .p7m for signed files per Allegato C SIAE
+        fileName = generateSiaeFileName('rca', eventDate, progressivoGenerazione, 'cades', systemCode);
         
       } catch (signError: any) {
         console.error('[C1 Send] Signature error:', signError.message);
