@@ -1726,9 +1726,121 @@ namespace SiaeBridge
         }
 
         // ============================================================
+        // Helper: Sanitizza header RFC822 rimuovendo CR/LF per prevenire injection
+        // ============================================================
+        static string SanitizeHeader(string value)
+        {
+            if (string.IsNullOrEmpty(value)) return "";
+            // Rimuovi CR, LF, e caratteri di controllo che potrebbero causare header injection
+            return new string(value.Where(c => c >= 32 && c != '\r' && c != '\n').ToArray()).Trim();
+        }
+
+        // ============================================================
+        // Helper: Costruisce messaggio MIME RFC822 da parametri SMIMESignML
+        // Per formato email conforme a Allegato C SIAE (RFC 2046 compliant)
+        // ============================================================
+        static string BuildMimeMessage(string from, string to, string subject, string body, string attachmentBase64, string attachmentName)
+        {
+            try
+            {
+                // Valida input obbligatori
+                if (string.IsNullOrWhiteSpace(from) || string.IsNullOrWhiteSpace(to))
+                {
+                    Log($"  BuildMimeMessage: ERRORE - from o to mancanti");
+                    return null;
+                }
+                
+                // Sanitizza headers per prevenire CR/LF injection
+                from = SanitizeHeader(from);
+                to = SanitizeHeader(to);
+                subject = SanitizeHeader(subject ?? "Trasmissione SIAE");
+                
+                if (string.IsNullOrEmpty(from) || string.IsNullOrEmpty(to))
+                {
+                    Log($"  BuildMimeMessage: ERRORE - from o to vuoti dopo sanitizzazione");
+                    return null;
+                }
+                
+                var sb = new StringBuilder();
+                
+                // Headers RFC822
+                sb.Append($"From: {from}\r\n");
+                sb.Append($"To: {to}\r\n");
+                sb.Append($"Subject: {subject}\r\n");
+                sb.Append($"Date: {DateTime.Now:R}\r\n");
+                sb.Append("MIME-Version: 1.0\r\n");
+                
+                // Normalizza newlines nel body a CRLF (RFC 2046 compliant)
+                string normalizedBody = (body ?? "").Replace("\r\n", "\n").Replace("\r", "\n").Replace("\n", "\r\n");
+                // Assicura che il body termini senza trailing newlines (aggiungeremo CRLF esplicitamente)
+                normalizedBody = normalizedBody.TrimEnd('\r', '\n');
+                
+                // Se c'è un allegato, usa multipart/mixed
+                if (!string.IsNullOrEmpty(attachmentBase64) && !string.IsNullOrEmpty(attachmentName))
+                {
+                    // Sanitizza attachment name
+                    attachmentName = SanitizeHeader(attachmentName);
+                    if (string.IsNullOrEmpty(attachmentName))
+                    {
+                        attachmentName = "attachment.bin";
+                    }
+                    
+                    string boundary = $"----=_Part_{Guid.NewGuid():N}";
+                    sb.Append($"Content-Type: multipart/mixed; boundary=\"{boundary}\"\r\n");
+                    sb.Append("\r\n");  // Blank line separating headers from body
+                    
+                    // Parte testo - RFC 2046: each part ends with CRLF
+                    sb.Append($"--{boundary}\r\n");
+                    sb.Append("Content-Type: text/plain; charset=us-ascii\r\n");
+                    sb.Append("Content-Transfer-Encoding: 7bit\r\n");
+                    sb.Append("\r\n");
+                    sb.Append(normalizedBody);
+                    sb.Append("\r\n");  // End text part with CRLF
+                    
+                    // Parte allegato
+                    sb.Append($"--{boundary}\r\n");
+                    sb.Append($"Content-Type: application/octet-stream; name=\"{attachmentName}\"\r\n");
+                    sb.Append("Content-Transfer-Encoding: base64\r\n");
+                    sb.Append($"Content-Disposition: attachment; filename=\"{attachmentName}\"\r\n");
+                    sb.Append("\r\n");
+                    
+                    // Split base64 in linee da 76 caratteri
+                    for (int i = 0; i < attachmentBase64.Length; i += 76)
+                    {
+                        int len = Math.Min(76, attachmentBase64.Length - i);
+                        sb.Append(attachmentBase64.Substring(i, len));
+                        sb.Append("\r\n");
+                    }
+                    
+                    // Terminating boundary con CRLF finale (RFC 2046)
+                    sb.Append($"--{boundary}--\r\n");
+                }
+                else
+                {
+                    // Solo testo, nessun allegato
+                    sb.Append("Content-Type: text/plain; charset=us-ascii\r\n");
+                    sb.Append("Content-Transfer-Encoding: 7bit\r\n");
+                    sb.Append("\r\n");
+                    sb.Append(normalizedBody);
+                    sb.Append("\r\n");  // Final CRLF
+                }
+                
+                string result = sb.ToString();
+                Log($"  BuildMimeMessage: from={from}, to={to}, hasAttachment={!string.IsNullOrEmpty(attachmentBase64)}, attachmentName={attachmentName}, length={result.Length}");
+                return result;
+            }
+            catch (Exception ex)
+            {
+                Log($"  BuildMimeMessage error: {ex.Message}");
+                return null;
+            }
+        }
+
+        // ============================================================
         // SIGN S/MIME - Firma S/MIME per email SIAE (Allegato C)
         // Per Provvedimento Agenzia Entrate 04/03/2008, sezione 1.6.1-1.6.2
         // L'email deve essere firmata S/MIME v2 con carta di attivazione
+        // Supporta sia formato legacy (mimeContent) che SMIMESignML (from,to,subject,body,attachment)
         // ============================================================
         static string SignSmime(string json)
         {
@@ -1738,12 +1850,38 @@ namespace SiaeBridge
             try
             {
                 dynamic req = JsonConvert.DeserializeObject(json);
-                string mimeContent = req.mimeContent;
                 string pin = req.pin;
+                
+                // Supporto ENTRAMBI i formati: legacy (mimeContent) e SMIMESignML (from, to, subject, body)
+                string mimeFrom = req.from;
+                string mimeTo = req.to;
+                string mimeSubject = req.subject;
+                string mimeBody = req.body;
+                string attachmentBase64 = req.attachmentBase64;
+                string attachmentName = req.attachmentName;
+                string mimeContent = req.mimeContent;
+                
+                // Rileva quale formato è stato usato
+                bool isNewFormat = !string.IsNullOrEmpty(mimeFrom) && !string.IsNullOrEmpty(mimeTo);
+                
+                Log($"SignSmime: slot={_slot}, format={(isNewFormat ? "SMIMESignML" : "legacy")}, from={mimeFrom}, to={mimeTo}");
+                
+                // Se è il nuovo formato SMIMESignML, costruisci il messaggio MIME
+                if (isNewFormat)
+                {
+                    mimeContent = BuildMimeMessage(mimeFrom, mimeTo, mimeSubject, mimeBody, attachmentBase64, attachmentName);
+                    Log($"  Built MIME message: {mimeContent?.Length ?? 0} bytes");
+                    
+                    // Gestione esplicita del fallimento BuildMimeMessage
+                    if (string.IsNullOrEmpty(mimeContent))
+                    {
+                        return ERR("Errore costruzione messaggio MIME - verificare che 'from' e 'to' siano email valide");
+                    }
+                }
 
                 if (string.IsNullOrEmpty(mimeContent))
                 {
-                    return ERR("Contenuto MIME mancante");
+                    return ERR("Contenuto MIME mancante - specificare mimeContent o (from, to, subject, body)");
                 }
 
                 Log($"SignSmime: slot={_slot}, mimeLength={mimeContent?.Length ?? 0}");
