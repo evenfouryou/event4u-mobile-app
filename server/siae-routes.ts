@@ -5933,7 +5933,7 @@ async function generateRcaReportXml(params: RcaReportParams): Promise<string> {
   }
   
   // Mappatura centralizzata TipoGenere SIAE (fix error 2101)
-  const tipoGenere = mapToSiaeTipoGenere(ticketedEvent.eventGenreCode);
+  const tipoGenere = mapToSiaeTipoGenere(ticketedEvent.genreCode);
   const spettacoloIntrattenimento = ticketedEvent.entertainmentType || 'S';
   const incidenzaIntrattenimento = ticketedEvent.entertainmentIncidence || 100;
   
