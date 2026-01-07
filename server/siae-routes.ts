@@ -4901,12 +4901,14 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   const reportTypeForFileName: 'giornaliero' | 'mensile' | 'rca' | 'log' = 
     isRCA ? 'rca' : (isMonthly ? 'mensile' : 'giornaliero');
   const effectiveSignatureFormat = p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : null);
+  // CRITICAL: Use same systemCode as XML for consistency (Allegato C SIAE)
+  const effectiveSystemCode = systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT;
   const generatedFileName = generateSiaeFileName(
     reportTypeForFileName, 
     effectiveReportDateForCount, 
     sequenceNumber,
     effectiveSignatureFormat,
-    SIAE_SYSTEM_CODE_DEFAULT
+    effectiveSystemCode
   );
   const fileExtension = effectiveSignatureFormat === 'cades' ? '.p7m' : '.xsi';
   
@@ -4939,7 +4941,7 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     totalAmount: totalAmount.toString(),
     xmlContent: signedXmlContent || xml, // XML originale o XMLDSig firmato
     transmissionId: transmission.id,
-    systemCode: SIAE_SYSTEM_CODE_DEFAULT,
+    systemCode: effectiveSystemCode, // CRITICAL: Must match XML CodiceSistemaCA
     sequenceNumber: sequenceNumber, // Progressivo calcolato dinamicamente
     signWithSmime: true, // Per Allegato C SIAE 1.6.2 - firma S/MIME obbligatoria
     requireSignature: true,
@@ -6508,8 +6510,8 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
       oraGen
     });
     
-    // Generate file name with correct format
-    const generatedFileName = generateSiaeFileName('giornaliero', reportDate, 1, null, SIAE_SYSTEM_CODE_DEFAULT);
+    // Generate file name with correct format - use systemCode from config for consistency
+    const generatedFileName = generateSiaeFileName('giornaliero', reportDate, 1, null, systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT);
     const fileExtension = '.xsi';
     
     // Create transmission record
