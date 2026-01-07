@@ -92,17 +92,36 @@ jobs:
           $srcDir = "desktop-app/SiaeBridge/bin/Release/net8.0-windows/win-x86/publish"
           $destDir = "desktop-app/resources"
           
-          # Create resources folder
+          # v3.48 FIX: Clean resources folder completely to avoid nested folders
+          if (Test-Path $destDir) {
+            Remove-Item $destDir -Recurse -Force
+            Write-Host "✓ Cleaned existing resources folder"
+          }
+          
+          # Create fresh resources folder
           New-Item -ItemType Directory -Path $destDir -Force | Out-Null
           Write-Host "Created resources folder: $destDir"
           
-          # Copy all SiaeBridge files
+          # Copy all SiaeBridge files DIRECTLY (no subfolder)
           Copy-Item "$srcDir/*" $destDir -Recurse -Force
           Write-Host "✓ Copied SiaeBridge files to resources"
+          
+          # Verify no nested SiaeBridge folder exists
+          if (Test-Path "$destDir/SiaeBridge") {
+            Write-Host "ERROR: Nested SiaeBridge folder detected! Removing..."
+            Remove-Item "$destDir/SiaeBridge" -Recurse -Force
+          }
           
           echo ""
           echo "=== Resources folder contents ==="
           Get-ChildItem $destDir | Format-Table Name, Length
+          
+          # Verify SiaeBridge.exe is directly in resources
+          if (!(Test-Path "$destDir/SiaeBridge.exe")) {
+            Write-Host "ERROR: SiaeBridge.exe not found directly in resources!"
+            exit 1
+          }
+          Write-Host "✓ SiaeBridge.exe verified in resources root"
 
       - name: Install Node dependencies
         working-directory: desktop-app
@@ -137,12 +156,14 @@ jobs:
         shell: pwsh
         run: |
           $pkg = Get-Content -Path "desktop-app/package.json" -Raw | ConvertFrom-Json
-          echo "VERSION=v$($pkg.version)" >> $env:GITHUB_OUTPUT
+          # Use version + run_number for unique tags
+          echo "VERSION=v$($pkg.version).${{ github.run_number }}" >> $env:GITHUB_OUTPUT
 
       - name: Create Release
         uses: softprops/action-gh-release@v1
         with:
           tag_name: ${{ steps.get_version.outputs.VERSION }}
+          make_latest: true
           name: "SIAE Lettore ${{ steps.get_version.outputs.VERSION }}"
           body: |
             ## Event Four You SIAE Lettore ${{ steps.get_version.outputs.VERSION }}
