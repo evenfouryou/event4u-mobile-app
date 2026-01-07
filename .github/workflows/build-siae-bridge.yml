@@ -1,10 +1,13 @@
-name: Build SiaeBridge
+name: Build SiaeBridge (Legacy - Disabled)
 
+# DISABLED: Use build-desktop.yml instead which builds the full Electron app
+# This workflow was causing duplicate builds
 on:
-  push:
-    paths:
-      - 'desktop-app/SiaeBridge/**'
   workflow_dispatch:
+    inputs:
+      confirm:
+        description: 'Type "yes" to confirm manual build'
+        required: true
 
 jobs:
   build:
