@@ -55,6 +55,7 @@ import {
   ArrowLeft,
   CreditCard,
   XCircle,
+  Download,
 } from "lucide-react";
 import { smartCardService, type SiaeCardEfffData, type EfffReadResult } from "@/lib/smart-card-service";
 import { Badge } from "@/components/ui/badge";
@@ -219,6 +220,7 @@ interface SmartCardVerifySectionProps {
     vatNumber: string | null;
     siaeEmail: string | null;
   };
+  onUseCardData?: (cardData: SiaeCardEfffData) => void;
 }
 
 interface ComparisonField {
@@ -231,12 +233,13 @@ interface ComparisonField {
   critical: boolean;
 }
 
-function SmartCardVerifySection({ dbConfig }: SmartCardVerifySectionProps) {
+function SmartCardVerifySection({ dbConfig, onUseCardData }: SmartCardVerifySectionProps) {
   const [loading, setLoading] = useState(false);
   const [cardData, setCardData] = useState<SiaeCardEfffData | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [environment, setEnvironment] = useState<string | null>(null);
   const [isTestCard, setIsTestCard] = useState<boolean>(false);
+  const { toast } = useToast();
 
   const handleReadCard = async () => {
     setLoading(true);
@@ -425,12 +428,30 @@ function SmartCardVerifySection({ dbConfig }: SmartCardVerifySectionProps) {
               <div className="p-3 bg-destructive/10 rounded-lg" data-testid="alert-mismatch-details">
                 <div className="flex items-start gap-2">
                   <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
-                  <div className="text-sm">
+                  <div className="text-sm flex-1">
                     <p className="font-medium text-destructive">Attenzione: Dati non corrispondenti</p>
                     <p className="text-muted-foreground mt-1">
                       I campi con asterisco (*) sono critici per l'invio SIAE. 
                       Aggiorna la configurazione database con i valori della Smart Card per evitare errori.
                     </p>
+                    {onUseCardData && cardData && (
+                      <Button
+                        type="button"
+                        size="sm"
+                        className="mt-3"
+                        onClick={() => {
+                          onUseCardData(cardData);
+                          toast({
+                            title: "Dati copiati",
+                            description: "I dati della Smart Card sono stati copiati nei campi. Salva per confermare.",
+                          });
+                        }}
+                        data-testid="button-use-card-data"
+                      >
+                        <Download className="h-4 w-4 mr-2" />
+                        Usa dati carta
+                      </Button>
+                    )}
                   </div>
                 </div>
               </div>
@@ -1408,6 +1429,12 @@ export default function SiaeSystemConfigPage() {
                     vatNumber: form.watch('vatNumber') || null,
                     siaeEmail: form.watch('siaeEmail') || null,
                   }}
+                  onUseCardData={(cardData) => {
+                    if (cardData.systemId) form.setValue('systemCode', cardData.systemId);
+                    if (cardData.partnerCodFis) form.setValue('taxId', cardData.partnerCodFis);
+                    if (cardData.partnerName) form.setValue('businessName', cardData.partnerName);
+                    if (cardData.siaeEmail) form.setValue('siaeEmail', cardData.siaeEmail);
+                  }}
                 />
               </TabsContent>
             </Tabs>
@@ -2322,6 +2349,12 @@ export default function SiaeSystemConfigPage() {
                     businessName: form.watch('businessName') || null,
                     vatNumber: form.watch('vatNumber') || null,
                     siaeEmail: form.watch('siaeEmail') || null,
+                  }}
+                  onUseCardData={(cardData) => {
+                    if (cardData.systemId) form.setValue('systemCode', cardData.systemId);
+                    if (cardData.partnerCodFis) form.setValue('taxId', cardData.partnerCodFis);
+                    if (cardData.partnerName) form.setValue('businessName', cardData.partnerName);
+                    if (cardData.siaeEmail) form.setValue('siaeEmail', cardData.siaeEmail);
                   }}
                 />
               </motion.div>
