@@ -53,7 +53,11 @@ import {
   ChevronRight,
   Building2,
   ArrowLeft,
+  CreditCard,
+  XCircle,
 } from "lucide-react";
+import { smartCardService, type SiaeCardEfffData, type EfffReadResult } from "@/lib/smart-card-service";
+import { Badge } from "@/components/ui/badge";
 import { 
   insertSiaeSystemConfigSchema, 
   type SiaeSystemConfig
@@ -206,6 +210,256 @@ function MobileToggleField({ icon: Icon, label, description, checked, onCheckedC
 }
 
 type SectionType = 'menu' | 'azienda' | 'captcha' | 'otp' | 'policy' | 'system';
+
+interface SmartCardVerifySectionProps {
+  dbConfig: {
+    systemCode: string | null;
+    taxId: string | null;
+    businessName: string | null;
+    vatNumber: string | null;
+    siaeEmail: string | null;
+  };
+}
+
+interface ComparisonField {
+  label: string;
+  cardField: string;
+  dbField: string;
+  cardValue: string;
+  dbValue: string;
+  match: boolean;
+  critical: boolean;
+}
+
+function SmartCardVerifySection({ dbConfig }: SmartCardVerifySectionProps) {
+  const [loading, setLoading] = useState(false);
+  const [cardData, setCardData] = useState<SiaeCardEfffData | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const [environment, setEnvironment] = useState<string | null>(null);
+  const [isTestCard, setIsTestCard] = useState<boolean>(false);
+
+  const handleReadCard = async () => {
+    setLoading(true);
+    setError(null);
+    setCardData(null);
+    
+    try {
+      const result = await smartCardService.readEfff();
+      
+      if (result.success && result.data) {
+        setCardData(result.data);
+        setEnvironment(result.environment || null);
+        setIsTestCard(result.isTestCard || false);
+      } else {
+        setError(result.error || 'Errore lettura Smart Card');
+      }
+    } catch (err: any) {
+      setError(err.message || 'Errore comunicazione');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const getComparisonFields = (): ComparisonField[] => {
+    if (!cardData) return [];
+    
+    return [
+      {
+        label: 'Codice Sistema',
+        cardField: 'systemId',
+        dbField: 'systemCode',
+        cardValue: cardData.systemId || '',
+        dbValue: dbConfig.systemCode || '',
+        match: (cardData.systemId || '').toUpperCase() === (dbConfig.systemCode || '').toUpperCase(),
+        critical: true,
+      },
+      {
+        label: 'CF Titolare (CFTitolareCA)',
+        cardField: 'partnerCodFis',
+        dbField: 'taxId',
+        cardValue: cardData.partnerCodFis || '',
+        dbValue: dbConfig.taxId || '',
+        match: (cardData.partnerCodFis || '').toUpperCase() === (dbConfig.taxId || '').toUpperCase(),
+        critical: true,
+      },
+      {
+        label: 'Ragione Sociale Titolare',
+        cardField: 'partnerName',
+        dbField: 'businessName',
+        cardValue: cardData.partnerName || '',
+        dbValue: dbConfig.businessName || '',
+        match: (cardData.partnerName || '').toUpperCase() === (dbConfig.businessName || '').toUpperCase(),
+        critical: false,
+      },
+      {
+        label: 'Email Server SIAE',
+        cardField: 'siaeEmail',
+        dbField: 'siaeEmail',
+        cardValue: cardData.siaeEmail || '',
+        dbValue: dbConfig.siaeEmail || '',
+        match: (cardData.siaeEmail || '').toLowerCase() === (dbConfig.siaeEmail || '').toLowerCase(),
+        critical: false,
+      },
+      {
+        label: 'CF Firmatario',
+        cardField: 'contactCodFis',
+        dbField: '-',
+        cardValue: cardData.contactCodFis || '',
+        dbValue: '-',
+        match: true,
+        critical: false,
+      },
+      {
+        label: 'Nome Firmatario',
+        cardField: 'contactName + contactLastName',
+        dbField: '-',
+        cardValue: `${cardData.contactName || ''} ${cardData.contactLastName || ''}`.trim(),
+        dbValue: '-',
+        match: true,
+        critical: false,
+      },
+    ];
+  };
+
+  const comparisonFields = getComparisonFields();
+  const hasMismatches = comparisonFields.some(f => !f.match && f.critical);
+
+  return (
+    <Card className="mt-4" data-testid="card-smartcard-verify">
+      <CardHeader className="pb-3">
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <CreditCard className="h-5 w-5 text-primary" />
+            <CardTitle className="text-lg">Verifica Smart Card</CardTitle>
+          </div>
+          <Button
+            type="button"
+            size="sm"
+            variant="outline"
+            onClick={handleReadCard}
+            disabled={loading}
+            data-testid="button-read-smartcard"
+          >
+            {loading ? (
+              <Loader2 className="h-4 w-4 animate-spin mr-2" />
+            ) : (
+              <RefreshCw className="h-4 w-4 mr-2" />
+            )}
+            Leggi Carta
+          </Button>
+        </div>
+        <CardDescription>
+          Confronta i dati della Smart Card SIAE con la configurazione database
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {error && (
+          <div className="flex items-center gap-2 p-3 bg-destructive/10 text-destructive rounded-lg mb-4" data-testid="alert-smartcard-error">
+            <XCircle className="h-5 w-5 shrink-0" />
+            <span className="text-sm">{error}</span>
+          </div>
+        )}
+
+        {cardData && (
+          <div className="space-y-4">
+            <div className="flex items-center gap-2 mb-3">
+              <Badge variant={isTestCard ? "secondary" : "default"} data-testid="badge-card-environment">
+                {isTestCard ? 'Carta di TEST' : 'Carta PRODUZIONE'}
+              </Badge>
+              {environment && (
+                <Badge variant="outline" data-testid="badge-card-target">
+                  Target: {environment}
+                </Badge>
+              )}
+              {hasMismatches && (
+                <Badge variant="destructive" data-testid="badge-mismatch-warning">
+                  <AlertTriangle className="h-3 w-3 mr-1" />
+                  Dati non corrispondenti
+                </Badge>
+              )}
+            </div>
+
+            <div className="border rounded-lg overflow-hidden">
+              <table className="w-full text-sm">
+                <thead className="bg-muted/50">
+                  <tr>
+                    <th className="px-3 py-2 text-left font-medium">Campo</th>
+                    <th className="px-3 py-2 text-left font-medium">Smart Card</th>
+                    <th className="px-3 py-2 text-left font-medium">Database</th>
+                    <th className="px-3 py-2 text-center font-medium w-20">Stato</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {comparisonFields.map((field, idx) => (
+                    <tr 
+                      key={field.label} 
+                      className={`border-t ${!field.match && field.critical ? 'bg-destructive/5' : ''}`}
+                      data-testid={`row-compare-${idx}`}
+                    >
+                      <td className="px-3 py-2 font-medium">
+                        {field.label}
+                        {field.critical && <span className="text-destructive ml-1">*</span>}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs">
+                        {field.cardValue || <span className="text-muted-foreground">-</span>}
+                      </td>
+                      <td className="px-3 py-2 font-mono text-xs">
+                        {field.dbValue !== '-' ? (field.dbValue || <span className="text-muted-foreground">-</span>) : <span className="text-muted-foreground">-</span>}
+                      </td>
+                      <td className="px-3 py-2 text-center">
+                        {field.dbValue === '-' ? (
+                          <span className="text-muted-foreground text-xs">Info</span>
+                        ) : field.match ? (
+                          <CheckCircle2 className="h-5 w-5 text-green-600 mx-auto" />
+                        ) : (
+                          <XCircle className={`h-5 w-5 mx-auto ${field.critical ? 'text-destructive' : 'text-yellow-500'}`} />
+                        )}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+
+            {hasMismatches && (
+              <div className="p-3 bg-destructive/10 rounded-lg" data-testid="alert-mismatch-details">
+                <div className="flex items-start gap-2">
+                  <AlertTriangle className="h-5 w-5 text-destructive shrink-0 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-destructive">Attenzione: Dati non corrispondenti</p>
+                    <p className="text-muted-foreground mt-1">
+                      I campi con asterisco (*) sono critici per l'invio SIAE. 
+                      Aggiorna la configurazione database con i valori della Smart Card per evitare errori.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {!hasMismatches && cardData && (
+              <div className="p-3 bg-green-500/10 rounded-lg" data-testid="alert-match-success">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="h-5 w-5 text-green-600" />
+                  <span className="text-sm text-green-700">
+                    Tutti i campi critici corrispondono. La configurazione è corretta.
+                  </span>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
+        {!cardData && !error && !loading && (
+          <div className="text-center py-6 text-muted-foreground" data-testid="prompt-read-card">
+            <CreditCard className="h-10 w-10 mx-auto mb-2 opacity-50" />
+            <p>Clicca "Leggi Carta" per verificare i dati della Smart Card</p>
+            <p className="text-xs mt-1">Richiede app desktop Event4U connessa e Smart Card inserita</p>
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  );
+}
 
 export default function SiaeSystemConfigPage() {
   const { toast } = useToast();
@@ -1145,6 +1399,16 @@ export default function SiaeSystemConfigPage() {
                     />
                   </CardContent>
                 </Card>
+                
+                <SmartCardVerifySection 
+                  dbConfig={{
+                    systemCode: form.watch('systemCode') || null,
+                    taxId: form.watch('taxId') || null,
+                    businessName: form.watch('businessName') || null,
+                    vatNumber: form.watch('vatNumber') || null,
+                    siaeEmail: form.watch('siaeEmail') || null,
+                  }}
+                />
               </TabsContent>
             </Tabs>
           </form>
@@ -2049,6 +2313,16 @@ export default function SiaeSystemConfigPage() {
                       testId="switch-auto-transmit"
                     />
                   )}
+                />
+                
+                <SmartCardVerifySection 
+                  dbConfig={{
+                    systemCode: form.watch('systemCode') || null,
+                    taxId: form.watch('taxId') || null,
+                    businessName: form.watch('businessName') || null,
+                    vatNumber: form.watch('vatNumber') || null,
+                    siaeEmail: form.watch('siaeEmail') || null,
+                  }}
                 />
               </motion.div>
             )}

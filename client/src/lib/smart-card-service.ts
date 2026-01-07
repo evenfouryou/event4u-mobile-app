@@ -46,6 +46,38 @@ export interface PukUnlockResult {
   error?: string;
 }
 
+/**
+ * Dati EFFF dalla Smart Card SIAE
+ * Conforme a Descrizione_contenuto_SmartCardTestxBA-V102.pdf
+ */
+export interface SiaeCardEfffData {
+  systemId: string;           // Codice univoco del Sistema (es: P0004010 per test)
+  contactName: string;        // Nome del firmatario (richiedente)
+  contactLastName: string;    // Cognome del firmatario
+  contactCodFis: string;      // Codice Fiscale del firmatario
+  systemLocation: string;     // Ubicazione del sistema
+  contactEmail: string;       // Email associata al certificato
+  siaeEmail: string;          // Email server SIAE per trasmissioni
+  partnerName: string;        // Ragione sociale o Nome/Cognome Titolare
+  partnerCodFis: string;      // CF o P.IVA del Titolare (va nel XML come CFTitolareCA)
+  partnerRegistroImprese: string; // Numero REA
+  partnerNation: string;      // Nazione (es: IT)
+  systemApprCode: string;     // Num protocollo delibera approvazione
+  systemApprDate: string;     // Data delibera approvazione
+  contactRepresentationType: string; // Tipo rappresentanza (I/T/L/N/P)
+  userDataFileVersion: string; // Versione file
+}
+
+export interface EfffReadResult {
+  success: boolean;
+  data?: SiaeCardEfffData;
+  isTestCard?: boolean;
+  environment?: string;
+  siaeEmailTarget?: string;
+  error?: string;
+  code?: string;
+}
+
 export interface FiscalSeal {
   sealNumber: string;
   timestamp: Date;
@@ -898,6 +930,50 @@ class SmartCardService {
       pukRetriesLeft: null,
       pinBlocked: false
     });
+  }
+
+  /**
+   * Legge i dati EFFF dalla Smart Card SIAE
+   * Contiene 15 campi anagrafici incluso CF Titolare, Codice Sistema, Email SIAE
+   * @returns I dati EFFF dalla smart card per verifica/confronto con database
+   */
+  public async readEfff(): Promise<EfffReadResult> {
+    try {
+      console.log('[SmartCard] Reading EFFF data from card via API...');
+      
+      const response = await fetch('/api/siae/card/efff', { 
+        credentials: 'include',
+        headers: { 'Content-Type': 'application/json' }
+      });
+      
+      const result = await response.json();
+      
+      if (!response.ok) {
+        console.error('[SmartCard] EFFF read failed:', result);
+        return {
+          success: false,
+          error: result.error || 'Errore lettura dati Smart Card',
+          code: result.code || 'EFFF_ERROR'
+        };
+      }
+      
+      console.log('[SmartCard] EFFF data received:', result);
+      
+      return {
+        success: true,
+        data: result.data,
+        isTestCard: result.isTestCard,
+        environment: result.environment,
+        siaeEmailTarget: result.siaeEmailTarget
+      };
+    } catch (error: any) {
+      console.error('[SmartCard] EFFF read exception:', error);
+      return {
+        success: false,
+        error: error.message || 'Errore comunicazione con server',
+        code: 'EFFF_NETWORK_ERROR'
+      };
+    }
   }
 }
 
