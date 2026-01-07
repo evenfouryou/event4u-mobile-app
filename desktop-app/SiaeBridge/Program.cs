@@ -139,7 +139,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.34 - FIX CRITICO: Nome file allegato usa solo filename senza path per SMIMESignML");
+            Log("SiaeBridge v3.35 - FIX SIAE 40605: Header S/MIME con nome file RCA corretto");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -2130,7 +2130,7 @@ namespace SiaeBridge
 
             try
             {
-                Log($"=== SignSmime v3.34 START ===");
+                Log($"=== SignSmime v3.35 START ===");
                 
                 dynamic req = JsonConvert.DeserializeObject(json);
                 string pin = req.pin;
@@ -2165,7 +2165,7 @@ namespace SiaeBridge
                 if (pin.Length < 4)
                     return ERR("PIN non valido - deve contenere almeno 4 cifre");
 
-                Log($"SignSmime (via SMIMESignML nativo v3.34): from={smimeFrom}, to={smimeTo}");
+                Log($"SignSmime (via SMIMESignML nativo v3.35): from={smimeFrom}, to={smimeTo}");
                 Log($"  Subject: {smimeSubject ?? "(none)"}");
                 Log($"  Body length: {smimeBody?.Length ?? 0}");
                 Log($"  Attachment: {attachmentName ?? "(none)"}, base64 length: {attachmentBase64?.Length ?? 0}");
@@ -2185,7 +2185,7 @@ namespace SiaeBridge
                 Log($"  Temp directory: {tempDir}");
                 Log($"  Output file: {outputFile}");
                 
-                // v3.34 FIX CRITICO: Salvataggio allegato e stringa attachments vengono impostati
+                // v3.35 FIX CRITICO: Salvataggio allegato e stringa attachments vengono impostati
                 // DOPO il cambio della directory di lavoro per usare path relativi.
                 // Vedi blocco dopo setup virtual drive.
                 string attachments = "";  // stringa vuota, NON null (smime.cpp fa strlen senza null check)
@@ -2193,7 +2193,7 @@ namespace SiaeBridge
                 if (!string.IsNullOrEmpty(attachmentBase64) && !string.IsNullOrEmpty(attachmentName))
                 {
                     attachmentBytesToWrite = Convert.FromBase64String(attachmentBase64);
-                    Log($"  v3.34: Attachment data prepared ({attachmentBytesToWrite.Length} bytes), will save AFTER workdir setup");
+                    Log($"  v3.35: Attachment data prepared ({attachmentBytesToWrite.Length} bytes), will save AFTER workdir setup");
                 }
                 else
                 {
@@ -2293,7 +2293,7 @@ namespace SiaeBridge
                     try { Directory.SetCurrentDirectory(tempDir); } catch { }
                 }
 
-                // v3.34 FIX CRITICO: Ora che siamo nella directory di lavoro corretta,
+                // v3.35 FIX CRITICO: Ora che siamo nella directory di lavoro corretta,
                 // salviamo l'allegato con SOLO il nome file (senza path).
                 // SMIMESignML usa il nome file dal percorso, quindi passando solo il nome
                 // l'allegato nell'email avrà esattamente il nome file SIAE richiesto.
@@ -2304,14 +2304,14 @@ namespace SiaeBridge
                     attachmentTempFile = Path.Combine(currentWorkDir, attachmentName);
                     File.WriteAllBytes(attachmentTempFile, attachmentBytesToWrite);
                     
-                    // v3.34 FIX: Passa SOLO il nome file, non il path completo!
+                    // v3.35 FIX: Passa SOLO il nome file, non il path completo!
                     // SMIMESignML troverà il file nella directory corrente.
                     // Il formato "displayName|filePath" con path relativo funziona correttamente.
                     attachments = $"{attachmentName}|{attachmentName}";
                     
-                    Log($"  v3.34 FIX: Attachment saved to workdir: {attachmentTempFile}");
-                    Log($"  v3.34 FIX: Attachment string uses ONLY filename: '{attachments}'");
-                    Log($"  v3.34 FIX: This ensures SMIMESignML uses '{attachmentName}' as attachment name in email");
+                    Log($"  v3.35 FIX: Attachment saved to workdir: {attachmentTempFile}");
+                    Log($"  v3.35 FIX: Attachment string uses ONLY filename: '{attachments}'");
+                    Log($"  v3.35 FIX: This ensures SMIMESignML uses '{attachmentName}' as attachment name in email");
                 }
 
                 // Reset card state before SMIMESignML call
@@ -2359,7 +2359,7 @@ namespace SiaeBridge
                     Directory.SetCurrentDirectory(originalDir);
                     Log($"  Restored CWD to: {originalDir}");
                     
-                    // v3.34: Pulisci il file allegato temporaneo
+                    // v3.35: Pulisci il file allegato temporaneo
                     if (!string.IsNullOrEmpty(attachmentTempFile) && File.Exists(attachmentTempFile))
                     {
                         try
@@ -2416,7 +2416,41 @@ namespace SiaeBridge
                     return ERR("S/MIME troppo corto - probabilmente non valido");
                 }
 
-                // Log prime 15 righe per debug
+                // ============================================================
+                // v3.35 FIX CRITICO: Post-processing header S/MIME per SIAE
+                // SMIMESignML genera header con nome generico "smime.p7m"
+                // ma SIAE richiede il nome file RCA effettivo negli header
+                // (es. RCA_2025_12_17_EVENT4U1_001_XSI_V.01.00.p7m)
+                // ============================================================
+                if (!string.IsNullOrEmpty(attachmentName))
+                {
+                    Log($"  v3.35 FIX: Post-processing S/MIME headers for SIAE compliance");
+                    
+                    // 1. Sostituisci application/x-pkcs7-mime con application/pkcs7-mime (rimuovi x-)
+                    if (signedMime.Contains("application/x-pkcs7-mime"))
+                    {
+                        signedMime = signedMime.Replace("application/x-pkcs7-mime", "application/pkcs7-mime");
+                        Log($"  v3.35 FIX: Replaced 'application/x-pkcs7-mime' -> 'application/pkcs7-mime'");
+                    }
+                    
+                    // 2. Sostituisci name="smime.p7m" con il nome file RCA reale
+                    if (signedMime.Contains("name=\"smime.p7m\""))
+                    {
+                        signedMime = signedMime.Replace("name=\"smime.p7m\"", $"name=\"{attachmentName}\"");
+                        Log($"  v3.35 FIX: Replaced name=\"smime.p7m\" -> name=\"{attachmentName}\"");
+                    }
+                    
+                    // 3. Sostituisci filename="smime.p7m" con il nome file RCA reale
+                    if (signedMime.Contains("filename=\"smime.p7m\""))
+                    {
+                        signedMime = signedMime.Replace("filename=\"smime.p7m\"", $"filename=\"{attachmentName}\"");
+                        Log($"  v3.35 FIX: Replaced filename=\"smime.p7m\" -> filename=\"{attachmentName}\"");
+                    }
+                    
+                    Log($"  v3.35 FIX: S/MIME headers updated for SIAE compliance");
+                }
+
+                // Log prime 15 righe per debug (dopo il post-processing)
                 var previewLines = signedMime.Split(new[] { "\r\n" }, StringSplitOptions.None);
                 Log($"  === S/MIME OUTPUT (prime 15 righe) ===");
                 for (int i = 0; i < Math.Min(15, previewLines.Length); i++)
