@@ -141,7 +141,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.45 - FIX: nested folder path detection");
+            Log("SiaeBridge v3.47 - FIX: scan ALL 16 slots without early break");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -389,8 +389,9 @@ namespace SiaeBridge
 
                         if (state == 0)
                         {
-                            // No more readers at this slot
-                            break;
+                            // v3.47 FIX: Don't break! Continue scanning all slots
+                            // Bit4ID MiniLector may be on a higher slot number
+                            continue;
                         }
 
                         if (!IsCardPresent(state))
@@ -454,8 +455,9 @@ namespace SiaeBridge
 
                 // Second pass: Windows sees readers but isCardIn returned 0 for all
                 // Try Initialize() directly as fallback (some drivers behave differently)
-                Log("  Fallback: trying Initialize() directly on slots 0-2...");
-                for (int s = 0; s < 3; s++)
+                // v3.47 FIX: Try ALL 16 slots, not just 0-2
+                Log("  Fallback: trying Initialize() directly on slots 0-15...");
+                for (int s = 0; s < 16; s++)
                 {
                     try
                     {
