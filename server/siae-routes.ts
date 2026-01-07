@@ -4873,11 +4873,50 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     }
   }
   
-  // Create transmission record - salva firma appropriata
+  // Calculate progressive sequence number for this transmission
+  // RCA: progressivo per evento specifico (Allegato C SIAE)
+  // Daily/Monthly: progressivo per data
+  const effectiveReportDateForCount = isRCA && rcaEventDate ? rcaEventDate : reportDate;
+  
+  let sequenceNumber: number;
+  if (isRCA && eventId) {
+    // RCA: conta trasmissioni esistenti per questo specifico evento SIAE
+    const eventTransmissions = await siaeStorage.getSiaeTransmissionsByTicketedEvent(eventId);
+    const rcaTransmissions = eventTransmissions.filter(t => t.transmissionType === 'rca');
+    sequenceNumber = rcaTransmissions.length + 1;
+  } else {
+    // Daily/Monthly: conta trasmissioni dello stesso tipo per la stessa data
+    const existingTransmissions = await siaeStorage.getSiaeTransmissionsByCompany(companyId);
+    const sameTypeTransmissions = existingTransmissions.filter(t => {
+      const tDate = new Date(t.periodDate);
+      return t.transmissionType === transmissionType &&
+             tDate.getFullYear() === effectiveReportDateForCount.getFullYear() &&
+             tDate.getMonth() === effectiveReportDateForCount.getMonth() &&
+             tDate.getDate() === effectiveReportDateForCount.getDate();
+    });
+    sequenceNumber = sameTypeTransmissions.length + 1;
+  }
+  
+  // Generate file name using the correct format (Allegato C SIAE)
+  const reportTypeForFileName: 'giornaliero' | 'mensile' | 'rca' | 'log' = 
+    isRCA ? 'rca' : (isMonthly ? 'mensile' : 'giornaliero');
+  const effectiveSignatureFormat = p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : null);
+  const generatedFileName = generateSiaeFileName(
+    reportTypeForFileName, 
+    effectiveReportDateForCount, 
+    sequenceNumber,
+    effectiveSignatureFormat,
+    SIAE_SYSTEM_CODE_DEFAULT
+  );
+  const fileExtension = effectiveSignatureFormat === 'cades' ? '.p7m' : '.xsi';
+  
+  // Create transmission record - salva firma appropriata e nome file conforme
   const transmission = await siaeStorage.createSiaeTransmission({
     companyId,
     transmissionType,
     periodDate: reportDate,
+    fileName: generatedFileName.replace(fileExtension, ''), // Nome senza estensione
+    fileExtension: fileExtension,
     fileContent: signedXmlContent || xml, // XMLDSig firmato o XML originale
     p7mContent: p7mBase64 || null, // CAdES-BES P7M per resend offline
     signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : null),
@@ -4895,13 +4934,13 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     to: destination,
     companyName,
     transmissionType,
-    periodDate: reportDate,
+    periodDate: effectiveReportDateForCount,
     ticketsCount: filteredTickets.length,
     totalAmount: totalAmount.toString(),
     xmlContent: signedXmlContent || xml, // XML originale o XMLDSig firmato
     transmissionId: transmission.id,
     systemCode: SIAE_SYSTEM_CODE_DEFAULT,
-    sequenceNumber: 1,
+    sequenceNumber: sequenceNumber, // Progressivo calcolato dinamicamente
     signWithSmime: true, // Per Allegato C SIAE 1.6.2 - firma S/MIME obbligatoria
     requireSignature: true,
     p7mBase64: p7mBase64, // CAdES-BES P7M per allegato email
@@ -6469,11 +6508,17 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
       oraGen
     });
     
+    // Generate file name with correct format
+    const generatedFileName = generateSiaeFileName('giornaliero', reportDate, 1, null, SIAE_SYSTEM_CODE_DEFAULT);
+    const fileExtension = '.xsi';
+    
     // Create transmission record
     const transmission = await siaeStorage.createSiaeTransmission({
       companyId,
       transmissionType: 'daily',
       periodDate: reportDate,
+      fileName: generatedFileName.replace(fileExtension, ''),
+      fileExtension,
       fileContent: xml,
       status: 'pending',
       ticketsCount: dayTickets.length,
@@ -7773,15 +7818,19 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     // Create transmission record - pass periodDate as Date object
     // Include ticketedEventId to link transmission to event
     // IMPORTANTE: Per C1 evento (LogTransazione) usare 'rca' per generare risposta SIAE
+    const effectiveSignatureFormat = p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : null);
+    const fileExtension = effectiveSignatureFormat === 'cades' ? '.p7m' : '.xsi';
+    
     const transmission = await siaeStorage.createSiaeTransmission({
       companyId: event.companyId,
       ticketedEventId: id, // Collegamento all'evento SIAE
       transmissionType: 'rca', // RCA = Riepilogo Controllo Accessi (C1 evento, genera risposta SIAE)
       periodDate: eventDate,
-      fileName: fileName,
+      fileName: fileName.replace(fileExtension, ''), // Nome senza estensione
+      fileExtension,
       fileContent: signedXmlContent || xmlContent, // XMLDSig firmato o XML originale
       p7mContent: p7mBase64 || null, // CAdES-BES P7M per resend offline
-      signatureFormat: p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : null),
+      signatureFormat: effectiveSignatureFormat,
       signedAt: (p7mBase64 || signedXmlContent) ? new Date() : null,
       status: 'pending',
       ticketsCount: reportData.activeTicketsCount,

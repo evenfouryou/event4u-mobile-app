@@ -256,6 +256,7 @@ export interface ISiaeStorage {
   // ==================== Transmissions ====================
   
   getSiaeTransmissionsByCompany(companyId: string): Promise<SiaeTransmission[]>;
+  getSiaeTransmissionsByTicketedEvent(ticketedEventId: string): Promise<SiaeTransmission[]>;
   getSiaeTransmission(id: string): Promise<SiaeTransmission | undefined>;
   getSiaeTransmissionCount(companyId: string): Promise<number>;
   createSiaeTransmission(transmission: InsertSiaeTransmission): Promise<SiaeTransmission>;
@@ -1299,6 +1300,12 @@ export class SiaeStorage implements ISiaeStorage {
   async getSiaeTransmissionsByCompany(companyId: string): Promise<SiaeTransmission[]> {
     return await db.select().from(siaeTransmissions)
       .where(eq(siaeTransmissions.companyId, companyId))
+      .orderBy(desc(siaeTransmissions.createdAt));
+  }
+  
+  async getSiaeTransmissionsByTicketedEvent(ticketedEventId: string): Promise<SiaeTransmission[]> {
+    return await db.select().from(siaeTransmissions)
+      .where(eq(siaeTransmissions.ticketedEventId, ticketedEventId))
       .orderBy(desc(siaeTransmissions.createdAt));
   }
   

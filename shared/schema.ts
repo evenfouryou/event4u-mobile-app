@@ -1715,8 +1715,8 @@ export const siaeTransmissions = pgTable("siae_transmissions", {
   matricolaMisuratoreFiscale: varchar("matricola_misuratore_fiscale", { length: 20 }), // Matricola dispositivo fiscale
   
   // File
-  fileName: varchar("file_name", { length: 255 }), // Formato: AAAA>MM>GG>SSSSSSSS>MP>TT>V
-  fileExtension: varchar("file_extension", { length: 4 }).notNull().default('.XST'), // .XST o .XSI
+  fileName: varchar("file_name", { length: 255 }), // Formato: RCA_AAAA_MM_GG_SSSSSSSS_###_XSI_V.XX.YY
+  fileExtension: varchar("file_extension", { length: 10 }).notNull().default('.xsi'), // .xsi o .p7m (CAdES-BES)
   fileContent: text("file_content"), // Contenuto XML originale (sempre presente per compatibilità)
   fileHash: varchar("file_hash", { length: 64 }), // SHA-256 hash del file inviato
   digitalSignature: text("digital_signature"), // Firma digitale XMLDSig (legacy)
