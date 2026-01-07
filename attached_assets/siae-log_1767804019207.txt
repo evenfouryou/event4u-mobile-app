@@ -1,0 +1,299 @@
+[2026-01-07 17:39:42.491] [info]    [FILE] System.ObjectModel.dll (71984 bytes)
+[2026-01-07 17:39:42.492] [info]    [FILE] System.Private.CoreLib.dll (12536072 bytes)
+[2026-01-07 17:39:42.492] [info]    [FILE] System.Private.DataContractSerialization.dll (1927432 bytes)
+[2026-01-07 17:39:42.493] [info]    [FILE] System.Private.Uri.dll (248080 bytes)
+[2026-01-07 17:39:42.494] [info]    [FILE] System.Private.Xml.dll (7424264 bytes)
+[2026-01-07 17:39:42.494] [info]    [FILE] System.Private.Xml.Linq.dll (366856 bytes)
+[2026-01-07 17:39:42.495] [info]    [FILE] System.Reflection.DispatchProxy.dll (71944 bytes)
+[2026-01-07 17:39:42.496] [info]    [FILE] System.Reflection.dll (16648 bytes)
+[2026-01-07 17:39:42.496] [info]    [FILE] System.Reflection.Emit.dll (125232 bytes)
+[2026-01-07 17:39:42.497] [info]    [FILE] System.Reflection.Emit.ILGeneration.dll (16136 bytes)
+[2026-01-07 17:39:42.498] [info]    [FILE] System.Reflection.Emit.Lightweight.dll (16136 bytes)
+[2026-01-07 17:39:42.498] [info]    [FILE] System.Reflection.Extensions.dll (15624 bytes)
+[2026-01-07 17:39:42.499] [info]    [FILE] System.Reflection.Metadata.dll (1063184 bytes)
+[2026-01-07 17:39:42.500] [info]    [FILE] System.Reflection.Primitives.dll (16136 bytes)
+[2026-01-07 17:39:42.501] [info]    [FILE] System.Reflection.TypeExtensions.dll (43272 bytes)
+[2026-01-07 17:39:42.501] [info]    [FILE] System.Resources.Reader.dll (15672 bytes)
+[2026-01-07 17:39:42.502] [info]    [FILE] System.Resources.ResourceManager.dll (16136 bytes)
+[2026-01-07 17:39:42.503] [info]    [FILE] System.Resources.Writer.dll (51464 bytes)
+[2026-01-07 17:39:42.505] [info]    [FILE] System.Runtime.CompilerServices.Unsafe.dll (15664 bytes)
+[2026-01-07 17:39:42.505] [info]    [FILE] System.Runtime.CompilerServices.VisualC.dll (30992 bytes)
+[2026-01-07 17:39:42.506] [info]    [FILE] System.Runtime.dll (43792 bytes)
+[2026-01-07 17:39:42.507] [info]    [FILE] System.Runtime.Extensions.dll (18184 bytes)
+[2026-01-07 17:39:42.508] [info]    [FILE] System.Runtime.Handles.dll (15624 bytes)
+[2026-01-07 17:39:42.508] [info]    [FILE] System.Runtime.InteropServices.dll (88328 bytes)
+[2026-01-07 17:39:42.509] [info]    [FILE] System.Runtime.InteropServices.JavaScript.dll (51464 bytes)
+[2026-01-07 17:39:42.510] [info]    [FILE] System.Runtime.InteropServices.RuntimeInformation.dll (15624 bytes)
+[2026-01-07 17:39:42.511] [info]    [FILE] System.Runtime.Intrinsics.dll (17200 bytes)
+[2026-01-07 17:39:42.511] [info]    [FILE] System.Runtime.Loader.dll (16136 bytes)
+[2026-01-07 17:39:42.512] [info]    [FILE] System.Runtime.Numerics.dll (313648 bytes)
+[2026-01-07 17:39:42.513] [info]    [FILE] System.Runtime.Serialization.dll (17160 bytes)
+[2026-01-07 17:39:42.513] [info]    [FILE] System.Runtime.Serialization.Formatters.dll (293136 bytes)
+[2026-01-07 17:39:42.514] [info]    [FILE] System.Runtime.Serialization.Json.dll (16144 bytes)
+[2026-01-07 17:39:42.514] [info]    [FILE] System.Runtime.Serialization.Primitives.dll (39224 bytes)
+[2026-01-07 17:39:42.515] [info]    [FILE] System.Runtime.Serialization.Xml.dll (17200 bytes)
+[2026-01-07 17:39:42.516] [info]    [FILE] System.Security.AccessControl.dll (211208 bytes)
+[2026-01-07 17:39:42.516] [info]    [FILE] System.Security.Claims.dll (92472 bytes)
+[2026-01-07 17:39:42.517] [info]    [FILE] System.Security.Cryptography.Algorithms.dll (17712 bytes)
+[2026-01-07 17:39:42.518] [info]    [FILE] System.Security.Cryptography.Cng.dll (16648 bytes)
+[2026-01-07 17:39:42.521] [info]    [FILE] System.Security.Cryptography.Csp.dll (16144 bytes)
+[2026-01-07 17:39:42.522] [info]    [FILE] System.Security.Cryptography.dll (1792264 bytes)
+[2026-01-07 17:39:42.522] [info]    [FILE] System.Security.Cryptography.Encoding.dll (16136 bytes)
+[2026-01-07 17:39:42.523] [info]    [FILE] System.Security.Cryptography.OpenSsl.dll (15664 bytes)
+[2026-01-07 17:39:42.524] [info]    [FILE] System.Security.Cryptography.Primitives.dll (16136 bytes)
+[2026-01-07 17:39:42.524] [info]    [FILE] System.Security.Cryptography.X509Certificates.dll (17208 bytes)
+[2026-01-07 17:39:42.525] [info]    [FILE] System.Security.dll (18696 bytes)
+[2026-01-07 17:39:42.525] [info]    [FILE] System.Security.Principal.dll (15632 bytes)
+[2026-01-07 17:39:42.526] [info]    [FILE] System.Security.Principal.Windows.dll (166152 bytes)
+[2026-01-07 17:39:42.527] [info]    [FILE] System.Security.SecureString.dll (15624 bytes)
+[2026-01-07 17:39:42.527] [info]    [FILE] System.ServiceModel.Web.dll (17160 bytes)
+[2026-01-07 17:39:42.528] [info]    [FILE] System.ServiceProcess.dll (16136 bytes)
+[2026-01-07 17:39:42.528] [info]    [FILE] System.Text.Encoding.CodePages.dll (858416 bytes)
+[2026-01-07 17:39:42.529] [info]    [FILE] System.Text.Encoding.dll (16184 bytes)
+[2026-01-07 17:39:42.530] [info]    [FILE] System.Text.Encoding.Extensions.dll (16136 bytes)
+[2026-01-07 17:39:42.530] [info]    [FILE] System.Text.Encodings.Web.dll (125192 bytes)
+[2026-01-07 17:39:42.531] [info]    [FILE] System.Text.Json.dll (1386808 bytes)
+[2026-01-07 17:39:42.531] [info]    [FILE] System.Text.RegularExpressions.dll (960776 bytes)
+[2026-01-07 17:39:42.531] [info]    [FILE] System.Threading.Channels.dll (121096 bytes)
+[2026-01-07 17:39:42.532] [info]    [FILE] System.Threading.dll (80184 bytes)
+[2026-01-07 17:39:42.532] [info]    [FILE] System.Threading.Overlapped.dll (16136 bytes)
+[2026-01-07 17:39:42.533] [info]    [FILE] System.Threading.Tasks.Dataflow.dll (440584 bytes)
+[2026-01-07 17:39:42.534] [info]    [FILE] System.Threading.Tasks.dll (17168 bytes)
+[2026-01-07 17:39:42.535] [info]    [FILE] System.Threading.Tasks.Extensions.dll (16136 bytes)
+[2026-01-07 17:39:42.535] [info]    [FILE] System.Threading.Tasks.Parallel.dll (121096 bytes)
+[2026-01-07 17:39:42.536] [info]    [FILE] System.Threading.Thread.dll (16184 bytes)
+[2026-01-07 17:39:42.537] [info]    [FILE] System.Threading.ThreadPool.dll (16184 bytes)
+[2026-01-07 17:39:42.538] [info]    [FILE] System.Threading.Timer.dll (15664 bytes)
+[2026-01-07 17:39:42.538] [info]    [FILE] System.Transactions.dll (16648 bytes)
+[2026-01-07 17:39:42.539] [info]    [FILE] System.Transactions.Local.dll (596272 bytes)
+[2026-01-07 17:39:42.539] [info]    [FILE] System.ValueTuple.dll (15632 bytes)
+[2026-01-07 17:39:42.540] [info]    [FILE] System.Web.dll (15664 bytes)
+[2026-01-07 17:39:42.540] [info]    [FILE] System.Web.HttpUtility.dll (59704 bytes)
+[2026-01-07 17:39:42.541] [info]    [FILE] System.Windows.dll (16176 bytes)
+[2026-01-07 17:39:42.542] [info]    [FILE] System.Xml.dll (23856 bytes)
+[2026-01-07 17:39:42.542] [info]    [FILE] System.Xml.Linq.dll (16136 bytes)
+[2026-01-07 17:39:42.543] [info]    [FILE] System.Xml.ReaderWriter.dll (22328 bytes)
+[2026-01-07 17:39:42.543] [info]    [FILE] System.Xml.Serialization.dll (16696 bytes)
+[2026-01-07 17:39:42.544] [info]    [FILE] System.Xml.XDocument.dll (16136 bytes)
+[2026-01-07 17:39:42.545] [info]    [FILE] System.Xml.XmlDocument.dll (16184 bytes)
+[2026-01-07 17:39:42.545] [info]    [FILE] System.Xml.XmlSerializer.dll (18184 bytes)
+[2026-01-07 17:39:42.546] [info]    [FILE] System.Xml.XPath.dll (16176 bytes)
+[2026-01-07 17:39:42.546] [info]    [FILE] System.Xml.XPath.XDocument.dll (30992 bytes)
+[2026-01-07 17:39:42.547] [info]    [FILE] WindowsBase.dll (16648 bytes)
+[2026-01-07 17:39:42.547] [info]  --- End Directory Structure ---
+[2026-01-07 17:39:42.548] [info]  Searching for SiaeBridge.exe...
+[2026-01-07 17:39:42.548] [info]  Resource path: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources
+[2026-01-07 17:39:42.548] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge.exe
+[2026-01-07 17:39:42.549] [info]    ✓ FOUND: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge.exe
+[2026-01-07 17:39:42.550] [info]  ✓ libSIAE.dll found at C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\libSIAE.dll
+[2026-01-07 17:39:42.555] [info]  WebSocket server started on port 18765
+[2026-01-07 17:39:42.555] [info]  Auto-connecting to relay...
+[2026-01-07 17:39:42.556] [info]  Connecting to relay: wss://manage.eventfouryou.com/ws/bridge
+[2026-01-07 17:39:42.794] [info]  Window shown
+[2026-01-07 17:39:43.073] [info]  Relay WebSocket connected
+[2026-01-07 17:39:43.075] [info]  Sent bridge_register to relay
+[2026-01-07 17:39:43.246] [info]  Relay message received: bridge_register_response
+[2026-01-07 17:39:43.247] [info]  ✓ Registered with relay successfully
+[2026-01-07 17:39:43.248] [info]  Broadcasting status: {"bridgeConnected":false,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2026-01-07 17:39:43.250] [debug] Sent status to relay
+[2026-01-07 17:39:43.251] [info]  Broadcasting status: {"bridgeConnected":false,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2026-01-07 17:39:43.252] [debug] Sent status to relay
+[2026-01-07 17:39:45.162] [info]  IPC: bridge:start
+[2026-01-07 17:39:45.163] [info]  Starting bridge: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge.exe
+[2026-01-07 17:39:45.676] [info]  [Bridge] READY
+[2026-01-07 17:39:45.677] [info]  Bridge READY
+[2026-01-07 17:39:45.677] [info]  Starting automatic status polling every 1000ms
+[2026-01-07 17:39:45.678] [info]  Broadcasting status: {"bridgeConnected":true,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2026-01-07 17:39:45.679] [debug] Sent status to relay
+[2026-01-07 17:39:45.680] [info]  Starting automatic status polling every 1000ms
+[2026-01-07 17:39:45.684] [info]  IPC: checkReader
+[2026-01-07 17:39:45.685] [info]  >> Command: CHECK_READER
+[2026-01-07 17:39:46.005] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:39:46.005] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:39:46.688] [info]  >> Command: CHECK_READER
+[2026-01-07 17:39:46.689] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:39:46.690] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:39:46.691] [info]  Status changed, broadcasting update
+[2026-01-07 17:39:46.691] [info]  Broadcasting status: {"bridgeConnected":true,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":true}
+[2026-01-07 17:39:46.692] [debug] Sent status to relay
+[2026-01-07 17:39:47.691] [info]  >> Command: CHECK_READER
+[2026-01-07 17:39:47.692] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:39:47.693] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:39:48.688] [info]  IPC: checkReader
+[2026-01-07 17:39:48.689] [info]  >> Command: CHECK_READER
+[2026-01-07 17:39:48.690] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:39:48.691] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:39:48.692] [info]  >> Command: CHECK_READER
+[2026-01-07 17:39:48.693] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:39:48.694] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:39:49.702] [info]  >> Command: CHECK_READER
+[2026-01-07 17:39:49.703] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:39:49.704] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:39:50.715] [info]  >> Command: CHECK_READER
+[2026-01-07 17:39:50.718] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:39:50.721] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:39:51.696] [info]  IPC: checkReader
+[2026-01-07 17:39:51.697] [info]  >> Command: CHECK_READER
+[2026-01-07 17:39:51.699] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:39:51.699] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:39:51.728] [info]  >> Command: CHECK_READER
+[2026-01-07 17:39:51.729] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:39:51.730] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:39:52.741] [info]  >> Command: CHECK_READER
+[2026-01-07 17:39:52.742] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:39:52.743] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:39:53.016] [info]  Relay message received: ping
+[2026-01-07 17:39:53.743] [info]  >> Command: CHECK_READER
+[2026-01-07 17:39:53.745] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:39:53.746] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:39:54.695] [info]  IPC: checkReader
+[2026-01-07 17:39:54.698] [info]  >> Command: CHECK_READER
+[2026-01-07 17:39:54.701] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:39:54.704] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:39:54.757] [info]  >> Command: CHECK_READER
+[2026-01-07 17:39:54.758] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:39:54.758] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:39:55.766] [info]  >> Command: CHECK_READER
+[2026-01-07 17:39:55.769] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:39:55.772] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:39:56.778] [info]  >> Command: CHECK_READER
+[2026-01-07 17:39:56.781] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:39:56.784] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:39:57.695] [info]  IPC: checkReader
+[2026-01-07 17:39:57.697] [info]  >> Command: CHECK_READER
+[2026-01-07 17:39:57.701] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:39:57.704] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:39:57.787] [info]  >> Command: CHECK_READER
+[2026-01-07 17:39:57.788] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:39:57.789] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:39:58.358] [info]  Relay message received: pong
+[2026-01-07 17:39:58.360] [debug] Received pong, connection alive
+[2026-01-07 17:39:58.793] [info]  >> Command: CHECK_READER
+[2026-01-07 17:39:58.796] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:39:58.797] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
