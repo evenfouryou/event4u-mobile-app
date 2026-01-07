@@ -1,0 +1,23 @@
+REPLY:
+
+CODICE:      0000
+DESCRIZIONE: Il riepilogo e' stato elaborato correttamente
+DETTAGLIO:   
+
+
+WARNING
+CODICE:      2108
+DESCRIZIONE: Autore non previsto per il Tipo Evento
+DETTAGLIO:   
+
+WARNING
+CODICE:      2112
+DESCRIZIONE: Nazionalita' del Film non prevista per il Tipo Evento
+DETTAGLIO:   
+
+WARNING
+CODICE:      2114
+DESCRIZIONE: Nazionalita' del Film non prevista nella codifica ISO 3166
+DETTAGLIO:   
+
+

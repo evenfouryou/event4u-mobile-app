@@ -5937,17 +5937,36 @@ async function generateRcaReportXml(params: RcaReportParams): Promise<string> {
   const spettacoloIntrattenimento = ticketedEvent.entertainmentType || 'S';
   const incidenzaIntrattenimento = ticketedEvent.entertainmentIncidence || 100;
   
-  // Per tipoGenere Intrattenimento (60-69, 30-40), Autore/Esecutore/NazionalitaFilm non previsti
-  // SIAE Warning 2108/2110/2112/2114: usare '-' per evitare warning
+  // Per tipoGenere Intrattenimento (60-69, 30-40), Autore/Esecutore/NazionalitaFilm NON DEVONO essere presenti
+  // SIAE Warning 2108/2110/2112/2114: OMETTERE completamente i tag per evitare warning
   // Codici Intrattenimento: 30-40 (giochi), 60-69 (ballo/discoteca), 70-74 (fiere/mostre), 79 (luna park)
+  // Codici Cinema (01-04): richiedono NazionalitaFilm (ISO 3166)
+  // Codici Teatro/Concerti (45-59): richiedono Autore ed Esecutore
   const genreNum = parseInt(tipoGenere);
   const isIntrattenimento = (genreNum >= 30 && genreNum <= 40) || 
                             (genreNum >= 60 && genreNum <= 69) || 
                             (genreNum >= 70 && genreNum <= 74) || 
                             genreNum === 79;
-  const autoreValue = isIntrattenimento ? '-' : '-';
-  const esecutoreValue = isIntrattenimento ? '-' : '-';
-  const nazionalitaFilmValue = isIntrattenimento ? '-' : 'ITA';
+  const isCinema = genreNum >= 1 && genreNum <= 4;
+  const isTeatroConcerti = genreNum >= 45 && genreNum <= 59;
+  
+  // Genera campi opzionali solo quando previsti dalla normativa
+  let autoreEsecutoreXml = '';
+  let nazionalitaFilmXml = '';
+  
+  if (isTeatroConcerti) {
+    // Teatro/Concerti: Autore ed Esecutore obbligatori
+    autoreEsecutoreXml = `
+    <Autore>${escapeXml(ticketedEvent.author || 'N/D')}</Autore>
+    <Esecutore>${escapeXml(ticketedEvent.performer || 'N/D')}</Esecutore>`;
+  }
+  
+  if (isCinema) {
+    // Cinema: NazionalitaFilm obbligatoria (codice ISO 3166)
+    nazionalitaFilmXml = `
+    <NazionalitaFilm>${escapeXml(ticketedEvent.filmNationality || 'IT')}</NazionalitaFilm>`;
+  }
+  // Per Intrattenimento (60-69, 30-40, 70-74, 79): NON includere Autore/Esecutore/NazionalitaFilm
   
   // NOTA: Nessun DOCTYPE - i Web Service SIAE non risolvono DTD esterni (XXE protection)
   const xml = `<?xml version="1.0" encoding="UTF-8"?>
@@ -5972,10 +5991,7 @@ async function generateRcaReportXml(params: RcaReportParams): Promise<string> {
     <DataEvento>${dataEvento}</DataEvento>
     <OraEvento>${oraEvento}</OraEvento>
     <TipoGenere>${escapeXml(tipoGenere)}</TipoGenere>
-    <TitoloEvento>${escapeXml(eventDetails.name)}</TitoloEvento>
-    <Autore>${autoreValue}</Autore>
-    <Esecutore>${esecutoreValue}</Esecutore>
-    <NazionalitaFilm>${nazionalitaFilmValue}</NazionalitaFilm>
+    <TitoloEvento>${escapeXml(eventDetails.name)}</TitoloEvento>${autoreEsecutoreXml}${nazionalitaFilmXml}
     <NumOpereRappresentate>1</NumOpereRappresentate>
     <SistemaEmissione CFTitolare="${escapeXml(cfTitolare)}" CodiceSistema="${escapeXml(systemEmissionCode)}">${titolXml}
     </SistemaEmissione>
