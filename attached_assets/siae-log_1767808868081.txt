@@ -1,0 +1,299 @@
+[2026-01-07 18:38:54.143] [info]    [FILE] System.Security.SecureString.dll (15624 bytes)
+[2026-01-07 18:38:54.144] [info]    [FILE] System.ServiceModel.Web.dll (17160 bytes)
+[2026-01-07 18:38:54.144] [info]    [FILE] System.ServiceProcess.dll (16136 bytes)
+[2026-01-07 18:38:54.145] [info]    [FILE] System.Text.Encoding.CodePages.dll (858416 bytes)
+[2026-01-07 18:38:54.146] [info]    [FILE] System.Text.Encoding.dll (16184 bytes)
+[2026-01-07 18:38:54.146] [info]    [FILE] System.Text.Encoding.Extensions.dll (16136 bytes)
+[2026-01-07 18:38:54.147] [info]    [FILE] System.Text.Encodings.Web.dll (125192 bytes)
+[2026-01-07 18:38:54.148] [info]    [FILE] System.Text.Json.dll (1386808 bytes)
+[2026-01-07 18:38:54.148] [info]    [FILE] System.Text.RegularExpressions.dll (960776 bytes)
+[2026-01-07 18:38:54.149] [info]    [FILE] System.Threading.Channels.dll (121096 bytes)
+[2026-01-07 18:38:54.149] [info]    [FILE] System.Threading.dll (80184 bytes)
+[2026-01-07 18:38:54.150] [info]    [FILE] System.Threading.Overlapped.dll (16136 bytes)
+[2026-01-07 18:38:54.151] [info]    [FILE] System.Threading.Tasks.Dataflow.dll (440584 bytes)
+[2026-01-07 18:38:54.152] [info]    [FILE] System.Threading.Tasks.dll (17168 bytes)
+[2026-01-07 18:38:54.152] [info]    [FILE] System.Threading.Tasks.Extensions.dll (16136 bytes)
+[2026-01-07 18:38:54.153] [info]    [FILE] System.Threading.Tasks.Parallel.dll (121096 bytes)
+[2026-01-07 18:38:54.154] [info]    [FILE] System.Threading.Thread.dll (16184 bytes)
+[2026-01-07 18:38:54.155] [info]    [FILE] System.Threading.ThreadPool.dll (16184 bytes)
+[2026-01-07 18:38:54.155] [info]    [FILE] System.Threading.Timer.dll (15664 bytes)
+[2026-01-07 18:38:54.156] [info]    [FILE] System.Transactions.dll (16648 bytes)
+[2026-01-07 18:38:54.157] [info]    [FILE] System.Transactions.Local.dll (596272 bytes)
+[2026-01-07 18:38:54.157] [info]    [FILE] System.ValueTuple.dll (15632 bytes)
+[2026-01-07 18:38:54.158] [info]    [FILE] System.Web.dll (15664 bytes)
+[2026-01-07 18:38:54.158] [info]    [FILE] System.Web.HttpUtility.dll (59704 bytes)
+[2026-01-07 18:38:54.159] [info]    [FILE] System.Windows.dll (16176 bytes)
+[2026-01-07 18:38:54.160] [info]    [FILE] System.Windows.Extensions.dll (72456 bytes)
+[2026-01-07 18:38:54.161] [info]    [FILE] System.Xml.dll (23856 bytes)
+[2026-01-07 18:38:54.162] [info]    [FILE] System.Xml.Linq.dll (16136 bytes)
+[2026-01-07 18:38:54.162] [info]    [FILE] System.Xml.ReaderWriter.dll (22328 bytes)
+[2026-01-07 18:38:54.163] [info]    [FILE] System.Xml.Serialization.dll (16696 bytes)
+[2026-01-07 18:38:54.164] [info]    [FILE] System.Xml.XDocument.dll (16136 bytes)
+[2026-01-07 18:38:54.165] [info]    [FILE] System.Xml.XmlDocument.dll (16184 bytes)
+[2026-01-07 18:38:54.165] [info]    [FILE] System.Xml.XmlSerializer.dll (18184 bytes)
+[2026-01-07 18:38:54.166] [info]    [FILE] System.Xml.XPath.dll (16176 bytes)
+[2026-01-07 18:38:54.167] [info]    [FILE] System.Xml.XPath.XDocument.dll (30992 bytes)
+[2026-01-07 18:38:54.167] [info]    [FILE] WindowsBase.dll (16648 bytes)
+[2026-01-07 18:38:54.168] [info]  --- End Directory Structure ---
+[2026-01-07 18:38:54.168] [info]  Searching for SiaeBridge.exe...
+[2026-01-07 18:38:54.169] [info]  Resource path: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources
+[2026-01-07 18:38:54.169] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge.exe
+[2026-01-07 18:38:54.170] [info]    ✓ FOUND: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge.exe
+[2026-01-07 18:38:54.171] [info]  ✓ libSIAE.dll found at C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\libSIAE.dll
+[2026-01-07 18:38:54.176] [info]  WebSocket server started on port 18765
+[2026-01-07 18:38:54.176] [info]  Auto-connecting to relay...
+[2026-01-07 18:38:54.177] [info]  Connecting to relay: wss://manage.eventfouryou.com/ws/bridge
+[2026-01-07 18:38:54.408] [info]  Window shown
+[2026-01-07 18:38:54.565] [info]  Relay WebSocket connected
+[2026-01-07 18:38:54.568] [info]  Sent bridge_register to relay
+[2026-01-07 18:38:54.737] [info]  Relay message received: bridge_register_response
+[2026-01-07 18:38:54.739] [info]  ✓ Registered with relay successfully
+[2026-01-07 18:38:54.740] [info]  Broadcasting status: {"bridgeConnected":false,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2026-01-07 18:38:54.742] [debug] Sent status to relay
+[2026-01-07 18:38:54.744] [info]  Broadcasting status: {"bridgeConnected":false,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2026-01-07 18:38:54.745] [debug] Sent status to relay
+[2026-01-07 18:38:56.462] [info]  IPC: bridge:start
+[2026-01-07 18:38:56.463] [info]  Starting bridge: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge.exe
+[2026-01-07 18:38:57.042] [info]  [Bridge] READY
+[2026-01-07 18:38:57.043] [info]  Bridge READY
+[2026-01-07 18:38:57.044] [info]  Starting automatic status polling every 1000ms
+[2026-01-07 18:38:57.044] [info]  Broadcasting status: {"bridgeConnected":true,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2026-01-07 18:38:57.045] [debug] Sent status to relay
+[2026-01-07 18:38:57.046] [info]  Starting automatic status polling every 1000ms
+[2026-01-07 18:38:57.051] [info]  IPC: checkReader
+[2026-01-07 18:38:57.052] [info]  >> Command: CHECK_READER
+[2026-01-07 18:38:57.523] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2026-01-07 18:38:57.523] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2026-01-07 18:38:58.053] [info]  >> Command: CHECK_READER
+[2026-01-07 18:38:58.069] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2026-01-07 18:38:58.070] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2026-01-07 18:38:58.071] [info]  Status changed, broadcasting update
+[2026-01-07 18:38:58.071] [info]  Broadcasting status: {"bridgeConnected":true,"readerConnected":true,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":true}
+[2026-01-07 18:38:58.072] [debug] Sent status to relay
+[2026-01-07 18:38:59.054] [info]  >> Command: CHECK_READER
+[2026-01-07 18:38:59.071] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2026-01-07 18:38:59.072] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2026-01-07 18:38:59.485] [info]  Relay message received: ping
+[2026-01-07 18:39:00.050] [info]  IPC: checkReader
+[2026-01-07 18:39:00.051] [info]  >> Command: CHECK_READER
+[2026-01-07 18:39:00.066] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2026-01-07 18:39:00.066] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2026-01-07 18:39:00.067] [info]  >> Command: CHECK_READER
+[2026-01-07 18:39:00.081] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2026-01-07 18:39:00.081] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2026-01-07 18:39:01.064] [info]  >> Command: CHECK_READER
+[2026-01-07 18:39:01.088] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2026-01-07 18:39:01.088] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2026-01-07 18:39:02.079] [info]  >> Command: CHECK_READER
+[2026-01-07 18:39:02.103] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2026-01-07 18:39:02.104] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2026-01-07 18:39:03.052] [info]  IPC: checkReader
+[2026-01-07 18:39:03.052] [info]  >> Command: CHECK_READER
+[2026-01-07 18:39:03.073] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2026-01-07 18:39:03.074] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2026-01-07 18:39:03.082] [info]  >> Command: CHECK_READER
+[2026-01-07 18:39:03.095] [info]  [Bridge] {"success":true,"readerConnected":true,"cardPresent":false,"message":"Inserire carta SIAE"}
+[2026-01-07 18:39:03.095] [info]  << Response: {
+  success: true,
+  readerConnected: true,
+  cardPresent: false,
+  message: 'Inserire carta SIAE'
+}
+[2026-01-07 18:39:03.352] [info]  Main window closed
+[2026-01-07 18:39:03.354] [error] Uncaught exception: TypeError: Object has been destroyed
+    at addToLogBuffer (C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\main.js:126:32)
+    at log.info (C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\main.js:138:3)
+    at BrowserWindow.<anonymous> (C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\main.js:217:9)
+    at BrowserWindow.emit (node:events:517:28)
+[2026-01-07 18:52:34.657] [info]  ============================================================
+[2026-01-07 18:52:34.663] [info]  App starting at 2026-01-07T17:52:34.663Z
+[2026-01-07 18:52:34.664] [info]  App version: 3.43.0
+[2026-01-07 18:52:34.664] [info]  Electron version: 28.3.3
+[2026-01-07 18:52:34.665] [info]  Node version: 18.18.2
+[2026-01-07 18:52:34.665] [info]  Platform: win32 x64
+[2026-01-07 18:52:34.666] [info]  User data path: C:\Users\Pc\AppData\Roaming\event-four-you-siae-lettore
+[2026-01-07 18:52:34.666] [info]  ============================================================
+[2026-01-07 18:52:34.755] [info]  App ready
+[2026-01-07 18:52:34.756] [info]  Relay config loaded - Server: production (wss://manage.eventfouryou.com)
+[2026-01-07 18:52:34.757] [info]  Creating main window...
+[2026-01-07 18:52:34.953] [info]  --- Directory Structure ---
+[2026-01-07 18:52:34.955] [info]  Contents of C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources:
+[2026-01-07 18:52:34.956] [info]    [DIR] app 
+[2026-01-07 18:52:34.958] [info]    [FILE] app-update.yml (161 bytes)
+[2026-01-07 18:52:34.959] [info]    [FILE] elevate.exe (107520 bytes)
+[2026-01-07 18:52:34.960] [info]    [DIR] SiaeBridge 
+[2026-01-07 18:52:34.961] [info]  Contents of C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge:
+[2026-01-07 18:52:34.961] [info]    [DIR] SiaeBridge 
+[2026-01-07 18:52:34.962] [info]  --- End Directory Structure ---
+[2026-01-07 18:52:34.963] [info]  Searching for SiaeBridge.exe...
+[2026-01-07 18:52:34.963] [info]  Resource path: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources
+[2026-01-07 18:52:34.964] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge.exe
+[2026-01-07 18:52:34.965] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\bin\Release\net472\SiaeBridge.exe
+[2026-01-07 18:52:34.965] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\bin\Debug\net472\SiaeBridge.exe
+[2026-01-07 18:52:34.966] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\SiaeBridge.exe
+[2026-01-07 18:52:34.967] [error] SiaeBridge.exe not found!
+[2026-01-07 18:52:34.974] [info]  WebSocket server started on port 18765
+[2026-01-07 18:52:34.975] [info]  Auto-connecting to relay...
+[2026-01-07 18:52:34.976] [info]  Connecting to relay: wss://manage.eventfouryou.com/ws/bridge
+[2026-01-07 18:52:35.308] [info]  Window shown
+[2026-01-07 18:52:35.824] [info]  Relay WebSocket connected
+[2026-01-07 18:52:35.825] [info]  Sent bridge_register to relay
+[2026-01-07 18:52:36.206] [info]  Relay message received: bridge_register_response
+[2026-01-07 18:52:36.206] [info]  ✓ Registered with relay successfully
+[2026-01-07 18:52:36.208] [info]  Broadcasting status: {"bridgeConnected":false,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2026-01-07 18:52:36.209] [debug] Sent status to relay
+[2026-01-07 18:52:36.209] [info]  Broadcasting status: {"bridgeConnected":false,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2026-01-07 18:52:36.210] [debug] Sent status to relay
+[2026-01-07 18:52:37.811] [info]  IPC: bridge:start
+[2026-01-07 18:52:37.812] [info]  Searching for SiaeBridge.exe...
+[2026-01-07 18:52:37.813] [info]  Resource path: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources
+[2026-01-07 18:52:37.814] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge.exe
+[2026-01-07 18:52:37.815] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\bin\Release\net472\SiaeBridge.exe
+[2026-01-07 18:52:37.815] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\bin\Debug\net472\SiaeBridge.exe
+[2026-01-07 18:52:37.816] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\SiaeBridge.exe
+[2026-01-07 18:52:37.817] [error] SiaeBridge.exe not found!
+[2026-01-07 18:52:37.818] [error] SiaeBridge.exe non trovato
+[2026-01-07 18:52:38.865] [info]  Relay message received: ping
+[2026-01-07 18:52:51.020] [info]  Relay message received: pong
+[2026-01-07 18:52:51.024] [debug] Received pong, connection alive
+[2026-01-07 18:52:53.861] [info]  Relay message received: ping
+[2026-01-07 18:53:06.026] [info]  Relay message received: pong
+[2026-01-07 18:53:06.030] [debug] Received pong, connection alive
+[2026-01-07 18:53:08.862] [info]  Relay message received: ping
+[2026-01-07 18:53:21.036] [info]  Relay message received: pong
+[2026-01-07 18:53:21.039] [debug] Received pong, connection alive
+[2026-01-07 18:53:23.871] [info]  Relay message received: ping
+[2026-01-07 18:53:36.086] [info]  Relay message received: pong
+[2026-01-07 18:53:36.088] [debug] Received pong, connection alive
+[2026-01-07 18:53:38.872] [info]  Relay message received: ping
+[2026-01-07 18:53:51.101] [info]  Relay message received: pong
+[2026-01-07 18:53:51.102] [debug] Received pong, connection alive
+[2026-01-07 18:53:53.919] [info]  Relay message received: ping
+[2026-01-07 18:54:06.060] [info]  Relay message received: pong
+[2026-01-07 18:54:06.060] [debug] Received pong, connection alive
+[2026-01-07 18:54:08.864] [info]  Relay message received: ping
+[2026-01-07 18:54:21.064] [info]  Relay message received: pong
+[2026-01-07 18:54:21.065] [debug] Received pong, connection alive
+[2026-01-07 18:54:23.859] [info]  Relay message received: ping
+[2026-01-07 18:54:36.050] [info]  Relay message received: pong
+[2026-01-07 18:54:36.051] [debug] Received pong, connection alive
+[2026-01-07 18:54:38.861] [info]  Relay message received: ping
+[2026-01-07 18:54:51.062] [info]  Relay message received: pong
+[2026-01-07 18:54:51.063] [debug] Received pong, connection alive
+[2026-01-07 18:54:53.859] [info]  Relay message received: ping
+[2026-01-07 18:55:06.074] [info]  Relay message received: pong
+[2026-01-07 18:55:06.075] [debug] Received pong, connection alive
+[2026-01-07 18:55:08.865] [info]  Relay message received: ping
+[2026-01-07 18:55:21.090] [info]  Relay message received: pong
+[2026-01-07 18:55:21.091] [debug] Received pong, connection alive
+[2026-01-07 18:55:23.865] [info]  Relay message received: ping
+[2026-01-07 18:55:36.090] [info]  Relay message received: pong
+[2026-01-07 18:55:36.091] [debug] Received pong, connection alive
+[2026-01-07 18:55:38.865] [info]  Relay message received: ping
+[2026-01-07 18:55:51.100] [info]  Relay message received: pong
+[2026-01-07 18:55:51.101] [debug] Received pong, connection alive
+[2026-01-07 18:55:53.871] [info]  Relay message received: ping
+[2026-01-07 18:56:06.125] [info]  Relay message received: pong
+[2026-01-07 18:56:06.126] [debug] Received pong, connection alive
+[2026-01-07 18:56:08.867] [info]  Relay message received: ping
+[2026-01-07 18:56:21.125] [info]  Relay message received: pong
+[2026-01-07 18:56:21.128] [debug] Received pong, connection alive
+[2026-01-07 18:56:23.867] [info]  Relay message received: ping
+[2026-01-07 18:56:36.144] [info]  Relay message received: pong
+[2026-01-07 18:56:36.144] [debug] Received pong, connection alive
+[2026-01-07 18:56:38.870] [info]  Relay message received: ping
+[2026-01-07 18:56:49.082] [info]  Main window closed
+[2026-01-07 18:56:49.083] [error] Uncaught exception: TypeError: Object has been destroyed
+    at addToLogBuffer (C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\main.js:126:32)
+    at log.info (C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\main.js:138:3)
+    at BrowserWindow.<anonymous> (C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\main.js:217:9)
+    at BrowserWindow.emit (node:events:517:28)
+[2026-01-07 19:00:40.883] [info]  ============================================================
+[2026-01-07 19:00:40.892] [info]  App starting at 2026-01-07T18:00:40.891Z
+[2026-01-07 19:00:40.893] [info]  App version: 3.44.0
+[2026-01-07 19:00:40.894] [info]  Electron version: 28.3.3
+[2026-01-07 19:00:40.896] [info]  Node version: 18.18.2
+[2026-01-07 19:00:40.897] [info]  Platform: win32 x64
+[2026-01-07 19:00:40.898] [info]  User data path: C:\Users\Pc\AppData\Roaming\event-four-you-siae-lettore
+[2026-01-07 19:00:40.899] [info]  ============================================================
+[2026-01-07 19:00:41.040] [info]  App ready
+[2026-01-07 19:00:41.041] [info]  Relay config loaded - Server: production (wss://manage.eventfouryou.com)
+[2026-01-07 19:00:41.043] [info]  Creating main window...
+[2026-01-07 19:00:41.246] [info]  --- Directory Structure ---
+[2026-01-07 19:00:41.248] [info]  Contents of C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources:
+[2026-01-07 19:00:41.250] [info]    [DIR] app 
+[2026-01-07 19:00:41.251] [info]    [FILE] app-update.yml (161 bytes)
+[2026-01-07 19:00:41.252] [info]    [FILE] elevate.exe (107520 bytes)
+[2026-01-07 19:00:41.253] [info]    [DIR] SiaeBridge 
+[2026-01-07 19:00:41.255] [info]  Contents of C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge:
+[2026-01-07 19:00:41.256] [info]    [DIR] SiaeBridge 
+[2026-01-07 19:00:41.257] [info]  --- End Directory Structure ---
+[2026-01-07 19:00:41.258] [info]  Searching for SiaeBridge.exe...
+[2026-01-07 19:00:41.259] [info]  Resource path: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources
+[2026-01-07 19:00:41.261] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge.exe
+[2026-01-07 19:00:41.262] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\bin\Release\net472\SiaeBridge.exe
+[2026-01-07 19:00:41.263] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\bin\Debug\net472\SiaeBridge.exe
+[2026-01-07 19:00:41.265] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\SiaeBridge.exe
+[2026-01-07 19:00:41.266] [error] SiaeBridge.exe not found!
+[2026-01-07 19:00:41.274] [info]  WebSocket server started on port 18765
+[2026-01-07 19:00:41.276] [info]  Auto-connecting to relay...
+[2026-01-07 19:00:41.277] [info]  Connecting to relay: wss://manage.eventfouryou.com/ws/bridge
+[2026-01-07 19:00:41.751] [info]  Window shown
+[2026-01-07 19:00:41.787] [info]  Relay WebSocket connected
+[2026-01-07 19:00:41.790] [info]  Sent bridge_register to relay
+[2026-01-07 19:00:42.003] [info]  Relay message received: bridge_register_response
+[2026-01-07 19:00:42.004] [info]  ✓ Registered with relay successfully
+[2026-01-07 19:00:42.005] [info]  Broadcasting status: {"bridgeConnected":false,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2026-01-07 19:00:42.007] [debug] Sent status to relay
+[2026-01-07 19:00:42.008] [info]  Broadcasting status: {"bridgeConnected":false,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2026-01-07 19:00:42.010] [debug] Sent status to relay
+[2026-01-07 19:00:44.038] [info]  IPC: bridge:start
+[2026-01-07 19:00:44.039] [info]  Searching for SiaeBridge.exe...
+[2026-01-07 19:00:44.040] [info]  Resource path: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources
+[2026-01-07 19:00:44.040] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge.exe
+[2026-01-07 19:00:44.041] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\bin\Release\net472\SiaeBridge.exe
+[2026-01-07 19:00:44.043] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\bin\Debug\net472\SiaeBridge.exe
+[2026-01-07 19:00:44.044] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\SiaeBridge\SiaeBridge.exe
+[2026-01-07 19:00:44.045] [error] SiaeBridge.exe not found!
+[2026-01-07 19:00:44.046] [error] SiaeBridge.exe non trovato
+[2026-01-07 19:00:54.327] [info]  Relay message received: ping

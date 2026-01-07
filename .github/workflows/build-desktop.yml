@@ -131,3 +131,33 @@ jobs:
         with:
           name: SIAE-Lettore-Portable
           path: desktop-app/dist/win-unpacked/
+
+      - name: Get version
+        id: get_version
+        shell: pwsh
+        run: |
+          $pkg = Get-Content -Path "desktop-app/package.json" -Raw | ConvertFrom-Json
+          echo "VERSION=v$($pkg.version)" >> $env:GITHUB_OUTPUT
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v1
+        with:
+          tag_name: ${{ steps.get_version.outputs.VERSION }}
+          name: "SIAE Lettore ${{ steps.get_version.outputs.VERSION }}"
+          body: |
+            ## Event Four You SIAE Lettore ${{ steps.get_version.outputs.VERSION }}
+            
+            ### Novità:
+            - Firma digitale CAdES-BES conforme ETSI EN 319 122-1
+            - SHA-256 invece di SHA-1 deprecato
+            - SigningCertificateV2 per SIAE 2025
+            - Self-contained build con .NET 8.0 runtime incluso
+            
+            ### Installazione:
+            1. Scarica il file .exe
+            2. Esegui l'installer
+            3. Avvia dal menu Start
+          files: desktop-app/dist/*.exe
+          generate_release_notes: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
