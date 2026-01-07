@@ -26,17 +26,17 @@ jobs:
       - name: Build SiaeBridge
         working-directory: desktop-app/SiaeBridge
         run: |
-          echo "=== Compiling SiaeBridge (x86) ==="
+          echo "=== Compiling SiaeBridge (x86 self-contained) ==="
           dotnet restore
-          dotnet build -c Release -r win-x86 --self-contained false
+          dotnet publish -c Release -r win-x86 --self-contained true
           echo ""
           echo "=== Output files ==="
-          dir bin\Release\net8.0-windows\win-x86\
+          dir bin\Release\net8.0-windows\win-x86\publish\
 
       - name: Copy prebuilt DLLs
         shell: pwsh
         run: |
-          $outDir = "desktop-app/SiaeBridge/bin/Release/net8.0-windows/win-x86"
+          $outDir = "desktop-app/SiaeBridge/bin/Release/net8.0-windows/win-x86/publish"
           
           # Copy libSIAE.dll from prebuilt
           $libSiae = "desktop-app/SiaeBridge/prebuilt/libSIAE.dll"
@@ -65,7 +65,7 @@ jobs:
       - name: Verify required files
         shell: pwsh
         run: |
-          $dir = "desktop-app/SiaeBridge/bin/Release/net8.0-windows/win-x86"
+          $dir = "desktop-app/SiaeBridge/bin/Release/net8.0-windows/win-x86/publish"
           $required = @("SiaeBridge.exe", "libSIAE.dll", "libSIAEp7.dll")
           
           $missing = @()
@@ -89,7 +89,7 @@ jobs:
       - name: Prepare resources folder for Electron
         shell: pwsh
         run: |
-          $srcDir = "desktop-app/SiaeBridge/bin/Release/net8.0-windows/win-x86"
+          $srcDir = "desktop-app/SiaeBridge/bin/Release/net8.0-windows/win-x86/publish"
           $destDir = "desktop-app/resources"
           
           # Create resources folder
