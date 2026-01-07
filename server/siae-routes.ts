@@ -7802,6 +7802,7 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
         totalAmount: reportData.totalRevenue.toFixed(2),
         xmlContent: signedXmlContent || xmlContent, // XML originale o XMLDSig firmato
         transmissionId: transmission.id,
+        systemCode: systemCode, // Codice sistema per nome file conforme Allegato C
         signWithSmime: true, // Per Allegato C SIAE 1.6.2 - firma S/MIME obbligatoria
         requireSignature: true,
         p7mBase64: p7mBase64, // CAdES-BES P7M per allegato email
