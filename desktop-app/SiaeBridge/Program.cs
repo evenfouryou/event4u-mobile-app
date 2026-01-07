@@ -141,13 +141,13 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.38 - FIX: Force 32-bit (ia32) Electron build for libSIAE.dll compatibility");
+            Log("SiaeBridge v3.39 - FIX: Remove false positive VC++ Runtime check");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
             
-            // v3.37: Check VC++ Runtime availability early
-            CheckVCRuntimeDependencies();
+            // v3.39: Skip aggressive VC++ check - it causes false positives
+            // The check will happen naturally when CheckReader is called
 
             string dllPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "libSIAE.dll");
             if (File.Exists(dllPath))
@@ -350,7 +350,7 @@ namespace SiaeBridge
 
         // ============================================================
         // CHECK READER
-        // v3.37 FIX: VC++ Runtime dependency check + improved detection
+        // v3.39 FIX: Removed false positive VC++ Runtime check
         // isCardIn() returns:
         //   0 = no reader at slot OR reader present but no card
         //   32 (SCARD_STATE_PRESENT) = card is present
@@ -358,21 +358,9 @@ namespace SiaeBridge
         // ============================================================
         static string CheckReader()
         {
-            // v3.37: Check if VC++ Runtime is missing (detected at startup)
-            if (_vcRuntimeMissing)
-            {
-                Log($"  VC++ Runtime error detected: {_vcRuntimeError}");
-                return JsonConvert.SerializeObject(new
-                {
-                    success = false,
-                    readerConnected = false,
-                    cardPresent = false,
-                    error = "VC_RUNTIME_MISSING",
-                    message = "Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe",
-                    downloadUrl = "https://aka.ms/vs/17/release/vc_redist.x86.exe"
-                });
-            }
-
+            // v3.39: Removed VC++ Runtime check that caused false positives
+            // With ia32 (32-bit) build, DLL loading should work correctly
+            
             bool hasReaders = CheckWindowsSmartCardReaders();
             Log($"Windows readers: {hasReaders}");
 
@@ -462,24 +450,9 @@ namespace SiaeBridge
                     }
                     catch (Exception ex)
                     {
-                        Log($"  Slot {s} error: {ex.Message}");
-                        
-                        // v3.37: Detect VC++ Runtime missing error
-                        if (ex.HResult == unchecked((int)0x8007000B) || ex.Message.Contains("formato non corretto"))
-                        {
-                            _vcRuntimeMissing = true;
-                            _vcRuntimeError = "VC++ Runtime mancante";
-                            Log($"  ✗ ERRORE 0x8007000B rilevato: VC++ Runtime non installato");
-                            return JsonConvert.SerializeObject(new
-                            {
-                                success = false,
-                                readerConnected = false,
-                                cardPresent = false,
-                                error = "VC_RUNTIME_MISSING",
-                                message = "Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe",
-                                downloadUrl = "https://aka.ms/vs/17/release/vc_redist.x86.exe"
-                            });
-                        }
+                        Log($"  Slot {s} error: {ex.Message} (HResult: 0x{ex.HResult:X8})");
+                        // v3.39: Don't set _vcRuntimeMissing here - it causes false positives
+                        // Just continue to next slot
                         
                         // Don't break on exceptions - try next slot
                         continue;
@@ -528,24 +501,9 @@ namespace SiaeBridge
                     }
                     catch (Exception ex)
                     {
-                        Log($"  Fallback slot {s} error: {ex.Message}");
-                        
-                        // v3.37: Detect VC++ Runtime missing error in fallback
-                        if (ex.HResult == unchecked((int)0x8007000B) || ex.Message.Contains("formato non corretto"))
-                        {
-                            _vcRuntimeMissing = true;
-                            _vcRuntimeError = "VC++ Runtime mancante";
-                            Log($"  ✗ ERRORE 0x8007000B rilevato in fallback: VC++ Runtime non installato");
-                            return JsonConvert.SerializeObject(new
-                            {
-                                success = false,
-                                readerConnected = false,
-                                cardPresent = false,
-                                error = "VC_RUNTIME_MISSING",
-                                message = "Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe",
-                                downloadUrl = "https://aka.ms/vs/17/release/vc_redist.x86.exe"
-                            });
-                        }
+                        Log($"  Fallback slot {s} error: {ex.Message} (HResult: 0x{ex.HResult:X8})");
+                        // v3.39: Don't set _vcRuntimeMissing - causes false positives
+                        // Continue to next slot
                     }
                 }
 

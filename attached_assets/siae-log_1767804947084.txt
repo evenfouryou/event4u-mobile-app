@@ -1,0 +1,299 @@
+[2026-01-07 17:55:17.478] [info]  Main window closed
+[2026-01-07 17:55:17.479] [error] Uncaught exception: TypeError: Object has been destroyed
+    at addToLogBuffer (C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\main.js:126:32)
+    at log.info (C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\main.js:138:3)
+    at BrowserWindow.<anonymous> (C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\app\main.js:217:9)
+    at BrowserWindow.emit (node:events:517:28)
+[2026-01-07 17:55:31.397] [info]  ============================================================
+[2026-01-07 17:55:31.403] [info]  App starting at 2026-01-07T16:55:31.402Z
+[2026-01-07 17:55:31.404] [info]  App version: 3.38.0
+[2026-01-07 17:55:31.405] [info]  Electron version: 28.3.3
+[2026-01-07 17:55:31.405] [info]  Node version: 18.18.2
+[2026-01-07 17:55:31.406] [info]  Platform: win32 ia32
+[2026-01-07 17:55:31.406] [info]  User data path: C:\Users\Pc\AppData\Roaming\event-four-you-siae-lettore
+[2026-01-07 17:55:31.407] [info]  ============================================================
+[2026-01-07 17:55:31.453] [info]  App ready
+[2026-01-07 17:55:31.455] [info]  Relay config loaded - Server: production (wss://manage.eventfouryou.com)
+[2026-01-07 17:55:31.455] [info]  Creating main window...
+[2026-01-07 17:55:31.554] [info]  --- Directory Structure ---
+[2026-01-07 17:55:31.555] [info]  Contents of C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources:
+[2026-01-07 17:55:31.556] [info]    [DIR] app 
+[2026-01-07 17:55:31.557] [info]    [FILE] app-update.yml (161 bytes)
+[2026-01-07 17:55:31.558] [info]    [FILE] elevate.exe (107520 bytes)
+[2026-01-07 17:55:31.559] [info]    [DIR] SiaeBridge 
+[2026-01-07 17:55:31.560] [info]  Contents of C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge:
+[2026-01-07 17:55:31.561] [info]    [FILE] BouncyCastle.Cryptography.dll (4870808 bytes)
+[2026-01-07 17:55:31.562] [info]    [FILE] bridge.log (54704 bytes)
+[2026-01-07 17:55:31.562] [info]    [FILE] clretwrc.dll (311048 bytes)
+[2026-01-07 17:55:31.563] [info]    [FILE] clrgc.dll (431368 bytes)
+[2026-01-07 17:55:31.564] [info]    [FILE] clrjit.dll (1526024 bytes)
+[2026-01-07 17:55:31.565] [info]    [FILE] coreclr.dll (4093192 bytes)
+[2026-01-07 17:55:31.566] [info]    [FILE] createdump.exe (59752 bytes)
+[2026-01-07 17:55:31.567] [info]    [FILE] hostfxr.dll (300808 bytes)
+[2026-01-07 17:55:31.567] [info]    [FILE] hostpolicy.dll (337672 bytes)
+[2026-01-07 17:55:31.568] [info]    [FILE] libSIAE.dll (148606 bytes)
+[2026-01-07 17:55:31.569] [info]    [FILE] libSIAEp7.dll (229057 bytes)
+[2026-01-07 17:55:31.570] [info]    [FILE] Microsoft.CSharp.dll (940336 bytes)
+[2026-01-07 17:55:31.570] [info]    [FILE] Microsoft.DiaSymReader.Native.x86.dll (2146344 bytes)
+[2026-01-07 17:55:31.571] [info]    [FILE] Microsoft.VisualBasic.Core.dll (1177864 bytes)
+[2026-01-07 17:55:31.572] [info]    [FILE] Microsoft.VisualBasic.dll (17672 bytes)
+[2026-01-07 17:55:31.573] [info]    [FILE] Microsoft.Win32.Primitives.dll (15672 bytes)
+[2026-01-07 17:55:31.573] [info]    [FILE] Microsoft.Win32.Registry.dll (104720 bytes)
+[2026-01-07 17:55:31.575] [info]    [FILE] mscordaccore.dll (1266520 bytes)
+[2026-01-07 17:55:31.576] [info]    [FILE] mscordaccore_x86_x86_8.0.2225.52707.dll (1266520 bytes)
+[2026-01-07 17:55:31.577] [info]    [FILE] mscordbi.dll (1181016 bytes)
+[2026-01-07 17:55:31.577] [info]    [FILE] mscorlib.dll (59704 bytes)
+[2026-01-07 17:55:31.578] [info]    [FILE] mscorrc.dll (137008 bytes)
+[2026-01-07 17:55:31.579] [info]    [FILE] msquic.dll (618056 bytes)
+[2026-01-07 17:55:31.580] [info]    [FILE] netstandard.dll (101176 bytes)
+[2026-01-07 17:55:31.580] [info]    [FILE] Newtonsoft.Json.dll (712464 bytes)
+[2026-01-07 17:55:31.581] [info]    [DIR] prebuilt 
+[2026-01-07 17:55:31.582] [info]    [FILE] SiaeBridge.deps.json (28273 bytes)
+[2026-01-07 17:55:31.583] [info]    [FILE] SiaeBridge.dll (110080 bytes)
+[2026-01-07 17:55:31.584] [info]    [FILE] SiaeBridge.exe (120832 bytes)
+[2026-01-07 17:55:31.584] [info]    [FILE] SiaeBridge.pdb (24664 bytes)
+[2026-01-07 17:55:31.585] [info]    [FILE] SiaeBridge.runtimeconfig.json (429 bytes)
+[2026-01-07 17:55:31.586] [info]    [FILE] System.AppContext.dll (15664 bytes)
+[2026-01-07 17:55:31.587] [info]    [FILE] System.Buffers.dll (15664 bytes)
+[2026-01-07 17:55:31.587] [info]    [FILE] System.Collections.Concurrent.dll (252176 bytes)
+[2026-01-07 17:55:31.588] [info]    [FILE] System.Collections.dll (239888 bytes)
+[2026-01-07 17:55:31.589] [info]    [FILE] System.Collections.Immutable.dll (751880 bytes)
+[2026-01-07 17:55:31.589] [info]    [FILE] System.Collections.NonGeneric.dll (92464 bytes)
+[2026-01-07 17:55:31.590] [info]    [FILE] System.Collections.Specialized.dll (92424 bytes)
+[2026-01-07 17:55:31.591] [info]    [FILE] System.ComponentModel.Annotations.dll (186632 bytes)
+[2026-01-07 17:55:31.592] [info]    [FILE] System.ComponentModel.DataAnnotations.dll (17200 bytes)
+[2026-01-07 17:55:31.592] [info]    [FILE] System.ComponentModel.dll (30984 bytes)
+[2026-01-07 17:55:31.593] [info]    [FILE] System.ComponentModel.EventBasedAsync.dll (47376 bytes)
+[2026-01-07 17:55:31.594] [info]    [FILE] System.ComponentModel.Primitives.dll (76040 bytes)
+[2026-01-07 17:55:31.595] [info]    [FILE] System.ComponentModel.TypeConverter.dll (686344 bytes)
+[2026-01-07 17:55:31.595] [info]    [FILE] System.Configuration.dll (19720 bytes)
+[2026-01-07 17:55:31.596] [info]    [FILE] System.Console.dll (157968 bytes)
+[2026-01-07 17:55:31.597] [info]    [FILE] System.Core.dll (23816 bytes)
+[2026-01-07 17:55:31.598] [info]    [FILE] System.Data.Common.dll (2648368 bytes)
+[2026-01-07 17:55:31.599] [info]    [FILE] System.Data.DataSetExtensions.dll (16136 bytes)
+[2026-01-07 17:55:31.599] [info]    [FILE] System.Data.dll (25352 bytes)
+[2026-01-07 17:55:31.600] [info]    [FILE] System.Diagnostics.Contracts.dll (16648 bytes)
+[2026-01-07 17:55:31.601] [info]    [FILE] System.Diagnostics.Debug.dll (16136 bytes)
+[2026-01-07 17:55:31.601] [info]    [FILE] System.Diagnostics.DiagnosticSource.dll (383240 bytes)
+[2026-01-07 17:55:31.602] [info]    [FILE] System.Diagnostics.FileVersionInfo.dll (47376 bytes)
+[2026-01-07 17:55:31.603] [info]    [FILE] System.Diagnostics.Process.dll (297232 bytes)
+[2026-01-07 17:55:31.603] [info]    [FILE] System.Diagnostics.StackTrace.dll (43272 bytes)
+[2026-01-07 17:55:31.604] [info]    [FILE] System.Diagnostics.TextWriterTraceListener.dll (63752 bytes)
+[2026-01-07 17:55:31.605] [info]    [FILE] System.Diagnostics.Tools.dll (15624 bytes)
+[2026-01-07 17:55:31.605] [info]    [FILE] System.Diagnostics.TraceSource.dll (129328 bytes)
+[2026-01-07 17:55:31.606] [info]    [FILE] System.Diagnostics.Tracing.dll (16648 bytes)
+[2026-01-07 17:55:31.606] [info]    [FILE] System.dll (50440 bytes)
+[2026-01-07 17:55:31.607] [info]    [FILE] System.Drawing.dll (20744 bytes)
+[2026-01-07 17:55:31.607] [info]    [FILE] System.Drawing.Primitives.dll (129336 bytes)
+[2026-01-07 17:55:31.608] [info]    [FILE] System.Dynamic.Runtime.dll (16696 bytes)
+[2026-01-07 17:55:31.608] [info]    [FILE] System.Formats.Asn1.dll (223496 bytes)
+[2026-01-07 17:55:31.609] [info]    [FILE] System.Formats.Tar.dll (252168 bytes)
+[2026-01-07 17:55:31.610] [info]    [FILE] System.Globalization.Calendars.dll (16184 bytes)
+[2026-01-07 17:55:31.610] [info]    [FILE] System.Globalization.dll (16144 bytes)
+[2026-01-07 17:55:31.611] [info]    [FILE] System.Globalization.Extensions.dll (15624 bytes)
+[2026-01-07 17:55:31.611] [info]    [FILE] System.IO.Compression.Brotli.dll (71944 bytes)
+[2026-01-07 17:55:31.612] [info]    [FILE] System.IO.Compression.dll (244016 bytes)
+[2026-01-07 17:55:31.612] [info]    [FILE] System.IO.Compression.FileSystem.dll (15624 bytes)
+[2026-01-07 17:55:31.613] [info]    [FILE] System.IO.Compression.Native.dll (775984 bytes)
+[2026-01-07 17:55:31.613] [info]    [FILE] System.IO.Compression.ZipFile.dll (51464 bytes)
+[2026-01-07 17:55:31.614] [info]    [FILE] System.IO.dll (16184 bytes)
+[2026-01-07 17:55:31.615] [info]    [FILE] System.IO.FileSystem.AccessControl.dll (96568 bytes)
+[2026-01-07 17:55:31.616] [info]    [FILE] System.IO.FileSystem.dll (16136 bytes)
+[2026-01-07 17:55:31.616] [info]    [FILE] System.IO.FileSystem.DriveInfo.dll (51464 bytes)
+[2026-01-07 17:55:31.617] [info]    [FILE] System.IO.FileSystem.Primitives.dll (15624 bytes)
+[2026-01-07 17:55:31.618] [info]    [FILE] System.IO.FileSystem.Watcher.dll (76040 bytes)
+[2026-01-07 17:55:31.618] [info]    [FILE] System.IO.IsolatedStorage.dll (84232 bytes)
+[2026-01-07 17:55:31.619] [info]    [FILE] System.IO.MemoryMappedFiles.dll (76048 bytes)
+[2026-01-07 17:55:31.619] [info]    [FILE] System.IO.Pipes.AccessControl.dll (16648 bytes)
+[2026-01-07 17:55:31.620] [info]    [FILE] System.IO.Pipes.dll (153864 bytes)
+[2026-01-07 17:55:31.621] [info]    [FILE] System.IO.UnmanagedMemoryStream.dll (15664 bytes)
+[2026-01-07 17:55:31.621] [info]    [FILE] System.Linq.dll (489784 bytes)
+[2026-01-07 17:55:31.622] [info]    [FILE] System.Linq.Expressions.dll (3389744 bytes)
+[2026-01-07 17:55:31.623] [info]    [FILE] System.Linq.Parallel.dll (735496 bytes)
+[2026-01-07 17:55:31.623] [info]    [FILE] System.Linq.Queryable.dll (166152 bytes)
+[2026-01-07 17:55:31.623] [info]    [FILE] System.Memory.dll (145680 bytes)
+[2026-01-07 17:55:31.624] [info]    [FILE] System.Net.dll (17672 bytes)
+[2026-01-07 17:55:31.624] [info]    [FILE] System.Net.Http.dll (1575224 bytes)
+[2026-01-07 17:55:31.625] [info]    [FILE] System.Net.Http.Json.dll (112904 bytes)
+[2026-01-07 17:55:31.625] [info]    [FILE] System.Net.HttpListener.dll (493840 bytes)
+[2026-01-07 17:55:31.625] [info]    [FILE] System.Net.Mail.dll (391472 bytes)
+[2026-01-07 17:55:31.626] [info]    [FILE] System.Net.NameResolution.dll (100616 bytes)
+[2026-01-07 17:55:31.626] [info]    [FILE] System.Net.NetworkInformation.dll (141576 bytes)
+[2026-01-07 17:55:31.627] [info]    [FILE] System.Net.Ping.dll (84280 bytes)
+[2026-01-07 17:55:31.627] [info]    [FILE] System.Net.Primitives.dll (211256 bytes)
+[2026-01-07 17:55:31.627] [info]    [FILE] System.Net.Quic.dll (260360 bytes)
+[2026-01-07 17:55:31.628] [info]    [FILE] System.Net.Requests.dll (321848 bytes)
+[2026-01-07 17:55:31.628] [info]    [FILE] System.Net.Security.dll (604432 bytes)
+[2026-01-07 17:55:31.629] [info]    [FILE] System.Net.ServicePoint.dll (43320 bytes)
+[2026-01-07 17:55:31.629] [info]    [FILE] System.Net.Sockets.dll (481544 bytes)
+[2026-01-07 17:55:31.630] [info]    [FILE] System.Net.WebClient.dll (149776 bytes)
+[2026-01-07 17:55:31.630] [info]    [FILE] System.Net.WebHeaderCollection.dll (63752 bytes)
+[2026-01-07 17:55:31.630] [info]    [FILE] System.Net.WebProxy.dll (43320 bytes)
+[2026-01-07 17:55:31.631] [info]    [FILE] System.Net.WebSockets.Client.dll (92424 bytes)
+[2026-01-07 17:55:31.631] [info]    [FILE] System.Net.WebSockets.dll (170288 bytes)
+[2026-01-07 17:55:31.631] [info]    [FILE] System.Numerics.dll (15664 bytes)
+[2026-01-07 17:55:31.632] [info]    [FILE] System.Numerics.Vectors.dll (16144 bytes)
+[2026-01-07 17:55:31.632] [info]    [FILE] System.ObjectModel.dll (71984 bytes)
+[2026-01-07 17:55:31.633] [info]    [FILE] System.Private.CoreLib.dll (12536072 bytes)
+[2026-01-07 17:55:31.633] [info]    [FILE] System.Private.DataContractSerialization.dll (1927432 bytes)
+[2026-01-07 17:55:31.633] [info]    [FILE] System.Private.Uri.dll (248080 bytes)
+[2026-01-07 17:55:31.634] [info]    [FILE] System.Private.Xml.dll (7424264 bytes)
+[2026-01-07 17:55:31.634] [info]    [FILE] System.Private.Xml.Linq.dll (366856 bytes)
+[2026-01-07 17:55:31.635] [info]    [FILE] System.Reflection.DispatchProxy.dll (71944 bytes)
+[2026-01-07 17:55:31.635] [info]    [FILE] System.Reflection.dll (16648 bytes)
+[2026-01-07 17:55:31.635] [info]    [FILE] System.Reflection.Emit.dll (125232 bytes)
+[2026-01-07 17:55:31.636] [info]    [FILE] System.Reflection.Emit.ILGeneration.dll (16136 bytes)
+[2026-01-07 17:55:31.636] [info]    [FILE] System.Reflection.Emit.Lightweight.dll (16136 bytes)
+[2026-01-07 17:55:31.636] [info]    [FILE] System.Reflection.Extensions.dll (15624 bytes)
+[2026-01-07 17:55:31.637] [info]    [FILE] System.Reflection.Metadata.dll (1063184 bytes)
+[2026-01-07 17:55:31.637] [info]    [FILE] System.Reflection.Primitives.dll (16136 bytes)
+[2026-01-07 17:55:31.638] [info]    [FILE] System.Reflection.TypeExtensions.dll (43272 bytes)
+[2026-01-07 17:55:31.638] [info]    [FILE] System.Resources.Reader.dll (15672 bytes)
+[2026-01-07 17:55:31.638] [info]    [FILE] System.Resources.ResourceManager.dll (16136 bytes)
+[2026-01-07 17:55:31.639] [info]    [FILE] System.Resources.Writer.dll (51464 bytes)
+[2026-01-07 17:55:31.639] [info]    [FILE] System.Runtime.CompilerServices.Unsafe.dll (15664 bytes)
+[2026-01-07 17:55:31.639] [info]    [FILE] System.Runtime.CompilerServices.VisualC.dll (30992 bytes)
+[2026-01-07 17:55:31.640] [info]    [FILE] System.Runtime.dll (43792 bytes)
+[2026-01-07 17:55:31.640] [info]    [FILE] System.Runtime.Extensions.dll (18184 bytes)
+[2026-01-07 17:55:31.641] [info]    [FILE] System.Runtime.Handles.dll (15624 bytes)
+[2026-01-07 17:55:31.641] [info]    [FILE] System.Runtime.InteropServices.dll (88328 bytes)
+[2026-01-07 17:55:31.641] [info]    [FILE] System.Runtime.InteropServices.JavaScript.dll (51464 bytes)
+[2026-01-07 17:55:31.642] [info]    [FILE] System.Runtime.InteropServices.RuntimeInformation.dll (15624 bytes)
+[2026-01-07 17:55:31.642] [info]    [FILE] System.Runtime.Intrinsics.dll (17200 bytes)
+[2026-01-07 17:55:31.643] [info]    [FILE] System.Runtime.Loader.dll (16136 bytes)
+[2026-01-07 17:55:31.643] [info]    [FILE] System.Runtime.Numerics.dll (313648 bytes)
+[2026-01-07 17:55:31.643] [info]    [FILE] System.Runtime.Serialization.dll (17160 bytes)
+[2026-01-07 17:55:31.644] [info]    [FILE] System.Runtime.Serialization.Formatters.dll (293136 bytes)
+[2026-01-07 17:55:31.644] [info]    [FILE] System.Runtime.Serialization.Json.dll (16144 bytes)
+[2026-01-07 17:55:31.644] [info]    [FILE] System.Runtime.Serialization.Primitives.dll (39224 bytes)
+[2026-01-07 17:55:31.645] [info]    [FILE] System.Runtime.Serialization.Xml.dll (17200 bytes)
+[2026-01-07 17:55:31.645] [info]    [FILE] System.Security.AccessControl.dll (211208 bytes)
+[2026-01-07 17:55:31.647] [info]    [FILE] System.Security.Claims.dll (92472 bytes)
+[2026-01-07 17:55:31.648] [info]    [FILE] System.Security.Cryptography.Algorithms.dll (17712 bytes)
+[2026-01-07 17:55:31.648] [info]    [FILE] System.Security.Cryptography.Cng.dll (16648 bytes)
+[2026-01-07 17:55:31.648] [info]    [FILE] System.Security.Cryptography.Csp.dll (16144 bytes)
+[2026-01-07 17:55:31.649] [info]    [FILE] System.Security.Cryptography.dll (1792264 bytes)
+[2026-01-07 17:55:31.649] [info]    [FILE] System.Security.Cryptography.Encoding.dll (16136 bytes)
+[2026-01-07 17:55:31.649] [info]    [FILE] System.Security.Cryptography.OpenSsl.dll (15664 bytes)
+[2026-01-07 17:55:31.650] [info]    [FILE] System.Security.Cryptography.Primitives.dll (16136 bytes)
+[2026-01-07 17:55:31.650] [info]    [FILE] System.Security.Cryptography.X509Certificates.dll (17208 bytes)
+[2026-01-07 17:55:31.651] [info]    [FILE] System.Security.dll (18696 bytes)
+[2026-01-07 17:55:31.651] [info]    [FILE] System.Security.Principal.dll (15632 bytes)
+[2026-01-07 17:55:31.651] [info]    [FILE] System.Security.Principal.Windows.dll (166152 bytes)
+[2026-01-07 17:55:31.652] [info]    [FILE] System.Security.SecureString.dll (15624 bytes)
+[2026-01-07 17:55:31.652] [info]    [FILE] System.ServiceModel.Web.dll (17160 bytes)
+[2026-01-07 17:55:31.653] [info]    [FILE] System.ServiceProcess.dll (16136 bytes)
+[2026-01-07 17:55:31.653] [info]    [FILE] System.Text.Encoding.CodePages.dll (858416 bytes)
+[2026-01-07 17:55:31.653] [info]    [FILE] System.Text.Encoding.dll (16184 bytes)
+[2026-01-07 17:55:31.654] [info]    [FILE] System.Text.Encoding.Extensions.dll (16136 bytes)
+[2026-01-07 17:55:31.654] [info]    [FILE] System.Text.Encodings.Web.dll (125192 bytes)
+[2026-01-07 17:55:31.654] [info]    [FILE] System.Text.Json.dll (1386808 bytes)
+[2026-01-07 17:55:31.655] [info]    [FILE] System.Text.RegularExpressions.dll (960776 bytes)
+[2026-01-07 17:55:31.655] [info]    [FILE] System.Threading.Channels.dll (121096 bytes)
+[2026-01-07 17:55:31.656] [info]    [FILE] System.Threading.dll (80184 bytes)
+[2026-01-07 17:55:31.656] [info]    [FILE] System.Threading.Overlapped.dll (16136 bytes)
+[2026-01-07 17:55:31.656] [info]    [FILE] System.Threading.Tasks.Dataflow.dll (440584 bytes)
+[2026-01-07 17:55:31.657] [info]    [FILE] System.Threading.Tasks.dll (17168 bytes)
+[2026-01-07 17:55:31.657] [info]    [FILE] System.Threading.Tasks.Extensions.dll (16136 bytes)
+[2026-01-07 17:55:31.657] [info]    [FILE] System.Threading.Tasks.Parallel.dll (121096 bytes)
+[2026-01-07 17:55:31.658] [info]    [FILE] System.Threading.Thread.dll (16184 bytes)
+[2026-01-07 17:55:31.658] [info]    [FILE] System.Threading.ThreadPool.dll (16184 bytes)
+[2026-01-07 17:55:31.659] [info]    [FILE] System.Threading.Timer.dll (15664 bytes)
+[2026-01-07 17:55:31.659] [info]    [FILE] System.Transactions.dll (16648 bytes)
+[2026-01-07 17:55:31.659] [info]    [FILE] System.Transactions.Local.dll (596272 bytes)
+[2026-01-07 17:55:31.660] [info]    [FILE] System.ValueTuple.dll (15632 bytes)
+[2026-01-07 17:55:31.660] [info]    [FILE] System.Web.dll (15664 bytes)
+[2026-01-07 17:55:31.661] [info]    [FILE] System.Web.HttpUtility.dll (59704 bytes)
+[2026-01-07 17:55:31.661] [info]    [FILE] System.Windows.dll (16176 bytes)
+[2026-01-07 17:55:31.661] [info]    [FILE] System.Xml.dll (23856 bytes)
+[2026-01-07 17:55:31.662] [info]    [FILE] System.Xml.Linq.dll (16136 bytes)
+[2026-01-07 17:55:31.662] [info]    [FILE] System.Xml.ReaderWriter.dll (22328 bytes)
+[2026-01-07 17:55:31.662] [info]    [FILE] System.Xml.Serialization.dll (16696 bytes)
+[2026-01-07 17:55:31.663] [info]    [FILE] System.Xml.XDocument.dll (16136 bytes)
+[2026-01-07 17:55:31.663] [info]    [FILE] System.Xml.XmlDocument.dll (16184 bytes)
+[2026-01-07 17:55:31.663] [info]    [FILE] System.Xml.XmlSerializer.dll (18184 bytes)
+[2026-01-07 17:55:31.664] [info]    [FILE] System.Xml.XPath.dll (16176 bytes)
+[2026-01-07 17:55:31.664] [info]    [FILE] System.Xml.XPath.XDocument.dll (30992 bytes)
+[2026-01-07 17:55:31.665] [info]    [FILE] WindowsBase.dll (16648 bytes)
+[2026-01-07 17:55:31.665] [info]  --- End Directory Structure ---
+[2026-01-07 17:55:31.665] [info]  Searching for SiaeBridge.exe...
+[2026-01-07 17:55:31.666] [info]  Resource path: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources
+[2026-01-07 17:55:31.666] [info]    Checking: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge.exe
+[2026-01-07 17:55:31.666] [info]    ✓ FOUND: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge.exe
+[2026-01-07 17:55:31.667] [info]  ✓ libSIAE.dll found at C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\libSIAE.dll
+[2026-01-07 17:55:31.670] [info]  WebSocket server started on port 18765
+[2026-01-07 17:55:31.670] [info]  Auto-connecting to relay...
+[2026-01-07 17:55:31.671] [info]  Connecting to relay: wss://manage.eventfouryou.com/ws/bridge
+[2026-01-07 17:55:31.842] [info]  Window shown
+[2026-01-07 17:55:32.099] [info]  Relay WebSocket connected
+[2026-01-07 17:55:32.104] [info]  Sent bridge_register to relay
+[2026-01-07 17:55:32.275] [info]  Relay message received: bridge_register_response
+[2026-01-07 17:55:32.277] [info]  ✓ Registered with relay successfully
+[2026-01-07 17:55:32.279] [info]  Broadcasting status: {"bridgeConnected":false,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2026-01-07 17:55:32.281] [debug] Sent status to relay
+[2026-01-07 17:55:32.283] [info]  Broadcasting status: {"bridgeConnected":false,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2026-01-07 17:55:32.286] [debug] Sent status to relay
+[2026-01-07 17:55:35.094] [info]  IPC: bridge:start
+[2026-01-07 17:55:35.095] [info]  Starting bridge: C:\Users\Pc\AppData\Local\Programs\Event Four You SIAE Lettore\resources\SiaeBridge\SiaeBridge.exe
+[2026-01-07 17:55:35.218] [info]  [Bridge] READY
+[2026-01-07 17:55:35.219] [info]  Bridge READY
+[2026-01-07 17:55:35.219] [info]  Starting automatic status polling every 1000ms
+[2026-01-07 17:55:35.220] [info]  Broadcasting status: {"bridgeConnected":true,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":false}
+[2026-01-07 17:55:35.221] [debug] Sent status to relay
+[2026-01-07 17:55:35.222] [info]  Starting automatic status polling every 1000ms
+[2026-01-07 17:55:35.226] [info]  IPC: checkReader
+[2026-01-07 17:55:35.227] [info]  >> Command: CHECK_READER
+[2026-01-07 17:55:35.330] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:55:35.331] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:55:36.228] [info]  >> Command: CHECK_READER
+[2026-01-07 17:55:36.230] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:55:36.230] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:55:36.231] [info]  Status changed, broadcasting update
+[2026-01-07 17:55:36.231] [info]  Broadcasting status: {"bridgeConnected":true,"readerConnected":false,"cardInserted":false,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"pinLocked":true}
+[2026-01-07 17:55:36.232] [debug] Sent status to relay
+[2026-01-07 17:55:37.243] [info]  >> Command: CHECK_READER
+[2026-01-07 17:55:37.244] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:55:37.245] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:55:38.195] [info]  Relay message received: ping
+[2026-01-07 17:55:38.240] [info]  IPC: checkReader
+[2026-01-07 17:55:38.240] [info]  >> Command: CHECK_READER
+[2026-01-07 17:55:38.241] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:55:38.242] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
+[2026-01-07 17:55:38.243] [info]  >> Command: CHECK_READER
+[2026-01-07 17:55:38.244] [info]  [Bridge] {"success":false,"readerConnected":false,"cardPresent":false,"error":"VC_RUNTIME_MISSING","message":"Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe","downloadUrl":"https://aka.ms/vs/17/release/vc_redist.x86.exe"}
+[2026-01-07 17:55:38.244] [info]  << Response: {
+  success: false,
+  readerConnected: false,
+  cardPresent: false,
+  error: 'VC_RUNTIME_MISSING',
+  message: 'Errore: Visual C++ Runtime mancante. Scaricare e installare da: https://aka.ms/vs/17/release/vc_redist.x86.exe',
+  downloadUrl: 'https://aka.ms/vs/17/release/vc_redist.x86.exe'
+}
