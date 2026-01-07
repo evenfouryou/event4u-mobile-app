@@ -641,6 +641,47 @@ async function handleWebSocketMessage(ws, msg) {
       }
       break;
 
+    case 'READ_EFFF':
+      try {
+        const requestId = msg.requestId || '';
+        log.info(`[EFFF] Reading EFFF data from card, requestId=${requestId}`);
+        const result = await sendBridgeCommand('READ_EFFF');
+        if (result.success && result.efffData) {
+          log.info(`[EFFF] EFFF read success: systemId=${result.efffData.systemId}`);
+          // Send EFFF_RESPONSE (uppercase) to match server handler
+          ws.send(JSON.stringify({
+            type: 'EFFF_RESPONSE',
+            requestId,
+            payload: {
+              success: true,
+              efffData: result.efffData,
+              isTestCard: result.isTestCard || false
+            }
+          }));
+        } else {
+          log.error(`[EFFF] EFFF read failed: ${result.error}`);
+          ws.send(JSON.stringify({
+            type: 'EFFF_RESPONSE',
+            requestId,
+            payload: {
+              success: false,
+              error: result.error || 'Errore lettura EFFF'
+            }
+          }));
+        }
+      } catch (err) {
+        log.error(`[EFFF] Exception reading EFFF: ${err.message}`);
+        ws.send(JSON.stringify({
+          type: 'EFFF_RESPONSE',
+          requestId: msg.requestId || '',
+          payload: {
+            success: false,
+            error: err.message
+          }
+        }));
+      }
+      break;
+
     default:
       log.warn('Unknown WS message type:', msg.type);
   }
