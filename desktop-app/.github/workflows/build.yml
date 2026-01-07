@@ -3,10 +3,16 @@ name: Build and Release
 on:
   push:
     branches: [main]
+    paths:
+      - 'desktop-app/**'
   workflow_dispatch:
 
 permissions:
   contents: write
+
+defaults:
+  run:
+    working-directory: desktop-app
 
 jobs:
   build:
@@ -24,13 +30,13 @@ jobs:
       - name: Build SiaeBridge
         run: |
           cd SiaeBridge
-          dotnet publish -c Release -r win-x86 --self-contained true -o ../resources
+          dotnet publish -c Release -r win-x86 --self-contained true -o ../resources/SiaeBridge
           
       - name: Copy libSIAE DLLs
         run: |
-          copy SiaeBridge\prebuilt\libSIAE.dll resources\
-          copy SiaeBridge\prebuilt\libSIAEp7.dll resources\
-          dir resources
+          copy SiaeBridge\prebuilt\libSIAE.dll resources\SiaeBridge\
+          copy SiaeBridge\prebuilt\libSIAEp7.dll resources\SiaeBridge\
+          dir resources\SiaeBridge
           
       - name: Setup Node.js
         uses: actions/setup-node@v4
@@ -49,15 +55,15 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: windows-installer
-          path: dist/*.exe
+          path: desktop-app/dist/*.exe
           
       - name: Create Release
         uses: softprops/action-gh-release@v1
         if: github.ref == 'refs/heads/main'
         with:
-          tag_name: v1.0.${{ github.run_number }}
-          name: Release v1.0.${{ github.run_number }}
-          files: dist/*.exe
+          tag_name: v3.35.${{ github.run_number }}
+          name: Release v3.35.${{ github.run_number }}
+          files: desktop-app/dist/*.exe
           generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

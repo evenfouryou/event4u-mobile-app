@@ -33,7 +33,7 @@
           "arch": ["x64"]
         }
       ],
-      "icon": "icon.ico",
+      "icon": "icon.png",
       "publisherName": "Event Four You"
     },
     "nsis": {
@@ -55,7 +55,7 @@
     ],
     "extraResources": [
       {
-        "from": "resources",
+        "from": "resources/SiaeBridge",
         "to": "SiaeBridge",
         "filter": ["**/*"]
       }
