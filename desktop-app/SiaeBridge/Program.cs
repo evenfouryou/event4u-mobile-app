@@ -141,7 +141,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.47 - FIX: scan ALL 16 slots without early break");
+            Log("SiaeBridge v3.51 - FIX: scan ALL 16 slots without early break");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -1626,23 +1626,21 @@ namespace SiaeBridge
                 Log($"  XML bytes: {xmlBytes.Length}");
 
                 // ============================================================
-                // CAdES-BES con SHA-256 usando BouncyCastle
-                // SIAE 2025: Solo CAdES-BES con SHA-256 è accettato
-                // NO FALLBACK a XMLDSig/SHA-1 (deprecato e rifiutato da SIAE)
+                // v3.51 FIX: Usa PKCS7SignML nativo da libSIAEp7.dll
+                // SIAE Error 40605 causato da BouncyCastle che genera P7M non conforme
+                // PKCS7SignML è la funzione ufficiale SIAE che crea P7M validi
                 // ============================================================
-                Log($"  Creating CAdES-BES signature with BouncyCastle (SHA-256)...");
-                Log($"  NOTE: NO fallback to legacy SHA-1/XMLDSig - SIAE requires SHA-256 only");
-                var (success, p7mBase64, error, signedAt) = CreateCAdESSignatureBC(xmlBytes, pin);
+                Log($"  v3.51: Using native PKCS7SignML from libSIAEp7.dll...");
+                Log($"  NOTE: libSIAEp7.dll creates SIAE-compliant P7M directly");
+                var (success, p7mBase64, error, signedAt) = CreateCAdESSignatureLegacy(xmlBytes, pin);
 
                 if (!success)
                 {
-                    Log($"  ERROR: CAdES-BES signature failed: {error}");
-                    Log($"  CRITICAL: Cannot use legacy SHA-1 fallback - SIAE 2025 requires SHA-256");
-                    // NO FALLBACK - Return error instead of using deprecated SHA-1
-                    return ERR($"Firma CAdES-BES fallita: {error}. SIAE richiede SHA-256, fallback SHA-1 disabilitato.");
+                    Log($"  ERROR: PKCS7SignML signature failed: {error}");
+                    return ERR($"Firma P7M fallita: {error}");
                 }
 
-                Log($"  ✓ CAdES-BES SHA-256 signature created successfully (SIAE 2025 compliant)");
+                Log($"  ✓ P7M created successfully with native PKCS7SignML");
 
                 // Ritorna il P7M in formato Base64
                 // Il server web salverà questo come file binario .p7m
