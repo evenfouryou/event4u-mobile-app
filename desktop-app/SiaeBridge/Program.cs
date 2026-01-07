@@ -2185,20 +2185,20 @@ namespace SiaeBridge
                 Log($"  Temp directory: {tempDir}");
                 Log($"  Output file: {outputFile}");
                 
-                // v3.29 FIX: Allegato nel formato "nome|percorso" come da documentazione SIAE
-                // La documentazione dice: "nome allegato1.txt|c:percorsoallegato1.txt"
-                // Il test ufficiale usa: "test.txt|c:\\test.txt"
-                // NON dobbiamo passare solo il percorso!
+                // v3.31 FIX: Allegato nel formato "percorso|nome" (ordine invertito rispetto a documentazione)
+                // La documentazione SIAE dice "nome|percorso" ma l'implementazione sembra invertita!
+                // Test empirico: l'output mostrava il percorso come nome file
+                // Proviamo: "c:\\path\\file.p7m|displayname.p7m"
                 string attachments = "";  // stringa vuota, NON null (smime.cpp fa strlen senza null check)
                 if (!string.IsNullOrEmpty(attachmentBase64) && !string.IsNullOrEmpty(attachmentName))
                 {
                     attachmentTempFile = Path.Combine(tempDir, attachmentName);
                     byte[] attachmentBytes = Convert.FromBase64String(attachmentBase64);
                     File.WriteAllBytes(attachmentTempFile, attachmentBytes);
-                    // FORMATO CORRETTO: "nomevisualizzato|percorso"
-                    attachments = $"{attachmentName}|{attachmentTempFile}";
+                    // v3.31: Prova ordine invertito "percorso|nome" 
+                    attachments = $"{attachmentTempFile}|{attachmentName}";
                     Log($"  Attachment saved to temp: {attachmentTempFile} ({attachmentBytes.Length} bytes)");
-                    Log($"  Attachment string for SMIMESignML: '{attachments}'");
+                    Log($"  Attachment string for SMIMESignML (v3.31 inverted): '{attachments}'");
                 }
                 else
                 {
