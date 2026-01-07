@@ -139,7 +139,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.29 - FIX: From con display name + Allegato formato nome|percorso");
+            Log("SiaeBridge v3.34 - FIX CRITICO: Nome file allegato usa solo filename senza path per SMIMESignML");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -2130,7 +2130,7 @@ namespace SiaeBridge
 
             try
             {
-                Log($"=== SignSmime v3.33 START ===");
+                Log($"=== SignSmime v3.34 START ===");
                 
                 dynamic req = JsonConvert.DeserializeObject(json);
                 string pin = req.pin;
@@ -2165,7 +2165,7 @@ namespace SiaeBridge
                 if (pin.Length < 4)
                     return ERR("PIN non valido - deve contenere almeno 4 cifre");
 
-                Log($"SignSmime (via SMIMESignML nativo v3.32): from={smimeFrom}, to={smimeTo}");
+                Log($"SignSmime (via SMIMESignML nativo v3.34): from={smimeFrom}, to={smimeTo}");
                 Log($"  Subject: {smimeSubject ?? "(none)"}");
                 Log($"  Body length: {smimeBody?.Length ?? 0}");
                 Log($"  Attachment: {attachmentName ?? "(none)"}, base64 length: {attachmentBase64?.Length ?? 0}");
@@ -2178,39 +2178,26 @@ namespace SiaeBridge
                     return ERR("Carta rimossa");
                 }
 
-                // Prepara file temporanei
+                // Prepara file temporanei - l'allegato verrà salvato DOPO il setup della directory di lavoro
                 string tempDir = Path.GetTempPath();
                 string timestamp = DateTime.Now.ToString("yyyyMMdd_HHmmss_fff");
                 outputFile = Path.Combine(tempDir, $"smime_output_{timestamp}.eml");
                 Log($"  Temp directory: {tempDir}");
                 Log($"  Output file: {outputFile}");
                 
-                // v3.33 FIX: La libreria SMIMESignML usa il nome file dal percorso, NON il display name!
-                // Quindi il file temporaneo deve avere il nome file ESATTO richiesto da SIAE.
-                // Formato nome file SIAE: RCA_YYYY_MM_DD_SYSTEMCODE_###_XSI_V.XX.YY.xsi (o .p7m)
-                // Documentazione formato attachments: "nome allegato1.txt|c:percorsoallegato1.txt"
-                // Esempio ufficiale: "test.txt|c:\\test.txt"
+                // v3.34 FIX CRITICO: Salvataggio allegato e stringa attachments vengono impostati
+                // DOPO il cambio della directory di lavoro per usare path relativi.
+                // Vedi blocco dopo setup virtual drive.
                 string attachments = "";  // stringa vuota, NON null (smime.cpp fa strlen senza null check)
+                byte[] attachmentBytesToWrite = null;
                 if (!string.IsNullOrEmpty(attachmentBase64) && !string.IsNullOrEmpty(attachmentName))
                 {
-                    // v3.33 FIX: Usa il nome file ESATTO come nome del file temporaneo
-                    // La libreria SMIMESignML SIAE ignora il primo parametro (display name) e usa
-                    // il nome del file dal percorso! Quindi dobbiamo salvare il file con il nome corretto.
-                    // Riferimento: il programma lettore SIAE richiede esattamente il formato:
-                    // RCA_YYYY_MM_DD_SYSTEMCODE_###_XSI_V.XX.YY.xsi (o .p7m per firma CAdES-BES)
-                    attachmentTempFile = Path.Combine(tempDir, attachmentName);
-                    byte[] attachmentBytes = Convert.FromBase64String(attachmentBase64);
-                    File.WriteAllBytes(attachmentTempFile, attachmentBytes);
-                    // v3.32: Formato corretto "nome|percorso" come da documentazione
-                    attachments = $"{attachmentName}|{attachmentTempFile}";
-                    Log($"  Attachment saved to temp: {attachmentTempFile} ({attachmentBytes.Length} bytes)");
-                    Log($"  Attachment display name: {attachmentName}");
-                    Log($"  v3.33 FIX: Temp file uses correct SIAE filename to ensure SMIMESignML uses it");
-                    Log($"  Attachment string for SMIMESignML (v3.32 name|path): '{attachments}'");
+                    attachmentBytesToWrite = Convert.FromBase64String(attachmentBase64);
+                    Log($"  v3.34: Attachment data prepared ({attachmentBytesToWrite.Length} bytes), will save AFTER workdir setup");
                 }
                 else
                 {
-                    Log($"  No attachment - passing empty string to SMIMESignML");
+                    Log($"  No attachment - will pass empty string to SMIMESignML");
                 }
 
                 // Body del messaggio (ASCII 7-bit come richiesto dalla documentazione)
@@ -2306,6 +2293,27 @@ namespace SiaeBridge
                     try { Directory.SetCurrentDirectory(tempDir); } catch { }
                 }
 
+                // v3.34 FIX CRITICO: Ora che siamo nella directory di lavoro corretta,
+                // salviamo l'allegato con SOLO il nome file (senza path).
+                // SMIMESignML usa il nome file dal percorso, quindi passando solo il nome
+                // l'allegato nell'email avrà esattamente il nome file SIAE richiesto.
+                if (attachmentBytesToWrite != null && !string.IsNullOrEmpty(attachmentName))
+                {
+                    // Salva nella directory di lavoro corrente (virtual drive o temp)
+                    string currentWorkDir = Directory.GetCurrentDirectory();
+                    attachmentTempFile = Path.Combine(currentWorkDir, attachmentName);
+                    File.WriteAllBytes(attachmentTempFile, attachmentBytesToWrite);
+                    
+                    // v3.34 FIX: Passa SOLO il nome file, non il path completo!
+                    // SMIMESignML troverà il file nella directory corrente.
+                    // Il formato "displayName|filePath" con path relativo funziona correttamente.
+                    attachments = $"{attachmentName}|{attachmentName}";
+                    
+                    Log($"  v3.34 FIX: Attachment saved to workdir: {attachmentTempFile}");
+                    Log($"  v3.34 FIX: Attachment string uses ONLY filename: '{attachments}'");
+                    Log($"  v3.34 FIX: This ensures SMIMESignML uses '{attachmentName}' as attachment name in email");
+                }
+
                 // Reset card state before SMIMESignML call
                 Log($"  Resetting card state before SMIMESignML...");
                 int finRes = FinalizeML(_slot);
@@ -2345,11 +2353,25 @@ namespace SiaeBridge
 
                 Log($"  SMIMESignML result: {signResult} (0x{signResult:X8})");
                 
-                // Ripristina directory originale e rimuovi virtual drive
+                // Ripristina directory originale, pulisci file temp, e rimuovi virtual drive
                 try
                 {
                     Directory.SetCurrentDirectory(originalDir);
                     Log($"  Restored CWD to: {originalDir}");
+                    
+                    // v3.34: Pulisci il file allegato temporaneo
+                    if (!string.IsNullOrEmpty(attachmentTempFile) && File.Exists(attachmentTempFile))
+                    {
+                        try
+                        {
+                            File.Delete(attachmentTempFile);
+                            Log($"  ✓ Deleted temp attachment: {attachmentTempFile}");
+                        }
+                        catch (Exception delEx)
+                        {
+                            Log($"  WARNING: Could not delete temp attachment: {delEx.Message}");
+                        }
+                    }
                     
                     // Rimuovi il virtual drive se è stato creato
                     if (virtualDriveCreated && virtualDriveLetter != null)
