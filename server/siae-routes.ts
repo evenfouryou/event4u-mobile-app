@@ -5804,7 +5804,8 @@ async function generateRcaReportXml(params: RcaReportParams): Promise<string> {
     console.log(`[RCA] CF non trovato - EFFF: ${cachedEfff?.partnerCodFis}, systemConfig.taxId: ${systemConfig?.taxId}, company.fiscalCode: ${company?.fiscalCode}, taxId: ${taxId}`);
     throw new Error('SIAE_MISSING_FISCAL_CODE: Per generare report RCA è necessario un codice fiscale valido (16 caratteri). Collegare la smart card o configurare il codice fiscale nella sezione Configurazione Sistema SIAE.');
   }
-  const denominazioneTitolare = cachedEfff?.partnerName || companyName || '';
+  // Priorità: EFFF smart card > systemConfig.businessName > companyName
+  const denominazioneTitolare = cachedEfff?.partnerName || systemConfig?.businessName || companyName || '';
   
   const allTransmissions = await siaeStorage.getSiaeTransmissionsByCompany(companyId);
   const rcaTransmissions = allTransmissions.filter(t => {
