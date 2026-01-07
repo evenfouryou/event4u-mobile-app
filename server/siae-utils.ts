@@ -324,11 +324,17 @@ export function generateSiaeSubject(
   const day = String(date.getDate()).padStart(2, '0');
   const prog = String(progressivo).padStart(3, '0');
   
-  // Codice sistema: se numerico, pad a 8 cifre con zeri
-  // Se alfanumerico (es. EVENT4U1), usa così com'è (già 8 caratteri)
+  // Codice sistema: DEVE essere esattamente 8 caratteri
+  // Se numerico puro, pad con zeri a sinistra
+  // Se alfanumerico, pad con zeri a sinistra comunque
+  // Esempio: P004010 (7 char) → 0P004010 (8 char)
   let sysCode = systemCode || SIAE_SYSTEM_CODE_DEFAULT;
-  if (/^\d+$/.test(sysCode)) {
+  if (sysCode.length < 8) {
+    // Pad a sinistra con zeri per raggiungere 8 caratteri
     sysCode = sysCode.padStart(8, '0');
+  } else if (sysCode.length > 8) {
+    // Tronca a 8 caratteri (non dovrebbe mai succedere)
+    sysCode = sysCode.substring(0, 8);
   }
   
   const version = 'V.01.00';

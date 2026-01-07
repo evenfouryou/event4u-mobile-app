@@ -8,7 +8,7 @@ import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions,
 import { eq, and, or, sql, desc, isNull, SQL, gte, lte, count, inArray } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
-import { requestFiscalSeal, isCardReadyForSeals, isBridgeConnected, getCachedBridgeStatus, requestXmlSignature } from "./bridge-relay";
+import { requestFiscalSeal, isCardReadyForSeals, isBridgeConnected, getCachedBridgeStatus, requestXmlSignature, getCachedEfffData } from "./bridge-relay";
 import { sendPrintJobToAgent, getConnectedAgents } from "./print-relay";
 import { generateTicketHtml } from "./template-routes";
 import { sendOTP as sendMSG91OTP, verifyOTP as verifyMSG91OTP, resendOTP as resendMSG91OTP, isMSG91Configured } from "./msg91-service";
@@ -7753,7 +7753,11 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     // Nome file conforme Allegato C SIAE (Provvedimento Agenzia Entrate 04/03/2008):
     // Formato: RCA_AAAA_MM_GG_SSSSSSSS_###_XSI_V.XX.YY.p7m
     // Usa generateSiaeFileName per garantire formato corretto
-    const systemCode = siaeConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT;
+    // FIX 2026-01-07: Usa codice sistema dalla smart card (EFFF) per coerenza con XML
+    // SIAE Error 40601: "Il prefisso o la lunghezza del nome del subject e' sbagliato"
+    const cachedEfff = getCachedEfffData();
+    const systemCode = cachedEfff?.systemId || siaeConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT;
+    console.log(`[RCA] System code for email: ${systemCode} (from: ${cachedEfff?.systemId ? 'smart card EFFF' : siaeConfig?.systemCode ? 'siaeConfig' : 'default'})`);
     // fileName will be updated to .p7m if signed, otherwise .xsi
     let fileName = generateSiaeFileName('rca', eventDate, progressivoGenerazione, null, systemCode);
 
