@@ -38,6 +38,9 @@ A WebSocket relay system (`/ws/bridge`) enabling remote smart card reader access
 ### SIAE Digital Signatures (CAdES-BES) & S/MIME Email Signatures
 The system supports CAdES-BES digital signatures for SIAE report compliance, generating .p7m binary files using the official SIAE smart card library (`libSIAEp7.dll`). This includes direct smart card signing, file-based workflow, and robust error handling. For SIAE RCA transmissions, emails are S/MIME signed per Allegato C requirements using the `SMIMESignML` function from `libSIAEp7.dll`, ensuring RFC822-compliant S/MIME creation with proper email header and attachment naming conventions.
 
+#### SIAE S/MIME Email Format (2026-01-07 Critical Fix)
+**Critical discovery**: SIAE requires **one signature** (S/MIME), not two (CAdES + S/MIME). The previous flow created `S/MIME(P7M(XML))` = double signature = Error 40605 "riepilogo illeggibile". The correct flow is: XML → SMIMESignML → S/MIME opaque (single signature). Note: Section 1.4.1 (.xsi.p7m) applies to CD-R storage only, not email. For email: attachment is `.xsi` (XML), Subject uses full format `RCA_AAAA_MM_GG_SSSSSSSS_###_XSI_V.01.00`. Key functions: `generateSiaeAttachmentName()` and `generateSiaeSubject()` in `siae-utils.ts`.
+
 ### Italian Fiscal Validation
 Server-side validation for Italian fiscal identifiers, including Codice Fiscale and Partita IVA, incorporating checksum algorithms compliant with Agenzia delle Entrate requirements.
 

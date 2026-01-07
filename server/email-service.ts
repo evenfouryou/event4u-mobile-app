@@ -437,10 +437,27 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
   };
   const reportType = reportTypeMap[transmissionType] || 'giornaliero';
   
-  // Nome file conforme a Allegato C SIAE (Sezione 1.4.1)
-  // FORMATO ALLEGATO (breve): RCA_AAAA_MM_GG_###.xsi.p7m
-  // DIVERSO dal Subject che ha formato completo!
-  const effectiveSignatureFormat = isCAdES ? 'cades' : (isXmlDsig ? 'xmldsig' : null);
+  // ============================================================
+  // FIX 2026-01-07: SIAE S/MIME richiede UNA SOLA firma!
+  // 
+  // Allegato C dice che l'allegato deve essere .xsi.p7m (CAdES)
+  // MA questo si riferisce a quando si salva su CD-R (sezione 1.1)
+  //
+  // Per EMAIL (sezione 1.5.2), il messaggio è S/MIME SignedData.
+  // SMIMESignML di libSIAEp7.dll firma l'INTERA email incluso allegato.
+  // Se passiamo un P7M già firmato, otteniamo doppia firma:
+  // S/MIME(P7M(XML)) = SignedData(SignedData(XML)) = ILLEGGIBILE!
+  //
+  // SOLUZIONE: Passare XML diretto a SMIMESignML, che crea:
+  // S/MIME(email con allegato XML) = firma singola, leggibile
+  //
+  // Nome file: .xsi (XML) invece di .xsi.p7m (doppia firma)
+  // ============================================================
+  
+  // Per email S/MIME, usiamo SEMPRE allegato XML diretto (non P7M)
+  // SMIMESignML crea la firma S/MIME che include l'allegato
+  const useRawXmlForSmime = signWithSmime;
+  const effectiveSignatureFormat = useRawXmlForSmime ? null : (isCAdES ? 'cades' : (isXmlDsig ? 'xmldsig' : null));
   const fileName = generateSiaeAttachmentName(reportType, periodDate, sequenceNumber, effectiveSignatureFormat);
   
   // Subject conforme a RFC-2822 SIAE (Sezione 1.5.3)
@@ -448,6 +465,10 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
   const emailSubject = generateSiaeSubject(reportType, periodDate, sequenceNumber, systemCode);
   
   console.log(`[EMAIL-SERVICE] SIAE file naming: attachmentName=${fileName}, subject=${emailSubject}`);
+  console.log(`[EMAIL-SERVICE] FIX 2026-01-07: Using raw XML for S/MIME (no double signature)`);
+  if (p7mBase64) {
+    console.log(`[EMAIL-SERVICE] WARNING: P7M provided but ignored - S/MIME includes XML directly`);
+  }
 
   const typeLabels: Record<string, string> = {
     'daily': 'Giornaliera (C1)',
@@ -587,27 +608,24 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
       const certFromAddress = `Event4U SIAE <${cardEmail}>`;
       
       // ============================================================
-      // v3.52 FIX CORRETTO: SMIMESignML firma l'EMAIL (S/MIME), NON l'allegato!
-      // L'allegato P7M deve essere creato separatamente da PKCS7SignML.
+      // FIX 2026-01-07: SEMPRE XML diretto per S/MIME!
       // 
-      // Flusso corretto:
-      // 1. PKCS7SignML crea il P7M dall'XML (firma CAdES sull'allegato)
-      // 2. SMIMESignML crea l'email S/MIME con il P7M come allegato
+      // SMIMESignML firma l'INTERA email (body + allegato) creando S/MIME opaco.
+      // Se passiamo P7M già firmato → doppia firma → SIAE errore 40605!
       //
-      // Se abbiamo il P7M pre-firmato, lo usiamo. Altrimenti passiamo l'XML.
+      // L'allegato DEVE essere XML puro (.xsi), NON P7M (.xsi.p7m)
+      // SMIMESignML crea: S/MIME(email con XML allegato) = UNA sola firma
       // ============================================================
-      const attachmentBase64Content = isCAdES && p7mBase64 ? p7mBase64 : Buffer.from(xmlContent, 'utf-8').toString('base64');
-      console.log(`[EMAIL-SERVICE] v3.52: Using ${isCAdES && p7mBase64 ? 'pre-signed P7M' : 'raw XML'} as attachment`);
+      const attachmentBase64Content = Buffer.from(xmlContent, 'utf-8').toString('base64');
+      console.log(`[EMAIL-SERVICE] FIX 2026-01-07: Using RAW XML as attachment (no P7M - S/MIME is the only signature)`);
       
       // INTEGRITY CHECK: Log SHA-256 prima dell'invio per diagnostica trasmissione
       try {
         const crypto = await import('crypto');
-        const buffer = isCAdES && p7mBase64 
-          ? Buffer.from(p7mBase64, 'base64') 
-          : Buffer.from(xmlContent, 'utf-8');
+        const buffer = Buffer.from(xmlContent, 'utf-8');
         const sha256Hash = crypto.createHash('sha256').update(buffer).digest('hex');
         console.log(`[EMAIL-SERVICE] [INTEGRITY] Attachment pre-send check:`);
-        console.log(`[EMAIL-SERVICE] [INTEGRITY]   - Type: ${isCAdES && p7mBase64 ? 'P7M (CAdES)' : 'XML'}`);
+        console.log(`[EMAIL-SERVICE] [INTEGRITY]   - Type: XML (raw, for S/MIME signing)`);
         console.log(`[EMAIL-SERVICE] [INTEGRITY]   - Size: ${buffer.length} bytes`);
         console.log(`[EMAIL-SERVICE] [INTEGRITY]   - Base64 length: ${attachmentBase64Content.length} chars`);
         console.log(`[EMAIL-SERVICE] [INTEGRITY]   - SHA-256: ${sha256Hash}`);
