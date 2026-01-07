@@ -148,10 +148,16 @@ log.error = (...args) => {
 
 function getBridgePath() {
   const possiblePaths = [
+    // Primary path - directly in SiaeBridge folder
     path.join(process.resourcesPath, 'SiaeBridge', 'SiaeBridge.exe'),
+    // Fallback: nested SiaeBridge folder (build artifact issue)
+    path.join(process.resourcesPath, 'SiaeBridge', 'SiaeBridge', 'SiaeBridge.exe'),
+    // Dev paths
     path.join(__dirname, 'SiaeBridge', 'bin', 'Release', 'net472', 'SiaeBridge.exe'),
     path.join(__dirname, 'SiaeBridge', 'bin', 'Debug', 'net472', 'SiaeBridge.exe'),
     path.join(__dirname, 'SiaeBridge', 'SiaeBridge.exe'),
+    // .NET 8 dev paths
+    path.join(__dirname, 'SiaeBridge', 'bin', 'Release', 'net8.0-windows', 'win-x86', 'publish', 'SiaeBridge.exe'),
   ];
 
   log.info('Searching for SiaeBridge.exe...');
