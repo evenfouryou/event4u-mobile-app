@@ -41,6 +41,14 @@ The system supports CAdES-BES digital signatures for SIAE report compliance, gen
 #### SIAE S/MIME Email Format (2026-01-07 Critical Fix)
 **Critical discovery**: SIAE requires **one signature** (S/MIME), not two (CAdES + S/MIME). The previous flow created `S/MIME(P7M(XML))` = double signature = Error 40605 "riepilogo illeggibile". The correct flow is: XML → SMIMESignML → S/MIME opaque (single signature). Note: Section 1.4.1 (.xsi.p7m) applies to CD-R storage only, not email. For email: attachment is `.xsi` (XML), Subject uses full format `RCA_AAAA_MM_GG_SSSSSSSS_###_XSI_V.01.00`. Key functions: `generateSiaeAttachmentName()` and `generateSiaeSubject()` in `siae-utils.ts`.
 
+#### SIAE TipoGenere Mapping (2026-01-08 Fix Error 2101)
+**Error 2101**: "Tipo evento diverso da quelli previsti nella tabella 1 all.A provv. 23/7/2001". The system now uses centralized `mapToSiaeTipoGenere()` function in `siae-utils.ts` that:
+- Maps all internal/legacy genre codes to valid SIAE 2-digit numeric codes (01-78)
+- Valid codes: 77=Discoteca, 01=Teatro, 09=Concerti, 20=Cinema, 70=Sport, 76=Altro
+- Handles both numeric legacy codes (60, 61, etc.) and text codes (discoteca, club, etc.)
+- Default: 77 (discoteca) for unmapped/unknown codes
+- Applied in: `siae-utils.ts`, `siae-scheduler.ts`, `siae-routes.ts`
+
 ### Italian Fiscal Validation
 Server-side validation for Italian fiscal identifiers, including Codice Fiscale and Partita IVA, incorporating checksum algorithms compliant with Agenzia delle Entrate requirements.
 

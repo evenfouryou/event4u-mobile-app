@@ -5,7 +5,7 @@ import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { sendSiaeTransmissionEmail } from "./email-service";
 import { isBridgeConnected, requestXmlSignature, getCachedEfffData } from "./bridge-relay";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, mapToSiaeTipoGenere } from './siae-utils';
 
 // Configurazione SIAE secondo Allegato B e C - Provvedimento Agenzia delle Entrate 04/03/2008
 const SIAE_TEST_MODE = process.env.SIAE_TEST_MODE === 'true';
@@ -41,20 +41,12 @@ export function generateSiaeEmailSubject(date: Date, systemCode: string, sequenc
 }
 
 /**
- * Mappa codice genere evento a codice SIAE (2 caratteri)
- * Secondo Allegato B - TAB.1
+ * Mappa codice genere evento a codice SIAE (2 caratteri numerici)
+ * Re-export dalla funzione centralizzata in siae-utils.ts
+ * @deprecated Usa mapToSiaeTipoGenere direttamente da siae-utils.ts
  */
 export function mapGenreToSiae(genreCode: string | null): string {
-  const genreMap: Record<string, string> = {
-    '60': 'DI', // Discoteca/Disco
-    '61': 'DI', // Disco/Club
-    '10': 'TE', // Teatro
-    '20': 'CI', // Cinema
-    '30': 'CO', // Concerto
-    '40': 'SP', // Sport
-    '50': 'AL', // Altro
-  };
-  return genreMap[genreCode || '60'] || 'DI';
+  return mapToSiaeTipoGenere(genreCode);
 }
 
 /**

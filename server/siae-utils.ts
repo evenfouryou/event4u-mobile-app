@@ -733,6 +733,104 @@ export function isCancelledStatus(status: string | null | undefined): boolean {
   return SIAE_CANCELLED_STATUSES.includes(status.toLowerCase() as any);
 }
 
+/**
+ * Mappa codice genere interno a TipoGenere SIAE valido
+ * Conforme a Allegato A - Tabella 1 Provvedimento 23/07/2001
+ * 
+ * Codici SIAE validi (2 caratteri numerici):
+ * - 77: Discoteche, sale da ballo
+ * - 78: Sale giochi, biliardi
+ * - 01-19: Spettacoli teatrali
+ * - 20-39: Cinema  
+ * - 40-59: Concerti
+ * - 60-69: Sport
+ * - 70-76: Altri intrattenimenti
+ * 
+ * IMPORTANTE: Per discoteche/club usare SEMPRE 77
+ */
+export function mapToSiaeTipoGenere(genreCode: string | null | undefined): string {
+  if (!genreCode) return '77'; // Default: discoteca
+  
+  const code = genreCode.trim();
+  
+  // Se già un codice SIAE valido (2 cifre), verifica che sia valido
+  if (/^\d{2}$/.test(code)) {
+    const num = parseInt(code);
+    // Codici validi secondo Tabella 1: 01-78
+    if (num >= 1 && num <= 78) {
+      return code.padStart(2, '0');
+    }
+    // Codice numerico non valido -> default discoteca
+    console.warn(`[SIAE] TipoGenere ${code} non valido, usando 77 (discoteca)`);
+    return '77';
+  }
+  
+  // Mappatura codici interni/testuali a codici SIAE
+  const mappings: Record<string, string> = {
+    // Discoteca/Intrattenimento (default per club)
+    'discoteca': '77',
+    'disco': '77',
+    'club': '77',
+    'nightclub': '77',
+    'sala_ballo': '77',
+    'dance': '77',
+    'DI': '77',
+    '60': '77', // Legacy mapping
+    '61': '77', // Legacy mapping
+    
+    // Concerti
+    'concerto': '09',
+    'concert': '09',
+    'live': '09',
+    'musica': '09',
+    'CO': '09',
+    '30': '09',
+    
+    // Teatro
+    'teatro': '01',
+    'theatre': '01',
+    'spettacolo': '01',
+    'TE': '01',
+    '10': '01',
+    
+    // Cinema
+    'cinema': '20',
+    'film': '20',
+    'CI': '20',
+    '20': '20',
+    
+    // Sport
+    'sport': '70',
+    'sportivo': '70',
+    'SP': '70',
+    '40': '70',
+    
+    // Sale giochi
+    'giochi': '78',
+    'games': '78',
+    'biliardo': '78',
+    
+    // Altro
+    'altro': '76',
+    'other': '76',
+    'AL': '76',
+    '50': '76',
+  };
+  
+  const mapped = mappings[code.toLowerCase()];
+  if (mapped) return mapped;
+  
+  // Se inizia con lettere, prova a mappare
+  if (/^[A-Z]{2}$/i.test(code)) {
+    const upperCode = code.toUpperCase();
+    if (mappings[upperCode]) return mappings[upperCode];
+  }
+  
+  // Fallback: discoteca
+  console.warn(`[SIAE] TipoGenere '${code}' non riconosciuto, usando 77 (discoteca)`);
+  return '77';
+}
+
 // ==================== EFFF Smart Card Data Structure ====================
 // Conforme a Descrizione_contenuto_SmartCardTestxBA-V102.pdf
 
@@ -1573,7 +1671,8 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   
   // Codici evento
   const codiceLocale = (event.venueCode || '0000000000001').padStart(13, '0').substring(0, 13);
-  const tipoGenere = (event.genreCode || '77').substring(0, 2);
+  // Usa mappatura centralizzata per TipoGenere SIAE (fix error 2101)
+  const tipoGenere = mapToSiaeTipoGenere(event.genreCode);
   const titoloEvento = escapeXml((event.name || 'Evento').substring(0, 100));
   const nomeLocale = escapeXml((venueName || event.name || 'Locale').substring(0, 100));
   

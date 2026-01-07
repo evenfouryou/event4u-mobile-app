@@ -1,6 +1,6 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere } from './siae-utils';
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -5932,7 +5932,8 @@ async function generateRcaReportXml(params: RcaReportParams): Promise<string> {
       </Titoli>`;
   }
   
-  const tipoGenere = ticketedEvent.eventGenreCode || 'DI';
+  // Mappatura centralizzata TipoGenere SIAE (fix error 2101)
+  const tipoGenere = mapToSiaeTipoGenere(ticketedEvent.eventGenreCode);
   const spettacoloIntrattenimento = ticketedEvent.entertainmentType || 'S';
   const incidenzaIntrattenimento = ticketedEvent.entertainmentIncidence || 100;
   
@@ -6227,7 +6228,8 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
       ? (ticketedEvent.entertainmentIncidence ?? 100) 
       : 0;
     const imponibileIntrattenimenti = 0; // Calcolato automaticamente dal sistema SIAE
-    const genreCode = ticketedEvent.genreCode || '61';
+    // Mappatura centralizzata TipoGenere SIAE (fix error 2101)
+    const genreCode = mapToSiaeTipoGenere(ticketedEvent.genreCode);
     const incidenzaGenere = ticketedEvent.genreIncidence ?? 0;
     const eventName = eventDetails.name || 'Evento';
     
