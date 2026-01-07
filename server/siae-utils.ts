@@ -261,15 +261,20 @@ export function normalizeCausaleAnnullamento(rawCode: string | null | undefined)
 
 /**
  * Genera nome file conforme Allegato C SIAE (Provvedimento Agenzia Entrate 04/03/2008)
- * - RCA_AAAA_MM_GG_###.xsi per Riepilogo Controllo Accessi (C1 evento, genera risposta SIAE)
- * - RMG_AAAA_MM_GG_###.xsi per Riepilogo Mensile Giornaliero (silenzioso)
- * - RPM_AAAA_MM_###.xsi per Riepilogo Periodico Mensile (silenzioso)
+ * Formato completo: XXX_AAAA_MM_GG_SSSSSSSS_###_TTT_V.XX.YY.ext
  * 
- * IMPORTANTE: Allegato C specifica che XXX = "LTA" o "RCA"
- * Il prefisso RCA_ è obbligatorio per trasmissioni Riepilogo Controllo Accessi
- * anche se l'elemento XML radice è <LogTransazione>
+ * - XXX = Prefisso (RCA, RMG, RPM)
+ * - AAAA_MM_GG = Data
+ * - SSSSSSSS = Codice Sistema (es. EVENT4U1)
+ * - ### = Progressivo (001, 002, ...)
+ * - TTT = Tipo (XSI)
+ * - V.XX.YY = Versione (V.01.00)
  * 
- * Per file firmati CAdES-BES: estensione .xsi.p7m
+ * Esempi:
+ * - RCA_2026_01_06_EVENT4U1_001_XSI_V.01.00.p7m (CAdES-BES)
+ * - RMG_2026_01_06_EVENT4U1_001_XSI_V.01.00.xsi (non firmato)
+ * 
+ * Per file firmati CAdES-BES: estensione .p7m
  * Per file non firmati o XMLDSig legacy: estensione .xsi
  * 
  * NOTA: XMLDSig è deprecato e NON accettato da SIAE dal 2025
@@ -279,33 +284,38 @@ export function generateSiaeFileName(
   reportType: 'giornaliero' | 'mensile' | 'rca' | 'log',
   date: Date,
   progressivo: number,
-  signatureFormat?: 'cades' | 'xmldsig' | null
+  signatureFormat?: 'cades' | 'xmldsig' | null,
+  systemCode?: string
 ): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   const prog = String(progressivo).padStart(3, '0');
+  const sysCode = systemCode || SIAE_SYSTEM_CODE_DEFAULT;
+  const version = 'V.01.00';
+  const tipo = 'XSI';
   
-  // Solo CAdES-BES produce veri file P7M, XMLDSig rimane .xsi
-  const extension = signatureFormat === 'cades' ? '.xsi.p7m' : '.xsi';
+  // Solo CAdES-BES produce veri file P7M
+  const extension = signatureFormat === 'cades' ? '.p7m' : '.xsi';
   
   if (signatureFormat === 'xmldsig') {
     console.warn('[SIAE-UTILS] ATTENZIONE: XMLDSig e DEPRECATO e rifiutato da SIAE. Aggiornare il bridge desktop a v3.14+ per CAdES-BES con SHA-256.');
   }
   
+  // Formato completo: XXX_AAAA_MM_GG_SSSSSSSS_###_TTT_V.XX.YY.ext
   switch (reportType) {
     case 'mensile':
       // RPM = Riepilogo Periodico Mensile (silenzioso, nessuna risposta SIAE)
-      return `RPM_${year}_${month}_${prog}${extension}`;
+      // RPM non ha giorno, solo mese
+      return `RPM_${year}_${month}_${sysCode}_${prog}_${tipo}_${version}${extension}`;
     case 'log':
     case 'rca':
       // RCA = Riepilogo Controllo Accessi (C1 evento, genera risposta SIAE Log.xsi)
-      // Allegato C 1.4.1: XXX = "LTA", "RCA" - prefisso RCA_ obbligatorio
-      return `RCA_${year}_${month}_${day}_${prog}${extension}`;
+      return `RCA_${year}_${month}_${day}_${sysCode}_${prog}_${tipo}_${version}${extension}`;
     case 'giornaliero':
     default:
       // RMG = Riepilogo Mensile Giornaliero (silenzioso, nessuna risposta SIAE)
-      return `RMG_${year}_${month}_${day}_${prog}${extension}`;
+      return `RMG_${year}_${month}_${day}_${sysCode}_${prog}_${tipo}_${version}${extension}`;
   }
 }
 
