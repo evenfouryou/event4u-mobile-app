@@ -141,7 +141,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.52 - FIX: scan ALL 16 slots without early break");
+            Log("SiaeBridge v3.54 - FIX: scan ALL 16 slots without early break");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -2441,15 +2441,11 @@ namespace SiaeBridge
                 }
 
                 // ============================================================
-                // v3.52 FIX CRITICO: Configura SMIMESignML con metadata corretti
-                // per evitare post-processing che invalida la firma S/MIME!
+                // v3.54 FIX: Formato szAttachments per SMIMESignML
+                // Dalla documentazione: "Files allegati separati da ';'"
+                // Significa SOLO il nome del file, NON path|displayName|content-type!
                 //
-                // Formato attachments: path|displayName|content-type
-                // - path: percorso del file allegato
-                // - displayName: nome file come apparirà nell'email
-                // - content-type: tipo MIME dell'allegato
-                //
-                // Usiamo application/pkcs7-mime per file P7M (CAdES)
+                // SMIMESignML cerca il file nella directory corrente
                 // ============================================================
                 if (attachmentBytesToWrite != null && !string.IsNullOrEmpty(attachmentName))
                 {
@@ -2458,19 +2454,14 @@ namespace SiaeBridge
                     attachmentTempFile = Path.Combine(currentWorkDir, attachmentName);
                     File.WriteAllBytes(attachmentTempFile, attachmentBytesToWrite);
                     
-                    // v3.52 FIX: Passa il formato completo con content-type!
-                    // Formato: path|displayName|content-type
-                    // Questo evita di dover fare post-processing che invalida la firma S/MIME
-                    string contentType = attachmentName.EndsWith(".p7m", StringComparison.OrdinalIgnoreCase)
-                        ? "application/pkcs7-mime"
-                        : "application/xml";
+                    // v3.54 FIX: Passa SOLO il nome del file, senza metadata!
+                    // La libreria SIAE determina automaticamente il content-type
+                    attachments = attachmentName;
                     
-                    attachments = $"{attachmentName}|{attachmentName}|{contentType}";
-                    
-                    Log($"  v3.52 FIX: Attachment saved to workdir: {attachmentTempFile}");
-                    Log($"  v3.52 FIX: Attachment string with metadata: '{attachments}'");
-                    Log($"  v3.52 FIX: Content-Type: {contentType}");
-                    Log($"  v3.52 FIX: This configures SMIMESignML BEFORE signing to avoid invalidating signature");
+                    Log($"  v3.54 FIX: Attachment saved to workdir: {attachmentTempFile}");
+                    Log($"  v3.54 FIX: Attachment string (filename only): '{attachments}'");
+                    Log($"  v3.54 FIX: File exists check: {File.Exists(attachmentTempFile)}");
+                    Log($"  v3.54 FIX: File size: {new FileInfo(attachmentTempFile).Length} bytes");
                 }
 
                 // Reset card state before SMIMESignML call
@@ -2586,23 +2577,25 @@ namespace SiaeBridge
                 // ============================================================
                 if (!string.IsNullOrEmpty(attachmentName))
                 {
-                    Log($"  v3.52 FIX: NO post-processing - signature integrity preserved");
-                    Log($"  v3.52 FIX: Attachment metadata was set BEFORE signing via attachments parameter");
+                    Log($"  v3.54 FIX: NO post-processing - signature integrity preserved");
                     
                     // Solo logging diagnostico - NESSUNA modifica al contenuto!
-                    bool hasCorrectFilename = signedMime.Contains($"filename=\"{attachmentName}\"") ||
-                                               signedMime.Contains($"name=\"{attachmentName}\"");
-                    bool hasCorrectContentType = signedMime.Contains("application/pkcs7-mime");
+                    // SMIMESignML genera S/MIME opaco (application/x-pkcs7-mime)
+                    // L'allegato P7M è incluso nel blob firmato
+                    bool isOpaqueSmime = signedMime.Contains("application/x-pkcs7-mime") || 
+                                         signedMime.Contains("application/pkcs7-mime");
+                    bool hasMultipartMixed = signedMime.Contains("multipart/mixed");
                     
-                    if (hasCorrectFilename)
-                        Log($"  v3.52 CHECK: ✓ Correct filename in S/MIME: {attachmentName}");
+                    if (isOpaqueSmime)
+                        Log($"  v3.54 CHECK: ✓ S/MIME opaco rilevato - allegato incluso nel blob firmato");
+                    else if (hasMultipartMixed)
+                        Log($"  v3.54 CHECK: ✓ S/MIME multipart - allegato visibile separatamente");
                     else
-                        Log($"  v3.52 WARNING: Filename not found in S/MIME - SMIMESignML may have used different name");
+                        Log($"  v3.54 WARNING: Formato S/MIME non riconosciuto");
                     
-                    if (hasCorrectContentType)
-                        Log($"  v3.52 CHECK: ✓ Correct content-type: application/pkcs7-mime");
-                    else
-                        Log($"  v3.52 WARNING: Content-type 'application/pkcs7-mime' not found - may cause issues");
+                    // Log primi 500 caratteri per debug
+                    string preview = signedMime.Length > 500 ? signedMime.Substring(0, 500) : signedMime;
+                    Log($"  v3.54 PREVIEW: {preview.Replace("\r", "\\r").Replace("\n", "\\n")}");
                 }
 
                 // Log prime 15 righe per debug (dopo il post-processing)

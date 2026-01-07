@@ -1856,11 +1856,20 @@ ipcMain.handle('relay:switchServer', async (event, serverType) => {
     disconnectRelay();
   }
   
+  // SECURITY: Reset PIN verification when switching servers
+  // Each server session requires fresh PIN authentication
+  log.info(`[SERVER-SWITCH] Resetting PIN verification for new server session`);
+  pinVerified = false;
+  lastVerifiedPin = null;
+  
   // Update config
   relayConfig.serverType = serverType;
   relayConfig.serverUrl = AVAILABLE_SERVERS[serverType];
   
-  log.info(`Server switched to: ${relayConfig.serverUrl}`);
+  // Save the server preference
+  saveRelayConfig();
+  
+  log.info(`Server switched to: ${relayConfig.serverUrl} - PIN reset required`);
   
   // Reconnect with new server
   setTimeout(() => {
@@ -1870,7 +1879,8 @@ ipcMain.handle('relay:switchServer', async (event, serverType) => {
   return { 
     success: true, 
     serverType,
-    serverUrl: relayConfig.serverUrl 
+    serverUrl: relayConfig.serverUrl,
+    pinReset: true // Notify UI that PIN needs to be re-entered
   };
 });
 
