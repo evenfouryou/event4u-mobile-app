@@ -1,10 +1,18 @@
-name: Build and Release Smart Card Reader
+name: Build SIAE Lettore
 
 on:
   push:
-    tags:
-      - 'v*'
+    branches: [main]
+    paths:
+      - 'desktop-app/**'
   workflow_dispatch:
+
+permissions:
+  contents: write
+
+defaults:
+  run:
+    working-directory: desktop-app
 
 jobs:
   build:
@@ -14,51 +22,74 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '8.0.x'
+          
+      - name: Get version from Program.cs
+        id: version
+        shell: pwsh
+        run: |
+          $content = Get-Content -Path "SiaeBridge/Program.cs" -Raw
+          if ($content -match 'SiaeBridge v(\d+\.\d+)') {
+            $version = $matches[1]
+            echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+            Write-Host "Detected version: $version"
+          } else {
+            echo "VERSION=3.36" >> $env:GITHUB_OUTPUT
+            Write-Host "Using default version: 3.36"
+          }
+          
+      - name: Build SiaeBridge
+        run: |
+          cd SiaeBridge
+          dotnet publish -c Release -r win-x86 --self-contained true -o ../resources/SiaeBridge
+          
+      - name: Copy libSIAE DLLs
+        run: |
+          copy SiaeBridge\prebuilt\libSIAE.dll resources\SiaeBridge\
+          copy SiaeBridge\prebuilt\libSIAEp7.dll resources\SiaeBridge\
+          dir resources\SiaeBridge
+          
       - name: Setup Node.js
         uses: actions/setup-node@v4
         with:
           node-version: '20'
           
-      - name: Install production dependencies
-        run: npm ci --production
+      - name: Install dependencies
+        run: npm install
         
-      - name: Create release package
-        run: |
-          mkdir release
-          copy server.js release\
-          copy package.json release\
-          copy install-and-run.bat release\
-          copy README.txt release\
-          copy node_modules release\node_modules\ /E /Y 2>nul || echo "No node_modules to copy"
+      - name: Build Electron app
+        run: npm run build
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           
-      - name: Create ZIP
-        run: Compress-Archive -Path release\* -DestinationPath Event4U-SmartCard-Reader.zip
-        shell: powershell
-        
-      - name: Upload artifact
+      - name: Upload artifacts
         uses: actions/upload-artifact@v4
         with:
-          name: Event4U-SmartCard-Reader
-          path: Event4U-SmartCard-Reader.zip
+          name: Event-Four-You-SIAE-Lettore-Setup
+          path: desktop-app/dist/*.exe
           
-      - name: Create GitHub Release
-        if: startsWith(github.ref, 'refs/tags/')
+      - name: Create Release
         uses: softprops/action-gh-release@v1
+        if: github.ref == 'refs/heads/main'
         with:
-          files: Event4U-SmartCard-Reader.zip
-          name: Event4U Smart Card Reader ${{ github.ref_name }}
+          tag_name: v${{ steps.version.outputs.VERSION }}.${{ github.run_number }}
+          name: Release v${{ steps.version.outputs.VERSION }}.${{ github.run_number }}
           body: |
-            ## Event4U Smart Card Reader
+            ## SIAE Lettore v${{ steps.version.outputs.VERSION }}
             
-            ### Installazione
-            1. Scarica `Event4U-SmartCard-Reader.zip`
-            2. Estrai in una cartella
-            3. Fai doppio click su `install-and-run.bat`
-            4. Lascia la finestra aperta mentre usi Event4U
+            Applicazione desktop per gestione smart card SIAE.
+            
+            ### Novita v3.36
+            - Fix rilevamento smart card migliorato
+            - Scansione tutti gli slot con fallback Initialize()
             
             ### Requisiti
-            - Windows 10/11
-            - Node.js (installato automaticamente se mancante)
-            - Lettore MiniLector EVO V3 (opzionale per test)
+            - Windows 10/11 x86/x64
+            - Lettore smart card SIAE
+          files: desktop-app/dist/*.exe
+          generate_release_notes: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
