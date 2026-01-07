@@ -15,13 +15,23 @@
 
   <ItemGroup>
     <PackageReference Include="Newtonsoft.Json" Version="13.0.3" />
+    <PackageReference Include="System.Security.Cryptography.Pkcs" Version="8.0.0" />
+    <PackageReference Include="System.Security.Permissions" Version="8.0.0" />
     <PackageReference Include="BouncyCastle.Cryptography" Version="2.5.1" />
   </ItemGroup>
 
-  <!-- Copy SIAE DLLs to output directory -->
+  <!-- Native DLLs for SIAE Smart Card -->
   <ItemGroup>
-    <None Include="prebuilt\libSIAE.dll" CopyToOutputDirectory="Always" CopyToPublishDirectory="Always" />
-    <None Include="prebuilt\libSIAEp7.dll" CopyToOutputDirectory="Always" CopyToPublishDirectory="Always" />
+    <!-- libSIAE.dll is in prebuilt folder -->
+    <None Include="prebuilt\libSIAE.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>libSIAE.dll</Link>
+    </None>
+    <!-- libSIAEp7.dll is in prebuilt folder -->
+    <None Include="prebuilt\libSIAEp7.dll">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+      <Link>libSIAEp7.dll</Link>
+    </None>
   </ItemGroup>
 
 </Project>

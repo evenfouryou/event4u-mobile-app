@@ -141,7 +141,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-            Log("SiaeBridge v3.39 - FIX: Remove false positive VC++ Runtime check");
+            Log("SiaeBridge v3.40 - FIX: Restore csproj to v3.16.3 (working version)");
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
