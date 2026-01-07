@@ -89,6 +89,7 @@ import {
   siaeCashiers,
   siaeCustomers,
   siaeNameChanges,
+  prProfiles,
   publicCustomerSessions,
   systemSettings,
   insertSiaeEventGenreSchema,
@@ -1077,8 +1078,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     return sanitized;
   };
 
-  app.get('/api/auth/user', isAuthenticated, async (req: any, res) => {
+  app.get('/api/auth/user', async (req: any, res) => {
     try {
+      // Check if this is a PR session (from /api/pr/login)
+      const prSession = req.session?.prProfile;
+      if (prSession?.id) {
+        // PR users have their own session format
+        const [profile] = await db.select().from(prProfiles)
+          .where(eq(prProfiles.id, prSession.id));
+        
+        if (profile) {
+          return res.json({
+            id: profile.id,
+            email: profile.email || `${profile.phone}@pr.local`,
+            firstName: profile.firstName,
+            lastName: profile.lastName,
+            name: `${profile.firstName} ${profile.lastName}`,
+            phone: profile.phone,
+            role: 'pr',
+            companyId: profile.companyId,
+            prCode: profile.prCode,
+            isPr: true
+          });
+        }
+      }
+      
+      // For all other session types, require passport authentication
+      if (!req.isAuthenticated() || !req.user?.claims?.sub) {
+        return res.status(401).json({ message: "Unauthorized" });
+      }
+      
       // Check if this is a SIAE cashier session
       if (req.user?.cashierType === 'siae' && req.user?.cashierId) {
         const [cashier] = await db.select().from(siaeCashiers)
