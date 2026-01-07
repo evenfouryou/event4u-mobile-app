@@ -1,0 +1,9 @@
+REPLY:
+
+ERRORE
+CODICE:      42605
+DESCRIZIONE: Il titolare del sistema non e' presente nell'anagrafica SIAE
+DETTAGLIO:   
+
+
+
