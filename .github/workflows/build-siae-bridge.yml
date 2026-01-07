@@ -1,0 +1,76 @@
+name: Build SiaeBridge
+
+on:
+  push:
+    paths:
+      - 'desktop-app/SiaeBridge/**'
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      
+    - name: Setup .NET 8.0
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '8.0.x'
+        
+    - name: Restore dependencies
+      run: dotnet restore desktop-app/SiaeBridge/SiaeBridge.csproj
+      
+    - name: Build
+      run: dotnet build desktop-app/SiaeBridge/SiaeBridge.csproj --configuration Release --no-restore
+      
+    - name: Publish
+      run: dotnet publish desktop-app/SiaeBridge/SiaeBridge.csproj --configuration Release --output ./publish --self-contained true --runtime win-x86
+      
+    - name: Get version from Program.cs
+      id: version
+      shell: pwsh
+      run: |
+        $content = Get-Content -Path "desktop-app/SiaeBridge/Program.cs" -Raw
+        if ($content -match 'private\s+const\s+string\s+VERSION\s*=\s*"([^"]+)"') {
+          $version = $matches[1]
+          echo "VERSION=$version" >> $env:GITHUB_OUTPUT
+        } else {
+          echo "VERSION=unknown" >> $env:GITHUB_OUTPUT
+        }
+        
+    - name: Create ZIP
+      shell: pwsh
+      run: |
+        Compress-Archive -Path ./publish/* -DestinationPath ./SiaeBridge-v${{ steps.version.outputs.VERSION }}.zip
+        
+    - name: Upload artifact
+      uses: actions/upload-artifact@v4
+      with:
+        name: SiaeBridge-v${{ steps.version.outputs.VERSION }}
+        path: ./SiaeBridge-v${{ steps.version.outputs.VERSION }}.zip
+        
+    - name: Create Release
+      if: github.ref == 'refs/heads/main'
+      uses: softprops/action-gh-release@v1
+      with:
+        tag_name: siae-bridge-v${{ steps.version.outputs.VERSION }}
+        name: SiaeBridge v${{ steps.version.outputs.VERSION }}
+        body: |
+          ## SiaeBridge v${{ steps.version.outputs.VERSION }}
+          
+          Desktop bridge per integrazione SIAE con firma digitale CAdES-BES.
+          
+          ### Installazione
+          1. Estrai il contenuto dello ZIP
+          2. Esegui SiaeBridge.exe
+          
+          ### Requisiti
+          - Windows 10/11 x86/x64
+          - Lettore smart card SIAE
+        files: ./SiaeBridge-v${{ steps.version.outputs.VERSION }}.zip
+        draft: false
+        prerelease: false
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
