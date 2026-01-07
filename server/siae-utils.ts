@@ -1549,15 +1549,17 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   const denominazioneTitolare = escapeXml((companyName || systemConfig?.businessName || 'N/D').substring(0, 60));
   const denominazioneOrganizzatore = escapeXml((event.organizerName || companyName || 'N/D').substring(0, 60));
   
-  // Date/time generazione
-  const now = new Date();
-  const dataRiepilogo = formatSiaeDateCompact(now);
-  const dataGenerazione = formatSiaeDateCompact(now);
-  const oraGenerazione = formatSiaeTimeCompact(now);
-  
-  // Date/time evento
+  // Date/time evento (usato anche per DataRiepilogo - DEVE coincidere con nome file!)
   const eventDate = typeof event.date === 'string' ? new Date(event.date) : event.date;
   const dataEvento = formatSiaeDateCompact(eventDate);
+  
+  // FIX 2026-01-07: DataRiepilogo DEVE essere uguale alla data nel nome file!
+  // SIAE Error 40603: "Le date dell'oggetto, del nome file, e del contenuto del riepilogo non sono coerenti"
+  // Il nome file usa eventDate (es: RCA_2025_12_17_001.xsi), quindi DataRiepilogo deve essere 20251217
+  const now = new Date();
+  const dataRiepilogo = formatSiaeDateCompact(eventDate); // USA eventDate, NON now!
+  const dataGenerazione = formatSiaeDateCompact(now);
+  const oraGenerazione = formatSiaeTimeCompact(now);
   let eventTimeValue: Date;
   if (event.time) {
     eventTimeValue = typeof event.time === 'string' ? new Date(event.time) : event.time;
