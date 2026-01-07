@@ -5,6 +5,9 @@ on:
     branches: [main]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: windows-latest
@@ -92,7 +95,7 @@ jobs:
           $srcDir = "desktop-app/SiaeBridge/bin/Release/net8.0-windows/win-x86/publish"
           $destDir = "desktop-app/resources"
           
-          # v3.48 FIX: Clean resources folder completely to avoid nested folders
+          # v3.49 FIX: Clean resources folder completely
           if (Test-Path $destDir) {
             Remove-Item $destDir -Recurse -Force
             Write-Host "✓ Cleaned existing resources folder"
@@ -102,26 +105,35 @@ jobs:
           New-Item -ItemType Directory -Path $destDir -Force | Out-Null
           Write-Host "Created resources folder: $destDir"
           
-          # Copy all SiaeBridge files DIRECTLY (no subfolder)
-          Copy-Item "$srcDir/*" $destDir -Recurse -Force
-          Write-Host "✓ Copied SiaeBridge files to resources"
+          # v3.49 FIX: Use Get-ChildItem instead of wildcard (PowerShell 7 compatible)
+          Write-Host "Copying from: $srcDir"
+          $files = Get-ChildItem -Path $srcDir -Force
+          Write-Host "Found $($files.Count) items to copy"
           
-          # Verify no nested SiaeBridge folder exists
-          if (Test-Path "$destDir/SiaeBridge") {
-            Write-Host "ERROR: Nested SiaeBridge folder detected! Removing..."
-            Remove-Item "$destDir/SiaeBridge" -Recurse -Force
+          foreach ($item in $files) {
+            Copy-Item -Path $item.FullName -Destination $destDir -Recurse -Force
+            Write-Host "  Copied: $($item.Name)"
           }
+          
+          Write-Host "✓ Copied SiaeBridge files to resources"
           
           echo ""
           echo "=== Resources folder contents ==="
           Get-ChildItem $destDir | Format-Table Name, Length
           
-          # Verify SiaeBridge.exe is directly in resources
-          if (!(Test-Path "$destDir/SiaeBridge.exe")) {
-            Write-Host "ERROR: SiaeBridge.exe not found directly in resources!"
-            exit 1
+          # Verify critical files
+          $criticalFiles = @("SiaeBridge.exe", "libSIAE.dll", "libSIAEp7.dll")
+          foreach ($f in $criticalFiles) {
+            $path = Join-Path $destDir $f
+            if (Test-Path $path) {
+              $size = (Get-Item $path).Length
+              Write-Host "✓ $f ($size bytes)"
+            } else {
+              Write-Host "✗ MISSING: $f"
+              exit 1
+            }
           }
-          Write-Host "✓ SiaeBridge.exe verified in resources root"
+          Write-Host "✓ All critical files verified"
 
       - name: Install Node dependencies
         working-directory: desktop-app
@@ -159,8 +171,22 @@ jobs:
           # Use version + run_number for unique tags
           echo "VERSION=v$($pkg.version).${{ github.run_number }}" >> $env:GITHUB_OUTPUT
 
+      - name: Find installer
+        id: find_installer
+        shell: pwsh
+        run: |
+          $installer = Get-ChildItem -Path "desktop-app/dist" -Filter "*.exe" | Where-Object { $_.Name -like "*Setup*" } | Select-Object -First 1
+          if ($installer) {
+            echo "INSTALLER_PATH=$($installer.FullName)" >> $env:GITHUB_OUTPUT
+            echo "INSTALLER_NAME=$($installer.Name)" >> $env:GITHUB_OUTPUT
+            Write-Host "Found installer: $($installer.Name)"
+          } else {
+            Write-Host "No installer found!"
+            exit 1
+          }
+
       - name: Create Release
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ steps.get_version.outputs.VERSION }}
           make_latest: true
@@ -168,17 +194,16 @@ jobs:
           body: |
             ## Event Four You SIAE Lettore ${{ steps.get_version.outputs.VERSION }}
             
-            ### Novità:
-            - Firma digitale CAdES-BES conforme ETSI EN 319 122-1
-            - SHA-256 invece di SHA-1 deprecato
-            - SigningCertificateV2 per SIAE 2025
-            - Self-contained build con .NET 8.0 runtime incluso
+            ### Novità v3.49:
+            - Fix copia file per PowerShell 7
+            - Rilevazione carta migliorata (scan 16 slot)
+            - Firma digitale CAdES-BES conforme SIAE
             
             ### Installazione:
             1. Scarica il file .exe
             2. Esegui l'installer
             3. Avvia dal menu Start
-          files: desktop-app/dist/*.exe
-          generate_release_notes: false
+          files: ${{ steps.find_installer.outputs.INSTALLER_PATH }}
+          fail_on_unmatched_files: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
