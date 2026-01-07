@@ -325,16 +325,12 @@ export function generateSiaeSubject(
   const prog = String(progressivo).padStart(3, '0');
   
   // Codice sistema: DEVE essere esattamente 8 caratteri
-  // Se numerico puro, pad con zeri a sinistra
-  // Se alfanumerico, pad con zeri a sinistra comunque
-  // Esempio: P004010 (7 char) → 0P004010 (8 char)
+  // NON fare padding automatico - il codice deve essere corretto alla fonte
+  // Esempio: P0004010 (8 char) è corretto, P004010 (7 char) è errato
   let sysCode = systemCode || SIAE_SYSTEM_CODE_DEFAULT;
-  if (sysCode.length < 8) {
-    // Pad a sinistra con zeri per raggiungere 8 caratteri
-    sysCode = sysCode.padStart(8, '0');
-  } else if (sysCode.length > 8) {
-    // Tronca a 8 caratteri (non dovrebbe mai succedere)
-    sysCode = sysCode.substring(0, 8);
+  if (sysCode.length !== 8) {
+    console.warn(`[SIAE-UTILS] WARNING: Codice sistema "${sysCode}" ha ${sysCode.length} caratteri invece di 8!`);
+    console.warn(`[SIAE-UTILS] Correggere il codice sistema nella configurazione SIAE o nella smart card.`);
   }
   
   const version = 'V.01.00';
