@@ -21,6 +21,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Tooltip,
   TooltipContent,
@@ -1066,14 +1067,13 @@ export default function SiaeTransmissionsPage() {
               </div>
               
               {/* Checkbox Forza Sostituzione per errore 40604 */}
-              <div className="flex items-center space-x-2 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
-                <input
-                  type="checkbox"
+              <div className="flex items-start space-x-3 p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                <Checkbox
                   id="forceSubstitution"
                   checked={forceSubstitution}
-                  onChange={(e) => setForceSubstitution(e.target.checked)}
-                  className="h-4 w-4 rounded border-amber-300 text-amber-600 focus:ring-amber-500"
+                  onCheckedChange={(checked) => setForceSubstitution(checked === true)}
                   data-testid="checkbox-force-substitution"
+                  className="mt-0.5"
                 />
                 <div className="flex-1">
                   <Label htmlFor="forceSubstitution" className="text-sm font-medium cursor-pointer">
@@ -2055,14 +2055,13 @@ export default function SiaeTransmissionsPage() {
             </div>
             
             {/* Checkbox Forza Sostituzione per errore 40604 - Mobile */}
-            <div className="flex items-center space-x-3 p-3 bg-amber-500/10 rounded-lg border border-amber-500/30">
-              <input
-                type="checkbox"
+            <div className="flex items-start space-x-3 p-3 bg-amber-500/10 rounded-lg border border-amber-500/30">
+              <Checkbox
                 id="forceSubstitutionMobile"
                 checked={forceSubstitution}
-                onChange={(e) => setForceSubstitution(e.target.checked)}
-                className="h-5 w-5 rounded border-amber-400"
+                onCheckedChange={(checked) => setForceSubstitution(checked === true)}
                 data-testid="checkbox-force-substitution-mobile"
+                className="mt-0.5"
               />
               <div className="flex-1">
                 <Label htmlFor="forceSubstitutionMobile" className="text-sm font-medium cursor-pointer">
