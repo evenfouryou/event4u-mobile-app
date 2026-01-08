@@ -4384,7 +4384,18 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
             };
           });
           
-          // Generate RCA XML (RiepilogoControlloAccessi format)
+          // Calculate progressivo for RCA based on previous transmissions for this event
+          // Per errore 40604 "riepilogo già elaborato": 
+          // - Sostituzione="S" non basta, SIAE richiede anche ProgressivoRiepilogo incrementato
+          const allTransmissions = await siaeStorage.getSiaeTransmissionsByCompany(transmission.companyId);
+          const rcaTransmissionsForEvent = allTransmissions.filter(t => 
+            t.transmissionType === 'rca' && t.ticketedEventId === transmission.ticketedEventId
+          );
+          // Per reinvio: incrementa progressivo rispetto alle trasmissioni precedenti
+          const rcaProgressivo = rcaTransmissionsForEvent.length + 1;
+          console.log(`[SIAE-ROUTES] RCA progressivo per reinvio: ${rcaProgressivo} (trasmissioni precedenti: ${rcaTransmissionsForEvent.length})`);
+          
+          // Generate RCA XML (RiepilogoControlloAccessi format) con Sostituzione="S"
           const rcaResult = generateRCAXml({
             companyId: transmission.companyId,
             eventId: ticketedEvent.id,
@@ -4397,6 +4408,8 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
             },
             companyName,
             taxId,
+            progressivo: rcaProgressivo, // Progressivo incrementato per reinvio
+            forceSubstitution: true, // Reinvio = sempre Sostituzione="S"
           });
           
           xmlContent = rcaResult.xml;
