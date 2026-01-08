@@ -209,6 +209,8 @@ export default function ScannerScanPage() {
   const [viewfinderState, setViewfinderState] = useState<"idle" | "scanning" | "success" | "error">("idle");
   const [scanPaused, setScanPaused] = useState(false);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
+  const [autoCloseCountdown, setAutoCloseCountdown] = useState(2);
+  const autoCloseTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   const { data: event } = useQuery<Event>({
     queryKey: ['/api/events', eventId],
@@ -286,10 +288,17 @@ export default function ScannerScanPage() {
 
   // Handle confirmation - resume scanning
   const handleConfirmScan = useCallback(() => {
+    // Clear any existing timer
+    if (autoCloseTimerRef.current) {
+      clearInterval(autoCloseTimerRef.current);
+      autoCloseTimerRef.current = null;
+    }
+    
     setShowConfirmModal(false);
     setScanResult(null);
     setScanPaused(false);
     setViewfinderState("scanning");
+    setAutoCloseCountdown(2);
     
     // Resume the camera
     if (scannerRef.current) {
@@ -302,6 +311,35 @@ export default function ScannerScanPage() {
       }
     }
   }, []);
+
+  // Auto-close modal after 2 seconds
+  useEffect(() => {
+    if (showConfirmModal) {
+      setAutoCloseCountdown(2);
+      
+      autoCloseTimerRef.current = setInterval(() => {
+        setAutoCloseCountdown(prev => {
+          if (prev <= 1) {
+            // Time's up, close the modal
+            if (autoCloseTimerRef.current) {
+              clearInterval(autoCloseTimerRef.current);
+              autoCloseTimerRef.current = null;
+            }
+            handleConfirmScan();
+            return 2;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+      return () => {
+        if (autoCloseTimerRef.current) {
+          clearInterval(autoCloseTimerRef.current);
+          autoCloseTimerRef.current = null;
+        }
+      };
+    }
+  }, [showConfirmModal, handleConfirmScan]);
 
   const handleScan = useCallback((code: string) => {
     if (!code.trim() || isProcessing || scanPaused) return;
@@ -1493,7 +1531,7 @@ export default function ScannerScanPage() {
             data-testid="button-confirm-scan"
           >
             <CheckCircle2 className="w-5 h-5 mr-2" />
-            OK - Prossimo
+            Prossimo ({autoCloseCountdown}s)
           </HapticButton>
         </DialogContent>
       </Dialog>
