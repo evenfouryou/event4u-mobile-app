@@ -188,7 +188,7 @@ import { Label } from "@/components/ui/label";
 
 const sectorFormSchema = z.object({
   name: z.string().min(1, "Nome biglietto richiesto"),
-  sectorCode: z.string().min(1, "Codice settore richiesto"),
+  sectorCode: z.string().optional().default(""),
   capacity: z.number().min(1, "Quantità richiesta"),
   isNumbered: z.boolean().default(false),
   ticketType: z.enum(['INT', 'RID', 'OMA']),
@@ -1012,8 +1012,10 @@ export default function EventHub() {
 
   const onSubmitSector = (data: SectorFormData) => {
     const priceValue = data.ticketType === 'OMA' ? '0' : (data.price || '0');
+    // Generate sectorCode from name if not provided
+    const generatedCode = data.sectorCode || data.name.toUpperCase().replace(/[^A-Z0-9]/g, '').slice(0, 10) || 'SEC';
     const submitData = {
-      sectorCode: data.sectorCode,
+      sectorCode: generatedCode,
       name: data.name,
       capacity: data.capacity,
       availableSeats: data.capacity,
