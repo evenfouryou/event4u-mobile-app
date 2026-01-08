@@ -96,6 +96,7 @@ const commissionFormSchema = z.object({
   channelPrintedValue: z.string(),
   channelPrType: z.enum(["percent", "fixed"]),
   channelPrValue: z.string(),
+  feePayer: z.enum(["customer", "organizer"]), // Who pays: 'customer' adds to cart, 'organizer' deducts from payout
 });
 
 const invoiceFormSchema = z.object({
@@ -151,6 +152,7 @@ export default function AdminBillingOrganizerDetail() {
       channelPrintedValue: "0",
       channelPrType: "percent" as const,
       channelPrValue: "0",
+      feePayer: "organizer" as const,
     },
   });
 
@@ -568,6 +570,43 @@ export default function AdminBillingOrganizerDetail() {
                           />
                         </div>
                       </div>
+                    </div>
+
+                    <div className="p-4 rounded-lg border bg-muted/30 space-y-4">
+                      <h4 className="font-medium flex items-center gap-2">
+                        <div className="h-8 w-8 rounded-lg bg-amber-500/20 flex items-center justify-center">
+                          <Wallet className="w-4 h-4 text-amber-500" />
+                        </div>
+                        Chi paga le commissioni?
+                      </h4>
+                      <FormField
+                        control={commissionForm.control}
+                        name="feePayer"
+                        render={({ field }) => (
+                          <FormItem>
+                            <Select onValueChange={field.onChange} value={field.value}>
+                              <FormControl>
+                                <SelectTrigger data-testid="select-fee-payer">
+                                  <SelectValue />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                <SelectItem value="organizer">
+                                  Gestore - Commissioni detratte dal bonifico
+                                </SelectItem>
+                                <SelectItem value="customer">
+                                  Cliente - Commissioni aggiunte al carrello
+                                </SelectItem>
+                              </SelectContent>
+                            </Select>
+                            <p className="text-xs text-muted-foreground mt-2">
+                              {field.value === "customer" 
+                                ? "Le commissioni verranno aggiunte al totale del carrello del cliente"
+                                : "Le commissioni verranno detratte dall'importo che verrà bonificato al gestore"}
+                            </p>
+                          </FormItem>
+                        )}
+                      />
                     </div>
 
                     <Button

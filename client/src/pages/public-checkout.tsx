@@ -83,6 +83,9 @@ interface PaymentIntentResponse {
   clientSecret: string;
   checkoutSessionId: string;
   total: number;
+  subtotal?: number;
+  commissionAmount?: number;
+  feePayer?: 'customer' | 'organizer';
 }
 
 let stripePromise: Promise<any> | null = null;
@@ -659,16 +662,20 @@ function CheckoutContent() {
             <div className="pt-2 space-y-2">
               <div className="flex justify-between items-center text-muted-foreground">
                 <span>Subtotale</span>
-                <span>€{cart.total.toFixed(2)}</span>
+                <span>€{(createPaymentIntent.data?.subtotal ?? cart.total).toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center text-muted-foreground">
                 <span>Commissioni</span>
-                <span className="text-teal-400">Gratuite</span>
+                {createPaymentIntent.data?.feePayer === 'customer' && (createPaymentIntent.data?.commissionAmount ?? 0) > 0 ? (
+                  <span className="text-foreground">€{(createPaymentIntent.data.commissionAmount ?? 0).toFixed(2)}</span>
+                ) : (
+                  <span className="text-teal-400">Gratuite</span>
+                )}
               </div>
               <div className="flex justify-between items-center pt-2 border-t border-border">
                 <span className="text-lg font-semibold text-foreground">Totale</span>
                 <span className="text-2xl font-bold text-primary" data-testid="text-total">
-                  €{cart.total.toFixed(2)}
+                  €{(createPaymentIntent.data?.total ?? cart.total).toFixed(2)}
                 </span>
               </div>
             </div>
@@ -866,7 +873,7 @@ function CheckoutContent() {
           <div className="flex justify-between items-center">
             <div>
               <p className="text-xs text-muted-foreground">Totale da pagare</p>
-              <p className="text-2xl font-bold text-primary">€{cart.total.toFixed(2)}</p>
+              <p className="text-2xl font-bold text-primary">€{(createPaymentIntent.data?.total ?? cart.total).toFixed(2)}</p>
             </div>
             <div className="flex items-center gap-2 text-muted-foreground">
               <ShieldCheck className="w-5 h-5" />
@@ -899,7 +906,7 @@ function CheckoutContent() {
             ) : (
               <>
                 <Lock className="w-5 h-5 mr-2" />
-                Paga €{cart.total.toFixed(2)}
+                Paga €{(createPaymentIntent.data?.total ?? cart.total).toFixed(2)}
               </>
             )}
           </HapticButton>
@@ -1442,17 +1449,21 @@ function DesktopCheckoutContent() {
             <div className="space-y-2">
               <div className="flex justify-between items-center text-muted-foreground">
                 <span>Subtotale ({cart.itemsCount} biglietti)</span>
-                <span>€{cart.total.toFixed(2)}</span>
+                <span>€{(createPaymentIntent.data?.subtotal ?? cart.total).toFixed(2)}</span>
               </div>
               <div className="flex justify-between items-center text-muted-foreground">
                 <span>Commissioni</span>
-                <span className="text-teal-400">Gratuite</span>
+                {createPaymentIntent.data?.feePayer === 'customer' && (createPaymentIntent.data?.commissionAmount ?? 0) > 0 ? (
+                  <span className="text-foreground">€{(createPaymentIntent.data.commissionAmount ?? 0).toFixed(2)}</span>
+                ) : (
+                  <span className="text-teal-400">Gratuite</span>
+                )}
               </div>
               <div className="h-px bg-border my-3" />
               <div className="flex justify-between items-center">
                 <span className="text-lg font-semibold text-foreground">Totale</span>
                 <span className="text-2xl font-bold text-primary" data-testid="text-total-desktop">
-                  €{cart.total.toFixed(2)}
+                  €{(createPaymentIntent.data?.total ?? cart.total).toFixed(2)}
                 </span>
               </div>
             </div>
@@ -1482,7 +1493,7 @@ function DesktopCheckoutContent() {
               ) : (
                 <>
                   <Lock className="w-4 h-4 mr-2" />
-                  Paga €{cart.total.toFixed(2)}
+                  Paga €{(createPaymentIntent.data?.total ?? cart.total).toFixed(2)}
                 </>
               )}
             </Button>

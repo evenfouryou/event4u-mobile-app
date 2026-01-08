@@ -15,6 +15,7 @@ import {
 } from "./bridge-relay";
 import { creditLoyaltyPoints } from "./loyalty-routes";
 import { convertReferralOnPurchase, getPendingReferralDiscount } from "./referral-routes";
+import { CommissionService, WalletService } from "./billing-service";
 import {
   siaeTicketedEvents,
   siaeEventSectors,
@@ -53,7 +54,7 @@ import { sendTicketEmail, sendPasswordResetEmail } from "./email-service";
 import { ticketTemplates, ticketTemplateElements } from "@shared/schema";
 import { sendOTP as sendMSG91OTP, verifyOTP as verifyMSG91OTP, resendOTP as resendMSG91OTP, isMSG91Configured } from "./msg91-service";
 import { siaeStorage } from "./siae-storage";
-import { siaeNameChanges, siaeResales, siaeWalletTransactions, eventReservationSettings, eventLists, listEntries, tableTypes, tableReservations, reservationPayments, prProfiles, siaeSubscriptionTypes, siaeSubscriptions } from "@shared/schema";
+import { siaeNameChanges, siaeResales, siaeWalletTransactions, eventReservationSettings, eventLists, listEntries, tableTypes, tableReservations, reservationPayments, prProfiles, siaeSubscriptionTypes, siaeSubscriptions, organizerCommissionProfiles } from "@shared/schema";
 import svgCaptcha from "svg-captcha";
 import QRCode from "qrcode";
 
@@ -1537,18 +1538,54 @@ router.post("/api/public/checkout/create-payment-intent", async (req, res) => {
       console.log(`[PUBLIC] Auto-created SIAE profile for user ${customer.userId}: ${newCustomer.id}`);
     }
 
-    // Carica carrello
+    // Carica carrello con info evento per ottenere companyId
     const items = await db
-      .select()
+      .select({
+        item: publicCartItems,
+        companyId: siaeTicketedEvents.companyId,
+      })
       .from(publicCartItems)
+      .innerJoin(siaeTicketedEvents, eq(publicCartItems.ticketedEventId, siaeTicketedEvents.id))
       .where(eq(publicCartItems.sessionId, sessionId));
 
     if (items.length === 0) {
       return res.status(400).json({ message: "Carrello vuoto" });
     }
 
-    // Calcola totale
-    const total = items.reduce((sum, item) => sum + Number(item.unitPrice) * item.quantity, 0);
+    // Tutti gli items devono essere della stessa company
+    const companyId = items[0].companyId;
+    const allSameCompany = items.every(i => i.companyId === companyId);
+    if (!allSameCompany) {
+      return res.status(400).json({ message: "Non puoi acquistare biglietti di organizzatori diversi nello stesso ordine" });
+    }
+
+    // Calcola subtotale (prezzo biglietti)
+    const subtotal = items.reduce((sum, { item }) => sum + Number(item.unitPrice) * item.quantity, 0);
+    
+    // Carica profilo commissioni e calcola sempre la commissione (per entrambe le modalità)
+    let commissionAmount = 0;
+    let commissionProfile = null;
+    
+    try {
+      commissionProfile = await CommissionService.getCommissionProfile(companyId);
+      
+      if (commissionProfile) {
+        // Calcola sempre la commissione per ogni item (canale online)
+        for (const { item } of items) {
+          const itemTotal = Number(item.unitPrice) * item.quantity;
+          const itemCommission = CommissionService.calculateCommission('online', itemTotal, commissionProfile);
+          commissionAmount += itemCommission;
+        }
+        console.log(`[PUBLIC] Commission calculated: ${commissionAmount.toFixed(2)} EUR, feePayer: ${commissionProfile.feePayer}`);
+      }
+    } catch (err) {
+      console.error("[PUBLIC] Error loading commission profile:", err);
+    }
+    
+    // Totale finale = subtotale + commissioni (solo se a carico cliente)
+    const feePayer = commissionProfile?.feePayer || 'organizer';
+    const customerPaysCommission = feePayer === 'customer';
+    const total = subtotal + (customerPaysCommission ? commissionAmount : 0);
     const totalInCents = Math.round(total * 100);
 
     // Crea payment intent con Stripe
@@ -1560,8 +1597,14 @@ router.post("/api/public/checkout/create-payment-intent", async (req, res) => {
         customerId: customer.id,
         sessionId,
         itemsCount: items.length.toString(),
+        subtotal: subtotal.toFixed(2),
+        commissionAmount: commissionAmount.toFixed(2),
+        feePayer,
       },
     });
+
+    // Estrai solo gli items per il cartSnapshot (rimuovi companyId join)
+    const cartItems = items.map(({ item }) => item);
 
     // Salva checkout session
     const expiresAt = new Date(Date.now() + 30 * 60 * 1000); // 30 minuti
@@ -1576,7 +1619,7 @@ router.post("/api/public/checkout/create-payment-intent", async (req, res) => {
         totalAmount: total.toString(),
         currency: "EUR",
         status: "pending",
-        cartSnapshot: items,
+        cartSnapshot: cartItems,
         customerIp: req.ip,
         customerUserAgent: req.headers["user-agent"],
         expiresAt,
@@ -1587,6 +1630,9 @@ router.post("/api/public/checkout/create-payment-intent", async (req, res) => {
       clientSecret: paymentIntent.client_secret,
       checkoutSessionId: checkoutSession.id,
       total,
+      subtotal,
+      commissionAmount: customerPaysCommission ? commissionAmount : 0, // Solo se a carico cliente
+      feePayer,
     });
   } catch (error: any) {
     console.error("[PUBLIC] Create payment intent error:", error);
@@ -2229,6 +2275,33 @@ router.post("/api/public/checkout/confirm", async (req, res) => {
         completedAt: new Date(),
       })
       .where(eq(publicCheckoutSessions.id, checkoutSessionId));
+
+    // Registra commissioni nel ledger organizzatore se feePayer='organizer'
+    // Usa i dati calcolati durante create-payment-intent dai metadati del payment intent
+    try {
+      const storedFeePayer = paymentIntent.metadata?.feePayer || 'organizer';
+      const storedCommissionAmount = parseFloat(paymentIntent.metadata?.commissionAmount || '0');
+      
+      if (storedFeePayer === 'organizer' && storedCommissionAmount > 0) {
+        const wallet = await WalletService.getOrCreateWallet(ticketedEvent.companyId);
+        
+        await WalletService.addLedgerEntry({
+          companyId: ticketedEvent.companyId,
+          walletId: wallet.id,
+          type: 'commission',
+          direction: 'debit',
+          amount: storedCommissionAmount,
+          referenceType: 'order',
+          referenceId: transaction.id,
+          channel: 'online',
+          note: `Commissione vendita online - Transazione ${transaction.transactionCode}`,
+        });
+        
+        console.log(`[PUBLIC] Commission ledger entry created: ${storedCommissionAmount.toFixed(2)} EUR for company ${ticketedEvent.companyId}`);
+      }
+    } catch (commissionError) {
+      console.error("[PUBLIC] Error recording commission ledger entry:", commissionError);
+    }
 
     // Accredita punti fedeltà
     try {
