@@ -446,8 +446,8 @@ async function sendDailyReports() {
 
         // Prefer systemId from Smart Card EFFF for email subject consistency with XML
         const systemCode = cachedEfff?.systemId || ticketedEvent.systemCode || SIAE_SYSTEM_CODE;
-        // RCA reports: usa 'rca' come tipo report per nome file RCA_YYYY_MM_DD_###.xsi
-        let fileName = generateSiaeFileName('rca', yesterday, progressivo, null, systemCode);
+        // RMG = Riepilogo Mensile Giornaliero: usa 'giornaliero' per nome file RMG_YYYY_MM_DD_###.xsi
+        let fileName = generateSiaeFileName('giornaliero', yesterday, progressivo, null, systemCode);
         let fileExtension = '.xsi'; // Default per non firmato
         let signatureFormat: 'cades' | 'xmldsig' | null = null;
 
@@ -466,7 +466,7 @@ async function sendDailyReports() {
           totalAmount: reportData.totalRevenue.toFixed(2),
         });
 
-        log(`Evento ${ticketedEvent.id} (${event.name}) - Report RCA creato: ${fileName}`);
+        log(`Evento ${ticketedEvent.id} (${event.name}) - Report RMG giornaliero creato: ${fileName}`);
 
         // Tenta firma digitale se il bridge è connesso
         let signatureInfo = '';
@@ -495,7 +495,7 @@ async function sendDailyReports() {
             
             // Aggiorna nome file: .p7m solo per CAdES-BES, altrimenti .xsi
             fileExtension = signatureFormat === 'cades' ? '.p7m' : '.xsi';
-            fileName = generateSiaeFileName('rca', yesterday, progressivo, signatureFormat, systemCode);
+            fileName = generateSiaeFileName('giornaliero', yesterday, progressivo, signatureFormat, systemCode);
             
             // Aggiorna trasmissione con firma e contenuto appropriato
             await siaeStorage.updateSiaeTransmission(transmission.id, {
@@ -622,8 +622,8 @@ async function sendMonthlyReports() {
 
         // Prefer systemId from Smart Card EFFF for email subject consistency with XML
         const systemCode = cachedEfff?.systemId || ticketedEvent.systemCode || SIAE_SYSTEM_CODE;
-        // RCA reports mensili: usa 'rca' come tipo report per nome file RCA_YYYY_MM_DD_###.xsi
-        let fileName = generateSiaeFileName('rca', previousMonth, progressivo, null, systemCode);
+        // RPM = Riepilogo Periodico Mensile: usa 'mensile' per nome file RPM_YYYY_MM_###.xsi
+        let fileName = generateSiaeFileName('mensile', previousMonth, progressivo, null, systemCode);
         let fileExtension = '.xsi'; // Default per non firmato
         let signatureFormat: 'cades' | 'xmldsig' | null = null;
 
@@ -642,7 +642,7 @@ async function sendMonthlyReports() {
           totalAmount: reportData.totalRevenue.toFixed(2),
         });
 
-        log(`Evento ${ticketedEvent.id} - Report mensile RCA creato: ${fileName}`);
+        log(`Evento ${ticketedEvent.id} - Report RPM mensile creato: ${fileName}`);
 
         // Tenta firma digitale se il bridge è connesso
         let signatureInfo = '';
@@ -671,7 +671,7 @@ async function sendMonthlyReports() {
             
             // Aggiorna nome file: .p7m solo per CAdES-BES, altrimenti .xsi
             fileExtension = signatureFormat === 'cades' ? '.p7m' : '.xsi';
-            fileName = generateSiaeFileName('rca', previousMonth, progressivo, signatureFormat, systemCode);
+            fileName = generateSiaeFileName('mensile', previousMonth, progressivo, signatureFormat, systemCode);
             
             // Aggiorna trasmissione con firma e contenuto appropriato
             await siaeStorage.updateSiaeTransmission(transmission.id, {
