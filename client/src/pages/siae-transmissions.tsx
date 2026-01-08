@@ -1205,8 +1205,10 @@ export default function SiaeTransmissionsPage() {
                         <TableCell>
                           {trans.periodDate && format(new Date(trans.periodDate), "dd/MM/yyyy", { locale: it })}
                         </TableCell>
-                        <TableCell className="max-w-[150px] truncate" title={trans.eventName || '-'} data-testid={`text-event-${trans.id}`}>
-                          {trans.eventName || '-'}
+                        <TableCell className="max-w-[150px] truncate" title={trans.eventName || (trans.transmissionType === 'monthly' ? 'Riepilogo mensile' : '-')} data-testid={`text-event-${trans.id}`}>
+                          {trans.eventName || (trans.transmissionType === 'monthly' ? (
+                            <span className="text-muted-foreground italic">Tutti gli eventi</span>
+                          ) : '-')}
                         </TableCell>
                         <TableCell>{getTypeLabel(trans.transmissionType)}</TableCell>
                         <TableCell data-testid={`text-schedule-type-${trans.id}`}>
