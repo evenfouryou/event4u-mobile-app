@@ -830,28 +830,15 @@ export default function SiaeTransmissionsPage() {
           </div>
         </div>
 
-        {!companyId && isSuperAdmin && (
-          <Card className="border-dashed">
-            <CardContent className="pt-6 text-center py-12">
-              <Building2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
-              <h3 className="text-lg font-medium mb-2">Seleziona un'azienda</h3>
-              <p className="text-muted-foreground">
-                Scegli un'azienda dal menu sopra per visualizzare le trasmissioni SIAE
-              </p>
-            </CardContent>
-          </Card>
-        )}
-
-        {companyId && (
-        <>
-        {/* Transmission Settings Collapsible Section */}
+        {/* Global Transmission Settings - Always visible */}
         <Collapsible open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
           <Card>
             <CardHeader className="pb-2">
               <CollapsibleTrigger className="flex items-center justify-between w-full" data-testid="button-toggle-settings">
                 <div className="flex items-center gap-2">
                   <Settings className="h-5 w-5 text-muted-foreground" />
-                  <CardTitle className="text-lg">Impostazioni Trasmissioni</CardTitle>
+                  <CardTitle className="text-lg">Impostazioni Trasmissioni Globali</CardTitle>
+                  <Badge variant="outline" className="text-xs">Tutte le aziende</Badge>
                 </div>
                 <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isSettingsOpen ? 'rotate-180' : ''}`} />
               </CollapsibleTrigger>
@@ -866,7 +853,7 @@ export default function SiaeTransmissionsPage() {
                 ) : (
                   <Form {...settingsForm}>
                     <form onSubmit={settingsForm.handleSubmit(onSettingsSubmit)} className="space-y-6">
-                      <div className="grid grid-cols-3 gap-6">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {/* Daily Settings */}
                         <div className="space-y-4 p-4 rounded-lg border">
                           <h4 className="font-medium text-sm text-muted-foreground">Invio Giornaliero</h4>
@@ -1058,6 +1045,20 @@ export default function SiaeTransmissionsPage() {
           </Card>
         </Collapsible>
 
+        {!companyId && isSuperAdmin && (
+          <Card className="border-dashed">
+            <CardContent className="pt-6 text-center py-12">
+              <Building2 className="h-12 w-12 mx-auto text-muted-foreground/50 mb-4" />
+              <h3 className="text-lg font-medium mb-2">Seleziona un'azienda</h3>
+              <p className="text-muted-foreground">
+                Scegli un'azienda dal menu sopra per visualizzare le trasmissioni SIAE
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {companyId && (
+        <>
         <div className="grid grid-cols-5 gap-4">
           <Card>
             <CardContent className="pt-6">
