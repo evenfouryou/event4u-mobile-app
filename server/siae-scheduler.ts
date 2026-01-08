@@ -741,20 +741,18 @@ async function sendMonthlyReports() {
 /**
  * Job per invio automatico report RCA (Riepilogo Controllo Accessi) per eventi conclusi.
  * Genera e invia RCA per eventi terminati che hanno autoSendReports abilitato.
- * Viene eseguito dopo la chiusura automatica degli eventi.
+ * Viene eseguito 24 ore dopo la chiusura dell'evento.
  */
 async function sendRCAReports() {
   try {
-    log('Avvio job invio report RCA per eventi conclusi...');
+    log('Avvio job invio report RCA per eventi conclusi (24h dopo chiusura)...');
     
     const now = new Date();
-    const yesterday = new Date(now);
-    yesterday.setDate(yesterday.getDate() - 1);
-    yesterday.setHours(0, 0, 0, 0);
-    const endOfYesterday = new Date(yesterday);
-    endOfYesterday.setHours(23, 59, 59, 999);
+    // Cerca eventi chiusi da almeno 24 ore (ma non più di 48 ore fa per evitare reprocessing)
+    const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const fortyEightHoursAgo = new Date(now.getTime() - 48 * 60 * 60 * 1000);
     
-    // Trova eventi chiusi nelle ultime 24 ore con ticketed events che hanno auto-invio
+    // Trova eventi chiusi da almeno 24 ore con ticketed events che hanno auto-invio
     const ticketedEventsWithEvents = await db.select({
       ticketedEvent: siaeTicketedEvents,
       event: events,
@@ -764,8 +762,9 @@ async function sendRCAReports() {
     .where(and(
       eq(siaeTicketedEvents.autoSendReports, true),
       eq(events.status, 'closed'),
-      gte(events.endDatetime, yesterday),
-      lt(events.endDatetime, now)
+      // Evento terminato tra 48 e 24 ore fa (finestra per invio RCA)
+      gte(events.endDatetime, fortyEightHoursAgo),
+      lt(events.endDatetime, twentyFourHoursAgo)
     ));
     
     if (ticketedEventsWithEvents.length === 0) {
@@ -1130,8 +1129,8 @@ export function initSiaeScheduler() {
   // Job per scadenza automatica rivendite 1h prima evento - ogni 5 minuti
   resaleExpirationIntervalId = setInterval(autoExpireResales, 5 * 60 * 1000);
   
-  // Job per invio automatico RCA dopo chiusura eventi - ogni 10 minuti
-  rcaIntervalId = setInterval(sendRCAReports, 10 * 60 * 1000);
+  // Job per invio automatico RCA 24 ore dopo chiusura eventi - ogni ora
+  rcaIntervalId = setInterval(sendRCAReports, 60 * 60 * 1000);
   
   // Esegui subito al primo avvio per chiudere eventi già scaduti e scadere rivendite
   autoCloseExpiredEvents();
@@ -1140,7 +1139,7 @@ export function initSiaeScheduler() {
   log('Scheduler SIAE inizializzato:');
   log('  - Job RMG giornaliero: ogni notte alle 02:00');
   log('  - Job RPM mensile: primo giorno del mese alle 03:00');
-  log('  - Job RCA evento: ogni 10 minuti (dopo chiusura evento)');
+  log('  - Job RCA evento: ogni ora (24h dopo chiusura evento)');
   log('  - Job chiusura eventi: ogni 5 minuti');
   log('  - Job scadenza rivendite: ogni 5 minuti (1h prima evento)');
   log(`  - System Code: ${SIAE_SYSTEM_CODE}`);
