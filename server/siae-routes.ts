@@ -4,7 +4,7 @@ import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTime
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
-import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions, siaeCashierAllocations, siaeOtpAttempts, siaeNameChanges, siaeResales, publicCartItems, publicCheckoutSessions, publicCustomerSessions, tableBookings, guestListEntries, siaeTransmissions, companies, siaeEmissionChannels, siaeSystemConfig, userFeatures, siaeTicketedEvents, users, siaeEventSectors, floorPlanSeats, siaeSeats, floorPlanZones } from "@shared/schema";
+import { events, siaeCashiers, siaeTickets, siaeTransactions, siaeSubscriptions, siaeCashierAllocations, siaeOtpAttempts, siaeNameChanges, siaeResales, publicCartItems, publicCheckoutSessions, publicCustomerSessions, tableBookings, guestListEntries, siaeTransmissions, companies, siaeEmissionChannels, siaeSystemConfig, userFeatures, siaeTicketedEvents, users, siaeEventSectors, floorPlanSeats, siaeSeats, floorPlanZones, siaeAuditLogs, siaeCustomers } from "@shared/schema";
 import { eq, and, or, sql, desc, isNull, SQL, gte, lte, count, inArray } from "drizzle-orm";
 import { z } from "zod";
 import bcrypt from "bcryptjs";
@@ -5892,18 +5892,40 @@ router.get("/api/siae/companies/:companyId/subscriptions", requireAuth, requireO
 });
 
 // Admin endpoint to get all subscriptions with company details
+// Supports query filters: companyId, ticketedEventId
 router.get("/api/siae/admin/subscriptions", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
     const isSuperAdmin = user.role === 'super_admin';
-    const companyId = user.companyId;
+    const userCompanyId = user.companyId;
     
-    let whereClause = isSuperAdmin ? undefined : eq(siaeSubscriptions.companyId, companyId);
+    // Query parameter filters
+    const filterCompanyId = req.query.companyId as string | undefined;
+    const filterTicketedEventId = req.query.ticketedEventId as string | undefined;
+    
+    // Build where conditions
+    const conditions: SQL[] = [];
+    
+    // Company authorization: non-super_admin can only see their own company
+    if (!isSuperAdmin && userCompanyId) {
+      conditions.push(eq(siaeSubscriptions.companyId, userCompanyId));
+    } else if (filterCompanyId) {
+      // Super admin can filter by specific company
+      conditions.push(eq(siaeSubscriptions.companyId, filterCompanyId));
+    }
+    
+    // Filter by ticketed event
+    if (filterTicketedEventId) {
+      conditions.push(eq(siaeSubscriptions.ticketedEventId, filterTicketedEventId));
+    }
+    
+    const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
     
     const results = await db.select({
       id: siaeSubscriptions.id,
       companyId: siaeSubscriptions.companyId,
       customerId: siaeSubscriptions.customerId,
+      ticketedEventId: siaeSubscriptions.ticketedEventId,
       subscriptionCode: siaeSubscriptions.subscriptionCode,
       progressiveNumber: siaeSubscriptions.progressiveNumber,
       turnType: siaeSubscriptions.turnType,
@@ -5916,14 +5938,19 @@ router.get("/api/siae/admin/subscriptions", requireAuth, requireOrganizer, async
       holderFirstName: siaeSubscriptions.holderFirstName,
       holderLastName: siaeSubscriptions.holderLastName,
       status: siaeSubscriptions.status,
+      cancellationReasonCode: siaeSubscriptions.cancellationReasonCode,
+      cancellationDate: siaeSubscriptions.cancellationDate,
       createdAt: siaeSubscriptions.createdAt,
       companyName: companies.name,
       customerFirstName: siaeCustomers.firstName,
       customerLastName: siaeCustomers.lastName,
+      eventName: events.name,
     })
     .from(siaeSubscriptions)
     .leftJoin(companies, eq(siaeSubscriptions.companyId, companies.id))
     .leftJoin(siaeCustomers, eq(siaeSubscriptions.customerId, siaeCustomers.id))
+    .leftJoin(siaeTicketedEvents, eq(siaeSubscriptions.ticketedEventId, siaeTicketedEvents.id))
+    .leftJoin(events, eq(siaeTicketedEvents.eventId, events.id))
     .where(whereClause)
     .orderBy(desc(siaeSubscriptions.createdAt));
     
@@ -5953,6 +5980,191 @@ router.patch("/api/siae/subscriptions/:id", requireAuth, requireOrganizer, async
     res.json(subscription);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
+  }
+});
+
+// Valid SIAE cancellation reason codes (TAB.5)
+const VALID_CANCELLATION_REASON_CODES = ['001', '002', '003', '004', '005', '006', '007', '009'];
+const CANCELLATION_REASON_DESCRIPTIONS: Record<string, string> = {
+  '001': 'Errore del cassiere',
+  '002': 'Errore del cliente',
+  '003': 'Evento annullato',
+  '004': 'Reso autorizzato',
+  '005': 'Duplicato',
+  '006': 'Sostituzione',
+  '007': 'Rimborso',
+  '009': 'Annullamento fiscale',
+};
+
+// Cancel subscription with SIAE compliance
+router.post("/api/siae/subscriptions/:id/cancel", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = req.user as any;
+    const { reasonCode } = req.body;
+    
+    // Validate reasonCode is provided
+    if (!reasonCode) {
+      return res.status(400).json({ 
+        message: "Causale annullamento obbligatoria (reasonCode)",
+        validCodes: CANCELLATION_REASON_DESCRIPTIONS
+      });
+    }
+    
+    // Validate reasonCode is valid per SIAE TAB.5
+    if (!VALID_CANCELLATION_REASON_CODES.includes(reasonCode)) {
+      return res.status(400).json({ 
+        message: `Causale annullamento non valida: ${reasonCode}`,
+        validCodes: CANCELLATION_REASON_DESCRIPTIONS
+      });
+    }
+    
+    // Fetch subscription
+    const [subscription] = await db.select()
+      .from(siaeSubscriptions)
+      .where(eq(siaeSubscriptions.id, id));
+    
+    if (!subscription) {
+      return res.status(404).json({ message: "Abbonamento non trovato" });
+    }
+    
+    // Check if already cancelled
+    if (subscription.status === 'cancelled') {
+      return res.status(400).json({ 
+        message: "Abbonamento già annullato",
+        cancellationDate: subscription.cancellationDate,
+        cancellationReasonCode: subscription.cancellationReasonCode
+      });
+    }
+    
+    // Check user authorization (same company or super_admin)
+    const isSuperAdmin = user.role === 'super_admin';
+    if (!isSuperAdmin && user.companyId !== subscription.companyId) {
+      return res.status(403).json({ message: "Non autorizzato ad annullare questo abbonamento" });
+    }
+    
+    const cancellationDate = new Date();
+    
+    // Update subscription status
+    const [updatedSubscription] = await db.update(siaeSubscriptions)
+      .set({
+        status: 'cancelled',
+        cancellationDate,
+        cancellationReasonCode: reasonCode,
+        cancelledByUserId: user.id,
+        updatedAt: new Date(),
+      })
+      .where(eq(siaeSubscriptions.id, id))
+      .returning();
+    
+    // Create audit log entry
+    await db.insert(siaeAuditLogs).values({
+      companyId: subscription.companyId,
+      userId: user.id,
+      action: 'cancel',
+      entityType: 'subscription',
+      entityId: id,
+      description: `Abbonamento ${subscription.subscriptionCode} annullato. Causale: ${reasonCode} - ${CANCELLATION_REASON_DESCRIPTIONS[reasonCode]}`,
+      oldData: JSON.stringify({ status: subscription.status }),
+      newData: JSON.stringify({ 
+        status: 'cancelled', 
+        cancellationDate, 
+        cancellationReasonCode: reasonCode 
+      }),
+      ipAddress: req.ip || req.socket?.remoteAddress,
+      userAgent: req.get('User-Agent'),
+    });
+    
+    res.json({
+      ...updatedSubscription,
+      cancellationReasonDescription: CANCELLATION_REASON_DESCRIPTIONS[reasonCode],
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Get subscription usage history
+router.get("/api/siae/subscriptions/:id/usage", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const user = req.user as any;
+    
+    // Fetch subscription
+    const [subscription] = await db.select()
+      .from(siaeSubscriptions)
+      .where(eq(siaeSubscriptions.id, id));
+    
+    if (!subscription) {
+      return res.status(404).json({ message: "Abbonamento non trovato" });
+    }
+    
+    // Check user authorization (same company or super_admin)
+    const isSuperAdmin = user.role === 'super_admin';
+    if (!isSuperAdmin && user.companyId !== subscription.companyId) {
+      return res.status(403).json({ message: "Non autorizzato a visualizzare questo abbonamento" });
+    }
+    
+    // Get usage from audit logs (validate actions on subscriptions)
+    const usageFromAudit = await db.select({
+      id: siaeAuditLogs.id,
+      action: siaeAuditLogs.action,
+      description: siaeAuditLogs.description,
+      accessDate: siaeAuditLogs.createdAt,
+      ipAddress: siaeAuditLogs.ipAddress,
+      userId: siaeAuditLogs.userId,
+    })
+    .from(siaeAuditLogs)
+    .where(and(
+      eq(siaeAuditLogs.entityType, 'subscription'),
+      eq(siaeAuditLogs.entityId, id),
+      eq(siaeAuditLogs.action, 'validate')
+    ))
+    .orderBy(desc(siaeAuditLogs.createdAt));
+    
+    // Get event info for the subscription
+    let eventInfo = null;
+    if (subscription.ticketedEventId) {
+      const [ticketedEvent] = await db.select({
+        ticketedEventId: siaeTicketedEvents.id,
+        eventId: events.id,
+        eventName: events.name,
+        eventDate: events.startDate,
+        locationId: events.locationId,
+      })
+      .from(siaeTicketedEvents)
+      .leftJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .where(eq(siaeTicketedEvents.id, subscription.ticketedEventId));
+      
+      eventInfo = ticketedEvent;
+    }
+    
+    res.json({
+      subscription: {
+        id: subscription.id,
+        subscriptionCode: subscription.subscriptionCode,
+        holderFirstName: subscription.holderFirstName,
+        holderLastName: subscription.holderLastName,
+        eventsCount: subscription.eventsCount,
+        eventsUsed: subscription.eventsUsed,
+        eventsRemaining: subscription.eventsCount - subscription.eventsUsed,
+        validFrom: subscription.validFrom,
+        validTo: subscription.validTo,
+        status: subscription.status,
+      },
+      event: eventInfo,
+      usageHistory: usageFromAudit.map(usage => ({
+        id: usage.id,
+        accessDate: usage.accessDate,
+        action: usage.action,
+        description: usage.description,
+        ipAddress: usage.ipAddress,
+        validatedBy: usage.userId,
+      })),
+      totalAccesses: usageFromAudit.length,
+    });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
   }
 });
 

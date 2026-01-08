@@ -47,6 +47,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   MobileAppLayout,
   MobileHeader,
@@ -67,6 +68,10 @@ import {
   ChevronRight,
   X,
   ArrowLeft,
+  XCircle,
+  History,
+  Building2,
+  Ticket,
 } from "lucide-react";
 
 const springTransition = {
@@ -88,6 +93,35 @@ const subscriptionFormSchema = z.object({
 
 type SubscriptionFormData = z.infer<typeof subscriptionFormSchema>;
 
+const CANCEL_REASON_CODES = [
+  { value: "001", label: "Errore del cassiere" },
+  { value: "002", label: "Errore del cliente" },
+  { value: "003", label: "Evento annullato" },
+  { value: "004", label: "Reso autorizzato" },
+  { value: "005", label: "Duplicato" },
+  { value: "006", label: "Sostituzione" },
+  { value: "007", label: "Rimborso" },
+  { value: "009", label: "Annullamento fiscale" },
+];
+
+interface Company {
+  id: string;
+  name: string;
+}
+
+interface TicketedEvent {
+  id: string;
+  eventName: string;
+  eventDate?: string;
+}
+
+interface SubscriptionUsage {
+  id: string;
+  usageDate: string;
+  eventName: string;
+  accessInfo?: string;
+}
+
 export default function SiaeSubscriptionsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -97,21 +131,53 @@ export default function SiaeSubscriptionsPage() {
   const [isCreateSheetOpen, setIsCreateSheetOpen] = useState(false);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+  const [isCancelDialogOpen, setIsCancelDialogOpen] = useState(false);
+  const [cancelReasonCode, setCancelReasonCode] = useState<string>("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
+  const [companyFilter, setCompanyFilter] = useState<string>("all");
+  const [eventFilter, setEventFilter] = useState<string>("all");
+  const [detailTab, setDetailTab] = useState<string>("info");
 
   const companyId = user?.companyId;
   const isSuperAdmin = user?.role === 'super_admin';
 
-  // Admin subscriptions with company details
   interface AdminSubscription extends SiaeSubscription {
     companyName: string | null;
     customerFirstName: string | null;
     customerLastName: string | null;
+    eventName?: string | null;
   }
 
+  const buildAdminQueryKey = () => {
+    const params = new URLSearchParams();
+    if (companyFilter && companyFilter !== "all") {
+      params.set("companyId", companyFilter);
+    }
+    if (eventFilter && eventFilter !== "all") {
+      params.set("ticketedEventId", eventFilter);
+    }
+    const queryString = params.toString();
+    return queryString ? `/api/siae/admin/subscriptions?${queryString}` : '/api/siae/admin/subscriptions';
+  };
+
+  const { data: companies } = useQuery<Company[]>({
+    queryKey: ['/api/companies'],
+    enabled: isSuperAdmin,
+  });
+
+  const { data: ticketedEvents } = useQuery<TicketedEvent[]>({
+    queryKey: ['/api/siae/ticketed-events'],
+    enabled: isSuperAdmin || !!companyId,
+  });
+
   const { data: adminSubscriptions, isLoading: isLoadingAdmin } = useQuery<AdminSubscription[]>({
-    queryKey: ['/api/siae/admin/subscriptions'],
+    queryKey: ['/api/siae/admin/subscriptions', companyFilter, eventFilter],
+    queryFn: async () => {
+      const response = await fetch(buildAdminQueryKey());
+      if (!response.ok) throw new Error('Failed to fetch subscriptions');
+      return response.json();
+    },
     enabled: isSuperAdmin || !!companyId,
   });
 
@@ -120,7 +186,11 @@ export default function SiaeSubscriptionsPage() {
     enabled: !!companyId && !isSuperAdmin,
   });
 
-  // Use admin subscriptions when available
+  const { data: usageHistory, isLoading: isLoadingUsage } = useQuery<SubscriptionUsage[]>({
+    queryKey: ['/api/siae/subscriptions', selectedSubscription?.id, 'usage'],
+    enabled: !!selectedSubscription?.id && (isDetailDialogOpen || isDetailSheetOpen),
+  });
+
   const currentSubscriptions = isSuperAdmin ? adminSubscriptions : (adminSubscriptions || subscriptions);
   const currentLoading = isSuperAdmin ? isLoadingAdmin : (isLoadingAdmin || isLoading);
 
@@ -149,6 +219,12 @@ export default function SiaeSubscriptionsPage() {
     }
   }, [isCreateSheetOpen, form]);
 
+  useEffect(() => {
+    if (!isDetailDialogOpen && !isDetailSheetOpen) {
+      setDetailTab("info");
+    }
+  }, [isDetailDialogOpen, isDetailSheetOpen]);
+
   const createSubscriptionMutation = useMutation({
     mutationFn: async (data: SubscriptionFormData) => {
       const response = await apiRequest("POST", `/api/siae/subscriptions`, {
@@ -162,10 +238,41 @@ export default function SiaeSubscriptionsPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.includes('subscriptions') || false });
       setIsCreateSheetOpen(false);
+      setIsCreateDialogOpen(false);
       triggerHaptic('success');
       toast({
         title: "Abbonamento Creato",
         description: "L'abbonamento è stato creato con successo.",
+      });
+    },
+    onError: (error: Error) => {
+      triggerHaptic('error');
+      toast({
+        title: "Errore",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  const cancelSubscriptionMutation = useMutation({
+    mutationFn: async ({ subscriptionId, reasonCode }: { subscriptionId: string; reasonCode: string }) => {
+      const response = await apiRequest("POST", `/api/siae/subscriptions/${subscriptionId}/cancel`, {
+        reasonCode,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.includes('subscriptions') || false });
+      setIsCancelDialogOpen(false);
+      setIsDetailDialogOpen(false);
+      setIsDetailSheetOpen(false);
+      setCancelReasonCode("");
+      setSelectedSubscription(null);
+      triggerHaptic('success');
+      toast({
+        title: "Abbonamento Annullato",
+        description: "L'abbonamento è stato annullato con successo.",
       });
     },
     onError: (error: Error) => {
@@ -197,7 +304,8 @@ export default function SiaeSubscriptionsPage() {
       sub.subscriptionCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       sub.holderFirstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       sub.holderLastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      ('companyName' in sub && sub.companyName?.toLowerCase().includes(searchQuery.toLowerCase()));
+      ('companyName' in sub && sub.companyName?.toLowerCase().includes(searchQuery.toLowerCase())) ||
+      ('eventName' in sub && sub.eventName?.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchesStatus = statusFilter === "all" || sub.status === statusFilter;
 
@@ -214,6 +322,14 @@ export default function SiaeSubscriptionsPage() {
 
   const onSubmit = (data: SubscriptionFormData) => {
     createSubscriptionMutation.mutate(data);
+  };
+
+  const handleCancelSubscription = () => {
+    if (!selectedSubscription || !cancelReasonCode) return;
+    cancelSubscriptionMutation.mutate({
+      subscriptionId: selectedSubscription.id,
+      reasonCode: cancelReasonCode,
+    });
   };
 
   const handleCardPress = (subscription: SiaeSubscription) => {
@@ -233,6 +349,90 @@ export default function SiaeSubscriptionsPage() {
       {label}
       {count !== undefined && <span className="ml-1.5 opacity-70">({count})</span>}
     </HapticButton>
+  );
+
+  const UsageHistorySection = () => (
+    <div className="space-y-3">
+      {isLoadingUsage ? (
+        <div className="space-y-2">
+          {[1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-16 w-full" />
+          ))}
+        </div>
+      ) : usageHistory && usageHistory.length > 0 ? (
+        usageHistory.map((usage) => (
+          <Card key={usage.id} className="glass-card">
+            <CardContent className="p-4">
+              <div className="flex items-center justify-between">
+                <div>
+                  <div className="font-medium">{usage.eventName}</div>
+                  <div className="text-sm text-muted-foreground">
+                    {format(new Date(usage.usageDate), "dd/MM/yyyy HH:mm", { locale: it })}
+                  </div>
+                  {usage.accessInfo && (
+                    <div className="text-xs text-muted-foreground mt-1">{usage.accessInfo}</div>
+                  )}
+                </div>
+                <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              </div>
+            </CardContent>
+          </Card>
+        ))
+      ) : (
+        <div className="text-center py-8 text-muted-foreground">
+          <History className="w-12 h-12 mx-auto mb-3 opacity-50" />
+          <p>Nessun utilizzo registrato</p>
+        </div>
+      )}
+    </div>
+  );
+
+  const CancelDialog = () => (
+    <Dialog open={isCancelDialogOpen} onOpenChange={setIsCancelDialogOpen}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle className="flex items-center gap-2">
+            <XCircle className="w-5 h-5 text-red-500" />
+            Annulla Abbonamento
+          </DialogTitle>
+          <DialogDescription>
+            Stai per annullare l'abbonamento {selectedSubscription?.subscriptionCode}. 
+            Seleziona il motivo dell'annullamento.
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <label className="text-sm font-medium">Motivo Annullamento</label>
+            <Select value={cancelReasonCode} onValueChange={setCancelReasonCode}>
+              <SelectTrigger data-testid="select-cancel-reason">
+                <SelectValue placeholder="Seleziona motivo" />
+              </SelectTrigger>
+              <SelectContent>
+                {CANCEL_REASON_CODES.map((reason) => (
+                  <SelectItem key={reason.value} value={reason.value}>
+                    {reason.value} - {reason.label}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <DialogFooter>
+          <Button variant="outline" onClick={() => setIsCancelDialogOpen(false)}>
+            Annulla
+          </Button>
+          <Button 
+            variant="destructive" 
+            onClick={handleCancelSubscription}
+            disabled={!cancelReasonCode || cancelSubscriptionMutation.isPending}
+            data-testid="button-confirm-cancel"
+          >
+            {cancelSubscriptionMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+            Conferma Annullamento
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 
   const header = (
@@ -313,12 +513,42 @@ export default function SiaeSubscriptionsPage() {
 
         <Card>
           <CardHeader>
-            <div className="flex items-center justify-between gap-4">
+            <div className="flex items-center justify-between gap-4 flex-wrap">
               <div>
                 <CardTitle>Elenco Abbonamenti</CardTitle>
                 <CardDescription>Gestisci tutti gli abbonamenti registrati</CardDescription>
               </div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                {isSuperAdmin && (
+                  <Select value={companyFilter} onValueChange={setCompanyFilter}>
+                    <SelectTrigger className="w-48" data-testid="filter-company">
+                      <Building2 className="w-4 h-4 mr-2" />
+                      <SelectValue placeholder="Gestore" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tutti i Gestori</SelectItem>
+                      {companies?.map((company) => (
+                        <SelectItem key={company.id} value={company.id}>
+                          {company.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                )}
+                <Select value={eventFilter} onValueChange={setEventFilter}>
+                  <SelectTrigger className="w-48" data-testid="filter-event">
+                    <Ticket className="w-4 h-4 mr-2" />
+                    <SelectValue placeholder="Evento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tutti gli Eventi</SelectItem>
+                    {ticketedEvents?.map((event) => (
+                      <SelectItem key={event.id} value={event.id}>
+                        {event.eventName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                   <Input
@@ -369,6 +599,7 @@ export default function SiaeSubscriptionsPage() {
                     <TableHead>Codice</TableHead>
                     {isSuperAdmin && <TableHead>Azienda</TableHead>}
                     <TableHead>Intestatario</TableHead>
+                    <TableHead>Evento</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Eventi</TableHead>
                     <TableHead>Validità</TableHead>
@@ -388,6 +619,13 @@ export default function SiaeSubscriptionsPage() {
                       )}
                       <TableCell className="font-medium">
                         {subscription.holderFirstName} {subscription.holderLastName}
+                      </TableCell>
+                      <TableCell>
+                        {'eventName' in subscription && subscription.eventName ? (
+                          <Badge variant="outline" className="font-normal">
+                            {subscription.eventName}
+                          </Badge>
+                        ) : '-'}
                       </TableCell>
                       <TableCell>{subscription.turnType === "F" ? "Fisso" : "Libero"}</TableCell>
                       <TableCell>{subscription.eventsUsed}/{subscription.eventsCount}</TableCell>
@@ -575,46 +813,73 @@ export default function SiaeSubscriptionsPage() {
               <DialogDescription>Informazioni complete sull'abbonamento</DialogDescription>
             </DialogHeader>
             {selectedSubscription && (
-              <div className="space-y-4">
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Codice</span>
-                  <span className="font-mono font-medium">{selectedSubscription.subscriptionCode}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Intestatario</span>
-                  <span className="font-medium">{selectedSubscription.holderFirstName} {selectedSubscription.holderLastName}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Tipo Turno</span>
-                  <span>{selectedSubscription.turnType === "F" ? "Fisso" : "Libero"}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Eventi</span>
-                  <span>{selectedSubscription.eventsUsed}/{selectedSubscription.eventsCount}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Validità</span>
-                  <span>
-                    {selectedSubscription.validFrom && format(new Date(selectedSubscription.validFrom), "dd/MM/yyyy", { locale: it })} - {selectedSubscription.validTo && format(new Date(selectedSubscription.validTo), "dd/MM/yyyy", { locale: it })}
-                  </span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Importo</span>
-                  <span className="text-[#FFD700] font-semibold">€{Number(selectedSubscription.totalAmount).toFixed(2)}</span>
-                </div>
-                <div className="flex items-center justify-between">
-                  <span className="text-muted-foreground">Stato</span>
-                  {getStatusBadge(selectedSubscription.status)}
-                </div>
-              </div>
+              <Tabs value={detailTab} onValueChange={setDetailTab}>
+                <TabsList className="grid w-full grid-cols-2">
+                  <TabsTrigger value="info">Informazioni</TabsTrigger>
+                  <TabsTrigger value="usage">Utilizzi</TabsTrigger>
+                </TabsList>
+                <TabsContent value="info" className="space-y-4 mt-4">
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Codice</span>
+                    <span className="font-mono font-medium">{selectedSubscription.subscriptionCode}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Intestatario</span>
+                    <span className="font-medium">{selectedSubscription.holderFirstName} {selectedSubscription.holderLastName}</span>
+                  </div>
+                  {'eventName' in selectedSubscription && selectedSubscription.eventName && (
+                    <div className="flex items-center justify-between">
+                      <span className="text-muted-foreground">Evento</span>
+                      <Badge variant="outline">{selectedSubscription.eventName}</Badge>
+                    </div>
+                  )}
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Tipo Turno</span>
+                    <span>{selectedSubscription.turnType === "F" ? "Fisso" : "Libero"}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Eventi</span>
+                    <span>{selectedSubscription.eventsUsed}/{selectedSubscription.eventsCount} ({selectedSubscription.eventsCount - selectedSubscription.eventsUsed} rimanenti)</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Validità</span>
+                    <span>
+                      {selectedSubscription.validFrom && format(new Date(selectedSubscription.validFrom), "dd/MM/yyyy", { locale: it })} - {selectedSubscription.validTo && format(new Date(selectedSubscription.validTo), "dd/MM/yyyy", { locale: it })}
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Importo</span>
+                    <span className="text-[#FFD700] font-semibold">€{Number(selectedSubscription.totalAmount).toFixed(2)}</span>
+                  </div>
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">Stato</span>
+                    {getStatusBadge(selectedSubscription.status)}
+                  </div>
+                </TabsContent>
+                <TabsContent value="usage" className="mt-4">
+                  <UsageHistorySection />
+                </TabsContent>
+              </Tabs>
             )}
-            <DialogFooter>
+            <DialogFooter className="gap-2">
+              {selectedSubscription?.status === "active" && (
+                <Button 
+                  variant="destructive" 
+                  onClick={() => setIsCancelDialogOpen(true)}
+                  data-testid="button-cancel-subscription"
+                >
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Annulla
+                </Button>
+              )}
               <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
                 Chiudi
               </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
+
+        <CancelDialog />
       </div>
     );
   }
@@ -711,7 +976,7 @@ export default function SiaeSubscriptionsPage() {
           </div>
         </motion.div>
 
-        {isLoading ? (
+        {currentLoading ? (
           <div className="space-y-3">
             {[1, 2, 3].map((i) => (
               <motion.div
@@ -1004,104 +1269,138 @@ export default function SiaeSubscriptionsPage() {
       >
         {selectedSubscription && (
           <div className="p-4 pb-8 space-y-4" data-testid="sheet-detail">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={springTransition}
-              className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-br from-[#FFD700]/10 to-transparent border border-[#FFD700]/20"
-            >
-              <div className="w-16 h-16 rounded-xl bg-[#FFD700]/20 flex items-center justify-center">
-                <CreditCard className="w-8 h-8 text-[#FFD700]" />
-              </div>
-              <div className="flex-1">
-                <div className="text-xl font-bold">
-                  {selectedSubscription.holderFirstName} {selectedSubscription.holderLastName}
-                </div>
-                <div className="text-sm text-muted-foreground font-mono">
-                  {selectedSubscription.subscriptionCode}
-                </div>
-              </div>
-              {getStatusBadge(selectedSubscription.status)}
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ ...springTransition, delay: 0.1 }}
-              className="grid grid-cols-2 gap-3"
-            >
-              <Card className="glass-card">
-                <CardContent className="p-4 text-center">
-                  <div className="text-3xl font-bold text-[#FFD700]">
-                    €{Number(selectedSubscription.totalAmount).toFixed(2)}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">Importo</div>
-                </CardContent>
-              </Card>
-              <Card className="glass-card">
-                <CardContent className="p-4 text-center">
-                  <div className="text-3xl font-bold">
-                    {selectedSubscription.eventsUsed}/{selectedSubscription.eventsCount}
-                  </div>
-                  <div className="text-xs text-muted-foreground mt-1">Eventi Usati</div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ ...springTransition, delay: 0.15 }}
-              className="space-y-1"
-            >
-              <Card className="glass-card">
-                <CardContent className="p-0 divide-y divide-border/50">
-                  <div className="flex justify-between items-center p-4 min-h-[52px]">
-                    <span className="text-muted-foreground">Tipo Turno</span>
-                    <span className="font-medium">{selectedSubscription.turnType === "F" ? "Fisso" : "Libero"}</span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 min-h-[52px]">
-                    <span className="text-muted-foreground">Data Inizio</span>
-                    <span className="font-medium">
-                      {selectedSubscription.validFrom && format(new Date(selectedSubscription.validFrom), "dd MMMM yyyy", { locale: it })}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 min-h-[52px]">
-                    <span className="text-muted-foreground">Data Fine</span>
-                    <span className="font-medium">
-                      {selectedSubscription.validTo && format(new Date(selectedSubscription.validTo), "dd MMMM yyyy", { locale: it })}
-                    </span>
-                  </div>
-                  <div className="flex justify-between items-center p-4 min-h-[52px]">
-                    <span className="text-muted-foreground">Creato il</span>
-                    <span className="font-medium">
-                      {selectedSubscription.createdAt && format(new Date(selectedSubscription.createdAt), "dd/MM/yyyy HH:mm", { locale: it })}
-                    </span>
-                  </div>
-                </CardContent>
-              </Card>
-            </motion.div>
-
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ ...springTransition, delay: 0.2 }}
-            >
-              <div className="h-2 w-full bg-muted/30 rounded-full overflow-hidden">
+            <Tabs value={detailTab} onValueChange={setDetailTab}>
+              <TabsList className="grid w-full grid-cols-2">
+                <TabsTrigger value="info">Info</TabsTrigger>
+                <TabsTrigger value="usage">Utilizzi</TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="info" className="space-y-4 mt-4">
                 <motion.div
-                  initial={{ width: 0 }}
-                  animate={{ width: `${(selectedSubscription.eventsUsed / selectedSubscription.eventsCount) * 100}%` }}
-                  transition={{ ...springTransition, delay: 0.3 }}
-                  className="h-full bg-gradient-to-r from-[#FFD700] to-emerald-500 rounded-full"
-                />
-              </div>
-              <div className="text-center text-xs text-muted-foreground mt-2">
-                {selectedSubscription.eventsCount - selectedSubscription.eventsUsed} eventi rimanenti
-              </div>
-            </motion.div>
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={springTransition}
+                  className="flex items-center gap-4 p-4 rounded-2xl bg-gradient-to-br from-[#FFD700]/10 to-transparent border border-[#FFD700]/20"
+                >
+                  <div className="w-16 h-16 rounded-xl bg-[#FFD700]/20 flex items-center justify-center">
+                    <CreditCard className="w-8 h-8 text-[#FFD700]" />
+                  </div>
+                  <div className="flex-1">
+                    <div className="text-xl font-bold">
+                      {selectedSubscription.holderFirstName} {selectedSubscription.holderLastName}
+                    </div>
+                    <div className="text-sm text-muted-foreground font-mono">
+                      {selectedSubscription.subscriptionCode}
+                    </div>
+                  </div>
+                  {getStatusBadge(selectedSubscription.status)}
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ ...springTransition, delay: 0.1 }}
+                  className="grid grid-cols-2 gap-3"
+                >
+                  <Card className="glass-card">
+                    <CardContent className="p-4 text-center">
+                      <div className="text-3xl font-bold text-[#FFD700]">
+                        €{Number(selectedSubscription.totalAmount).toFixed(2)}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">Importo</div>
+                    </CardContent>
+                  </Card>
+                  <Card className="glass-card">
+                    <CardContent className="p-4 text-center">
+                      <div className="text-3xl font-bold">
+                        {selectedSubscription.eventsUsed}/{selectedSubscription.eventsCount}
+                      </div>
+                      <div className="text-xs text-muted-foreground mt-1">Eventi Usati</div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ ...springTransition, delay: 0.15 }}
+                  className="space-y-1"
+                >
+                  <Card className="glass-card">
+                    <CardContent className="p-0 divide-y divide-border/50">
+                      <div className="flex justify-between items-center p-4 min-h-[52px]">
+                        <span className="text-muted-foreground">Tipo Turno</span>
+                        <span className="font-medium">{selectedSubscription.turnType === "F" ? "Fisso" : "Libero"}</span>
+                      </div>
+                      <div className="flex justify-between items-center p-4 min-h-[52px]">
+                        <span className="text-muted-foreground">Data Inizio</span>
+                        <span className="font-medium">
+                          {selectedSubscription.validFrom && format(new Date(selectedSubscription.validFrom), "dd MMMM yyyy", { locale: it })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-4 min-h-[52px]">
+                        <span className="text-muted-foreground">Data Fine</span>
+                        <span className="font-medium">
+                          {selectedSubscription.validTo && format(new Date(selectedSubscription.validTo), "dd MMMM yyyy", { locale: it })}
+                        </span>
+                      </div>
+                      <div className="flex justify-between items-center p-4 min-h-[52px]">
+                        <span className="text-muted-foreground">Creato il</span>
+                        <span className="font-medium">
+                          {selectedSubscription.createdAt && format(new Date(selectedSubscription.createdAt), "dd/MM/yyyy HH:mm", { locale: it })}
+                        </span>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </motion.div>
+
+                <motion.div
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ ...springTransition, delay: 0.2 }}
+                >
+                  <div className="h-2 w-full bg-muted/30 rounded-full overflow-hidden">
+                    <motion.div
+                      initial={{ width: 0 }}
+                      animate={{ width: `${(selectedSubscription.eventsUsed / selectedSubscription.eventsCount) * 100}%` }}
+                      transition={{ ...springTransition, delay: 0.3 }}
+                      className="h-full bg-gradient-to-r from-[#FFD700] to-emerald-500 rounded-full"
+                    />
+                  </div>
+                  <div className="text-center text-xs text-muted-foreground mt-2">
+                    {selectedSubscription.eventsCount - selectedSubscription.eventsUsed} eventi rimanenti
+                  </div>
+                </motion.div>
+
+                {selectedSubscription.status === "active" && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ ...springTransition, delay: 0.25 }}
+                  >
+                    <HapticButton
+                      variant="destructive"
+                      className="w-full min-h-[48px]"
+                      onClick={() => setIsCancelDialogOpen(true)}
+                      hapticType="medium"
+                      data-testid="button-cancel-subscription"
+                    >
+                      <XCircle className="w-5 h-5 mr-2" />
+                      Annulla Abbonamento
+                    </HapticButton>
+                  </motion.div>
+                )}
+              </TabsContent>
+
+              <TabsContent value="usage" className="mt-4">
+                <UsageHistorySection />
+              </TabsContent>
+            </Tabs>
           </div>
         )}
       </BottomSheet>
+
+      <CancelDialog />
     </MobileAppLayout>
   );
 }
