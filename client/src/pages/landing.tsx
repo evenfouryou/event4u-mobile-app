@@ -111,6 +111,9 @@ export default function Landing() {
                 <Link href="/acquista" className="text-muted-foreground hover-elevate px-3 py-2 rounded-md" data-testid="link-nav-events">
                   Eventi
                 </Link>
+                <Link href="/rivendite" className="text-muted-foreground hover-elevate px-3 py-2 rounded-md" data-testid="link-nav-resales">
+                  Rivendite
+                </Link>
                 <Link href="/locali" className="text-muted-foreground hover-elevate px-3 py-2 rounded-md" data-testid="link-nav-venues">
                   Locali
                 </Link>
@@ -317,6 +320,9 @@ export default function Landing() {
               <div className="flex items-center gap-8">
                 <Link href="/acquista" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-footer-events-desktop">
                   Eventi
+                </Link>
+                <Link href="/rivendite" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-footer-resales-desktop">
+                  Rivendite
                 </Link>
                 <Link href="/locali" className="text-muted-foreground hover:text-foreground transition-colors" data-testid="link-footer-venues-desktop">
                   Locali
@@ -612,7 +618,7 @@ export default function Landing() {
         <div className="flex flex-col items-center gap-8">
           <BrandLogo variant="horizontal" className="h-8 w-auto" />
           
-          <div className="flex items-center gap-8">
+          <div className="flex items-center gap-6">
             <Link 
               href="/acquista" 
               className="text-base text-muted-foreground min-h-[48px] min-w-[48px] flex items-center justify-center" 
@@ -620,6 +626,14 @@ export default function Landing() {
               onClick={handleLinkPress}
             >
               Eventi
+            </Link>
+            <Link 
+              href="/rivendite" 
+              className="text-base text-muted-foreground min-h-[48px] min-w-[48px] flex items-center justify-center" 
+              data-testid="link-footer-resales"
+              onClick={handleLinkPress}
+            >
+              Rivendite
             </Link>
             <Link 
               href="/locali" 
