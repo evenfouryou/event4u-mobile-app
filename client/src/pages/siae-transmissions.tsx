@@ -844,11 +844,11 @@ export default function SiaeTransmissionsPage() {
                   <Form {...settingsForm}>
                     <form onSubmit={settingsForm.handleSubmit(onSettingsSubmit)} className="space-y-6">
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {/* RCA Giornaliero Settings */}
+                        {/* RMG Giornaliero Settings */}
                         <div className="space-y-4 p-4 rounded-lg border bg-blue-500/5">
                           <div className="flex items-center gap-2">
                             <Clock className="h-4 w-4 text-blue-500" />
-                            <h4 className="font-medium text-sm">RCA Giornaliero</h4>
+                            <h4 className="font-medium text-sm">RMG - Giornaliero</h4>
                           </div>
                           <p className="text-xs text-muted-foreground">
                             Trasmissione automatica per eventi conclusi (DataRiepilogo: AAAAMMGG)
@@ -929,11 +929,11 @@ export default function SiaeTransmissionsPage() {
                           </div>
                         </div>
 
-                        {/* RCA Mensile Settings */}
+                        {/* RPM Mensile Settings */}
                         <div className="space-y-4 p-4 rounded-lg border bg-amber-500/5">
                           <div className="flex items-center gap-2">
                             <Calendar className="h-4 w-4 text-amber-500" />
-                            <h4 className="font-medium text-sm">RCA Mensile</h4>
+                            <h4 className="font-medium text-sm">RPM - Mensile</h4>
                           </div>
                           <p className="text-xs text-muted-foreground">
                             Trasmissione mensile aggregata (DataRiepilogo: AAAAMM01)
@@ -1383,14 +1383,14 @@ export default function SiaeTransmissionsPage() {
                   <SelectContent>
                     <SelectItem value="daily">
                       <div className="flex flex-col items-start">
-                        <span className="font-medium">RCA Giornaliero</span>
-                        <span className="text-xs text-muted-foreground">Riepilogo accessi per data evento</span>
+                        <span className="font-medium">RMG - Giornaliero</span>
+                        <span className="text-xs text-muted-foreground">Riepilogo Mensile Giornaliero (C1)</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="monthly">
                       <div className="flex flex-col items-start">
-                        <span className="font-medium">RCA Mensile</span>
-                        <span className="text-xs text-muted-foreground">Riepilogo accessi per mese</span>
+                        <span className="font-medium">RPM - Mensile</span>
+                        <span className="text-xs text-muted-foreground">Riepilogo Periodico Mensile (C1)</span>
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -1406,7 +1406,7 @@ export default function SiaeTransmissionsPage() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
                       <Calendar className="w-4 h-4" />
-                      <span className="font-medium text-sm">RCA Mensile</span>
+                      <span className="font-medium text-sm">RPM - Mensile</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Riepilogo Controllo Accessi con DataRiepilogo impostata al mese selezionato.
@@ -1417,7 +1417,7 @@ export default function SiaeTransmissionsPage() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400">
                       <Clock className="w-4 h-4" />
-                      <span className="font-medium text-sm">RCA Giornaliero</span>
+                      <span className="font-medium text-sm">RMG - Giornaliero</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Riepilogo Controllo Accessi con DataRiepilogo impostata alla data evento.
@@ -1517,7 +1517,7 @@ export default function SiaeTransmissionsPage() {
                 data-testid="button-send-c1-submit"
               >
                 {sendC1Mutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {c1Type === 'monthly' ? 'Invia RCA Mensile' : 'Invia RCA Giornaliero'}
+                {c1Type === 'monthly' ? 'Invia RPM Mensile' : 'Invia RMG Giornaliero'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -2527,8 +2527,8 @@ export default function SiaeTransmissionsPage() {
             </div>
             <p className="text-muted-foreground text-sm">
               {c1Type === 'monthly' 
-                ? "RCA Mensile - Riepilogo accessi per mese"
-                : "RCA Giornaliero - Riepilogo accessi per data"}
+                ? "RPM - Riepilogo Periodico Mensile (C1)"
+                : "RMG - Riepilogo Mensile Giornaliero (C1)"}
             </p>
           </div>
 
@@ -2540,8 +2540,8 @@ export default function SiaeTransmissionsPage() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="daily">RCA Giornaliero</SelectItem>
-                  <SelectItem value="monthly">RCA Mensile</SelectItem>
+                  <SelectItem value="daily">RMG - Giornaliero</SelectItem>
+                  <SelectItem value="monthly">RPM - Mensile</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -2652,7 +2652,7 @@ export default function SiaeTransmissionsPage() {
               data-testid="button-send-c1-confirm"
             >
               {sendC1Mutation.isPending && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
-              {c1Type === 'monthly' ? 'Invia RCA Mensile' : 'Invia RCA Giornaliero'}
+              {c1Type === 'monthly' ? 'Invia RPM Mensile' : 'Invia RMG Giornaliero'}
             </HapticButton>
           </div>
         </div>
