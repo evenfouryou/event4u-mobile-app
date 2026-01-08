@@ -29,6 +29,7 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
@@ -2478,15 +2479,30 @@ export default function PublicEventDetailPage() {
                   </Card>
                 )}
 
-                {/* Sectors list */}
+                {/* Tickets Tabs - New Tickets and Resale */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <Ticket className="w-5 h-5 text-primary" />
-                      Biglietti disponibili
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-4" data-testid="grid-sectors">
+                  <Tabs defaultValue="new-tickets" className="w-full">
+                    <CardHeader>
+                      <div className="flex flex-col gap-4">
+                        <CardTitle className="flex items-center gap-2">
+                          <Ticket className="w-5 h-5 text-primary" />
+                          Acquista Biglietti
+                        </CardTitle>
+                        <TabsList className="grid w-full grid-cols-2">
+                          <TabsTrigger value="new-tickets" data-testid="tab-new-tickets" className="flex items-center gap-2">
+                            <Ticket className="w-4 h-4" />
+                            Biglietti Nuovi
+                          </TabsTrigger>
+                          <TabsTrigger value="resale" data-testid="tab-resale" className="flex items-center gap-2">
+                            <RefreshCw className="w-4 h-4" />
+                            Rivendite
+                          </TabsTrigger>
+                        </TabsList>
+                      </div>
+                    </CardHeader>
+                    
+                    <TabsContent value="new-tickets">
+                      <CardContent className="space-y-4" data-testid="grid-sectors">
                     {event.sectors.length === 0 ? (
                       <div className="text-center py-8">
                         <Ticket className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
@@ -2708,13 +2724,18 @@ export default function PublicEventDetailPage() {
                         );
                       })
                     )}
-                  </CardContent>
-                </Card>
+                      </CardContent>
+                    </TabsContent>
 
-                {/* Resale Marketplace - Secondary ticketing */}
-                {event && (
-                  <ResaleMarketplace eventId={event.id} isAuthenticated={isCustomerAuthenticated} />
-                )}
+                    <TabsContent value="resale">
+                      <CardContent>
+                        {event && (
+                          <ResaleMarketplace eventId={event.id} isAuthenticated={isCustomerAuthenticated} embedded />
+                        )}
+                      </CardContent>
+                    </TabsContent>
+                  </Tabs>
+                </Card>
 
                 {/* Subscriptions section - Desktop */}
                 {subscriptionTypes && subscriptionTypes.length > 0 && (

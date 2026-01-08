@@ -42,9 +42,10 @@ interface ResaleItem {
 interface ResaleMarketplaceProps {
   eventId: string;
   isAuthenticated: boolean;
+  embedded?: boolean;
 }
 
-export function ResaleMarketplace({ eventId, isAuthenticated }: ResaleMarketplaceProps) {
+export function ResaleMarketplace({ eventId, isAuthenticated, embedded = false }: ResaleMarketplaceProps) {
   const { toast } = useToast();
   const [selectedResale, setSelectedResale] = useState<ResaleItem | null>(null);
   const [showPurchaseDialog, setShowPurchaseDialog] = useState(false);
@@ -104,6 +105,14 @@ export function ResaleMarketplace({ eventId, isAuthenticated }: ResaleMarketplac
   const resales = data?.resales || [];
   
   if (isLoading) {
+    if (embedded) {
+      return (
+        <div className="space-y-3">
+          <Skeleton className="h-20 w-full" />
+          <Skeleton className="h-20 w-full" />
+        </div>
+      );
+    }
     return (
       <Card>
         <CardHeader>
@@ -121,7 +130,191 @@ export function ResaleMarketplace({ eventId, isAuthenticated }: ResaleMarketplac
   }
   
   if (resales.length === 0) {
+    if (embedded) {
+      return (
+        <div className="text-center py-8">
+          <RefreshCw className="w-12 h-12 mx-auto mb-3 text-muted-foreground" />
+          <h3 className="text-lg font-semibold text-foreground mb-2">Nessuna rivendita</h3>
+          <p className="text-sm text-muted-foreground">
+            Non ci sono biglietti in rivendita al momento.
+          </p>
+        </div>
+      );
+    }
     return null;
+  }
+  
+  const resaleList = (
+    <div className="space-y-3" data-testid="grid-resales">
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-muted-foreground">
+          Biglietti in vendita da altri utenti
+        </p>
+        <Badge className="bg-green-500/10 text-green-500 border-green-500/20">
+          <Shield className="w-3 h-3 mr-1" />
+          SIAE verificato
+        </Badge>
+      </div>
+      {resales.map((resale) => {
+        const originalPrice = parseFloat(resale.originalPrice);
+        const resalePrice = parseFloat(resale.resalePrice);
+        const discount = originalPrice > 0 
+          ? Math.round((1 - resalePrice / originalPrice) * 100)
+          : 0;
+        
+        return (
+          <div
+            key={resale.id}
+            className="p-4 rounded-xl border border-border hover-elevate transition-all"
+            data-testid={`card-resale-${resale.id}`}
+          >
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-green-400 to-emerald-500 flex items-center justify-center">
+                  <Ticket className="w-5 h-5 text-white" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-foreground" data-testid={`text-resale-sector-${resale.id}`}>
+                    {resale.sectorName}
+                  </h4>
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Tag className="w-3 h-3" />
+                    <span>{resale.ticketType}</span>
+                    <span className="text-xs">•</span>
+                    <Clock className="w-3 h-3" />
+                    <span>
+                      In vendita da {format(new Date(resale.listedAt), "d MMM", { locale: it })}
+                    </span>
+                  </div>
+                </div>
+              </div>
+              <div className="text-right flex items-center gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-2xl font-bold text-primary" data-testid={`text-resale-price-${resale.id}`}>
+                      €{resalePrice.toFixed(2)}
+                    </span>
+                    {discount > 0 && (
+                      <Badge className="bg-green-500 text-white border-0 text-xs">
+                        -{discount}%
+                      </Badge>
+                    )}
+                  </div>
+                  {originalPrice !== resalePrice && (
+                    <p className="text-xs text-muted-foreground line-through">
+                      Originale: €{originalPrice.toFixed(2)}
+                    </p>
+                  )}
+                </div>
+                <Button
+                  size="sm"
+                  onClick={() => handlePurchaseClick(resale)}
+                  data-testid={`button-buy-resale-${resale.id}`}
+                >
+                  <ShoppingCart className="w-4 h-4 mr-1" />
+                  Acquista
+                </Button>
+              </div>
+            </div>
+          </div>
+        );
+      })}
+      
+      <div className="pt-2 text-center">
+        <Button
+          variant="ghost"
+          size="sm"
+          onClick={() => refetch()}
+          className="text-muted-foreground"
+          data-testid="button-refresh-resales"
+        >
+          <RefreshCw className="w-4 h-4 mr-2" />
+          Aggiorna lista
+        </Button>
+      </div>
+    </div>
+  );
+  
+  if (embedded) {
+    return (
+      <>
+        {resaleList}
+        <Dialog open={showPurchaseDialog} onOpenChange={setShowPurchaseDialog}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <ShoppingCart className="w-5 h-5" />
+                Conferma acquisto rivendita
+              </DialogTitle>
+              <DialogDescription>
+                Stai per acquistare un biglietto in rivendita
+              </DialogDescription>
+            </DialogHeader>
+            
+            {selectedResale && (
+              <div className="space-y-4 py-4">
+                <div className="p-4 rounded-lg bg-muted/50 space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Settore</span>
+                    <span className="font-medium">{selectedResale.sectorName}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Tipo</span>
+                    <span className="font-medium">{selectedResale.ticketType}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Prezzo</span>
+                    <span className="text-xl font-bold text-primary">
+                      €{parseFloat(selectedResale.resalePrice).toFixed(2)}
+                    </span>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-2 p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+                  <Shield className="w-5 h-5 text-green-500 mt-0.5" />
+                  <div className="text-sm">
+                    <p className="font-medium text-green-700 dark:text-green-400">
+                      Transazione protetta SIAE
+                    </p>
+                    <p className="text-muted-foreground">
+                      Il biglietto originale verrà annullato e ne verrà emesso uno nuovo a tuo nome.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+            
+            <DialogFooter>
+              <Button
+                variant="outline"
+                onClick={() => setShowPurchaseDialog(false)}
+                disabled={reserveMutation.isPending}
+                data-testid="button-cancel-resale"
+              >
+                Annulla
+              </Button>
+              <Button
+                onClick={handleConfirmPurchase}
+                disabled={reserveMutation.isPending}
+                data-testid="button-confirm-resale"
+              >
+                {reserveMutation.isPending ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Elaborazione...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="w-4 h-4 mr-2" />
+                    Procedi al pagamento
+                  </>
+                )}
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
+    );
   }
   
   return (
