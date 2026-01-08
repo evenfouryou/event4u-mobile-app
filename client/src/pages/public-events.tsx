@@ -516,6 +516,18 @@ export default function PublicEventsPage() {
               data-testid="input-search"
             />
           </div>
+          
+          <nav className="flex items-center gap-4 text-sm">
+            <Link href="/acquista" className="text-foreground font-medium border-b-2 border-primary pb-1">
+              Eventi
+            </Link>
+            <Link href="/rivendite" className="text-muted-foreground">
+              Rivendite
+            </Link>
+            <Link href="/locali" className="text-muted-foreground">
+              Locali
+            </Link>
+          </nav>
         </div>
       </motion.header>
 
