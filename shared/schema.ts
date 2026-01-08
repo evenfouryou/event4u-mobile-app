@@ -4741,6 +4741,7 @@ export const organizerCommissionProfiles = pgTable("organizer_commission_profile
   channelPrintedValue: decimal("channel_printed_value", { precision: 10, scale: 2 }).notNull().default('0'),
   channelPrType: varchar("channel_pr_type", { length: 20 }).notNull().default('percent'), // 'percent' | 'fixed'
   channelPrValue: decimal("channel_pr_value", { precision: 10, scale: 2 }).notNull().default('0'),
+  feePayer: varchar("fee_payer", { length: 20 }).notNull().default('organizer'), // 'customer' = added to cart, 'organizer' = deducted from payout
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
