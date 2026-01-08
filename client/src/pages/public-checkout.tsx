@@ -796,12 +796,13 @@ function CheckoutContent() {
             </h2>
           </div>
           <div className="p-4">
-            {!canProceedWithPayment && captchaData?.enabled ? (
-              <div className="flex flex-col items-center justify-center py-12 opacity-60">
-                <Lock className="w-10 h-10 text-muted-foreground mb-4" />
-                <p className="text-muted-foreground text-center">Completa la verifica CAPTCHA per sbloccare il pagamento</p>
+            {!canProceedWithPayment && captchaData?.enabled && (
+              <div className="flex items-center gap-2 p-3 mb-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                <ShieldCheck className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                <p className="text-sm text-amber-400">Completa la verifica CAPTCHA per procedere al pagamento</p>
               </div>
-            ) : (createPaymentIntent.isPending || (!createPaymentIntent.data && !createPaymentIntent.isError)) ? (
+            )}
+            {(createPaymentIntent.isPending || (!createPaymentIntent.data && !createPaymentIntent.isError)) ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
                 <p className="text-muted-foreground">Preparazione pagamento...</p>

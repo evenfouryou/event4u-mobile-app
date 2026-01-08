@@ -10,6 +10,7 @@ import {
   isCardReadyForSeals,
   ensureCardReadyForSeals,
   isBridgeConnected,
+  getCachedBridgeStatus,
   getCachedEfffData,
   type FiscalSealData 
 } from "./bridge-relay";
@@ -3789,10 +3790,17 @@ router.post("/api/public/account/name-change", async (req, res) => {
         ticketedEventId: siaeTickets.ticketedEventId,
         customerId: siaeTickets.customerId,
         ticketPrice: siaeTickets.ticketPrice,
+        grossAmount: siaeTickets.grossAmount,
         participantFirstName: siaeTickets.participantFirstName,
         participantLastName: siaeTickets.participantLastName,
+        sectorId: siaeTickets.sectorId,
+        transactionId: siaeTickets.transactionId,
+        ticketTypeCode: siaeTickets.ticketTypeCode,
+        sectorCode: siaeTickets.sectorCode,
         allowsChangeName: siaeTicketedEvents.allowsChangeName,
         nameChangeFee: siaeTicketedEvents.nameChangeFee,
+        autoApproveNameChanges: siaeTicketedEvents.autoApproveNameChanges,
+        siaeEventCode: siaeTicketedEvents.siaeEventCode,
         eventStart: events.startDatetime,
       })
       .from(siaeTickets)
@@ -3849,15 +3857,133 @@ router.post("/api/public/account/name-change", async (req, res) => {
       })
       .returning();
 
-    console.log("[PUBLIC] Name change request created:", nameChange.id, "fee:", fee, "paymentStatus:", paymentStatus);
+    console.log("[PUBLIC] Name change request created:", nameChange.id, "fee:", fee, "paymentStatus:", paymentStatus, "autoApprove:", ticket.autoApproveNameChanges);
+    
+    // Auto-approvazione se abilitata e nessuna fee richiesta
+    if (ticket.autoApproveNameChanges && fee === 0) {
+      console.log("[PUBLIC] Auto-approval enabled, checking bridge status...");
+      const bridgeStatus = getCachedBridgeStatus();
+      
+      if (bridgeStatus.bridgeConnected && bridgeStatus.cardInserted) {
+        try {
+          // Request fiscal seal for new ticket
+          const priceInCents = Math.round(Number(ticket.grossAmount || ticket.ticketPrice || 0) * 100);
+          console.log(`[PUBLIC] Auto-approving name change ${nameChange.id}, requesting seal for ${priceInCents} cents`);
+          const sealData = await requestFiscalSeal(priceInCents);
+          
+          // Process the name change in a transaction
+          const result = await db.transaction(async (tx) => {
+            // Mark original ticket as replaced
+            await tx.update(siaeTickets)
+              .set({
+                status: 'replaced',
+                cancellationReasonCode: 'CN', // Cambio Nominativo
+                cancellationDate: new Date(),
+                updatedAt: new Date()
+              })
+              .where(eq(siaeTickets.id, ticketId));
+            
+            // Get next progressive number
+            const [{ maxProgress }] = await tx
+              .select({ maxProgress: sql<number>`COALESCE(MAX(progressive_number), 0)` })
+              .from(siaeTickets)
+              .where(eq(siaeTickets.ticketedEventId, ticket.ticketedEventId));
+            const newProgressiveNumber = (maxProgress || 0) + 1;
+            
+            // Generate new ticket code
+            const newTicketCode = `${ticket.siaeEventCode || 'TKT'}-NC-${newProgressiveNumber.toString().padStart(6, '0')}`;
+            
+            // Get original ticket full data for copying
+            const [originalTicket] = await tx.select().from(siaeTickets).where(eq(siaeTickets.id, ticketId));
+            
+            // Create new ticket with new holder data (keep original customerId for ownership)
+            const [newTicket] = await tx.insert(siaeTickets)
+              .values({
+                ticketedEventId: originalTicket!.ticketedEventId,
+                sectorId: originalTicket!.sectorId,
+                transactionId: originalTicket?.transactionId,
+                customerId: originalTicket?.customerId || customer.id, // Preserve original ownership
+                fiscalSealCode: sealData.sealCode,
+                fiscalSealCounter: sealData.counter,
+                progressiveNumber: newProgressiveNumber,
+                cardCode: sealData.serialNumber,
+                emissionDate: new Date(),
+                emissionDateStr: new Date().toISOString().slice(0, 10).replace(/-/g, ''),
+                emissionTimeStr: new Date().toTimeString().slice(0, 5).replace(':', ''),
+                ticketTypeCode: originalTicket!.ticketTypeCode,
+                sectorCode: originalTicket!.sectorCode,
+                ticketCode: newTicketCode,
+                ticketType: originalTicket?.ticketType,
+                ticketPrice: originalTicket?.ticketPrice,
+                seatId: originalTicket?.seatId,
+                row: originalTicket?.row,
+                seatNumber: originalTicket?.seatNumber,
+                grossAmount: originalTicket?.grossAmount || '0',
+                netAmount: originalTicket?.netAmount,
+                vatAmount: originalTicket?.vatAmount,
+                prevendita: originalTicket?.prevendita,
+                prevenditaVat: originalTicket?.prevenditaVat,
+                participantFirstName: newFirstName,
+                participantLastName: newLastName,
+                isComplimentary: originalTicket?.isComplimentary,
+                paymentMethod: 'name_change',
+                status: 'active',
+                originalTicketId: ticketId,
+                qrCode: `SIAE-TKT-NC-${newProgressiveNumber}`,
+              })
+              .returning();
+            
+            // Update original ticket with replacement reference
+            await tx.update(siaeTickets)
+              .set({ replacedByTicketId: newTicket.id })
+              .where(eq(siaeTickets.id, ticketId));
+            
+            // Update name change request as completed
+            const [updatedNameChange] = await tx.update(siaeNameChanges)
+              .set({
+                status: 'completed',
+                newTicketId: newTicket.id,
+                processedAt: new Date(),
+                notes: 'Approvato automaticamente (auto-approval)',
+                updatedAt: new Date()
+              })
+              .where(eq(siaeNameChanges.id, nameChange.id))
+              .returning();
+            
+            return { newTicket, updatedNameChange };
+          });
+          
+          console.log(`[PUBLIC] Auto-approval completed for name change ${nameChange.id}, new ticket: ${result.newTicket.id}`);
+          
+          return res.json({
+            message: "Cambio nominativo completato automaticamente. Il nuovo biglietto è stato emesso.",
+            nameChangeId: nameChange.id,
+            newTicketId: result.newTicket.id,
+            fee: "0.00",
+            paymentStatus: 'not_required',
+            requiresPayment: false,
+            autoApproved: true,
+            status: 'completed'
+          });
+        } catch (autoApproveError: any) {
+          console.error("[PUBLIC] Auto-approval failed:", autoApproveError);
+          // Fall through to return pending status - will be processed manually
+        }
+      } else {
+        console.log("[PUBLIC] Bridge not ready for auto-approval, request will be pending");
+      }
+    }
+    
     res.json({ 
       message: fee > 0 
         ? "Richiesta creata. Per completare il cambio nominativo è richiesto il pagamento della commissione."
-        : "Richiesta cambio nominativo inviata",
+        : "Richiesta cambio nominativo inviata. Sarà processata a breve.",
       nameChangeId: nameChange.id,
       fee: fee.toFixed(2),
       paymentStatus,
       requiresPayment: fee > 0,
+      autoApproved: false,
+      status: 'pending'
     });
   } catch (error: any) {
     console.error("[PUBLIC] Name change error:", error);
@@ -4011,10 +4137,143 @@ router.post("/api/public/account/name-change/:id/pay/confirm", async (req, res) 
       .returning();
 
     console.log("[PUBLIC] Name change fee paid:", id, "paymentIntentId:", paymentIntentId);
+    
+    // Check if auto-approval is enabled for this event
+    const [ticketInfo] = await db
+      .select({
+        ticketId: siaeTickets.id,
+        ticketedEventId: siaeTickets.ticketedEventId,
+        ticketPrice: siaeTickets.ticketPrice,
+        grossAmount: siaeTickets.grossAmount,
+        sectorId: siaeTickets.sectorId,
+        transactionId: siaeTickets.transactionId,
+        ticketTypeCode: siaeTickets.ticketTypeCode,
+        sectorCode: siaeTickets.sectorCode,
+        participantFirstName: siaeTickets.participantFirstName,
+        participantLastName: siaeTickets.participantLastName,
+        autoApproveNameChanges: siaeTicketedEvents.autoApproveNameChanges,
+        siaeEventCode: siaeTicketedEvents.siaeEventCode,
+      })
+      .from(siaeTickets)
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .where(eq(siaeTickets.id, nameChange.originalTicketId));
+    
+    if (ticketInfo?.autoApproveNameChanges) {
+      console.log("[PUBLIC] Auto-approval enabled after payment, checking bridge status...");
+      const bridgeStatus = getCachedBridgeStatus();
+      
+      if (bridgeStatus.bridgeConnected && bridgeStatus.cardInserted) {
+        try {
+          // Request fiscal seal for new ticket
+          const priceInCents = Math.round(Number(ticketInfo.grossAmount || ticketInfo.ticketPrice || 0) * 100);
+          console.log(`[PUBLIC] Auto-approving name change ${id} after payment, requesting seal for ${priceInCents} cents`);
+          const sealData = await requestFiscalSeal(priceInCents);
+          
+          // Process the name change in a transaction
+          const result = await db.transaction(async (tx) => {
+            // Mark original ticket as replaced
+            await tx.update(siaeTickets)
+              .set({
+                status: 'replaced',
+                cancellationReasonCode: 'CN',
+                cancellationDate: new Date(),
+                updatedAt: new Date()
+              })
+              .where(eq(siaeTickets.id, nameChange.originalTicketId));
+            
+            // Get next progressive number
+            const [{ maxProgress }] = await tx
+              .select({ maxProgress: sql<number>`COALESCE(MAX(progressive_number), 0)` })
+              .from(siaeTickets)
+              .where(eq(siaeTickets.ticketedEventId, ticketInfo.ticketedEventId));
+            const newProgressiveNumber = (maxProgress || 0) + 1;
+            
+            // Generate new ticket code
+            const newTicketCode = `${ticketInfo.siaeEventCode || 'TKT'}-NC-${newProgressiveNumber.toString().padStart(6, '0')}`;
+            
+            // Get original ticket full data
+            const [originalTicket] = await tx.select().from(siaeTickets).where(eq(siaeTickets.id, nameChange.originalTicketId));
+            
+            // Create new ticket with new holder data (use full original ticket data)
+            const [newTicket] = await tx.insert(siaeTickets)
+              .values({
+                ticketedEventId: originalTicket!.ticketedEventId,
+                sectorId: originalTicket!.sectorId,
+                transactionId: originalTicket?.transactionId,
+                customerId: originalTicket?.customerId || customer.id, // Preserve original ownership
+                fiscalSealCode: sealData.sealCode,
+                fiscalSealCounter: sealData.counter,
+                progressiveNumber: newProgressiveNumber,
+                cardCode: sealData.serialNumber,
+                emissionDate: new Date(),
+                emissionDateStr: new Date().toISOString().slice(0, 10).replace(/-/g, ''),
+                emissionTimeStr: new Date().toTimeString().slice(0, 5).replace(':', ''),
+                ticketTypeCode: originalTicket!.ticketTypeCode,
+                sectorCode: originalTicket!.sectorCode,
+                ticketCode: newTicketCode,
+                ticketType: originalTicket?.ticketType,
+                ticketPrice: originalTicket?.ticketPrice,
+                seatId: originalTicket?.seatId,
+                row: originalTicket?.row,
+                seatNumber: originalTicket?.seatNumber,
+                grossAmount: originalTicket?.grossAmount || '0',
+                netAmount: originalTicket?.netAmount,
+                vatAmount: originalTicket?.vatAmount,
+                prevendita: originalTicket?.prevendita,
+                prevenditaVat: originalTicket?.prevenditaVat,
+                participantFirstName: updated.newFirstName,
+                participantLastName: updated.newLastName,
+                isComplimentary: originalTicket?.isComplimentary,
+                paymentMethod: 'name_change',
+                status: 'active',
+                originalTicketId: nameChange.originalTicketId,
+                qrCode: `SIAE-TKT-NC-${newProgressiveNumber}`,
+              })
+              .returning();
+            
+            // Update original ticket with replacement reference
+            await tx.update(siaeTickets)
+              .set({ replacedByTicketId: newTicket.id })
+              .where(eq(siaeTickets.id, nameChange.originalTicketId));
+            
+            // Update name change request as completed
+            const [completedNameChange] = await tx.update(siaeNameChanges)
+              .set({
+                status: 'completed',
+                newTicketId: newTicket.id,
+                processedAt: new Date(),
+                notes: 'Approvato automaticamente dopo pagamento (auto-approval)',
+                updatedAt: new Date()
+              })
+              .where(eq(siaeNameChanges.id, id))
+              .returning();
+            
+            return { newTicket, completedNameChange };
+          });
+          
+          console.log(`[PUBLIC] Auto-approval after payment completed for ${id}, new ticket: ${result.newTicket.id}`);
+          
+          return res.json({
+            success: true,
+            message: "Pagamento confermato e cambio nominativo completato. Il nuovo biglietto è stato emesso.",
+            nameChange: result.completedNameChange,
+            newTicketId: result.newTicket.id,
+            autoApproved: true,
+          });
+        } catch (autoApproveError: any) {
+          console.error("[PUBLIC] Auto-approval after payment failed:", autoApproveError);
+          // Fall through to return pending status
+        }
+      } else {
+        console.log("[PUBLIC] Bridge not ready for auto-approval after payment");
+      }
+    }
+    
     res.json({
       success: true,
       message: "Pagamento confermato. La tua richiesta è ora in attesa di approvazione.",
       nameChange: updated,
+      autoApproved: false,
     });
   } catch (error: any) {
     console.error("[PUBLIC] Name change payment confirm error:", error);
