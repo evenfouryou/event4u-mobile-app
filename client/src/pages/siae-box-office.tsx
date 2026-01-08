@@ -38,6 +38,7 @@ import {
   DialogTitle,
   DialogFooter,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
   MobileAppLayout,
   MobileHeader,
@@ -61,12 +62,30 @@ import {
   ChevronRight,
   Plus,
   ArrowLeft,
+  Calendar,
 } from "lucide-react";
 
 interface AdminSession extends SiaeBoxOfficeSession {
   companyName: string | null;
   companyId: string | null;
   userName: string | null;
+}
+
+interface CashierSessionDetail {
+  id: string;
+  companyId: string;
+  eventId: string | null;
+  userId: string;
+  status: string;
+  openedAt: string | null;
+  closedAt: string | null;
+  ticketsIssued: number | null;
+  totalAmount: string | null;
+  notes: string | null;
+  userName: string | null;
+  eventName: string | null;
+  eventDate: string | null;
+  companyName: string | null;
 }
 
 const springConfig = { stiffness: 400, damping: 30 };
@@ -86,6 +105,7 @@ export default function SiaeBoxOfficePage() {
   const [selectedLocationId, setSelectedLocationId] = useState("");
   const [actualCash, setActualCash] = useState("");
   const [closeNotes, setCloseNotes] = useState("");
+  const [activeTab, setActiveTab] = useState("siae");
 
   const companyId = user?.companyId;
   const isSuperAdmin = user?.role === 'super_admin';
@@ -113,6 +133,11 @@ export default function SiaeBoxOfficePage() {
   const { data: locations } = useQuery<Location[]>({
     queryKey: ['/api/locations'],
     enabled: !!companyId && !isSuperAdmin,
+  });
+
+  const { data: cashierSessions, isLoading: isLoadingCashier } = useQuery<CashierSessionDetail[]>({
+    queryKey: ['/api/printers/admin/cashier/sessions'],
+    enabled: !!companyId || isSuperAdmin,
   });
 
   const openSessionMutation = useMutation({
@@ -396,168 +421,320 @@ export default function SiaeBoxOfficePage() {
           </Card>
         )}
 
-        <div className="grid grid-cols-4 gap-4">
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
-                <Play className="w-4 h-4 text-emerald-400" />
-                Aperte
-              </div>
-              <div className="text-3xl font-bold text-emerald-400" data-testid="stat-open">{stats.open}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
-                <Square className="w-4 h-4 text-blue-400" />
-                Chiuse
-              </div>
-              <div className="text-3xl font-bold text-blue-400" data-testid="stat-closed">{stats.closed}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
-                <Ticket className="w-4 h-4" />
-                Biglietti
-              </div>
-              <div className="text-3xl font-bold" data-testid="stat-tickets">{stats.totalTickets}</div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
-                <Banknote className="w-4 h-4 text-[#FFD700]" />
-                Incasso Totale
-              </div>
-              <div className="text-3xl font-bold text-[#FFD700]" data-testid="stat-cash">€{stats.totalCash.toFixed(0)}</div>
-            </CardContent>
-          </Card>
-        </div>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <TabsList>
+            <TabsTrigger value="siae" data-testid="tab-siae">
+              <Store className="w-4 h-4 mr-2" />
+              SIAE Box Office
+            </TabsTrigger>
+            <TabsTrigger value="cashier" data-testid="tab-cashier">
+              <Calendar className="w-4 h-4 mr-2" />
+              Cassieri Eventi
+            </TabsTrigger>
+          </TabsList>
 
-        <Card>
-          <CardContent className="p-0">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Stato</TableHead>
-                  {isSuperAdmin && <TableHead>Azienda</TableHead>}
-                  <TableHead>Operatore</TableHead>
-                  <TableHead>Apertura</TableHead>
-                  <TableHead>Chiusura</TableHead>
-                  <TableHead className="text-right">Biglietti</TableHead>
-                  <TableHead className="text-right">Contanti</TableHead>
-                  <TableHead className="text-right">Carte</TableHead>
-                  <TableHead className="text-right">Azioni</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {currentLoading ? (
-                  Array.from({ length: 5 }).map((_, i) => (
-                    <TableRow key={i}>
-                      <TableCell colSpan={isSuperAdmin ? 9 : 8}>
-                        <Skeleton className="h-8 w-full" />
-                      </TableCell>
+          <TabsContent value="siae" className="space-y-6">
+            <div className="grid grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                    <Play className="w-4 h-4 text-emerald-400" />
+                    Aperte
+                  </div>
+                  <div className="text-3xl font-bold text-emerald-400" data-testid="stat-open">{stats.open}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                    <Square className="w-4 h-4 text-blue-400" />
+                    Chiuse
+                  </div>
+                  <div className="text-3xl font-bold text-blue-400" data-testid="stat-closed">{stats.closed}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                    <Ticket className="w-4 h-4" />
+                    Biglietti
+                  </div>
+                  <div className="text-3xl font-bold" data-testid="stat-tickets">{stats.totalTickets}</div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                    <Banknote className="w-4 h-4 text-[#FFD700]" />
+                    Incasso Totale
+                  </div>
+                  <div className="text-3xl font-bold text-[#FFD700]" data-testid="stat-cash">€{stats.totalCash.toFixed(0)}</div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Stato</TableHead>
+                      {isSuperAdmin && <TableHead>Azienda</TableHead>}
+                      <TableHead>Operatore</TableHead>
+                      <TableHead>Apertura</TableHead>
+                      <TableHead>Chiusura</TableHead>
+                      <TableHead className="text-right">Biglietti</TableHead>
+                      <TableHead className="text-right">Contanti</TableHead>
+                      <TableHead className="text-right">Carte</TableHead>
+                      <TableHead className="text-right">Azioni</TableHead>
                     </TableRow>
-                  ))
-                ) : currentSessions?.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={isSuperAdmin ? 9 : 8} className="text-center py-12">
-                      <div className="flex flex-col items-center gap-4">
-                        <Store className="w-12 h-12 text-muted-foreground" />
-                        <div>
-                          <h3 className="font-semibold text-lg">Nessuna Sessione</h3>
-                          <p className="text-muted-foreground">
-                            {isSuperAdmin 
-                              ? "Non ci sono sessioni di cassa registrate"
-                              : "Apri la tua prima sessione di cassa"}
-                          </p>
-                        </div>
-                        {!isSuperAdmin && (
-                          <Button onClick={() => setIsOpenDialogOpen(true)}>
-                            <Play className="w-4 h-4 mr-2" />
-                            Apri Prima Sessione
-                          </Button>
-                        )}
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  currentSessions?.map((session) => (
-                    <TableRow key={session.id} data-testid={`row-session-${session.id}`}>
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          {getStatusBadge(session.status)}
-                          {session.status === "open" && (
-                            <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                          )}
-                        </div>
-                      </TableCell>
-                      {isSuperAdmin && (
-                        <TableCell>
-                          {'companyName' in session && session.companyName ? (
-                            <div className="flex items-center gap-2">
-                              <Building2 className="w-4 h-4 text-primary" />
-                              <span className="font-medium">{String(session.companyName)}</span>
+                  </TableHeader>
+                  <TableBody>
+                    {currentLoading ? (
+                      Array.from({ length: 5 }).map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell colSpan={isSuperAdmin ? 9 : 8}>
+                            <Skeleton className="h-8 w-full" />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : currentSessions?.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={isSuperAdmin ? 9 : 8} className="text-center py-12">
+                          <div className="flex flex-col items-center gap-4">
+                            <Store className="w-12 h-12 text-muted-foreground" />
+                            <div>
+                              <h3 className="font-semibold text-lg">Nessuna Sessione</h3>
+                              <p className="text-muted-foreground">
+                                {isSuperAdmin 
+                                  ? "Non ci sono sessioni di cassa registrate"
+                                  : "Apri la tua prima sessione di cassa"}
+                              </p>
                             </div>
-                          ) : '-'}
+                            {!isSuperAdmin && (
+                              <Button onClick={() => setIsOpenDialogOpen(true)}>
+                                <Play className="w-4 h-4 mr-2" />
+                                Apri Prima Sessione
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
-                      )}
-                      <TableCell>
-                        <div className="flex items-center gap-2">
-                          <User className="w-4 h-4 text-muted-foreground" />
-                          <span>
-                            {isSuperAdmin && 'userName' in session && session.userName 
-                              ? String(session.userName) 
-                              : `Operatore ${session.userId?.slice(0, 6)}...`}
-                          </span>
-                        </div>
-                      </TableCell>
-                      <TableCell>
-                        {session.openedAt && format(new Date(session.openedAt), "dd/MM/yyyy HH:mm", { locale: it })}
-                      </TableCell>
-                      <TableCell>
-                        {session.closedAt 
-                          ? format(new Date(session.closedAt), "dd/MM/yyyy HH:mm", { locale: it })
-                          : '-'}
-                      </TableCell>
-                      <TableCell className="text-right font-medium">{session.ticketsSold}</TableCell>
-                      <TableCell className="text-right font-bold text-[#FFD700]">
-                        €{Number(session.cashTotal || 0).toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        €{Number(session.cardTotal || 0).toFixed(2)}
-                      </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Button 
-                            variant="ghost" 
-                            size="icon"
-                            onClick={() => handleViewSessionDesktop(session)}
-                            data-testid={`button-view-${session.id}`}
-                          >
-                            <Eye className="w-4 h-4" />
-                          </Button>
-                          {!isSuperAdmin && session.status === "open" && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => handleCloseSessionDesktop(session)}
-                              data-testid={`button-close-${session.id}`}
-                            >
-                              <Square className="w-4 h-4 mr-1" />
-                              Chiudi
-                            </Button>
+                      </TableRow>
+                    ) : (
+                      currentSessions?.map((session) => (
+                        <TableRow key={session.id} data-testid={`row-session-${session.id}`}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {getStatusBadge(session.status)}
+                              {session.status === "open" && (
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                              )}
+                            </div>
+                          </TableCell>
+                          {isSuperAdmin && (
+                            <TableCell>
+                              {'companyName' in session && session.companyName ? (
+                                <div className="flex items-center gap-2">
+                                  <Building2 className="w-4 h-4 text-primary" />
+                                  <span className="font-medium">{String(session.companyName)}</span>
+                                </div>
+                              ) : '-'}
+                            </TableCell>
                           )}
-                        </div>
-                      </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4 text-muted-foreground" />
+                              <span>
+                                {isSuperAdmin && 'userName' in session && session.userName 
+                                  ? String(session.userName) 
+                                  : `Operatore ${session.userId?.slice(0, 6)}...`}
+                              </span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {session.openedAt && format(new Date(session.openedAt), "dd/MM/yyyy HH:mm", { locale: it })}
+                          </TableCell>
+                          <TableCell>
+                            {session.closedAt 
+                              ? format(new Date(session.closedAt), "dd/MM/yyyy HH:mm", { locale: it })
+                              : '-'}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">{session.ticketsSold}</TableCell>
+                          <TableCell className="text-right font-bold text-[#FFD700]">
+                            €{Number(session.cashTotal || 0).toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            €{Number(session.cardTotal || 0).toFixed(2)}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button 
+                                variant="ghost" 
+                                size="icon"
+                                onClick={() => handleViewSessionDesktop(session)}
+                                data-testid={`button-view-${session.id}`}
+                              >
+                                <Eye className="w-4 h-4" />
+                              </Button>
+                              {!isSuperAdmin && session.status === "open" && (
+                                <Button 
+                                  variant="outline" 
+                                  size="sm"
+                                  onClick={() => handleCloseSessionDesktop(session)}
+                                  data-testid={`button-close-${session.id}`}
+                                >
+                                  <Square className="w-4 h-4 mr-1" />
+                                  Chiudi
+                                </Button>
+                              )}
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+
+          <TabsContent value="cashier" className="space-y-6">
+            <div className="grid grid-cols-4 gap-4">
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                    <Play className="w-4 h-4 text-emerald-400" />
+                    Attive
+                  </div>
+                  <div className="text-3xl font-bold text-emerald-400" data-testid="stat-cashier-active">
+                    {cashierSessions?.filter(s => s.status === "active").length || 0}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                    <Square className="w-4 h-4 text-blue-400" />
+                    Chiuse
+                  </div>
+                  <div className="text-3xl font-bold text-blue-400" data-testid="stat-cashier-closed">
+                    {cashierSessions?.filter(s => s.status === "closed").length || 0}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                    <Ticket className="w-4 h-4" />
+                    Biglietti Emessi
+                  </div>
+                  <div className="text-3xl font-bold" data-testid="stat-cashier-tickets">
+                    {cashierSessions?.reduce((sum, s) => sum + (s.ticketsIssued || 0), 0) || 0}
+                  </div>
+                </CardContent>
+              </Card>
+              <Card>
+                <CardContent className="pt-6">
+                  <div className="flex items-center gap-2 text-muted-foreground text-sm mb-2">
+                    <Euro className="w-4 h-4 text-[#FFD700]" />
+                    Importo Totale
+                  </div>
+                  <div className="text-3xl font-bold text-[#FFD700]" data-testid="stat-cashier-amount">
+                    €{cashierSessions?.reduce((sum, s) => sum + Number(s.totalAmount || 0), 0).toFixed(0) || 0}
+                  </div>
+                </CardContent>
+              </Card>
+            </div>
+
+            <Card>
+              <CardContent className="p-0">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Stato</TableHead>
+                      <TableHead>Evento</TableHead>
+                      <TableHead>Cassiere</TableHead>
+                      <TableHead>Apertura</TableHead>
+                      <TableHead>Chiusura</TableHead>
+                      <TableHead className="text-right">Biglietti</TableHead>
+                      <TableHead className="text-right">Importo</TableHead>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </CardContent>
-        </Card>
+                  </TableHeader>
+                  <TableBody>
+                    {isLoadingCashier ? (
+                      Array.from({ length: 5 }).map((_, i) => (
+                        <TableRow key={i}>
+                          <TableCell colSpan={7}>
+                            <Skeleton className="h-8 w-full" />
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    ) : cashierSessions?.length === 0 ? (
+                      <TableRow>
+                        <TableCell colSpan={7} className="text-center py-12">
+                          <div className="flex flex-col items-center gap-4">
+                            <Calendar className="w-12 h-12 text-muted-foreground" />
+                            <div>
+                              <h3 className="font-semibold text-lg">Nessuna Sessione Cassiere</h3>
+                              <p className="text-muted-foreground">
+                                Non ci sono sessioni cassiere eventi registrate
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ) : (
+                      cashierSessions?.map((session) => (
+                        <TableRow key={session.id} data-testid={`row-cashier-${session.id}`}>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {session.status === "active" ? (
+                                <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Attiva</Badge>
+                              ) : (
+                                <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Chiusa</Badge>
+                              )}
+                              {session.status === "active" && (
+                                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col">
+                              <span className="font-medium">{session.eventName || '-'}</span>
+                              {session.eventDate && (
+                                <span className="text-xs text-muted-foreground">
+                                  {format(new Date(session.eventDate), "dd/MM/yyyy", { locale: it })}
+                                </span>
+                              )}
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              <User className="w-4 h-4 text-muted-foreground" />
+                              <span>{session.userName || `Utente ${session.userId?.slice(0, 6)}...`}</span>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {session.openedAt && format(new Date(session.openedAt), "dd/MM/yyyy HH:mm", { locale: it })}
+                          </TableCell>
+                          <TableCell>
+                            {session.closedAt 
+                              ? format(new Date(session.closedAt), "dd/MM/yyyy HH:mm", { locale: it })
+                              : '-'}
+                          </TableCell>
+                          <TableCell className="text-right font-medium">{session.ticketsIssued || 0}</TableCell>
+                          <TableCell className="text-right font-bold text-[#FFD700]">
+                            €{Number(session.totalAmount || 0).toFixed(2)}
+                          </TableCell>
+                        </TableRow>
+                      ))
+                    )}
+                  </TableBody>
+                </Table>
+              </CardContent>
+            </Card>
+          </TabsContent>
+        </Tabs>
 
         <Dialog open={isOpenDialogOpen} onOpenChange={setIsOpenDialogOpen}>
           <DialogContent>

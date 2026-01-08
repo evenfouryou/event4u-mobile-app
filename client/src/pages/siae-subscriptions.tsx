@@ -101,11 +101,28 @@ export default function SiaeSubscriptionsPage() {
   const [searchQuery, setSearchQuery] = useState("");
 
   const companyId = user?.companyId;
+  const isSuperAdmin = user?.role === 'super_admin';
+
+  // Admin subscriptions with company details
+  interface AdminSubscription extends SiaeSubscription {
+    companyName: string | null;
+    customerFirstName: string | null;
+    customerLastName: string | null;
+  }
+
+  const { data: adminSubscriptions, isLoading: isLoadingAdmin } = useQuery<AdminSubscription[]>({
+    queryKey: ['/api/siae/admin/subscriptions'],
+    enabled: isSuperAdmin || !!companyId,
+  });
 
   const { data: subscriptions, isLoading, refetch } = useQuery<SiaeSubscription[]>({
     queryKey: ['/api/siae/companies', companyId, 'subscriptions'],
-    enabled: !!companyId,
+    enabled: !!companyId && !isSuperAdmin,
   });
+
+  // Use admin subscriptions when available
+  const currentSubscriptions = isSuperAdmin ? adminSubscriptions : (adminSubscriptions || subscriptions);
+  const currentLoading = isSuperAdmin ? isLoadingAdmin : (isLoadingAdmin || isLoading);
 
   const { data: customers } = useQuery<SiaeCustomer[]>({
     queryKey: ['/api/siae/customers'],
@@ -174,12 +191,13 @@ export default function SiaeSubscriptionsPage() {
     }
   };
 
-  const filteredSubscriptions = subscriptions?.filter((sub) => {
+  const filteredSubscriptions = currentSubscriptions?.filter((sub) => {
     const matchesSearch =
       searchQuery === "" ||
       sub.subscriptionCode?.toLowerCase().includes(searchQuery.toLowerCase()) ||
       sub.holderFirstName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      sub.holderLastName?.toLowerCase().includes(searchQuery.toLowerCase());
+      sub.holderLastName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      ('companyName' in sub && sub.companyName?.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchesStatus = statusFilter === "all" || sub.status === statusFilter;
 
@@ -187,11 +205,11 @@ export default function SiaeSubscriptionsPage() {
   });
 
   const stats = {
-    total: subscriptions?.length || 0,
-    active: subscriptions?.filter(s => s.status === "active").length || 0,
-    expired: subscriptions?.filter(s => s.status === "expired").length || 0,
-    totalEvents: subscriptions?.reduce((sum, s) => sum + (s.eventsCount || 0), 0) || 0,
-    totalValue: subscriptions?.reduce((sum, s) => sum + Number(s.totalAmount || 0), 0) || 0,
+    total: currentSubscriptions?.length || 0,
+    active: currentSubscriptions?.filter(s => s.status === "active").length || 0,
+    expired: currentSubscriptions?.filter(s => s.status === "expired").length || 0,
+    totalEvents: currentSubscriptions?.reduce((sum, s) => sum + (s.eventsCount || 0), 0) || 0,
+    totalValue: currentSubscriptions?.reduce((sum, s) => sum + Number(s.totalAmount || 0), 0) || 0,
   };
 
   const onSubmit = (data: SubscriptionFormData) => {
@@ -241,14 +259,23 @@ export default function SiaeSubscriptionsPage() {
     return (
       <div className="container mx-auto p-6 space-y-6" data-testid="page-siae-subscriptions">
         <div className="flex items-center justify-between">
-          <div>
+          <div className="space-y-1">
             <h1 className="text-3xl font-bold">Abbonamenti SIAE</h1>
-            <p className="text-muted-foreground">Gestione abbonamenti clienti</p>
+            <p className="text-muted-foreground">
+              {isSuperAdmin ? "Visualizzazione abbonamenti di tutti i gestori" : "Gestione abbonamenti clienti"}
+            </p>
+            {isSuperAdmin && (
+              <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 mt-2">
+                Modalità Amministratore
+              </Badge>
+            )}
           </div>
-          <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create">
-            <Plus className="w-4 h-4 mr-2" />
-            Nuovo Abbonamento
-          </Button>
+          {!isSuperAdmin && (
+            <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="button-create">
+              <Plus className="w-4 h-4 mr-2" />
+              Nuovo Abbonamento
+            </Button>
+          )}
         </div>
 
         <div className="grid grid-cols-5 gap-4">
@@ -317,7 +344,7 @@ export default function SiaeSubscriptionsPage() {
             </div>
           </CardHeader>
           <CardContent>
-            {isLoading ? (
+            {currentLoading ? (
               <div className="space-y-2">
                 {[1, 2, 3].map((i) => (
                   <Skeleton key={i} className="h-12 w-full" />
@@ -328,16 +355,19 @@ export default function SiaeSubscriptionsPage() {
                 <CreditCard className="w-12 h-12 mx-auto text-muted-foreground mb-4" />
                 <h3 className="text-lg font-medium mb-2">Nessun Abbonamento</h3>
                 <p className="text-muted-foreground mb-4">Non ci sono abbonamenti registrati</p>
-                <Button onClick={() => setIsCreateDialogOpen(true)}>
-                  <Plus className="w-4 h-4 mr-2" />
-                  Crea Abbonamento
-                </Button>
+                {!isSuperAdmin && (
+                  <Button onClick={() => setIsCreateDialogOpen(true)}>
+                    <Plus className="w-4 h-4 mr-2" />
+                    Crea Abbonamento
+                  </Button>
+                )}
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
                     <TableHead>Codice</TableHead>
+                    {isSuperAdmin && <TableHead>Azienda</TableHead>}
                     <TableHead>Intestatario</TableHead>
                     <TableHead>Tipo</TableHead>
                     <TableHead>Eventi</TableHead>
@@ -351,6 +381,11 @@ export default function SiaeSubscriptionsPage() {
                   {filteredSubscriptions?.map((subscription) => (
                     <TableRow key={subscription.id} data-testid={`row-subscription-${subscription.id}`}>
                       <TableCell className="font-mono">{subscription.subscriptionCode}</TableCell>
+                      {isSuperAdmin && (
+                        <TableCell className="font-medium">
+                          {'companyName' in subscription ? subscription.companyName : '-'}
+                        </TableCell>
+                      )}
                       <TableCell className="font-medium">
                         {subscription.holderFirstName} {subscription.holderLastName}
                       </TableCell>

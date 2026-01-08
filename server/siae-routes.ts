@@ -5832,6 +5832,48 @@ router.get("/api/siae/companies/:companyId/subscriptions", requireAuth, requireO
   }
 });
 
+// Admin endpoint to get all subscriptions with company details
+router.get("/api/siae/admin/subscriptions", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const isSuperAdmin = user.role === 'super_admin';
+    const companyId = user.companyId;
+    
+    let whereClause = isSuperAdmin ? undefined : eq(siaeSubscriptions.companyId, companyId);
+    
+    const results = await db.select({
+      id: siaeSubscriptions.id,
+      companyId: siaeSubscriptions.companyId,
+      customerId: siaeSubscriptions.customerId,
+      subscriptionCode: siaeSubscriptions.subscriptionCode,
+      progressiveNumber: siaeSubscriptions.progressiveNumber,
+      turnType: siaeSubscriptions.turnType,
+      eventsCount: siaeSubscriptions.eventsCount,
+      eventsUsed: siaeSubscriptions.eventsUsed,
+      validFrom: siaeSubscriptions.validFrom,
+      validTo: siaeSubscriptions.validTo,
+      totalAmount: siaeSubscriptions.totalAmount,
+      rateoPerEvent: siaeSubscriptions.rateoPerEvent,
+      holderFirstName: siaeSubscriptions.holderFirstName,
+      holderLastName: siaeSubscriptions.holderLastName,
+      status: siaeSubscriptions.status,
+      createdAt: siaeSubscriptions.createdAt,
+      companyName: companies.name,
+      customerFirstName: siaeCustomers.firstName,
+      customerLastName: siaeCustomers.lastName,
+    })
+    .from(siaeSubscriptions)
+    .leftJoin(companies, eq(siaeSubscriptions.companyId, companies.id))
+    .leftJoin(siaeCustomers, eq(siaeSubscriptions.customerId, siaeCustomers.id))
+    .where(whereClause)
+    .orderBy(desc(siaeSubscriptions.createdAt));
+    
+    res.json(results);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.post("/api/siae/subscriptions", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
   try {
     const data = insertSiaeSubscriptionSchema.parse(req.body);

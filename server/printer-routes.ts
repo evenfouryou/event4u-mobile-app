@@ -4,7 +4,8 @@ import {
   printerModels, printerAgents, printerProfiles, printJobs, cashierSessions,
   insertPrinterModelSchema, updatePrinterModelSchema,
   insertPrinterProfileSchema, updatePrinterProfileSchema,
-  insertPrintJobSchema, insertCashierSessionSchema
+  insertPrintJobSchema, insertCashierSessionSchema,
+  users, events, companies
 } from '@shared/schema';
 import { eq, and, desc } from 'drizzle-orm';
 import crypto from 'crypto';
@@ -665,6 +666,62 @@ router.get('/cashier/sessions', requireAdmin, async (req: Request, res: Response
   } catch (error) {
     console.error('Error fetching cashier sessions:', error);
     res.status(500).json({ error: 'Errore nel recupero storico sessioni cassa' });
+  }
+});
+
+// GET admin cashier sessions with user/event/company details
+router.get('/admin/cashier/sessions', requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const user = getUser(req);
+    const companyId = user?.companyId;
+    const isSuperAdmin = user?.role === 'super_admin';
+    const eventId = req.query.eventId as string | undefined;
+    
+    const results = await db.select({
+      id: cashierSessions.id,
+      companyId: cashierSessions.companyId,
+      eventId: cashierSessions.eventId,
+      userId: cashierSessions.userId,
+      status: cashierSessions.status,
+      openedAt: cashierSessions.openedAt,
+      closedAt: cashierSessions.closedAt,
+      ticketsIssued: cashierSessions.ticketsIssued,
+      totalAmount: cashierSessions.totalAmount,
+      notes: cashierSessions.notes,
+      userName: users.firstName,
+      userLastName: users.lastName,
+      userEmail: users.email,
+      eventName: events.name,
+      eventDate: events.startDatetime,
+      companyName: companies.name,
+    })
+    .from(cashierSessions)
+    .leftJoin(users, eq(cashierSessions.userId, users.id))
+    .leftJoin(events, eq(cashierSessions.eventId, events.id))
+    .leftJoin(companies, eq(cashierSessions.companyId, companies.id))
+    .where(
+      isSuperAdmin 
+        ? (eventId ? eq(cashierSessions.eventId, eventId) : undefined)
+        : (companyId 
+            ? (eventId 
+                ? and(eq(cashierSessions.companyId, companyId), eq(cashierSessions.eventId, eventId))
+                : eq(cashierSessions.companyId, companyId))
+            : undefined)
+    )
+    .orderBy(desc(cashierSessions.openedAt));
+    
+    // Format response with full name
+    const formattedSessions = results.map(s => ({
+      ...s,
+      userName: s.userName && s.userLastName 
+        ? `${s.userName} ${s.userLastName}` 
+        : s.userName || s.userEmail || 'Operatore',
+    }));
+    
+    res.json(formattedSessions);
+  } catch (error) {
+    console.error('Error fetching admin cashier sessions:', error);
+    res.status(500).json({ error: 'Errore nel recupero sessioni cassa' });
   }
 });
 
