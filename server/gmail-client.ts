@@ -3,6 +3,7 @@
 
 import { google } from 'googleapis';
 import { getSystemGmailClient, isGmailConnected } from './gmail-oauth';
+import { parseSiaeResponseFile } from './siae-utils';
 
 let connectionSettings: any;
 
@@ -81,7 +82,23 @@ export interface SiaeEmailResponse {
   protocolNumber?: string;
   status: 'accepted' | 'rejected' | 'error' | 'unknown';
   errorMessage?: string;
+  errorCode?: string;
   transmissionId?: string;
+  attachments?: SiaeAttachment[];
+}
+
+// Interface for SIAE attachment
+export interface SiaeAttachment {
+  filename: string;
+  content: string;
+  mimeType: string;
+  parsed?: {
+    success: boolean;
+    type: 'OK' | 'ERRORE' | 'UNKNOWN';
+    code: string | null;
+    description: string | null;
+    protocolNumber: string | null;
+  };
 }
 
 // Parse SIAE response from email body
@@ -123,6 +140,68 @@ function parseSiaeResponse(subject: string, body: string): Partial<SiaeEmailResp
   }
 
   return result;
+}
+
+// Extract attachment from message part recursively
+async function extractAttachments(
+  gmail: any, 
+  messageId: string, 
+  parts: any[], 
+  attachments: SiaeAttachment[]
+): Promise<void> {
+  for (const part of parts) {
+    // Recurse into nested parts
+    if (part.parts) {
+      await extractAttachments(gmail, messageId, part.parts, attachments);
+    }
+    
+    // Check for attachment
+    const filename = part.filename;
+    if (filename && filename.endsWith('.txt') && part.body?.attachmentId) {
+      try {
+        const attachmentResponse = await gmail.users.messages.attachments.get({
+          userId: 'me',
+          messageId: messageId,
+          id: part.body.attachmentId
+        });
+        
+        const content = Buffer.from(attachmentResponse.data.data, 'base64').toString('utf-8');
+        const parsed = parseSiaeResponseFile(content);
+        
+        attachments.push({
+          filename,
+          content,
+          mimeType: part.mimeType || 'text/plain',
+          parsed: {
+            success: parsed.success,
+            type: parsed.type,
+            code: parsed.code,
+            description: parsed.description,
+            protocolNumber: parsed.protocolNumber
+          }
+        });
+        
+        console.log(`[Gmail] Extracted attachment: ${filename}, type: ${parsed.type}, code: ${parsed.code}`);
+      } catch (err: any) {
+        console.error(`[Gmail] Failed to get attachment ${filename}:`, err.message);
+      }
+    }
+  }
+}
+
+// Extract transmission reference from filename (e.g., RCA_2025_12_17_001.xsi_2026_01_08...)
+function extractTransmissionRefFromFilename(filename: string): { reportType: string; reportDate: string; progressivo: string } | null {
+  // Pattern: RCA_YYYY_MM_DD_NNN or RMG_YYYY_MM_DD_NNN or RPM_YYYY_MM_NNN
+  const match = filename.match(/^(RCA|RMG|RPM)_(\d{4})_(\d{2})_(\d{2})?_?(\d{3})/);
+  if (match) {
+    const [, type, year, month, day, prog] = match;
+    return {
+      reportType: type.toLowerCase(),
+      reportDate: day ? `${year}-${month}-${day}` : `${year}-${month}`,
+      progressivo: prog
+    };
+  }
+  return null;
 }
 
 // Fetch SIAE response emails from inbox
@@ -176,7 +255,39 @@ export async function fetchSiaeResponses(companyId?: string, sinceDate?: Date): 
       }
     }
 
+    // Extract attachments (.txt files with SIAE response)
+    const attachments: SiaeAttachment[] = [];
+    if (payload?.parts) {
+      await extractAttachments(gmail, msg.id, payload.parts, attachments);
+    }
+
     const parsed = parseSiaeResponse(subject, body);
+    
+    // If we have attachments with parsed data, use that for status/code
+    let errorCode: string | undefined;
+    let protocolNumber: string | undefined;
+    let status = parsed.status;
+    let errorMessage = parsed.errorMessage;
+    
+    for (const att of attachments) {
+      if (att.parsed) {
+        if (att.parsed.type === 'ERRORE' && att.parsed.code) {
+          errorCode = att.parsed.code;
+          errorMessage = att.parsed.description || errorMessage;
+          status = 'rejected';
+        } else if (att.parsed.type === 'OK' && att.parsed.protocolNumber) {
+          protocolNumber = att.parsed.protocolNumber;
+          status = 'accepted';
+        }
+        
+        // Try to extract transmission reference from attachment filename
+        const ref = extractTransmissionRefFromFilename(att.filename);
+        if (ref && !parsed.transmissionId) {
+          // Store reference info for later matching
+          parsed.transmissionId = `${ref.reportType}_${ref.reportDate}_${ref.progressivo}`;
+        }
+      }
+    }
 
     results.push({
       messageId: msg.id,
@@ -184,7 +295,12 @@ export async function fetchSiaeResponses(companyId?: string, sinceDate?: Date): 
       from,
       date: new Date(dateStr),
       body,
-      ...parsed
+      ...parsed,
+      attachments,
+      errorCode,
+      protocolNumber: protocolNumber || parsed.protocolNumber,
+      status: status || 'unknown',
+      errorMessage
     } as SiaeEmailResponse);
   }
 
