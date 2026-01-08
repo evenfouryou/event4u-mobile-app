@@ -1349,31 +1349,30 @@ export default function EventWizard() {
                 )}
               </div>
 
-              {siaeGenreCode && (
-                <motion.div 
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="rounded-2xl border-2 border-primary/50 bg-primary/5 p-5"
-                >
-                  <div className="flex items-center justify-between">
-                    <div>
-                      <Label className="text-base font-medium">Aliquota IVA Applicata</Label>
-                      <p className="text-sm text-muted-foreground mt-1">
-                        Questa aliquota sarà applicata a tutti i biglietti
-                      </p>
-                    </div>
-                    <Badge className="text-xl px-5 py-2 bg-primary" data-testid="badge-vat-rate">
-                      {(() => {
-                        const genre = siaeGenres?.find(g => g.code === siaeGenreCode);
-                        if (!genre) return 'N/D';
-                        const rate = genre.vatRate;
-                        if (rate !== null && rate !== undefined) return `${Number(rate)}%`;
-                        return genre.taxType === 'S' ? '10%' : '22%';
-                      })()}
-                    </Badge>
+              <motion.div 
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className={`rounded-2xl border-2 p-5 ${siaeGenreCode ? 'border-primary/50 bg-primary/5' : 'border-muted bg-muted/20'}`}
+              >
+                <div className="flex items-center justify-between">
+                  <div>
+                    <Label className="text-base font-medium">Aliquota IVA Applicata</Label>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      {siaeGenreCode ? 'Questa aliquota sarà applicata a tutti i biglietti' : 'Seleziona un genere per vedere l\'aliquota IVA'}
+                    </p>
                   </div>
-                </motion.div>
-              )}
+                  <Badge className={`text-xl px-5 py-2 ${siaeGenreCode ? 'bg-primary' : 'bg-muted-foreground/30'}`} data-testid="badge-vat-rate">
+                    {(() => {
+                      if (!siaeGenreCode) return '--%';
+                      const genre = siaeGenres?.find(g => g.code === siaeGenreCode);
+                      if (!genre) return 'N/D';
+                      const rate = genre.vatRate;
+                      if (rate !== null && rate !== undefined) return `${Number(rate)}%`;
+                      return genre.taxType === 'S' ? '10%' : '22%';
+                    })()}
+                  </Badge>
+                </div>
+              </motion.div>
 
               <div className="space-y-3">
                 <Label className="text-base font-medium">Tipo Imposta</Label>
@@ -2611,20 +2610,21 @@ export default function EventWizard() {
                     </div>
                   </div>
 
-                  {siaeGenreCode && (
-                    <div className="rounded-lg border-2 border-primary/50 bg-primary/5 p-4 flex items-center justify-between">
-                      <div>
-                        <Label className="font-medium">Aliquota IVA Applicata</Label>
-                        <p className="text-sm text-muted-foreground">Questa aliquota sarà applicata a tutti i biglietti</p>
-                      </div>
-                      <Badge className="text-lg px-4 py-1.5 bg-primary" data-testid="badge-vat-rate">
-                        {(() => {
-                          const rate = siaeGenres?.find(g => g.code === siaeGenreCode)?.vatRate;
-                          return rate !== null && rate !== undefined ? `${Number(rate)}%` : 'N/D';
-                        })()}
-                      </Badge>
+                  <div className={`rounded-lg border-2 p-4 flex items-center justify-between ${siaeGenreCode ? 'border-primary/50 bg-primary/5' : 'border-muted bg-muted/20'}`}>
+                    <div>
+                      <Label className="font-medium">Aliquota IVA Applicata</Label>
+                      <p className="text-sm text-muted-foreground">
+                        {siaeGenreCode ? 'Questa aliquota sarà applicata a tutti i biglietti' : 'Seleziona un genere per vedere l\'aliquota IVA'}
+                      </p>
                     </div>
-                  )}
+                    <Badge className={`text-lg px-4 py-1.5 ${siaeGenreCode ? 'bg-primary' : 'bg-muted-foreground/30'}`} data-testid="badge-vat-rate">
+                      {(() => {
+                        if (!siaeGenreCode) return '--%';
+                        const rate = siaeGenres?.find(g => g.code === siaeGenreCode)?.vatRate;
+                        return rate !== null && rate !== undefined ? `${Number(rate)}%` : 'N/D';
+                      })()}
+                    </Badge>
+                  </div>
 
                   <div className="grid grid-cols-2 gap-6">
                     <div className="flex items-center justify-between rounded-lg border p-4">
