@@ -409,8 +409,8 @@ async function sendDailyReports() {
 
     for (const { ticketedEvent, event } of ticketedEventsWithEvents) {
       try {
-        // Verifica impostazioni trasmissione per la company
-        const settings = await getTransmissionSettings(ticketedEvent.companyId);
+        // Verifica impostazioni trasmissione per la company (ricarica sempre dal DB)
+        let settings = await getTransmissionSettings(ticketedEvent.companyId);
         if (settings && !settings.autoSendEnabled) {
           log(`Evento ${ticketedEvent.id} - Auto-invio disabilitato per company, skip`);
           continue;
@@ -596,7 +596,7 @@ async function sendMonthlyReports() {
         }
         // Verifica se è il giorno configurato per l'invio mensile
         const recurringDay = settings?.monthlyRecurringDay || 1;
-        if (settings?.monthlyRecurringEnabled && !isTodayMonthlyRecurringDay(recurringDay)) {
+        if (recurringDay && !isTodayMonthlyRecurringDay(recurringDay)) {
           log(`Evento ${ticketedEvent.id} - Oggi non è il giorno ${recurringDay} del mese, skip report mensile`);
           continue;
         }
