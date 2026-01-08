@@ -1,8 +1,9 @@
 import { db } from "./db";
-import { siaeTicketedEvents, siaeTransmissions, events, companies, siaeEventSectors, siaeTickets, siaeResales } from "@shared/schema";
+import { siaeTicketedEvents, siaeTransmissions, siaeTransmissionSettings, events, companies, siaeEventSectors, siaeTickets, siaeResales } from "@shared/schema";
 import { eq, and, sql, gte, lt, desc, lte } from "drizzle-orm";
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
+import type { SiaeTransmissionSettings } from "@shared/schema";
 import { sendSiaeTransmissionEmail } from "./email-service";
 import { isBridgeConnected, requestXmlSignature, getCachedEfffData } from "./bridge-relay";
 import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, mapToSiaeTipoGenere } from './siae-utils';
@@ -74,6 +75,37 @@ async function getNextProgressivo(ticketedEventId: string, transmissionType: str
     ));
 
   return existing.length + 1;
+}
+
+// Ottiene le impostazioni trasmissione per una company
+async function getTransmissionSettings(companyId: string): Promise<SiaeTransmissionSettings | null> {
+  const [settings] = await db.select()
+    .from(siaeTransmissionSettings)
+    .where(eq(siaeTransmissionSettings.companyId, companyId));
+  return settings || null;
+}
+
+// Verifica se è passato l'intervallo richiesto dall'ultimo invio
+function shouldSendBasedOnInterval(lastSentAt: Date | null, intervalDays: number): boolean {
+  if (!lastSentAt) return true; // Mai inviato, procedi
+  
+  const now = new Date();
+  const daysSinceLast = Math.floor((now.getTime() - lastSentAt.getTime()) / (1000 * 60 * 60 * 24));
+  return daysSinceLast >= intervalDays;
+}
+
+// Verifica se un evento è terminato da N giorni
+function eventEndedDaysAgo(eventEndDate: Date, delayDays: number): boolean {
+  const now = new Date();
+  const endDate = new Date(eventEndDate);
+  const daysSinceEnd = Math.floor((now.getTime() - endDate.getTime()) / (1000 * 60 * 60 * 24));
+  return daysSinceEnd >= delayDays;
+}
+
+// Verifica se oggi è il giorno del mese configurato per invio mensile
+function isTodayMonthlyRecurringDay(recurringDay: number): boolean {
+  const now = new Date();
+  return now.getDate() === recurringDay;
 }
 
 async function generateC1ReportData(ticketedEvent: any, reportType: 'giornaliero' | 'mensile', reportDate: Date, progressivo: number = 1) {
@@ -377,6 +409,23 @@ async function sendDailyReports() {
 
     for (const { ticketedEvent, event } of ticketedEventsWithEvents) {
       try {
+        // Verifica impostazioni trasmissione per la company
+        const settings = await getTransmissionSettings(ticketedEvent.companyId);
+        if (settings && !settings.autoSendEnabled) {
+          log(`Evento ${ticketedEvent.id} - Auto-invio disabilitato per company, skip`);
+          continue;
+        }
+        if (settings && !settings.dailyEnabled) {
+          log(`Evento ${ticketedEvent.id} - Invio giornaliero disabilitato, skip`);
+          continue;
+        }
+        // Verifica intervallo giorni (default 5 se non impostato)
+        const intervalDays = settings?.dailyIntervalDays || 5;
+        if (settings?.lastDailySentAt && !shouldSendBasedOnInterval(settings.lastDailySentAt, intervalDays)) {
+          log(`Evento ${ticketedEvent.id} - Non passati ${intervalDays} giorni dall'ultimo invio, skip`);
+          continue;
+        }
+        
         const alreadySent = await checkExistingTransmission(ticketedEvent.id, 'daily', yesterday);
         if (alreadySent) {
           log(`Evento ${ticketedEvent.id} - Report giornaliero già inviato, skip`);
@@ -403,6 +452,7 @@ async function sendDailyReports() {
           ticketedEventId: ticketedEvent.id,
           transmissionType: 'daily',
           periodDate: yesterday,
+          scheduleType: 'daily',
           fileName: fileName.replace(fileExtension, ''),
           fileExtension,
           fileContent: xmlContent,
@@ -483,6 +533,14 @@ async function sendDailyReports() {
             status: 'sent',
             sentAt: new Date(),
           });
+          
+          // Aggiorna lastDailySentAt nelle impostazioni company
+          if (settings) {
+            await db.update(siaeTransmissionSettings)
+              .set({ lastDailySentAt: new Date() })
+              .where(eq(siaeTransmissionSettings.companyId, ticketedEvent.companyId));
+          }
+          
           log(`Evento ${ticketedEvent.id} - Email inviata a ${SIAE_TEST_EMAIL}${signatureInfo}, status aggiornato a 'sent'`);
         } catch (emailError: any) {
           log(`ERRORE invio email per evento ${ticketedEvent.id}: ${emailError.message}`);
@@ -526,6 +584,23 @@ async function sendMonthlyReports() {
 
     for (const { ticketedEvent } of ticketedEventsWithTickets) {
       try {
+        // Verifica impostazioni trasmissione per la company
+        const settings = await getTransmissionSettings(ticketedEvent.companyId);
+        if (settings && !settings.autoSendEnabled) {
+          log(`Evento ${ticketedEvent.id} - Auto-invio disabilitato per company, skip report mensile`);
+          continue;
+        }
+        if (settings && !settings.monthlyEnabled) {
+          log(`Evento ${ticketedEvent.id} - Invio mensile disabilitato, skip`);
+          continue;
+        }
+        // Verifica se è il giorno configurato per l'invio mensile
+        const recurringDay = settings?.monthlyRecurringDay || 1;
+        if (settings?.monthlyRecurringEnabled && !isTodayMonthlyRecurringDay(recurringDay)) {
+          log(`Evento ${ticketedEvent.id} - Oggi non è il giorno ${recurringDay} del mese, skip report mensile`);
+          continue;
+        }
+        
         const alreadySent = await checkExistingTransmission(ticketedEvent.id, 'monthly', previousMonth);
         if (alreadySent) {
           log(`Evento ${ticketedEvent.id} - Report mensile già inviato, skip`);
@@ -552,6 +627,7 @@ async function sendMonthlyReports() {
           ticketedEventId: ticketedEvent.id,
           transmissionType: 'monthly',
           periodDate: previousMonth,
+          scheduleType: 'monthly',
           fileName: fileName.replace(fileExtension, ''),
           fileExtension,
           fileContent: xmlContent,
@@ -632,6 +708,14 @@ async function sendMonthlyReports() {
             status: 'sent',
             sentAt: new Date(),
           });
+          
+          // Aggiorna lastMonthlySentAt nelle impostazioni company
+          if (settings) {
+            await db.update(siaeTransmissionSettings)
+              .set({ lastMonthlySentAt: new Date() })
+              .where(eq(siaeTransmissionSettings.companyId, ticketedEvent.companyId));
+          }
+          
           log(`Evento ${ticketedEvent.id} - Email mensile inviata a ${SIAE_TEST_EMAIL}${signatureInfo}, status aggiornato a 'sent'`);
         } catch (emailError: any) {
           log(`ERRORE invio email mensile per evento ${ticketedEvent.id}: ${emailError.message}`);

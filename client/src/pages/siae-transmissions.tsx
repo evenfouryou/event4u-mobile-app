@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -7,7 +7,7 @@ import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { type SiaeTransmission, type Company } from "@shared/schema";
+import { type SiaeTransmission, type Company, type SiaeTransmissionSettings } from "@shared/schema";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -45,6 +45,23 @@ import {
   DialogFooter,
 } from "@/components/ui/dialog";
 import {
+  Collapsible,
+  CollapsibleContent,
+  CollapsibleTrigger,
+} from "@/components/ui/collapsible";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "@/components/ui/form";
+import { useForm } from "react-hook-form";
+import { zodResolver } from "@hookform/resolvers/zod";
+import { z } from "zod";
+import {
   MobileAppLayout,
   MobileHeader,
   HapticButton,
@@ -65,6 +82,7 @@ import {
   Loader2,
   Upload,
   ChevronRight,
+  ChevronDown,
   ArrowLeft,
   Filter,
   X,
@@ -79,7 +97,24 @@ import {
   Unlink,
   Search,
   Calendar,
+  Settings,
+  RotateCcw,
+  Save,
 } from "lucide-react";
+
+const transmissionSettingsSchema = z.object({
+  dailyEnabled: z.boolean(),
+  dailyIntervalDays: z.number().min(1).max(30),
+  endEventEnabled: z.boolean(),
+  endEventDelayDays: z.number().min(1).max(30),
+  monthlyEnabled: z.boolean(),
+  monthlyDelayDays: z.number().min(1).max(30),
+  monthlyRecurringEnabled: z.boolean(),
+  monthlyRecurringDay: z.number().min(1).max(28),
+  autoSendEnabled: z.boolean(),
+});
+
+type TransmissionSettingsFormValues = z.infer<typeof transmissionSettingsSchema>;
 
 const springTransition = {
   type: "spring" as const,
@@ -119,17 +154,83 @@ export default function SiaeTransmissionsPage() {
   const [dateFrom, setDateFrom] = useState<string>("");
   const [dateTo, setDateTo] = useState<string>("");
   const [forceSubstitution, setForceSubstitution] = useState<boolean>(false);
+  const [isSettingsOpen, setIsSettingsOpen] = useState<boolean>(false);
+  const [eventFilterId, setEventFilterId] = useState<string>("all");
+  const [isResendDialogOpen, setIsResendDialogOpen] = useState(false);
+  const [resendEmail, setResendEmail] = useState<string>("servertest2@batest.siae.it");
 
   const isSuperAdmin = user?.role === 'super_admin';
   const companyId = isSuperAdmin ? selectedCompanyId : user?.companyId;
+
+  // Settings form with react-hook-form
+  const settingsForm = useForm<TransmissionSettingsFormValues>({
+    resolver: zodResolver(transmissionSettingsSchema),
+    defaultValues: {
+      dailyEnabled: true,
+      dailyIntervalDays: 5,
+      endEventEnabled: true,
+      endEventDelayDays: 5,
+      monthlyEnabled: true,
+      monthlyDelayDays: 5,
+      monthlyRecurringEnabled: true,
+      monthlyRecurringDay: 1,
+      autoSendEnabled: false,
+    },
+  });
 
   const { data: companies } = useQuery<Company[]>({
     queryKey: ['/api/companies'],
     enabled: isSuperAdmin,
   });
 
-  const { data: transmissions, isLoading } = useQuery<SiaeTransmission[]>({
-    queryKey: ['/api/siae/companies', companyId, 'transmissions'],
+  // Fetch transmission settings
+  const { data: transmissionSettings, isLoading: isLoadingSettings } = useQuery<SiaeTransmissionSettings>({
+    queryKey: ['/api/siae/transmission-settings', companyId],
+    enabled: !!companyId,
+  });
+
+  // Update form when settings are loaded
+  useEffect(() => {
+    if (transmissionSettings) {
+      settingsForm.reset({
+        dailyEnabled: transmissionSettings.dailyEnabled ?? true,
+        dailyIntervalDays: transmissionSettings.dailyIntervalDays ?? 5,
+        endEventEnabled: transmissionSettings.endEventEnabled ?? true,
+        endEventDelayDays: transmissionSettings.endEventDelayDays ?? 5,
+        monthlyEnabled: transmissionSettings.monthlyEnabled ?? true,
+        monthlyDelayDays: transmissionSettings.monthlyDelayDays ?? 5,
+        monthlyRecurringEnabled: transmissionSettings.monthlyRecurringEnabled ?? true,
+        monthlyRecurringDay: transmissionSettings.monthlyRecurringDay ?? 1,
+        autoSendEnabled: transmissionSettings.autoSendEnabled ?? false,
+      });
+    }
+  }, [transmissionSettings, settingsForm]);
+
+  // Build transmission list URL with optional event filter
+  const transmissionsListUrl = eventFilterId !== 'all' 
+    ? `/api/siae/transmissions-list?companyId=${companyId}&ticketedEventId=${eventFilterId}`
+    : `/api/siae/transmissions-list?companyId=${companyId}`;
+
+  // Fetch transmissions - use list API with event filter
+  const { data: transmissions, isLoading } = useQuery<(SiaeTransmission & { eventName?: string })[]>({
+    queryKey: ['/api/siae/transmissions-list', companyId, eventFilterId],
+    queryFn: async () => {
+      const res = await fetch(transmissionsListUrl, { credentials: 'include' });
+      if (!res.ok) throw new Error('Failed to fetch transmissions');
+      return res.json();
+    },
+    enabled: !!companyId,
+  });
+
+  // Fetch events for dropdown filter
+  const { data: eventsForDropdown } = useQuery<Array<{
+    id: string;
+    eventId: string;
+    eventName: string;
+    eventDate: string;
+    status: string;
+  }>>({
+    queryKey: ['/api/siae/ticketed-events', companyId],
     enabled: !!companyId,
   });
 
@@ -452,6 +553,61 @@ export default function SiaeTransmissionsPage() {
     },
   });
 
+  // Mutation for saving transmission settings
+  const saveSettingsMutation = useMutation({
+    mutationFn: async (data: TransmissionSettingsFormValues) => {
+      const response = await apiRequest("PUT", `/api/siae/transmission-settings`, {
+        ...data,
+        companyId,
+      });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/transmission-settings', companyId] });
+      triggerHaptic('success');
+      toast({
+        title: "Impostazioni Salvate",
+        description: "Le impostazioni delle trasmissioni sono state aggiornate.",
+      });
+    },
+    onError: (error: Error) => {
+      triggerHaptic('error');
+      toast({
+        title: "Errore",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
+  // Mutation for resending failed transmissions
+  const resendTransmissionMutation = useMutation({
+    mutationFn: async ({ id, toEmail }: { id: string; toEmail: string }) => {
+      const response = await apiRequest("POST", `/api/siae/transmissions/${id}/resend`, {
+        toEmail,
+      });
+      return response.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ predicate: (q) => (q.queryKey[0] as string)?.includes('transmissions') || false });
+      setIsResendDialogOpen(false);
+      setSelectedTransmission(null);
+      triggerHaptic('success');
+      toast({
+        title: "Reinvio Sostitutivo Creato",
+        description: `Nuova trasmissione creata con progressivo ${data.transmission?.progressivoInvio || 'N/A'}.`,
+      });
+    },
+    onError: (error: Error) => {
+      triggerHaptic('error');
+      toast({
+        title: "Errore Reinvio",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   const getStatusConfig = (status: string) => {
     switch (status) {
       case "sent":
@@ -501,6 +657,20 @@ export default function SiaeTransmissionsPage() {
     }
   };
 
+  const getScheduleTypeLabel = (scheduleType: string | null | undefined) => {
+    switch (scheduleType) {
+      case "manual": return "Manuale";
+      case "daily": return "Giornaliero";
+      case "end_event": return "Fine Evento";
+      case "monthly": return "Mensile";
+      default: return "Manuale";
+    }
+  };
+
+  const onSettingsSubmit = (data: TransmissionSettingsFormValues) => {
+    saveSettingsMutation.mutate(data);
+  };
+
   const filteredTransmissions = transmissions?.filter((trans) => {
     const matchesStatus = statusFilter === "all" || trans.status === statusFilter;
     const matchesType = typeFilter === "all" || trans.transmissionType === typeFilter;
@@ -541,7 +711,7 @@ export default function SiaeTransmissionsPage() {
     totalTickets: transmissions?.reduce((sum, t) => sum + (t.ticketsCount || 0), 0) || 0,
   };
 
-  const activeFiltersCount = (statusFilter !== "all" ? 1 : 0) + (typeFilter !== "all" ? 1 : 0) + (searchQuery !== "" ? 1 : 0) + (dateFrom !== "" ? 1 : 0) + (dateTo !== "" ? 1 : 0);
+  const activeFiltersCount = (statusFilter !== "all" ? 1 : 0) + (typeFilter !== "all" ? 1 : 0) + (searchQuery !== "" ? 1 : 0) + (dateFrom !== "" ? 1 : 0) + (dateTo !== "" ? 1 : 0) + (eventFilterId !== "all" ? 1 : 0);
   
   const resetFilters = () => {
     setStatusFilter("all");
@@ -549,6 +719,7 @@ export default function SiaeTransmissionsPage() {
     setSearchQuery("");
     setDateFrom("");
     setDateTo("");
+    setEventFilterId("all");
   };
 
   // Desktop version
@@ -679,6 +850,236 @@ export default function SiaeTransmissionsPage() {
 
         {companyId && (
         <>
+        {/* Transmission Settings Collapsible Section */}
+        <Collapsible open={isSettingsOpen} onOpenChange={setIsSettingsOpen}>
+          <Card>
+            <CardHeader className="pb-2">
+              <CollapsibleTrigger className="flex items-center justify-between w-full" data-testid="button-toggle-settings">
+                <div className="flex items-center gap-2">
+                  <Settings className="h-5 w-5 text-muted-foreground" />
+                  <CardTitle className="text-lg">Impostazioni Trasmissioni</CardTitle>
+                </div>
+                <ChevronDown className={`h-5 w-5 text-muted-foreground transition-transform ${isSettingsOpen ? 'rotate-180' : ''}`} />
+              </CollapsibleTrigger>
+            </CardHeader>
+            <CollapsibleContent>
+              <CardContent>
+                {isLoadingSettings ? (
+                  <div className="space-y-4">
+                    <Skeleton className="h-8 w-full" />
+                    <Skeleton className="h-8 w-full" />
+                  </div>
+                ) : (
+                  <Form {...settingsForm}>
+                    <form onSubmit={settingsForm.handleSubmit(onSettingsSubmit)} className="space-y-6">
+                      <div className="grid grid-cols-3 gap-6">
+                        {/* Daily Settings */}
+                        <div className="space-y-4 p-4 rounded-lg border">
+                          <h4 className="font-medium text-sm text-muted-foreground">Invio Giornaliero</h4>
+                          <FormField
+                            control={settingsForm.control}
+                            name="dailyEnabled"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center justify-between">
+                                <FormLabel className="text-sm">Abilitato</FormLabel>
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    data-testid="checkbox-daily-enabled"
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={settingsForm.control}
+                            name="dailyIntervalDays"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm">Intervallo (giorni)</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    max={30}
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 5)}
+                                    data-testid="input-daily-interval"
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        {/* End Event Settings */}
+                        <div className="space-y-4 p-4 rounded-lg border">
+                          <h4 className="font-medium text-sm text-muted-foreground">Fine Evento</h4>
+                          <FormField
+                            control={settingsForm.control}
+                            name="endEventEnabled"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center justify-between">
+                                <FormLabel className="text-sm">Abilitato</FormLabel>
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    data-testid="checkbox-end-event-enabled"
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={settingsForm.control}
+                            name="endEventDelayDays"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm">Ritardo (giorni)</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    max={30}
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 5)}
+                                    data-testid="input-end-event-delay"
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        {/* Monthly Settings */}
+                        <div className="space-y-4 p-4 rounded-lg border">
+                          <h4 className="font-medium text-sm text-muted-foreground">Invio Mensile</h4>
+                          <FormField
+                            control={settingsForm.control}
+                            name="monthlyEnabled"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center justify-between">
+                                <FormLabel className="text-sm">Abilitato</FormLabel>
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    data-testid="checkbox-monthly-enabled"
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={settingsForm.control}
+                            name="monthlyDelayDays"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm">Ritardo (giorni)</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    max={30}
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 5)}
+                                    data-testid="input-monthly-delay"
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={settingsForm.control}
+                            name="monthlyRecurringEnabled"
+                            render={({ field }) => (
+                              <FormItem className="flex flex-row items-center justify-between">
+                                <FormLabel className="text-sm">Ricorrente</FormLabel>
+                                <FormControl>
+                                  <Checkbox
+                                    checked={field.value}
+                                    onCheckedChange={field.onChange}
+                                    data-testid="checkbox-monthly-recurring"
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={settingsForm.control}
+                            name="monthlyRecurringDay"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-sm">Giorno del mese</FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    min={1}
+                                    max={28}
+                                    {...field}
+                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                                    data-testid="input-monthly-day"
+                                  />
+                                </FormControl>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </div>
+
+                      {/* Auto-send toggle */}
+                      <div className="flex items-center justify-between p-4 rounded-lg border bg-muted/50">
+                        <div>
+                          <h4 className="font-medium">Invio Automatico</h4>
+                          <p className="text-sm text-muted-foreground">Invia automaticamente le trasmissioni generate</p>
+                        </div>
+                        <FormField
+                          control={settingsForm.control}
+                          name="autoSendEnabled"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                  data-testid="checkbox-auto-send"
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+
+                      <div className="flex justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          onClick={() => settingsForm.reset()}
+                          data-testid="button-reset-settings"
+                        >
+                          <RotateCcw className="w-4 h-4 mr-2" />
+                          Ripristina
+                        </Button>
+                        <Button
+                          type="submit"
+                          disabled={saveSettingsMutation.isPending}
+                          data-testid="button-save-settings"
+                        >
+                          {saveSettingsMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                          <Save className="w-4 h-4 mr-2" />
+                          Salva Impostazioni
+                        </Button>
+                      </div>
+                    </form>
+                  </Form>
+                )}
+              </CardContent>
+            </CollapsibleContent>
+          </Card>
+        </Collapsible>
+
         <div className="grid grid-cols-5 gap-4">
           <Card>
             <CardContent className="pt-6">
@@ -778,6 +1179,19 @@ export default function SiaeTransmissionsPage() {
                     <SelectItem value="corrective">Correttiva</SelectItem>
                   </SelectContent>
                 </Select>
+                <Select value={eventFilterId} onValueChange={setEventFilterId}>
+                  <SelectTrigger className="w-[200px]" data-testid="select-event-filter">
+                    <SelectValue placeholder="Filtra per evento" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Tutti gli eventi</SelectItem>
+                    {eventsForDropdown?.map((event) => (
+                      <SelectItem key={event.id} value={event.id}>
+                        {event.eventName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardHeader>
@@ -791,7 +1205,11 @@ export default function SiaeTransmissionsPage() {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Data</TableHead>
+                    <TableHead>Evento</TableHead>
                     <TableHead>Tipo</TableHead>
+                    <TableHead>Tipo Invio</TableHead>
+                    <TableHead>Prog.</TableHead>
+                    <TableHead>Sost.</TableHead>
                     <TableHead>Biglietti</TableHead>
                     <TableHead>Importo</TableHead>
                     <TableHead>Stato</TableHead>
@@ -807,7 +1225,29 @@ export default function SiaeTransmissionsPage() {
                         <TableCell>
                           {trans.periodDate && format(new Date(trans.periodDate), "dd/MM/yyyy", { locale: it })}
                         </TableCell>
+                        <TableCell className="max-w-[150px] truncate" title={trans.eventName || '-'} data-testid={`text-event-${trans.id}`}>
+                          {trans.eventName || '-'}
+                        </TableCell>
                         <TableCell>{getTypeLabel(trans.transmissionType)}</TableCell>
+                        <TableCell data-testid={`text-schedule-type-${trans.id}`}>
+                          <Badge variant="outline" className="text-xs">
+                            {getScheduleTypeLabel(trans.scheduleType)}
+                          </Badge>
+                        </TableCell>
+                        <TableCell data-testid={`text-progressivo-${trans.id}`}>
+                          {trans.progressivoInvio ? (
+                            <Badge className={`text-xs ${trans.progressivoInvio > 1 ? 'bg-amber-500 text-black' : 'bg-blue-500 text-white'}`}>
+                              {trans.progressivoInvio}
+                            </Badge>
+                          ) : '-'}
+                        </TableCell>
+                        <TableCell data-testid={`text-substitution-${trans.id}`}>
+                          {trans.isSubstitution && (
+                            <Badge variant="destructive" className="text-xs" data-testid={`badge-substitution-${trans.id}`}>
+                              S
+                            </Badge>
+                          )}
+                        </TableCell>
                         <TableCell>{trans.ticketsCount}</TableCell>
                         <TableCell>€{Number(trans.totalAmount || 0).toFixed(2)}</TableCell>
                         <TableCell>
@@ -872,6 +1312,20 @@ export default function SiaeTransmissionsPage() {
                               >
                                 <CheckCircle2 className="w-4 h-4 mr-1" />
                                 Conferma
+                              </Button>
+                            )}
+                            {(trans.status === "error" || trans.status === "rejected") && (
+                              <Button
+                                size="sm"
+                                variant="destructive"
+                                onClick={() => {
+                                  setSelectedTransmission(trans);
+                                  setIsResendDialogOpen(true);
+                                }}
+                                data-testid={`button-resend-${trans.id}`}
+                              >
+                                <RotateCcw className="w-4 h-4 mr-1" />
+                                Reinvia
                               </Button>
                             )}
                           </div>
@@ -1350,6 +1804,61 @@ export default function SiaeTransmissionsPage() {
                 </Button>
               )}
               <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>Chiudi</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Resend Dialog */}
+        <Dialog open={isResendDialogOpen} onOpenChange={setIsResendDialogOpen}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Reinvio Sostitutivo</DialogTitle>
+              <DialogDescription>
+                Crea una nuova trasmissione sostitutiva (Sostituzione="S") per questa trasmissione fallita.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {selectedTransmission && (
+                <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
+                  <p className="text-sm text-muted-foreground">
+                    <strong>Trasmissione originale:</strong> {getTypeLabel(selectedTransmission.transmissionType)}
+                  </p>
+                  {selectedTransmission.errorMessage && (
+                    <p className="text-sm text-red-600 dark:text-red-400 mt-1">
+                      <strong>Errore:</strong> {selectedTransmission.errorMessage}
+                    </p>
+                  )}
+                </div>
+              )}
+              <div>
+                <Label>Email Destinatario SIAE</Label>
+                <Input
+                  type="email"
+                  value={resendEmail}
+                  onChange={(e) => setResendEmail(e.target.value)}
+                  placeholder="servertest2@batest.siae.it"
+                  data-testid="input-resend-email"
+                />
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setIsResendDialogOpen(false)}>Annulla</Button>
+              <Button
+                onClick={() => {
+                  if (selectedTransmission) {
+                    resendTransmissionMutation.mutate({
+                      id: selectedTransmission.id,
+                      toEmail: resendEmail,
+                    });
+                  }
+                }}
+                disabled={!resendEmail || resendTransmissionMutation.isPending}
+                data-testid="button-resend-confirm"
+              >
+                {resendTransmissionMutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Reinvia Sostitutivo
+              </Button>
             </DialogFooter>
           </DialogContent>
         </Dialog>
