@@ -165,7 +165,11 @@ async function extractAttachments(
           id: part.body.attachmentId
         });
         
-        const content = Buffer.from(attachmentResponse.data.data, 'base64').toString('utf-8');
+        // Gmail API returns base64url encoded data, need to convert to standard base64
+        const base64Data = attachmentResponse.data.data
+          .replace(/-/g, '+')
+          .replace(/_/g, '/');
+        const content = Buffer.from(base64Data, 'base64').toString('utf-8');
         const parsed = parseSiaeResponseFile(content);
         
         attachments.push({
@@ -245,11 +249,14 @@ export async function fetchSiaeResponses(companyId?: string, sinceDate?: Date): 
     const payload = fullMessage.data.payload;
     
     if (payload?.body?.data) {
-      body = Buffer.from(payload.body.data, 'base64').toString('utf-8');
+      // Gmail API uses base64url encoding - normalize to standard base64
+      const base64Body = payload.body.data.replace(/-/g, '+').replace(/_/g, '/');
+      body = Buffer.from(base64Body, 'base64').toString('utf-8');
     } else if (payload?.parts) {
       for (const part of payload.parts) {
         if (part.mimeType === 'text/plain' && part.body?.data) {
-          body = Buffer.from(part.body.data, 'base64').toString('utf-8');
+          const base64Part = part.body.data.replace(/-/g, '+').replace(/_/g, '/');
+          body = Buffer.from(base64Part, 'base64').toString('utf-8');
           break;
         }
       }

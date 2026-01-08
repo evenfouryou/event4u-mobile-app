@@ -5381,13 +5381,15 @@ router.post("/api/siae/transmissions/check-responses", requireAuth, requireGesto
       }
       
       // Strategy 3: Match by date if only one transmission exists for that date
-      if (!matchedTransmission && pendingTransmissions.length > 0) {
+      // Only use this fallback if we have some parsed reference (protocol or error code)
+      if (!matchedTransmission && pendingTransmissions.length > 0 && (response.protocolNumber || response.errorCode)) {
         const responseDate = response.date.toISOString().split('T')[0];
         const sameDateTransmissions = pendingTransmissions.filter(t => 
           t.sentAt && new Date(t.sentAt).toISOString().split('T')[0] === responseDate
         );
         if (sameDateTransmissions.length === 1) {
           matchedTransmission = sameDateTransmissions[0];
+          console.log(`[SIAE-ROUTES] Matched by date fallback: ${matchedTransmission.id}`);
         }
       }
       

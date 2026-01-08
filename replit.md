@@ -52,7 +52,18 @@ The system uses official SIAE genre codes from table `siae_event_genres` (Allega
 - **70-79**: Fiere, mostre, parchi
 
 Function `mapToSiaeTipoGenere()` normalizes codes to 2-digit format. Default: 61 (discoteca).
-For Intrattenimento codes (30-40, 60-69, 70-74, 79), Autore/Esecutore/NazionalitaFilm use '-' to avoid warnings 2108/2110/2112/2114.
+For Intrattenimento codes (30-40, 60-69, 70-74, 79), Autore/Esecutore/NazionalitaFilm tags are **completely omitted** (not included even with "-") to avoid warnings 2108/2110/2112/2114.
+
+#### SIAE Email Response Auto-Sync (2026-01-08)
+Automatic retrieval and association of SIAE response emails from Gmail inbox. Features:
+- **Attachment Parsing**: Downloads .txt attachments from SIAE emails and parses them using `parseSiaeResponseFile()` to extract error codes, descriptions, and protocol numbers
+- **Multi-Strategy Matching**: Associates email responses to transmissions using:
+  1. Direct transmission ID match
+  2. Subject line containing filename match
+  3. Attachment filename pattern matching (RCA_YYYY_MM_DD_NNN format)
+  4. Date-based fallback (only if parsed reference exists)
+- **Response Fields**: Updates `status`, `errorCode`, `errorMessage`, `receiptProtocol`, `responseEmailId`
+- **Gmail base64url**: All Gmail API data is normalized from base64url to standard base64 before decoding
 
 ### Italian Fiscal Validation
 Server-side validation for Italian fiscal identifiers, including Codice Fiscale and Partita IVA, incorporating checksum algorithms compliant with Agenzia delle Entrate requirements.
