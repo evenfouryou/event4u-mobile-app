@@ -852,10 +852,16 @@ export default function SiaeTransmissionsPage() {
                 ) : (
                   <Form {...settingsForm}>
                     <form onSubmit={settingsForm.handleSubmit(onSettingsSubmit)} className="space-y-6">
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        {/* Daily Settings */}
-                        <div className="space-y-4 p-4 rounded-lg border">
-                          <h4 className="font-medium text-sm text-muted-foreground">Invio Giornaliero</h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {/* RCA Giornaliero Settings */}
+                        <div className="space-y-4 p-4 rounded-lg border bg-blue-500/5">
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4 text-blue-500" />
+                            <h4 className="font-medium text-sm">RCA Giornaliero</h4>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Trasmissione automatica per eventi conclusi (DataRiepilogo: AAAAMMGG)
+                          </p>
                           <FormField
                             control={settingsForm.control}
                             name="dailyEnabled"
@@ -872,70 +878,75 @@ export default function SiaeTransmissionsPage() {
                               </FormItem>
                             )}
                           />
-                          <FormField
-                            control={settingsForm.control}
-                            name="dailyIntervalDays"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-sm">Intervallo (giorni)</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    min={1}
-                                    max={30}
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 5)}
-                                    data-testid="input-daily-interval"
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                              control={settingsForm.control}
+                              name="endEventEnabled"
+                              render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between">
+                                  <FormLabel className="text-sm">Fine Evento</FormLabel>
+                                  <FormControl>
+                                    <Checkbox
+                                      checked={field.value}
+                                      onCheckedChange={field.onChange}
+                                      data-testid="checkbox-end-event-enabled"
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={settingsForm.control}
+                              name="endEventDelayDays"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-sm">Ritardo (giorni)</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      max={30}
+                                      {...field}
+                                      onChange={(e) => field.onChange(parseInt(e.target.value) || 5)}
+                                      data-testid="input-end-event-delay"
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          <div className="grid grid-cols-2 gap-4">
+                            <FormField
+                              control={settingsForm.control}
+                              name="dailyIntervalDays"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-sm">Intervallo batch (giorni)</FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      min={1}
+                                      max={30}
+                                      {...field}
+                                      onChange={(e) => field.onChange(parseInt(e.target.value) || 5)}
+                                      data-testid="input-daily-interval"
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
                         </div>
 
-                        {/* End Event Settings */}
-                        <div className="space-y-4 p-4 rounded-lg border">
-                          <h4 className="font-medium text-sm text-muted-foreground">Fine Evento</h4>
-                          <FormField
-                            control={settingsForm.control}
-                            name="endEventEnabled"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center justify-between">
-                                <FormLabel className="text-sm">Abilitato</FormLabel>
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    data-testid="checkbox-end-event-enabled"
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={settingsForm.control}
-                            name="endEventDelayDays"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-sm">Ritardo (giorni)</FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    min={1}
-                                    max={30}
-                                    {...field}
-                                    onChange={(e) => field.onChange(parseInt(e.target.value) || 5)}
-                                    data-testid="input-end-event-delay"
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-
-                        {/* Monthly Settings */}
-                        <div className="space-y-4 p-4 rounded-lg border">
-                          <h4 className="font-medium text-sm text-muted-foreground">Invio Mensile</h4>
+                        {/* RCA Mensile Settings */}
+                        <div className="space-y-4 p-4 rounded-lg border bg-amber-500/5">
+                          <div className="flex items-center gap-2">
+                            <Calendar className="h-4 w-4 text-amber-500" />
+                            <h4 className="font-medium text-sm">RCA Mensile</h4>
+                          </div>
+                          <p className="text-xs text-muted-foreground">
+                            Trasmissione mensile aggregata (DataRiepilogo: AAAAMM01)
+                          </p>
                           <FormField
                             control={settingsForm.control}
                             name="monthlyEnabled"
