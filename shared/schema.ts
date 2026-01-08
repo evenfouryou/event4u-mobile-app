@@ -1757,6 +1757,11 @@ export const siaeTransmissions = pgTable("siae_transmissions", {
   totalImpostaIntrattenimento: decimal("total_imposta_intrattenimento", { precision: 12, scale: 2 }), // Imposta intrattenimento
   totalEsenti: decimal("total_esenti", { precision: 12, scale: 2 }), // Corrispettivi esenti
   
+  // === NUOVI CAMPI SCHEDULING RCA 2026 ===
+  scheduleType: varchar("schedule_type", { length: 20 }).default('manual'), // manual, daily, end_event, monthly
+  isSubstitution: boolean("is_substitution").notNull().default(false), // true se Sostituzione="S" nell'XML
+  originalTransmissionId: varchar("original_transmission_id").references((): any => siaeTransmissions.id), // ID trasmissione originale per reinvii
+  
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
@@ -1772,6 +1777,42 @@ export const siaeTransmissionsRelations = relations(siaeTransmissions, ({ one, m
   }),
   logs: many(siaeLogs),
   emailAudits: many(siaeEmailAudit),
+}));
+
+// Impostazioni Trasmissioni SIAE per Organizzatore - Configurazione intervalli RCA
+export const siaeTransmissionSettings = pgTable("siae_transmission_settings", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  companyId: varchar("company_id").notNull().references(() => companies.id).unique(), // Una configurazione per organizzatore
+  
+  // Intervalli di invio (in giorni)
+  dailyEnabled: boolean("daily_enabled").notNull().default(true), // Abilita invio giornaliero
+  dailyIntervalDays: integer("daily_interval_days").notNull().default(5), // Ogni N giorni durante evento
+  
+  endEventEnabled: boolean("end_event_enabled").notNull().default(true), // Abilita invio fine evento
+  endEventDelayDays: integer("end_event_delay_days").notNull().default(5), // N giorni dopo chiusura evento
+  
+  monthlyEnabled: boolean("monthly_enabled").notNull().default(true), // Abilita invio mensile
+  monthlyDelayDays: integer("monthly_delay_days").notNull().default(5), // N giorni dopo fine evento per mensile
+  monthlyRecurringEnabled: boolean("monthly_recurring_enabled").notNull().default(true), // Invio ricorrente fine mese
+  monthlyRecurringDay: integer("monthly_recurring_day").notNull().default(1), // Giorno del mese per invio (1-28)
+  
+  // Tracking ultimo invio
+  lastDailySentAt: timestamp("last_daily_sent_at"),
+  lastEndEventSentAt: timestamp("last_end_event_sent_at"),
+  lastMonthlySentAt: timestamp("last_monthly_sent_at"),
+  
+  // Auto-invio
+  autoSendEnabled: boolean("auto_send_enabled").notNull().default(false), // Abilita invio automatico scheduler
+  
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+});
+
+export const siaeTransmissionSettingsRelations = relations(siaeTransmissionSettings, ({ one }) => ({
+  company: one(companies, {
+    fields: [siaeTransmissionSettings.companyId],
+    references: [companies.id],
+  }),
 }));
 
 // Email Audit Trail per trasmissioni SIAE - Tracciabilità completa
@@ -2901,6 +2942,14 @@ export const insertSiaeTransmissionSchema = createInsertSchema(siaeTransmissions
 });
 export const updateSiaeTransmissionSchema = insertSiaeTransmissionSchema.partial().omit({ companyId: true });
 
+// Transmission Settings
+export const insertSiaeTransmissionSettingsSchema = createInsertSchema(siaeTransmissionSettings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+export const updateSiaeTransmissionSettingsSchema = insertSiaeTransmissionSettingsSchema.partial().omit({ companyId: true });
+
 // Email Audit
 export const insertSiaeEmailAuditSchema = createInsertSchema(siaeEmailAudit).omit({
   id: true,
@@ -3080,6 +3129,11 @@ export type InsertSiaeLog = z.infer<typeof insertSiaeLogSchema>;
 export type SiaeTransmission = typeof siaeTransmissions.$inferSelect;
 export type InsertSiaeTransmission = z.infer<typeof insertSiaeTransmissionSchema>;
 export type UpdateSiaeTransmission = z.infer<typeof updateSiaeTransmissionSchema>;
+
+// Transmission Settings
+export type SiaeTransmissionSettings = typeof siaeTransmissionSettings.$inferSelect;
+export type InsertSiaeTransmissionSettings = z.infer<typeof insertSiaeTransmissionSettingsSchema>;
+export type UpdateSiaeTransmissionSettings = z.infer<typeof updateSiaeTransmissionSettingsSchema>;
 
 // Email Audit
 export type SiaeEmailAudit = typeof siaeEmailAudit.$inferSelect;
