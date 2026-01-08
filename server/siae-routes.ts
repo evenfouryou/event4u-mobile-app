@@ -5192,10 +5192,10 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   const fileExtension = effectiveSignatureFormat === 'cades' ? '.p7m' : '.xsi';
   
   // Create transmission record - salva firma appropriata e nome file conforme
-  // FIX: Includere ticketedEventId per RCA per tracciare trasmissioni per evento
+  // FIX: Includere ticketedEventId per tutti i tipi se un evento è selezionato
   const transmission = await siaeStorage.createSiaeTransmission({
     companyId,
-    ticketedEventId: isRCA ? eventId : undefined, // Collegamento evento SIAE per RCA
+    ticketedEventId: eventId || undefined, // Collegamento evento SIAE (sempre se selezionato)
     transmissionType,
     periodDate: reportDate,
     fileName: generatedFileName.replace(fileExtension, ''), // Nome senza estensione
