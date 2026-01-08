@@ -59,17 +59,24 @@ export default function Login() {
     try {
       // Route to appropriate login method based on selected tab
       if (loginMethod === 'phone') {
-        // PR login with phone + prefix
+        // Phone login - supports both customers and PR users
         const fullPhone = `${phonePrefix}${phoneNumber}`;
-        await apiRequest('POST', '/api/pr/login', { 
-          phone: fullPhone, 
-          phonePrefix,
-          phoneNumber,
+        const response: any = await apiRequest('POST', '/api/auth/login', { 
+          phone: fullPhone,
           password 
         });
         triggerHaptic('success');
-        queryClient.invalidateQueries({ queryKey: ["/api/pr/me"] });
-        window.location.href = '/pr-app';
+        
+        // Route based on role
+        if (response.user?.role === 'cliente') {
+          queryClient.invalidateQueries({ queryKey: ["/api/public/customers/me"] });
+          window.location.href = redirectTo || '/account';
+        } else if (response.user?.role === 'pr') {
+          queryClient.invalidateQueries({ queryKey: ["/api/pr/me"] });
+          window.location.href = '/pr-app';
+        } else {
+          window.location.href = redirectTo || '/';
+        }
         return;
       } else if (loginMethod === 'username') {
         // Username login - try SIAE cashier endpoint first, then fallback to auth/login

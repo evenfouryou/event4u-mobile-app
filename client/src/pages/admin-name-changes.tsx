@@ -86,7 +86,7 @@ interface NameChangeData {
   event: {
     id: string;
     name: string;
-    date: string;
+    startDatetime: string;
   };
   company: {
     id: string;
@@ -555,7 +555,7 @@ export default function AdminNameChanges() {
                             <div>
                               <div className="font-medium text-sm">{nc.event.name}</div>
                               <div className="text-xs text-muted-foreground">
-                                {format(new Date(nc.event.date), "dd MMM yyyy", { locale: it })}
+                                {format(new Date(nc.event.startDatetime), "dd MMM yyyy", { locale: it })}
                               </div>
                             </div>
                           </div>

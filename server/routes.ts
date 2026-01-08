@@ -944,21 +944,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Unified login - supports both users (admin/gestore) and customers (SIAE clients)
+  // Also supports phone number login for customers
   app.post('/api/auth/login', async (req, res) => {
     try {
-      const { email, password } = req.body;
+      const { email, password, phone } = req.body;
       
-      if (!email || !password) {
-        return res.status(400).json({ message: "Email/Username e password richiesti" });
+      // Accept either email or phone
+      const identifier = email || phone;
+      
+      if (!identifier || !password) {
+        return res.status(400).json({ message: "Email/Username/Telefono e password richiesti" });
       }
 
-      const normalizedInput = email.toLowerCase().trim();
+      const normalizedInput = identifier.toLowerCase().trim();
       const isEmail = normalizedInput.includes('@');
+      // Phone detection: starts with + or contains only digits (after removing spaces/dashes)
+      const cleanPhone = normalizedInput.replace(/[\s\-()]/g, '');
+      const isPhone = cleanPhone.startsWith('+') || /^\d{8,15}$/.test(cleanPhone);
       
-      // First, try to find in users table (admin/gestore/staff)
+      // First, try to find in users table (admin/gestore/staff) - only for email/username
       // For username-based login (scanner, etc.), search by email field which stores the username
-      const user = await storage.getUserByEmail(normalizedInput);
-      console.log('[Login] Input:', normalizedInput, 'IsEmail:', isEmail, 'User Found:', !!user);
+      let user = null;
+      if (!isPhone) {
+        user = await storage.getUserByEmail(normalizedInput);
+      }
+      console.log('[Login] Input:', normalizedInput, 'IsEmail:', isEmail, 'IsPhone:', isPhone, 'User Found:', !!user);
       
       if (user && user.passwordHash) {
         const isValidPassword = await bcrypt.compare(password, user.passwordHash);
@@ -997,49 +1007,164 @@ export async function registerRoutes(app: Express): Promise<Server> {
         });
       }
       
-      // If not found in users and input looks like email, try siae_customers table
-      if (normalizedInput.includes('@')) {
-        const [customer] = await db
-          .select()
-          .from(siaeCustomers)
-          .where(eq(siaeCustomers.email, normalizedInput));
+      // If not found in users, try PR profiles first (for phone login)
+      if (isPhone) {
+        // Normalize phone for PR lookup (same logic as /api/pr/login)
+        const cleanDigits = cleanPhone.replace(/\D/g, '');
+        let numberPart = cleanDigits;
+        let detectedPrefix = '';
         
-        console.log('[Login] Customer Found:', !!customer);
+        // Remove Italian prefix
+        if (cleanDigits.startsWith('39') && cleanDigits.length >= 12) {
+          numberPart = cleanDigits.substring(2);
+          detectedPrefix = '+39';
+        } 
+        // Remove US/Canada prefix  
+        else if (cleanDigits.startsWith('1') && cleanDigits.length >= 11) {
+          numberPart = cleanDigits.substring(1);
+          detectedPrefix = '+1';
+        }
+        // Remove other common European prefixes
+        else if (['44', '33', '49', '34', '41', '43', '32', '31'].some(c => 
+          cleanDigits.startsWith(c) && cleanDigits.length >= 10 + c.length
+        )) {
+          const prefix = ['44', '33', '49', '34', '41', '43', '32', '31'].find(c => 
+            cleanDigits.startsWith(c)
+          );
+          if (prefix) {
+            numberPart = cleanDigits.substring(prefix.length);
+            detectedPrefix = '+' + prefix;
+          }
+        }
         
-        if (customer && customer.passwordHash) {
-          const isValidPassword = await bcrypt.compare(password, customer.passwordHash);
+        // Search PR by prefix + number (structured format, same as /api/pr/login)
+        let prProfile = null;
+        
+        if (detectedPrefix) {
+          [prProfile] = await db.select()
+            .from(prProfiles)
+            .where(and(
+              eq(prProfiles.phonePrefix, detectedPrefix),
+              eq(prProfiles.phone, numberPart)
+            ));
+        }
+        
+        // If not found, try just the number part (for legacy data)
+        if (!prProfile) {
+          [prProfile] = await db
+            .select()
+            .from(prProfiles)
+            .where(eq(prProfiles.phone, numberPart));
+        }
+        
+        // If still not found, try raw cleaned phone (for truly legacy data)
+        if (!prProfile) {
+          [prProfile] = await db
+            .select()
+            .from(prProfiles)
+            .where(eq(prProfiles.phone, cleanDigits));
+        }
+        
+        console.log('[Login] PR by Phone Found:', !!prProfile);
+        
+        if (prProfile && prProfile.passwordHash && prProfile.isActive) {
+          const isValidPassword = await bcrypt.compare(password, prProfile.passwordHash);
           if (!isValidPassword) {
             return res.status(401).json({ message: "Credenziali non valide" });
           }
-
-          if (!customer.registrationCompleted) {
-            return res.status(403).json({ message: "Completa la registrazione con OTP" });
-          }
-
-          // Create session for customer
-          return (req as any).login({ 
-            claims: { sub: customer.id, email: customer.email },
-            role: 'cliente',
-            customerId: customer.id,
-            accountType: 'customer'
-          }, (err: any) => {
-            if (err) {
-              console.error("Session creation error:", err);
-              return res.status(500).json({ message: "Login failed" });
+          
+          // Update last login (same as /api/pr/login)
+          await db.update(prProfiles)
+            .set({ 
+              lastLoginAt: new Date(),
+              phoneVerified: true 
+            })
+            .where(eq(prProfiles.id, prProfile.id));
+          
+          // Create PR session (same structure as /api/pr/login)
+          const prProfileData = {
+            id: prProfile.id,
+            companyId: prProfile.companyId,
+            firstName: prProfile.firstName,
+            lastName: prProfile.lastName,
+            prCode: prProfile.prCode,
+            phone: prProfile.phone,
+            email: prProfile.email
+          };
+          
+          (req.session as any).prProfile = prProfileData;
+          
+          return res.json({
+            message: "Login successful",
+            user: {
+              id: prProfile.id,
+              email: prProfile.email,
+              phone: prProfile.phone,
+              firstName: prProfile.firstName,
+              lastName: prProfile.lastName,
+              prCode: prProfile.prCode,
+              role: 'pr',
+              companyId: prProfile.companyId
             }
-            
-            res.json({ 
-              message: "Login successful",
-              user: {
-                id: customer.id,
-                email: customer.email,
-                firstName: customer.firstName,
-                lastName: customer.lastName,
-                role: 'cliente',
-              }
-            });
           });
         }
+      }
+      
+      // If not found in PR, try siae_customers table (by email or phone)
+      let customer = null;
+      
+      if (isPhone) {
+        // Search by phone number
+        const [phoneCustomer] = await db
+          .select()
+          .from(siaeCustomers)
+          .where(eq(siaeCustomers.phone, cleanPhone));
+        customer = phoneCustomer;
+        console.log('[Login] Customer by Phone Found:', !!customer);
+      } else if (normalizedInput.includes('@')) {
+        // Search by email
+        const [emailCustomer] = await db
+          .select()
+          .from(siaeCustomers)
+          .where(eq(siaeCustomers.email, normalizedInput));
+        customer = emailCustomer;
+        console.log('[Login] Customer by Email Found:', !!customer);
+      }
+      
+      if (customer && customer.passwordHash) {
+        const isValidPassword = await bcrypt.compare(password, customer.passwordHash);
+        if (!isValidPassword) {
+          return res.status(401).json({ message: "Credenziali non valide" });
+        }
+
+        if (!customer.registrationCompleted) {
+          return res.status(403).json({ message: "Completa la registrazione con OTP" });
+        }
+
+        // Create session for customer
+        return (req as any).login({ 
+          claims: { sub: customer.id, email: customer.email || customer.phone },
+          role: 'cliente',
+          customerId: customer.id,
+          accountType: 'customer'
+        }, (err: any) => {
+          if (err) {
+            console.error("Session creation error:", err);
+            return res.status(500).json({ message: "Login failed" });
+          }
+          
+          res.json({ 
+            message: "Login successful",
+            user: {
+              id: customer.id,
+              email: customer.email,
+              phone: customer.phone,
+              firstName: customer.firstName,
+              lastName: customer.lastName,
+              role: 'cliente',
+            }
+          });
+        });
       }
       
       // Neither user nor customer found

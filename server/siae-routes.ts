@@ -1606,7 +1606,7 @@ router.get("/api/siae/admin/transactions", requireAuth, requireSuperAdmin, async
         event: {
           id: events.id,
           name: events.name,
-          date: events.date,
+          startDatetime: events.startDatetime,
         },
         company: {
           id: companies.id,
@@ -2813,14 +2813,27 @@ router.get("/api/siae/transactions", requireAuth, async (req: Request, res: Resp
       return res.json([]);
     }
     
-    // Get all transactions for these events
+    // Get all transactions for these events with event info
     const transactions = await db
-      .select()
+      .select({
+        transaction: siaeTransactions,
+        eventId: siaeTicketedEvents.eventId,
+        eventName: events.name,
+      })
       .from(siaeTransactions)
+      .innerJoin(siaeTicketedEvents, eq(siaeTransactions.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
       .where(inArray(siaeTransactions.ticketedEventId, ticketedEventIds))
       .orderBy(desc(siaeTransactions.createdAt));
     
-    res.json(transactions);
+    // Flatten the response to include event info at the transaction level
+    const result = transactions.map(row => ({
+      ...row.transaction,
+      eventId: row.eventId,
+      eventName: row.eventName,
+    }));
+    
+    res.json(result);
   } catch (error: any) {
     console.error('[GET /api/siae/transactions] Error:', error);
     res.status(500).json({ message: error.message });
@@ -2926,11 +2939,18 @@ router.patch("/api/siae/transactions/:id", requireAuth, async (req: Request, res
   }
 });
 
-// ==================== Admin Name Changes (Super Admin) ====================
+// ==================== Admin Name Changes (Super Admin & Gestore) ====================
 
-router.get("/api/siae/admin/name-changes", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
+router.get("/api/siae/admin/name-changes", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
+    const user = req.user as any;
     const { companyId, eventId, status, page = '1', limit = '50' } = req.query;
+    
+    // Gestori can only see their company's name changes
+    // Super admins can see all or filter by company
+    const effectiveCompanyId = user.role === 'super_admin' 
+      ? (companyId as string | undefined) 
+      : user.companyId;
     
     // Build query with filters
     let query = db
@@ -2953,7 +2973,7 @@ router.get("/api/siae/admin/name-changes", requireAuth, requireSuperAdmin, async
         event: {
           id: events.id,
           name: events.name,
-          date: events.date,
+          startDatetime: events.startDatetime,
         },
         company: {
           id: companies.id,
@@ -2968,8 +2988,9 @@ router.get("/api/siae/admin/name-changes", requireAuth, requireSuperAdmin, async
     
     // Apply filters
     const conditions: any[] = [];
-    if (companyId && typeof companyId === 'string') {
-      conditions.push(eq(siaeTicketedEvents.companyId, companyId));
+    // For gestore, always filter by their company; for super_admin, use query param if provided
+    if (effectiveCompanyId) {
+      conditions.push(eq(siaeTicketedEvents.companyId, effectiveCompanyId));
     }
     if (eventId && typeof eventId === 'string') {
       conditions.push(eq(siaeTicketedEvents.eventId, eventId));
@@ -3033,10 +3054,17 @@ router.get("/api/siae/admin/name-changes", requireAuth, requireSuperAdmin, async
 });
 
 // Get companies and events for filters
-router.get("/api/siae/admin/name-changes/filters", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
+router.get("/api/siae/admin/name-changes/filters", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
-    // Get all companies with name changes
-    const companiesWithChanges = await db
+    const user = req.user as any;
+    
+    // For gestore, filter to their company only
+    const companyFilter = user.role === 'super_admin' 
+      ? undefined 
+      : user.companyId;
+    
+    // Get all companies with name changes (super_admin sees all, gestore sees only theirs)
+    let companiesQuery = db
       .selectDistinct({
         id: companies.id,
         name: companies.name,
@@ -3044,11 +3072,15 @@ router.get("/api/siae/admin/name-changes/filters", requireAuth, requireSuperAdmi
       .from(siaeNameChanges)
       .innerJoin(siaeTickets, eq(siaeNameChanges.originalTicketId, siaeTickets.id))
       .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
-      .innerJoin(companies, eq(siaeTicketedEvents.companyId, companies.id))
-      .orderBy(companies.name);
+      .innerJoin(companies, eq(siaeTicketedEvents.companyId, companies.id));
     
-    // Get all events with name changes
-    const eventsWithChanges = await db
+    if (companyFilter) {
+      companiesQuery = companiesQuery.where(eq(siaeTicketedEvents.companyId, companyFilter)) as any;
+    }
+    const companiesWithChanges = await companiesQuery.orderBy(companies.name);
+    
+    // Get all events with name changes (filtered by company for gestore)
+    let eventsQuery = db
       .selectDistinct({
         id: events.id,
         name: events.name,
@@ -3057,8 +3089,12 @@ router.get("/api/siae/admin/name-changes/filters", requireAuth, requireSuperAdmi
       .from(siaeNameChanges)
       .innerJoin(siaeTickets, eq(siaeNameChanges.originalTicketId, siaeTickets.id))
       .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
-      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
-      .orderBy(events.name);
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id));
+    
+    if (companyFilter) {
+      eventsQuery = eventsQuery.where(eq(siaeTicketedEvents.companyId, companyFilter)) as any;
+    }
+    const eventsWithChanges = await eventsQuery.orderBy(events.name);
     
     res.json({
       companies: companiesWithChanges,
@@ -3072,9 +3108,15 @@ router.get("/api/siae/admin/name-changes/filters", requireAuth, requireSuperAdmi
 
 // SIAE Compliance: Biglietti annullati per riemissione non ancora agganciati al nuovo titolo
 // Per tracciabilità fiscale - mostra i titoli annullati con causale cambio nominativo in attesa di riemissione
-router.get("/api/siae/admin/name-changes/pending-reissue", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
+router.get("/api/siae/admin/name-changes/pending-reissue", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
+    const user = req.user as any;
     const { companyId, eventId } = req.query;
+    
+    // For gestore, always filter by their company
+    const effectiveCompanyId = user.role === 'super_admin' 
+      ? (companyId as string | undefined) 
+      : user.companyId;
     
     // Find tickets cancelled for name change (code 10) that don't have a replacement yet
     // OR name change requests that are pending
@@ -3085,8 +3127,8 @@ router.get("/api/siae/admin/name-changes/pending-reissue", requireAuth, requireS
       )!
     ];
     
-    if (companyId) {
-      conditions.push(eq(siaeTicketedEvents.companyId, companyId as string));
+    if (effectiveCompanyId) {
+      conditions.push(eq(siaeTicketedEvents.companyId, effectiveCompanyId));
     }
     if (eventId) {
       conditions.push(eq(siaeTicketedEvents.eventId, Number(eventId)));
@@ -3154,9 +3196,10 @@ router.get("/api/siae/admin/name-changes/pending-reissue", requireAuth, requireS
   }
 });
 
-// Process name change (super_admin)
-router.post("/api/siae/admin/name-changes/:id/process", requireAuth, requireSuperAdmin, async (req: Request, res: Response) => {
+// Process name change (super_admin or gestore for their company)
+router.post("/api/siae/admin/name-changes/:id/process", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
+    const user = req.user as any;
     const { id } = req.params;
     const { action, rejectionReason } = req.body;
     
@@ -3164,10 +3207,26 @@ router.post("/api/siae/admin/name-changes/:id/process", requireAuth, requireSupe
       return res.status(400).json({ message: "Azione non valida. Usa 'approve' o 'reject'" });
     }
     
-    // Get the name change request
-    const [nameChange] = await db.select().from(siaeNameChanges).where(eq(siaeNameChanges.id, id));
-    if (!nameChange) {
+    // Get the name change request with company info
+    const [nameChangeWithCompany] = await db
+      .select({
+        nameChange: siaeNameChanges,
+        companyId: siaeTicketedEvents.companyId,
+      })
+      .from(siaeNameChanges)
+      .innerJoin(siaeTickets, eq(siaeNameChanges.originalTicketId, siaeTickets.id))
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .where(eq(siaeNameChanges.id, id));
+    
+    if (!nameChangeWithCompany) {
       return res.status(404).json({ message: "Richiesta di cambio nominativo non trovata" });
+    }
+    
+    const nameChange = nameChangeWithCompany.nameChange;
+    
+    // Gestori can only process name changes for their own company
+    if (user.role !== 'super_admin' && nameChangeWithCompany.companyId !== user.companyId) {
+      return res.status(403).json({ message: "Non autorizzato a elaborare questa richiesta" });
     }
     
     if (nameChange.status !== 'pending') {

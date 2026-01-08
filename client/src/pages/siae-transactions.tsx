@@ -140,9 +140,14 @@ export default function SiaeTransactionsPage() {
     enabled: !!eventId,
   });
 
-  const getEventNameForTransaction = (ticketedEventId: string | null) => {
-    if (!ticketedEventId) return "-";
-    const te = allTicketedEvents?.find(e => e.id === ticketedEventId);
+  const getEventNameForTransaction = (transaction: SiaeTransaction) => {
+    // First check if eventName is directly available from the API response
+    if ((transaction as any).eventName) {
+      return (transaction as any).eventName;
+    }
+    // Fallback to client-side lookup for event-specific view
+    if (!transaction.ticketedEventId) return "-";
+    const te = allTicketedEvents?.find(e => e.id === transaction.ticketedEventId);
     if (!te) return "Evento sconosciuto";
     const ev = allEvents?.find(e => e.id === te.eventId);
     return ev?.name || "Evento sconosciuto";
@@ -509,7 +514,7 @@ export default function SiaeTransactionsPage() {
                         </TableCell>
                         <TableCell data-testid={`cell-event-${transaction.id}`}>
                           <span className="text-sm truncate max-w-[180px] block font-medium">
-                            {getEventNameForTransaction(transaction.ticketedEventId)}
+                            {getEventNameForTransaction(transaction)}
                           </span>
                         </TableCell>
                         <TableCell data-testid={`cell-price-${transaction.id}`}>
@@ -999,7 +1004,7 @@ export default function SiaeTransactionsPage() {
                         </TableCell>
                         <TableCell data-testid={`cell-event-mobile-${transaction.id}`}>
                           <span className="text-sm truncate max-w-[150px] block font-medium">
-                            {getEventNameForTransaction(transaction.ticketedEventId)}
+                            {getEventNameForTransaction(transaction)}
                           </span>
                         </TableCell>
                         <TableCell data-testid={`cell-price-mobile-${transaction.id}`}>

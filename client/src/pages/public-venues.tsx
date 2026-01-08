@@ -30,6 +30,7 @@ import { useState } from "react";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { BrandLogo } from "@/components/brand-logo";
 
 interface VenueEvent {
   id: string;
@@ -112,15 +113,20 @@ export default function PublicVenues() {
           <div className="container mx-auto px-6 py-4">
             <div className="flex items-center justify-between gap-4">
               <Link href="/">
-                <div className="flex items-center gap-3 cursor-pointer">
-                  <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-                    <Building2 className="h-5 w-5 text-primary-foreground" />
-                  </div>
-                  <span className="text-xl font-bold text-foreground">
-                    Event<span className="text-primary">4</span>U
-                  </span>
-                </div>
+                <BrandLogo variant="horizontal" className="h-10 w-auto" />
               </Link>
+
+              <nav className="flex items-center gap-6">
+                <Link href="/acquista" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
+                  Eventi
+                </Link>
+                <Link href="/rivendite" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
+                  Rivendite
+                </Link>
+                <Link href="/locali" className="text-foreground font-medium">
+                  Locali
+                </Link>
+              </nav>
 
               <div className="flex-1 max-w-md">
                 <div className="relative">
@@ -136,12 +142,6 @@ export default function PublicVenues() {
               </div>
 
               <div className="flex items-center gap-3">
-                <Link href="/acquista">
-                  <Button variant="ghost" data-testid="button-events">
-                    <Ticket className="w-4 h-4 mr-2" />
-                    Eventi
-                  </Button>
-                </Link>
                 {isAuthenticated ? (
                   <Link href="/account">
                     <Avatar className="h-9 w-9 cursor-pointer ring-2 ring-primary/20" data-testid="avatar-user">
@@ -390,30 +390,12 @@ export default function PublicVenues() {
       >
         <div className="flex items-center justify-between gap-3 mb-4">
           <Link href="/">
-            <motion.div 
-              whileTap={{ scale: 0.95 }}
-              className="flex items-center gap-2 cursor-pointer min-h-[44px]"
-            >
-              <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center">
-                <Building2 className="h-5 w-5 text-primary-foreground" />
-              </div>
-              <span className="text-lg font-bold text-foreground">
-                Event<span className="text-primary">4</span>U
-              </span>
+            <motion.div whileTap={{ scale: 0.95 }}>
+              <BrandLogo variant="horizontal" className="h-10 w-auto" />
             </motion.div>
           </Link>
           
           <div className="flex items-center gap-2">
-            <Link href="/acquista">
-              <Button 
-                variant="ghost" 
-                size="icon"
-                className="h-11 w-11 rounded-full" 
-                data-testid="button-events"
-              >
-                <Ticket className="w-5 h-5" />
-              </Button>
-            </Link>
             {isAuthenticated ? (
               <Link href="/account">
                 <Avatar className="h-11 w-11 cursor-pointer ring-2 ring-primary/20" data-testid="avatar-user">
@@ -436,6 +418,18 @@ export default function PublicVenues() {
             )}
             <ThemeToggle />
           </div>
+        </div>
+
+        <div className="flex items-center gap-4 text-sm mb-4">
+          <Link href="/acquista" className="text-muted-foreground">
+            Eventi
+          </Link>
+          <Link href="/rivendite" className="text-muted-foreground">
+            Rivendite
+          </Link>
+          <Link href="/locali" className="text-foreground font-medium border-b-2 border-primary pb-1">
+            Locali
+          </Link>
         </div>
 
         <motion.div 
