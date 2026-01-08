@@ -4785,9 +4785,10 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     // Calculate progressivo for RCA based on previous transmissions for this event
     // Per errore 40604 "riepilogo già elaborato": 
     // - Sostituzione="S" non basta, SIAE richiede anche ProgressivoRiepilogo incrementato
+    // FIX: Usa ticketedEventId (campo corretto nello schema) invece di eventId
     const allTransmissions = await siaeStorage.getSiaeTransmissionsByCompany(companyId);
     const rcaTransmissionsForEvent = allTransmissions.filter(t => 
-      t.transmissionType === 'rca' && t.eventId === eventId
+      t.transmissionType === 'rca' && t.ticketedEventId === eventId
     );
     let rcaProgressivo = rcaTransmissionsForEvent.length + 1;
     
