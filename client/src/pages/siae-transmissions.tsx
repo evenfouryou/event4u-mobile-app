@@ -109,7 +109,6 @@ const transmissionSettingsSchema = z.object({
   endEventDelayDays: z.number().min(1).max(30),
   monthlyEnabled: z.boolean(),
   monthlyDelayDays: z.number().min(1).max(30),
-  monthlyRecurringEnabled: z.boolean(),
   monthlyRecurringDay: z.number().min(1).max(28),
   autoSendEnabled: z.boolean(),
 });
@@ -172,7 +171,6 @@ export default function SiaeTransmissionsPage() {
       endEventDelayDays: 5,
       monthlyEnabled: true,
       monthlyDelayDays: 5,
-      monthlyRecurringEnabled: true,
       monthlyRecurringDay: 1,
       autoSendEnabled: false,
     },
@@ -183,10 +181,9 @@ export default function SiaeTransmissionsPage() {
     enabled: isSuperAdmin,
   });
 
-  // Fetch transmission settings
+  // Fetch transmission settings (global singleton)
   const { data: transmissionSettings, isLoading: isLoadingSettings } = useQuery<SiaeTransmissionSettings>({
-    queryKey: ['/api/siae/transmission-settings', companyId],
-    enabled: !!companyId,
+    queryKey: ['/api/siae/transmission-settings'],
   });
 
   // Update form when settings are loaded
@@ -199,7 +196,6 @@ export default function SiaeTransmissionsPage() {
         endEventDelayDays: transmissionSettings.endEventDelayDays ?? 5,
         monthlyEnabled: transmissionSettings.monthlyEnabled ?? true,
         monthlyDelayDays: transmissionSettings.monthlyDelayDays ?? 5,
-        monthlyRecurringEnabled: transmissionSettings.monthlyRecurringEnabled ?? true,
         monthlyRecurringDay: transmissionSettings.monthlyRecurringDay ?? 1,
         autoSendEnabled: transmissionSettings.autoSendEnabled ?? false,
       });
@@ -553,17 +549,14 @@ export default function SiaeTransmissionsPage() {
     },
   });
 
-  // Mutation for saving transmission settings
+  // Mutation for saving transmission settings (global singleton)
   const saveSettingsMutation = useMutation({
     mutationFn: async (data: TransmissionSettingsFormValues) => {
-      const response = await apiRequest("PUT", `/api/siae/transmission-settings`, {
-        ...data,
-        companyId,
-      });
+      const response = await apiRequest("PUT", `/api/siae/transmission-settings`, data);
       return response.json();
     },
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/siae/transmission-settings', companyId] });
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/transmission-settings'] });
       triggerHaptic('success');
       toast({
         title: "Impostazioni Salvate",
@@ -582,9 +575,10 @@ export default function SiaeTransmissionsPage() {
 
   // Mutation for resending failed transmissions
   const resendTransmissionMutation = useMutation({
-    mutationFn: async ({ id, toEmail }: { id: string; toEmail: string }) => {
+    mutationFn: async ({ id, toEmail, forceSubstitution }: { id: string; toEmail: string; forceSubstitution: boolean }) => {
       const response = await apiRequest("POST", `/api/siae/transmissions/${id}/resend`, {
         toEmail,
+        forceSubstitution,
       });
       return response.json();
     },
@@ -986,22 +980,6 @@ export default function SiaeTransmissionsPage() {
                                     {...field}
                                     onChange={(e) => field.onChange(parseInt(e.target.value) || 5)}
                                     data-testid="input-monthly-delay"
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={settingsForm.control}
-                            name="monthlyRecurringEnabled"
-                            render={({ field }) => (
-                              <FormItem className="flex flex-row items-center justify-between">
-                                <FormLabel className="text-sm">Ricorrente</FormLabel>
-                                <FormControl>
-                                  <Checkbox
-                                    checked={field.value}
-                                    onCheckedChange={field.onChange}
-                                    data-testid="checkbox-monthly-recurring"
                                   />
                                 </FormControl>
                               </FormItem>
@@ -1809,7 +1787,12 @@ export default function SiaeTransmissionsPage() {
         </Dialog>
 
         {/* Resend Dialog */}
-        <Dialog open={isResendDialogOpen} onOpenChange={setIsResendDialogOpen}>
+        <Dialog open={isResendDialogOpen} onOpenChange={(open) => {
+          setIsResendDialogOpen(open);
+          if (!open) {
+            setForceSubstitution(false);
+          }
+        }}>
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Reinvio Sostitutivo</DialogTitle>
@@ -1821,7 +1804,13 @@ export default function SiaeTransmissionsPage() {
               {selectedTransmission && (
                 <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
                   <p className="text-sm text-muted-foreground">
-                    <strong>Trasmissione originale:</strong> {getTypeLabel(selectedTransmission.transmissionType)}
+                    <strong>File:</strong> {selectedTransmission.fileName || 'N/A'}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    <strong>Tipo:</strong> {getTypeLabel(selectedTransmission.transmissionType)}
+                  </p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    <strong>Stato:</strong> {selectedTransmission.status}
                   </p>
                   {selectedTransmission.errorMessage && (
                     <p className="text-sm text-red-600 dark:text-red-400 mt-1">
@@ -1830,6 +1819,23 @@ export default function SiaeTransmissionsPage() {
                   )}
                 </div>
               )}
+              <div className="flex items-start space-x-3 p-3 bg-amber-500/10 rounded-lg border border-amber-500/30">
+                <Checkbox
+                  id="forceSubstitutionResend"
+                  checked={forceSubstitution}
+                  onCheckedChange={(checked) => setForceSubstitution(checked === true)}
+                  data-testid="checkbox-force-substitution-resend"
+                  className="mt-0.5"
+                />
+                <div className="flex-1">
+                  <Label htmlFor="forceSubstitutionResend" className="text-sm font-medium cursor-pointer">
+                    Forza Sostituzione (Sostituzione=S)
+                  </Label>
+                  <p className="text-xs text-muted-foreground">
+                    Usa questa opzione per reinviare un report già elaborato (errore 40604)
+                  </p>
+                </div>
+              </div>
               <div>
                 <Label>Email Destinatario SIAE</Label>
                 <Input
@@ -1842,13 +1848,14 @@ export default function SiaeTransmissionsPage() {
               </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => setIsResendDialogOpen(false)}>Annulla</Button>
+              <Button variant="outline" onClick={() => setIsResendDialogOpen(false)} data-testid="button-resend-cancel">Annulla</Button>
               <Button
                 onClick={() => {
                   if (selectedTransmission) {
                     resendTransmissionMutation.mutate({
                       id: selectedTransmission.id,
                       toEmail: resendEmail,
+                      forceSubstitution,
                     });
                   }
                 }}

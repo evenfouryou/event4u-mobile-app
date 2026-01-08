@@ -265,12 +265,12 @@ export interface ISiaeStorage {
   createSiaeTransmission(transmission: InsertSiaeTransmission): Promise<SiaeTransmission>;
   updateSiaeTransmission(id: string, transmission: Partial<SiaeTransmission>): Promise<SiaeTransmission | undefined>;
   
-  // ==================== Transmission Settings ====================
+  // ==================== Transmission Settings (Global Singleton) ====================
   
-  getSiaeTransmissionSettings(companyId: string): Promise<SiaeTransmissionSettings | undefined>;
-  createSiaeTransmissionSettings(settings: InsertSiaeTransmissionSettings): Promise<SiaeTransmissionSettings>;
-  updateSiaeTransmissionSettings(companyId: string, settings: Partial<SiaeTransmissionSettings>): Promise<SiaeTransmissionSettings | undefined>;
-  getOrCreateSiaeTransmissionSettings(companyId: string): Promise<SiaeTransmissionSettings>;
+  getGlobalSiaeTransmissionSettings(): Promise<SiaeTransmissionSettings | undefined>;
+  createGlobalSiaeTransmissionSettings(settings: InsertSiaeTransmissionSettings): Promise<SiaeTransmissionSettings>;
+  updateGlobalSiaeTransmissionSettings(settings: Partial<SiaeTransmissionSettings>): Promise<SiaeTransmissionSettings | undefined>;
+  getOrCreateGlobalSiaeTransmissionSettings(): Promise<SiaeTransmissionSettings>;
   
   // ==================== Box Office Sessions ====================
   
@@ -1344,31 +1344,31 @@ export class SiaeStorage implements ISiaeStorage {
     return updated;
   }
   
-  // ==================== Transmission Settings ====================
+  // ==================== Transmission Settings (Global Singleton) ====================
   
-  async getSiaeTransmissionSettings(companyId: string): Promise<SiaeTransmissionSettings | undefined> {
+  async getGlobalSiaeTransmissionSettings(): Promise<SiaeTransmissionSettings | undefined> {
     const [settings] = await db.select().from(siaeTransmissionSettings)
-      .where(eq(siaeTransmissionSettings.companyId, companyId));
+      .where(eq(siaeTransmissionSettings.id, 'global'));
     return settings;
   }
   
-  async createSiaeTransmissionSettings(settings: InsertSiaeTransmissionSettings): Promise<SiaeTransmissionSettings> {
-    const [created] = await db.insert(siaeTransmissionSettings).values(settings).returning();
+  async createGlobalSiaeTransmissionSettings(settings: InsertSiaeTransmissionSettings): Promise<SiaeTransmissionSettings> {
+    const [created] = await db.insert(siaeTransmissionSettings).values({ ...settings, id: 'global' } as any).returning();
     return created;
   }
   
-  async updateSiaeTransmissionSettings(companyId: string, settings: Partial<SiaeTransmissionSettings>): Promise<SiaeTransmissionSettings | undefined> {
+  async updateGlobalSiaeTransmissionSettings(settings: Partial<SiaeTransmissionSettings>): Promise<SiaeTransmissionSettings | undefined> {
     const [updated] = await db.update(siaeTransmissionSettings)
       .set({ ...settings, updatedAt: new Date() })
-      .where(eq(siaeTransmissionSettings.companyId, companyId))
+      .where(eq(siaeTransmissionSettings.id, 'global'))
       .returning();
     return updated;
   }
   
-  async getOrCreateSiaeTransmissionSettings(companyId: string): Promise<SiaeTransmissionSettings> {
-    let settings = await this.getSiaeTransmissionSettings(companyId);
+  async getOrCreateGlobalSiaeTransmissionSettings(): Promise<SiaeTransmissionSettings> {
+    let settings = await this.getGlobalSiaeTransmissionSettings();
     if (!settings) {
-      settings = await this.createSiaeTransmissionSettings({ companyId });
+      settings = await this.createGlobalSiaeTransmissionSettings({});
     }
     return settings;
   }

@@ -1779,10 +1779,9 @@ export const siaeTransmissionsRelations = relations(siaeTransmissions, ({ one, m
   emailAudits: many(siaeEmailAudit),
 }));
 
-// Impostazioni Trasmissioni SIAE per Organizzatore - Configurazione intervalli RCA
+// Impostazioni Trasmissioni SIAE Globali - Configurazione intervalli RCA (singleton)
 export const siaeTransmissionSettings = pgTable("siae_transmission_settings", {
-  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
-  companyId: varchar("company_id").notNull().references(() => companies.id).unique(), // Una configurazione per organizzatore
+  id: varchar("id").primaryKey().default('global'), // Singleton row con id fisso 'global'
   
   // Intervalli di invio (in giorni)
   dailyEnabled: boolean("daily_enabled").notNull().default(true), // Abilita invio giornaliero
@@ -1793,7 +1792,6 @@ export const siaeTransmissionSettings = pgTable("siae_transmission_settings", {
   
   monthlyEnabled: boolean("monthly_enabled").notNull().default(true), // Abilita invio mensile
   monthlyDelayDays: integer("monthly_delay_days").notNull().default(5), // N giorni dopo fine evento per mensile
-  monthlyRecurringEnabled: boolean("monthly_recurring_enabled").notNull().default(true), // Invio ricorrente fine mese
   monthlyRecurringDay: integer("monthly_recurring_day").notNull().default(1), // Giorno del mese per invio (1-28)
   
   // Tracking ultimo invio
@@ -1807,13 +1805,6 @@ export const siaeTransmissionSettings = pgTable("siae_transmission_settings", {
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
-
-export const siaeTransmissionSettingsRelations = relations(siaeTransmissionSettings, ({ one }) => ({
-  company: one(companies, {
-    fields: [siaeTransmissionSettings.companyId],
-    references: [companies.id],
-  }),
-}));
 
 // Email Audit Trail per trasmissioni SIAE - Tracciabilità completa
 export const siaeEmailAudit = pgTable("siae_email_audit", {
@@ -2942,13 +2933,13 @@ export const insertSiaeTransmissionSchema = createInsertSchema(siaeTransmissions
 });
 export const updateSiaeTransmissionSchema = insertSiaeTransmissionSchema.partial().omit({ companyId: true });
 
-// Transmission Settings
+// Transmission Settings (global singleton)
 export const insertSiaeTransmissionSettingsSchema = createInsertSchema(siaeTransmissionSettings).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
-export const updateSiaeTransmissionSettingsSchema = insertSiaeTransmissionSettingsSchema.partial().omit({ companyId: true });
+export const updateSiaeTransmissionSettingsSchema = insertSiaeTransmissionSettingsSchema.partial();
 
 // Email Audit
 export const insertSiaeEmailAuditSchema = createInsertSchema(siaeEmailAudit).omit({

@@ -4264,19 +4264,12 @@ router.get("/api/siae/companies/:companyId/ticketed-events", requireAuth, requir
   }
 });
 
-// ==================== Transmission Settings API ====================
+// ==================== Transmission Settings API (Global Singleton) ====================
 
-// Get transmission settings for company
+// Get global transmission settings
 router.get("/api/siae/transmission-settings", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
-    const companyId = req.query.companyId as string || user?.companyId;
-    
-    if (!companyId) {
-      return res.status(400).json({ message: "Company ID richiesto" });
-    }
-    
-    const settings = await siaeStorage.getOrCreateSiaeTransmissionSettings(companyId);
+    const settings = await siaeStorage.getOrCreateGlobalSiaeTransmissionSettings();
     res.json(settings);
   } catch (error: any) {
     console.error('[SIAE-ROUTES] Failed to get transmission settings:', error);
@@ -4284,22 +4277,14 @@ router.get("/api/siae/transmission-settings", requireAuth, requireGestore, async
   }
 });
 
-// Update transmission settings
+// Update global transmission settings
 router.put("/api/siae/transmission-settings", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
-    const user = req.user as any;
-    const companyId = req.body.companyId || user?.companyId;
-    
-    if (!companyId) {
-      return res.status(400).json({ message: "Company ID richiesto" });
-    }
-    
     // Ensure settings exist first
-    await siaeStorage.getOrCreateSiaeTransmissionSettings(companyId);
+    await siaeStorage.getOrCreateGlobalSiaeTransmissionSettings();
     
     // Update with provided values
-    const { companyId: _, ...updateData } = req.body;
-    const settings = await siaeStorage.updateSiaeTransmissionSettings(companyId, updateData);
+    const settings = await siaeStorage.updateGlobalSiaeTransmissionSettings(req.body);
     
     if (!settings) {
       return res.status(404).json({ message: "Impostazioni non trovate" });

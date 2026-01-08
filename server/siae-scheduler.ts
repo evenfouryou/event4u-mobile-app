@@ -77,11 +77,11 @@ async function getNextProgressivo(ticketedEventId: string, transmissionType: str
   return existing.length + 1;
 }
 
-// Ottiene le impostazioni trasmissione per una company
-async function getTransmissionSettings(companyId: string): Promise<SiaeTransmissionSettings | null> {
+// Ottiene le impostazioni trasmissione globali (singleton)
+async function getGlobalTransmissionSettings(): Promise<SiaeTransmissionSettings | null> {
   const [settings] = await db.select()
     .from(siaeTransmissionSettings)
-    .where(eq(siaeTransmissionSettings.companyId, companyId));
+    .where(eq(siaeTransmissionSettings.id, 'global'));
   return settings || null;
 }
 
@@ -386,6 +386,26 @@ async function sendDailyReports() {
   log('Avvio job invio report giornalieri RCA (RiepilogoControlloAccessi)...');
   
   try {
+    // Carica settings globali UNA volta per run
+    const settings = await getGlobalTransmissionSettings();
+    
+    // Verifica se invio automatico globale è abilitato
+    if (settings && !settings.autoSendEnabled) {
+      log('Auto-invio disabilitato globalmente, skip job giornaliero');
+      return;
+    }
+    if (settings && !settings.dailyEnabled) {
+      log('Invio giornaliero disabilitato globalmente, skip');
+      return;
+    }
+    
+    // Verifica intervallo giorni (default 5 se non impostato)
+    const intervalDays = settings?.dailyIntervalDays || 5;
+    if (settings?.lastDailySentAt && !shouldSendBasedOnInterval(settings.lastDailySentAt, intervalDays)) {
+      log(`Non passati ${intervalDays} giorni dall'ultimo invio giornaliero, skip`);
+      return;
+    }
+    
     const yesterday = new Date();
     yesterday.setDate(yesterday.getDate() - 1);
     yesterday.setHours(0, 0, 0, 0);
@@ -409,22 +429,6 @@ async function sendDailyReports() {
 
     for (const { ticketedEvent, event } of ticketedEventsWithEvents) {
       try {
-        // Verifica impostazioni trasmissione per la company (ricarica sempre dal DB)
-        let settings = await getTransmissionSettings(ticketedEvent.companyId);
-        if (settings && !settings.autoSendEnabled) {
-          log(`Evento ${ticketedEvent.id} - Auto-invio disabilitato per company, skip`);
-          continue;
-        }
-        if (settings && !settings.dailyEnabled) {
-          log(`Evento ${ticketedEvent.id} - Invio giornaliero disabilitato, skip`);
-          continue;
-        }
-        // Verifica intervallo giorni (default 5 se non impostato)
-        const intervalDays = settings?.dailyIntervalDays || 5;
-        if (settings?.lastDailySentAt && !shouldSendBasedOnInterval(settings.lastDailySentAt, intervalDays)) {
-          log(`Evento ${ticketedEvent.id} - Non passati ${intervalDays} giorni dall'ultimo invio, skip`);
-          continue;
-        }
         
         const alreadySent = await checkExistingTransmission(ticketedEvent.id, 'daily', yesterday);
         if (alreadySent) {
@@ -534,12 +538,10 @@ async function sendDailyReports() {
             sentAt: new Date(),
           });
           
-          // Aggiorna lastDailySentAt nelle impostazioni company
-          if (settings) {
-            await db.update(siaeTransmissionSettings)
-              .set({ lastDailySentAt: new Date() })
-              .where(eq(siaeTransmissionSettings.companyId, ticketedEvent.companyId));
-          }
+          // Aggiorna lastDailySentAt nelle impostazioni globali
+          await db.update(siaeTransmissionSettings)
+            .set({ lastDailySentAt: new Date() })
+            .where(eq(siaeTransmissionSettings.id, 'global'));
           
           log(`Evento ${ticketedEvent.id} - Email inviata a ${SIAE_TEST_EMAIL}${signatureInfo}, status aggiornato a 'sent'`);
         } catch (emailError: any) {
@@ -564,6 +566,26 @@ async function sendMonthlyReports() {
   log('Avvio job invio report mensili RCA...');
   
   try {
+    // Carica settings globali UNA volta per run
+    const settings = await getGlobalTransmissionSettings();
+    
+    // Verifica se invio automatico globale è abilitato
+    if (settings && !settings.autoSendEnabled) {
+      log('Auto-invio disabilitato globalmente, skip job mensile');
+      return;
+    }
+    if (settings && !settings.monthlyEnabled) {
+      log('Invio mensile disabilitato globalmente, skip');
+      return;
+    }
+    
+    // Verifica se è il giorno configurato per l'invio mensile
+    const recurringDay = settings?.monthlyRecurringDay || 1;
+    if (!isTodayMonthlyRecurringDay(recurringDay)) {
+      log(`Oggi non è il giorno ${recurringDay} del mese, skip job mensile`);
+      return;
+    }
+    
     const now = new Date();
     const previousMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
     const endOfPreviousMonth = new Date(now.getFullYear(), now.getMonth(), 0, 23, 59, 59);
@@ -584,23 +606,6 @@ async function sendMonthlyReports() {
 
     for (const { ticketedEvent } of ticketedEventsWithTickets) {
       try {
-        // Verifica impostazioni trasmissione per la company
-        const settings = await getTransmissionSettings(ticketedEvent.companyId);
-        if (settings && !settings.autoSendEnabled) {
-          log(`Evento ${ticketedEvent.id} - Auto-invio disabilitato per company, skip report mensile`);
-          continue;
-        }
-        if (settings && !settings.monthlyEnabled) {
-          log(`Evento ${ticketedEvent.id} - Invio mensile disabilitato, skip`);
-          continue;
-        }
-        // Verifica se è il giorno configurato per l'invio mensile
-        const recurringDay = settings?.monthlyRecurringDay || 1;
-        if (recurringDay && !isTodayMonthlyRecurringDay(recurringDay)) {
-          log(`Evento ${ticketedEvent.id} - Oggi non è il giorno ${recurringDay} del mese, skip report mensile`);
-          continue;
-        }
-        
         const alreadySent = await checkExistingTransmission(ticketedEvent.id, 'monthly', previousMonth);
         if (alreadySent) {
           log(`Evento ${ticketedEvent.id} - Report mensile già inviato, skip`);
@@ -709,12 +714,10 @@ async function sendMonthlyReports() {
             sentAt: new Date(),
           });
           
-          // Aggiorna lastMonthlySentAt nelle impostazioni company
-          if (settings) {
-            await db.update(siaeTransmissionSettings)
-              .set({ lastMonthlySentAt: new Date() })
-              .where(eq(siaeTransmissionSettings.companyId, ticketedEvent.companyId));
-          }
+          // Aggiorna lastMonthlySentAt nelle impostazioni globali
+          await db.update(siaeTransmissionSettings)
+            .set({ lastMonthlySentAt: new Date() })
+            .where(eq(siaeTransmissionSettings.id, 'global'));
           
           log(`Evento ${ticketedEvent.id} - Email mensile inviata a ${SIAE_TEST_EMAIL}${signatureInfo}, status aggiornato a 'sent'`);
         } catch (emailError: any) {
