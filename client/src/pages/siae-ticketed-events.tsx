@@ -1558,6 +1558,30 @@ export default function SiaeTicketedEventsPage() {
                   />
                 </div>
 
+                {/* Riepilogo Aliquote Fiscali */}
+                {form.watch("genreCode") && (
+                  <div className="grid grid-cols-2 gap-4 p-3 rounded-lg border border-border/50 bg-muted/30">
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Aliquota IVA</div>
+                      <div className="font-semibold">
+                        {(() => {
+                          const selectedGenre = genres?.find(g => g.code === form.watch("genreCode"));
+                          const vatRate = selectedGenre?.vatRate ?? (form.watch("taxType") === 'S' ? 10 : 22);
+                          return <Badge variant="secondary">{vatRate}%</Badge>;
+                        })()}
+                      </div>
+                    </div>
+                    {form.watch("taxType") === 'I' && (
+                      <div>
+                        <div className="text-xs text-muted-foreground mb-1">Aliquota ISI</div>
+                        <div className="font-semibold">
+                          <Badge variant="secondary">16%</Badge>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 <div className="grid grid-cols-2 gap-4">
                   <FormField
                     control={form.control}
@@ -3118,6 +3142,30 @@ export default function SiaeTicketedEventsPage() {
                   )}
                 />
               </div>
+
+              {/* Riepilogo Aliquote Fiscali */}
+              {form.watch("genreCode") && (
+                <div className="grid grid-cols-2 gap-4 p-3 rounded-lg border border-border/50 bg-muted/30">
+                  <div>
+                    <div className="text-xs text-muted-foreground mb-1">Aliquota IVA</div>
+                    <div className="font-semibold">
+                      {(() => {
+                        const selectedGenre = genres?.find(g => g.code === form.watch("genreCode"));
+                        const vatRate = selectedGenre?.vatRate ?? (form.watch("taxType") === 'S' ? 10 : 22);
+                        return <Badge variant="secondary">{vatRate}%</Badge>;
+                      })()}
+                    </div>
+                  </div>
+                  {form.watch("taxType") === 'I' && (
+                    <div>
+                      <div className="text-xs text-muted-foreground mb-1">Aliquota ISI</div>
+                      <div className="font-semibold">
+                        <Badge variant="secondary">16%</Badge>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
 
               <div className="grid grid-cols-2 gap-4">
                 <FormField
