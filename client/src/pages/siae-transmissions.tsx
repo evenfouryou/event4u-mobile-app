@@ -1784,7 +1784,7 @@ export default function SiaeTransmissionsPage() {
               {selectedTransmission && (
                 <div className="p-3 bg-amber-50 dark:bg-amber-950/30 rounded-lg border border-amber-200 dark:border-amber-800">
                   <p className="text-sm text-muted-foreground">
-                    <strong>File:</strong> {selectedTransmission.fileName || 'N/A'}
+                    <strong>File:</strong> {selectedTransmission.fileName ? `${selectedTransmission.fileName}${selectedTransmission.fileExtension || ''}` : 'N/A'}
                   </p>
                   <p className="text-sm text-muted-foreground mt-1">
                     <strong>Tipo:</strong> {getTypeLabel(selectedTransmission.transmissionType)}
@@ -2101,7 +2101,7 @@ export default function SiaeTransmissionsPage() {
                               <div className="flex-1 min-w-0">
                                 <h3 className="font-semibold text-base truncate flex items-center gap-2">
                                   <FileText className="w-4 h-4 shrink-0" />
-                                  {transmission.fileName || `${transmission.id.slice(0, 8)}${transmission.fileExtension}`}
+                                  {transmission.fileName ? `${transmission.fileName}${transmission.fileExtension || ''}` : `${transmission.id.slice(0, 8)}${transmission.fileExtension}`}
                                 </h3>
                                 <p className="text-sm text-muted-foreground mt-0.5">
                                   {getTypeLabel(transmission.transmissionType)} • {transmission.periodDate && format(new Date(transmission.periodDate), "dd MMM yyyy", { locale: it })}
@@ -2321,7 +2321,7 @@ export default function SiaeTransmissionsPage() {
               {selectedTransmission.fileName && (
                 <div className="flex justify-between py-3 border-b border-border/50">
                   <span className="text-muted-foreground text-sm">File</span>
-                  <span className="font-mono text-sm">{selectedTransmission.fileName}</span>
+                  <span className="font-mono text-sm">{selectedTransmission.fileName}{selectedTransmission.fileExtension || ''}</span>
                 </div>
               )}
               {selectedTransmission.sentAt && (
