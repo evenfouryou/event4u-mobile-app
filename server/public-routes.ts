@@ -4465,6 +4465,45 @@ router.get("/api/public/account/resales", async (req, res) => {
 
 // ==================== RESALE PURCHASE FLOW (SIAE-COMPLIANT) ====================
 
+// Get all available resales across all events (public, no auth required)
+router.get("/api/public/resales", async (req, res) => {
+  try {
+    const now = new Date();
+    
+    const resales = await db
+      .select({
+        id: siaeResales.id,
+        eventId: events.id,
+        ticketedEventId: siaeTicketedEvents.id,
+        eventName: events.name,
+        eventStart: events.startDatetime,
+        eventImageUrl: events.imageUrl,
+        locationName: locations.name,
+        sectorName: siaeEventSectors.name,
+        ticketType: siaeTickets.ticketType,
+        originalPrice: siaeResales.originalPrice,
+        resalePrice: siaeResales.resalePrice,
+        listedAt: siaeResales.listedAt,
+      })
+      .from(siaeResales)
+      .innerJoin(siaeTickets, eq(siaeResales.originalTicketId, siaeTickets.id))
+      .innerJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .innerJoin(locations, eq(events.locationId, locations.id))
+      .where(and(
+        eq(siaeResales.status, 'listed'),
+        gt(events.startDatetime, now)
+      ))
+      .orderBy(events.startDatetime, siaeResales.resalePrice);
+    
+    res.json(resales);
+  } catch (error: any) {
+    console.error("[PUBLIC] Get all resales error:", error);
+    res.status(500).json({ message: "Errore nel caricamento rivendite" });
+  }
+});
+
 // Get available resales for an event (public, no auth required)
 router.get("/api/public/events/:eventId/resales", async (req, res) => {
   try {

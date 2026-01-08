@@ -72,6 +72,7 @@ import SiaeApprovals from "@/pages/siae-approvals";
 // siae-card-reader merged into siae-activation-cards
 import PublicEvents from "@/pages/public-events";
 import PublicEventDetail from "@/pages/public-event-detail";
+import PublicResales from "@/pages/public-resales";
 import PublicForgotPassword from "@/pages/public-forgot-password";
 import PublicResetPassword from "@/pages/public-reset-password";
 import PublicCart from "@/pages/public-cart";
@@ -174,6 +175,7 @@ function Router() {
         <Route path="/e/:shortId" component={EventShortLink} />
         <Route path="/acquista/:id" component={PublicEventDetail} />
         <Route path="/acquista" component={PublicEvents} />
+        <Route path="/rivendite" component={PublicResales} />
         <Route path="/carrello" component={PublicCart} />
         <Route path="/accedi">
           <Redirect to="/login" />
@@ -295,6 +297,7 @@ function Router() {
         <Route path="/account" component={AccountPage} />
         <Route path="/acquista/:id" component={PublicEventDetail} />
         <Route path="/acquista" component={PublicEvents} />
+        <Route path="/rivendite" component={PublicResales} />
         <Route path="/carrello" component={PublicCart} />
         <Route path="/checkout/success" component={PublicCheckoutSuccess} />
         <Route path="/checkout" component={PublicCheckout} />

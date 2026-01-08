@@ -29,7 +29,6 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Separator } from "@/components/ui/separator";
 import { useToast } from "@/hooks/use-toast";
@@ -77,7 +76,6 @@ import { useState, useRef, useEffect, useMemo, useCallback } from "react";
 import { PublicReservationSection } from "@/components/public-reservation-section";
 import { useSeatHolds, type SeatStatusUpdate } from "@/hooks/use-ticketing-websocket";
 import { HoldCountdownTimer } from "@/components/hold-countdown-timer";
-import { ResaleMarketplace } from "@/components/resale-marketplace";
 
 interface Seat {
   id: string;
@@ -2479,29 +2477,23 @@ export default function PublicEventDetailPage() {
                   </Card>
                 )}
 
-                {/* Tickets Tabs - New Tickets and Resale */}
+                {/* Tickets Section */}
                 <Card>
-                  <Tabs defaultValue="new-tickets" className="w-full">
                     <CardHeader>
-                      <div className="flex flex-col gap-4">
+                      <div className="flex items-center justify-between">
                         <CardTitle className="flex items-center gap-2">
                           <Ticket className="w-5 h-5 text-primary" />
                           Acquista Biglietti
                         </CardTitle>
-                        <TabsList className="grid w-full grid-cols-2">
-                          <TabsTrigger value="new-tickets" data-testid="tab-new-tickets" className="flex items-center gap-2">
-                            <Ticket className="w-4 h-4" />
-                            Biglietti Nuovi
-                          </TabsTrigger>
-                          <TabsTrigger value="resale" data-testid="tab-resale" className="flex items-center gap-2">
+                        <Link href="/rivendite">
+                          <Button variant="outline" size="sm" className="flex items-center gap-2" data-testid="link-resales">
                             <RefreshCw className="w-4 h-4" />
-                            Rivendite
-                          </TabsTrigger>
-                        </TabsList>
+                            Vedi Rivendite
+                          </Button>
+                        </Link>
                       </div>
                     </CardHeader>
                     
-                    <TabsContent value="new-tickets">
                       <CardContent className="space-y-4" data-testid="grid-sectors">
                     {event.sectors.length === 0 ? (
                       <div className="text-center py-8">
@@ -2725,16 +2717,6 @@ export default function PublicEventDetailPage() {
                       })
                     )}
                       </CardContent>
-                    </TabsContent>
-
-                    <TabsContent value="resale">
-                      <CardContent>
-                        {event && (
-                          <ResaleMarketplace eventId={event.id} isAuthenticated={isCustomerAuthenticated} embedded />
-                        )}
-                      </CardContent>
-                    </TabsContent>
-                  </Tabs>
                 </Card>
 
                 {/* Subscriptions section - Desktop */}

@@ -303,6 +303,18 @@ export default function PublicEventsPage() {
                 <BrandLogo variant="horizontal" className="h-10 w-auto" />
               </Link>
 
+              <nav className="flex items-center gap-6">
+                <Link href="/acquista" className="text-foreground font-medium">
+                  Eventi
+                </Link>
+                <Link href="/rivendite" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
+                  Rivendite
+                </Link>
+                <Link href="/locali" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
+                  Locali
+                </Link>
+              </nav>
+
               <div className="flex-1 max-w-xl">
                 <div className="relative">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
