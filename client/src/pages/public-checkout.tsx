@@ -421,6 +421,7 @@ function CheckoutContent() {
   }, []);
 
   useEffect(() => {
+    // Crea Payment Intent solo dopo validazione CAPTCHA (backend richiede CAPTCHA valido)
     if (cart && cart.items.length > 0 && customer && !paymentIntentCreated.current && canProceedWithPayment) {
       paymentIntentCreated.current = true;
       createPaymentIntent.mutate();
@@ -788,7 +789,12 @@ function CheckoutContent() {
             </h2>
           </div>
           <div className="p-4">
-            {(createPaymentIntent.isPending || (!createPaymentIntent.data && !createPaymentIntent.isError)) ? (
+            {!canProceedWithPayment && captchaData?.enabled ? (
+              <div className="flex flex-col items-center justify-center py-12 opacity-60">
+                <Lock className="w-10 h-10 text-muted-foreground mb-4" />
+                <p className="text-muted-foreground text-center">Completa la verifica CAPTCHA per sbloccare il pagamento</p>
+              </div>
+            ) : (createPaymentIntent.isPending || (!createPaymentIntent.data && !createPaymentIntent.isError)) ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
                 <p className="text-muted-foreground">Preparazione pagamento...</p>
@@ -1052,6 +1058,7 @@ function DesktopCheckoutContent() {
   }, []);
 
   useEffect(() => {
+    // Crea Payment Intent solo dopo validazione CAPTCHA (backend richiede CAPTCHA valido)
     if (cart && cart.items.length > 0 && customer && !paymentIntentCreated.current && canProceedWithPayment) {
       paymentIntentCreated.current = true;
       createPaymentIntent.mutate();
@@ -1378,7 +1385,12 @@ function DesktopCheckoutContent() {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            {(createPaymentIntent.isPending || (!createPaymentIntent.data && !createPaymentIntent.isError)) ? (
+            {!canProceedWithPayment && captchaData?.enabled ? (
+              <div className="flex flex-col items-center justify-center py-8 opacity-60">
+                <Lock className="w-8 h-8 text-muted-foreground mb-3" />
+                <p className="text-muted-foreground text-center">Completa la verifica CAPTCHA per sbloccare il pagamento</p>
+              </div>
+            ) : (createPaymentIntent.isPending || (!createPaymentIntent.data && !createPaymentIntent.isError)) ? (
               <div className="flex flex-col items-center justify-center py-8">
                 <Loader2 className="w-8 h-8 animate-spin text-primary mb-3" />
                 <p className="text-muted-foreground">Preparazione pagamento...</p>

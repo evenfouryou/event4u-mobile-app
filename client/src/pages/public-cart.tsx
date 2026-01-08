@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -398,6 +398,35 @@ export default function PublicCartPage() {
       });
     },
   });
+
+  // Auto-rimuovi elementi scaduti dal carrello
+  const removingExpiredRef = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    if (!cart?.items?.length) return;
+    
+    const now = new Date();
+    const expiredItems = cart.items.filter(item => {
+      const reservedUntil = new Date(item.reservedUntil);
+      return reservedUntil < now && !removingExpiredRef.current.has(item.id);
+    });
+    
+    if (expiredItems.length > 0) {
+      expiredItems.forEach(item => {
+        removingExpiredRef.current.add(item.id);
+        removeMutation.mutate(item.id, {
+          onSettled: () => {
+            removingExpiredRef.current.delete(item.id);
+          }
+        });
+      });
+      
+      toast({
+        title: "Riserve scadute rimosse",
+        description: `${expiredItems.length} articol${expiredItems.length > 1 ? 'i' : 'o'} con riserva scaduta ${expiredItems.length > 1 ? 'sono stati rimossi' : 'è stato rimosso'} automaticamente.`,
+        variant: "destructive",
+      });
+    }
+  }, [cart?.items]);
 
   const handleCheckout = () => {
     triggerHaptic('medium');
