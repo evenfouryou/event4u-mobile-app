@@ -5207,6 +5207,7 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     status: 'pending',
     ticketsCount: filteredTickets.length,
     totalAmount: totalAmount.toString(),
+    progressivoInvio: sequenceNumber, // Progressivo invio per periodo fiscale
   });
   
   // Import and send the email with SIAE-compliant format (Allegato C)
@@ -6879,6 +6880,17 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
                    String(now.getMinutes()).padStart(2, '0') + 
                    String(now.getSeconds()).padStart(2, '0');
     
+    // Calculate progressive sequence number for this transmission
+    const existingTransmissions = await siaeStorage.getSiaeTransmissionsByCompany(companyId);
+    const sameTypeTransmissions = existingTransmissions.filter(t => {
+      const tDate = new Date(t.periodDate);
+      return t.transmissionType === 'daily' &&
+             tDate.getFullYear() === reportDate.getFullYear() &&
+             tDate.getMonth() === reportDate.getMonth() &&
+             tDate.getDate() === reportDate.getDate();
+    });
+    const sequenceNumber = sameTypeTransmissions.length + 1;
+    
     // Generate RiepilogoMensile XML using shared helper
     const xml = await generateC1ReportXml({
       companyId,
@@ -6892,7 +6904,7 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
     });
     
     // Generate file name with correct format - use systemCode from config for consistency
-    const generatedFileName = generateSiaeFileName('giornaliero', reportDate, 1, null, systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT);
+    const generatedFileName = generateSiaeFileName('giornaliero', reportDate, sequenceNumber, null, systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT);
     const fileExtension = '.xsi';
     
     // Create transmission record
@@ -6906,6 +6918,7 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
       status: 'pending',
       ticketsCount: dayTickets.length,
       totalAmount: dayTickets.reduce((sum, t) => sum + parseFloat(t.grossAmount || '0'), 0).toString(),
+      progressivoInvio: sequenceNumber, // Progressivo invio per periodo fiscale
     });
     
     // Format date for filename
@@ -8223,6 +8236,7 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
       ticketsCount: reportData.activeTicketsCount,
       ticketsCancelled: reportData.cancelledTicketsCount,
       totalAmount: reportData.totalRevenue.toFixed(2),
+      progressivoInvio: progressivoGenerazione, // Progressivo invio per periodo fiscale
     });
 
     // Optionally send email

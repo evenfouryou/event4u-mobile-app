@@ -218,19 +218,7 @@ export default function SiaeTransmissionsPage() {
     enabled: !!companyId,
   });
 
-  // Fetch events for dropdown filter
-  const { data: eventsForDropdown } = useQuery<Array<{
-    id: string;
-    eventId: string;
-    eventName: string;
-    eventDate: string;
-    status: string;
-  }>>({
-    queryKey: ['/api/siae/ticketed-events', companyId],
-    enabled: !!companyId,
-  });
-
-  // Fetch SIAE ticketed events for RCA report selection
+  // Fetch SIAE ticketed events (used for both dropdown filter and RCA selection)
   const { data: ticketedEvents } = useQuery<Array<{
     id: string;
     eventId: string;
@@ -241,6 +229,9 @@ export default function SiaeTransmissionsPage() {
     queryKey: ['/api/siae/companies', companyId, 'ticketed-events'],
     enabled: !!companyId,
   });
+
+  // Use all ticketed events for dropdown filter
+  const eventsForDropdown = ticketedEvents;
 
   // Filter to show only closed events for RCA (events with ticketingStatus='closed')
   const eventsForRCA = ticketedEvents?.filter(e => e.status === 'closed') || [];
