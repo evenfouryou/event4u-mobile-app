@@ -20,6 +20,7 @@ import {
   siaeResales,
   siaeLogs,
   siaeTransmissions,
+  siaeTransmissionSettings,
   siaeBoxOfficeSessions,
   siaeSubscriptions,
   siaeAuditLogs,
@@ -69,6 +70,8 @@ import {
   type InsertSiaeLog,
   type SiaeTransmission,
   type InsertSiaeTransmission,
+  type SiaeTransmissionSettings,
+  type InsertSiaeTransmissionSettings,
   type SiaeBoxOfficeSession,
   type InsertSiaeBoxOfficeSession,
   type SiaeSubscription,
@@ -261,6 +264,13 @@ export interface ISiaeStorage {
   getSiaeTransmissionCount(companyId: string): Promise<number>;
   createSiaeTransmission(transmission: InsertSiaeTransmission): Promise<SiaeTransmission>;
   updateSiaeTransmission(id: string, transmission: Partial<SiaeTransmission>): Promise<SiaeTransmission | undefined>;
+  
+  // ==================== Transmission Settings ====================
+  
+  getSiaeTransmissionSettings(companyId: string): Promise<SiaeTransmissionSettings | undefined>;
+  createSiaeTransmissionSettings(settings: InsertSiaeTransmissionSettings): Promise<SiaeTransmissionSettings>;
+  updateSiaeTransmissionSettings(companyId: string, settings: Partial<SiaeTransmissionSettings>): Promise<SiaeTransmissionSettings | undefined>;
+  getOrCreateSiaeTransmissionSettings(companyId: string): Promise<SiaeTransmissionSettings>;
   
   // ==================== Box Office Sessions ====================
   
@@ -1332,6 +1342,35 @@ export class SiaeStorage implements ISiaeStorage {
       .where(eq(siaeTransmissions.id, id))
       .returning();
     return updated;
+  }
+  
+  // ==================== Transmission Settings ====================
+  
+  async getSiaeTransmissionSettings(companyId: string): Promise<SiaeTransmissionSettings | undefined> {
+    const [settings] = await db.select().from(siaeTransmissionSettings)
+      .where(eq(siaeTransmissionSettings.companyId, companyId));
+    return settings;
+  }
+  
+  async createSiaeTransmissionSettings(settings: InsertSiaeTransmissionSettings): Promise<SiaeTransmissionSettings> {
+    const [created] = await db.insert(siaeTransmissionSettings).values(settings).returning();
+    return created;
+  }
+  
+  async updateSiaeTransmissionSettings(companyId: string, settings: Partial<SiaeTransmissionSettings>): Promise<SiaeTransmissionSettings | undefined> {
+    const [updated] = await db.update(siaeTransmissionSettings)
+      .set({ ...settings, updatedAt: new Date() })
+      .where(eq(siaeTransmissionSettings.companyId, companyId))
+      .returning();
+    return updated;
+  }
+  
+  async getOrCreateSiaeTransmissionSettings(companyId: string): Promise<SiaeTransmissionSettings> {
+    let settings = await this.getSiaeTransmissionSettings(companyId);
+    if (!settings) {
+      settings = await this.createSiaeTransmissionSettings({ companyId });
+    }
+    return settings;
   }
   
   // ==================== Box Office Sessions ====================

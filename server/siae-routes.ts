@@ -4264,6 +4264,225 @@ router.get("/api/siae/companies/:companyId/ticketed-events", requireAuth, requir
   }
 });
 
+// ==================== Transmission Settings API ====================
+
+// Get transmission settings for company
+router.get("/api/siae/transmission-settings", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const companyId = req.query.companyId as string || user?.companyId;
+    
+    if (!companyId) {
+      return res.status(400).json({ message: "Company ID richiesto" });
+    }
+    
+    const settings = await siaeStorage.getOrCreateSiaeTransmissionSettings(companyId);
+    res.json(settings);
+  } catch (error: any) {
+    console.error('[SIAE-ROUTES] Failed to get transmission settings:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Update transmission settings
+router.put("/api/siae/transmission-settings", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const companyId = req.body.companyId || user?.companyId;
+    
+    if (!companyId) {
+      return res.status(400).json({ message: "Company ID richiesto" });
+    }
+    
+    // Ensure settings exist first
+    await siaeStorage.getOrCreateSiaeTransmissionSettings(companyId);
+    
+    // Update with provided values
+    const { companyId: _, ...updateData } = req.body;
+    const settings = await siaeStorage.updateSiaeTransmissionSettings(companyId, updateData);
+    
+    if (!settings) {
+      return res.status(404).json({ message: "Impostazioni non trovate" });
+    }
+    
+    res.json(settings);
+  } catch (error: any) {
+    console.error('[SIAE-ROUTES] Failed to update transmission settings:', error);
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// Get transmissions filtered by organizer and optionally by event
+router.get("/api/siae/transmissions-list", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const companyId = req.query.companyId as string || user?.companyId;
+    const ticketedEventId = req.query.ticketedEventId as string;
+    
+    if (!companyId) {
+      return res.status(400).json({ message: "Company ID richiesto" });
+    }
+    
+    let transmissions;
+    if (ticketedEventId) {
+      transmissions = await siaeStorage.getSiaeTransmissionsByTicketedEvent(ticketedEventId);
+    } else {
+      transmissions = await siaeStorage.getSiaeTransmissionsByCompany(companyId);
+    }
+    
+    // Enrich with event info
+    const enrichedTransmissions = await Promise.all(transmissions.map(async (t) => {
+      let eventName = 'N/D';
+      let eventDate = null;
+      if (t.ticketedEventId) {
+        const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(t.ticketedEventId);
+        if (ticketedEvent) {
+          const event = await storage.getEvent(ticketedEvent.eventId);
+          eventName = event?.name || ticketedEvent.eventTitle || 'Evento sconosciuto';
+          eventDate = event?.startDatetime || ticketedEvent.createdAt;
+        }
+      }
+      return {
+        ...t,
+        eventName,
+        eventDate,
+      };
+    }));
+    
+    res.json(enrichedTransmissions);
+  } catch (error: any) {
+    console.error('[SIAE-ROUTES] Failed to get transmissions list:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// Resend transmission with Sostituzione="S"
+router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { toEmail } = req.body;
+    
+    // Get original transmission
+    const original = await siaeStorage.getSiaeTransmission(id);
+    if (!original) {
+      return res.status(404).json({ message: "Trasmissione originale non trovata" });
+    }
+    
+    if (!original.ticketedEventId) {
+      return res.status(400).json({ message: "Trasmissione senza evento associato" });
+    }
+    
+    // Count existing transmissions for this event to get next progressivo
+    const existingTransmissions = await siaeStorage.getSiaeTransmissionsByTicketedEvent(original.ticketedEventId);
+    const sameTypeTransmissions = existingTransmissions.filter(t => 
+      t.transmissionType === original.transmissionType
+    );
+    const nextProgressivo = sameTypeTransmissions.length + 1;
+    
+    // Get event and company data for XML regeneration
+    const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(original.ticketedEventId);
+    if (!ticketedEvent) {
+      return res.status(400).json({ message: "Evento SIAE non trovato" });
+    }
+    
+    const company = await storage.getCompany(original.companyId);
+    const baseEvent = await storage.getEvent(ticketedEvent.eventId);
+    const allTickets = await siaeStorage.getSiaeTicketsByCompany(original.companyId);
+    const eventTickets = allTickets.filter(t => t.ticketedEventId === original.ticketedEventId);
+    const systemConfig = await siaeStorage.getSiaeSystemConfig(original.companyId);
+    const activationCards = await siaeStorage.getSiaeActivationCardsByCompany(original.companyId);
+    const activeCard = activationCards.find(c => c.status === 'active');
+    const taxId = systemConfig?.taxId || company?.fiscalCode || company?.taxId || '';
+    
+    // Import and use the generateRcaXml function
+    const { generateRcaXml, SiaeEventForLog } = await import('./siae-utils');
+    
+    // Prepare event data for RCA generation with Sostituzione="S"
+    const eventForLog: SiaeEventForLog = {
+      id: ticketedEvent.id,
+      eventId: ticketedEvent.eventId,
+      eventTitle: baseEvent?.name || ticketedEvent.eventTitle || 'Evento',
+      eventLocation: ticketedEvent.eventLocation || baseEvent?.locationId || 'Locale',
+      genreCode: ticketedEvent.genreCode || '60',
+      tipoTassazione: ticketedEvent.tipoTassazione || 'I',
+      entertainmentIncidence: ticketedEvent.entertainmentIncidence || 50,
+      systemCode: ticketedEvent.systemCode || 'EVENT4U1',
+      siaeLocationCode: ticketedEvent.siaeLocationCode || '0000000000000',
+      organizerType: ticketedEvent.organizerType || 'G',
+      businessName: systemConfig?.businessName || company?.name || 'N/D',
+      startDatetime: baseEvent?.startDatetime || new Date(),
+    };
+    
+    const rcaResult = generateRcaXml(
+      eventTickets,
+      eventForLog,
+      company?.name || 'N/D',
+      taxId,
+      activeCard?.systemId || 'EVENT4U1',
+      nextProgressivo,
+      true // isSubstitution = true -> Sostituzione="S"
+    );
+    
+    // Create new transmission with substitution flag
+    const newTransmission = await siaeStorage.createSiaeTransmission({
+      companyId: original.companyId,
+      ticketedEventId: original.ticketedEventId,
+      transmissionType: original.transmissionType,
+      periodDate: original.periodDate,
+      scheduleType: 'manual',
+      isSubstitution: true,
+      originalTransmissionId: original.id,
+      progressivoInvio: nextProgressivo,
+      fileName: rcaResult.fileName,
+      fileExtension: '.xsi',
+      fileContent: rcaResult.xml,
+      status: 'pending',
+      ticketsCount: rcaResult.ticketsCount,
+      ticketsCancelled: rcaResult.cancelledCount,
+      totalAmount: rcaResult.totalRevenue.toFixed(2),
+    });
+    
+    console.log(`[SIAE-ROUTES] Created substitution transmission ${newTransmission.id} (progressivo: ${nextProgressivo}) for original ${id}`);
+    
+    // If toEmail provided, send immediately
+    if (toEmail) {
+      const { sendSiaeTransmissionEmail } = await import('./email-service');
+      
+      await sendSiaeTransmissionEmail({
+        to: toEmail,
+        companyName: company?.name || 'N/A',
+        transmissionType: original.transmissionType,
+        periodDate: original.periodDate,
+        ticketsCount: rcaResult.ticketsCount,
+        totalAmount: rcaResult.totalRevenue.toFixed(2),
+        xmlContent: rcaResult.xml,
+        transmissionId: newTransmission.id,
+        systemCode: activeCard?.systemId || 'EVENT4U1',
+        sequenceNumber: nextProgressivo,
+        signWithSmime: true,
+        requireSignature: true,
+      });
+      
+      await siaeStorage.updateSiaeTransmission(newTransmission.id, {
+        status: 'sent',
+        sentAt: new Date(),
+        sentToPec: toEmail,
+      });
+      
+      console.log(`[SIAE-ROUTES] Sent substitution transmission to ${toEmail}`);
+    }
+    
+    res.status(201).json({
+      message: `Trasmissione sostitutiva creata con progressivo ${nextProgressivo}`,
+      transmission: newTransmission,
+      sent: !!toEmail,
+    });
+  } catch (error: any) {
+    console.error('[SIAE-ROUTES] Failed to resend transmission:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 router.post("/api/siae/transmissions", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const data = insertSiaeTransmissionSchema.parse(req.body);
