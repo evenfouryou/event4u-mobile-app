@@ -5340,40 +5340,101 @@ router.post("/api/siae/transmissions/check-responses", requireAuth, requireGesto
     console.log(`[SIAE-ROUTES] Checking for SIAE email responses (company: ${companyId})...`);
     const responses = await checkForSiaeResponses(companyId);
     
-    const updates: Array<{transmissionId: string; status: string; protocolNumber?: string}> = [];
+    const updates: Array<{transmissionId: string; status: string; protocolNumber?: string; errorCode?: string}> = [];
+    
+    // Get all transmissions for matching (filter by status 'sent' in memory)
+    const allTransmissions = await siaeStorage.getSiaeTransmissionsByCompany(companyId);
+    const pendingTransmissions = allTransmissions.filter(t => t.status === 'sent');
     
     for (const response of responses) {
-      // Try to match with existing transmissions
+      // Skip if we don't have useful data
+      if (response.status === 'unknown') continue;
+      
+      // Try to match with existing transmissions using multiple strategies
+      let matchedTransmission = null;
+      
+      // Strategy 1: Direct ID match
       if (response.transmissionId) {
-        const transmission = await siaeStorage.getSiaeTransmission(response.transmissionId);
-        if (transmission && transmission.status === 'sent') {
-          // Update the transmission based on the response
-          const newStatus = response.status === 'accepted' ? 'received' : 
-                           response.status === 'rejected' ? 'rejected' : 
-                           response.status === 'error' ? 'error' : 'sent';
+        matchedTransmission = await siaeStorage.getSiaeTransmission(response.transmissionId);
+      }
+      
+      // Strategy 2: Match by subject containing filename
+      if (!matchedTransmission && pendingTransmissions.length > 0) {
+        for (const t of pendingTransmissions) {
+          // Check if subject contains the filename
+          if (t.fileName && response.subject.includes(t.fileName.replace('.xsi', ''))) {
+            matchedTransmission = t;
+            break;
+          }
           
-          await siaeStorage.updateSiaeTransmission(response.transmissionId, {
-            status: newStatus,
-            receivedAt: response.date,
-            receiptProtocol: response.protocolNumber || null,
-            receiptContent: response.body.substring(0, 1000), // First 1000 chars
-            errorMessage: response.errorMessage || null,
-          });
-          
-          updates.push({
-            transmissionId: response.transmissionId,
-            status: newStatus,
-            protocolNumber: response.protocolNumber,
-          });
-          
-          // Log the update
-          await siaeStorage.createSiaeLog({
-            companyId: transmission.companyId,
-            eventType: response.status === 'accepted' ? 'transmission_confirmed' : 'transmission_error',
-            eventDetails: `Risposta SIAE per trasmissione ${response.transmissionId}: ${response.status}${response.protocolNumber ? ` - Protocollo: ${response.protocolNumber}` : ''}`,
-            transmissionId: response.transmissionId,
-          });
+          // Check if any attachment filename matches transmission
+          if (response.attachments && response.attachments.length > 0) {
+            for (const att of response.attachments) {
+              // Attachment filenames often contain date patterns like RCA_YYYY_MM_DD
+              if (t.fileName && att.filename.includes(t.fileName.replace('.xsi', ''))) {
+                matchedTransmission = t;
+                break;
+              }
+            }
+          }
         }
+      }
+      
+      // Strategy 3: Match by date if only one transmission exists for that date
+      if (!matchedTransmission && pendingTransmissions.length > 0) {
+        const responseDate = response.date.toISOString().split('T')[0];
+        const sameDateTransmissions = pendingTransmissions.filter(t => 
+          t.sentAt && new Date(t.sentAt).toISOString().split('T')[0] === responseDate
+        );
+        if (sameDateTransmissions.length === 1) {
+          matchedTransmission = sameDateTransmissions[0];
+        }
+      }
+      
+      // If we found a matching transmission and it hasn't been updated yet
+      if (matchedTransmission && matchedTransmission.status === 'sent' && !matchedTransmission.responseEmailId) {
+        // Determine new status
+        const newStatus = response.status === 'accepted' ? 'received' : 
+                         response.status === 'rejected' ? 'rejected' : 
+                         response.status === 'error' ? 'error' : 'sent';
+        
+        // Build update payload
+        const updatePayload: any = {
+          status: newStatus,
+          receivedAt: response.date,
+          receiptProtocol: response.protocolNumber || null,
+          receiptContent: response.body.substring(0, 1000),
+          errorMessage: response.errorMessage || null,
+          responseEmailId: response.messageId, // Track which email was associated
+        };
+        
+        // Add error code if available from attachment parsing
+        if (response.errorCode) {
+          updatePayload.errorCode = response.errorCode;
+        }
+        
+        await siaeStorage.updateSiaeTransmission(matchedTransmission.id, updatePayload);
+        
+        updates.push({
+          transmissionId: matchedTransmission.id,
+          status: newStatus,
+          protocolNumber: response.protocolNumber,
+          errorCode: response.errorCode,
+        });
+        
+        // Log the update
+        const eventDetails = response.status === 'accepted'
+          ? `Risposta SIAE positiva - Protocollo: ${response.protocolNumber}`
+          : `Risposta SIAE negativa - Errore ${response.errorCode || 'sconosciuto'}: ${response.errorMessage || 'Dettagli non disponibili'}`;
+          
+        await siaeStorage.createSiaeLog({
+          companyId: matchedTransmission.companyId,
+          eventType: response.status === 'accepted' ? 'transmission_confirmed' : 'transmission_error',
+          eventDetails,
+          transmissionId: matchedTransmission.id,
+        });
+        
+        console.log(`[SIAE-ROUTES] Updated transmission ${matchedTransmission.id}: ${newStatus}`);
       }
     }
     
@@ -5389,7 +5450,12 @@ router.post("/api/siae/transmissions/check-responses", requireAuth, requireGesto
         date: r.date,
         status: r.status,
         protocolNumber: r.protocolNumber,
+        errorCode: r.errorCode,
         transmissionId: r.transmissionId,
+        attachments: r.attachments?.map(a => ({
+          filename: a.filename,
+          parsed: a.parsed
+        })),
       })),
     });
   } catch (error: any) {

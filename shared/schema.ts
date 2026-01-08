@@ -1745,6 +1745,7 @@ export const siaeTransmissions = pgTable("siae_transmissions", {
   errorMessage: text("error_message"),
   errorCode: varchar("error_code", { length: 10 }), // Codice errore AdE
   retryCount: integer("retry_count").notNull().default(0),
+  responseEmailId: varchar("response_email_id", { length: 255 }), // Gmail message ID della risposta associata
   
   // Statistiche estese
   ticketsCount: integer("tickets_count").notNull().default(0),
