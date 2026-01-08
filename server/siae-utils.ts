@@ -1939,3 +1939,95 @@ function normalizeCodiceOrdinePosto(sectorCode: string | null | undefined): stri
   
   return 'UN';
 }
+
+// ==================== SIAE Response Parsing ====================
+
+/**
+ * Risultato del parsing di una risposta SIAE
+ */
+export interface SiaeResponseParseResult {
+  success: boolean;
+  type: 'OK' | 'ERRORE' | 'UNKNOWN';
+  code: string | null;
+  description: string | null;
+  detail: string | null;
+  protocolNumber: string | null;
+  rawContent: string;
+}
+
+/**
+ * Parsa il contenuto di un file di risposta SIAE
+ * Formato tipico:
+ * REPLY:
+ * 
+ * ERRORE
+ * CODICE:      40604
+ * DESCRIZIONE: Il riepilogo risulta gia' elaborato
+ * DETTAGLIO:   
+ * 
+ * oppure per successo:
+ * REPLY:
+ * 
+ * OK
+ * PROTOCOLLO: 12345678
+ */
+export function parseSiaeResponseFile(content: string): SiaeResponseParseResult {
+  const result: SiaeResponseParseResult = {
+    success: false,
+    type: 'UNKNOWN',
+    code: null,
+    description: null,
+    detail: null,
+    protocolNumber: null,
+    rawContent: content,
+  };
+  
+  if (!content || content.trim().length === 0) {
+    return result;
+  }
+  
+  const lines = content.split('\n').map(l => l.trim());
+  
+  // Cerca il tipo di risposta (OK o ERRORE)
+  for (const line of lines) {
+    if (line === 'OK') {
+      result.type = 'OK';
+      result.success = true;
+      break;
+    }
+    if (line === 'ERRORE') {
+      result.type = 'ERRORE';
+      result.success = false;
+      break;
+    }
+  }
+  
+  // Estrai i campi
+  for (const line of lines) {
+    // CODICE: estrai il numero (può avere spazi)
+    const codiceMatch = line.match(/^CODICE:\s*(\d+)/i);
+    if (codiceMatch) {
+      result.code = codiceMatch[1];
+    }
+    
+    // DESCRIZIONE: estrai il testo
+    const descrizioneMatch = line.match(/^DESCRIZIONE:\s*(.+)/i);
+    if (descrizioneMatch) {
+      result.description = descrizioneMatch[1].trim();
+    }
+    
+    // DETTAGLIO: estrai il testo (può essere vuoto)
+    const dettaglioMatch = line.match(/^DETTAGLIO:\s*(.*)/i);
+    if (dettaglioMatch) {
+      result.detail = dettaglioMatch[1].trim() || null;
+    }
+    
+    // PROTOCOLLO: per risposte OK
+    const protocolloMatch = line.match(/^PROTOCOLLO:\s*(\S+)/i);
+    if (protocolloMatch) {
+      result.protocolNumber = protocolloMatch[1];
+    }
+  }
+  
+  return result;
+}

@@ -1143,23 +1143,98 @@ export default function SiaeTransmissionsPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>Conferma Ricezione SIAE</DialogTitle>
-              <DialogDescription>Registra la conferma ricevuta da SIAE</DialogDescription>
+              <DialogDescription>Carica il file di risposta SIAE o inserisci manualmente i dati</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
+              {/* Upload file di risposta SIAE */}
+              <div className="p-3 bg-muted/50 rounded-lg border border-dashed">
+                <Label className="text-sm font-medium mb-2 block">Carica File Risposta SIAE</Label>
+                <Input
+                  type="file"
+                  accept=".txt,.text"
+                  data-testid="input-upload-siae-response"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    
+                    const content = await file.text();
+                    try {
+                      const response = await fetch('/api/siae/parse-response', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({ 
+                          content,
+                          transmissionId: selectedTransmission?.id 
+                        }),
+                      });
+                      
+                      if (response.ok) {
+                        const data = await response.json();
+                        const parsed = data.parsed;
+                        
+                        if (parsed.type === 'ERRORE') {
+                          setReceiptContent(`Errore ${parsed.code}: ${parsed.description}${parsed.detail ? ` - ${parsed.detail}` : ''}`);
+                          setReceiptProtocol(`ERR-${parsed.code}`);
+                          toast({
+                            title: "Risposta SIAE: ERRORE",
+                            description: `Codice ${parsed.code}: ${parsed.description}`,
+                            variant: "destructive",
+                          });
+                        } else if (parsed.type === 'OK' && parsed.protocolNumber) {
+                          setReceiptProtocol(parsed.protocolNumber);
+                          setReceiptContent("Trasmissione confermata da SIAE");
+                          toast({
+                            title: "Risposta SIAE: OK",
+                            description: `Protocollo: ${parsed.protocolNumber}`,
+                          });
+                        } else {
+                          setReceiptContent(content.substring(0, 500));
+                          toast({
+                            title: "File parsato",
+                            description: "Contenuto estratto, verifica i dati",
+                          });
+                        }
+                      }
+                    } catch (err) {
+                      toast({
+                        title: "Errore parsing",
+                        description: "Impossibile parsare il file di risposta",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                />
+                <p className="text-xs text-muted-foreground mt-1">
+                  Carica il file .txt ricevuto da SIAE per estrarre automaticamente codice/protocollo
+                </p>
+              </div>
+              
+              <div className="relative">
+                <div className="absolute inset-0 flex items-center">
+                  <span className="w-full border-t" />
+                </div>
+                <div className="relative flex justify-center text-xs uppercase">
+                  <span className="bg-background px-2 text-muted-foreground">oppure inserisci manualmente</span>
+                </div>
+              </div>
+              
               <div>
-                <Label>Protocollo Ricezione *</Label>
+                <Label>Protocollo / Codice Errore *</Label>
                 <Input
                   value={receiptProtocol}
                   onChange={(e) => setReceiptProtocol(e.target.value)}
-                  placeholder="Es: SIAE-2025-001234"
+                  placeholder="Es: SIAE-2025-001234 o ERR-40604"
+                  data-testid="input-receipt-protocol"
                 />
               </div>
               <div>
-                <Label>Contenuto Ricevuta (opzionale)</Label>
+                <Label>Contenuto Ricevuta / Dettagli</Label>
                 <Input
                   value={receiptContent}
                   onChange={(e) => setReceiptContent(e.target.value)}
-                  placeholder="Note o riferimenti"
+                  placeholder="Note, descrizione errore o riferimenti"
+                  data-testid="input-receipt-content"
                 />
               </div>
             </div>

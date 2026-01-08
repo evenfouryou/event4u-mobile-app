@@ -1,6 +1,6 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult } from './siae-utils';
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -566,6 +566,48 @@ router.post("/api/siae/debug/parse-log", async (req: Request, res: Response) => 
       parseResult,
       stats,
       description: "Parser Log.xsi SIAE conforme a Log_v0040_20190627.dtd"
+    });
+  } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== Parse SIAE Response File ====================
+/**
+ * Parsa un file di risposta SIAE (.txt) per estrarre codice errore, descrizione, protocollo
+ * Usato per aggiornare automaticamente lo stato delle trasmissioni
+ */
+router.post("/api/siae/parse-response", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const { content, transmissionId } = req.body;
+    
+    if (!content) {
+      return res.status(400).json({ error: "Content del file di risposta richiesto" });
+    }
+    
+    const result = parseSiaeResponseFile(content);
+    
+    // Se fornito un transmissionId, aggiorna la trasmissione con i dati estratti
+    if (transmissionId && result.code) {
+      try {
+        const transmission = await siaeStorage.getSiaeTransmission(transmissionId);
+        if (transmission) {
+          await siaeStorage.updateSiaeTransmission(transmissionId, {
+            status: result.success ? 'confirmed' : 'error',
+            errorMessage: result.success ? null : `Errore ${result.code}: ${result.description}`,
+            receiptProtocol: result.protocolNumber || null,
+            receiptContent: content.substring(0, 2000),
+          });
+        }
+      } catch (updateError: any) {
+        console.error('[SIAE-ROUTES] Failed to update transmission:', updateError);
+      }
+    }
+    
+    res.json({
+      timestamp: new Date().toISOString(),
+      parsed: result,
+      description: "Parsing file risposta SIAE completato"
     });
   } catch (error: any) {
     res.status(500).json({ error: error.message });
