@@ -2440,7 +2440,7 @@ export default function EventHub() {
             )}
             <TabsTrigger value="finance" data-testid="tab-finance">
               <Euro className="h-4 w-4 mr-2" />
-              Finanza
+              Parte finanziaria
             </TabsTrigger>
             {ticketedEvent && (
               <TabsTrigger value="page-editor" data-testid="tab-page-editor">
@@ -6140,7 +6140,7 @@ export default function EventHub() {
                   { id: 'pr', label: 'PR', icon: Megaphone },
                   { id: 'access', label: 'Accessi', icon: QrCode },
                   ...(userFeatures?.beverageEnabled !== false ? [{ id: 'inventory', label: 'Stock', icon: Package }] : []),
-                  { id: 'finance', label: 'Finanza', icon: Euro },
+                  { id: 'finance', label: 'Parte finanziaria', icon: Euro },
                   { id: 'report', label: 'Report', icon: BarChart3 },
                   ...(ticketedEvent ? [{ id: 'page-editor', label: 'Pagina', icon: Palette }] : []),
                 ].map(tab => (
