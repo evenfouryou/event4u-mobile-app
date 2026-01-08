@@ -4663,7 +4663,7 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
       return res.status(400).json({ message: "Pagamento non completato" });
     }
     
-    // === FULFILLMENT FLOW (SIAE-COMPLIANT) ===
+    // === FULFILLMENT FLOW (SIAE-COMPLIANT WITH REAL FISCAL SEAL) ===
     console.log(`[RESALE] Starting fulfillment for ${id}`);
     
     // 1. Mark as paid
@@ -4701,13 +4701,45 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
       })
       .where(eq(siaeTickets.id, resale.originalTicketId));
     
-    // 4. Generate new fiscal seal for new ticket
+    // 4. Try to get real fiscal seal from bridge if available
     const now = new Date();
-    const newSigillo = `R${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+    let sealData: { sealCode: string; counter: number; serialNumber: string } | null = null;
+    let newSigillo: string;
+    let fiscalSealCode: string | null = null;
+    let fiscalSealCounter: number | null = null;
+    let cardCode: string | null = null;
     
-    // 5. Create new ticket for buyer
+    const bridgeStatus = getCachedBridgeStatus();
+    if (bridgeStatus.bridgeConnected && bridgeStatus.cardInserted) {
+      try {
+        // Request real fiscal seal from smart card
+        const priceInCents = Math.round(parseFloat(resale.resalePrice) * 100);
+        sealData = await requestFiscalSeal(priceInCents);
+        newSigillo = sealData.sealCode;
+        fiscalSealCode = sealData.sealCode;
+        fiscalSealCounter = sealData.counter;
+        cardCode = sealData.serialNumber;
+        console.log(`[RESALE] Got real fiscal seal: ${newSigillo}`);
+      } catch (sealError) {
+        console.error(`[RESALE] Failed to get real fiscal seal, using fallback:`, sealError);
+        newSigillo = `R${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      }
+    } else {
+      // Bridge not available, use temporary seal
+      newSigillo = `R${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+      console.log(`[RESALE] Bridge not available, using temporary seal: ${newSigillo}`);
+    }
+    
+    // 5. Create new ticket for buyer with all original ticket data
     const newTicketCode = `RT${now.getTime().toString(36).toUpperCase()}`;
     const newQrCode = `${newTicketCode}-${Math.random().toString(36).substring(2, 10).toUpperCase()}`;
+    
+    // Get next progressive number
+    const [maxProg] = await db
+      .select({ maxProg: sql<number>`COALESCE(MAX(${siaeTickets.progressiveNumber}), 0)` })
+      .from(siaeTickets)
+      .where(eq(siaeTickets.ticketedEventId, originalTicket.ticketedEventId));
+    const newProgressiveNumber = (maxProg?.maxProg || 0) + 1;
     
     const [newTicket] = await db
       .insert(siaeTickets)
@@ -4719,11 +4751,23 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
         qrCode: newQrCode,
         ticketType: originalTicket.ticketType,
         ticketTypeCode: originalTicket.ticketTypeCode,
+        sectorCode: originalTicket.sectorCode,
         ticketPrice: resale.resalePrice,
         ticketCategory: originalTicket.ticketCategory,
         seatNumber: originalTicket.seatNumber,
         seatRow: originalTicket.seatRow,
+        row: originalTicket.row,
+        seatId: originalTicket.seatId,
         sigilloFiscale: newSigillo,
+        fiscalSealCode: fiscalSealCode,
+        fiscalSealCounter: fiscalSealCounter,
+        cardCode: cardCode,
+        progressiveNumber: newProgressiveNumber,
+        grossAmount: resale.resalePrice,
+        netAmount: originalTicket.netAmount,
+        vatAmount: originalTicket.vatAmount,
+        prevendita: originalTicket.prevendita,
+        prevenditaVat: originalTicket.prevenditaVat,
         customerId: customer.id,
         participantFirstName: customer.firstName,
         participantLastName: customer.lastName,
@@ -4731,10 +4775,21 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
         participantPhone: customer.phone,
         participantFiscalCode: customer.fiscalCode,
         emissionDate: now,
-        status: 'emesso',
+        emissionDateStr: now.toISOString().slice(0, 10).replace(/-/g, ''),
+        emissionTimeStr: now.toTimeString().slice(0, 5).replace(':', ''),
+        status: sealData ? 'active' : 'pending_fiscalization',
         emissionChannel: 'resale',
+        originalTicketId: originalTicket.id,
+        paymentMethod: 'resale',
+        isComplimentary: originalTicket.isComplimentary,
       })
       .returning();
+    
+    // Update original ticket with replacement reference
+    await db
+      .update(siaeTickets)
+      .set({ replacedByTicketId: newTicket.id })
+      .where(eq(siaeTickets.id, originalTicket.id));
     
     // 6. Update resale with new ticket and sigillo
     await db
