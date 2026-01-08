@@ -1380,20 +1380,20 @@ export default function SiaeTransmissionsPage() {
                   <SelectContent>
                     <SelectItem value="rca">
                       <div className="flex flex-col items-start">
-                        <span className="font-medium">RCA - Controllo Accessi Evento</span>
-                        <span className="text-xs text-muted-foreground">Singolo evento - SIAE risponde</span>
+                        <span className="font-medium">RCA Fine Evento</span>
+                        <span className="text-xs text-muted-foreground">Report singolo evento concluso - SIAE risponde</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="daily">
                       <div className="flex flex-col items-start">
-                        <span className="font-medium">RMG - Riepilogo Giornaliero</span>
-                        <span className="text-xs text-muted-foreground">Eventi del giorno - nessuna risposta</span>
+                        <span className="font-medium">Giornaliero</span>
+                        <span className="text-xs text-muted-foreground">Aggregazione eventi del giorno</span>
                       </div>
                     </SelectItem>
                     <SelectItem value="monthly">
                       <div className="flex flex-col items-start">
-                        <span className="font-medium">RPM - Riepilogo Mensile</span>
-                        <span className="text-xs text-muted-foreground">Rendicontazione fiscale - nessuna risposta</span>
+                        <span className="font-medium">Mensile</span>
+                        <span className="text-xs text-muted-foreground">Rendicontazione mensile</span>
                       </div>
                     </SelectItem>
                   </SelectContent>
@@ -1410,25 +1410,21 @@ export default function SiaeTransmissionsPage() {
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
                       <CheckCircle2 className="w-4 h-4" />
-                      <span className="font-medium text-sm">Report con Risposta SIAE</span>
+                      <span className="font-medium text-sm">RCA Fine Evento</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Il <strong className="text-foreground">RCA (RiepilogoControlloAccessi)</strong> è il report C1 per singolo evento. 
-                      <strong className="text-green-600 dark:text-green-400"> SIAE risponderà</strong> con un file Log.xsi di conferma (REPLY:0000:OK) o errore.
-                    </p>
-                    <p className="text-xs text-muted-foreground">
-                      Formato conforme ad Allegato B - Provvedimento 04/03/2008.
+                      Report RCA per singolo evento concluso. 
+                      <strong className="text-green-600 dark:text-green-400"> SIAE risponderà</strong> con conferma (REPLY:0000:OK) o errore.
                     </p>
                   </div>
                 ) : c1Type === 'monthly' ? (
                   <div className="space-y-2">
                     <div className="flex items-center gap-2 text-amber-600 dark:text-amber-400">
-                      <AlertTriangle className="w-4 h-4" />
-                      <span className="font-medium text-sm">Adempimento Silenzioso</span>
+                      <Calendar className="w-4 h-4" />
+                      <span className="font-medium text-sm">Report Mensile</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Il Riepilogo Mensile (RPM) serve per la rendicontazione fiscale e il versamento delle imposte. 
-                      <strong className="text-foreground"> SIAE non invia risposta</strong> per questo tipo di report.
+                      Rendicontazione mensile aggregata per tutti gli eventi del mese.
                     </p>
                   </div>
                 ) : (
@@ -1438,8 +1434,7 @@ export default function SiaeTransmissionsPage() {
                       <span className="font-medium text-sm">Report Giornaliero</span>
                     </div>
                     <p className="text-xs text-muted-foreground">
-                      Il Riepilogo Giornaliero (RMG) aggrega tutti gli eventi del giorno.
-                      <strong className="text-foreground"> SIAE non invia risposta</strong> per questo tipo.
+                      Aggregazione eventi del giorno selezionato.
                     </p>
                   </div>
                 )}
