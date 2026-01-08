@@ -1024,7 +1024,7 @@ export default function EventHub() {
       priceRidotto: data.ticketType === 'RID' ? priceValue : '0',
       priceOmaggio: '0',
       prevendita: data.ddp || '0',
-      ivaRate: data.ivaRate,
+      ivaRate: String(ticketedEvent?.vatRate || 10),
       sortOrder: data.sortOrder,
       active: data.active,
     };
@@ -5271,27 +5271,12 @@ export default function EventHub() {
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
-                  <FormField
-                    control={sectorForm.control}
-                    name="ivaRate"
-                    render={({ field }) => (
-                      <FormItem>
-                        <FormLabel>Aliquota IVA</FormLabel>
-                        <Select onValueChange={field.onChange} value={field.value}>
-                          <FormControl>
-                            <SelectTrigger data-testid="select-iva-rate">
-                              <SelectValue placeholder="Seleziona IVA" />
-                            </SelectTrigger>
-                          </FormControl>
-                          <SelectContent>
-                            <SelectItem value="10">10%</SelectItem>
-                            <SelectItem value="22">22%</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        <FormMessage />
-                      </FormItem>
-                    )}
-                  />
+                  <div className="space-y-2">
+                    <Label>Aliquota IVA</Label>
+                    <div className="h-9 px-3 py-2 rounded-md border bg-muted/50 text-sm flex items-center">
+                      {ticketedEvent?.vatRate || 10}% (da evento)
+                    </div>
+                  </div>
 
                   <FormField
                     control={sectorForm.control}
