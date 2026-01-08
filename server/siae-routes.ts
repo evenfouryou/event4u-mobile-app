@@ -4727,6 +4727,22 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
       };
     });
     
+    // Calculate progressivo for RCA based on previous transmissions for this event
+    // Per errore 40604 "riepilogo già elaborato": 
+    // - Sostituzione="S" non basta, SIAE richiede anche ProgressivoRiepilogo incrementato
+    const allTransmissions = await siaeStorage.getSiaeTransmissionsByCompany(companyId);
+    const rcaTransmissionsForEvent = allTransmissions.filter(t => 
+      t.transmissionType === 'rca' && t.eventId === eventId
+    );
+    let rcaProgressivo = rcaTransmissionsForEvent.length + 1;
+    
+    // Se forceSubstitution=true, aggiungi 1 extra per essere sicuri
+    // (anche se già incrementato dal conteggio, SIAE potrebbe richiedere progressivo > precedente)
+    if (forceSubstitution && rcaProgressivo <= rcaTransmissionsForEvent.length) {
+      rcaProgressivo = rcaTransmissionsForEvent.length + 1;
+    }
+    console.log(`[SIAE-ROUTES] RCA progressivo: ${rcaProgressivo} (trasmissioni precedenti: ${rcaTransmissionsForEvent.length}, forceSubstitution: ${forceSubstitution})`);
+    
     // Generate RCA XML (RiepilogoControlloAccessi format - Allegato B Provvedimento 04/03/2008)
     // NOTA: Usa generateRCAXml invece di generateC1LogXml (deprecato - causa errore SIAE 40605)
     const rcaResult = generateRCAXml({
@@ -4741,6 +4757,7 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
       },
       companyName,
       taxId,
+      progressivo: rcaProgressivo, // Progressivo incrementato per ogni trasmissione
       forceSubstitution, // Forza Sostituzione="S" per reinvio (errore 40604)
     });
     

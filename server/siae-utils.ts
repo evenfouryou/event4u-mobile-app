@@ -1615,20 +1615,23 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   const titoloEvento = escapeXml((event.name || 'Evento').substring(0, 100));
   const nomeLocale = escapeXml((venueName || event.name || 'Locale').substring(0, 100));
   
-  // Per tipoGenere Intrattenimento, Autore/Esecutore/NazionalitaFilm non sono previsti
-  // SIAE Warning 2108/2110/2112/2114: usare '-' per evitare warning
+  // Per tipoGenere Intrattenimento, Autore/Esecutore/NazionalitaFilm NON devono essere presenti
+  // SIAE Warning 2108/2110/2112/2114: OMETTERE completamente i tag, non usare '-'
   // Codici Intrattenimento: 30-40 (giochi), 60-69 (ballo/discoteca), 70-74 (fiere/mostre), 79 (luna park)
+  // Codici Cinema (01-04): richiedono NazionalitaFilm (ISO 3166)
+  // Codici Teatro/Concerti (45-59): richiedono Autore ed Esecutore
   const genreNum = parseInt(tipoGenere);
   const isIntrattenimento = (genreNum >= 30 && genreNum <= 40) || 
                             (genreNum >= 60 && genreNum <= 69) || 
                             (genreNum >= 70 && genreNum <= 74) || 
                             genreNum === 79;
-  const autore = isIntrattenimento ? '-' : escapeXml((author || event.name || '-').substring(0, 100));
-  const esecutore = isIntrattenimento ? '-' : escapeXml((performer || event.organizerName || companyName || '-').substring(0, 100));
+  const isCinema = genreNum >= 1 && genreNum <= 4;
+  const isTeatroConcerti = genreNum >= 45 && genreNum <= 59;
   
-  // NazionalitaFilm: per intrattenimento usare '-' (campo non applicabile)
-  // SIAE Warning 2112/2114: "Nazionalita' del Film non prevista per il Tipo Evento"
-  const nazionalitaFilm = isIntrattenimento ? '-' : 'ITA';
+  // Genera valori solo se necessari (verranno inclusi condizionalmente nell'XML)
+  const autore = isTeatroConcerti ? escapeXml((author || event.name || 'N/D').substring(0, 100)) : null;
+  const esecutore = isTeatroConcerti ? escapeXml((performer || event.organizerName || companyName || 'N/D').substring(0, 100)) : null;
+  const nazionalitaFilm = isCinema ? 'IT' : null;
   
   // SpettacoloIntrattenimento: S=spettacolo, I=intrattenimento (default S)
   const spettacoloIntrattenimento = event.tipoTassazione === 'I' ? 'I' : 'S';
@@ -1808,9 +1811,19 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   xmlLines.push(`        <OraEvento>${oraEvento}</OraEvento>`);
   xmlLines.push(`        <TipoGenere>${tipoGenere}</TipoGenere>`);
   xmlLines.push(`        <TitoloEvento>${titoloEvento}</TitoloEvento>`);
-  xmlLines.push(`        <Autore>${autore}</Autore>`);
-  xmlLines.push(`        <Esecutore>${esecutore}</Esecutore>`);
-  xmlLines.push(`        <NazionalitaFilm>${nazionalitaFilm}</NazionalitaFilm>`);
+  // Includi Autore/Esecutore/NazionalitaFilm SOLO per categorie che li richiedono
+  // Per Intrattenimento (30-40, 60-69, 70-74, 79): OMETTI completamente
+  // Per Teatro/Concerti (45-59): includi Autore e Esecutore
+  // Per Cinema (01-04): includi NazionalitaFilm
+  if (autore !== null) {
+    xmlLines.push(`        <Autore>${autore}</Autore>`);
+  }
+  if (esecutore !== null) {
+    xmlLines.push(`        <Esecutore>${esecutore}</Esecutore>`);
+  }
+  if (nazionalitaFilm !== null) {
+    xmlLines.push(`        <NazionalitaFilm>${nazionalitaFilm}</NazionalitaFilm>`);
+  }
   xmlLines.push(`        <NumOpereRappresentate>1</NumOpereRappresentate>`);
   
   // ==================== SistemaEmissione ====================
