@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import type { SiaeTransmissionSettings } from "@shared/schema";
 import { sendSiaeTransmissionEmail } from "./email-service";
 import { isBridgeConnected, requestXmlSignature, getCachedEfffData } from "./bridge-relay";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, mapToSiaeTipoGenere } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, mapToSiaeTipoGenere, generateRCAXml, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, type RCAParams } from './siae-utils';
 
 // Configurazione SIAE secondo Allegato B e C - Provvedimento Agenzia delle Entrate 04/03/2008
 const SIAE_TEST_MODE = process.env.SIAE_TEST_MODE === 'true';
@@ -738,10 +738,262 @@ async function sendMonthlyReports() {
   }
 }
 
+/**
+ * Job per invio automatico report RCA (Riepilogo Controllo Accessi) per eventi conclusi.
+ * Genera e invia RCA per eventi terminati che hanno autoSendReports abilitato.
+ * Viene eseguito dopo la chiusura automatica degli eventi.
+ */
+async function sendRCAReports() {
+  try {
+    log('Avvio job invio report RCA per eventi conclusi...');
+    
+    const now = new Date();
+    const yesterday = new Date(now);
+    yesterday.setDate(yesterday.getDate() - 1);
+    yesterday.setHours(0, 0, 0, 0);
+    const endOfYesterday = new Date(yesterday);
+    endOfYesterday.setHours(23, 59, 59, 999);
+    
+    // Trova eventi chiusi nelle ultime 24 ore con ticketed events che hanno auto-invio
+    const ticketedEventsWithEvents = await db.select({
+      ticketedEvent: siaeTicketedEvents,
+      event: events,
+    })
+    .from(siaeTicketedEvents)
+    .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+    .where(and(
+      eq(siaeTicketedEvents.autoSendReports, true),
+      eq(events.status, 'closed'),
+      gte(events.endDatetime, yesterday),
+      lt(events.endDatetime, now)
+    ));
+    
+    if (ticketedEventsWithEvents.length === 0) {
+      log('Nessun evento concluso con auto-invio RCA abilitato');
+      return;
+    }
+    
+    log(`Trovati ${ticketedEventsWithEvents.length} eventi conclusi per invio RCA`);
+    
+    for (const { ticketedEvent, event } of ticketedEventsWithEvents) {
+      try {
+        // Verifica se esiste già una trasmissione RCA per questo evento
+        const existingRCA = await db.select()
+          .from(siaeTransmissions)
+          .where(and(
+            eq(siaeTransmissions.ticketedEventId, ticketedEvent.id),
+            eq(siaeTransmissions.transmissionType, 'rca')
+          ))
+          .limit(1);
+        
+        if (existingRCA.length > 0) {
+          log(`Evento ${ticketedEvent.id} - RCA già inviato, skip`);
+          continue;
+        }
+        
+        // Recupera dati necessari per generazione RCA
+        const company = await storage.getCompany(ticketedEvent.companyId);
+        const sectors = await siaeStorage.getSiaeEventSectors(ticketedEvent.id);
+        const allTickets = await siaeStorage.getSiaeTicketsByEvent(ticketedEvent.id);
+        const location = event.locationId ? await storage.getLocation(event.locationId) : null;
+        const siaeConfig = await siaeStorage.getSiaeSystemConfig(ticketedEvent.companyId);
+        
+        // Calcola progressivo
+        const allTransmissions = await siaeStorage.getSiaeTransmissionsByCompany(ticketedEvent.companyId);
+        const rcaTransmissionsForEvent = allTransmissions.filter(t => 
+          t.transmissionType === 'rca' && t.ticketedEventId === ticketedEvent.id
+        );
+        const progressivo = rcaTransmissionsForEvent.length + 1;
+        
+        // Prepara i ticket nel formato richiesto (SiaeTicketForLog)
+        const eventDate = event.endDatetime || new Date();
+        const ticketsForLog = allTickets.map((t: any, idx: number) => ({
+          id: t.id,
+          status: t.status,
+          fiscalSealCode: t.fiscalSealCode || null,
+          progressiveNumber: t.progressiveNumber || idx + 1,
+          cardCode: t.cardCode || null,
+          emissionChannelCode: t.emissionChannelCode || 'WEB',
+          emissionDate: t.createdAt || new Date(),
+          ticketTypeCode: t.ticketTypeCode || 'I1',
+          sectorCode: sectors.find((s: any) => s.id === t.sectorId)?.sectorCode || '01',
+          grossAmount: Number(t.ticketPrice) || Number(t.grossAmount) || Number(t.priceAtPurchase) || 0,
+          netAmount: Number(t.ticketPrice) || Number(t.netAmount) || 0,
+          vatAmount: 0,
+          prevendita: Number(t.prevendita) || 0,
+          isComplimentary: t.isComplimentary || false,
+          row: t.row || null,
+          seatNumber: t.seatNumber || null,
+          participantFirstName: t.participantFirstName || null,
+          participantLastName: t.participantLastName || null,
+          originalTicketId: t.originalTicketId || null,
+          replacedByTicketId: t.replacedByTicketId || null,
+          originalProgressiveNumber: t.originalProgressiveNumber || null,
+          cancellationReasonCode: t.cancellationReasonCode || null,
+          cancellationDate: t.cancellationDate || null,
+          accessDateTime: t.scannedAt || null,
+          codiceTitolo: normalizeSiaeTipoTitolo(t.ticketTypeCode, t.isComplimentary) || 'I1',
+          codiceOrdine: normalizeSiaeCodiceOrdine(t.sectorCode) || 'P1',
+        }));
+        
+        // Prepara evento per RCA
+        const eventForLog = {
+          id: ticketedEvent.id,
+          name: event.name || 'Evento',
+          date: eventDate,
+          startTime: event.startDatetime ? formatSiaeTimeHHMM(new Date(event.startDatetime)) : '20:00',
+          endTime: event.endDatetime ? formatSiaeTimeHHMM(new Date(event.endDatetime)) : '23:59',
+          genreCode: ticketedEvent.genreCode || '61',
+          taxType: ticketedEvent.taxType || 'I',
+          organizerName: company?.name || 'Organizzatore',
+          organizerTaxId: company?.fiscalCode || company?.taxId || '',
+          venueCode: location?.siaeLocationCode || '001',
+          venueName: location?.name || 'Locale',
+          eventLocation: location?.name || 'Locale',
+        };
+        
+        // Configurazione sistema
+        const companyTaxId = company?.fiscalCode || company?.taxId || siaeConfig?.taxId || '';
+        const companyBusinessName = company?.name || siaeConfig?.businessName || 'Azienda';
+        
+        const rcaParams: RCAParams = {
+          companyId: ticketedEvent.companyId,
+          eventId: ticketedEvent.id,
+          event: eventForLog,
+          tickets: ticketsForLog,
+          systemConfig: {
+            systemCode: siaeConfig?.systemCode || SIAE_SYSTEM_CODE,
+            taxId: siaeConfig?.taxId || companyTaxId,
+            businessName: siaeConfig?.businessName || companyBusinessName,
+          },
+          companyName: companyBusinessName,
+          taxId: companyTaxId,
+          progressivo: progressivo,
+          venueName: location?.name || 'Locale',
+        };
+        
+        // Genera XML RCA
+        const rcaResult = generateRCAXml(rcaParams);
+        
+        if (!rcaResult.success) {
+          log(`ERRORE generazione RCA per evento ${ticketedEvent.id}: ${rcaResult.errors.join('; ')}`);
+          continue;
+        }
+        
+        const xmlContent = rcaResult.xml;
+        
+        // Nome file
+        const cachedEfff = getCachedEfffData();
+        const systemCode = cachedEfff?.systemId || siaeConfig?.systemCode || SIAE_SYSTEM_CODE;
+        let fileName = generateSiaeFileName('rca', eventDate, progressivo, null, systemCode);
+        let fileExtension = '.xsi';
+        let signatureFormat: 'cades' | 'xmldsig' | null = null;
+        
+        // Crea trasmissione
+        const transmission = await siaeStorage.createSiaeTransmission({
+          companyId: ticketedEvent.companyId,
+          ticketedEventId: ticketedEvent.id,
+          transmissionType: 'rca',
+          periodDate: eventDate,
+          scheduleType: 'auto',
+          fileName: fileName.replace(fileExtension, ''),
+          fileExtension,
+          fileContent: xmlContent,
+          status: 'pending',
+          ticketsCount: rcaResult.ticketCount,
+          ticketsCancelled: 0,
+          totalAmount: ticketsForLog.reduce((sum, t) => sum + t.grossAmount, 0).toFixed(2),
+        });
+        
+        log(`Evento ${ticketedEvent.id} (${event.name}) - Report RCA creato: ${fileName}`);
+        
+        // Tenta firma digitale
+        let signatureInfo = '';
+        let p7mBase64: string | undefined;
+        let signedXmlContent: string | undefined;
+        
+        try {
+          if (isBridgeConnected()) {
+            log(`Bridge connesso, tentativo firma digitale RCA...`);
+            const signatureResult = await requestXmlSignature(xmlContent);
+            
+            if (signatureResult.p7mBase64) {
+              p7mBase64 = signatureResult.p7mBase64;
+              signatureFormat = 'cades';
+              signatureInfo = ` (firmato CAdES-BES ${signatureResult.algorithm || 'SHA-256'})`;
+              log(`Firma RCA CAdES-BES creata alle ${signatureResult.signedAt}`);
+            } else if (signatureResult.signedXml) {
+              signedXmlContent = signatureResult.signedXml;
+              signatureFormat = 'xmldsig';
+              signatureInfo = ' (firmato XMLDSig - DEPRECATO)';
+            }
+            
+            fileExtension = signatureFormat === 'cades' ? '.p7m' : '.xsi';
+            fileName = generateSiaeFileName('rca', eventDate, progressivo, signatureFormat, systemCode);
+            
+            await siaeStorage.updateSiaeTransmission(transmission.id, {
+              fileContent: signedXmlContent || xmlContent,
+              fileName: fileName.replace(fileExtension, ''),
+              fileExtension,
+              p7mContent: p7mBase64 || null,
+              signatureFormat: signatureFormat,
+              signedAt: new Date(),
+            });
+          } else {
+            log(`Bridge non connesso, invio RCA non firmato`);
+          }
+        } catch (signError: any) {
+          log(`ATTENZIONE: Firma digitale RCA fallita, invio non firmato: ${signError.message}`);
+        }
+        
+        // Invio email
+        try {
+          await sendSiaeTransmissionEmail({
+            to: SIAE_TEST_EMAIL,
+            companyName: companyBusinessName,
+            transmissionType: 'rca',
+            periodDate: eventDate,
+            ticketsCount: rcaResult.ticketCount,
+            totalAmount: ticketsForLog.reduce((sum, t) => sum + t.grossAmount, 0).toFixed(2),
+            xmlContent: signedXmlContent || xmlContent,
+            transmissionId: transmission.id,
+            systemCode: systemCode,
+            sequenceNumber: progressivo,
+            p7mBase64: p7mBase64,
+            signatureFormat: signatureFormat || undefined,
+            signWithSmime: true,
+            requireSignature: true,
+          });
+          
+          await siaeStorage.updateSiaeTransmission(transmission.id, {
+            status: 'sent',
+            sentAt: new Date(),
+          });
+          
+          log(`Evento ${ticketedEvent.id} - Email RCA inviata a ${SIAE_TEST_EMAIL}${signatureInfo}`);
+        } catch (emailError: any) {
+          log(`ERRORE invio email RCA per evento ${ticketedEvent.id}: ${emailError.message}`);
+          await siaeStorage.updateSiaeTransmission(transmission.id, {
+            status: 'error',
+            errorMessage: emailError.message,
+          });
+        }
+      } catch (eventError: any) {
+        log(`ERRORE RCA per evento ${ticketedEvent.id}: ${eventError.message}`);
+      }
+    }
+    
+    log('Job invio report RCA completato');
+  } catch (error: any) {
+    log(`ERRORE job RCA: ${error.message}`);
+  }
+}
+
 let dailyIntervalId: NodeJS.Timeout | null = null;
 let monthlyIntervalId: NodeJS.Timeout | null = null;
 let eventCloseIntervalId: NodeJS.Timeout | null = null;
 let resaleExpirationIntervalId: NodeJS.Timeout | null = null;
+let rcaIntervalId: NodeJS.Timeout | null = null;
 
 /**
  * Chiude automaticamente gli eventi la cui data/ora di fine è passata.
@@ -867,6 +1119,7 @@ export function initSiaeScheduler() {
   if (monthlyIntervalId) clearInterval(monthlyIntervalId);
   if (eventCloseIntervalId) clearInterval(eventCloseIntervalId);
   if (resaleExpirationIntervalId) clearInterval(resaleExpirationIntervalId);
+  if (rcaIntervalId) clearInterval(rcaIntervalId);
 
   dailyIntervalId = setInterval(checkAndRunDailyJob, 60 * 1000);
   monthlyIntervalId = setInterval(checkAndRunMonthlyJob, 60 * 1000);
@@ -877,13 +1130,17 @@ export function initSiaeScheduler() {
   // Job per scadenza automatica rivendite 1h prima evento - ogni 5 minuti
   resaleExpirationIntervalId = setInterval(autoExpireResales, 5 * 60 * 1000);
   
+  // Job per invio automatico RCA dopo chiusura eventi - ogni 10 minuti
+  rcaIntervalId = setInterval(sendRCAReports, 10 * 60 * 1000);
+  
   // Esegui subito al primo avvio per chiudere eventi già scaduti e scadere rivendite
   autoCloseExpiredEvents();
   autoExpireResales();
 
   log('Scheduler SIAE inizializzato:');
-  log('  - Job giornaliero: ogni notte alle 02:00');
-  log('  - Job mensile: primo giorno del mese alle 03:00');
+  log('  - Job RMG giornaliero: ogni notte alle 02:00');
+  log('  - Job RPM mensile: primo giorno del mese alle 03:00');
+  log('  - Job RCA evento: ogni 10 minuti (dopo chiusura evento)');
   log('  - Job chiusura eventi: ogni 5 minuti');
   log('  - Job scadenza rivendite: ogni 5 minuti (1h prima evento)');
   log(`  - System Code: ${SIAE_SYSTEM_CODE}`);
@@ -907,7 +1164,11 @@ export function stopSiaeScheduler() {
     clearInterval(resaleExpirationIntervalId);
     resaleExpirationIntervalId = null;
   }
+  if (rcaIntervalId) {
+    clearInterval(rcaIntervalId);
+    rcaIntervalId = null;
+  }
   log('Scheduler SIAE fermato');
 }
 
-export { sendDailyReports, sendMonthlyReports };
+export { sendDailyReports, sendMonthlyReports, sendRCAReports };

@@ -144,7 +144,7 @@ export default function SiaeTransmissionsPage() {
   const [testEmail, setTestEmail] = useState<string>("servertest2@batest.siae.it");
   const [dailyDate, setDailyDate] = useState<string>(new Date().toISOString().split('T')[0]);
   const [dailyEmail, setDailyEmail] = useState<string>("servertest2@batest.siae.it");
-  const [c1Type, setC1Type] = useState<'daily' | 'monthly'>('daily');
+  const [c1Type, setC1Type] = useState<'daily' | 'monthly' | 'rca'>('daily');
   const [selectedEventId, setSelectedEventId] = useState<string>("");
   const [receiptProtocol, setReceiptProtocol] = useState<string>("");
   const [receiptContent, setReceiptContent] = useState<string>("");
@@ -377,7 +377,7 @@ export default function SiaeTransmissionsPage() {
   });
 
   const sendC1Mutation = useMutation({
-    mutationFn: async ({ date, toEmail, type, eventId, forceSubstitution }: { date: string; toEmail: string; type: 'daily' | 'monthly'; eventId?: string; forceSubstitution?: boolean }) => {
+    mutationFn: async ({ date, toEmail, type, eventId, forceSubstitution }: { date: string; toEmail: string; type: 'daily' | 'monthly' | 'rca'; eventId?: string; forceSubstitution?: boolean }) => {
       const response = await apiRequest("POST", `/api/siae/companies/${companyId}/transmissions/send-c1`, {
         date,
         toEmail,
@@ -634,8 +634,9 @@ export default function SiaeTransmissionsPage() {
 
   const getTypeLabel = (type: string) => {
     switch (type) {
-      case "daily": return "Giornaliera";
-      case "monthly": return "Mensile";
+      case "daily": return "RMG Giornaliero";
+      case "monthly": return "RPM Mensile";
+      case "rca": return "RCA Evento";
       case "corrective": return "Correttiva";
       default: return type;
     }
@@ -1376,7 +1377,7 @@ export default function SiaeTransmissionsPage() {
             <div className="space-y-4 py-4">
               <div>
                 <Label>Frequenza Trasmissione</Label>
-                <Select value={c1Type} onValueChange={(v: 'daily' | 'monthly') => { setC1Type(v); }}>
+                <Select value={c1Type} onValueChange={(v: 'daily' | 'monthly' | 'rca') => { setC1Type(v); }}>
                   <SelectTrigger data-testid="select-c1-type">
                     <SelectValue />
                   </SelectTrigger>
@@ -1393,6 +1394,12 @@ export default function SiaeTransmissionsPage() {
                         <span className="text-xs text-muted-foreground">Riepilogo Periodico Mensile (C1)</span>
                       </div>
                     </SelectItem>
+                    <SelectItem value="rca">
+                      <div className="flex flex-col items-start">
+                        <span className="font-medium">RCA - Controllo Accessi</span>
+                        <span className="text-xs text-muted-foreground">Riepilogo Controllo Accessi evento</span>
+                      </div>
+                    </SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1400,6 +1407,7 @@ export default function SiaeTransmissionsPage() {
               {/* Info box con spiegazione tipo report */}
               <div className={`p-3 rounded-lg border ${
                 c1Type === 'monthly' ? 'bg-amber-500/10 border-amber-500/30' : 
+                c1Type === 'rca' ? 'bg-green-500/10 border-green-500/30' :
                 'bg-blue-500/10 border-blue-500/30'
               }`}>
                 {c1Type === 'monthly' ? (
@@ -1410,6 +1418,17 @@ export default function SiaeTransmissionsPage() {
                     </div>
                     <p className="text-xs text-muted-foreground">
                       Riepilogo Controllo Accessi con DataRiepilogo impostata al mese selezionato.
+                      Conforme ad Allegato B - Provvedimento 04/03/2008.
+                    </p>
+                  </div>
+                ) : c1Type === 'rca' ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2 text-green-600 dark:text-green-400">
+                      <Ticket className="w-4 h-4" />
+                      <span className="font-medium text-sm">RCA - Controllo Accessi</span>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Report specifico per evento con dati biglietteria e accessi.
                       Conforme ad Allegato B - Provvedimento 04/03/2008.
                     </p>
                   </div>
@@ -1427,11 +1446,11 @@ export default function SiaeTransmissionsPage() {
                 )}
               </div>
               
-              {/* Selezione evento - sempre richiesto */}
+              {/* Selezione evento - richiesto per RCA */}
               <div>
-                <Label>Evento *</Label>
+                <Label>Evento {c1Type === 'rca' && <span className="text-destructive">*</span>}</Label>
                 <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-                  <SelectTrigger data-testid="select-rca-event">
+                  <SelectTrigger data-testid="select-rca-event" className={c1Type === 'rca' && !selectedEventId ? 'border-destructive' : ''}>
                     <SelectValue placeholder="Seleziona un evento concluso..." />
                   </SelectTrigger>
                   <SelectContent>
@@ -1451,14 +1470,21 @@ export default function SiaeTransmissionsPage() {
                     )}
                   </SelectContent>
                 </Select>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Solo eventi già conclusi possono essere trasmessi
-                </p>
+                {c1Type === 'rca' && !selectedEventId && (
+                  <p className="text-xs text-destructive mt-1">
+                    Seleziona un evento per inviare il report RCA
+                  </p>
+                )}
+                {(c1Type !== 'rca' || selectedEventId) && (
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Solo eventi già conclusi possono essere trasmessi
+                  </p>
+                )}
               </div>
               
               {/* Data/Mese di riferimento per il riepilogo */}
               <div>
-                <Label>{c1Type === 'monthly' ? 'Mese di riferimento' : 'Data Riepilogo'}</Label>
+                <Label>{c1Type === 'monthly' ? 'Mese di riferimento' : c1Type === 'rca' ? 'Data Evento' : 'Data Riepilogo'}</Label>
                 <Input 
                   type={c1Type === 'monthly' ? 'month' : 'date'} 
                   value={dailyDate} 
@@ -1468,6 +1494,8 @@ export default function SiaeTransmissionsPage() {
                 <p className="text-xs text-muted-foreground mt-1">
                   {c1Type === 'monthly' 
                     ? 'Verrà usato come DataRiepilogo nel formato AAAAMM01' 
+                    : c1Type === 'rca'
+                    ? 'Data dell\'evento per il report RCA'
                     : 'Verrà usato come DataRiepilogo nel formato AAAAMMGG'}
                 </p>
               </div>
@@ -1509,7 +1537,7 @@ export default function SiaeTransmissionsPage() {
                   });
                 }}
                 disabled={
-                  !selectedEventId || 
+                  (c1Type === 'rca' && !selectedEventId) || 
                   !dailyDate || 
                   !dailyEmail || 
                   sendC1Mutation.isPending
@@ -1517,7 +1545,7 @@ export default function SiaeTransmissionsPage() {
                 data-testid="button-send-c1-submit"
               >
                 {sendC1Mutation.isPending && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-                {c1Type === 'monthly' ? 'Invia RPM Mensile' : 'Invia RMG Giornaliero'}
+                {c1Type === 'monthly' ? 'Invia RPM Mensile' : c1Type === 'rca' ? 'Invia RCA Evento' : 'Invia RMG Giornaliero'}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -2517,10 +2545,13 @@ export default function SiaeTransmissionsPage() {
         <div className="p-4 space-y-6">
           <div className="text-center py-4">
             <div className={`w-16 h-16 mx-auto mb-4 rounded-full ${
-              c1Type === 'monthly' ? 'bg-amber-500/20' : 'bg-blue-500/20'
+              c1Type === 'monthly' ? 'bg-amber-500/20' : 
+              c1Type === 'rca' ? 'bg-green-500/20' : 'bg-blue-500/20'
             } flex items-center justify-center`}>
               {c1Type === 'monthly' ? (
                 <Calendar className="w-8 h-8 text-amber-400" />
+              ) : c1Type === 'rca' ? (
+                <Ticket className="w-8 h-8 text-green-400" />
               ) : (
                 <Clock className="w-8 h-8 text-blue-400" />
               )}
@@ -2528,6 +2559,8 @@ export default function SiaeTransmissionsPage() {
             <p className="text-muted-foreground text-sm">
               {c1Type === 'monthly' 
                 ? "RPM - Riepilogo Periodico Mensile (C1)"
+                : c1Type === 'rca'
+                ? "RCA - Riepilogo Controllo Accessi"
                 : "RMG - Riepilogo Mensile Giornaliero (C1)"}
             </p>
           </div>
@@ -2535,33 +2568,38 @@ export default function SiaeTransmissionsPage() {
           <div className="space-y-4">
             <div>
               <Label className="text-sm font-medium mb-2 block">Frequenza Trasmissione</Label>
-              <Select value={c1Type} onValueChange={(v: 'daily' | 'monthly') => { setC1Type(v); }}>
+              <Select value={c1Type} onValueChange={(v: 'daily' | 'monthly' | 'rca') => { setC1Type(v); }}>
                 <SelectTrigger className="h-12" data-testid="select-c1-type-mobile">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="daily">RMG - Giornaliero</SelectItem>
                   <SelectItem value="monthly">RPM - Mensile</SelectItem>
+                  <SelectItem value="rca">RCA - Controllo Accessi</SelectItem>
                 </SelectContent>
               </Select>
             </div>
             
             {/* Info box per mobile */}
             <div className={`p-3 rounded-lg ${
-              c1Type === 'monthly' ? 'bg-amber-500/10 border border-amber-500/30' : 'bg-blue-500/10 border border-blue-500/30'
+              c1Type === 'monthly' ? 'bg-amber-500/10 border border-amber-500/30' : 
+              c1Type === 'rca' ? 'bg-green-500/10 border border-green-500/30' :
+              'bg-blue-500/10 border border-blue-500/30'
             }`}>
               <p className="text-xs text-muted-foreground">
                 {c1Type === 'monthly' 
                   ? "DataRiepilogo in formato AAAAMM01. Conforme ad Allegato B."
+                  : c1Type === 'rca'
+                  ? "Report specifico evento con dati biglietteria. Conforme ad Allegato B."
                   : "DataRiepilogo in formato AAAAMMGG. Conforme ad Allegato B."}
               </p>
             </div>
             
-            {/* Selezione evento - sempre richiesto */}
+            {/* Selezione evento - richiesto per RCA */}
             <div>
-              <Label className="text-sm font-medium mb-2 block">Evento *</Label>
+              <Label className="text-sm font-medium mb-2 block">Evento {c1Type === 'rca' && <span className="text-destructive">*</span>}</Label>
               <Select value={selectedEventId} onValueChange={setSelectedEventId}>
-                <SelectTrigger className="h-12" data-testid="select-rca-event-mobile">
+                <SelectTrigger className={`h-12 ${c1Type === 'rca' && !selectedEventId ? 'border-destructive' : ''}`} data-testid="select-rca-event-mobile">
                   <SelectValue placeholder="Seleziona evento..." />
                 </SelectTrigger>
                 <SelectContent>
@@ -2576,11 +2614,16 @@ export default function SiaeTransmissionsPage() {
                   )}
                 </SelectContent>
               </Select>
+              {c1Type === 'rca' && !selectedEventId && (
+                <p className="text-xs text-destructive mt-1">
+                  Seleziona un evento per inviare il report RCA
+                </p>
+              )}
             </div>
             
             {/* Data/Mese di riferimento */}
             <div>
-              <Label className="text-sm font-medium mb-2 block">{c1Type === 'monthly' ? 'Mese di riferimento' : 'Data Riepilogo'}</Label>
+              <Label className="text-sm font-medium mb-2 block">{c1Type === 'monthly' ? 'Mese di riferimento' : c1Type === 'rca' ? 'Data Evento' : 'Data Riepilogo'}</Label>
               <Input
                 type={c1Type === 'monthly' ? 'month' : 'date'}
                 value={dailyDate}
@@ -2633,6 +2676,7 @@ export default function SiaeTransmissionsPage() {
             <HapticButton
               className={`flex-1 h-12 ${
                 c1Type === 'monthly' ? 'bg-amber-500 text-black hover:bg-amber-500/90' : 
+                c1Type === 'rca' ? 'bg-green-500 text-white hover:bg-green-500/90' :
                 'bg-blue-500 text-white hover:bg-blue-500/90'
               }`}
               onClick={() => sendC1Mutation.mutate({ 
@@ -2643,7 +2687,7 @@ export default function SiaeTransmissionsPage() {
                 forceSubstitution
               })}
               disabled={
-                !selectedEventId || 
+                (c1Type === 'rca' && !selectedEventId) || 
                 !dailyDate || 
                 !dailyEmail || 
                 sendC1Mutation.isPending
@@ -2652,7 +2696,7 @@ export default function SiaeTransmissionsPage() {
               data-testid="button-send-c1-confirm"
             >
               {sendC1Mutation.isPending && <Loader2 className="w-5 h-5 mr-2 animate-spin" />}
-              {c1Type === 'monthly' ? 'Invia RPM Mensile' : 'Invia RMG Giornaliero'}
+              {c1Type === 'monthly' ? 'Invia RPM Mensile' : c1Type === 'rca' ? 'Invia RCA Evento' : 'Invia RMG Giornaliero'}
             </HapticButton>
           </div>
         </div>
