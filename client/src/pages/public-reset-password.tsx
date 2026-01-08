@@ -14,6 +14,7 @@ import {
   MobileHeader,
   HapticButton,
 } from "@/components/mobile-primitives";
+import { BrandLogo } from "@/components/brand-logo";
 
 export default function PublicResetPassword() {
   const [, navigate] = useLocation();
@@ -109,11 +110,7 @@ export default function PublicResetPassword() {
         <header className="border-b border-border">
           <div className="container mx-auto px-6 py-4 flex items-center justify-between">
             <Link href="/">
-              <img 
-                src="/logo.png" 
-                alt="Event4U" 
-                className="h-10 w-auto cursor-pointer"
-              />
+              <BrandLogo variant="horizontal" className="h-10 w-auto cursor-pointer" />
             </Link>
           </div>
         </header>

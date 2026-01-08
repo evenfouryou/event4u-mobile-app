@@ -10,6 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { triggerHaptic, HapticButton } from "@/components/mobile-primitives";
+import { BrandLogo } from "@/components/brand-logo";
 
 export default function ResetPassword() {
   const isMobile = useIsMobile();
@@ -128,12 +129,7 @@ export default function ResetPassword() {
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-8">
             <Link href="/" data-testid="link-home">
-              <img 
-                src="/logo.png" 
-                alt="EventFourYou" 
-                className="h-16 w-auto"
-                data-testid="img-logo"
-              />
+              <BrandLogo variant="horizontal" className="h-16 w-auto" />
             </Link>
           </div>
 
@@ -341,11 +337,7 @@ export default function ResetPassword() {
             className="w-full max-w-md mx-auto"
           >
             <div className="flex justify-center mb-8">
-              <img 
-                src="/logo.png" 
-                alt="EventFourYou" 
-                className="h-16 w-auto"
-              />
+              <BrandLogo variant="horizontal" className="h-16 w-auto" />
             </div>
 
             <div className="text-center mb-8">

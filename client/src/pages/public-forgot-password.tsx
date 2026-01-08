@@ -10,6 +10,7 @@ import { apiRequest } from "@/lib/queryClient";
 import { motion, AnimatePresence } from "framer-motion";
 import { triggerHaptic, HapticButton, MobileAppLayout } from "@/components/mobile-primitives";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { BrandLogo } from "@/components/brand-logo";
 
 const springTransition = {
   type: "spring" as const,
@@ -50,11 +51,7 @@ export default function PublicForgotPassword() {
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-8">
             <Link href="/">
-              <img 
-                src="/logo.png" 
-                alt="Event4U" 
-                className="h-12 w-auto cursor-pointer"
-              />
+              <BrandLogo variant="horizontal" className="h-12 w-auto cursor-pointer" />
             </Link>
           </div>
 
@@ -176,11 +173,7 @@ export default function PublicForgotPassword() {
   const header = (
     <div className="flex items-center justify-between px-4 py-3 border-b border-border bg-background/80 backdrop-blur-xl">
       <Link href="/">
-        <img 
-          src="/logo.png" 
-          alt="Event4U" 
-          className="h-10 w-auto cursor-pointer"
-        />
+        <BrandLogo variant="horizontal" className="h-10 w-auto cursor-pointer" />
       </Link>
       <HapticButton 
         variant="ghost" 

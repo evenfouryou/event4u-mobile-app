@@ -44,6 +44,7 @@ import { MobileAppLayout, HapticButton, triggerHaptic } from "@/components/mobil
 import { useIsMobile } from "@/hooks/use-mobile";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { BrandLogo } from "@/components/brand-logo";
 import type { SchoolBadgeLanding } from "@shared/schema";
 
 const springConfig = { type: "spring" as const, stiffness: 400, damping: 30 };
@@ -372,12 +373,7 @@ export default function SchoolBadgeLanding() {
       <div className="min-h-screen bg-background flex items-center justify-center p-6" data-testid="page-school-badge-landing">
         <div className="w-full max-w-md">
           <div className="text-center mb-6">
-            <img 
-              src="/logo.png" 
-              alt="Event4U" 
-              className="h-8 w-auto mx-auto mb-4"
-              data-testid="img-event4u-logo-desktop"
-            />
+            <BrandLogo variant="horizontal" className="h-8 w-auto mx-auto mb-4" />
           </div>
           
           <Card>
@@ -687,12 +683,7 @@ export default function SchoolBadgeLanding() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ ...springConfig, delay: 0.1 }}
         >
-          <img 
-            src="/logo.png" 
-            alt="Event4U" 
-            className="h-10 w-auto mb-6"
-            data-testid="img-event4u-logo"
-          />
+          <BrandLogo variant="horizontal" className="h-10 w-auto mb-6" />
           
           {landing.logoUrl ? (
             <motion.img 

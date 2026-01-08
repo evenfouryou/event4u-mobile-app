@@ -13,6 +13,7 @@ import {
   HapticButton, 
   triggerHaptic 
 } from "@/components/mobile-primitives";
+import { BrandLogo } from "@/components/brand-logo";
 
 const springConfig = { type: "spring" as const, stiffness: 400, damping: 30 };
 
@@ -49,12 +50,7 @@ export default function ForgotPassword() {
         <div className="w-full max-w-md">
           <div className="flex justify-center mb-8">
             <Link href="/" data-testid="link-home">
-              <img 
-                src="/logo.png" 
-                alt="EventFourYou" 
-                className="h-16 w-auto"
-                data-testid="img-logo"
-              />
+              <BrandLogo variant="horizontal" className="h-16 w-auto" />
             </Link>
           </div>
 
@@ -169,12 +165,7 @@ export default function ForgotPassword() {
             onClick={() => triggerHaptic('light')}
             className="block min-h-[44px] min-w-[44px] flex items-center justify-center"
           >
-            <img 
-              src="/logo.png" 
-              alt="EventFourYou" 
-              className="h-20 w-auto"
-              data-testid="img-logo-mobile"
-            />
+            <BrandLogo variant="horizontal" className="h-20 w-auto" />
           </Link>
         </motion.div>
 
