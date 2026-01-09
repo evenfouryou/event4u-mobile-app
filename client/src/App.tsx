@@ -207,6 +207,9 @@ function Router() {
         <Route path="/account">
           <Redirect to="/login" />
         </Route>
+        {/* PR App - uses its own authentication (usePrAuth) */}
+        <Route path="/pr-app" component={PrApp} />
+        <Route path="/pr-wallet" component={PrWallet} />
         <Route component={NotFound} />
       </Switch>
     );
