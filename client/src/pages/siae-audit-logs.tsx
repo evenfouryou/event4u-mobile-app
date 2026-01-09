@@ -62,6 +62,8 @@ import {
   ChevronRight,
   ArrowLeft,
   Building2,
+  User,
+  Monitor,
 } from "lucide-react";
 const springTransition = {
   type: "spring" as const,
@@ -78,6 +80,7 @@ export default function SiaeAuditLogsPage() {
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
   const [actionFilter, setActionFilter] = useState<string>("all");
   const [entityFilter, setEntityFilter] = useState<string>("all");
+  const [originFilter, setOriginFilter] = useState<string>("all");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCompanyId, setSelectedCompanyId] = useState<string | null>(null);
 
@@ -195,8 +198,11 @@ export default function SiaeAuditLogsPage() {
 
     const matchesAction = actionFilter === "all" || log.action === actionFilter;
     const matchesEntity = entityFilter === "all" || log.entityType === entityFilter;
+    const matchesOrigin = originFilter === "all" || 
+      (originFilter === "system" && !log.userId) ||
+      (originFilter === "user" && log.userId);
 
-    return matchesSearch && matchesAction && matchesEntity;
+    return matchesSearch && matchesAction && matchesEntity && matchesOrigin;
   });
 
   const stats = {
@@ -209,7 +215,7 @@ export default function SiaeAuditLogsPage() {
 
   const uniqueActions = Array.from(new Set(auditLogs?.map(l => l.action) || []));
   const uniqueEntities = Array.from(new Set(auditLogs?.map(l => l.entityType) || []));
-  const activeFiltersCount = (actionFilter !== "all" ? 1 : 0) + (entityFilter !== "all" ? 1 : 0);
+  const activeFiltersCount = (actionFilter !== "all" ? 1 : 0) + (entityFilter !== "all" ? 1 : 0) + (originFilter !== "all" ? 1 : 0);
 
   const handleViewDetails = (log: SiaeAuditLog) => {
     triggerHaptic('medium');
@@ -230,6 +236,7 @@ export default function SiaeAuditLogsPage() {
     triggerHaptic('light');
     setActionFilter("all");
     setEntityFilter("all");
+    setOriginFilter("all");
   };
 
   if (isLoading) {
@@ -399,6 +406,17 @@ export default function SiaeAuditLogsPage() {
                       ))}
                     </SelectContent>
                   </Select>
+                  <Select value={originFilter} onValueChange={setOriginFilter}>
+                    <SelectTrigger className="w-[180px]" data-testid="select-origin-filter-desktop">
+                      <Globe className="h-4 w-4 mr-2" />
+                      <SelectValue placeholder="Origine" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="all">Tutte le origini</SelectItem>
+                      <SelectItem value="system">Sistema</SelectItem>
+                      <SelectItem value="user">Utente</SelectItem>
+                    </SelectContent>
+                  </Select>
                   {activeFiltersCount > 0 && (
                     <Button variant="ghost" size="sm" onClick={handleClearFilters}>
                       Resetta filtri
@@ -421,7 +439,17 @@ export default function SiaeAuditLogsPage() {
                     {filteredLogs && filteredLogs.length > 0 ? (
                       filteredLogs.map((log) => (
                         <TableRow key={log.id} data-testid={`row-audit-log-${log.id}`}>
-                          <TableCell>{getActionBadge(log.action)}</TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-2">
+                              {getActionBadge(log.action)}
+                              {!log.userId && (
+                                <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30" data-testid={`badge-system-${log.id}`}>
+                                  <Monitor className="h-3 w-3 mr-1" />
+                                  Sistema
+                                </Badge>
+                              )}
+                            </div>
+                          </TableCell>
                           <TableCell>{getEntityBadge(log.entityType)}</TableCell>
                           <TableCell className="max-w-[300px] truncate">
                             {log.description || "Operazione registrata"}
@@ -481,6 +509,12 @@ export default function SiaeAuditLogsPage() {
                 <div className="flex items-center gap-4">
                   {getActionBadge(selectedLog.action)}
                   {getEntityBadge(selectedLog.entityType)}
+                  {!selectedLog.userId && (
+                    <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">
+                      <Monitor className="h-3 w-3 mr-1" />
+                      Sistema
+                    </Badge>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-2 gap-4">
@@ -779,6 +813,12 @@ export default function SiaeAuditLogsPage() {
                           <div className="flex items-center gap-2 flex-wrap">
                             {getActionBadge(log.action)}
                             {getEntityBadge(log.entityType)}
+                            {!log.userId && (
+                              <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">
+                                <Monitor className="h-3 w-3 mr-1" />
+                                Sistema
+                              </Badge>
+                            )}
                           </div>
                           
                           <p className="text-white text-sm line-clamp-2">
@@ -869,6 +909,21 @@ export default function SiaeAuditLogsPage() {
             </Select>
           </div>
 
+          <div className="space-y-3">
+            <label className="text-sm font-medium text-gray-400">Origine</label>
+            <Select value={originFilter} onValueChange={setOriginFilter}>
+              <SelectTrigger className="h-12 bg-[#0a0e17] border-gray-700 rounded-xl" data-testid="select-origin-filter">
+                <Globe className="h-4 w-4 mr-2" />
+                <SelectValue placeholder="Tutte le origini" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">Tutte le origini</SelectItem>
+                <SelectItem value="system">Sistema</SelectItem>
+                <SelectItem value="user">Utente</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
           <div className="flex gap-3 pt-4">
             <HapticButton
               variant="outline"
@@ -912,7 +967,15 @@ export default function SiaeAuditLogsPage() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-1">
                 <p className="text-xs text-gray-500 uppercase tracking-wide">Tipo Entità</p>
-                {getEntityBadge(selectedLog.entityType)}
+                <div className="flex items-center gap-2">
+                  {getEntityBadge(selectedLog.entityType)}
+                  {!selectedLog.userId && (
+                    <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">
+                      <Monitor className="h-3 w-3 mr-1" />
+                      Sistema
+                    </Badge>
+                  )}
+                </div>
               </div>
               <div className="space-y-1">
                 <p className="text-xs text-gray-500 uppercase tracking-wide">ID Entità</p>

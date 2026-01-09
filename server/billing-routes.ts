@@ -197,15 +197,22 @@ router.post("/api/admin/billing/organizers/:companyId/subscription", requireAuth
       return res.status(404).json({ message: "Azienda non trovata" });
     }
 
-    const validated = insertOrganizerSubscriptionSchema.parse({
+    // Convert date strings to Date objects for drizzle-zod validation
+    const requestData = {
       ...req.body,
       companyId,
-    });
+      startDate: req.body.startDate ? new Date(req.body.startDate) : undefined,
+      endDate: req.body.endDate ? new Date(req.body.endDate) : undefined,
+      nextBillingDate: req.body.nextBillingDate ? new Date(req.body.nextBillingDate) : undefined,
+    };
+
+    const validated = insertOrganizerSubscriptionSchema.parse(requestData);
 
     const [subscription] = await db.insert(organizerSubscriptions).values(validated).returning();
     res.status(201).json(subscription);
   } catch (error) {
     if (error instanceof z.ZodError) {
+      console.error("[Billing] Zod validation error:", error.errors);
       return res.status(400).json({ message: "Dati non validi", errors: error.errors });
     }
     console.error("[Billing] Error creating subscription:", error);
