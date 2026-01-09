@@ -905,19 +905,23 @@ router.get("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, a
       return res.status(403).json({ error: "Accesso negato a questo evento" });
     }
     
-    // Fetch assignments with PR profile details (userId is prProfileId)
-    const assignments = await db
-      .select({
-        id: eventPrAssignments.id,
-        eventId: eventPrAssignments.eventId,
-        prUserId: eventPrAssignments.userId, // Renamed for frontend compatibility
-        staffUserId: eventPrAssignments.staffUserId,
-        companyId: eventPrAssignments.companyId,
-        canAddToLists: eventPrAssignments.canAddToLists,
-        canProposeTables: eventPrAssignments.canProposeTables,
-        isActive: eventPrAssignments.isActive,
-        createdAt: eventPrAssignments.createdAt,
-        prProfile: {
+    // Fetch all assignments
+    const rawAssignments = await db
+      .select()
+      .from(eventPrAssignments)
+      .where(and(
+        eq(eventPrAssignments.eventId, eventId),
+        eq(eventPrAssignments.isActive, true)
+      ))
+      .orderBy(desc(eventPrAssignments.createdAt));
+    
+    // Enrich with PR profile or user data
+    const enrichedAssignments = await Promise.all(rawAssignments.map(async (assignment) => {
+      let prProfile = null;
+      
+      // Try to get PR profile first (new system - by prProfileId)
+      if (assignment.prProfileId) {
+        const [profile] = await db.select({
           id: prProfiles.id,
           firstName: prProfiles.firstName,
           lastName: prProfiles.lastName,
@@ -925,17 +929,80 @@ router.get("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, a
           phone: prProfiles.phone,
           prCode: prProfiles.prCode,
           displayName: prProfiles.displayName,
-        },
-      })
-      .from(eventPrAssignments)
-      .innerJoin(prProfiles, eq(eventPrAssignments.userId, prProfiles.id))
-      .where(and(
-        eq(eventPrAssignments.eventId, eventId),
-        eq(eventPrAssignments.isActive, true)
-      ))
-      .orderBy(desc(eventPrAssignments.createdAt));
+        }).from(prProfiles).where(eq(prProfiles.id, assignment.prProfileId));
+        prProfile = profile || null;
+      }
+      
+      // Fallback for legacy records: try multiple strategies
+      if (!prProfile && assignment.userId) {
+        // Strategy 1: userId might actually be a prProfile ID (old code stored prProfileId in userId)
+        const [directProfile] = await db.select({
+          id: prProfiles.id,
+          firstName: prProfiles.firstName,
+          lastName: prProfiles.lastName,
+          email: prProfiles.email,
+          phone: prProfiles.phone,
+          prCode: prProfiles.prCode,
+          displayName: prProfiles.displayName,
+        }).from(prProfiles).where(eq(prProfiles.id, assignment.userId));
+        
+        if (directProfile) {
+          prProfile = directProfile;
+        } else {
+          // Strategy 2: Try to find a prProfile linked to this userId
+          const [linkedProfile] = await db.select({
+            id: prProfiles.id,
+            firstName: prProfiles.firstName,
+            lastName: prProfiles.lastName,
+            email: prProfiles.email,
+            phone: prProfiles.phone,
+            prCode: prProfiles.prCode,
+            displayName: prProfiles.displayName,
+          }).from(prProfiles).where(eq(prProfiles.userId, assignment.userId));
+          
+          if (linkedProfile) {
+            prProfile = linkedProfile;
+          } else {
+            // Strategy 3: Ultimate fallback - get user data directly
+            const [userRecord] = await db.select({
+              id: users.id,
+              firstName: users.firstName,
+              lastName: users.lastName,
+              email: users.email,
+              phone: users.phone,
+            }).from(users).where(eq(users.id, assignment.userId));
+            if (userRecord) {
+              prProfile = {
+                id: userRecord.id,
+                firstName: userRecord.firstName,
+                lastName: userRecord.lastName,
+                email: userRecord.email,
+                phone: userRecord.phone,
+                prCode: null,
+                displayName: null,
+              };
+            }
+          }
+        }
+      }
+      
+      return {
+        id: assignment.id,
+        eventId: assignment.eventId,
+        prUserId: assignment.prProfileId || assignment.userId, // For frontend compatibility
+        prProfileId: assignment.prProfileId,
+        userId: assignment.userId,
+        staffUserId: assignment.staffUserId,
+        companyId: assignment.companyId,
+        canAddToLists: assignment.canAddToLists,
+        canProposeTables: assignment.canProposeTables,
+        isActive: assignment.isActive,
+        createdAt: assignment.createdAt,
+        prProfile,
+      };
+    }));
     
-    res.json(assignments);
+    res.json(enrichedAssignments);
   } catch (error: any) {
     console.error("Error getting PR assignments:", error);
     res.status(500).json({ error: error.message });
@@ -946,7 +1013,7 @@ router.get("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, a
 router.post("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const { eventId } = req.params;
-    const { prUserId } = req.body; // This is actually prProfileId from frontend
+    const { prUserId } = req.body; // This is prProfileId from frontend
     const user = req.user as any;
     
     if (!prUserId) {
@@ -972,22 +1039,39 @@ router.post("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, 
       return res.status(400).json({ error: "Il profilo PR selezionato non è attivo" });
     }
     
-    // Check if assignment already exists
-    const existing = await db
+    // Check if assignment already exists - check both prProfileId and legacy userId
+    // Strategy 1: Check new prProfileId column
+    let existing = await db
       .select()
       .from(eventPrAssignments)
       .where(and(
         eq(eventPrAssignments.eventId, eventId),
-        eq(eventPrAssignments.userId, prUserId)
+        eq(eventPrAssignments.prProfileId, prUserId)
       ))
       .limit(1);
+    
+    // Strategy 2: Check legacy userId column (old code stored prProfileId in userId)
+    if (!existing.length) {
+      existing = await db
+        .select()
+        .from(eventPrAssignments)
+        .where(and(
+          eq(eventPrAssignments.eventId, eventId),
+          eq(eventPrAssignments.userId, prUserId)
+        ))
+        .limit(1);
+    }
     
     if (existing.length > 0) {
       // Reactivate if deactivated
       if (!existing[0].isActive) {
         const [updated] = await db
           .update(eventPrAssignments)
-          .set({ isActive: true, updatedAt: new Date() })
+          .set({ 
+            isActive: true, 
+            prProfileId: prUserId, // Backfill prProfileId for legacy records
+            updatedAt: new Date() 
+          })
           .where(eq(eventPrAssignments.id, existing[0].id))
           .returning();
         return res.json(updated);
@@ -995,10 +1079,10 @@ router.post("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, 
       return res.status(409).json({ error: "PR già assegnato a questo evento" });
     }
     
-    // Create new assignment (userId stores the prProfileId)
+    // Create new assignment using prProfileId (new column)
     const [assignment] = await db.insert(eventPrAssignments).values({
       eventId,
-      userId: prUserId, // This is the prProfileId
+      prProfileId: prUserId, // Store in the new column
       companyId: event[0].companyId,
       staffUserId: user.id,
       canAddToLists: true,
@@ -1019,7 +1103,7 @@ router.post("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, 
 // DELETE /api/events/:eventId/pr-assignments/:prUserId - Remove PR from event
 router.delete("/api/events/:eventId/pr-assignments/:prUserId", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
-    const { eventId, prUserId } = req.params;
+    const { eventId, prUserId } = req.params; // prUserId is actually prProfileId
     const user = req.user as any;
     
     // Verify event exists and user has access
@@ -1033,16 +1117,29 @@ router.delete("/api/events/:eventId/pr-assignments/:prUserId", requireAuth, requ
     }
     
     // Find and soft-delete the assignment (set isActive = false)
-    const [deleted] = await db
+    // Try prProfileId first, then fall back to legacy userId
+    let deleted = await db
       .update(eventPrAssignments)
       .set({ isActive: false, updatedAt: new Date() })
       .where(and(
         eq(eventPrAssignments.eventId, eventId),
-        eq(eventPrAssignments.userId, prUserId)
+        eq(eventPrAssignments.prProfileId, prUserId)
       ))
       .returning();
     
-    if (!deleted) {
+    // Fallback to legacy userId if not found by prProfileId
+    if (!deleted.length) {
+      deleted = await db
+        .update(eventPrAssignments)
+        .set({ isActive: false, updatedAt: new Date() })
+        .where(and(
+          eq(eventPrAssignments.eventId, eventId),
+          eq(eventPrAssignments.userId, prUserId)
+        ))
+        .returning();
+    }
+    
+    if (!deleted.length) {
       return res.status(404).json({ error: "Assegnazione non trovata" });
     }
     

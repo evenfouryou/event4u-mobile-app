@@ -4369,7 +4369,8 @@ export const e4uStaffAssignments = pgTable("e4u_staff_assignments", {
 export const eventPrAssignments = pgTable("event_pr_assignments", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   eventId: varchar("event_id").notNull().references(() => events.id),
-  userId: varchar("user_id").notNull().references(() => users.id),
+  userId: varchar("user_id").references(() => users.id), // Legacy - kept for backward compatibility
+  prProfileId: varchar("pr_profile_id").references(() => prProfiles.id), // New - references PR profile
   staffUserId: varchar("staff_user_id").references(() => users.id),
   companyId: varchar("company_id").notNull().references(() => companies.id),
   canAddToLists: boolean("can_add_to_lists").notNull().default(true),
