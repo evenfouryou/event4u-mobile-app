@@ -687,6 +687,15 @@ const customerRegisterSchema = z.object({
   firstName: z.string().min(1, "Nome obbligatorio"),
   lastName: z.string().min(1, "Cognome obbligatorio"),
   password: z.string().min(8, "Password deve avere almeno 8 caratteri"),
+  // Campi opzionali aggiuntivi
+  birthDate: z.string().optional(),
+  gender: z.enum(['M', 'F']).optional(),
+  street: z.string().optional(),
+  city: z.string().optional(),
+  province: z.string().max(2).optional(),
+  postalCode: z.string().optional(),
+  addressLatitude: z.string().optional(),
+  addressLongitude: z.string().optional(),
 });
 
 // Registrazione cliente
@@ -734,6 +743,15 @@ router.post("/api/public/customers/register", async (req, res) => {
         phoneVerified: false,
         emailVerified: false,
         registrationCompleted: false,
+        // Campi opzionali
+        birthDate: data.birthDate ? new Date(data.birthDate) : null,
+        gender: data.gender || null,
+        street: data.street || null,
+        city: data.city || null,
+        province: data.province || null,
+        postalCode: data.postalCode || null,
+        addressLatitude: data.addressLatitude || null,
+        addressLongitude: data.addressLongitude || null,
       })
       .returning();
 

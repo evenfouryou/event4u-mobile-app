@@ -1238,6 +1238,14 @@ export const siaeCustomers = pgTable("siae_customers", {
   gender: varchar("gender", { length: 1 }), // 'M' o 'F'
   birthDate: timestamp("birth_date"),
   birthPlace: varchar("birth_place", { length: 255 }), // ISO 3166 conforme
+  // Indirizzo di residenza
+  street: varchar("street", { length: 255 }), // Via e numero civico
+  city: varchar("city", { length: 100 }),
+  province: varchar("province", { length: 2 }), // Sigla provincia (es. MI, RM)
+  postalCode: varchar("postal_code", { length: 10 }),
+  country: varchar("country", { length: 2 }).default('IT'), // ISO 3166-1 alpha-2
+  addressLatitude: varchar("address_latitude", { length: 20 }),
+  addressLongitude: varchar("address_longitude", { length: 20 }),
   // Stato verifica
   phoneVerified: boolean("phone_verified").notNull().default(false),
   emailVerified: boolean("email_verified").notNull().default(false),

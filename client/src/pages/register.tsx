@@ -9,6 +9,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { 
@@ -25,7 +26,9 @@ import {
   Eye,
   EyeOff,
   Building2,
-  Ticket
+  Ticket,
+  MapPin,
+  Calendar
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { motion, AnimatePresence } from "framer-motion";
@@ -62,6 +65,12 @@ const clienteRegisterSchema = z.object({
   email: z.string().email("Email non valida"),
   phone: z.string().min(10, "Numero di telefono non valido"),
   password: z.string().min(8, "Password deve avere almeno 8 caratteri"),
+  birthDate: z.string().optional(),
+  gender: z.enum(['M', 'F']).optional(),
+  street: z.string().optional(),
+  city: z.string().optional(),
+  province: z.string().max(2).optional(),
+  postalCode: z.string().optional(),
   acceptTerms: z.boolean().refine(val => val === true, {
     message: "Devi accettare i termini e condizioni"
   }),
@@ -117,6 +126,12 @@ export default function Register() {
       firstName: "",
       lastName: "",
       password: "",
+      birthDate: "",
+      gender: undefined,
+      street: "",
+      city: "",
+      province: "",
+      postalCode: "",
       acceptTerms: false,
       acceptPrivacy: false,
     },
@@ -155,6 +170,12 @@ export default function Register() {
         firstName: data.firstName,
         lastName: data.lastName,
         password: data.password,
+        birthDate: data.birthDate || undefined,
+        gender: data.gender || undefined,
+        street: data.street || undefined,
+        city: data.city || undefined,
+        province: data.province || undefined,
+        postalCode: data.postalCode || undefined,
       });
       const result = await res.json();
       setCustomerId(result.customerId);
@@ -1343,6 +1364,99 @@ export default function Register() {
                     </FormItem>
                   )}
                 />
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={clienteForm.control}
+                    name="birthDate"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Data di nascita</FormLabel>
+                        <FormControl>
+                          <Input type="date" {...field} data-testid="input-birth-date" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={clienteForm.control}
+                    name="gender"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Sesso</FormLabel>
+                        <Select onValueChange={field.onChange} defaultValue={field.value}>
+                          <FormControl>
+                            <SelectTrigger data-testid="select-gender">
+                              <SelectValue placeholder="Seleziona" />
+                            </SelectTrigger>
+                          </FormControl>
+                          <SelectContent>
+                            <SelectItem value="M">Maschio</SelectItem>
+                            <SelectItem value="F">Femmina</SelectItem>
+                          </SelectContent>
+                        </Select>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={clienteForm.control}
+                  name="street"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Indirizzo</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                          <Input placeholder="Via Roma, 1" {...field} className="pl-10" data-testid="input-street" />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <div className="grid grid-cols-2 gap-3">
+                  <FormField
+                    control={clienteForm.control}
+                    name="city"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Città</FormLabel>
+                        <FormControl>
+                          <Input placeholder="Milano" {...field} data-testid="input-city" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                  <FormField
+                    control={clienteForm.control}
+                    name="postalCode"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>CAP</FormLabel>
+                        <FormControl>
+                          <Input placeholder="20100" maxLength={5} {...field} data-testid="input-postal-code" />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                </div>
+                <FormField
+                  control={clienteForm.control}
+                  name="province"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Provincia</FormLabel>
+                      <FormControl>
+                        <Input placeholder="MI" maxLength={2} {...field} className="uppercase" data-testid="input-province" />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
                 <div className="space-y-3 pt-2">
                   <FormField
                     control={clienteForm.control}
@@ -1613,6 +1727,152 @@ export default function Register() {
                             {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                           </button>
                         </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.37 }}
+                className="grid grid-cols-2 gap-4"
+              >
+                <FormField
+                  control={clienteForm.control}
+                  name="birthDate"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-muted-foreground text-sm font-medium">Data di nascita</FormLabel>
+                      <FormControl>
+                        <Input
+                          type="date"
+                          {...field}
+                          className="h-14 text-base bg-muted/30 border-border text-foreground rounded-xl"
+                          data-testid="input-birth-date"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={clienteForm.control}
+                  name="gender"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-muted-foreground text-sm font-medium">Sesso</FormLabel>
+                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                        <FormControl>
+                          <SelectTrigger className="h-14 text-base bg-muted/30 border-border text-foreground rounded-xl" data-testid="select-gender">
+                            <SelectValue placeholder="Seleziona" />
+                          </SelectTrigger>
+                        </FormControl>
+                        <SelectContent>
+                          <SelectItem value="M">Maschio</SelectItem>
+                          <SelectItem value="F">Femmina</SelectItem>
+                        </SelectContent>
+                      </Select>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.38 }}
+              >
+                <FormField
+                  control={clienteForm.control}
+                  name="street"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-muted-foreground text-sm font-medium">Indirizzo</FormLabel>
+                      <FormControl>
+                        <div className="relative">
+                          <MapPin className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
+                          <Input
+                            {...field}
+                            placeholder="Via Roma, 1"
+                            className="h-14 pl-12 text-base bg-muted/30 border-border text-foreground rounded-xl"
+                            data-testid="input-street"
+                          />
+                        </div>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.39 }}
+                className="grid grid-cols-2 gap-4"
+              >
+                <FormField
+                  control={clienteForm.control}
+                  name="city"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-muted-foreground text-sm font-medium">Città</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="Milano"
+                          className="h-14 text-base bg-muted/30 border-border text-foreground rounded-xl"
+                          data-testid="input-city"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={clienteForm.control}
+                  name="postalCode"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-muted-foreground text-sm font-medium">CAP</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="20100"
+                          maxLength={5}
+                          className="h-14 text-base bg-muted/30 border-border text-foreground rounded-xl"
+                          data-testid="input-postal-code"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </motion.div>
+
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.395 }}
+              >
+                <FormField
+                  control={clienteForm.control}
+                  name="province"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="text-muted-foreground text-sm font-medium">Provincia</FormLabel>
+                      <FormControl>
+                        <Input
+                          {...field}
+                          placeholder="MI"
+                          maxLength={2}
+                          className="h-14 text-base bg-muted/30 border-border text-foreground rounded-xl uppercase"
+                          data-testid="input-province"
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
