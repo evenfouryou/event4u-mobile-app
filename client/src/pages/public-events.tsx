@@ -207,7 +207,7 @@ function EventCard({ event, userLocation }: { event: PublicEvent; userLocation: 
                   <p className="text-sm text-muted-foreground line-clamp-1" data-testid={`text-location-${event.id}`}>
                     {event.locationName}
                   </p>
-                  {event.distance !== null && event.distance !== undefined && (
+                  {event.distance != null && !isNaN(event.distance) && (
                     <p className="text-xs text-teal-400 font-medium" data-testid={`text-distance-${event.id}`}>
                       {formatDistance(event.distance)}
                     </p>

@@ -211,7 +211,7 @@ function MapView({ venues, userLocation, onVenueSelect, selectedVenue, onCloseSe
                       {selectedVenue.city}
                     </p>
                   )}
-                  {selectedVenue.distance !== null && selectedVenue.distance !== undefined && (
+                  {selectedVenue.distance != null && !isNaN(selectedVenue.distance) && (
                     <p className="text-teal-400 text-sm font-medium mt-1">
                       {formatDistance(selectedVenue.distance)}
                     </p>
@@ -510,7 +510,7 @@ export default function PublicVenues() {
                         <span className="truncate">{venue.address}</span>
                       </p>
                     )}
-                    {venue.distance !== null && venue.distance !== undefined && (
+                    {venue.distance != null && !isNaN(venue.distance) && (
                       <p className="text-teal-400 text-sm font-medium mb-2" data-testid={`text-distance-${venue.id}`}>
                         {formatDistance(venue.distance)}
                       </p>
@@ -576,7 +576,7 @@ export default function PublicVenues() {
                         <span>{selectedVenue.openingHours}</span>
                       </div>
                     )}
-                    {selectedVenue.distance !== null && selectedVenue.distance !== undefined && (
+                    {selectedVenue.distance != null && !isNaN(selectedVenue.distance) && (
                       <div className="flex items-center gap-2 text-teal-400 font-medium">
                         <Navigation className="w-4 h-4" />
                         <span>{formatDistance(selectedVenue.distance)}</span>
@@ -919,7 +919,7 @@ function VenueCard({ venue, userLocation }: { venue: Venue; userLocation: { lat:
         </div>
 
         <CardContent className="p-5">
-          {venue.distance !== null && venue.distance !== undefined && (
+          {venue.distance != null && !isNaN(venue.distance) && (
             <p className="text-teal-400 text-sm font-medium mb-3" data-testid={`text-distance-${venue.id}`}>
               <Navigation className="w-4 h-4 inline mr-1.5" />
               {formatDistance(venue.distance)}

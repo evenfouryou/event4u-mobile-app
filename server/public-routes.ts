@@ -343,12 +343,13 @@ router.get("/api/public/events", async (req, res) => {
           
           if (!isNaN(lat) && !isNaN(lng)) {
             const toRad = (deg: number) => deg * (Math.PI / 180);
-            distance = 6371 * Math.acos(
-              Math.cos(toRad(userLatNum!)) * Math.cos(toRad(lat)) * 
+            const cosValue = Math.cos(toRad(userLatNum!)) * Math.cos(toRad(lat)) * 
               Math.cos(toRad(lng) - toRad(userLngNum!)) + 
-              Math.sin(toRad(userLatNum!)) * Math.sin(toRad(lat))
-            );
-            distance = Math.round(distance * 100) / 100;
+              Math.sin(toRad(userLatNum!)) * Math.sin(toRad(lat));
+            const clampedCosValue = Math.max(-1, Math.min(1, cosValue));
+            distance = 6371 * Math.acos(clampedCosValue);
+            if (isNaN(distance)) distance = null;
+            else distance = Math.round(distance * 100) / 100;
           }
         }
 
@@ -2812,12 +2813,13 @@ router.get("/api/public/venues", async (req, res) => {
         
         if (!isNaN(lat) && !isNaN(lng)) {
           const toRad = (deg: number) => deg * (Math.PI / 180);
-          distance = 6371 * Math.acos(
-            Math.cos(toRad(userLatNum!)) * Math.cos(toRad(lat)) * 
+          const cosValue = Math.cos(toRad(userLatNum!)) * Math.cos(toRad(lat)) * 
             Math.cos(toRad(lng) - toRad(userLngNum!)) + 
-            Math.sin(toRad(userLatNum!)) * Math.sin(toRad(lat))
-          );
-          distance = Math.round(distance * 100) / 100;
+            Math.sin(toRad(userLatNum!)) * Math.sin(toRad(lat));
+          const clampedCosValue = Math.max(-1, Math.min(1, cosValue));
+          distance = 6371 * Math.acos(clampedCosValue);
+          if (isNaN(distance)) distance = null;
+          else distance = Math.round(distance * 100) / 100;
         }
       }
       
