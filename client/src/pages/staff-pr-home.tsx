@@ -26,6 +26,7 @@ import {
   UserPlus,
   QrCode,
   ListChecks,
+  Wallet,
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -271,13 +272,27 @@ export default function StaffPrHome() {
                 </Button>
               )}
 
-              <Button
-                onClick={() => navigate('/scanner')}
-                data-testid="button-quick-scanner-desktop"
-              >
-                <QrCode className="h-4 w-4 mr-2" />
-                Scanner QR
-              </Button>
+              {isPr && (
+                <Button
+                  variant="outline"
+                  onClick={() => navigate('/pr-wallet')}
+                  data-testid="button-quick-wallet-desktop"
+                  className="bg-emerald-500/10 border-emerald-500/30 hover:bg-emerald-500/20"
+                >
+                  <Wallet className="h-4 w-4 mr-2 text-emerald-400" />
+                  Wallet
+                </Button>
+              )}
+
+              {isStaff && (
+                <Button
+                  onClick={() => navigate('/scanner')}
+                  data-testid="button-quick-scanner-desktop"
+                >
+                  <QrCode className="h-4 w-4 mr-2" />
+                  Scanner QR
+                </Button>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -358,9 +373,11 @@ export default function StaffPrHome() {
   }
 
   // Mobile Version
+  const mobileTitle = isPr ? "Dashboard PR" : "Dashboard Staff";
+  
   return (
     <MobileAppLayout
-      header={<MobileHeader title="Dashboard Staff" showBackButton showMenuButton />}
+      header={<MobileHeader title={mobileTitle} showBackButton showMenuButton />}
       contentClassName="pb-24"
     >
       <motion.div 
@@ -512,18 +529,35 @@ export default function StaffPrHome() {
               </motion.div>
             )}
 
-            <motion.div variants={scaleIn} whileTap={{ scale: 0.95 }}>
-              <HapticButton 
-                variant="outline" 
-                className="w-full min-h-[88px] flex-col gap-3 text-lg rounded-2xl border-2 bg-primary/10 border-primary/30"
-                onClick={() => navigate('/scanner')}
-                data-testid="button-quick-scanner"
-                hapticType="medium"
-              >
-                <QrCode className="h-7 w-7 text-primary" />
-                <span>Scanner QR</span>
-              </HapticButton>
-            </motion.div>
+            {isPr && (
+              <motion.div variants={scaleIn} whileTap={{ scale: 0.95 }}>
+                <HapticButton 
+                  variant="outline" 
+                  className="w-full min-h-[88px] flex-col gap-3 text-lg rounded-2xl border-2 bg-emerald-500/10 border-emerald-500/30"
+                  onClick={() => navigate('/pr-wallet')}
+                  data-testid="button-quick-wallet"
+                  hapticType="medium"
+                >
+                  <Wallet className="h-7 w-7 text-emerald-400" />
+                  <span>Wallet</span>
+                </HapticButton>
+              </motion.div>
+            )}
+
+            {isStaff && (
+              <motion.div variants={scaleIn} whileTap={{ scale: 0.95 }}>
+                <HapticButton 
+                  variant="outline" 
+                  className="w-full min-h-[88px] flex-col gap-3 text-lg rounded-2xl border-2 bg-primary/10 border-primary/30"
+                  onClick={() => navigate('/scanner')}
+                  data-testid="button-quick-scanner"
+                  hapticType="medium"
+                >
+                  <QrCode className="h-7 w-7 text-primary" />
+                  <span>Scanner QR</span>
+                </HapticButton>
+              </motion.div>
+            )}
           </div>
         </motion.div>
 

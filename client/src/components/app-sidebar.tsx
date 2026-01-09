@@ -542,7 +542,7 @@ export function AppSidebar() {
       {
         title: "I Miei Eventi",
         icon: Calendar,
-        url: "/staff-pr-home",
+        url: "/pr/my-events",
         group: "Gestione",
       },
       {
@@ -556,6 +556,12 @@ export function AppSidebar() {
         icon: Armchair,
         url: "/pr/tables",
         group: "Gestione PR",
+      },
+      {
+        title: "Wallet",
+        icon: Wallet,
+        url: "/pr-wallet",
+        group: "Guadagni",
       },
       {
         title: "Impostazioni",
