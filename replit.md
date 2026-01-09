@@ -83,6 +83,22 @@ A digital badge creation system for schools and organizations, accessible to `ge
 ### Paid Reservation Booking System (PR Wallet)
 A reservation system for event lists and tables with PR (promoter) commission tracking using a wallet model. It handles PR registration, authentication, commission accumulation, payout requests, and integrates with scanners for payment verification and check-in.
 
+### Customer Home with Event Discovery (2026-01-09)
+A redesigned public-facing home page (`/acquista`, `/locali`, `/rivendite`) featuring:
+
+- **Event Categories**: Global event categories system (`event_categories` table) with 8 predefined categories: Discoteca, Concerti, Festival, Teatro, Sport, Party, Cultura, Food & Drink. Each category has an icon (Lucide), color, and display order.
+- **Category Filtering**: Events can be filtered by category using horizontal scrollable pills. API endpoint `/api/public/event-categories` provides category list.
+- **Geolocation Support**: 
+  - Locations table includes `latitude` and `longitude` fields
+  - "Vicino a te" filter requests browser geolocation
+  - Distance calculation using Haversine formula with clamped acos for numerical stability
+  - Events and venues sorted by distance when user location is available
+- **Google Maps Integration**: Venues page (`/locali`) features map/list view toggle with `@vis.gl/react-google-maps`. Requires `VITE_GOOGLE_MAPS_API_KEY` environment variable. Shows venue markers with click-to-select functionality.
+- **API Endpoints**:
+  - `GET /api/public/event-categories` - List all active categories
+  - `GET /api/public/events?categoryId=...&userLat=...&userLng=...` - Filter by category and location
+  - `GET /api/public/venues?userLat=...&userLng=...` - Venues with distance sorting
+
 ## External Dependencies
 
 ### Third-Party Services
