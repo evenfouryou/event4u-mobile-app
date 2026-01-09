@@ -265,6 +265,9 @@ export const locations = pgTable("locations", {
   postalCode: varchar("postal_code", { length: 20 }),
   capacity: integer("capacity"),
   notes: text("notes"),
+  // Geolocalizzazione
+  latitude: decimal("latitude", { precision: 10, scale: 7 }),
+  longitude: decimal("longitude", { precision: 10, scale: 7 }),
   // Campi per vetrina pubblica
   heroImageUrl: text("hero_image_url"),
   shortDescription: text("short_description"),
@@ -280,6 +283,23 @@ export const locationsRelations = relations(locations, ({ one, many }) => ({
     fields: [locations.companyId],
     references: [companies.id],
   }),
+  events: many(events),
+}));
+
+// Event Categories table - Global categories for event discovery
+export const eventCategories = pgTable("event_categories", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  slug: varchar("slug", { length: 100 }).notNull().unique(),
+  description: text("description"),
+  icon: varchar("icon", { length: 50 }), // Lucide icon name
+  color: varchar("color", { length: 7 }).notNull().default('#3b82f6'), // hex color
+  displayOrder: integer("display_order").notNull().default(0),
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
+export const eventCategoriesRelations = relations(eventCategories, ({ many }) => ({
   events: many(events),
 }));
 
@@ -307,7 +327,8 @@ export const events = pgTable("events", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   companyId: varchar("company_id").notNull().references(() => companies.id),
   locationId: varchar("location_id").notNull().references(() => locations.id),
-  formatId: varchar("format_id").references(() => eventFormats.id), // optional event format/category
+  formatId: varchar("format_id").references(() => eventFormats.id), // optional event format (company-specific)
+  categoryId: varchar("category_id").references(() => eventCategories.id), // global category for discovery
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"), // Public description for event page
   imageUrl: text("image_url"), // Public image URL for event page
@@ -343,6 +364,10 @@ export const eventsRelations = relations(events, ({ one, many }) => ({
   format: one(eventFormats, {
     fields: [events.formatId],
     references: [eventFormats.id],
+  }),
+  category: one(eventCategories, {
+    fields: [events.categoryId],
+    references: [eventCategories.id],
   }),
   priceList: one(priceLists, {
     fields: [events.priceListId],
@@ -2293,6 +2318,11 @@ export const insertLocationSchema = createInsertSchema(locations).omit({
   updatedAt: true,
 });
 
+export const insertEventCategorySchema = createInsertSchema(eventCategories).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertEventFormatSchema = createInsertSchema(eventFormats).omit({
   id: true,
   createdAt: true,
@@ -2437,6 +2467,9 @@ export type UpdateUserFeatures = z.infer<typeof updateUserFeaturesSchema>;
 
 export type Location = typeof locations.$inferSelect;
 export type InsertLocation = z.infer<typeof insertLocationSchema>;
+
+export type EventCategory = typeof eventCategories.$inferSelect;
+export type InsertEventCategory = z.infer<typeof insertEventCategorySchema>;
 
 export type EventFormat = typeof eventFormats.$inferSelect;
 export type InsertEventFormat = z.infer<typeof insertEventFormatSchema>;
