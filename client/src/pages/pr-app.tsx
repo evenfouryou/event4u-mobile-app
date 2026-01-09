@@ -106,6 +106,8 @@ import {
   User,
   Settings,
   ArrowRightLeft,
+  Building,
+  ChevronDown,
 } from "lucide-react";
 import { format, isToday, isTomorrow } from "date-fns";
 import { it } from "date-fns/locale";
@@ -521,7 +523,11 @@ export default function PrAppPage() {
     updateProfile, 
     isUpdatingProfile, 
     changePassword, 
-    isChangingPassword 
+    isChangingPassword,
+    myCompanies,
+    hasMultipleCompanies,
+    switchCompany,
+    isSwitchingCompany,
   } = usePrAuth();
   
   const [activeTab, setActiveTab] = useState<TabType>('home');
@@ -1616,11 +1622,74 @@ export default function PrAppPage() {
         </Card>
       </motion.div>
 
+      {hasMultipleCompanies && (
+        <motion.div
+          variants={cardVariants}
+          initial="hidden"
+          animate="visible"
+          transition={{ delay: 0.15 }}
+        >
+          <Card className="glass-card border-white/10" data-testid="card-company-selector">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Building className="w-5 h-5 text-primary" />
+                Aziende
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3" data-testid="company-selector-content">
+              <p className="text-sm text-muted-foreground mb-3">
+                Stai operando per più aziende. Seleziona l'azienda attiva.
+              </p>
+              {myCompanies?.profiles.map((profile) => (
+                <HapticButton
+                  key={profile.id}
+                  variant={profile.isCurrent ? "default" : "outline"}
+                  className={cn(
+                    "w-full justify-between gap-3",
+                    profile.isCurrent && "bg-primary text-primary-foreground"
+                  )}
+                  onClick={() => {
+                    if (!profile.isCurrent) {
+                      triggerHaptic('medium');
+                      switchCompany(profile.id);
+                    }
+                  }}
+                  disabled={isSwitchingCompany || profile.isCurrent}
+                  data-testid={`button-switch-company-${profile.id}`}
+                >
+                  <div className="flex items-center gap-3">
+                    <Building className="w-4 h-4" />
+                    <div className="text-left">
+                      <p className="font-medium">{profile.companyName}</p>
+                      <p className={cn(
+                        "text-xs",
+                        profile.isCurrent ? "text-primary-foreground/70" : "text-muted-foreground"
+                      )}>
+                        Codice: {profile.prCode}
+                      </p>
+                    </div>
+                  </div>
+                  {profile.isCurrent ? (
+                    <Badge variant="secondary" className="bg-white/20 text-white border-0">
+                      Attivo
+                    </Badge>
+                  ) : isSwitchingCompany ? (
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                  ) : (
+                    <ChevronRight className="w-4 h-4" />
+                  )}
+                </HapticButton>
+              ))}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
       <motion.div
         variants={cardVariants}
         initial="hidden"
         animate="visible"
-        transition={{ delay: 0.2 }}
+        transition={{ delay: hasMultipleCompanies ? 0.25 : 0.2 }}
       >
         <Card className="glass-card border-white/10">
           <CardHeader className="pb-3">
@@ -1635,7 +1704,7 @@ export default function PrAppPage() {
               className="w-full justify-start gap-3"
               onClick={() => {
                 triggerHaptic('medium');
-                setLocation('/acquista');
+                window.location.href = '/acquista';
               }}
               data-testid="button-switch-to-customer"
             >

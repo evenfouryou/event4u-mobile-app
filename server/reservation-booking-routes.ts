@@ -15,6 +15,7 @@ import {
   eventReservationSettings,
   events,
   users,
+  companies,
   listEntries,
   tableReservations,
   tableTypes,

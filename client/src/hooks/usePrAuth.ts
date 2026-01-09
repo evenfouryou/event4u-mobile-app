@@ -21,10 +21,46 @@ export interface PrProfile {
   updatedAt: string;
 }
 
+export interface PrCompanyProfile {
+  id: string;
+  companyId: string;
+  companyName: string;
+  firstName: string;
+  lastName: string;
+  prCode: string;
+  displayName?: string | null;
+  userId?: string | null;
+  isCurrent: boolean;
+}
+
+export interface PrMyCompaniesResponse {
+  currentProfileId: string;
+  profiles: PrCompanyProfile[];
+}
+
 export function usePrAuth() {
   const { data: prProfile, isLoading, error } = useQuery<PrProfile>({
     queryKey: ["/api/pr/me"],
     retry: false,
+  });
+
+  const { data: myCompanies, isLoading: isLoadingCompanies } = useQuery<PrMyCompaniesResponse>({
+    queryKey: ["/api/pr/my-companies"],
+    enabled: !!prProfile,
+    retry: false,
+  });
+
+  const switchCompanyMutation = useMutation({
+    mutationFn: async (prProfileId: string) => {
+      const response = await apiRequest("POST", "/api/pr/switch-company", { prProfileId });
+      return response.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/pr/me"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pr/my-companies"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pr/wallet"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/pr/events"] });
+    },
   });
 
   const logoutMutation = useMutation({
@@ -65,5 +101,10 @@ export function usePrAuth() {
     isUpdatingProfile: updateProfileMutation.isPending,
     changePassword: changePasswordMutation.mutateAsync,
     isChangingPassword: changePasswordMutation.isPending,
+    myCompanies,
+    isLoadingCompanies,
+    hasMultipleCompanies: (myCompanies?.profiles?.length ?? 0) > 1,
+    switchCompany: switchCompanyMutation.mutate,
+    isSwitchingCompany: switchCompanyMutation.isPending,
   };
 }

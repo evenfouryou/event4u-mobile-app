@@ -14,6 +14,8 @@ import {
   eventPrAssignments,
   users,
   events,
+  prProfiles,
+  companies,
 } from "@shared/schema";
 import { z } from "zod";
 import { like, or, eq, and, desc } from "drizzle-orm";
@@ -1081,6 +1083,147 @@ router.get("/api/users/prs", requireAuth, requireGestore, async (req: Request, r
     res.json(prUsers);
   } catch (error: any) {
     console.error("Error getting PR users:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== PR Multi-Company Support ====================
+
+// Get all companies/profiles for the current PR (multi-company support)
+router.get("/api/pr/my-companies", async (req: Request, res: Response) => {
+  try {
+    const prSession = (req.session as any)?.prProfile;
+    
+    if (!prSession) {
+      return res.status(401).json({ error: "Non autenticato" });
+    }
+    
+    // Get current profile to find phone
+    const [currentProfile] = await db.select()
+      .from(prProfiles)
+      .where(eq(prProfiles.id, prSession.id));
+    
+    if (!currentProfile) {
+      return res.status(404).json({ error: "Profilo non trovato" });
+    }
+    
+    // Find all profiles with same phone number (primary identifier)
+    const allProfiles = await db.select({
+      id: prProfiles.id,
+      companyId: prProfiles.companyId,
+      firstName: prProfiles.firstName,
+      lastName: prProfiles.lastName,
+      prCode: prProfiles.prCode,
+      phone: prProfiles.phone,
+      email: prProfiles.email,
+      displayName: prProfiles.displayName,
+      userId: prProfiles.userId,
+      isActive: prProfiles.isActive,
+      companyName: companies.name,
+    })
+    .from(prProfiles)
+    .leftJoin(companies, eq(prProfiles.companyId, companies.id))
+    .where(and(
+      eq(prProfiles.phone, currentProfile.phone),
+      eq(prProfiles.isActive, true)
+    ))
+    .orderBy(companies.name);
+    
+    res.json({
+      currentProfileId: prSession.id,
+      profiles: allProfiles.map(p => ({
+        id: p.id,
+        companyId: p.companyId,
+        companyName: p.companyName || 'Azienda sconosciuta',
+        firstName: p.firstName,
+        lastName: p.lastName,
+        prCode: p.prCode,
+        displayName: p.displayName,
+        userId: p.userId,
+        isCurrent: p.id === prSession.id,
+      })),
+    });
+  } catch (error: any) {
+    console.error("Error getting PR companies:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Zod schema for switch-company request body
+const switchCompanySchema = z.object({
+  prProfileId: z.string().min(1, "prProfileId richiesto"),
+});
+
+// Switch to a different company profile
+router.post("/api/pr/switch-company", async (req: Request, res: Response) => {
+  try {
+    const prSession = (req.session as any)?.prProfile;
+    
+    if (!prSession) {
+      return res.status(401).json({ error: "Non autenticato" });
+    }
+    
+    // Validate request body with zod
+    const parseResult = switchCompanySchema.safeParse(req.body);
+    if (!parseResult.success) {
+      return res.status(400).json({ error: "Dati non validi", details: parseResult.error.errors });
+    }
+    
+    const { prProfileId } = parseResult.data;
+    
+    // Get current profile to verify phone
+    const [currentProfile] = await db.select()
+      .from(prProfiles)
+      .where(eq(prProfiles.id, prSession.id));
+    
+    if (!currentProfile) {
+      return res.status(404).json({ error: "Profilo corrente non trovato" });
+    }
+    
+    // Get the target profile and verify it belongs to the same PR (same phone)
+    const [targetProfile] = await db.select()
+      .from(prProfiles)
+      .where(and(
+        eq(prProfiles.id, prProfileId),
+        eq(prProfiles.phone, currentProfile.phone),
+        eq(prProfiles.isActive, true)
+      ));
+    
+    if (!targetProfile) {
+      return res.status(403).json({ error: "Non autorizzato a cambiare a questo profilo" });
+    }
+    
+    // Update session with new profile
+    (req.session as any).prProfile = {
+      id: targetProfile.id,
+      firstName: targetProfile.firstName,
+      lastName: targetProfile.lastName,
+      phone: targetProfile.phone,
+      prCode: targetProfile.prCode,
+      email: targetProfile.email,
+      companyId: targetProfile.companyId,
+    };
+    
+    // Update last login timestamp
+    await db.update(prProfiles)
+      .set({ lastLoginAt: new Date() })
+      .where(eq(prProfiles.id, targetProfile.id));
+    
+    res.json({
+      success: true,
+      profile: {
+        id: targetProfile.id,
+        firstName: targetProfile.firstName,
+        lastName: targetProfile.lastName,
+        prCode: targetProfile.prCode,
+        displayName: targetProfile.displayName,
+        phone: targetProfile.phone,
+        email: targetProfile.email,
+        companyId: targetProfile.companyId,
+      },
+    });
+  } catch (error: any) {
+    console.error("Error switching PR company:", error);
     res.status(500).json({ error: error.message });
   }
 });
