@@ -259,7 +259,7 @@ export default function Login() {
                   <Label>Numero di Telefono</Label>
                   <div className="flex gap-2">
                     <Select value={phonePrefix} onValueChange={setPhonePrefix}>
-                      <SelectTrigger className="w-[100px]" data-testid="select-phone-prefix">
+                      <SelectTrigger className="w-[120px]" data-testid="select-phone-prefix">
                         <SelectValue placeholder="+39" />
                       </SelectTrigger>
                       <SelectContent>
@@ -509,10 +509,10 @@ export default function Login() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ ...springConfig, delay: 0.18 }}
               >
-                <Label className="text-base font-medium">Telefono (per PR)</Label>
+                <Label className="text-base font-medium">Telefono</Label>
                 <div className="flex gap-2">
                   <Select value={phonePrefix} onValueChange={setPhonePrefix}>
-                    <SelectTrigger className="w-[90px] h-14 bg-background/50 border-white/10 rounded-xl" data-testid="select-phone-prefix-mobile">
+                    <SelectTrigger className="w-[120px] h-14 bg-background/50 border-white/10 rounded-xl" data-testid="select-phone-prefix-mobile">
                       <SelectValue placeholder="+39" />
                     </SelectTrigger>
                     <SelectContent>
