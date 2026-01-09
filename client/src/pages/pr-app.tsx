@@ -270,9 +270,9 @@ function EventCard({ event, onClick, stats }: {
     >
       <Card className="overflow-hidden glass-card border-white/10">
         <div className="relative h-40">
-          {event.flyerUrl ? (
+          {event.imageUrl ? (
             <img 
-              src={event.flyerUrl} 
+              src={event.imageUrl} 
               alt={event.name}
               className="w-full h-full object-cover"
             />
@@ -289,12 +289,6 @@ function EventCard({ event, onClick, stats }: {
                 <Calendar className="h-3.5 w-3.5" />
                 {dateLabel}
               </span>
-              {event.location && (
-                <span className="flex items-center gap-1 truncate">
-                  <MapPin className="h-3.5 w-3.5" />
-                  {event.location}
-                </span>
-              )}
             </div>
           </div>
           <Badge 
@@ -1536,7 +1530,7 @@ export default function PrAppPage() {
                   <span>{prProfile.email}</span>
                 ) : (
                   <HapticButton
-                    variant="link"
+                    variant="ghost"
                     className="p-0 h-auto text-primary"
                     onClick={() => setIsEmailDialogOpen(true)}
                     data-testid="button-add-email"
