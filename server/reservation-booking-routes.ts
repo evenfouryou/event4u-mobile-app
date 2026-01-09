@@ -17,6 +17,7 @@ import {
   users,
   listEntries,
   tableReservations,
+  tableTypes,
   userCompanyRoles,
   siaeCustomers,
   insertPrProfileSchema,
