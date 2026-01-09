@@ -46,6 +46,7 @@ import {
   floorPlanSeats,
   seatHolds,
   eventSeatStatus,
+  eventCategories,
 } from "@shared/schema";
 import { eq, and, gt, lt, desc, sql, gte, lte, or, isNull } from "drizzle-orm";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
@@ -184,12 +185,44 @@ async function getAuthenticatedCustomer(req: any): Promise<any | null> {
   return customer;
 }
 
+// ==================== CATEGORIE EVENTI ====================
+
+// Lista categorie eventi attive
+router.get("/api/public/event-categories", async (req, res) => {
+  try {
+    const categories = await db
+      .select({
+        id: eventCategories.id,
+        name: eventCategories.name,
+        slug: eventCategories.slug,
+        description: eventCategories.description,
+        icon: eventCategories.icon,
+        color: eventCategories.color,
+        displayOrder: eventCategories.displayOrder,
+      })
+      .from(eventCategories)
+      .where(eq(eventCategories.isActive, true))
+      .orderBy(eventCategories.displayOrder);
+
+    res.json(categories);
+  } catch (error: any) {
+    console.error("[PUBLIC] Error fetching event categories:", error);
+    res.status(500).json({ message: "Errore nel caricamento categorie" });
+  }
+});
+
 // ==================== EVENTI PUBBLICI ====================
 
 // Lista eventi disponibili per acquisto
 router.get("/api/public/events", async (req, res) => {
   try {
-    const { city, dateFrom, dateTo, limit = 20, offset = 0 } = req.query;
+    const { city, dateFrom, dateTo, categoryId, userLat, userLng, limit = 20, offset = 0 } = req.query;
+    
+    const hasUserLocation = userLat && userLng && 
+      !isNaN(parseFloat(userLat as string)) && 
+      !isNaN(parseFloat(userLng as string));
+    const userLatNum = hasUserLocation ? parseFloat(userLat as string) : null;
+    const userLngNum = hasUserLocation ? parseFloat(userLng as string) : null;
     const now = new Date();
     
     // Debug: log all ticketed events with their status
@@ -228,6 +261,19 @@ router.get("/api/public/events", async (req, res) => {
     });
     console.log("=== PUBLIC EVENTS DEBUG END ===");
 
+    const whereConditions = [
+      eq(siaeTicketedEvents.ticketingStatus, "active"),
+      eq(events.isPublic, true),
+      or(eq(events.status, "scheduled"), eq(events.status, "ongoing")),
+      gt(events.endDatetime, now),
+      or(isNull(siaeTicketedEvents.saleStartDate), lte(siaeTicketedEvents.saleStartDate, now)),
+      or(isNull(siaeTicketedEvents.saleEndDate), gte(siaeTicketedEvents.saleEndDate, now))
+    ];
+
+    if (categoryId && typeof categoryId === 'string') {
+      whereConditions.push(eq(events.categoryId, categoryId));
+    }
+
     const result = await db
       .select({
         id: siaeTicketedEvents.id,
@@ -247,25 +293,24 @@ router.get("/api/public/events", async (req, res) => {
         locationId: locations.id,
         locationName: locations.name,
         locationAddress: locations.address,
+        locationLatitude: locations.latitude,
+        locationLongitude: locations.longitude,
+        categoryId: events.categoryId,
+        categoryName: eventCategories.name,
+        categorySlug: eventCategories.slug,
+        categoryIcon: eventCategories.icon,
+        categoryColor: eventCategories.color,
       })
       .from(siaeTicketedEvents)
       .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
       .innerJoin(locations, eq(events.locationId, locations.id))
-      .where(
-        and(
-          eq(siaeTicketedEvents.ticketingStatus, "active"),
-          eq(events.isPublic, true), // Only show events marked as public
-          or(eq(events.status, "scheduled"), eq(events.status, "ongoing")), // Include both scheduled and ongoing events
-          gt(events.endDatetime, now), // Event hasn't ended yet
-          or(isNull(siaeTicketedEvents.saleStartDate), lte(siaeTicketedEvents.saleStartDate, now)),
-          or(isNull(siaeTicketedEvents.saleEndDate), gte(siaeTicketedEvents.saleEndDate, now))
-        )
-      )
+      .leftJoin(eventCategories, eq(events.categoryId, eventCategories.id))
+      .where(and(...whereConditions))
       .orderBy(events.startDatetime)
       .limit(Number(limit))
       .offset(Number(offset));
 
-    // Aggiungi info disponibilità
+    // Aggiungi info disponibilità e calcola distanza
     const eventsWithAvailability = await Promise.all(
       result.map(async (event) => {
         const sectors = await db
@@ -291,14 +336,40 @@ router.get("/api/public/events", async (req, res) => {
           : 0;
         const totalAvailable = sectors.reduce((sum, s) => sum + (s.availableSeats || 0), 0);
 
+        let distance: number | null = null;
+        if (hasUserLocation && event.locationLatitude && event.locationLongitude) {
+          const lat = parseFloat(event.locationLatitude);
+          const lng = parseFloat(event.locationLongitude);
+          
+          if (!isNaN(lat) && !isNaN(lng)) {
+            const toRad = (deg: number) => deg * (Math.PI / 180);
+            distance = 6371 * Math.acos(
+              Math.cos(toRad(userLatNum!)) * Math.cos(toRad(lat)) * 
+              Math.cos(toRad(lng) - toRad(userLngNum!)) + 
+              Math.sin(toRad(userLatNum!)) * Math.sin(toRad(lat))
+            );
+            distance = Math.round(distance * 100) / 100;
+          }
+        }
+
         return {
           ...event,
           minPrice,
           totalAvailable,
           sectorsCount: sectors.length,
+          distance,
         };
       })
     );
+
+    if (hasUserLocation) {
+      eventsWithAvailability.sort((a, b) => {
+        if (a.distance === null && b.distance === null) return 0;
+        if (a.distance === null) return 1;
+        if (b.distance === null) return -1;
+        return a.distance - b.distance;
+      });
+    }
 
     res.json(eventsWithAvailability);
   } catch (error: any) {
@@ -2704,11 +2775,17 @@ router.get("/api/public/tickets", async (req, res) => {
 // Lista locali pubblici con prossimi eventi
 router.get("/api/public/venues", async (req, res) => {
   try {
-    const { city, limit = 20, offset = 0 } = req.query;
+    const { city, userLat, userLng, limit = 20, offset = 0 } = req.query;
     const now = new Date();
 
-    // Query base per locali pubblici
-    let query = db
+    const hasUserLocation = userLat && userLng && 
+      !isNaN(parseFloat(userLat as string)) && 
+      !isNaN(parseFloat(userLng as string));
+
+    const userLatNum = hasUserLocation ? parseFloat(userLat as string) : null;
+    const userLngNum = hasUserLocation ? parseFloat(userLng as string) : null;
+
+    const venuesList = await db
       .select({
         id: locations.id,
         name: locations.name,
@@ -2718,17 +2795,47 @@ router.get("/api/public/venues", async (req, res) => {
         heroImageUrl: locations.heroImageUrl,
         shortDescription: locations.shortDescription,
         openingHours: locations.openingHours,
+        latitude: locations.latitude,
+        longitude: locations.longitude,
       })
       .from(locations)
       .where(eq(locations.isPublic, true))
       .limit(Number(limit))
       .offset(Number(offset));
 
-    const venuesList = await query;
+    let venuesWithDistance = venuesList.map(venue => {
+      let distance: number | null = null;
+      
+      if (hasUserLocation && venue.latitude && venue.longitude) {
+        const lat = parseFloat(venue.latitude);
+        const lng = parseFloat(venue.longitude);
+        
+        if (!isNaN(lat) && !isNaN(lng)) {
+          const toRad = (deg: number) => deg * (Math.PI / 180);
+          distance = 6371 * Math.acos(
+            Math.cos(toRad(userLatNum!)) * Math.cos(toRad(lat)) * 
+            Math.cos(toRad(lng) - toRad(userLngNum!)) + 
+            Math.sin(toRad(userLatNum!)) * Math.sin(toRad(lat))
+          );
+          distance = Math.round(distance * 100) / 100;
+        }
+      }
+      
+      return { ...venue, distance };
+    });
+
+    if (hasUserLocation) {
+      venuesWithDistance.sort((a, b) => {
+        if (a.distance === null && b.distance === null) return 0;
+        if (a.distance === null) return 1;
+        if (b.distance === null) return -1;
+        return a.distance - b.distance;
+      });
+    }
 
     // Per ogni locale, ottieni i prossimi eventi
     const venuesWithEvents = await Promise.all(
-      venuesList.map(async (venue) => {
+      venuesWithDistance.map(async (venue) => {
         const upcomingEvents = await db
           .select({
             id: siaeTicketedEvents.id,

@@ -1,15 +1,16 @@
 import { useQuery } from "@tanstack/react-query";
 import { Card } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Calendar, MapPin, Clock, Search, Ticket, Star, Sparkles, User, ShoppingBag } from "lucide-react";
+import { Calendar, MapPin, Clock, Search, Ticket, Star, Sparkles, User, ShoppingBag, Music, Utensils, Wine, Mic, Palette, Theater, Film, Gamepad2, Heart, PartyPopper, Globe, type LucideIcon } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { Link } from "wouter";
 import { motion } from "framer-motion";
-import { useState, useRef } from "react";
+import { useState, useRef, useCallback } from "react";
 import { useCustomerAuth } from "@/hooks/useCustomerAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BrandLogo } from "@/components/brand-logo";
@@ -32,9 +33,36 @@ interface PublicEvent {
   locationId: number;
   locationName: string;
   locationAddress: string;
+  locationLatitude: string | null;
+  locationLongitude: string | null;
+  categoryId: string | null;
+  categoryName: string | null;
+  categorySlug: string | null;
+  categoryIcon: string | null;
+  categoryColor: string | null;
   minPrice: number;
   totalAvailable: number;
   sectorsCount: number;
+  distance: number | null;
+}
+
+interface EventCategory {
+  id: string;
+  name: string;
+  slug: string;
+  description: string | null;
+  icon: string | null;
+  color: string;
+  displayOrder: number;
+}
+
+const iconMap: Record<string, LucideIcon> = {
+  Music, Utensils, Wine, Mic, Palette, Theater, Film, Gamepad2, Heart, PartyPopper, Globe, Calendar, Star, Ticket, Sparkles,
+};
+
+function DynamicIcon({ name, className }: { name: string | null; className?: string }) {
+  const IconComponent = name && iconMap[name] ? iconMap[name] : Sparkles;
+  return <IconComponent className={className} />;
 }
 
 type FilterType = 'all' | 'today' | 'weekend' | 'month';
@@ -65,7 +93,14 @@ const cardVariants = {
   },
 };
 
-function EventCard({ event }: { event: PublicEvent }) {
+function formatDistance(km: number): string {
+  if (km < 1) {
+    return `${Math.round(km * 1000)} m`;
+  }
+  return `${km.toFixed(1)} km`;
+}
+
+function EventCard({ event, userLocation }: { event: PublicEvent; userLocation: { lat: number; lng: number } | null }) {
   const eventDate = new Date(event.eventStart);
   const isToday = new Date().toDateString() === eventDate.toDateString();
   const isSoldOut = event.totalAvailable <= 0;
@@ -97,18 +132,36 @@ function EventCard({ event }: { event: PublicEvent }) {
             <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
             
             <div className="absolute top-4 left-4 right-4 flex justify-between items-start z-10">
-              {isToday && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  transition={springTransition}
-                  className="bg-emerald-500/90 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg shadow-emerald-500/25 flex items-center gap-1.5"
-                  data-testid={`badge-today-${event.id}`}
-                >
-                  <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
-                  Stasera
-                </motion.div>
-              )}
+              <div className="flex gap-2 flex-wrap">
+                {isToday && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={springTransition}
+                    className="bg-emerald-500/90 text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg shadow-emerald-500/25 flex items-center gap-1.5"
+                    data-testid={`badge-today-${event.id}`}
+                  >
+                    <span className="w-1.5 h-1.5 bg-white rounded-full animate-pulse" />
+                    Stasera
+                  </motion.div>
+                )}
+                {event.categoryName && (
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    animate={{ scale: 1 }}
+                    transition={springTransition}
+                    className="text-white text-xs font-semibold px-3 py-1.5 rounded-full shadow-lg flex items-center gap-1.5"
+                    style={{ 
+                      backgroundColor: `${event.categoryColor || '#00CED1'}CC`,
+                      boxShadow: `0 10px 15px -3px ${event.categoryColor || '#00CED1'}40`
+                    }}
+                    data-testid={`badge-category-${event.id}`}
+                  >
+                    <DynamicIcon name={event.categoryIcon} className="w-3 h-3" />
+                    {event.categoryName}
+                  </motion.div>
+                )}
+              </div>
               {isSoldOut && (
                 <motion.div
                   initial={{ scale: 0 }}
@@ -150,9 +203,16 @@ function EventCard({ event }: { event: PublicEvent }) {
                 <div className="w-10 h-10 rounded-xl bg-teal-500/10 flex items-center justify-center shrink-0">
                   <MapPin className="w-5 h-5 text-teal-400" />
                 </div>
-                <p className="text-sm text-muted-foreground line-clamp-1 flex-1" data-testid={`text-location-${event.id}`}>
-                  {event.locationName}
-                </p>
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm text-muted-foreground line-clamp-1" data-testid={`text-location-${event.id}`}>
+                    {event.locationName}
+                  </p>
+                  {event.distance !== null && event.distance !== undefined && (
+                    <p className="text-xs text-teal-400 font-medium" data-testid={`text-distance-${event.id}`}>
+                      {formatDistance(event.distance)}
+                    </p>
+                  )}
+                </div>
               </div>
             </div>
             
@@ -243,13 +303,69 @@ function FilterPill({ label, icon, active, onClick, testId }: FilterPillProps) {
 export default function PublicEventsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [activeCategory, setActiveCategory] = useState<string | null>(null);
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  const [locationEnabled, setLocationEnabled] = useState(false);
+  const [locationLoading, setLocationLoading] = useState(false);
   const { isAuthenticated } = useCustomerAuth();
   const scrollRef = useRef<HTMLDivElement>(null);
   const isMobile = useIsMobile();
 
-  const { data: events, isLoading, error } = useQuery<PublicEvent[]>({
-    queryKey: ["/api/public/events"],
+  const { data: categories, isLoading: categoriesLoading } = useQuery<EventCategory[]>({
+    queryKey: ["/api/public/event-categories"],
   });
+
+  const eventsQueryKey = [
+    "/api/public/events",
+    activeCategory,
+    userLocation?.lat,
+    userLocation?.lng,
+  ];
+
+  const { data: events, isLoading, error } = useQuery<PublicEvent[]>({
+    queryKey: eventsQueryKey,
+    queryFn: async () => {
+      const params = new URLSearchParams();
+      if (activeCategory) {
+        params.set("categoryId", activeCategory);
+      }
+      if (userLocation) {
+        params.set("userLat", userLocation.lat.toString());
+        params.set("userLng", userLocation.lng.toString());
+      }
+      const url = `/api/public/events${params.toString() ? `?${params.toString()}` : ""}`;
+      const res = await fetch(url);
+      if (!res.ok) throw new Error("Failed to fetch events");
+      return res.json();
+    },
+  });
+
+  const requestGeolocation = useCallback(() => {
+    if (locationLoading) return;
+    
+    if (locationEnabled && userLocation) {
+      setLocationEnabled(false);
+      setUserLocation(null);
+      return;
+    }
+
+    setLocationLoading(true);
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        setUserLocation({
+          lat: position.coords.latitude,
+          lng: position.coords.longitude,
+        });
+        setLocationEnabled(true);
+        setLocationLoading(false);
+      },
+      (error) => {
+        console.error("Geolocation error:", error);
+        setLocationLoading(false);
+      },
+      { enableHighAccuracy: true, timeout: 10000, maximumAge: 60000 }
+    );
+  }, [locationLoading, locationEnabled, userLocation]);
 
   const filterEvents = (events: PublicEvent[], filter: FilterType) => {
     const now = new Date();
@@ -365,33 +481,71 @@ export default function PublicEventsPage() {
             <p className="text-muted-foreground">Scopri gli eventi e acquista i tuoi biglietti</p>
           </div>
 
-          <div className="flex flex-wrap gap-3 mb-8">
-            <FilterPill
-              label="Tutti"
-              active={activeFilter === 'all'}
-              onClick={() => setActiveFilter('all')}
-              testId="filter-all-desktop"
-            />
-            <FilterPill
-              label="Stasera"
-              icon={<Star className="w-4 h-4" />}
-              active={activeFilter === 'today'}
-              onClick={() => setActiveFilter('today')}
-              testId="filter-tonight-desktop"
-            />
-            <FilterPill
-              label="Weekend"
-              active={activeFilter === 'weekend'}
-              onClick={() => setActiveFilter('weekend')}
-              testId="filter-weekend-desktop"
-            />
-            <FilterPill
-              label="Questo Mese"
-              icon={<Calendar className="w-4 h-4" />}
-              active={activeFilter === 'month'}
-              onClick={() => setActiveFilter('month')}
-              testId="filter-month-desktop"
-            />
+          <div className="space-y-4 mb-8">
+            <div className="flex flex-wrap gap-3">
+              <FilterPill
+                label="Tutti"
+                active={activeFilter === 'all'}
+                onClick={() => setActiveFilter('all')}
+                testId="filter-all-desktop"
+              />
+              <FilterPill
+                label="Stasera"
+                icon={<Star className="w-4 h-4" />}
+                active={activeFilter === 'today'}
+                onClick={() => setActiveFilter('today')}
+                testId="filter-tonight-desktop"
+              />
+              <FilterPill
+                label="Weekend"
+                active={activeFilter === 'weekend'}
+                onClick={() => setActiveFilter('weekend')}
+                testId="filter-weekend-desktop"
+              />
+              <FilterPill
+                label="Questo Mese"
+                icon={<Calendar className="w-4 h-4" />}
+                active={activeFilter === 'month'}
+                onClick={() => setActiveFilter('month')}
+                testId="filter-month-desktop"
+              />
+              <div className="w-px h-8 bg-border self-center mx-1" />
+              <FilterPill
+                label={locationLoading ? "Caricamento..." : "Vicino a te"}
+                icon={<MapPin className={`w-4 h-4 ${locationLoading ? 'animate-pulse' : ''}`} />}
+                active={locationEnabled}
+                onClick={requestGeolocation}
+                testId="filter-nearby-desktop"
+              />
+            </div>
+            
+            <div className="flex flex-wrap gap-3">
+              <FilterPill
+                label="Tutti"
+                icon={<Globe className="w-4 h-4" />}
+                active={activeCategory === null}
+                onClick={() => setActiveCategory(null)}
+                testId="filter-category-all-desktop"
+              />
+              {categoriesLoading ? (
+                <div className="flex gap-3">
+                  {[...Array(4)].map((_, i) => (
+                    <Skeleton key={i} className="h-12 w-24 rounded-full" />
+                  ))}
+                </div>
+              ) : (
+                categories?.map((category) => (
+                  <FilterPill
+                    key={category.id}
+                    label={category.name}
+                    icon={<DynamicIcon name={category.icon} className="w-4 h-4" />}
+                    active={activeCategory === category.id}
+                    onClick={() => setActiveCategory(category.id)}
+                    testId={`filter-category-${category.slug}-desktop`}
+                  />
+                ))
+              )}
+            </div>
           </div>
 
           {error && (
@@ -415,7 +569,7 @@ export default function PublicEventsPage() {
               data-testid="grid-events-desktop"
             >
               {filteredEvents.map((event) => (
-                <EventCard key={event.id} event={event} />
+                <EventCard key={event.id} event={event} userLocation={userLocation} />
               ))}
             </motion.div>
           ) : (
@@ -566,6 +720,47 @@ export default function PublicEventsPage() {
             onClick={() => setActiveFilter('month')}
             testId="filter-month"
           />
+          <FilterPill
+            label={locationLoading ? "Caricamento..." : "Vicino a te"}
+            icon={<MapPin className={`w-4 h-4 ${locationLoading ? 'animate-pulse' : ''}`} />}
+            active={locationEnabled}
+            onClick={requestGeolocation}
+            testId="filter-nearby"
+          />
+        </motion.div>
+
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          transition={{ ...springTransition, delay: 0.15 }}
+          className="flex gap-3 pb-4 overflow-x-auto scrollbar-none -mx-4 px-4"
+          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          <FilterPill
+            label="Tutti"
+            icon={<Globe className="w-4 h-4" />}
+            active={activeCategory === null}
+            onClick={() => setActiveCategory(null)}
+            testId="filter-category-all"
+          />
+          {categoriesLoading ? (
+            <>
+              {[...Array(3)].map((_, i) => (
+                <Skeleton key={i} className="h-12 w-20 rounded-full shrink-0" />
+              ))}
+            </>
+          ) : (
+            categories?.map((category) => (
+              <FilterPill
+                key={category.id}
+                label={category.name}
+                icon={<DynamicIcon name={category.icon} className="w-4 h-4" />}
+                active={activeCategory === category.id}
+                onClick={() => setActiveCategory(category.id)}
+                testId={`filter-category-${category.slug}`}
+              />
+            ))
+          )}
         </motion.div>
 
         {error && (
@@ -595,7 +790,7 @@ export default function PublicEventsPage() {
             data-testid="grid-events"
           >
             {filteredEvents.map((event) => (
-              <EventCard key={event.id} event={event} />
+              <EventCard key={event.id} event={event} userLocation={userLocation} />
             ))}
           </motion.div>
         ) : (
