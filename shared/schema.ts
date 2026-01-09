@@ -58,6 +58,7 @@ export const users = pgTable("users", {
   role: varchar("role").notNull().default('gestore'), // super_admin, gestore, gestore_covisione, capo_staff, pr, warehouse, bartender, cassiere, cliente
   companyId: varchar("company_id").references(() => companies.id),
   parentUserId: varchar("parent_user_id"), // For PR: their Capo Staff; For Capo Staff: their Gestore
+  siaeCustomerId: varchar("siae_customer_id"), // Link to siaeCustomers for PR/staff who are also customers (FK added via migration)
   emailVerified: boolean("email_verified").default(false), // Email verification status for classic registration
   phoneVerified: boolean("phone_verified").default(false), // Phone verification for PR OTP login
   verificationToken: varchar("verification_token"), // Token for email verification link
@@ -69,10 +70,42 @@ export const users = pgTable("users", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
-export const usersRelations = relations(users, ({ one }) => ({
+export const usersRelations = relations(users, ({ one, many }) => ({
   company: one(companies, {
     fields: [users.companyId],
     references: [companies.id],
+  }),
+  companyRoles: many(userCompanyRoles),
+}));
+
+// User Company Roles - Multi-company role assignments for PR/Staff
+// Allows a single user (e.g., PR) to be associated with multiple companies/gestori
+export const userCompanyRoles = pgTable("user_company_roles", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  userId: varchar("user_id").notNull().references(() => users.id),
+  companyId: varchar("company_id").notNull().references(() => companies.id),
+  role: varchar("role", { length: 50 }).notNull(), // pr, capo_staff, warehouse, bartender, cassiere
+  parentUserId: varchar("parent_user_id").references(() => users.id), // The staff member who manages this user for this company
+  isActive: boolean("is_active").notNull().default(true),
+  createdAt: timestamp("created_at").defaultNow(),
+  updatedAt: timestamp("updated_at").defaultNow(),
+}, (table) => [
+  index("idx_user_company_roles_user").on(table.userId),
+  index("idx_user_company_roles_company").on(table.companyId),
+]);
+
+export const userCompanyRolesRelations = relations(userCompanyRoles, ({ one }) => ({
+  user: one(users, {
+    fields: [userCompanyRoles.userId],
+    references: [users.id],
+  }),
+  company: one(companies, {
+    fields: [userCompanyRoles.companyId],
+    references: [companies.id],
+  }),
+  parentUser: one(users, {
+    fields: [userCompanyRoles.parentUserId],
+    references: [users.id],
   }),
 }));
 
@@ -2206,6 +2239,21 @@ export const upsertUserSchema = createInsertSchema(users).omit({
 }).extend({
   id: z.string(),
 });
+
+// User Company Roles schemas
+export const insertUserCompanyRoleSchema = createInsertSchema(userCompanyRoles).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const updateUserCompanyRoleSchema = insertUserCompanyRoleSchema.partial().omit({
+  userId: true,
+  companyId: true,
+});
+
+export type InsertUserCompanyRole = z.infer<typeof insertUserCompanyRoleSchema>;
+export type UserCompanyRole = typeof userCompanyRoles.$inferSelect;
 
 export const insertCompanySchema = createInsertSchema(companies).omit({
   id: true,
