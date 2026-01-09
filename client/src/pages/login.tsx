@@ -256,7 +256,7 @@ export default function Login() {
 
               {loginMethod === 'phone' && (
                 <div className="space-y-2">
-                  <Label>Telefono (per PR)</Label>
+                  <Label>Numero di Telefono</Label>
                   <div className="flex gap-2">
                     <Select value={phonePrefix} onValueChange={setPhonePrefix}>
                       <SelectTrigger className="w-[100px]" data-testid="select-phone-prefix">
@@ -282,7 +282,7 @@ export default function Login() {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Questo metodo è riservato ai PR registrati dal gestore
+                    Per accesso Staff e Promoter
                   </p>
                 </div>
               )}
@@ -535,7 +535,7 @@ export default function Login() {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Questo metodo è riservato ai PR registrati dal gestore
+                  Per accesso Staff e Promoter
                 </p>
               </motion.div>
             )}
