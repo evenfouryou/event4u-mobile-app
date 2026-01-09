@@ -83,6 +83,19 @@ A digital badge creation system for schools and organizations, accessible to `ge
 ### Paid Reservation Booking System (PR Wallet)
 A reservation system for event lists and tables with PR (promoter) commission tracking using a wallet model. It handles PR registration, authentication, commission accumulation, payout requests, and integrates with scanners for payment verification and check-in.
 
+#### PR Navigation and Commission Model (2026-01-09)
+- **Bottom Navigation**: Reduced to 3 essential items (Home, Profile, Wallet). Liste/Tavoli are accessible via in-event tab bar.
+- **Commission Structure**: Additive model combining percentage AND fixed per-person fees: `(amount × percentage / 100) + (fixedPerPerson × personCount)`
+- **PR Assignment to Events**: Gestori can assign PRs to specific events via the Event Hub's "PR Assegnati" tab (`prEventAssignments` table).
+- **Multi-Company PR Support**: PRs can work for multiple companies with role switching in Profile tab.
+
+### Event Management (2026-01-09)
+- **Event Categorization**: Events are split into three date-based categories for gestore view:
+  - **In Corso**: Currently ongoing events (startDate <= now && endDate >= now, or status='ongoing')
+  - **Futuri**: Upcoming events
+  - **Passati**: Past events (endDate < now or status='closed')
+- **Null endDatetime Handling**: Events without end dates use startDatetime and status for categorization. Sorting uses startDatetime as fallback.
+
 ### Customer Home with Event Discovery (2026-01-09)
 A redesigned public-facing home page (`/acquista`, `/locali`, `/rivendite`) featuring:
 
