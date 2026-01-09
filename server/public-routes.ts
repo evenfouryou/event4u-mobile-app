@@ -688,7 +688,7 @@ const customerRegisterSchema = z.object({
   lastName: z.string().min(1, "Cognome obbligatorio"),
   password: z.string().min(8, "Password deve avere almeno 8 caratteri"),
   // Campi opzionali aggiuntivi
-  birthDate: z.string().optional(),
+  birthDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Formato data non valido").optional().or(z.literal('')),
   gender: z.enum(['M', 'F']).optional(),
   street: z.string().optional(),
   city: z.string().optional(),
@@ -743,15 +743,15 @@ router.post("/api/public/customers/register", async (req, res) => {
         phoneVerified: false,
         emailVerified: false,
         registrationCompleted: false,
-        // Campi opzionali
-        birthDate: data.birthDate ? new Date(data.birthDate) : null,
+        // Campi opzionali (stringa vuota → null)
+        birthDate: data.birthDate && data.birthDate.length > 0 ? new Date(data.birthDate) : null,
         gender: data.gender || null,
-        street: data.street || null,
-        city: data.city || null,
-        province: data.province || null,
-        postalCode: data.postalCode || null,
-        addressLatitude: data.addressLatitude || null,
-        addressLongitude: data.addressLongitude || null,
+        street: data.street?.trim() || null,
+        city: data.city?.trim() || null,
+        province: data.province?.trim().toUpperCase() || null,
+        postalCode: data.postalCode?.trim() || null,
+        addressLatitude: data.addressLatitude?.trim() || null,
+        addressLongitude: data.addressLongitude?.trim() || null,
       })
       .returning();
 
