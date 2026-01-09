@@ -4280,17 +4280,18 @@ export default function EventHub() {
                     </TableHeader>
                     <TableBody>
                       {prAssignments.map((assignment: any) => {
-                        const prUser = assignment.user || users.find(u => u.id === assignment.prUserId);
+                        const prProfile = assignment.prProfile;
                         return (
                           <TableRow key={assignment.id || assignment.prUserId} data-testid={`row-pr-assignment-${assignment.prUserId}`}>
                             <TableCell className="font-medium">
-                              {prUser ? `${prUser.firstName} ${prUser.lastName}` : 'PR sconosciuto'}
+                              {prProfile ? `${prProfile.firstName} ${prProfile.lastName}` : 'PR sconosciuto'}
+                              {prProfile?.prCode && <span className="text-xs text-muted-foreground ml-2">({prProfile.prCode})</span>}
                             </TableCell>
                             <TableCell className="text-muted-foreground">
-                              {prUser?.email || '-'}
+                              {prProfile?.email || prProfile?.phone || '-'}
                             </TableCell>
                             <TableCell>
-                              <Badge variant="secondary">{prUser?.role || 'pr'}</Badge>
+                              <Badge variant="secondary">PR</Badge>
                             </TableCell>
                             <TableCell>
                               <Button 

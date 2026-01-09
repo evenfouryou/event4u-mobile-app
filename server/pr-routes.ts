@@ -905,29 +905,30 @@ router.get("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, a
       return res.status(403).json({ error: "Accesso negato a questo evento" });
     }
     
-    // Fetch assignments with PR user details
+    // Fetch assignments with PR profile details (userId is prProfileId)
     const assignments = await db
       .select({
         id: eventPrAssignments.id,
         eventId: eventPrAssignments.eventId,
-        userId: eventPrAssignments.userId,
+        prUserId: eventPrAssignments.userId, // Renamed for frontend compatibility
         staffUserId: eventPrAssignments.staffUserId,
         companyId: eventPrAssignments.companyId,
         canAddToLists: eventPrAssignments.canAddToLists,
         canProposeTables: eventPrAssignments.canProposeTables,
         isActive: eventPrAssignments.isActive,
         createdAt: eventPrAssignments.createdAt,
-        prUser: {
-          id: users.id,
-          firstName: users.firstName,
-          lastName: users.lastName,
-          email: users.email,
-          phone: users.phone,
-          profileImageUrl: users.profileImageUrl,
+        prProfile: {
+          id: prProfiles.id,
+          firstName: prProfiles.firstName,
+          lastName: prProfiles.lastName,
+          email: prProfiles.email,
+          phone: prProfiles.phone,
+          prCode: prProfiles.prCode,
+          displayName: prProfiles.displayName,
         },
       })
       .from(eventPrAssignments)
-      .innerJoin(users, eq(eventPrAssignments.userId, users.id))
+      .innerJoin(prProfiles, eq(eventPrAssignments.userId, prProfiles.id))
       .where(and(
         eq(eventPrAssignments.eventId, eventId),
         eq(eventPrAssignments.isActive, true)
@@ -941,11 +942,11 @@ router.get("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, a
   }
 });
 
-// POST /api/events/:eventId/pr-assignments - Assign a PR to an event
+// POST /api/events/:eventId/pr-assignments - Assign a PR profile to an event
 router.post("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const { eventId } = req.params;
-    const { prUserId } = req.body;
+    const { prUserId } = req.body; // This is actually prProfileId from frontend
     const user = req.user as any;
     
     if (!prUserId) {
@@ -962,13 +963,13 @@ router.post("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, 
       return res.status(403).json({ error: "Accesso negato a questo evento" });
     }
     
-    // Verify PR user exists and has PR role
-    const prUser = await db.select().from(users).where(eq(users.id, prUserId)).limit(1);
-    if (!prUser.length) {
-      return res.status(404).json({ error: "Utente PR non trovato" });
+    // Verify PR profile exists and is active
+    const prProfile = await db.select().from(prProfiles).where(eq(prProfiles.id, prUserId)).limit(1);
+    if (!prProfile.length) {
+      return res.status(404).json({ error: "Profilo PR non trovato" });
     }
-    if (prUser[0].role !== 'pr') {
-      return res.status(400).json({ error: "L'utente selezionato non ha ruolo PR" });
+    if (!prProfile[0].isActive) {
+      return res.status(400).json({ error: "Il profilo PR selezionato non è attivo" });
     }
     
     // Check if assignment already exists
@@ -994,10 +995,10 @@ router.post("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, 
       return res.status(409).json({ error: "PR già assegnato a questo evento" });
     }
     
-    // Create new assignment
+    // Create new assignment (userId stores the prProfileId)
     const [assignment] = await db.insert(eventPrAssignments).values({
       eventId,
-      userId: prUserId,
+      userId: prUserId, // This is the prProfileId
       companyId: event[0].companyId,
       staffUserId: user.id,
       canAddToLists: true,
@@ -1052,37 +1053,37 @@ router.delete("/api/events/:eventId/pr-assignments/:prUserId", requireAuth, requ
   }
 });
 
-// GET /api/users/prs - List all PR users for selection
+// GET /api/users/prs - List all PR profiles for selection (from prProfiles table)
 router.get("/api/users/prs", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
     
-    // Get all active PR users that belong to the same company
+    // Get all active PR profiles that belong to the same company
     const whereConditions = [
-      eq(users.role, 'pr'),
-      eq(users.isActive, true),
+      eq(prProfiles.isActive, true),
     ];
     
     if (user.role !== 'super_admin') {
-      whereConditions.push(eq(users.companyId, user.companyId));
+      whereConditions.push(eq(prProfiles.companyId, user.companyId));
     }
     
-    const prUsers = await db
+    const prProfilesList = await db
       .select({
-        id: users.id,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        email: users.email,
-        phone: users.phone,
-        profileImageUrl: users.profileImageUrl,
+        id: prProfiles.id,
+        firstName: prProfiles.firstName,
+        lastName: prProfiles.lastName,
+        email: prProfiles.email,
+        phone: prProfiles.phone,
+        prCode: prProfiles.prCode,
+        displayName: prProfiles.displayName,
       })
-      .from(users)
+      .from(prProfiles)
       .where(and(...whereConditions))
-      .orderBy(users.lastName, users.firstName);
+      .orderBy(prProfiles.lastName, prProfiles.firstName);
     
-    res.json(prUsers);
+    res.json(prProfilesList);
   } catch (error: any) {
-    console.error("Error getting PR users:", error);
+    console.error("Error getting PR profiles:", error);
     res.status(500).json({ error: error.message });
   }
 });
