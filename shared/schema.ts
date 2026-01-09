@@ -5479,8 +5479,8 @@ export const prProfiles = pgTable("pr_profiles", {
   displayName: varchar("display_name", { length: 100 }),
   bio: text("bio"),
   profileImageUrl: text("profile_image_url"),
-  commissionType: varchar("commission_type", { length: 20 }).notNull().default('percentage'), // 'percentage' | 'fixed'
-  commissionValue: decimal("commission_value", { precision: 10, scale: 2 }).notNull().default('10'), // 10% or €10
+  commissionPercentage: decimal("commission_percentage", { precision: 5, scale: 2 }).notNull().default('0'), // Percentage (0-100)
+  commissionFixedPerPerson: decimal("commission_fixed_per_person", { precision: 10, scale: 2 }).notNull().default('0'), // Fixed € per person
   defaultListCommission: decimal("default_list_commission", { precision: 10, scale: 2 }).default('0'), // Commissione per ingresso lista
   defaultTableCommission: decimal("default_table_commission", { precision: 10, scale: 2 }).default('0'), // Commissione per prenotazione tavolo
   totalEarnings: decimal("total_earnings", { precision: 12, scale: 2 }).notNull().default('0'),
@@ -5693,8 +5693,8 @@ export const createPrByGestoreSchema = z.object({
   lastName: z.string().min(1, "Cognome richiesto"),
   phonePrefix: z.string().min(2).max(6).default('+39'), // Prefisso internazionale
   phone: z.string().min(9, "Numero troppo corto (min 9 cifre)").max(15), // Numero senza prefisso
-  commissionType: z.enum(['percentage', 'fixed']).default('percentage'),
-  commissionValue: z.string().default('10'),
+  commissionPercentage: z.string().default('0'), // Percentage (0-100)
+  commissionFixedPerPerson: z.string().default('0'), // Fixed € per person
   defaultListCommission: z.string().optional(),
   defaultTableCommission: z.string().optional(),
 });

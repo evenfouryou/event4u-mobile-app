@@ -87,8 +87,8 @@ interface PrProfile {
   phone: string;
   firstName?: string;
   lastName?: string;
-  commissionType: string;
-  commissionValue: string | number; // Decimal comes as string from DB
+  commissionPercentage: string | number; // Decimal comes as string from DB
+  commissionFixedPerPerson: string | number; // Decimal comes as string from DB
   totalEarnings: string | number;
   pendingEarnings: string | number;
   paidEarnings: string | number;
@@ -133,8 +133,8 @@ const createPrFormSchema = z.object({
 });
 
 const editPrFormSchema = z.object({
-  commissionType: z.enum(["percentage", "fixed"]),
-  commissionValue: z.coerce.number().min(0, "Valore deve essere positivo"),
+  commissionPercentage: z.coerce.number().min(0, "Valore deve essere positivo").max(100, "Max 100%"),
+  commissionFixedPerPerson: z.coerce.number().min(0, "Valore deve essere positivo"),
 });
 
 type CreatePrFormData = z.infer<typeof createPrFormSchema>;
@@ -180,8 +180,8 @@ export default function PrManagement() {
   const editForm = useForm<EditPrFormData>({
     resolver: zodResolver(editPrFormSchema),
     defaultValues: {
-      commissionType: "percentage",
-      commissionValue: 10,
+      commissionPercentage: 0,
+      commissionFixedPerPerson: 0,
     },
   });
 
@@ -337,8 +337,8 @@ export default function PrManagement() {
   const handleEdit = (pr: PrProfile) => {
     setSelectedPr(pr);
     editForm.reset({
-      commissionType: pr.commissionType as "percentage" | "fixed",
-      commissionValue: toNumber(pr.commissionValue),
+      commissionPercentage: toNumber(pr.commissionPercentage),
+      commissionFixedPerPerson: toNumber(pr.commissionFixedPerPerson),
     });
     setIsEditDialogOpen(true);
   };
@@ -349,12 +349,22 @@ export default function PrManagement() {
     return `${firstName} ${lastName}`.trim() || 'N/A';
   };
 
-  const getCommissionLabel = (type: string, value: string | number) => {
-    const numValue = toNumber(value);
-    if (type === 'percentage') {
-      return `${numValue}%`;
+  const getCommissionLabel = (pr: PrProfile) => {
+    const percentage = toNumber(pr.commissionPercentage);
+    const fixed = toNumber(pr.commissionFixedPerPerson);
+    
+    const parts: string[] = [];
+    if (percentage > 0) {
+      parts.push(`${percentage}%`);
     }
-    return `€${numValue.toFixed(2)}`;
+    if (fixed > 0) {
+      parts.push(`€${fixed.toFixed(2)}/persona`);
+    }
+    
+    if (parts.length === 0) {
+      return "Nessuna commissione";
+    }
+    return parts.join(" + ");
   };
 
   if (!canManagePr) {
@@ -516,12 +526,8 @@ export default function PrManagement() {
                             {pr.prCode}
                           </Badge>
                           <div className="flex items-center gap-1 text-muted-foreground">
-                            {pr.commissionType === 'percentage' ? (
-                              <Percent className="h-3.5 w-3.5" />
-                            ) : (
-                              <Euro className="h-3.5 w-3.5" />
-                            )}
-                            <span>{getCommissionLabel(pr.commissionType, pr.commissionValue)}</span>
+                            <Euro className="h-3.5 w-3.5" />
+                            <span>{getCommissionLabel(pr)}</span>
                           </div>
                           <div className="flex items-center gap-1 font-medium text-primary">
                             <Euro className="h-3.5 w-3.5" />
@@ -635,12 +641,8 @@ export default function PrManagement() {
                       </TableCell>
                       <TableCell>
                         <div className="flex items-center gap-1">
-                          {pr.commissionType === 'percentage' ? (
-                            <Percent className="h-4 w-4 text-muted-foreground" />
-                          ) : (
-                            <Euro className="h-4 w-4 text-muted-foreground" />
-                          )}
-                          {getCommissionLabel(pr.commissionType, pr.commissionValue)}
+                          <Euro className="h-4 w-4 text-muted-foreground" />
+                          {getCommissionLabel(pr)}
                         </div>
                       </TableCell>
                       <TableCell className="text-right font-medium">
@@ -859,47 +861,57 @@ export default function PrManagement() {
               })}
               className="space-y-4"
             >
-              <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-4">
                 <FormField
                   control={editForm.control}
-                  name="commissionType"
+                  name="commissionPercentage"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tipo Commissione</FormLabel>
-                      <Select onValueChange={field.onChange} value={field.value}>
-                        <FormControl>
-                          <SelectTrigger data-testid="select-edit-commission-type">
-                            <SelectValue placeholder="Seleziona" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          <SelectItem value="percentage">Percentuale</SelectItem>
-                          <SelectItem value="fixed">Fisso (€)</SelectItem>
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={editForm.control}
-                  name="commissionValue"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Valore</FormLabel>
+                      <FormLabel className="flex items-center gap-2">
+                        <Percent className="h-4 w-4" />
+                        Commissione Percentuale (%)
+                      </FormLabel>
                       <FormControl>
                         <Input
                           type="number"
                           min="0"
+                          max="100"
                           step="0.01"
+                          placeholder="es. 10 per il 10%"
                           {...field}
-                          data-testid="input-edit-commission-value"
+                          data-testid="input-edit-commission-percentage"
                         />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
+                <FormField
+                  control={editForm.control}
+                  name="commissionFixedPerPerson"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel className="flex items-center gap-2">
+                        <Euro className="h-4 w-4" />
+                        Commissione Fissa per Persona (€)
+                      </FormLabel>
+                      <FormControl>
+                        <Input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          placeholder="es. 2 per €2 a persona"
+                          {...field}
+                          data-testid="input-edit-commission-fixed"
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Entrambe le commissioni possono essere applicate insieme.
+                </p>
               </div>
               <DialogFooter>
                 <Button

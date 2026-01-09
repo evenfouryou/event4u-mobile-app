@@ -724,6 +724,10 @@ export default function EventHub() {
   const [newPrData, setNewPrData] = useState({ userId: '', staffUserId: '', canAddToLists: true, canProposeTables: false });
   const [newScannerData, setNewScannerData] = useState({ userId: '', canScanLists: true, canScanTables: true, canScanTickets: true });
 
+  // PR Assignment Dialog State (new endpoints)
+  const [showAssignPrDialogNew, setShowAssignPrDialogNew] = useState(false);
+  const [selectedPrUserId, setSelectedPrUserId] = useState<string>('');
+
   // Biglietti Emessi state
   const [ticketSectorFilter, setTicketSectorFilter] = useState<string>("all");
   const [ticketStatusFilter, setTicketStatusFilter] = useState<string>("all");
@@ -1263,6 +1267,17 @@ export default function EventHub() {
     enabled: !!id,
   });
 
+  // PR Assignments (new endpoints)
+  const { data: prAssignments = [], isLoading: prAssignmentsLoading } = useQuery<any[]>({
+    queryKey: ['/api/events', id, 'pr-assignments'],
+    enabled: !!id,
+  });
+
+  // Available PR Users
+  const { data: availablePrUsers = [] } = useQuery<any[]>({
+    queryKey: ['/api/users/prs'],
+  });
+
   // SIAE sector mutations
   const [editingSector, setEditingSector] = useState<SiaeEventSector | null>(null);
   const [editingCapacity, setEditingCapacity] = useState<string>('');
@@ -1633,6 +1648,36 @@ export default function EventHub() {
     },
     onError: (error: any) => {
       toast({ title: "Errore", description: error?.message || "Impossibile aggiornare l'accesso dello scanner", variant: "destructive" });
+    },
+  });
+
+  // Assign PR mutation (new endpoint)
+  const assignPrMutationNew = useMutation({
+    mutationFn: async (prUserId: string) => {
+      return apiRequest('POST', `/api/events/${id}/pr-assignments`, { prUserId });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'pr-assignments'] });
+      toast({ title: "PR assegnato", description: "Il PR è stato assegnato all'evento." });
+      setShowAssignPrDialogNew(false);
+      setSelectedPrUserId('');
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error?.message || "Impossibile assegnare il PR", variant: "destructive" });
+    },
+  });
+
+  // Remove PR mutation (new endpoint)
+  const removePrMutationNew = useMutation({
+    mutationFn: async (prUserId: string) => {
+      return apiRequest('DELETE', `/api/events/${id}/pr-assignments/${prUserId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'pr-assignments'] });
+      toast({ title: "PR rimosso", description: "Il PR è stato rimosso dall'evento." });
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error?.message || "Impossibile rimuovere il PR", variant: "destructive" });
     },
   });
 
@@ -4199,6 +4244,73 @@ export default function EventHub() {
                 )}
               </CardContent>
             </Card>
+
+            {/* PR Assignments Card (new endpoints) */}
+            <Card data-testid="card-pr-assignments">
+              <CardHeader className="flex flex-row items-center justify-between gap-4">
+                <div>
+                  <CardTitle>Assegnazioni PR</CardTitle>
+                  <CardDescription>PR assegnati a questo evento</CardDescription>
+                </div>
+                <Button onClick={() => setShowAssignPrDialogNew(true)} data-testid="button-add-pr-assignment">
+                  <Plus className="h-4 w-4 mr-2" />
+                  Aggiungi PR
+                </Button>
+              </CardHeader>
+              <CardContent>
+                {prAssignmentsLoading ? (
+                  <div className="space-y-2">
+                    {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+                  </div>
+                ) : prAssignments.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground" data-testid="empty-pr-assignments">
+                    <Megaphone className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nessun PR assegnato a questo evento</p>
+                    <p className="text-sm mt-1">Clicca "Aggiungi PR" per assegnare un PR</p>
+                  </div>
+                ) : (
+                  <Table data-testid="table-pr-assignments">
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Email</TableHead>
+                        <TableHead>Ruolo</TableHead>
+                        <TableHead className="w-12"></TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {prAssignments.map((assignment: any) => {
+                        const prUser = assignment.user || users.find(u => u.id === assignment.prUserId);
+                        return (
+                          <TableRow key={assignment.id || assignment.prUserId} data-testid={`row-pr-assignment-${assignment.prUserId}`}>
+                            <TableCell className="font-medium">
+                              {prUser ? `${prUser.firstName} ${prUser.lastName}` : 'PR sconosciuto'}
+                            </TableCell>
+                            <TableCell className="text-muted-foreground">
+                              {prUser?.email || '-'}
+                            </TableCell>
+                            <TableCell>
+                              <Badge variant="secondary">{prUser?.role || 'pr'}</Badge>
+                            </TableCell>
+                            <TableCell>
+                              <Button 
+                                variant="ghost" 
+                                size="icon" 
+                                onClick={() => removePrMutationNew.mutate(assignment.prUserId)}
+                                disabled={removePrMutationNew.isPending}
+                                data-testid={`button-remove-pr-${assignment.prUserId}`}
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Access Tab */}
@@ -5072,6 +5184,55 @@ export default function EventHub() {
               <Button onClick={() => assignPrMutation.mutate({ userId: newPrData.userId, staffUserId: newPrData.staffUserId || undefined, canAddToLists: newPrData.canAddToLists, canProposeTables: newPrData.canProposeTables })} disabled={assignPrMutation.isPending || !newPrData.userId}>
                 {assignPrMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                 Assegna
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* Add PR Assignment Dialog (new endpoints) */}
+        <Dialog open={showAssignPrDialogNew} onOpenChange={setShowAssignPrDialogNew}>
+          <DialogContent data-testid="dialog-add-pr-assignment">
+            <DialogHeader>
+              <DialogTitle>Aggiungi PR all'Evento</DialogTitle>
+              <DialogDescription>
+                Seleziona un PR da assegnare a questo evento
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Seleziona PR</Label>
+                <Select value={selectedPrUserId} onValueChange={setSelectedPrUserId}>
+                  <SelectTrigger data-testid="select-pr-user">
+                    <SelectValue placeholder="Seleziona un PR..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {availablePrUsers
+                      .filter((prUser: any) => !prAssignments.some((a: any) => a.prUserId === prUser.id))
+                      .map((prUser: any) => (
+                        <SelectItem key={prUser.id} value={prUser.id} data-testid={`option-pr-${prUser.id}`}>
+                          {prUser.firstName} {prUser.lastName} - {prUser.email}
+                        </SelectItem>
+                      ))}
+                    {availablePrUsers.filter((prUser: any) => !prAssignments.some((a: any) => a.prUserId === prUser.id)).length === 0 && (
+                      <div className="p-3 text-center text-muted-foreground text-sm">
+                        Nessun PR disponibile
+                      </div>
+                    )}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => { setShowAssignPrDialogNew(false); setSelectedPrUserId(''); }} data-testid="button-cancel-pr-assignment">
+                Annulla
+              </Button>
+              <Button 
+                onClick={() => assignPrMutationNew.mutate(selectedPrUserId)} 
+                disabled={assignPrMutationNew.isPending || !selectedPrUserId}
+                data-testid="button-confirm-pr-assignment"
+              >
+                {assignPrMutationNew.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                Assegna PR
               </Button>
             </DialogFooter>
           </DialogContent>

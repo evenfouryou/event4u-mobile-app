@@ -108,13 +108,18 @@ async function generateQrCodeDataUrl(token: string): Promise<string> {
 
 function calculateCommission(
   amount: number,
-  commissionType: string,
-  commissionValue: number
+  commissionPercentage: number,
+  commissionFixedPerPerson: number,
+  personCount: number = 1
 ): number {
-  if (commissionType === 'percentage') {
-    return (amount * commissionValue) / 100;
+  let total = 0;
+  if (commissionPercentage > 0) {
+    total += (amount * commissionPercentage) / 100;
   }
-  return commissionValue; // fixed amount
+  if (commissionFixedPerPerson > 0) {
+    total += commissionFixedPerPerson * personCount;
+  }
+  return total;
 }
 
 // ==================== PR Profile APIs ====================
@@ -263,8 +268,8 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
       displayName: `${validated.firstName} ${validated.lastName}`,
       prCode,
       passwordHash,
-      commissionType: validated.commissionType,
-      commissionValue: validated.commissionValue,
+      commissionPercentage: validated.commissionPercentage || '0',
+      commissionFixedPerPerson: validated.commissionFixedPerPerson || '0',
       defaultListCommission: validated.defaultListCommission || '0',
       defaultTableCommission: validated.defaultTableCommission || '0',
     }).returning();
@@ -649,8 +654,8 @@ router.post("/api/pr/login", async (req: Request, res: Response) => {
             displayName: profile.displayName,
             phone: profile.phone,
             email: profile.email,
-            commissionType: profile.commissionType,
-            commissionValue: profile.commissionValue,
+            commissionPercentage: profile.commissionPercentage,
+            commissionFixedPerPerson: profile.commissionFixedPerPerson,
             totalEarnings: profile.totalEarnings,
             pendingEarnings: profile.pendingEarnings,
             paidEarnings: profile.paidEarnings
@@ -694,8 +699,8 @@ router.get("/api/pr/me", async (req: Request, res: Response) => {
       displayName: profile.displayName,
       phone: profile.phone,
       email: profile.email,
-      commissionType: profile.commissionType,
-      commissionValue: profile.commissionValue,
+      commissionPercentage: profile.commissionPercentage,
+      commissionFixedPerPerson: profile.commissionFixedPerPerson,
       totalEarnings: profile.totalEarnings,
       pendingEarnings: profile.pendingEarnings,
       paidEarnings: profile.paidEarnings,
@@ -1136,12 +1141,14 @@ router.post("/api/reservations/payments", requireAuth, requirePrOrHigher, async 
       if (prProfile) {
         prProfileId = prProfile.id;
         
-        // Calculate commission
+        // Calculate commission (both percentage and fixed per person)
         const amount = parseFloat(data.amount || '0');
+        const personCount = parseInt(data.personCount || '1', 10) || 1;
         const commission = calculateCommission(
           amount,
-          prProfile.commissionType,
-          parseFloat(prProfile.commissionValue || '0')
+          parseFloat(prProfile.commissionPercentage || '0'),
+          parseFloat(prProfile.commissionFixedPerPerson || '0'),
+          personCount
         );
         prCommissionAmount = commission.toFixed(2);
       }
@@ -1290,8 +1297,8 @@ router.get("/api/reservations/pr/:prCode/wallet", requireAuth, async (req: Reque
       // Profile info
       prCode: profile.prCode,
       displayName: profile.displayName,
-      commissionType: profile.commissionType,
-      commissionValue: profile.commissionValue,
+      commissionPercentage: profile.commissionPercentage,
+      commissionFixedPerPerson: profile.commissionFixedPerPerson,
     };
     
     res.json(stats);

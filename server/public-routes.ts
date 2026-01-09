@@ -5540,11 +5540,17 @@ router.post("/api/public/reservations", async (req, res) => {
       if (prProfile) {
         prProfileId = prProfile.id;
         const amountNum = parseFloat(amount || '0');
-        if (prProfile.commissionType === 'percentage') {
-          prCommissionAmount = ((amountNum * parseFloat(prProfile.commissionValue || '0')) / 100).toFixed(2);
-        } else {
-          prCommissionAmount = prProfile.commissionValue || '0';
+        const personCount = parseInt(guestCount || '1', 10) || 1;
+        let commission = 0;
+        const commissionPct = parseFloat(prProfile.commissionPercentage || '0');
+        const commissionFixed = parseFloat(prProfile.commissionFixedPerPerson || '0');
+        if (commissionPct > 0) {
+          commission += (amountNum * commissionPct) / 100;
         }
+        if (commissionFixed > 0) {
+          commission += commissionFixed * personCount;
+        }
+        prCommissionAmount = commission.toFixed(2);
       }
     }
     

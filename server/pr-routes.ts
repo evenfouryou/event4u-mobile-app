@@ -11,9 +11,12 @@ import {
   insertGuestListSchema,
   insertGuestListEntrySchema,
   siaeCustomers,
+  eventPrAssignments,
+  users,
+  events,
 } from "@shared/schema";
 import { z } from "zod";
-import { like, or, eq } from "drizzle-orm";
+import { like, or, eq, and, desc } from "drizzle-orm";
 
 const router = Router();
 
@@ -877,6 +880,207 @@ router.post("/api/pr/customers/quick-create", requireAuth, requirePr, async (req
     });
   } catch (error: any) {
     console.error("Error creating quick customer:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== Event PR Assignments ====================
+
+// GET /api/events/:eventId/pr-assignments - List all PRs assigned to an event
+router.get("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const user = req.user as any;
+    
+    // Verify event exists and user has access (owns the company)
+    const event = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!event.length) {
+      return res.status(404).json({ error: "Evento non trovato" });
+    }
+    
+    // Check if user has access to this event's company
+    if (user.role !== 'super_admin' && event[0].companyId !== user.companyId) {
+      return res.status(403).json({ error: "Accesso negato a questo evento" });
+    }
+    
+    // Fetch assignments with PR user details
+    const assignments = await db
+      .select({
+        id: eventPrAssignments.id,
+        eventId: eventPrAssignments.eventId,
+        userId: eventPrAssignments.userId,
+        staffUserId: eventPrAssignments.staffUserId,
+        companyId: eventPrAssignments.companyId,
+        canAddToLists: eventPrAssignments.canAddToLists,
+        canProposeTables: eventPrAssignments.canProposeTables,
+        isActive: eventPrAssignments.isActive,
+        createdAt: eventPrAssignments.createdAt,
+        prUser: {
+          id: users.id,
+          firstName: users.firstName,
+          lastName: users.lastName,
+          email: users.email,
+          phone: users.phone,
+          profileImageUrl: users.profileImageUrl,
+        },
+      })
+      .from(eventPrAssignments)
+      .innerJoin(users, eq(eventPrAssignments.userId, users.id))
+      .where(and(
+        eq(eventPrAssignments.eventId, eventId),
+        eq(eventPrAssignments.isActive, true)
+      ))
+      .orderBy(desc(eventPrAssignments.createdAt));
+    
+    res.json(assignments);
+  } catch (error: any) {
+    console.error("Error getting PR assignments:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// POST /api/events/:eventId/pr-assignments - Assign a PR to an event
+router.post("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { eventId } = req.params;
+    const { prUserId } = req.body;
+    const user = req.user as any;
+    
+    if (!prUserId) {
+      return res.status(400).json({ error: "prUserId è obbligatorio" });
+    }
+    
+    // Verify event exists and user has access
+    const event = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!event.length) {
+      return res.status(404).json({ error: "Evento non trovato" });
+    }
+    
+    if (user.role !== 'super_admin' && event[0].companyId !== user.companyId) {
+      return res.status(403).json({ error: "Accesso negato a questo evento" });
+    }
+    
+    // Verify PR user exists and has PR role
+    const prUser = await db.select().from(users).where(eq(users.id, prUserId)).limit(1);
+    if (!prUser.length) {
+      return res.status(404).json({ error: "Utente PR non trovato" });
+    }
+    if (prUser[0].role !== 'pr') {
+      return res.status(400).json({ error: "L'utente selezionato non ha ruolo PR" });
+    }
+    
+    // Check if assignment already exists
+    const existing = await db
+      .select()
+      .from(eventPrAssignments)
+      .where(and(
+        eq(eventPrAssignments.eventId, eventId),
+        eq(eventPrAssignments.userId, prUserId)
+      ))
+      .limit(1);
+    
+    if (existing.length > 0) {
+      // Reactivate if deactivated
+      if (!existing[0].isActive) {
+        const [updated] = await db
+          .update(eventPrAssignments)
+          .set({ isActive: true, updatedAt: new Date() })
+          .where(eq(eventPrAssignments.id, existing[0].id))
+          .returning();
+        return res.json(updated);
+      }
+      return res.status(409).json({ error: "PR già assegnato a questo evento" });
+    }
+    
+    // Create new assignment
+    const [assignment] = await db.insert(eventPrAssignments).values({
+      eventId,
+      userId: prUserId,
+      companyId: event[0].companyId,
+      staffUserId: user.id,
+      canAddToLists: true,
+      canProposeTables: true,
+      isActive: true,
+    }).returning();
+    
+    res.status(201).json(assignment);
+  } catch (error: any) {
+    console.error("Error creating PR assignment:", error);
+    if (error instanceof z.ZodError) {
+      return res.status(400).json({ error: "Dati non validi", details: error.errors });
+    }
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// DELETE /api/events/:eventId/pr-assignments/:prUserId - Remove PR from event
+router.delete("/api/events/:eventId/pr-assignments/:prUserId", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { eventId, prUserId } = req.params;
+    const user = req.user as any;
+    
+    // Verify event exists and user has access
+    const event = await db.select().from(events).where(eq(events.id, eventId)).limit(1);
+    if (!event.length) {
+      return res.status(404).json({ error: "Evento non trovato" });
+    }
+    
+    if (user.role !== 'super_admin' && event[0].companyId !== user.companyId) {
+      return res.status(403).json({ error: "Accesso negato a questo evento" });
+    }
+    
+    // Find and soft-delete the assignment (set isActive = false)
+    const [deleted] = await db
+      .update(eventPrAssignments)
+      .set({ isActive: false, updatedAt: new Date() })
+      .where(and(
+        eq(eventPrAssignments.eventId, eventId),
+        eq(eventPrAssignments.userId, prUserId)
+      ))
+      .returning();
+    
+    if (!deleted) {
+      return res.status(404).json({ error: "Assegnazione non trovata" });
+    }
+    
+    res.status(204).send();
+  } catch (error: any) {
+    console.error("Error removing PR assignment:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// GET /api/users/prs - List all PR users for selection
+router.get("/api/users/prs", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    
+    // Get all active PR users that belong to the same company
+    const whereConditions = [
+      eq(users.role, 'pr'),
+      eq(users.isActive, true),
+    ];
+    
+    if (user.role !== 'super_admin') {
+      whereConditions.push(eq(users.companyId, user.companyId));
+    }
+    
+    const prUsers = await db
+      .select({
+        id: users.id,
+        firstName: users.firstName,
+        lastName: users.lastName,
+        email: users.email,
+        phone: users.phone,
+        profileImageUrl: users.profileImageUrl,
+      })
+      .from(users)
+      .where(and(...whereConditions))
+      .orderBy(users.lastName, users.firstName);
+    
+    res.json(prUsers);
+  } catch (error: any) {
+    console.error("Error getting PR users:", error);
     res.status(500).json({ error: error.message });
   }
 });

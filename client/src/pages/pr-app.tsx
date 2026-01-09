@@ -105,6 +105,7 @@ import {
   LogOut,
   User,
   Settings,
+  ArrowRightLeft,
 } from "lucide-react";
 import { format, isToday, isTomorrow } from "date-fns";
 import { it } from "date-fns/locale";
@@ -1073,31 +1074,13 @@ export default function PrAppPage() {
     <MobileBottomBar>
       <MobileNavItem
         icon={Home}
-        label="Eventi"
-        active={activeTab === 'home'}
+        label="Home"
+        active={activeTab === 'home' || activeTab === 'liste' || activeTab === 'tavoli'}
         onClick={() => {
           if (selectedEventId) handleBackToEvents();
           else handleTabChange('home');
         }}
         data-testid="nav-home"
-      />
-      <MobileNavItem
-        icon={ListChecks}
-        label="Liste"
-        active={activeTab === 'liste'}
-        onClick={() => handleTabChange('liste')}
-        badge={selectedEventId && entries.length > 0 ? entries.length : undefined}
-        data-testid="nav-liste"
-      />
-      <MobileNavItem
-        icon={Armchair}
-        label="Tavoli"
-        active={activeTab === 'tavoli'}
-        onClick={() => handleTabChange('tavoli')}
-        badge={selectedEventId && tables.filter(t => t.status === 'available').length > 0 
-          ? tables.filter(t => t.status === 'available').length 
-          : undefined}
-        data-testid="nav-tavoli"
       />
       <MobileNavItem
         icon={Wallet}
@@ -1650,6 +1633,19 @@ export default function PrAppPage() {
             <HapticButton
               variant="outline"
               className="w-full justify-start gap-3"
+              onClick={() => {
+                triggerHaptic('medium');
+                setLocation('/acquista');
+              }}
+              data-testid="button-switch-to-customer"
+            >
+              <ArrowRightLeft className="w-4 h-4" />
+              Passa a modalità cliente
+            </HapticButton>
+            
+            <HapticButton
+              variant="outline"
+              className="w-full justify-start gap-3"
               onClick={() => setIsPasswordDialogOpen(true)}
               data-testid="button-change-password"
             >
@@ -1678,6 +1674,44 @@ export default function PrAppPage() {
     </div>
   );
 
+  const renderEventTabBar = () => {
+    if (!selectedEventId || activeTab === 'wallet' || activeTab === 'profilo') {
+      return null;
+    }
+    return (
+      <div className="flex gap-2 py-3 border-b border-border">
+        <HapticButton
+          variant={activeTab === 'liste' ? "default" : "outline"}
+          className="flex-1 gap-2"
+          onClick={() => handleTabChange('liste')}
+          data-testid="tab-liste"
+        >
+          <ListChecks className="h-4 w-4" />
+          Liste
+          {entries.length > 0 && (
+            <Badge variant="secondary" className="ml-1">
+              {entries.length}
+            </Badge>
+          )}
+        </HapticButton>
+        <HapticButton
+          variant={activeTab === 'tavoli' ? "default" : "outline"}
+          className="flex-1 gap-2"
+          onClick={() => handleTabChange('tavoli')}
+          data-testid="tab-tavoli"
+        >
+          <Armchair className="h-4 w-4" />
+          Tavoli
+          {tables.filter(t => t.status === 'available').length > 0 && (
+            <Badge variant="secondary" className="ml-1">
+              {tables.filter(t => t.status === 'available').length}
+            </Badge>
+          )}
+        </HapticButton>
+      </div>
+    );
+  };
+
   const renderContent = () => {
     if (!selectedEventId && (activeTab === 'liste' || activeTab === 'tavoli')) {
       if (activeTab === 'liste') return renderListeTab();
@@ -1686,11 +1720,31 @@ export default function PrAppPage() {
 
     switch (activeTab) {
       case 'home':
+        if (selectedEventId) {
+          return (
+            <>
+              {renderEventTabBar()}
+              <div className="text-center py-8 text-muted-foreground">
+                <p>Seleziona Liste o Tavoli per gestire l'evento</p>
+              </div>
+            </>
+          );
+        }
         return renderHomeTab();
       case 'liste':
-        return renderListeTab();
+        return (
+          <>
+            {renderEventTabBar()}
+            {renderListeTab()}
+          </>
+        );
       case 'tavoli':
-        return renderTavoliTab();
+        return (
+          <>
+            {renderEventTabBar()}
+            {renderTavoliTab()}
+          </>
+        );
       case 'wallet':
         return renderWalletTab();
       case 'profilo':

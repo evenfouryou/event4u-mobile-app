@@ -47,7 +47,7 @@ import {
 } from "@/components/mobile-primitives";
 import type { Event, Station, EventFormat, Location } from "@shared/schema";
 
-type FilterType = 'all' | 'active' | 'past';
+type FilterType = 'in_corso' | 'futuri' | 'passati';
 
 const springConfig = { type: "spring", stiffness: 400, damping: 30 };
 
@@ -191,8 +191,12 @@ function EventCard({
               </p>
               <p className="text-muted-foreground text-base">
                 {new Date(event.startDatetime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
-                {' - '}
-                {new Date(event.endDatetime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                {event.endDatetime && (
+                  <>
+                    {' - '}
+                    {new Date(event.endDatetime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                  </>
+                )}
               </p>
             </div>
           </div>
@@ -254,15 +258,15 @@ function EmptyState({
   onCreateClick: () => void;
 }) {
   const messages: Record<FilterType, { title: string; subtitle: string }> = {
-    all: { 
-      title: "Nessun evento", 
-      subtitle: "Crea il tuo primo evento per iniziare" 
+    in_corso: { 
+      title: "Nessun evento in corso", 
+      subtitle: "Gli eventi attualmente in svolgimento appariranno qui" 
     },
-    active: { 
-      title: "Nessun evento attivo", 
-      subtitle: "Gli eventi in corso e programmati appariranno qui" 
+    futuri: { 
+      title: "Nessun evento futuro", 
+      subtitle: "Gli eventi programmati appariranno qui" 
     },
-    past: { 
+    passati: { 
       title: "Nessun evento passato", 
       subtitle: "Gli eventi conclusi appariranno qui" 
     },
@@ -300,7 +304,7 @@ function EmptyState({
         {searchQuery ? "Prova con un termine di ricerca diverso" : subtitle}
       </p>
       
-      {canCreate && !searchQuery && filter === 'all' && (
+      {canCreate && !searchQuery && filter === 'futuri' && (
         <HapticButton 
           onClick={onCreateClick}
           className="gradient-golden text-black font-semibold min-h-[56px] px-8 text-lg"
@@ -347,7 +351,7 @@ function EventsHeader({
 export default function Events() {
   const [, navigate] = useLocation();
   const [searchQuery] = useState("");
-  const [activeFilter, setActiveFilter] = useState<FilterType>('all');
+  const [activeFilter, setActiveFilter] = useState<FilterType>('in_corso');
   const { user } = useAuth();
   const isMobile = useIsMobile();
   
@@ -389,6 +393,40 @@ export default function Events() {
     return fixedStations.length + eventSpecific;
   };
 
+  const categorizeEvent = (event: Event): FilterType => {
+    const now = new Date();
+    const startDate = new Date(event.startDatetime);
+    
+    // Gestisce eventi senza data di fine (endDatetime null/undefined)
+    const hasValidEndDate = event.endDatetime && !isNaN(new Date(event.endDatetime).getTime());
+    const endDate = hasValidEndDate ? new Date(event.endDatetime) : null;
+    
+    // Se l'evento è chiuso (stato 'closed'), è passato
+    if (event.status === 'closed') {
+      return 'passati';
+    }
+    
+    // Se non c'è data di fine valida, usiamo solo la data di inizio e lo stato
+    if (!endDate) {
+      if (startDate <= now && event.status === 'ongoing') {
+        return 'in_corso';
+      }
+      if (startDate < now && event.status !== 'scheduled' && event.status !== 'draft') {
+        return 'passati';
+      }
+      return 'futuri';
+    }
+    
+    // Con data di fine valida
+    if (endDate < now) {
+      return 'passati';
+    } else if (startDate <= now && endDate >= now) {
+      return 'in_corso';
+    } else {
+      return 'futuri';
+    }
+  };
+
   const filteredEvents = useMemo(() => {
     if (!events) return [];
     
@@ -400,29 +438,30 @@ export default function Events() {
       );
     }
     
-    switch (activeFilter) {
-      case 'active':
-        filtered = filtered.filter(e => e.status === 'ongoing' || e.status === 'scheduled' || e.status === 'draft');
-        break;
-      case 'past':
-        filtered = filtered.filter(e => e.status === 'closed');
-        break;
-    }
+    filtered = filtered.filter(e => categorizeEvent(e) === activeFilter);
     
     return filtered.sort((a, b) => {
-      const statusOrder = { ongoing: 0, scheduled: 1, draft: 2, closed: 3 };
-      const statusDiff = (statusOrder[a.status as keyof typeof statusOrder] || 4) - 
-                        (statusOrder[b.status as keyof typeof statusOrder] || 4);
-      if (statusDiff !== 0) return statusDiff;
-      return new Date(b.startDatetime).getTime() - new Date(a.startDatetime).getTime();
+      if (activeFilter === 'passati') {
+        // Ordina per data di fine decrescente (più recenti prima)
+        const endA = a.endDatetime ? new Date(a.endDatetime).getTime() : new Date(a.startDatetime).getTime();
+        const endB = b.endDatetime ? new Date(b.endDatetime).getTime() : new Date(b.startDatetime).getTime();
+        return endB - endA;
+      } else {
+        // Per futuri e in corso: ordina per data di inizio crescente
+        return new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime();
+      }
     });
   }, [events, activeFilter, searchQuery]);
 
-  const filterCounts = useMemo(() => ({
-    all: events?.length || 0,
-    active: events?.filter(e => e.status === 'ongoing' || e.status === 'scheduled' || e.status === 'draft').length || 0,
-    past: events?.filter(e => e.status === 'closed').length || 0,
-  }), [events]);
+  const filterCounts = useMemo(() => {
+    if (!events) return { in_corso: 0, futuri: 0, passati: 0 };
+    
+    return events.reduce((acc, event) => {
+      const category = categorizeEvent(event);
+      acc[category]++;
+      return acc;
+    }, { in_corso: 0, futuri: 0, passati: 0 } as Record<FilterType, number>);
+  }, [events]);
 
   const handleCreateEvent = () => {
     triggerHaptic('success');
@@ -456,35 +495,35 @@ export default function Events() {
           )}
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
-          <Card>
+        <div className="grid grid-cols-3 gap-4">
+          <Card 
+            className={`cursor-pointer transition-all ${activeFilter === 'in_corso' ? 'ring-2 ring-teal-500' : 'hover-elevate'}`}
+            onClick={() => setActiveFilter('in_corso')}
+            data-testid="stat-card-in-corso"
+          >
             <CardContent className="pt-6">
-              <div className="text-2xl font-bold">{filterCounts.all}</div>
-              <p className="text-sm text-muted-foreground">Totale Eventi</p>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-teal-500">
-                {events?.filter(e => e.status === 'ongoing').length || 0}
-              </div>
+              <div className="text-2xl font-bold text-teal-500">{filterCounts.in_corso}</div>
               <p className="text-sm text-muted-foreground">In Corso</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card 
+            className={`cursor-pointer transition-all ${activeFilter === 'futuri' ? 'ring-2 ring-blue-500' : 'hover-elevate'}`}
+            onClick={() => setActiveFilter('futuri')}
+            data-testid="stat-card-futuri"
+          >
             <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-blue-500">
-                {events?.filter(e => e.status === 'scheduled').length || 0}
-              </div>
-              <p className="text-sm text-muted-foreground">Programmati</p>
+              <div className="text-2xl font-bold text-blue-500">{filterCounts.futuri}</div>
+              <p className="text-sm text-muted-foreground">Futuri</p>
             </CardContent>
           </Card>
-          <Card>
+          <Card 
+            className={`cursor-pointer transition-all ${activeFilter === 'passati' ? 'ring-2 ring-rose-500' : 'hover-elevate'}`}
+            onClick={() => setActiveFilter('passati')}
+            data-testid="stat-card-passati"
+          >
             <CardContent className="pt-6">
-              <div className="text-2xl font-bold text-muted-foreground">
-                {events?.filter(e => e.status === 'draft').length || 0}
-              </div>
-              <p className="text-sm text-muted-foreground">Bozze</p>
+              <div className="text-2xl font-bold text-rose-500">{filterCounts.passati}</div>
+              <p className="text-sm text-muted-foreground">Passati</p>
             </CardContent>
           </Card>
         </div>
@@ -495,28 +534,28 @@ export default function Events() {
               <CardTitle>Lista Eventi</CardTitle>
               <div className="flex gap-2">
                 <Button
-                  variant={activeFilter === 'all' ? 'default' : 'outline'}
+                  variant={activeFilter === 'in_corso' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setActiveFilter('all')}
-                  data-testid="filter-all-desktop"
+                  onClick={() => setActiveFilter('in_corso')}
+                  data-testid="filter-in-corso-desktop"
                 >
-                  Tutti ({filterCounts.all})
+                  In Corso ({filterCounts.in_corso})
                 </Button>
                 <Button
-                  variant={activeFilter === 'active' ? 'default' : 'outline'}
+                  variant={activeFilter === 'futuri' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setActiveFilter('active')}
-                  data-testid="filter-active-desktop"
+                  onClick={() => setActiveFilter('futuri')}
+                  data-testid="filter-futuri-desktop"
                 >
-                  Attivi ({filterCounts.active})
+                  Futuri ({filterCounts.futuri})
                 </Button>
                 <Button
-                  variant={activeFilter === 'past' ? 'default' : 'outline'}
+                  variant={activeFilter === 'passati' ? 'default' : 'outline'}
                   size="sm"
-                  onClick={() => setActiveFilter('past')}
-                  data-testid="filter-past-desktop"
+                  onClick={() => setActiveFilter('passati')}
+                  data-testid="filter-passati-desktop"
                 >
-                  Passati ({filterCounts.past})
+                  Passati ({filterCounts.passati})
                 </Button>
               </div>
             </div>
@@ -533,13 +572,13 @@ export default function Events() {
                 <CalendarIcon className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="text-lg font-semibold mb-2">Nessun evento trovato</h3>
                 <p className="text-muted-foreground mb-4">
-                  {activeFilter === 'all' 
-                    ? "Crea il tuo primo evento per iniziare" 
-                    : activeFilter === 'active' 
-                    ? "Nessun evento attivo al momento"
-                    : "Nessun evento passato"}
+                  {activeFilter === 'in_corso' 
+                    ? "Nessun evento attualmente in svolgimento" 
+                    : activeFilter === 'futuri' 
+                    ? "Nessun evento programmato"
+                    : "Nessun evento concluso"}
                 </p>
-                {canCreateEvents && activeFilter === 'all' && (
+                {canCreateEvents && activeFilter === 'futuri' && (
                   <Button onClick={handleCreateEvent} data-testid="button-create-event-empty-desktop">
                     <Plus className="w-4 h-4 mr-2" />
                     Crea Evento
@@ -587,8 +626,12 @@ export default function Events() {
                         </TableCell>
                         <TableCell>
                           {new Date(event.startDatetime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
-                          {' - '}
-                          {new Date(event.endDatetime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                          {event.endDatetime && (
+                            <>
+                              {' - '}
+                              {new Date(event.endDatetime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
+                            </>
+                          )}
                         </TableCell>
                         <TableCell>
                           {location ? (
@@ -650,25 +693,25 @@ export default function Events() {
         style={{ WebkitOverflowScrolling: 'touch' }}
       >
         <FilterChip
-          active={activeFilter === 'all'}
-          label="Tutti"
-          count={filterCounts.all}
-          onClick={() => setActiveFilter('all')}
-          testId="filter-all"
+          active={activeFilter === 'in_corso'}
+          label="In Corso"
+          count={filterCounts.in_corso}
+          onClick={() => setActiveFilter('in_corso')}
+          testId="filter-in-corso"
         />
         <FilterChip
-          active={activeFilter === 'active'}
-          label="Attivi"
-          count={filterCounts.active}
-          onClick={() => setActiveFilter('active')}
-          testId="filter-active"
+          active={activeFilter === 'futuri'}
+          label="Futuri"
+          count={filterCounts.futuri}
+          onClick={() => setActiveFilter('futuri')}
+          testId="filter-futuri"
         />
         <FilterChip
-          active={activeFilter === 'past'}
+          active={activeFilter === 'passati'}
           label="Passati"
-          count={filterCounts.past}
-          onClick={() => setActiveFilter('past')}
-          testId="filter-past"
+          count={filterCounts.passati}
+          onClick={() => setActiveFilter('passati')}
+          testId="filter-passati"
         />
       </motion.div>
 
