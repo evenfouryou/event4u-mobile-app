@@ -1548,6 +1548,44 @@ export default function PrAppPage() {
         variants={cardVariants}
         initial="hidden"
         animate="visible"
+        transition={{ delay: 0.05 }}
+      >
+        <Card className="glass-card border-white/10">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-lg flex items-center gap-2">
+              <TrendingUp className="w-5 h-5 text-primary" />
+              Statistiche Commissioni
+            </CardTitle>
+          </CardHeader>
+          <CardContent data-testid="commission-stats">
+            <div className="grid grid-cols-3 gap-3">
+              <div className="text-center p-3 rounded-xl bg-muted/30">
+                <p className="text-2xl font-bold text-primary">
+                  {wallet?.thisMonthReservations || 0}
+                </p>
+                <p className="text-xs text-muted-foreground">Prenotazioni mese</p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-muted/30">
+                <p className="text-2xl font-bold text-green-500">
+                  {formatCurrency(wallet?.thisMonthEarnings || 0)}
+                </p>
+                <p className="text-xs text-muted-foreground">Guadagni mese</p>
+              </div>
+              <div className="text-center p-3 rounded-xl bg-muted/30">
+                <p className="text-2xl font-bold text-foreground">
+                  {formatCurrency(wallet?.totalEarnings || 0)}
+                </p>
+                <p className="text-xs text-muted-foreground">Totale guadagni</p>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
+
+      <motion.div
+        variants={cardVariants}
+        initial="hidden"
+        animate="visible"
         transition={{ delay: 0.1 }}
       >
         <Card className="glass-card border-white/10">
