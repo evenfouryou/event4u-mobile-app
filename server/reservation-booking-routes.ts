@@ -17,6 +17,8 @@ import {
   users,
   listEntries,
   tableReservations,
+  userCompanyRoles,
+  siaeCustomers,
   insertPrProfileSchema,
   updatePrProfileSchema,
   createPrByGestoreSchema,
@@ -183,9 +185,9 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
     // Validate input with gestore schema
     const validated = createPrByGestoreSchema.parse(req.body);
     
-    // Check if phone already exists (check full phone = prefix + number)
+    // Check if phone already exists for THIS company
     const fullPhone = `${validated.phonePrefix || '+39'}${validated.phone}`;
-    const [existingPhone] = await db.select()
+    const [existingInCompany] = await db.select()
       .from(prProfiles)
       .where(and(
         eq(prProfiles.phone, validated.phone),
@@ -193,9 +195,22 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
         eq(prProfiles.companyId, user.companyId)
       ));
     
-    if (existingPhone) {
-      return res.status(400).json({ error: "Questo numero di telefono è già registrato come PR" });
+    if (existingInCompany) {
+      return res.status(400).json({ error: "Questo numero di telefono è già registrato come PR nella tua azienda" });
     }
+    
+    // Check if phone exists in OTHER companies (multi-company PR support)
+    const [existingInOtherCompany] = await db.select()
+      .from(prProfiles)
+      .where(and(
+        eq(prProfiles.phone, validated.phone),
+        eq(prProfiles.phonePrefix, validated.phonePrefix || '+39')
+      ));
+    
+    // Check if this phone is a registered customer
+    const [existingCustomer] = await db.select()
+      .from(siaeCustomers)
+      .where(eq(siaeCustomers.phone, fullPhone));
     
     // Generate unique PR code
     let prCode = generatePrCode();
@@ -211,8 +226,19 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
     const password = generatePrPassword();
     const passwordHash = await bcrypt.hash(password, 10);
     
-    // Create PR profile
+    let userId: string | null = null;
+    let isExistingUser = false;
+    
+    // If phone exists in other company, link to existing user
+    if (existingInOtherCompany && existingInOtherCompany.userId) {
+      userId = existingInOtherCompany.userId;
+      isExistingUser = true;
+      console.log(`[PR] Phone ${fullPhone} already PR in another company, linking to existing user ${userId}`);
+    }
+    
+    // Create PR profile for this company
     const [profile] = await db.insert(prProfiles).values({
+      userId: userId,
       companyId: user.companyId,
       firstName: validated.firstName,
       lastName: validated.lastName,
@@ -227,27 +253,52 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
       defaultTableCommission: validated.defaultTableCommission || '0',
     }).returning();
     
+    // Create userCompanyRoles entry for multi-company tracking
+    if (userId) {
+      await db.insert(userCompanyRoles).values({
+        userId: userId,
+        companyId: user.companyId,
+        role: 'pr',
+        parentUserId: user.id, // The gestore who added them
+      }).onConflictDoNothing();
+    }
+    
+    // If customer exists with same phone, link the accounts
+    if (existingCustomer && profile.id) {
+      // Update user record if exists to link to customer
+      if (userId) {
+        await db.update(users)
+          .set({ siaeCustomerId: existingCustomer.id })
+          .where(eq(users.id, userId));
+      }
+      console.log(`[PR] Linked PR ${profile.id} to existing customer ${existingCustomer.id}`);
+    }
+    
     // Build access link
     const baseUrl = process.env.CUSTOM_DOMAIN 
       ? `https://${process.env.CUSTOM_DOMAIN}` 
       : process.env.PUBLIC_URL || 'https://eventfouryou.com';
     const accessLink = `${baseUrl}/login`;
     
-    // Send SMS with credentials (use full phone with prefix)
-    const smsResult = await sendPrCredentialsSMS(
-      fullPhone,
-      validated.firstName,
-      password,
-      accessLink
-    );
+    // Only send SMS if new user (existing users already have credentials)
+    let smsResult = { success: true, message: 'Credenziali già esistenti' };
+    if (!isExistingUser) {
+      smsResult = await sendPrCredentialsSMS(
+        fullPhone,
+        validated.firstName,
+        password,
+        accessLink
+      );
+    }
     
-    console.log(`[PR] Created PR ${profile.id} for ${validated.firstName} ${validated.lastName}, SMS: ${smsResult.success ? 'sent' : 'failed'}`);
+    console.log(`[PR] Created PR ${profile.id} for ${validated.firstName} ${validated.lastName}, Existing: ${isExistingUser}, SMS: ${smsResult.success ? 'sent' : 'skipped'}`);
     
     res.status(201).json({
       ...profile,
       passwordHash: undefined, // Don't return hash
       smsSent: smsResult.success,
-      smsMessage: smsResult.message
+      smsMessage: isExistingUser ? 'Il PR esiste già in un\'altra azienda. Può accedere con le stesse credenziali.' : smsResult.message,
+      isExistingUser
     });
   } catch (error: any) {
     console.error("Error creating PR profile:", error);
