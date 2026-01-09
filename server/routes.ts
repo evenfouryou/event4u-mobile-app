@@ -1208,11 +1208,47 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Check if this is a PR session (from /api/pr/login)
       const prSession = req.session?.prProfile;
       if (prSession?.id) {
+        // Check if PR is in customer mode
+        if (req.session?.activeRole === 'cliente' && req.session?.customerMode) {
+          const customerMode = req.session.customerMode;
+          return res.json({
+            id: prSession.id,
+            email: customerMode.email,
+            firstName: customerMode.firstName,
+            lastName: customerMode.lastName,
+            name: `${customerMode.firstName} ${customerMode.lastName}`,
+            role: 'cliente',
+            isCustomer: true,
+            canSwitchToPr: true,
+            prProfileId: prSession.id,
+            siaeCustomerId: customerMode.customerId
+          });
+        }
+        
         // PR users have their own session format
         const [profile] = await db.select().from(prProfiles)
           .where(eq(prProfiles.id, prSession.id));
         
         if (profile) {
+          // Get linked customer if any
+          let siaeCustomerId = null;
+          if (profile.userId) {
+            const [linkedUser] = await db.select().from(users)
+              .where(eq(users.id, profile.userId));
+            if (linkedUser?.siaeCustomerId) {
+              siaeCustomerId = linkedUser.siaeCustomerId;
+            }
+          }
+          // Also check if customer exists with same phone
+          if (!siaeCustomerId) {
+            const fullPhone = `${profile.phonePrefix || '+39'}${profile.phone}`;
+            const [customer] = await db.select().from(siaeCustomers)
+              .where(eq(siaeCustomers.phone, fullPhone));
+            if (customer) {
+              siaeCustomerId = customer.id;
+            }
+          }
+          
           return res.json({
             id: profile.id,
             email: profile.email || `${profile.phone}@pr.local`,
@@ -1223,7 +1259,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
             role: 'pr',
             companyId: profile.companyId,
             prCode: profile.prCode,
-            isPr: true
+            isPr: true,
+            siaeCustomerId: siaeCustomerId
           });
         }
       }

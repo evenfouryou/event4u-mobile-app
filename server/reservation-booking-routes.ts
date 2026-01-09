@@ -35,6 +35,21 @@ const router = Router();
 // ==================== Authentication Middleware ====================
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
+  // Check for passport authentication OR PR session authentication
+  const prSession = (req.session as any)?.prProfile;
+  
+  if (prSession?.id) {
+    // PR is authenticated via their session
+    // Set a virtual user object for consistency
+    (req as any).user = {
+      id: prSession.id,
+      role: 'pr',
+      companyId: prSession.companyId,
+      isPr: true
+    };
+    return next();
+  }
+  
   if (!req.isAuthenticated || !req.isAuthenticated()) {
     return res.status(401).json({ error: "Non autenticato" });
   }
@@ -2116,6 +2131,143 @@ router.delete("/api/pr-session/table-reservations/:id", requirePrSession, async 
     res.json({ success: true });
   } catch (error: any) {
     console.error("Error deleting table reservation:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// ==================== Role Switching APIs ====================
+
+// Switch from PR to Customer mode
+router.post("/api/switch-role/customer", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const prSession = (req.session as any)?.prProfile;
+    
+    // Only PR users can switch to customer mode
+    if (user.role !== 'pr' || !prSession?.id) {
+      return res.status(403).json({ error: "Solo i PR possono passare alla modalità cliente" });
+    }
+    
+    // Get the PR profile
+    const [profile] = await db.select().from(prProfiles)
+      .where(eq(prProfiles.id, prSession.id));
+    
+    if (!profile) {
+      return res.status(404).json({ error: "Profilo PR non trovato" });
+    }
+    
+    // Find linked customer account by multiple methods
+    let customer = null;
+    
+    // Method 1: Check if PR profile has userId with siaeCustomerId
+    if (profile.userId) {
+      const [linkedUser] = await db.select().from(users)
+        .where(eq(users.id, profile.userId));
+      if (linkedUser?.siaeCustomerId) {
+        const [linkedCustomer] = await db.select().from(siaeCustomers)
+          .where(eq(siaeCustomers.id, linkedUser.siaeCustomerId));
+        if (linkedCustomer) customer = linkedCustomer;
+      }
+    }
+    
+    // Method 2: Find customer by phone match
+    if (!customer) {
+      const fullPhone = `${profile.phonePrefix || '+39'}${profile.phone}`;
+      const [phoneCustomer] = await db.select().from(siaeCustomers)
+        .where(eq(siaeCustomers.phone, fullPhone));
+      if (phoneCustomer) customer = phoneCustomer;
+    }
+    
+    if (!customer) {
+      return res.status(400).json({ error: "Nessun account cliente collegato a questo profilo PR" });
+    }
+    
+    // Store original PR data in session for switching back
+    (req.session as any).originalPrSession = {
+      prProfileId: prSession.id,
+      companyId: prSession.companyId,
+    };
+    
+    // Update session to customer mode
+    (req.session as any).activeRole = 'cliente';
+    (req.session as any).customerMode = {
+      customerId: customer.id,
+      firstName: customer.firstName,
+      lastName: customer.lastName,
+      email: customer.email,
+    };
+    
+    req.session.save((err) => {
+      if (err) {
+        console.error("[ROLE-SWITCH] Error saving session:", err);
+        return res.status(500).json({ error: "Errore nel cambio ruolo" });
+      }
+      
+      console.log(`[ROLE-SWITCH] PR ${prSession.id} switched to customer mode (customer: ${customer.id})`);
+      res.json({ 
+        success: true, 
+        message: "Passato a modalità cliente",
+        redirectTo: '/'
+      });
+    });
+  } catch (error: any) {
+    console.error("Error switching to customer mode:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Switch from Customer back to PR mode
+router.post("/api/switch-role/pr", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const session = req.session as any;
+    
+    // Check if there's an original PR session to restore
+    if (!session.originalPrSession) {
+      return res.status(400).json({ error: "Nessuna sessione PR originale da ripristinare" });
+    }
+    
+    // Clear customer mode
+    delete session.customerMode;
+    delete session.activeRole;
+    delete session.originalPrSession;
+    
+    req.session.save((err) => {
+      if (err) {
+        console.error("[ROLE-SWITCH] Error saving session:", err);
+        return res.status(500).json({ error: "Errore nel cambio ruolo" });
+      }
+      
+      console.log(`[ROLE-SWITCH] User ${user.id} switched back to PR mode`);
+      res.json({ 
+        success: true, 
+        message: "Tornato a modalità PR",
+        redirectTo: '/staff-pr-home'
+      });
+    });
+  } catch (error: any) {
+    console.error("Error switching to PR mode:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// Get current active role (for UI display)
+router.get("/api/switch-role/current", requireAuth, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const session = req.session as any;
+    
+    res.json({
+      userId: user.id,
+      baseRole: user.role,
+      activeRole: session.activeRole || user.role,
+      isCustomerMode: !!session.customerMode,
+      customerData: session.customerMode || null,
+      canSwitchToCustomer: user.role === 'pr' && !!user.siaeCustomerId,
+      canSwitchToPr: !!session.originalPrSession,
+    });
+  } catch (error: any) {
+    console.error("Error getting current role:", error);
     res.status(500).json({ error: error.message });
   }
 });

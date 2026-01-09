@@ -40,6 +40,7 @@ import {
   Gift,
   Share2,
   PackageOpen,
+  ArrowLeftRight,
 } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
@@ -784,6 +785,62 @@ export function AppSidebar() {
             </div>
           </div>
         </div>
+
+        {/* Role Switch Button - PR users with linked customer account */}
+        {isPr && (user as any).siaeCustomerId && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start mb-2 text-muted-foreground hover:text-foreground"
+            onClick={async () => {
+              try {
+                const res = await fetch('/api/switch-role/customer', {
+                  method: 'POST',
+                  credentials: 'include',
+                });
+                const data = await res.json();
+                if (data.success && data.redirectTo) {
+                  queryClient.clear();
+                  window.location.href = data.redirectTo;
+                }
+              } catch (error) {
+                console.error("Error switching to customer mode:", error);
+              }
+            }}
+            data-testid="button-switch-to-customer"
+          >
+            <ArrowLeftRight className="h-4 w-4 mr-3" />
+            Passa a Modalità Cliente
+          </Button>
+        )}
+
+        {/* Switch back to PR mode - for users in customer mode (PR who switched) */}
+        {isCliente && (user as any).canSwitchToPr && (
+          <Button
+            variant="outline"
+            size="sm"
+            className="w-full justify-start mb-2 text-muted-foreground hover:text-foreground"
+            onClick={async () => {
+              try {
+                const res = await fetch('/api/switch-role/pr', {
+                  method: 'POST',
+                  credentials: 'include',
+                });
+                const data = await res.json();
+                if (data.success && data.redirectTo) {
+                  queryClient.clear();
+                  window.location.href = data.redirectTo;
+                }
+              } catch (error) {
+                console.error("Error switching to PR mode:", error);
+              }
+            }}
+            data-testid="button-switch-to-pr"
+          >
+            <ArrowLeftRight className="h-4 w-4 mr-3" />
+            Torna a Modalità PR
+          </Button>
+        )}
 
         {/* Logout Button */}
         <Button
