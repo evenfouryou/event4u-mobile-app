@@ -73,6 +73,7 @@ import SiaeApprovals from "@/pages/siae-approvals";
 import PublicEvents from "@/pages/public-events";
 import PublicEventDetail from "@/pages/public-event-detail";
 import PublicResales from "@/pages/public-resales";
+import PublicResaleCheckout from "@/pages/public-resale-checkout";
 import PublicForgotPassword from "@/pages/public-forgot-password";
 import PublicResetPassword from "@/pages/public-reset-password";
 import PublicCart from "@/pages/public-cart";
@@ -177,6 +178,7 @@ function Router() {
         <Route path="/acquista/:id" component={PublicEventDetail} />
         <Route path="/acquista" component={PublicEvents} />
         <Route path="/rivendite" component={PublicResales} />
+        <Route path="/rivendita/:id" component={PublicResaleCheckout} />
         <Route path="/carrello" component={PublicCart} />
         <Route path="/accedi">
           <Redirect to="/login" />
@@ -300,6 +302,7 @@ function Router() {
         <Route path="/acquista/:id" component={PublicEventDetail} />
         <Route path="/acquista" component={PublicEvents} />
         <Route path="/rivendite" component={PublicResales} />
+        <Route path="/rivendita/:id" component={PublicResaleCheckout} />
         <Route path="/carrello" component={PublicCart} />
         <Route path="/checkout/success" component={PublicCheckoutSuccess} />
         <Route path="/checkout" component={PublicCheckout} />

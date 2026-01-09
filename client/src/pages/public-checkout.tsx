@@ -796,13 +796,38 @@ function CheckoutContent() {
             </h2>
           </div>
           <div className="p-4">
-            {!canProceedWithPayment && captchaData?.enabled && (
-              <div className="flex items-center gap-2 p-3 mb-4 bg-amber-500/10 border border-amber-500/30 rounded-lg">
-                <ShieldCheck className="w-5 h-5 text-amber-400 flex-shrink-0" />
-                <p className="text-sm text-amber-400">Completa la verifica CAPTCHA per procedere al pagamento</p>
+            {!canProceedWithPayment && captchaData?.enabled ? (
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                  <ShieldCheck className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                  <p className="text-sm text-amber-400">Completa la verifica CAPTCHA per inserire i dati della carta</p>
+                </div>
+                <div className="relative opacity-50 pointer-events-none">
+                  <div className="p-4 bg-muted/30 rounded-2xl border border-border space-y-4">
+                    <div className="space-y-2">
+                      <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                      <div className="h-12 bg-muted rounded-lg animate-pulse" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <div className="h-4 w-16 bg-muted rounded animate-pulse" />
+                        <div className="h-12 bg-muted rounded-lg animate-pulse" />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="h-4 w-12 bg-muted rounded animate-pulse" />
+                        <div className="h-12 bg-muted rounded-lg animate-pulse" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="bg-background/80 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Completa prima la verifica</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            )}
-            {(createPaymentIntent.isPending || (!createPaymentIntent.data && !createPaymentIntent.isError)) ? (
+            ) : createPaymentIntent.isPending ? (
               <div className="flex flex-col items-center justify-center py-12">
                 <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
                 <p className="text-muted-foreground">Preparazione pagamento...</p>
@@ -818,7 +843,7 @@ function CheckoutContent() {
                   onElementsReady={(elements) => { elementsRef.current = elements; }}
                 />
               </Elements>
-            ) : (
+            ) : createPaymentIntent.isError ? (
               <div className="text-center py-8">
                 <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-400" />
                 <p className="text-red-400 mb-4">Errore nel caricamento del modulo di pagamento.</p>
@@ -830,6 +855,11 @@ function CheckoutContent() {
                 >
                   Riprova
                 </HapticButton>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-12">
+                <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+                <p className="text-muted-foreground">Preparazione pagamento...</p>
               </div>
             )}
           </div>
@@ -1394,11 +1424,37 @@ function DesktopCheckoutContent() {
           </CardHeader>
           <CardContent>
             {!canProceedWithPayment && captchaData?.enabled ? (
-              <div className="flex flex-col items-center justify-center py-8 opacity-60">
-                <Lock className="w-8 h-8 text-muted-foreground mb-3" />
-                <p className="text-muted-foreground text-center">Completa la verifica CAPTCHA per sbloccare il pagamento</p>
+              <div className="space-y-4">
+                <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                  <ShieldCheck className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                  <p className="text-sm text-amber-400">Completa la verifica CAPTCHA per inserire i dati della carta</p>
+                </div>
+                <div className="relative opacity-50 pointer-events-none">
+                  <div className="p-4 bg-muted/30 rounded-xl border border-border space-y-4">
+                    <div className="space-y-2">
+                      <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+                      <div className="h-12 bg-muted rounded-lg animate-pulse" />
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <div className="h-4 w-20 bg-muted rounded animate-pulse" />
+                        <div className="h-12 bg-muted rounded-lg animate-pulse" />
+                      </div>
+                      <div className="space-y-2">
+                        <div className="h-4 w-16 bg-muted rounded animate-pulse" />
+                        <div className="h-12 bg-muted rounded-lg animate-pulse" />
+                      </div>
+                    </div>
+                  </div>
+                  <div className="absolute inset-0 flex items-center justify-center">
+                    <div className="bg-background/80 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center gap-2">
+                      <Lock className="w-4 h-4 text-muted-foreground" />
+                      <span className="text-sm text-muted-foreground">Completa prima la verifica</span>
+                    </div>
+                  </div>
+                </div>
               </div>
-            ) : (createPaymentIntent.isPending || (!createPaymentIntent.data && !createPaymentIntent.isError)) ? (
+            ) : createPaymentIntent.isPending ? (
               <div className="flex flex-col items-center justify-center py-8">
                 <Loader2 className="w-8 h-8 animate-spin text-primary mb-3" />
                 <p className="text-muted-foreground">Preparazione pagamento...</p>
@@ -1414,7 +1470,7 @@ function DesktopCheckoutContent() {
                   onElementsReady={(elements) => { elementsRef.current = elements; }}
                 />
               </Elements>
-            ) : (
+            ) : createPaymentIntent.isError ? (
               <div className="text-center py-6">
                 <AlertCircle className="w-10 h-10 mx-auto mb-3 text-red-400" />
                 <p className="text-red-400 mb-4">Errore nel caricamento del modulo di pagamento.</p>
@@ -1425,6 +1481,11 @@ function DesktopCheckoutContent() {
                 >
                   Riprova
                 </Button>
+              </div>
+            ) : (
+              <div className="flex flex-col items-center justify-center py-8">
+                <Loader2 className="w-8 h-8 animate-spin text-primary mb-3" />
+                <p className="text-muted-foreground">Preparazione pagamento...</p>
               </div>
             )}
 

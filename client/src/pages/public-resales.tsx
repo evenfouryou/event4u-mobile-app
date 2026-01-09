@@ -80,7 +80,7 @@ function ResaleCard({ resale }: { resale: PublicResale }) {
       whileTap={{ scale: 0.98 }}
       transition={springTransition}
     >
-      <Link href={`/acquista/${resale.ticketedEventId}`}>
+      <Link href={`/rivendita/${resale.id}`}>
         <Card
           className="relative overflow-hidden rounded-2xl border-0 cursor-pointer bg-card"
           data-testid={`card-resale-${resale.id}`}

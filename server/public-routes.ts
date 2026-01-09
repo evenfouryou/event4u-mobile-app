@@ -4504,6 +4504,46 @@ router.get("/api/public/resales", async (req, res) => {
   }
 });
 
+// Get a single resale by ID (public, no auth required)
+router.get("/api/public/resales/:id", async (req, res) => {
+  try {
+    const { id } = req.params;
+    
+    const [resale] = await db
+      .select({
+        id: siaeResales.id,
+        eventId: events.id,
+        ticketedEventId: siaeTicketedEvents.id,
+        eventName: events.name,
+        eventStart: events.startDatetime,
+        eventImageUrl: events.imageUrl,
+        locationName: locations.name,
+        sectorName: siaeEventSectors.name,
+        ticketType: siaeTickets.ticketType,
+        originalPrice: siaeResales.originalPrice,
+        resalePrice: siaeResales.resalePrice,
+        listedAt: siaeResales.listedAt,
+        status: siaeResales.status,
+      })
+      .from(siaeResales)
+      .innerJoin(siaeTickets, eq(siaeResales.originalTicketId, siaeTickets.id))
+      .innerJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .innerJoin(locations, eq(events.locationId, locations.id))
+      .where(eq(siaeResales.id, id));
+    
+    if (!resale) {
+      return res.status(404).json({ message: "Rivendita non trovata" });
+    }
+    
+    res.json(resale);
+  } catch (error: any) {
+    console.error("[PUBLIC] Get single resale error:", error);
+    res.status(500).json({ message: "Errore nel caricamento rivendita" });
+  }
+});
+
 // Get available resales for an event (public, no auth required)
 router.get("/api/public/events/:eventId/resales", async (req, res) => {
   try {
