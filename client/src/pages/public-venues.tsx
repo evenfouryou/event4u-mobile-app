@@ -220,7 +220,7 @@ function MapView({ venues, userLocation, onVenueSelect, selectedVenue, onCloseSe
                     <Badge variant="secondary" className="text-xs">
                       {selectedVenue.eventCount} {selectedVenue.eventCount === 1 ? "evento" : "eventi"}
                     </Badge>
-                    <Link href={`/locali/${selectedVenue.id}`} className="ml-auto">
+                    <Link href={`/locali/${selectedVenue.id}`} className="ml-auto" data-testid={`link-map-venue-${selectedVenue.id}`}>
                       <Button size="sm" className="min-h-[36px]" data-testid={`button-map-view-venue-${selectedVenue.id}`}>
                         Scopri di più
                         <ArrowRight className="w-4 h-4 ml-1" />
@@ -334,18 +334,18 @@ export default function PublicVenues() {
         <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border">
           <div className="container mx-auto px-6 py-4">
             <div className="flex items-center justify-between gap-4">
-              <Link href="/">
+              <Link href="/" data-testid="link-logo-desktop">
                 <BrandLogo variant="horizontal" className="h-10 w-auto" />
               </Link>
 
               <nav className="flex items-center gap-6">
-                <Link href="/acquista" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
+                <Link href="/acquista" className="text-muted-foreground hover:text-foreground transition-colors font-medium" data-testid="nav-events-desktop">
                   Eventi
                 </Link>
-                <Link href="/rivendite" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
+                <Link href="/rivendite" className="text-muted-foreground hover:text-foreground transition-colors font-medium" data-testid="nav-resales-desktop">
                   Rivendite
                 </Link>
-                <Link href="/locali" className="text-foreground font-medium">
+                <Link href="/locali" className="text-foreground font-medium" data-testid="nav-venues-desktop">
                   Locali
                 </Link>
               </nav>
@@ -365,7 +365,7 @@ export default function PublicVenues() {
 
               <div className="flex items-center gap-3">
                 {isAuthenticated ? (
-                  <Link href="/account">
+                  <Link href="/account" data-testid="link-account-desktop">
                     <Avatar className="h-9 w-9 cursor-pointer ring-2 ring-primary/20" data-testid="avatar-user">
                       <AvatarFallback className="bg-primary/10 text-primary">
                         <User className="h-4 w-4" />
@@ -373,7 +373,7 @@ export default function PublicVenues() {
                     </Avatar>
                   </Link>
                 ) : (
-                  <Link href="/login">
+                  <Link href="/login" data-testid="link-login-desktop">
                     <Button variant="outline" data-testid="button-login">
                       <User className="w-4 h-4 mr-2" />
                       Accedi
@@ -603,10 +603,9 @@ export default function PublicVenues() {
                       </h4>
                       <div className="space-y-2">
                         {selectedVenue.upcomingEvents.map((event) => (
-                          <Link key={event.id} href={`/acquista/${event.id}`}>
+                          <Link key={event.id} href={`/acquista/${event.id}`} data-testid={`link-upcoming-event-${event.id}`}>
                             <div 
                               className="flex items-center justify-between p-3 rounded-lg bg-muted/50 hover-elevate cursor-pointer"
-                              data-testid={`link-event-${event.id}`}
                             >
                               <div className="flex-1 min-w-0">
                                 <p className="text-foreground font-medium truncate">{event.eventName}</p>
@@ -636,7 +635,7 @@ export default function PublicVenues() {
                   )}
 
                   <div className="flex gap-3 pt-2">
-                    <Link href={`/locali/${selectedVenue.id}`} className="flex-1">
+                    <Link href={`/locali/${selectedVenue.id}`} className="flex-1" data-testid={`link-venue-detail-${selectedVenue.id}`}>
                       <Button className="w-full" data-testid={`button-view-venue-${selectedVenue.id}`}>
                         Scopri di più
                         <ArrowRight className="w-4 h-4 ml-2" />
@@ -655,6 +654,7 @@ export default function PublicVenues() {
   return (
     <div 
       className="min-h-screen bg-background flex flex-col"
+      data-testid="page-public-venues-mobile"
       style={{ paddingTop: 'env(safe-area-inset-top)' }}
     >
       <motion.header 
@@ -665,7 +665,7 @@ export default function PublicVenues() {
         style={{ top: 'env(safe-area-inset-top)' }}
       >
         <div className="flex items-center justify-between gap-3 mb-4">
-          <Link href="/">
+          <Link href="/" data-testid="link-logo">
             <motion.div whileTap={{ scale: 0.95 }}>
               <BrandLogo variant="horizontal" className="h-10 w-auto" />
             </motion.div>
@@ -673,7 +673,7 @@ export default function PublicVenues() {
           
           <div className="flex items-center gap-2">
             {isAuthenticated ? (
-              <Link href="/account">
+              <Link href="/account" data-testid="link-account">
                 <Avatar className="h-11 w-11 cursor-pointer ring-2 ring-primary/20" data-testid="avatar-user">
                   <AvatarFallback className="bg-primary/10 text-primary">
                     <User className="h-5 w-5" />
@@ -681,7 +681,7 @@ export default function PublicVenues() {
                 </Avatar>
               </Link>
             ) : (
-              <Link href="/login">
+              <Link href="/login" data-testid="link-login">
                 <Button 
                   variant="ghost" 
                   size="icon"
@@ -697,13 +697,13 @@ export default function PublicVenues() {
         </div>
 
         <div className="flex items-center gap-4 text-sm mb-4">
-          <Link href="/acquista" className="text-muted-foreground">
+          <Link href="/acquista" className="text-muted-foreground" data-testid="nav-events">
             Eventi
           </Link>
-          <Link href="/rivendite" className="text-muted-foreground">
+          <Link href="/rivendite" className="text-muted-foreground" data-testid="nav-resales">
             Rivendite
           </Link>
-          <Link href="/locali" className="text-foreground font-medium border-b-2 border-primary pb-1">
+          <Link href="/locali" className="text-foreground font-medium border-b-2 border-primary pb-1" data-testid="nav-venues">
             Locali
           </Link>
         </div>

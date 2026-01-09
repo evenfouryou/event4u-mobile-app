@@ -111,7 +111,7 @@ function EventCard({ event, userLocation }: { event: PublicEvent; userLocation: 
       whileTap={{ scale: 0.98 }}
       transition={springTransition}
     >
-      <Link href={`/acquista/${event.id}`}>
+      <Link href={`/acquista/${event.id}`} data-testid={`link-event-${event.id}`}>
         <Card
           className="relative overflow-hidden rounded-2xl border-0 cursor-pointer bg-card"
           data-testid={`card-event-${event.id}`}
@@ -415,18 +415,18 @@ export default function PublicEventsPage() {
         <header className="sticky top-0 z-50 backdrop-blur-xl bg-background/90 border-b border-border">
           <div className="container mx-auto px-6 py-4">
             <div className="flex items-center justify-between gap-6">
-              <Link href="/">
+              <Link href="/" data-testid="link-logo-desktop">
                 <BrandLogo variant="horizontal" className="h-10 w-auto" />
               </Link>
 
               <nav className="flex items-center gap-6">
-                <Link href="/acquista" className="text-foreground font-medium">
+                <Link href="/acquista" className="text-foreground font-medium" data-testid="nav-events-desktop">
                   Eventi
                 </Link>
-                <Link href="/rivendite" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
+                <Link href="/rivendite" className="text-muted-foreground hover:text-foreground transition-colors font-medium" data-testid="nav-resales-desktop">
                   Rivendite
                 </Link>
-                <Link href="/locali" className="text-muted-foreground hover:text-foreground transition-colors font-medium">
+                <Link href="/locali" className="text-muted-foreground hover:text-foreground transition-colors font-medium" data-testid="nav-venues-desktop">
                   Locali
                 </Link>
               </nav>
@@ -445,7 +445,7 @@ export default function PublicEventsPage() {
               </div>
 
               <div className="flex items-center gap-3">
-                <Link href="/carrello">
+                <Link href="/carrello" data-testid="link-cart-desktop">
                   <Button
                     variant="outline"
                     size="icon"
@@ -456,7 +456,7 @@ export default function PublicEventsPage() {
                   </Button>
                 </Link>
                 {isAuthenticated ? (
-                  <Link href="/account">
+                  <Link href="/account" data-testid="link-account-desktop">
                     <Avatar className="h-10 w-10 cursor-pointer ring-2 ring-primary/20" data-testid="avatar-user-desktop">
                       <AvatarFallback className="bg-primary/10 text-primary">
                         <User className="h-5 w-5" />
@@ -464,7 +464,7 @@ export default function PublicEventsPage() {
                     </Avatar>
                   </Link>
                 ) : (
-                  <Link href="/login">
+                  <Link href="/login" data-testid="link-login-desktop">
                     <Button className="h-10 px-5 rounded-xl font-semibold" data-testid="button-login-desktop">
                       Accedi
                     </Button>
@@ -612,6 +612,7 @@ export default function PublicEventsPage() {
   return (
     <div 
       className="min-h-screen bg-background flex flex-col"
+      data-testid="page-public-events"
       style={{ 
         paddingTop: 'env(safe-area-inset-top)',
         paddingLeft: 'env(safe-area-inset-left)',
@@ -627,12 +628,12 @@ export default function PublicEventsPage() {
       >
         <div className="px-4 py-4 space-y-4">
           <div className="flex items-center justify-between gap-3">
-            <Link href="/">
+            <Link href="/" data-testid="link-logo">
               <BrandLogo variant="horizontal" className="h-10 w-auto" />
             </Link>
             
             <div className="flex items-center gap-2">
-              <Link href="/carrello">
+              <Link href="/carrello" data-testid="link-cart">
                 <Button 
                   variant="outline" 
                   size="icon" 
@@ -643,7 +644,7 @@ export default function PublicEventsPage() {
                 </Button>
               </Link>
               {isAuthenticated ? (
-                <Link href="/account">
+                <Link href="/account" data-testid="link-account">
                   <Avatar className="h-12 w-12 cursor-pointer ring-2 ring-primary/20" data-testid="avatar-user">
                     <AvatarFallback className="bg-primary/10 text-primary">
                       <User className="h-5 w-5" />
@@ -651,7 +652,7 @@ export default function PublicEventsPage() {
                   </Avatar>
                 </Link>
               ) : (
-                <Link href="/login">
+                <Link href="/login" data-testid="link-login">
                   <Button className="h-12 px-5 rounded-xl font-semibold" data-testid="button-login">
                     Accedi
                   </Button>
@@ -672,13 +673,13 @@ export default function PublicEventsPage() {
           </div>
           
           <nav className="flex items-center gap-4 text-sm">
-            <Link href="/acquista" className="text-foreground font-medium border-b-2 border-primary pb-1">
+            <Link href="/acquista" className="text-foreground font-medium border-b-2 border-primary pb-1" data-testid="nav-events">
               Eventi
             </Link>
-            <Link href="/rivendite" className="text-muted-foreground">
+            <Link href="/rivendite" className="text-muted-foreground" data-testid="nav-resales">
               Rivendite
             </Link>
-            <Link href="/locali" className="text-muted-foreground">
+            <Link href="/locali" className="text-muted-foreground" data-testid="nav-venues">
               Locali
             </Link>
           </nav>
