@@ -37,6 +37,7 @@ export function MobileBottomNav() {
     '/events/new',
     '/scanner',
     '/cassa-biglietti',
+    '/pr-app',
   ];
   const shouldHide = hiddenPaths.some(path => location.startsWith(path));
   

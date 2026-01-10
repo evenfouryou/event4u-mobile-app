@@ -75,7 +75,7 @@ import { z } from "zod";
 import nodemailer from "nodemailer";
 import { db } from "./db";
 import { eq, and, or, inArray, desc, isNull, like, sql } from "drizzle-orm";
-import { events } from "@shared/schema";
+import { events, siaeTickets } from "@shared/schema";
 import crypto from "crypto";
 import QRCode from "qrcode";
 import { 
@@ -1094,18 +1094,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
           
           (req.session as any).prProfile = prProfileData;
           
-          return res.json({
-            message: "Login successful",
-            user: {
-              id: prProfile.id,
-              email: prProfile.email,
-              phone: prProfile.phone,
-              firstName: prProfile.firstName,
-              lastName: prProfile.lastName,
-              prCode: prProfile.prCode,
-              role: 'pr',
-              companyId: prProfile.companyId
+          // Save session explicitly before responding
+          return req.session.save((saveErr) => {
+            if (saveErr) {
+              console.error("[Login] Session save error:", saveErr);
+              return res.status(500).json({ message: "Session creation failed" });
             }
+            
+            return res.json({
+              message: "Login successful",
+              user: {
+                id: prProfile.id,
+                email: prProfile.email,
+                phone: prProfile.phone,
+                firstName: prProfile.firstName,
+                lastName: prProfile.lastName,
+                prCode: prProfile.prCode,
+                role: 'pr',
+                companyId: prProfile.companyId
+              }
+            });
           });
         }
       }
