@@ -724,20 +724,111 @@ router.post("/api/pr/logout", (req: Request, res: Response) => {
   });
 });
 
-// PR Switch to Customer Mode - Clear PR session but keep browsing
-router.post("/api/pr/switch-to-customer", (req: Request, res: Response) => {
+// PR Switch to Customer Mode - Seamlessly switch to linked customer account
+router.post("/api/pr/switch-to-customer", async (req: Request, res: Response) => {
   try {
-    // Only remove PR profile from session, don't destroy entire session
+    const prSession = (req.session as any).prProfile;
+    
+    if (!prSession) {
+      return res.status(401).json({ error: "Non autenticato come PR" });
+    }
+    
+    // Get full PR profile to find linked customer
+    const [prProfile] = await db.select()
+      .from(prProfiles)
+      .where(eq(prProfiles.id, prSession.id));
+    
+    if (!prProfile) {
+      return res.status(404).json({ error: "Profilo PR non trovato" });
+    }
+    
+    // Normalize phone number: remove all non-digits except +, ensure +39 prefix
+    const normalizePhone = (phone: string): string => {
+      // Remove spaces, dashes, parentheses etc
+      let normalized = phone.replace(/[^\d+]/g, '');
+      // If starts with 0039, replace with +39
+      if (normalized.startsWith('0039')) {
+        normalized = '+39' + normalized.slice(4);
+      }
+      // If starts with 39 (no +), add +
+      if (normalized.startsWith('39') && !normalized.startsWith('+')) {
+        normalized = '+' + normalized;
+      }
+      // If doesn't start with +, assume Italian and add +39
+      if (!normalized.startsWith('+')) {
+        normalized = '+39' + normalized;
+      }
+      // Handle +390xxx (extra trunk zero) - collapse to +39xxx
+      if (normalized.startsWith('+390')) {
+        normalized = '+39' + normalized.slice(4);
+      }
+      return normalized;
+    };
+    
+    // Look for a customer with the same phone number
+    let customer = null;
+    
+    if (prProfile.phone) {
+      const prFullPhone = normalizePhone(`${prProfile.phonePrefix || '+39'}${prProfile.phone}`);
+      
+      // Get all customers and compare normalized phones
+      const customers = await db.select().from(siaeCustomers);
+      customer = customers.find(c => c.phone && normalizePhone(c.phone) === prFullPhone) || null;
+    }
+    
+    // If not found by phone, try email (case insensitive)
+    if (!customer && prProfile.email) {
+      const [foundByEmail] = await db.select()
+        .from(siaeCustomers)
+        .where(sql`lower(${siaeCustomers.email}) = lower(${prProfile.email})`);
+      customer = foundByEmail;
+    }
+    
+    // Remove PR profile from session
     delete (req.session as any).prProfile;
     
-    // Save the session with prProfile removed
-    req.session.save((err) => {
-      if (err) {
-        console.error("Error saving session after switch:", err);
-        return res.status(500).json({ error: "Errore nel cambio modalità" });
-      }
-      res.json({ success: true, message: "Modalità cliente attivata" });
-    });
+    if (customer) {
+      // Seamlessly authenticate as customer
+      (req.session as any).customerMode = {
+        customerId: customer.id,
+        firstName: customer.firstName,
+        lastName: customer.lastName,
+        email: customer.email,
+        phone: customer.phone,
+      };
+      
+      console.log(`[PR-SWITCH] PR ${prProfile.id} switched to customer ${customer.id}`);
+      
+      // Save the session with customer mode activated
+      req.session.save((err) => {
+        if (err) {
+          console.error("Error saving session after switch:", err);
+          return res.status(500).json({ error: "Errore nel cambio modalità" });
+        }
+        res.json({ 
+          success: true, 
+          message: "Modalità cliente attivata",
+          customerFound: true,
+          redirect: "/acquista"
+        });
+      });
+    } else {
+      // No linked customer found - just clear PR session
+      console.log(`[PR-SWITCH] PR ${prProfile.id} switched to customer mode (no linked customer)`);
+      
+      req.session.save((err) => {
+        if (err) {
+          console.error("Error saving session after switch:", err);
+          return res.status(500).json({ error: "Errore nel cambio modalità" });
+        }
+        res.json({ 
+          success: true, 
+          message: "Modalità cliente attivata",
+          customerFound: false,
+          redirect: "/login"
+        });
+      });
+    }
   } catch (error: any) {
     console.error("Error switching to customer mode:", error);
     res.status(500).json({ error: error.message });

@@ -75,6 +75,7 @@ import {
 import { format, isToday, isTomorrow } from "date-fns";
 import { it } from "date-fns/locale";
 import type { GuestList, GuestListEntry, Event, EventTable, TableBooking, EventStaffAssignment } from "@shared/schema";
+import { BrandLogo } from "@/components/brand-logo";
 
 type MainTab = 'home' | 'wallet' | 'profilo';
 type EventSubTab = 'liste' | 'tavoli';
@@ -416,7 +417,8 @@ export default function PrAppPage() {
         credentials: 'include'
       });
       if (response.ok) {
-        window.location.href = '/acquista';
+        const data = await response.json();
+        window.location.href = data.redirect || '/acquista';
       } else {
         toast({ title: "Errore", description: "Impossibile passare a modalità cliente", variant: "destructive" });
       }
@@ -444,8 +446,8 @@ export default function PrAppPage() {
     }
   };
 
-  const formatEventDate = (date: string) => {
-    const d = new Date(date);
+  const formatEventDate = (date: string | Date) => {
+    const d = typeof date === 'string' ? new Date(date) : date;
     if (isToday(d)) return "Oggi";
     if (isTomorrow(d)) return "Domani";
     return format(d, "EEE d MMM", { locale: it });
@@ -585,10 +587,10 @@ export default function PrAppPage() {
                           <Calendar className="w-4 h-4" />
                           <span>{formatEventDate(event.startDatetime)}</span>
                         </div>
-                        {event.locationName && (
+                        {(event as any).locationName && (
                           <div className="flex items-center gap-2 mt-1 text-sm text-muted-foreground">
                             <MapPin className="w-4 h-4" />
-                            <span className="truncate">{event.locationName}</span>
+                            <span className="truncate">{(event as any).locationName}</span>
                           </div>
                         )}
                       </div>
@@ -676,7 +678,7 @@ export default function PrAppPage() {
                         )}
                       </div>
                       <div className="flex items-center gap-2">
-                        {entry.isCheckedIn ? (
+                        {entry.qrScannedAt ? (
                           <Badge className="bg-green-500/20 text-green-400">
                             <CheckCircle2 className="w-3 h-3 mr-1" />
                             Entrato
@@ -732,7 +734,7 @@ export default function PrAppPage() {
                   <div>
                     <h4 className="font-medium">{list.name}</h4>
                     <p className="text-sm text-muted-foreground">
-                      {list.currentGuests || 0} / {list.maxGuests || '∞'} ospiti
+                      {list.currentCount || 0} / {list.maxGuests || '∞'} ospiti
                     </p>
                   </div>
                   <ChevronRight className="w-5 h-5 text-muted-foreground" />
@@ -803,7 +805,7 @@ export default function PrAppPage() {
                           </Badge>
                         </div>
                         <p className="text-sm text-muted-foreground">
-                          {table.minGuests}-{table.maxGuests} persone • €{table.price}
+                          {table.capacity} persone{table.minSpend ? ` • €${table.minSpend}` : ''}
                         </p>
                         {isBooked && booking && (
                           <p className="text-sm text-amber-400 mt-1">
@@ -969,7 +971,10 @@ export default function PrAppPage() {
       exit="exit"
       className="p-4 space-y-4"
     >
-      <h1 className="text-2xl font-bold">Profilo</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Profilo</h1>
+        <BrandLogo variant="horizontal" className="h-8" />
+      </div>
 
       <Card className="bg-gradient-to-br from-primary/20 to-primary/5 border-primary/20">
         <CardContent className="p-6">
