@@ -18,7 +18,7 @@ import {
   companies,
 } from "@shared/schema";
 import { z } from "zod";
-import { like, or, eq, and, desc } from "drizzle-orm";
+import { like, or, eq, and, desc, isNull } from "drizzle-orm";
 
 const router = Router();
 
@@ -1157,35 +1157,76 @@ router.get("/api/users/prs", requireAuth, requireGestore, async (req: Request, r
     const user = req.user as any;
     const includeStaff = req.query.includeStaff === 'true';
     
+    console.log(`[PR-DEBUG] /api/users/prs called by user ${user.id}, role: ${user.role}, companyId: ${user.companyId}, includeStaff: ${includeStaff}`);
+    
+    // First, get ALL profiles to debug
+    const allProfiles = await db
+      .select({
+        id: prProfiles.id,
+        firstName: prProfiles.firstName,
+        lastName: prProfiles.lastName,
+        isStaff: prProfiles.isStaff,
+        isActive: prProfiles.isActive,
+        companyId: prProfiles.companyId,
+      })
+      .from(prProfiles);
+    
+    console.log(`[PR-DEBUG] All profiles in DB: ${JSON.stringify(allProfiles)}`);
+    
     // Get all active PR profiles that belong to the same company
-    // By default, exclude Staff (isStaff=false) unless includeStaff=true
+    // By default, exclude Staff (isStaff=true) unless includeStaff=true
+    // NOTE: isStaff can be NULL for old profiles, treat NULL as false (regular PR)
     const whereConditions = [
       eq(prProfiles.isActive, true),
     ];
-    
-    // Exclude Staff by default (show only regular PRs)
-    if (!includeStaff) {
-      whereConditions.push(eq(prProfiles.isStaff, false));
-    }
     
     if (user.role !== 'super_admin') {
       whereConditions.push(eq(prProfiles.companyId, user.companyId));
     }
     
-    const prProfilesList = await db
-      .select({
-        id: prProfiles.id,
-        firstName: prProfiles.firstName,
-        lastName: prProfiles.lastName,
-        email: prProfiles.email,
-        phone: prProfiles.phone,
-        prCode: prProfiles.prCode,
-        displayName: prProfiles.displayName,
-        isStaff: prProfiles.isStaff,
-      })
-      .from(prProfiles)
-      .where(and(...whereConditions))
-      .orderBy(prProfiles.lastName, prProfiles.firstName);
+    let prProfilesList;
+    
+    if (includeStaff) {
+      // Include all (both PR and Staff)
+      prProfilesList = await db
+        .select({
+          id: prProfiles.id,
+          firstName: prProfiles.firstName,
+          lastName: prProfiles.lastName,
+          email: prProfiles.email,
+          phone: prProfiles.phone,
+          prCode: prProfiles.prCode,
+          displayName: prProfiles.displayName,
+          isStaff: prProfiles.isStaff,
+        })
+        .from(prProfiles)
+        .where(and(...whereConditions))
+        .orderBy(prProfiles.lastName, prProfiles.firstName);
+    } else {
+      // Exclude Staff: isStaff=false OR isStaff IS NULL (old profiles without the field)
+      prProfilesList = await db
+        .select({
+          id: prProfiles.id,
+          firstName: prProfiles.firstName,
+          lastName: prProfiles.lastName,
+          email: prProfiles.email,
+          phone: prProfiles.phone,
+          prCode: prProfiles.prCode,
+          displayName: prProfiles.displayName,
+          isStaff: prProfiles.isStaff,
+        })
+        .from(prProfiles)
+        .where(and(
+          ...whereConditions,
+          or(
+            eq(prProfiles.isStaff, false),
+            isNull(prProfiles.isStaff)
+          )
+        ))
+        .orderBy(prProfiles.lastName, prProfiles.firstName);
+    }
+    
+    console.log(`[PR-DEBUG] Filtered result (includeStaff=${includeStaff}): ${prProfilesList.length} profiles`);
     
     res.json(prProfilesList);
   } catch (error: any) {
