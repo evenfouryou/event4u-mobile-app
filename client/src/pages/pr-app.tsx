@@ -547,6 +547,7 @@ export default function PrAppPage() {
   const [isPayoutDialogOpen, setIsPayoutDialogOpen] = useState(false);
   const [isEmailDialogOpen, setIsEmailDialogOpen] = useState(false);
   const [isPasswordDialogOpen, setIsPasswordDialogOpen] = useState(false);
+  const [isSwitchingToCustomer, setIsSwitchingToCustomer] = useState(false);
   const [newEmail, setNewEmail] = useState("");
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -1734,13 +1735,41 @@ export default function PrAppPage() {
             <HapticButton
               variant="outline"
               className="w-full justify-start gap-3"
-              onClick={() => {
+              disabled={isSwitchingToCustomer}
+              onClick={async () => {
                 triggerHaptic('medium');
-                window.location.href = '/acquista';
+                setIsSwitchingToCustomer(true);
+                try {
+                  const response = await fetch('/api/pr/switch-to-customer', {
+                    method: 'POST',
+                    credentials: 'include'
+                  });
+                  if (response.ok) {
+                    window.location.href = '/acquista';
+                  } else {
+                    toast({
+                      title: "Errore",
+                      description: "Impossibile passare a modalità cliente",
+                      variant: "destructive"
+                    });
+                  }
+                } catch (error) {
+                  toast({
+                    title: "Errore",
+                    description: "Errore di connessione",
+                    variant: "destructive"
+                  });
+                } finally {
+                  setIsSwitchingToCustomer(false);
+                }
               }}
               data-testid="button-switch-to-customer"
             >
-              <ArrowRightLeft className="w-4 h-4" />
+              {isSwitchingToCustomer ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <ArrowRightLeft className="w-4 h-4" />
+              )}
               Passa a modalità cliente
             </HapticButton>
             

@@ -724,6 +724,26 @@ router.post("/api/pr/logout", (req: Request, res: Response) => {
   });
 });
 
+// PR Switch to Customer Mode - Clear PR session but keep browsing
+router.post("/api/pr/switch-to-customer", (req: Request, res: Response) => {
+  try {
+    // Only remove PR profile from session, don't destroy entire session
+    delete (req.session as any).prProfile;
+    
+    // Save the session with prProfile removed
+    req.session.save((err) => {
+      if (err) {
+        console.error("Error saving session after switch:", err);
+        return res.status(500).json({ error: "Errore nel cambio modalità" });
+      }
+      res.json({ success: true, message: "Modalità cliente attivata" });
+    });
+  } catch (error: any) {
+    console.error("Error switching to customer mode:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // PR Update own profile (add email, update displayName)
 router.patch("/api/pr/me", async (req: Request, res: Response) => {
   try {
