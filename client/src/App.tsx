@@ -1,4 +1,4 @@
-import { Switch, Route, Redirect } from "wouter";
+import { Switch, Route, Redirect, useLocation } from "wouter";
 import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
@@ -147,6 +147,7 @@ import { CookieConsent } from "@/components/cookie-consent";
 function Router() {
   const { isAuthenticated, isLoading, user } = useAuth();
   const isMobile = useIsMobile();
+  const [location] = useLocation();
 
   if (isLoading) {
     return (
@@ -235,8 +236,18 @@ function Router() {
     );
   }
 
-  // PR and Capo Staff dedicated routes - Mobile-first interface with full navigation
+  // PR and Capo Staff dedicated routes - Mobile-first interface
   if ((user as any)?.role === 'pr' || (user as any)?.role === 'capo_staff') {
+    // For /pr-app route, render without sidebar/header for clean mobile experience
+    if (location.startsWith('/pr-app')) {
+      return (
+        <div className="min-h-screen bg-background">
+          <PrApp />
+        </div>
+      );
+    }
+    
+    // Other PR routes use full layout with sidebar
     return (
       <SidebarProvider style={style}>
         <div className="flex h-screen w-full">
@@ -250,8 +261,6 @@ function Router() {
             </header>
             <main className="flex-1 overflow-auto pb-20 md:pb-0">
               <Switch>
-                {/* Mobile-first PrApp come interfaccia principale */}
-                <Route path="/pr-app" component={PrApp} />
                 <Route path="/pr/guest-lists" component={PrGuestLists} />
                 <Route path="/pr/tables" component={PrTables} />
                 <Route path="/pr/staff" component={PrStaff} />
@@ -268,7 +277,6 @@ function Router() {
                 <Route path="/scanner/stats/:eventId?" component={ScannerStats} />
                 <Route path="/scanner" component={ScannerHome} />
                 <Route path="/">
-                  {/* Redirect to mobile-first PR app */}
                   <Redirect to="/pr-app" />
                 </Route>
                 <Route component={NotFound} />
