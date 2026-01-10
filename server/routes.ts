@@ -23,6 +23,7 @@ import marketingRoutes from "./marketing-routes";
 import loyaltyRoutes from "./loyalty-routes";
 import referralRoutes from "./referral-routes";
 import bundleRoutes from "./bundle-routes";
+import staffRoutes from "./staff-routes";
 import { startMarketingScheduler } from "./marketing-scheduler";
 import { setupTicketingWebSocket } from "./ticketing-websocket";
 import { startHoldCleanupJob } from "./hold-service";
@@ -175,6 +176,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Bundle routes
   app.use(bundleRoutes);
+  
+  // Staff management routes (gestione PR subordinati per Staff)
+  app.use(staffRoutes);
   
   // Start marketing email scheduler
   startMarketingScheduler();
