@@ -286,14 +286,50 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
     }
     
     // If customer exists with same phone, link the accounts
+    // Otherwise, create a new customer automatically for seamless switch
+    let linkedCustomerId: string | null = null;
+    
     if (existingCustomer && profile.id) {
-      // Update user record if exists to link to customer
+      // Link to existing customer
+      linkedCustomerId = existingCustomer.id;
       if (userId) {
         await db.update(users)
           .set({ siaeCustomerId: existingCustomer.id })
           .where(eq(users.id, userId));
       }
       console.log(`[PR] Linked PR ${profile.id} to existing customer ${existingCustomer.id}`);
+    } else {
+      // Auto-create a customer for this PR to enable seamless switching
+      try {
+        // Generate unique code for the auto-created customer
+        const uniqueCode = `PR-${crypto.randomBytes(6).toString('hex').toUpperCase()}`;
+        // Generate a placeholder email for auto-created customer (PR can update later)
+        const customerEmail = `pr-${validated.phone}@auto.event4u.local`;
+        
+        const [newCustomer] = await db.insert(siaeCustomers).values({
+          uniqueCode,
+          email: customerEmail,
+          phone: fullPhone,
+          firstName: validated.firstName,
+          lastName: validated.lastName,
+          phoneVerified: true, // PR customers are pre-verified
+          emailVerified: false, // Placeholder email not verified
+          registrationCompleted: true,
+          authenticationType: 'BO', // Back-office created
+        }).returning();
+        
+        linkedCustomerId = newCustomer.id;
+        
+        if (userId) {
+          await db.update(users)
+            .set({ siaeCustomerId: newCustomer.id })
+            .where(eq(users.id, userId));
+        }
+        console.log(`[PR] Auto-created customer ${newCustomer.id} for PR ${profile.id}`);
+      } catch (err) {
+        console.error(`[PR] Failed to auto-create customer for PR ${profile.id}:`, err);
+        // Non-critical error - PR can still work without linked customer
+      }
     }
     
     // Build access link
