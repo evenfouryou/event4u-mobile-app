@@ -56,6 +56,8 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Switch } from "@/components/ui/switch";
+import { Label } from "@/components/ui/label";
 import {
   Users,
   Plus,
@@ -93,6 +95,8 @@ interface PrProfile {
   pendingEarnings: string | number;
   paidEarnings: string | number;
   isActive: boolean;
+  isStaff?: boolean;
+  displayName?: string | null;
   createdAt: string;
   user?: {
     id: string;
@@ -135,6 +139,8 @@ const createPrFormSchema = z.object({
 const editPrFormSchema = z.object({
   commissionPercentage: z.coerce.number().min(0, "Valore deve essere positivo").max(100, "Max 100%"),
   commissionFixedPerPerson: z.coerce.number().min(0, "Valore deve essere positivo"),
+  isStaff: z.boolean().optional(),
+  displayName: z.string().optional(),
 });
 
 type CreatePrFormData = z.infer<typeof createPrFormSchema>;
@@ -339,6 +345,8 @@ export default function PrManagement() {
     editForm.reset({
       commissionPercentage: toNumber(pr.commissionPercentage),
       commissionFixedPerPerson: toNumber(pr.commissionFixedPerPerson),
+      isStaff: pr.isStaff ?? false,
+      displayName: pr.displayName ?? '',
     });
     setIsEditDialogOpen(true);
   };
@@ -912,6 +920,57 @@ export default function PrManagement() {
                 <p className="text-sm text-muted-foreground">
                   Entrambe le commissioni possono essere applicate insieme.
                 </p>
+
+                <div className="border-t pt-4 mt-4">
+                  <FormField
+                    control={editForm.control}
+                    name="isStaff"
+                    render={({ field }) => (
+                      <FormItem className="flex flex-row items-center justify-between">
+                        <div className="space-y-0.5">
+                          <FormLabel className="flex items-center gap-2">
+                            <Shield className="h-4 w-4" />
+                            Abilita Account Staff
+                          </FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            Consente al PR di accedere come Staff
+                          </p>
+                        </div>
+                        <FormControl>
+                          <Switch
+                            checked={field.value ?? false}
+                            onCheckedChange={field.onChange}
+                            data-testid="switch-is-staff"
+                          />
+                        </FormControl>
+                      </FormItem>
+                    )}
+                  />
+                  
+                  {editForm.watch("isStaff") && (
+                    <FormField
+                      control={editForm.control}
+                      name="displayName"
+                      render={({ field }) => (
+                        <FormItem className="mt-4">
+                          <FormLabel>Nome Staff</FormLabel>
+                          <FormControl>
+                            <Input
+                              placeholder="Nome visualizzato come Staff"
+                              {...field}
+                              value={field.value ?? ''}
+                              data-testid="input-staff-display-name"
+                            />
+                          </FormControl>
+                          <p className="text-sm text-muted-foreground">
+                            Il nome che verrà mostrato quando accede come Staff
+                          </p>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  )}
+                </div>
               </div>
               <DialogFooter>
                 <Button

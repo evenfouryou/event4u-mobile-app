@@ -16,6 +16,7 @@ export interface PrProfile {
   defaultListCommission?: string | null;
   defaultTableCommission?: string | null;
   status: string;
+  isStaff?: boolean;
   assignedEvents?: string[];
   createdAt: string;
   updatedAt: string;

@@ -73,6 +73,7 @@ import {
   ListChecks,
   Armchair,
   Clock,
+  Shield,
 } from "lucide-react";
 import { format, isToday, isTomorrow } from "date-fns";
 import { it } from "date-fns/locale";
@@ -202,6 +203,7 @@ export default function PrAppPage() {
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [isAccountSelectorOpen, setIsAccountSelectorOpen] = useState(false);
   
   const debouncedPhone = useDebounce(customerSearchPhone, 500);
 
@@ -210,6 +212,27 @@ export default function PrAppPage() {
       setLocation("/login");
     }
   }, [authLoading, isAuthenticated, setLocation]);
+
+  useEffect(() => {
+    if (isAuthenticated && prProfile?.isStaff) {
+      const sessionKey = `pr_account_mode_${prProfile.id}`;
+      const savedMode = sessionStorage.getItem(sessionKey);
+      if (!savedMode) {
+        setIsAccountSelectorOpen(true);
+      }
+    }
+  }, [isAuthenticated, prProfile]);
+
+  const handleAccountModeSelection = (mode: 'pr' | 'staff') => {
+    if (prProfile) {
+      const sessionKey = `pr_account_mode_${prProfile.id}`;
+      sessionStorage.setItem(sessionKey, mode);
+      setIsAccountSelectorOpen(false);
+      if (mode === 'staff') {
+        setLocation('/staff');
+      }
+    }
+  };
 
   const { data: assignments = [] } = useQuery<EventStaffAssignment[]>({
     queryKey: ["/api/pr/my-assignments"],
@@ -1492,6 +1515,42 @@ export default function PrAppPage() {
               Cambia Password
             </HapticButton>
           </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isAccountSelectorOpen} onOpenChange={() => {}}>
+        <DialogContent className="max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-primary" />
+              Seleziona Modalità di Accesso
+            </DialogTitle>
+            <DialogDescription>
+              Hai accesso sia come PR che come Staff. Come vuoi entrare?
+            </DialogDescription>
+          </DialogHeader>
+          <div className="grid gap-4 py-4">
+            <HapticButton
+              variant="outline"
+              className="h-20 flex flex-col items-center justify-center gap-2"
+              onClick={() => handleAccountModeSelection('pr')}
+              data-testid="button-enter-as-pr"
+            >
+              <User className="h-6 w-6" />
+              <span className="font-semibold">Accedi come PR</span>
+              <span className="text-xs text-muted-foreground">Gestisci liste e prenotazioni</span>
+            </HapticButton>
+            <HapticButton
+              variant="outline"
+              className="h-20 flex flex-col items-center justify-center gap-2"
+              onClick={() => handleAccountModeSelection('staff')}
+              data-testid="button-enter-as-staff"
+            >
+              <Shield className="h-6 w-6" />
+              <span className="font-semibold">Accedi come Staff</span>
+              <span className="text-xs text-muted-foreground">Accesso alla dashboard Staff</span>
+            </HapticButton>
+          </div>
         </DialogContent>
       </Dialog>
     </div>
