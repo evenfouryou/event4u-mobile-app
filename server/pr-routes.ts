@@ -1151,14 +1151,22 @@ router.delete("/api/events/:eventId/pr-assignments/:prUserId", requireAuth, requ
 });
 
 // GET /api/users/prs - List all PR profiles for selection (from prProfiles table)
+// By default excludes Staff profiles (isStaff=true). Use ?includeStaff=true to include them.
 router.get("/api/users/prs", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
+    const includeStaff = req.query.includeStaff === 'true';
     
     // Get all active PR profiles that belong to the same company
+    // By default, exclude Staff (isStaff=false) unless includeStaff=true
     const whereConditions = [
       eq(prProfiles.isActive, true),
     ];
+    
+    // Exclude Staff by default (show only regular PRs)
+    if (!includeStaff) {
+      whereConditions.push(eq(prProfiles.isStaff, false));
+    }
     
     if (user.role !== 'super_admin') {
       whereConditions.push(eq(prProfiles.companyId, user.companyId));
@@ -1173,6 +1181,7 @@ router.get("/api/users/prs", requireAuth, requireGestore, async (req: Request, r
         phone: prProfiles.phone,
         prCode: prProfiles.prCode,
         displayName: prProfiles.displayName,
+        isStaff: prProfiles.isStaff,
       })
       .from(prProfiles)
       .where(and(...whereConditions))
