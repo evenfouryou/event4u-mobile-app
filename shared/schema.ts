@@ -5465,6 +5465,10 @@ export const prProfiles = pgTable("pr_profiles", {
   userId: varchar("user_id").references(() => users.id).unique(), // Opzionale - collegato dopo se necessario
   companyId: varchar("company_id").notNull().references(() => companies.id),
   
+  // Gerarchia Staff -> PR
+  isStaff: boolean("is_staff").notNull().default(false), // true = Staff (può creare PR)
+  supervisorId: varchar("supervisor_id"), // ID del PR/Staff supervisore (self-reference)
+  
   // Dati anagrafici PR (registrazione via gestore)
   firstName: varchar("first_name", { length: 100 }).notNull(),
   lastName: varchar("last_name", { length: 100 }).notNull(),
@@ -5484,6 +5488,7 @@ export const prProfiles = pgTable("pr_profiles", {
   commissionFixedPerPerson: decimal("commission_fixed_per_person", { precision: 10, scale: 2 }).notNull().default('0'), // Fixed € per person
   defaultListCommission: decimal("default_list_commission", { precision: 10, scale: 2 }).default('0'), // Commissione per ingresso lista
   defaultTableCommission: decimal("default_table_commission", { precision: 10, scale: 2 }).default('0'), // Commissione per prenotazione tavolo
+  staffCommissionPercentage: decimal("staff_commission_percentage", { precision: 5, scale: 2 }).default('0'), // % sulle commissioni dei PR sotto di lui (solo Staff)
   totalEarnings: decimal("total_earnings", { precision: 12, scale: 2 }).notNull().default('0'),
   pendingEarnings: decimal("pending_earnings", { precision: 12, scale: 2 }).notNull().default('0'),
   paidEarnings: decimal("paid_earnings", { precision: 12, scale: 2 }).notNull().default('0'),
@@ -5494,6 +5499,7 @@ export const prProfiles = pgTable("pr_profiles", {
 }, (table) => [
   index("idx_pr_profiles_phone").on(table.phone),
   index("idx_pr_profiles_company").on(table.companyId),
+  index("idx_pr_profiles_supervisor").on(table.supervisorId),
 ]);
 
 export const prProfilesRelations = relations(prProfiles, ({ one, many }) => ({
@@ -5505,6 +5511,12 @@ export const prProfilesRelations = relations(prProfiles, ({ one, many }) => ({
     fields: [prProfiles.companyId],
     references: [companies.id],
   }),
+  supervisor: one(prProfiles, {
+    fields: [prProfiles.supervisorId],
+    references: [prProfiles.id],
+    relationName: "prHierarchy",
+  }),
+  subordinates: many(prProfiles, { relationName: "prHierarchy" }),
   reservations: many(reservationPayments),
 }));
 
