@@ -727,6 +727,7 @@ export default function EventHub() {
   // PR Assignment Dialog State (new endpoints)
   const [showAssignPrDialogNew, setShowAssignPrDialogNew] = useState(false);
   const [selectedPrUserId, setSelectedPrUserId] = useState<string>('');
+  const [newPrPermissions, setNewPrPermissions] = useState({ canAddToLists: true, canProposeTables: true });
 
   // Biglietti Emessi state
   const [ticketSectorFilter, setTicketSectorFilter] = useState<string>("all");
@@ -1653,14 +1654,15 @@ export default function EventHub() {
 
   // Assign PR mutation (new endpoint)
   const assignPrMutationNew = useMutation({
-    mutationFn: async (prUserId: string) => {
-      return apiRequest('POST', `/api/events/${id}/pr-assignments`, { prUserId });
+    mutationFn: async (data: { prUserId: string; canAddToLists: boolean; canProposeTables: boolean }) => {
+      return apiRequest('POST', `/api/events/${id}/pr-assignments`, data);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'pr-assignments'] });
       toast({ title: "PR assegnato", description: "Il PR è stato assegnato all'evento." });
       setShowAssignPrDialogNew(false);
       setSelectedPrUserId('');
+      setNewPrPermissions({ canAddToLists: true, canProposeTables: true });
     },
     onError: (error: any) => {
       toast({ title: "Errore", description: error?.message || "Impossibile assegnare il PR", variant: "destructive" });
@@ -5222,13 +5224,34 @@ export default function EventHub() {
                   </SelectContent>
                 </Select>
               </div>
+              <div className="space-y-2">
+                <Label>Permessi</Label>
+                <div className="space-y-2">
+                  <div className="flex items-center justify-between p-3 rounded-lg border">
+                    <span className="text-sm">Aggiungere alle Liste</span>
+                    <Switch 
+                      checked={newPrPermissions.canAddToLists} 
+                      onCheckedChange={(c) => setNewPrPermissions(p => ({ ...p, canAddToLists: c }))} 
+                      data-testid="switch-can-add-to-lists"
+                    />
+                  </div>
+                  <div className="flex items-center justify-between p-3 rounded-lg border">
+                    <span className="text-sm">Proporre Tavoli</span>
+                    <Switch 
+                      checked={newPrPermissions.canProposeTables} 
+                      onCheckedChange={(c) => setNewPrPermissions(p => ({ ...p, canProposeTables: c }))} 
+                      data-testid="switch-can-propose-tables"
+                    />
+                  </div>
+                </div>
+              </div>
             </div>
             <DialogFooter>
-              <Button variant="outline" onClick={() => { setShowAssignPrDialogNew(false); setSelectedPrUserId(''); }} data-testid="button-cancel-pr-assignment">
+              <Button variant="outline" onClick={() => { setShowAssignPrDialogNew(false); setSelectedPrUserId(''); setNewPrPermissions({ canAddToLists: true, canProposeTables: true }); }} data-testid="button-cancel-pr-assignment">
                 Annulla
               </Button>
               <Button 
-                onClick={() => assignPrMutationNew.mutate(selectedPrUserId)} 
+                onClick={() => assignPrMutationNew.mutate({ prUserId: selectedPrUserId, ...newPrPermissions })} 
                 disabled={assignPrMutationNew.isPending || !selectedPrUserId}
                 data-testid="button-confirm-pr-assignment"
               >

@@ -1013,7 +1013,7 @@ router.get("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, a
 router.post("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const { eventId } = req.params;
-    const { prUserId } = req.body; // This is prProfileId from frontend
+    const { prUserId, canAddToLists = true, canProposeTables = true } = req.body; // prUserId is prProfileId from frontend
     const user = req.user as any;
     
     if (!prUserId) {
@@ -1085,8 +1085,8 @@ router.post("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, 
       prProfileId: prUserId, // Store in the new column
       companyId: event[0].companyId,
       staffUserId: user.id,
-      canAddToLists: true,
-      canProposeTables: true,
+      canAddToLists,
+      canProposeTables,
       isActive: true,
     }).returning();
     
