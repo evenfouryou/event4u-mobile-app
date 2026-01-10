@@ -233,6 +233,17 @@ export default function StaffAppPage() {
     }
   }, [authLoading, isAuthenticated, setLocation]);
 
+  // Honor saved mode preference - redirect to PR app if mode is "pr"
+  useEffect(() => {
+    if (isAuthenticated && prProfile) {
+      const sessionKey = `pr_account_mode_${prProfile.id}`;
+      const savedMode = sessionStorage.getItem(sessionKey);
+      if (savedMode === 'pr') {
+        window.location.href = '/pr';
+      }
+    }
+  }, [isAuthenticated, prProfile]);
+
   const { data: staffProfile, isLoading: loadingProfile } = useQuery<StaffProfile>({
     queryKey: ["/api/staff/my-profile"],
     enabled: isAuthenticated,
@@ -1018,6 +1029,23 @@ export default function StaffAppPage() {
               <ArrowRightLeft className="w-4 h-4" />
             )}
             Passa a modalità cliente
+          </HapticButton>
+          
+          <HapticButton
+            variant="outline"
+            className="w-full justify-start gap-3"
+            disabled={!prProfile}
+            onClick={() => {
+              if (prProfile) {
+                const sessionKey = `pr_account_mode_${prProfile.id}`;
+                sessionStorage.setItem(sessionKey, 'pr');
+                window.location.href = '/pr';
+              }
+            }}
+            data-testid="button-switch-to-pr"
+          >
+            <User className="w-4 h-4" />
+            Passa a modalità PR
           </HapticButton>
           
           <HapticButton

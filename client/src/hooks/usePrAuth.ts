@@ -70,6 +70,12 @@ export function usePrAuth() {
       return response.json();
     },
     onSuccess: () => {
+      // Clear all PR account mode selections from sessionStorage
+      Object.keys(sessionStorage).forEach(key => {
+        if (key.startsWith('pr_account_mode_')) {
+          sessionStorage.removeItem(key);
+        }
+      });
       queryClient.invalidateQueries({ queryKey: ["/api/pr/me"] });
       window.location.href = "/login";
     },

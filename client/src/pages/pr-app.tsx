@@ -218,8 +218,13 @@ export default function PrAppPage() {
       const sessionKey = `pr_account_mode_${prProfile.id}`;
       const savedMode = sessionStorage.getItem(sessionKey);
       if (!savedMode) {
+        // No mode saved - show selection dialog
         setIsAccountSelectorOpen(true);
+      } else if (savedMode === 'staff') {
+        // Staff mode saved - redirect to staff app
+        window.location.href = '/staff';
       }
+      // If savedMode === 'pr', stay on current page (PR app)
     }
   }, [isAuthenticated, prProfile]);
 
@@ -1109,6 +1114,22 @@ export default function PrAppPage() {
             )}
             Passa a modalità cliente
           </HapticButton>
+          
+          {prProfile?.isStaff && (
+            <HapticButton
+              variant="outline"
+              className="w-full justify-start gap-3"
+              onClick={() => {
+                const sessionKey = `pr_account_mode_${prProfile.id}`;
+                sessionStorage.setItem(sessionKey, 'staff');
+                window.location.href = '/staff';
+              }}
+              data-testid="button-switch-to-staff"
+            >
+              <Shield className="w-4 h-4" />
+              Passa a modalità Staff
+            </HapticButton>
+          )}
           
           <HapticButton
             variant="outline"
