@@ -8,6 +8,9 @@ interface CustomerProfile {
   lastName: string | null;
   phone: string | null;
   phoneVerified: boolean;
+  birthDate: string | null;
+  city: string | null;
+  province: string | null;
   _isUserWithoutSiaeProfile?: boolean;
 }
 

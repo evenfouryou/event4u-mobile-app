@@ -1129,11 +1129,56 @@ router.get("/api/public/customers/me", async (req, res) => {
       lastName: customer.lastName,
       phone: customer.phone,
       phoneVerified: customer.phoneVerified || false,
+      birthDate: customer.birthDate || null,
+      city: customer.city || null,
+      province: customer.province || null,
       _isUserWithoutSiaeProfile: customer._isUserWithoutSiaeProfile || false,
     });
   } catch (error: any) {
     console.error("[PUBLIC] Profile error:", error);
     res.status(500).json({ message: "Errore nel caricamento profilo" });
+  }
+});
+
+// Aggiorna profilo cliente autenticato
+router.patch("/api/public/customers/me", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+    
+    // Only allow updating certain fields
+    const { birthDate, city, province, firstName, lastName } = req.body;
+    
+    const updateData: any = { updatedAt: new Date() };
+    
+    if (birthDate) updateData.birthDate = new Date(birthDate);
+    if (city) updateData.city = city;
+    if (province) updateData.province = province;
+    if (firstName) updateData.firstName = firstName;
+    if (lastName) updateData.lastName = lastName;
+    
+    const [updated] = await db
+      .update(siaeCustomers)
+      .set(updateData)
+      .where(eq(siaeCustomers.id, customer.id))
+      .returning();
+    
+    console.log("[PUBLIC] Profile updated for customer:", customer.email);
+    res.json({
+      id: updated.id,
+      email: updated.email,
+      firstName: updated.firstName,
+      lastName: updated.lastName,
+      phone: updated.phone,
+      birthDate: updated.birthDate,
+      city: updated.city,
+      province: updated.province,
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Profile update error:", error);
+    res.status(500).json({ message: "Errore nell'aggiornamento profilo" });
   }
 });
 

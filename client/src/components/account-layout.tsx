@@ -1,11 +1,17 @@
 import { Link, useLocation } from "wouter";
-import { useQuery } from "@tanstack/react-query";
-import { queryClient } from "@/lib/queryClient";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { queryClient, apiRequest } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { MobileBottomBar, MobileNavItem } from "@/components/mobile-primitives";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { useState, useEffect } from "react";
 import {
   User,
   Ticket,
@@ -17,12 +23,25 @@ import {
 import { BrandLogo } from "@/components/brand-logo";
 
 interface Customer {
-  id: number;
+  id: string;
   firstName: string;
   lastName: string;
   email: string;
   phone: string;
+  birthDate: string | null;
+  city: string | null;
+  province: string | null;
 }
+
+// Italian provinces list
+const italianProvinces = [
+  "AG", "AL", "AN", "AO", "AP", "AQ", "AR", "AT", "AV", "BA", "BG", "BI", "BL", "BN", "BO", "BR", "BS", "BT", "BZ",
+  "CA", "CB", "CE", "CH", "CL", "CN", "CO", "CR", "CS", "CT", "CZ", "EN", "FC", "FE", "FG", "FI", "FM", "FR", "GE",
+  "GO", "GR", "IM", "IS", "KR", "LC", "LE", "LI", "LO", "LT", "LU", "MB", "MC", "ME", "MI", "MN", "MO", "MS", "MT",
+  "NA", "NO", "NU", "OR", "PA", "PC", "PD", "PE", "PG", "PI", "PN", "PO", "PR", "PT", "PU", "PV", "PZ", "RA", "RC",
+  "RE", "RG", "RI", "RM", "RN", "RO", "SA", "SI", "SO", "SP", "SR", "SS", "SU", "SV", "TA", "TE", "TN", "TO", "TP",
+  "TR", "TS", "TV", "UD", "VA", "VB", "VC", "VE", "VI", "VR", "VT", "VV"
+];
 
 const navItems = [
   { href: "/account/home", label: "Home", icon: Home },
@@ -109,11 +128,56 @@ interface AccountLayoutProps {
 export function AccountLayout({ children }: AccountLayoutProps) {
   const [location, navigate] = useLocation();
   const isMobile = useIsMobile();
+  const { toast } = useToast();
+  
+  // State for profile completion dialog
+  const [showProfileComplete, setShowProfileComplete] = useState(false);
+  const [birthDate, setBirthDate] = useState("");
+  const [city, setCity] = useState("");
+  const [province, setProvince] = useState("");
 
   const { data: customer } = useQuery<Customer>({
     queryKey: ["/api/public/customers/me"],
     retry: false,
   });
+
+  // Check if profile needs completion
+  useEffect(() => {
+    if (customer) {
+      const needsCompletion = !customer.birthDate || !customer.city || !customer.province;
+      if (needsCompletion) {
+        setShowProfileComplete(true);
+        // Pre-fill existing values if any
+        if (customer.birthDate) setBirthDate(customer.birthDate.split('T')[0]);
+        if (customer.city) setCity(customer.city);
+        if (customer.province) setProvince(customer.province);
+      }
+    }
+  }, [customer]);
+
+  // Mutation to update profile
+  const updateProfileMutation = useMutation({
+    mutationFn: async (data: { birthDate: string; city: string; province: string }) => {
+      const res = await apiRequest("PATCH", "/api/public/customers/me", data);
+      return res.json();
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/public/customers/me"] });
+      setShowProfileComplete(false);
+      toast({ title: "Profilo aggiornato", description: "I tuoi dati sono stati salvati" });
+    },
+    onError: (err: any) => {
+      toast({ title: "Errore", description: err.message || "Impossibile aggiornare il profilo", variant: "destructive" });
+    }
+  });
+
+  const handleProfileSubmit = () => {
+    if (!birthDate || !city || !province) {
+      toast({ title: "Campi obbligatori", description: "Compila tutti i campi per continuare", variant: "destructive" });
+      return;
+    }
+    updateProfileMutation.mutate({ birthDate, city, province });
+  };
 
   const handleLogout = async () => {
     try {
@@ -127,12 +191,70 @@ export function AccountLayout({ children }: AccountLayoutProps) {
     window.location.href = "/acquista";
   };
 
+  // Profile completion dialog component
+  const ProfileCompleteDialog = () => (
+    <Dialog open={showProfileComplete} onOpenChange={() => {}}>
+      <DialogContent className="sm:max-w-md" onPointerDownOutside={(e) => e.preventDefault()}>
+        <DialogHeader>
+          <DialogTitle>Completa il tuo profilo</DialogTitle>
+          <DialogDescription>
+            Per continuare, inserisci i dati mancanti
+          </DialogDescription>
+        </DialogHeader>
+        <div className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label htmlFor="birthDate">Data di nascita *</Label>
+            <Input
+              id="birthDate"
+              type="date"
+              value={birthDate}
+              onChange={(e) => setBirthDate(e.target.value)}
+              data-testid="input-birth-date"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="city">Città *</Label>
+            <Input
+              id="city"
+              placeholder="Es. Milano"
+              value={city}
+              onChange={(e) => setCity(e.target.value)}
+              data-testid="input-city"
+            />
+          </div>
+          <div className="space-y-2">
+            <Label htmlFor="province">Provincia *</Label>
+            <Select value={province} onValueChange={setProvince}>
+              <SelectTrigger data-testid="select-province">
+                <SelectValue placeholder="Seleziona provincia" />
+              </SelectTrigger>
+              <SelectContent>
+                {italianProvinces.map((prov) => (
+                  <SelectItem key={prov} value={prov}>{prov}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+        </div>
+        <Button 
+          onClick={handleProfileSubmit} 
+          disabled={updateProfileMutation.isPending}
+          className="w-full"
+          data-testid="button-save-profile"
+        >
+          {updateProfileMutation.isPending ? "Salvataggio..." : "Salva e continua"}
+        </Button>
+      </DialogContent>
+    </Dialog>
+  );
+
   if (isMobile) {
     return (
       <div 
         className="fixed inset-0 flex flex-col bg-background"
         style={{ paddingTop: 'env(safe-area-inset-top)' }}
       >
+        <ProfileCompleteDialog />
         <header className="shrink-0 flex items-center justify-between px-4 py-3 bg-card/95 backdrop-blur-xl border-b border-border z-30">
           <Link href="/acquista" data-testid="link-logo">
             <BrandLogo variant="horizontal" className="h-9 w-auto" />
@@ -177,6 +299,7 @@ export function AccountLayout({ children }: AccountLayoutProps) {
 
   return (
     <div className="min-h-screen bg-background flex">
+      <ProfileCompleteDialog />
       <aside className="fixed left-0 top-0 h-full w-72 z-40">
         <SidebarContent customer={customer || null} onLogout={handleLogout} />
       </aside>
