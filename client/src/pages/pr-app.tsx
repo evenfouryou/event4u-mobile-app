@@ -13,6 +13,8 @@ import { useLocation } from "wouter";
 import {
   HapticButton,
   triggerHaptic,
+  MobileBottomBar,
+  MobileNavItem,
 } from "@/components/mobile-primitives";
 import {
   Form,
@@ -1116,52 +1118,54 @@ export default function PrAppPage() {
   );
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-primary/5 flex flex-col">
-      <ScrollArea className="flex-1 pb-20">
+    <div 
+      className="fixed inset-0 flex flex-col bg-background"
+      style={{ paddingTop: 'env(safe-area-inset-top)' }}
+    >
+      <header className="shrink-0 flex items-center justify-between px-4 py-3 bg-card/95 backdrop-blur-xl border-b border-border z-30">
+        <BrandLogo variant="horizontal" className="h-9 w-auto" />
+        
+        <div className="flex items-center gap-2">
+          {prProfile && (
+            <div 
+              className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-primary/10 cursor-pointer"
+              onClick={() => setActiveTab('profilo')}
+            >
+              <User className="w-4 h-4 text-primary" />
+              <span className="text-sm font-medium text-primary">{prProfile.firstName}</span>
+            </div>
+          )}
+        </div>
+      </header>
+
+      <main className="flex-1 overflow-y-auto overscroll-contain">
         <AnimatePresence mode="wait">
           {activeTab === 'home' && renderHomeTab()}
           {activeTab === 'wallet' && renderWalletTab()}
           {activeTab === 'profilo' && renderProfiloTab()}
         </AnimatePresence>
-      </ScrollArea>
+      </main>
 
-      <nav className="fixed bottom-0 left-0 right-0 bg-background/80 backdrop-blur-lg border-t border-white/10 safe-area-bottom z-50">
-        <div className="flex justify-around items-center h-16">
-          <button
-            onClick={() => { setActiveTab('home'); setSelectedEventId(null); }}
-            className={cn(
-              "flex flex-col items-center gap-1 py-2 px-6 transition-colors",
-              activeTab === 'home' ? "text-primary" : "text-muted-foreground"
-            )}
-            data-testid="nav-home"
-          >
-            <Home className="w-6 h-6" />
-            <span className="text-xs font-medium">Home</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('wallet')}
-            className={cn(
-              "flex flex-col items-center gap-1 py-2 px-6 transition-colors",
-              activeTab === 'wallet' ? "text-primary" : "text-muted-foreground"
-            )}
-            data-testid="nav-wallet"
-          >
-            <Wallet className="w-6 h-6" />
-            <span className="text-xs font-medium">Wallet</span>
-          </button>
-          <button
-            onClick={() => setActiveTab('profilo')}
-            className={cn(
-              "flex flex-col items-center gap-1 py-2 px-6 transition-colors",
-              activeTab === 'profilo' ? "text-primary" : "text-muted-foreground"
-            )}
-            data-testid="nav-profilo"
-          >
-            <User className="w-6 h-6" />
-            <span className="text-xs font-medium">Profilo</span>
-          </button>
-        </div>
-      </nav>
+      <MobileBottomBar className="shrink-0 z-30">
+        <MobileNavItem
+          icon={Home}
+          label="Home"
+          active={activeTab === 'home'}
+          onClick={() => { setActiveTab('home'); setSelectedEventId(null); }}
+        />
+        <MobileNavItem
+          icon={Wallet}
+          label="Wallet"
+          active={activeTab === 'wallet'}
+          onClick={() => setActiveTab('wallet')}
+        />
+        <MobileNavItem
+          icon={User}
+          label="Profilo"
+          active={activeTab === 'profilo'}
+          onClick={() => setActiveTab('profilo')}
+        />
+      </MobileBottomBar>
 
       <Dialog open={isAddGuestOpen} onOpenChange={setIsAddGuestOpen}>
         <DialogContent className="max-w-md">
