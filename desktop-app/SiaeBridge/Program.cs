@@ -141,11 +141,7 @@ namespace SiaeBridge
             try { _log = new StreamWriter(logPath, true) { AutoFlush = true }; } catch { }
 
             Log("═══════════════════════════════════════════════════════");
-<<<<<<< HEAD
             Log("SiaeBridge v3.54 - FIX: scan ALL 16 slots without early break");
-=======
-            Log("SiaeBridge v3.34 - FIX CRITICO: Nome file allegato usa solo filename senza path per SMIMESignML");
->>>>>>> e71534f35d9a188f3c9f0b8b3219be3753af4474
             Log($"Time: {DateTime.Now:yyyy-MM-dd HH:mm:ss}");
             Log($"Dir: {AppDomain.CurrentDomain.BaseDirectory}");
             Log($"32-bit Process: {!Environment.Is64BitProcess}");
@@ -2281,11 +2277,7 @@ namespace SiaeBridge
 
             try
             {
-<<<<<<< HEAD
                 Log($"=== SignSmime v3.35 START ===");
-=======
-                Log($"=== SignSmime v3.34 START ===");
->>>>>>> e71534f35d9a188f3c9f0b8b3219be3753af4474
                 
                 dynamic req = JsonConvert.DeserializeObject(json);
                 string pin = req.pin;
@@ -2320,11 +2312,7 @@ namespace SiaeBridge
                 if (pin.Length < 4)
                     return ERR("PIN non valido - deve contenere almeno 4 cifre");
 
-<<<<<<< HEAD
                 Log($"SignSmime (via SMIMESignML nativo v3.35): from={smimeFrom}, to={smimeTo}");
-=======
-                Log($"SignSmime (via SMIMESignML nativo v3.34): from={smimeFrom}, to={smimeTo}");
->>>>>>> e71534f35d9a188f3c9f0b8b3219be3753af4474
                 Log($"  Subject: {smimeSubject ?? "(none)"}");
                 Log($"  Body length: {smimeBody?.Length ?? 0}");
                 Log($"  Attachment: {attachmentName ?? "(none)"}, base64 length: {attachmentBase64?.Length ?? 0}");
@@ -2344,11 +2332,7 @@ namespace SiaeBridge
                 Log($"  Temp directory: {tempDir}");
                 Log($"  Output file: {outputFile}");
                 
-<<<<<<< HEAD
                 // v3.35 FIX CRITICO: Salvataggio allegato e stringa attachments vengono impostati
-=======
-                // v3.34 FIX CRITICO: Salvataggio allegato e stringa attachments vengono impostati
->>>>>>> e71534f35d9a188f3c9f0b8b3219be3753af4474
                 // DOPO il cambio della directory di lavoro per usare path relativi.
                 // Vedi blocco dopo setup virtual drive.
                 string attachments = "";  // stringa vuota, NON null (smime.cpp fa strlen senza null check)
@@ -2356,11 +2340,7 @@ namespace SiaeBridge
                 if (!string.IsNullOrEmpty(attachmentBase64) && !string.IsNullOrEmpty(attachmentName))
                 {
                     attachmentBytesToWrite = Convert.FromBase64String(attachmentBase64);
-<<<<<<< HEAD
                     Log($"  v3.35: Attachment data prepared ({attachmentBytesToWrite.Length} bytes), will save AFTER workdir setup");
-=======
-                    Log($"  v3.34: Attachment data prepared ({attachmentBytesToWrite.Length} bytes), will save AFTER workdir setup");
->>>>>>> e71534f35d9a188f3c9f0b8b3219be3753af4474
                 }
                 else
                 {
@@ -2460,7 +2440,6 @@ namespace SiaeBridge
                     try { Directory.SetCurrentDirectory(tempDir); } catch { }
                 }
 
-<<<<<<< HEAD
                 // ============================================================
                 // v3.54 FIX: Formato szAttachments per SMIMESignML
                 // Dalla documentazione: "Files allegati separati da ';'"
@@ -2468,12 +2447,6 @@ namespace SiaeBridge
                 //
                 // SMIMESignML cerca il file nella directory corrente
                 // ============================================================
-=======
-                // v3.34 FIX CRITICO: Ora che siamo nella directory di lavoro corretta,
-                // salviamo l'allegato con SOLO il nome file (senza path).
-                // SMIMESignML usa il nome file dal percorso, quindi passando solo il nome
-                // l'allegato nell'email avrà esattamente il nome file SIAE richiesto.
->>>>>>> e71534f35d9a188f3c9f0b8b3219be3753af4474
                 if (attachmentBytesToWrite != null && !string.IsNullOrEmpty(attachmentName))
                 {
                     // Salva nella directory di lavoro corrente (virtual drive o temp)
@@ -2481,7 +2454,6 @@ namespace SiaeBridge
                     attachmentTempFile = Path.Combine(currentWorkDir, attachmentName);
                     File.WriteAllBytes(attachmentTempFile, attachmentBytesToWrite);
                     
-<<<<<<< HEAD
                     // v3.54 FIX: Passa SOLO il nome del file, senza metadata!
                     // La libreria SIAE determina automaticamente il content-type
                     attachments = attachmentName;
@@ -2490,16 +2462,6 @@ namespace SiaeBridge
                     Log($"  v3.54 FIX: Attachment string (filename only): '{attachments}'");
                     Log($"  v3.54 FIX: File exists check: {File.Exists(attachmentTempFile)}");
                     Log($"  v3.54 FIX: File size: {new FileInfo(attachmentTempFile).Length} bytes");
-=======
-                    // v3.34 FIX: Passa SOLO il nome file, non il path completo!
-                    // SMIMESignML troverà il file nella directory corrente.
-                    // Il formato "displayName|filePath" con path relativo funziona correttamente.
-                    attachments = $"{attachmentName}|{attachmentName}";
-                    
-                    Log($"  v3.34 FIX: Attachment saved to workdir: {attachmentTempFile}");
-                    Log($"  v3.34 FIX: Attachment string uses ONLY filename: '{attachments}'");
-                    Log($"  v3.34 FIX: This ensures SMIMESignML uses '{attachmentName}' as attachment name in email");
->>>>>>> e71534f35d9a188f3c9f0b8b3219be3753af4474
                 }
 
                 // Reset card state before SMIMESignML call
@@ -2547,11 +2509,7 @@ namespace SiaeBridge
                     Directory.SetCurrentDirectory(originalDir);
                     Log($"  Restored CWD to: {originalDir}");
                     
-<<<<<<< HEAD
                     // v3.35: Pulisci il file allegato temporaneo
-=======
-                    // v3.34: Pulisci il file allegato temporaneo
->>>>>>> e71534f35d9a188f3c9f0b8b3219be3753af4474
                     if (!string.IsNullOrEmpty(attachmentTempFile) && File.Exists(attachmentTempFile))
                     {
                         try
