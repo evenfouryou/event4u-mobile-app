@@ -4035,7 +4035,7 @@ export default function EventHub() {
                 </Button>
               </CardHeader>
               <CardContent>
-                {guestLists.length === 0 ? (
+                {(e4uLists.length === 0 && guestLists.length === 0) ? (
                   <div className="text-center py-12 text-muted-foreground">
                     <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
                     <p>Nessuna lista ospiti</p>
@@ -4053,18 +4053,20 @@ export default function EventHub() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {guestLists.map(list => {
-                        const guests = e4uStats?.guestsByList?.[list.id] || { total: 0, checkedIn: 0 };
+                      {(e4uLists.length > 0 ? e4uLists : guestLists).map((list: any) => {
+                        const entryCount = list.entryCount || list.currentCount || 0;
+                        const checkedIn = list.checkedInCount || 0;
+                        const maxCapacity = list.maxCapacity || list.maxGuests || 0;
                         return (
                           <TableRow key={list.id} data-testid={`row-list-${list.id}`}>
                             <TableCell className="font-medium">{list.name}</TableCell>
-                            <TableCell>{guests.total}</TableCell>
-                            <TableCell>{list.maxGuests || '∞'}</TableCell>
-                            <TableCell>-</TableCell>
+                            <TableCell>{entryCount}</TableCell>
+                            <TableCell>{maxCapacity || '∞'}</TableCell>
+                            <TableCell>{list.price ? `€${list.price}` : '-'}</TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                <Progress value={guests.total > 0 ? (guests.checkedIn / guests.total) * 100 : 0} className="h-2 w-20" />
-                                <span className="text-sm text-muted-foreground">{guests.checkedIn}/{guests.total}</span>
+                                <Progress value={entryCount > 0 ? (checkedIn / entryCount) * 100 : 0} className="h-2 w-20" />
+                                <span className="text-sm text-muted-foreground">{checkedIn}/{entryCount}</span>
                               </div>
                             </TableCell>
                             <TableCell>
@@ -4087,8 +4089,8 @@ export default function EventHub() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-4">
                 <div>
-                  <CardTitle>Prenotazioni Tavoli</CardTitle>
-                  <CardDescription>{bookedTables} su {tables.length} tavoli prenotati</CardDescription>
+                  <CardTitle>Tipologie Tavoli</CardTitle>
+                  <CardDescription>{e4uTableTypes.length || tables.length} tipologie, {bookedTables} prenotazioni</CardDescription>
                 </div>
                 <Button onClick={() => setShowCreateTableTypeDialog(true)} data-testid="button-create-table-type">
                   <Plus className="h-4 w-4 mr-2" />
@@ -4096,11 +4098,36 @@ export default function EventHub() {
                 </Button>
               </CardHeader>
               <CardContent>
-                <VenueMap 
-                  tables={tables} 
-                  bookings={bookings}
-                  onTableClick={(table) => navigate(`/pr/tables?tableId=${table.id}`)}
-                />
+                {e4uTableTypes.length > 0 ? (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Nome</TableHead>
+                        <TableHead>Prezzo</TableHead>
+                        <TableHead>Max Ospiti</TableHead>
+                        <TableHead>Quantità</TableHead>
+                        <TableHead>Prenotati</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {e4uTableTypes.map((tt: any) => (
+                        <TableRow key={tt.id} data-testid={`row-table-type-${tt.id}`}>
+                          <TableCell className="font-medium">{tt.name}</TableCell>
+                          <TableCell>€{tt.price}</TableCell>
+                          <TableCell>{tt.maxGuests}</TableCell>
+                          <TableCell>{tt.totalQuantity}</TableCell>
+                          <TableCell>{tt.bookedCount || 0}</TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <VenueMap 
+                    tables={tables} 
+                    bookings={bookings}
+                    onTableClick={(table) => navigate(`/pr/tables?tableId=${table.id}`)}
+                  />
+                )}
               </CardContent>
             </Card>
           </TabsContent>
