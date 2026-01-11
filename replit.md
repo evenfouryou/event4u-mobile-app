@@ -86,8 +86,15 @@ A reservation system for event lists and tables with PR (promoter) commission tr
 #### PR Navigation and Commission Model (2026-01-09)
 - **Bottom Navigation**: Reduced to 3 essential items (Home, Profile, Wallet). Liste/Tavoli are accessible via in-event tab bar.
 - **Commission Structure**: Additive model combining percentage AND fixed per-person fees: `(amount × percentage / 100) + (fixedPerPerson × personCount)`
-- **PR Assignment to Events**: Gestori can assign PRs to specific events via the Event Hub's "PR Assegnati" tab (`prEventAssignments` table).
+- **PR Assignment to Events**: Gestori can assign PRs to specific events via the Event Hub's "PR Assegnati" tab (`eventPrAssignments` table).
 - **Multi-Company PR Support**: PRs can work for multiple companies with role switching in Profile tab.
+
+#### Unified PR System (2026-01-11)
+- **Single Assignment System**: Removed legacy "PR Evento" (e4uPrAssignments) and "Staff" assignment cards from Event Hub. All PR assignments now use `eventPrAssignments` table with `prProfileId` column.
+- **Backward Compatibility**: Queries check both legacy `userId` and new `prProfileId` columns using OR logic to support existing data.
+- **PR Wallet Session Auth**: `requireAuth` middleware supports both Passport authentication and PR session (`req.session.prProfile`). The middleware attaches `(req as any).prProfileId` separately without overwriting `req.user`, preserving userId-based checks.
+- **Multi-Role Visibility**: Staff members who also have PR profiles see all their events (staff via `userId`, PR via `prProfileId`) when switching roles.
+- **Permission Functions**: `checkListPermission`, `checkTablePermission`, `checkEventAccess` accept optional `prProfileId` parameter to authorize PR Wallet users.
 
 ### Event Management (2026-01-09)
 - **Event Categorization**: Events are split into three date-based categories for gestore view:
