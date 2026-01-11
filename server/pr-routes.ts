@@ -1170,16 +1170,14 @@ router.get("/api/users/prs", requireAuth, requireGestore, async (req: Request, r
     }).from(prProfiles);
     console.log(`[PR-LIST] All profiles in DB:`, JSON.stringify(allProfiles, null, 2));
     
-    // Get all active PR profiles that belong to the same company
+    // Get all PR profiles that belong to the same company
     // By default, exclude Staff (isStaff=true) unless includeStaff=true
     // NOTE: isStaff can be NULL for old profiles, treat NULL as false (regular PR)
-    const whereConditions = [
-      eq(prProfiles.isActive, true),
-    ];
+    // NOTE: We now include inactive PRs to match /api/reservations/pr-profiles behavior
+    const whereConditions: any[] = [];
     
-    if (user.role !== 'super_admin') {
-      whereConditions.push(eq(prProfiles.companyId, user.companyId));
-    }
+    // Always filter by company (use user.companyId for all roles including super_admin)
+    whereConditions.push(eq(prProfiles.companyId, user.companyId));
     
     let prProfilesList;
     
