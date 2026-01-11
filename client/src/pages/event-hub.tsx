@@ -1274,9 +1274,9 @@ export default function EventHub() {
     enabled: !!id,
   });
 
-  // Available PR Users
+  // Available PR Users - using same endpoint as PR Management page which works correctly
   const { data: availablePrUsers = [] } = useQuery<any[]>({
-    queryKey: ['/api/users/prs'],
+    queryKey: ['/api/reservations/pr-profiles'],
   });
 
   // SIAE sector mutations
