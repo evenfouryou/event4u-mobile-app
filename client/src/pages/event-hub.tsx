@@ -711,17 +711,12 @@ export default function EventHub() {
   const [newListData, setNewListData] = useState({ name: '', maxCapacity: '', price: '' });
   const [newTableTypeData, setNewTableTypeData] = useState({ name: '', price: '', maxGuests: '', totalQuantity: '' });
   
-  // E4U Staff/PR/Scanner Dialog State
-  const [showAssignStaffDialog, setShowAssignStaffDialog] = useState(false);
-  const [showAssignPrDialog, setShowAssignPrDialog] = useState(false);
+  // E4U Scanner Dialog State
   const [showAssignScannerDialog, setShowAssignScannerDialog] = useState(false);
   const [showScannerAccessDialog, setShowScannerAccessDialog] = useState(false);
   const [selectedScannerForAccess, setSelectedScannerForAccess] = useState<any>(null);
   const [scannerAccessAllSectors, setScannerAccessAllSectors] = useState(true);
   const [scannerAccessSelectedSectors, setScannerAccessSelectedSectors] = useState<string[]>([]);
-  const [selectedStaffForPr, setSelectedStaffForPr] = useState<string | null>(null);
-  const [newStaffData, setNewStaffData] = useState({ userId: '', canManageLists: true, canManageTables: true, canCreatePr: false, canApproveTables: false });
-  const [newPrData, setNewPrData] = useState({ userId: '', staffUserId: '', canAddToLists: true, canProposeTables: false });
   const [newScannerData, setNewScannerData] = useState({ userId: '', canScanLists: true, canScanTables: true, canScanTickets: true });
 
   // PR Assignment Dialog State (new endpoints)
@@ -1244,18 +1239,6 @@ export default function EventHub() {
     enabled: !!id,
   });
 
-  // E4U Staff Assignments
-  const { data: e4uStaff = [] } = useQuery<any[]>({
-    queryKey: ['/api/e4u/events', id, 'staff'],
-    enabled: !!id,
-  });
-
-  // E4U PR Assignments
-  const { data: e4uPr = [] } = useQuery<any[]>({
-    queryKey: ['/api/e4u/events', id, 'pr'],
-    enabled: !!id,
-  });
-
   // E4U Scanners
   const { data: e4uScanners = [] } = useQuery<any[]>({
     queryKey: ['/api/e4u/events', id, 'scanners'],
@@ -1549,38 +1532,6 @@ export default function EventHub() {
     },
   });
 
-  // Assign Staff mutation
-  const assignStaffMutation = useMutation({
-    mutationFn: async (data: { userId: string; canManageLists: boolean; canManageTables: boolean; canCreatePr: boolean; canApproveTables: boolean }) => {
-      return apiRequest('POST', `/api/e4u/events/${id}/staff`, data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/e4u/events', id, 'staff'] });
-      toast({ title: "Staff assegnato all'evento" });
-      setShowAssignStaffDialog(false);
-      setNewStaffData({ userId: '', canManageLists: true, canManageTables: true, canCreatePr: false, canApproveTables: false });
-    },
-    onError: (error: any) => {
-      toast({ title: "Errore", description: error?.message || "Impossibile assegnare lo staff", variant: "destructive" });
-    },
-  });
-
-  // Assign PR mutation
-  const assignPrMutation = useMutation({
-    mutationFn: async (data: { userId: string; staffUserId?: string; canAddToLists: boolean; canProposeTables: boolean }) => {
-      return apiRequest('POST', `/api/e4u/events/${id}/pr`, data);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/e4u/events', id, 'pr'] });
-      toast({ title: "PR assegnato all'evento" });
-      setShowAssignPrDialog(false);
-      setNewPrData({ userId: '', staffUserId: '', canAddToLists: true, canProposeTables: false });
-    },
-    onError: (error: any) => {
-      toast({ title: "Errore", description: error?.message || "Impossibile assegnare il PR", variant: "destructive" });
-    },
-  });
-
   // Assign Scanner mutation
   const assignScannerMutation = useMutation({
     mutationFn: async (data: { userId: string; canScanLists: boolean; canScanTables: boolean; canScanTickets: boolean }) => {
@@ -1594,34 +1545,6 @@ export default function EventHub() {
     },
     onError: (error: any) => {
       toast({ title: "Errore", description: error?.message || "Impossibile assegnare lo scanner", variant: "destructive" });
-    },
-  });
-
-  // Remove Staff mutation
-  const removeStaffMutation = useMutation({
-    mutationFn: async (staffId: string) => {
-      return apiRequest('DELETE', `/api/e4u/staff/${staffId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/e4u/events', id, 'staff'] });
-      toast({ title: "Staff rimosso" });
-    },
-    onError: (error: any) => {
-      toast({ title: "Errore", description: error?.message || "Impossibile rimuovere lo staff", variant: "destructive" });
-    },
-  });
-
-  // Remove PR mutation
-  const removePrMutation = useMutation({
-    mutationFn: async (prId: string) => {
-      return apiRequest('DELETE', `/api/e4u/pr/${prId}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/e4u/events', id, 'pr'] });
-      toast({ title: "PR rimosso" });
-    },
-    onError: (error: any) => {
-      toast({ title: "Errore", description: error?.message || "Impossibile rimuovere il PR", variant: "destructive" });
     },
   });
 
@@ -2471,10 +2394,6 @@ export default function EventHub() {
             <TabsTrigger value="tables" data-testid="tab-tables">
               <Armchair className="h-4 w-4 mr-2" />
               Tavoli
-            </TabsTrigger>
-            <TabsTrigger value="staff" data-testid="tab-staff">
-              <Shield className="h-4 w-4 mr-2" />
-              Staff
             </TabsTrigger>
             <TabsTrigger value="pr" data-testid="tab-pr">
               <Megaphone className="h-4 w-4 mr-2" />
@@ -4126,130 +4045,8 @@ export default function EventHub() {
             </Card>
           </TabsContent>
 
-          {/* Staff Tab */}
-          <TabsContent value="staff" className="space-y-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between gap-4">
-                <div>
-                  <CardTitle>Staff Evento</CardTitle>
-                  <CardDescription>Gestione personale assegnato</CardDescription>
-                </div>
-                <Button onClick={() => setShowAssignStaffDialog(true)} data-testid="button-assign-staff">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Assegna Staff
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {e4uStaff.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Shield className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Nessuno staff assegnato</p>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Ruolo</TableHead>
-                        <TableHead>Permessi</TableHead>
-                        <TableHead className="w-12"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {e4uStaff.map((staff: any) => {
-                        const staffUser = users.find(u => u.id === staff.userId);
-                        return (
-                          <TableRow key={staff.id} data-testid={`row-staff-${staff.id}`}>
-                            <TableCell className="font-medium">
-                              {staffUser ? `${staffUser.firstName} ${staffUser.lastName}` : 'Staff sconosciuto'}
-                            </TableCell>
-                            <TableCell>
-                              <Badge variant="secondary">{staffUser?.role || 'staff'}</Badge>
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-1">
-                                {staff.canManageLists && <Badge className="bg-cyan-500/20 text-cyan-400">Liste</Badge>}
-                                {staff.canManageTables && <Badge className="bg-purple-500/20 text-purple-400">Tavoli</Badge>}
-                                {staff.canCreatePr && <Badge className="bg-orange-500/20 text-orange-400">PR</Badge>}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Button variant="ghost" size="icon" onClick={() => removeStaffMutation.mutate(staff.id)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-          </TabsContent>
-
           {/* PR Tab */}
           <TabsContent value="pr" className="space-y-6">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between gap-4">
-                <div>
-                  <CardTitle>PR Evento</CardTitle>
-                  <CardDescription>Gestione promoter</CardDescription>
-                </div>
-                <Button onClick={() => setShowAssignPrDialog(true)} data-testid="button-assign-pr">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Assegna PR
-                </Button>
-              </CardHeader>
-              <CardContent>
-                {e4uPr.length === 0 ? (
-                  <div className="text-center py-12 text-muted-foreground">
-                    <Megaphone className="h-12 w-12 mx-auto mb-4 opacity-50" />
-                    <p>Nessun PR assegnato</p>
-                  </div>
-                ) : (
-                  <Table>
-                    <TableHeader>
-                      <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Supervisore</TableHead>
-                        <TableHead>Permessi</TableHead>
-                        <TableHead className="w-12"></TableHead>
-                      </TableRow>
-                    </TableHeader>
-                    <TableBody>
-                      {e4uPr.map((pr: any) => {
-                        const prUser = users.find(u => u.id === pr.userId);
-                        const supervisorStaff = e4uStaff.find((s: any) => s.userId === pr.staffUserId);
-                        const supervisorUser = supervisorStaff ? users.find(u => u.id === supervisorStaff.userId) : null;
-                        return (
-                          <TableRow key={pr.id} data-testid={`row-pr-${pr.id}`}>
-                            <TableCell className="font-medium">
-                              {prUser ? `${prUser.firstName} ${prUser.lastName}` : 'PR sconosciuto'}
-                            </TableCell>
-                            <TableCell className="text-muted-foreground">
-                              {supervisorUser ? `${supervisorUser.firstName} ${supervisorUser.lastName}` : '-'}
-                            </TableCell>
-                            <TableCell>
-                              <div className="flex gap-1">
-                                {pr.canAddToLists && <Badge className="bg-cyan-500/20 text-cyan-400">Liste</Badge>}
-                                {pr.canProposeTables && <Badge className="bg-purple-500/20 text-purple-400">Tavoli</Badge>}
-                              </div>
-                            </TableCell>
-                            <TableCell>
-                              <Button variant="ghost" size="icon" onClick={() => removePrMutation.mutate(pr.id)}>
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
-                            </TableCell>
-                          </TableRow>
-                        );
-                      })}
-                    </TableBody>
-                  </Table>
-                )}
-              </CardContent>
-            </Card>
-
             {/* PR Assignments Card (new endpoints) */}
             <Card data-testid="card-pr-assignments">
               <CardHeader className="flex flex-row items-center justify-between gap-4">
@@ -5092,104 +4889,6 @@ export default function EventHub() {
               }} disabled={createTableTypeMutation.isPending || !newTableTypeData.name}>
                 {createTableTypeMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                 Crea Tipo Tavolo
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Assign Staff Dialog */}
-        <Dialog open={showAssignStaffDialog} onOpenChange={setShowAssignStaffDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Assegna Staff</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Seleziona Utente</Label>
-                <select className="w-full h-10 px-3 rounded-md border bg-background" value={newStaffData.userId} onChange={(e) => setNewStaffData(p => ({ ...p, userId: e.target.value }))}>
-                  <option value="">Seleziona...</option>
-                  {users.filter(u => ['staff', 'capo_staff', 'gestore'].includes(u.role)).filter(u => !e4uStaff.some((s: any) => s.userId === u.id)).map(u => (
-                    <option key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.role})</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label>Permessi</Label>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-3 rounded-lg border">
-                    <span className="text-sm">Gestione Liste</span>
-                    <Switch checked={newStaffData.canManageLists} onCheckedChange={(c) => setNewStaffData(p => ({ ...p, canManageLists: c }))} />
-                  </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg border">
-                    <span className="text-sm">Gestione Tavoli</span>
-                    <Switch checked={newStaffData.canManageTables} onCheckedChange={(c) => setNewStaffData(p => ({ ...p, canManageTables: c }))} />
-                  </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg border">
-                    <span className="text-sm">Creare PR</span>
-                    <Switch checked={newStaffData.canCreatePr} onCheckedChange={(c) => setNewStaffData(p => ({ ...p, canCreatePr: c }))} />
-                  </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg border">
-                    <span className="text-sm">Approvare Tavoli</span>
-                    <Switch checked={newStaffData.canApproveTables} onCheckedChange={(c) => setNewStaffData(p => ({ ...p, canApproveTables: c }))} />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowAssignStaffDialog(false)}>Annulla</Button>
-              <Button onClick={() => assignStaffMutation.mutate(newStaffData)} disabled={assignStaffMutation.isPending || !newStaffData.userId}>
-                {assignStaffMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                Assegna
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-
-        {/* Assign PR Dialog */}
-        <Dialog open={showAssignPrDialog} onOpenChange={setShowAssignPrDialog}>
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>Assegna PR</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4 py-4">
-              <div className="space-y-2">
-                <Label>Seleziona PR</Label>
-                <select className="w-full h-10 px-3 rounded-md border bg-background" value={newPrData.userId} onChange={(e) => setNewPrData(p => ({ ...p, userId: e.target.value }))}>
-                  <option value="">Seleziona...</option>
-                  {users.filter(u => ['pr', 'staff', 'capo_staff'].includes(u.role)).filter(u => !e4uPr.some((p: any) => p.userId === u.id)).map(u => (
-                    <option key={u.id} value={u.id}>{u.firstName} {u.lastName} ({u.role})</option>
-                  ))}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label>Supervisore (opzionale)</Label>
-                <select className="w-full h-10 px-3 rounded-md border bg-background" value={newPrData.staffUserId} onChange={(e) => setNewPrData(p => ({ ...p, staffUserId: e.target.value }))}>
-                  <option value="">Nessuno</option>
-                  {e4uStaff.map((staff: any) => {
-                    const u = users.find(u => u.id === staff.userId);
-                    return <option key={staff.id} value={staff.userId}>{u ? `${u.firstName} ${u.lastName}` : 'Staff'}</option>;
-                  })}
-                </select>
-              </div>
-              <div className="space-y-2">
-                <Label>Permessi</Label>
-                <div className="space-y-2">
-                  <div className="flex items-center justify-between p-3 rounded-lg border">
-                    <span className="text-sm">Aggiungere alle Liste</span>
-                    <Switch checked={newPrData.canAddToLists} onCheckedChange={(c) => setNewPrData(p => ({ ...p, canAddToLists: c }))} />
-                  </div>
-                  <div className="flex items-center justify-between p-3 rounded-lg border">
-                    <span className="text-sm">Proporre Tavoli</span>
-                    <Switch checked={newPrData.canProposeTables} onCheckedChange={(c) => setNewPrData(p => ({ ...p, canProposeTables: c }))} />
-                  </div>
-                </div>
-              </div>
-            </div>
-            <DialogFooter>
-              <Button variant="outline" onClick={() => setShowAssignPrDialog(false)}>Annulla</Button>
-              <Button onClick={() => assignPrMutation.mutate({ userId: newPrData.userId, staffUserId: newPrData.staffUserId || undefined, canAddToLists: newPrData.canAddToLists, canProposeTables: newPrData.canProposeTables })} disabled={assignPrMutation.isPending || !newPrData.userId}>
-                {assignPrMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
-                Assegna
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -8625,139 +8324,12 @@ export default function EventHub() {
             </div>
           </TabsContent>
 
-          <TabsContent value="staff">
-            <div className="space-y-4 sm:space-y-6">
-              {/* Stats Grid */}
-              <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:gap-3 md:gap-4">
-                <div className="p-2 sm:p-3 md:p-4 rounded-lg bg-teal-500/10 border border-teal-500/30" data-testid="stat-staff-count">
-                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-teal-400">{e4uStaff.length}</div>
-                  <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">Staff Attivi</div>
-                </div>
-              </div>
-
-              {/* Staff Section */}
-              <Card className="glass-card">
-                <CardHeader className="px-3 sm:px-4 md:px-6">
-                  <div className="flex items-center justify-between gap-2 flex-wrap">
-                    <CardTitle className="flex items-center gap-2 text-base sm:text-lg">
-                      <Users className="h-4 w-4 sm:h-5 sm:w-5 text-teal-400" />
-                      Staff
-                    </CardTitle>
-                    <Button 
-                      onClick={() => setShowAssignStaffDialog(true)} 
-                      size="sm"
-                      data-testid="btn-assign-staff"
-                    >
-                      <Plus className="h-4 w-4 sm:mr-1" />
-                      <span className="hidden sm:inline">Assegna Staff</span>
-                    </Button>
-                  </div>
-                </CardHeader>
-                <CardContent className="px-3 sm:px-4 md:px-6">
-                  {e4uStaff.length > 0 ? (
-                    <div className="space-y-2 sm:space-y-3">
-                      {e4uStaff.map((staff: any) => {
-                        const staffUser = users.find(u => u.id === staff.userId);
-                        const staffPrs = e4uPr.filter((pr: any) => pr.staffUserId === staff.userId);
-                        
-                        return (
-                          <div 
-                            key={staff.id} 
-                            className="p-2 sm:p-3 md:p-4 rounded-lg bg-background/50 border hover:border-teal-500/50 transition-colors"
-                            data-testid={`staff-item-${staff.id}`}
-                          >
-                            <div className="flex items-start justify-between gap-2 sm:gap-4">
-                              <div className="flex items-center gap-2 sm:gap-3">
-                                <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-teal-500 to-cyan-600 flex items-center justify-center text-white font-medium text-xs sm:text-sm">
-                                  {staffUser?.firstName?.[0]}{staffUser?.lastName?.[0]}
-                                </div>
-                                <div className="min-w-0">
-                                  <div className="font-medium text-sm sm:text-base truncate">
-                                    {staffUser ? `${staffUser.firstName} ${staffUser.lastName}` : 'Utente sconosciuto'}
-                                  </div>
-                                  <div className="flex items-center gap-1 mt-0.5 sm:mt-1 flex-wrap">
-                                    {staff.canManageLists && (
-                                      <Badge variant="secondary" className="text-[10px] sm:text-xs px-1 sm:px-2">Liste</Badge>
-                                    )}
-                                    {staff.canManageTables && (
-                                      <Badge variant="secondary" className="text-[10px] sm:text-xs px-1 sm:px-2">Tavoli</Badge>
-                                    )}
-                                    {staff.canCreatePr && (
-                                      <Badge variant="secondary" className="text-[10px] sm:text-xs px-1 sm:px-2 bg-orange-500/20 text-orange-400">PR</Badge>
-                                    )}
-                                    {staff.canApproveTables && (
-                                      <Badge variant="secondary" className="text-[10px] sm:text-xs px-1 sm:px-2 bg-purple-500/20 text-purple-400 hidden sm:inline-flex">Approva</Badge>
-                                    )}
-                                  </div>
-                                </div>
-                              </div>
-                              <Button 
-                                variant="ghost" 
-                                size="icon"
-                                className="h-7 w-7 sm:h-8 sm:w-8"
-                                onClick={() => removeStaffMutation.mutate(staff.id)}
-                                disabled={removeStaffMutation.isPending}
-                                data-testid={`btn-remove-staff-${staff.id}`}
-                              >
-                                <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
-                              </Button>
-                            </div>
-                            
-                            {/* PR under this staff */}
-                            {staffPrs.length > 0 && (
-                              <div className="mt-2 sm:mt-3 ml-10 sm:ml-12 space-y-1.5 sm:space-y-2">
-                                <div className="text-[10px] sm:text-xs text-muted-foreground flex items-center gap-1">
-                                  <Megaphone className="h-3 w-3" />
-                                  PR ({staffPrs.length})
-                                </div>
-                                {staffPrs.map((pr: any) => {
-                                  const prUser = users.find(u => u.id === pr.userId);
-                                  return (
-                                    <div 
-                                      key={pr.id}
-                                      className="flex items-center justify-between gap-2 p-1.5 sm:p-2 rounded-md bg-orange-500/5 border border-orange-500/20"
-                                      data-testid={`staff-pr-${pr.id}`}
-                                    >
-                                      <span className="text-xs sm:text-sm truncate">
-                                        {prUser ? `${prUser.firstName} ${prUser.lastName}` : 'PR sconosciuto'}
-                                      </span>
-                                      <div className="flex items-center gap-1">
-                                        {pr.canAddToLists && <Badge variant="outline" className="text-[10px] sm:text-xs px-1 sm:px-2">Liste</Badge>}
-                                        {pr.canProposeTables && <Badge variant="outline" className="text-[10px] sm:text-xs px-1 sm:px-2 hidden sm:inline-flex">Tavoli</Badge>}
-                                      </div>
-                                    </div>
-                                  );
-                                })}
-                              </div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className="text-center py-8">
-                      <Users className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-                      <h3 className="font-semibold mb-2">Nessuno Staff</h3>
-                      <p className="text-sm text-muted-foreground mb-4">
-                        Assegna membri dello staff a questo evento
-                      </p>
-                      <Button onClick={() => setShowAssignStaffDialog(true)} data-testid="btn-assign-first-staff">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Assegna Staff
-                      </Button>
-                    </div>
-                  )}
-                </CardContent>
-              </Card>
-            </div>
-          </TabsContent>
-
           <TabsContent value="pr">
             <div className="space-y-4 sm:space-y-6">
               {/* Stats Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-1 gap-2 sm:gap-3 md:gap-4">
                 <div className="p-2 sm:p-3 md:p-4 rounded-lg bg-orange-500/10 border border-orange-500/30" data-testid="stat-pr-count">
-                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-orange-400">{e4uPr.length}</div>
+                  <div className="text-lg sm:text-xl md:text-2xl font-bold text-orange-400">{prAssignments.length}</div>
                   <div className="text-[10px] sm:text-xs md:text-sm text-muted-foreground">PR Attivi</div>
                 </div>
               </div>
@@ -8771,7 +8343,7 @@ export default function EventHub() {
                       PR
                     </CardTitle>
                     <Button 
-                      onClick={() => setShowAssignPrDialog(true)} 
+                      onClick={() => setShowAssignPrDialogNew(true)} 
                       size="sm"
                       data-testid="btn-assign-pr"
                     >
@@ -8781,25 +8353,21 @@ export default function EventHub() {
                   </div>
                 </CardHeader>
                 <CardContent className="px-3 sm:px-4 md:px-6">
-                  {e4uPr.length > 0 ? (
+                  {prAssignments.length > 0 ? (
                     <div className="space-y-2 sm:space-y-3">
-                      {e4uPr.map((prData: any) => {
-                        const pr = prData.assignment || prData;
-                        const prUser = prData.user || users.find(u => u.id === pr.userId);
-                        const supervisorUser = pr.staffUserId ? users.find(u => u.id === pr.staffUserId) : null;
-                        const displayName = prUser 
-                          ? (prUser.firstName && prUser.lastName 
-                              ? `${prUser.firstName} ${prUser.lastName}` 
-                              : prUser.email || 'Utente sconosciuto')
-                          : 'Utente sconosciuto';
-                        const initials = prUser?.firstName?.[0] || prUser?.email?.[0]?.toUpperCase() || '?';
-                        const initials2 = prUser?.lastName?.[0] || '';
+                      {prAssignments.map((assignment: any) => {
+                        const prProfile = assignment.prProfile;
+                        const displayName = prProfile 
+                          ? `${prProfile.firstName} ${prProfile.lastName}` 
+                          : 'PR sconosciuto';
+                        const initials = prProfile?.firstName?.[0] || '?';
+                        const initials2 = prProfile?.lastName?.[0] || '';
                         
                         return (
                           <div 
-                            key={pr.id} 
+                            key={assignment.id || assignment.prUserId} 
                             className="flex items-center justify-between gap-2 sm:gap-4 p-2 sm:p-3 md:p-4 rounded-lg bg-background/50 border hover:border-orange-500/50 transition-colors"
-                            data-testid={`pr-item-${pr.id}`}
+                            data-testid={`pr-item-${assignment.prUserId}`}
                           >
                             <div className="flex items-center gap-2 sm:gap-3 min-w-0">
                               <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-white font-medium text-xs sm:text-sm flex-shrink-0">
@@ -8809,18 +8377,13 @@ export default function EventHub() {
                                 <div className="font-medium text-sm sm:text-base truncate">
                                   {displayName}
                                 </div>
-                                {supervisorUser && (
+                                {prProfile?.prCode && (
                                   <div className="text-[10px] sm:text-xs text-muted-foreground truncate">
-                                    <span className="hidden sm:inline">Supervisore: </span>{supervisorUser.firstName} {supervisorUser.lastName}
+                                    Codice: {prProfile.prCode}
                                   </div>
                                 )}
                                 <div className="flex items-center gap-1 mt-0.5 sm:mt-1 flex-wrap">
-                                  {pr.canAddToLists && (
-                                    <Badge variant="secondary" className="text-[10px] sm:text-xs px-1 sm:px-2">Liste</Badge>
-                                  )}
-                                  {pr.canProposeTables && (
-                                    <Badge variant="secondary" className="text-[10px] sm:text-xs px-1 sm:px-2">Tavoli</Badge>
-                                  )}
+                                  <Badge variant="secondary" className="text-[10px] sm:text-xs px-1 sm:px-2">PR</Badge>
                                 </div>
                               </div>
                             </div>
@@ -8828,9 +8391,9 @@ export default function EventHub() {
                               variant="ghost" 
                               size="icon"
                               className="h-7 w-7 sm:h-8 sm:w-8 flex-shrink-0"
-                              onClick={() => removePrMutation.mutate(pr.id)}
-                              disabled={removePrMutation.isPending}
-                              data-testid={`btn-remove-pr-${pr.id}`}
+                              onClick={() => removePrMutationNew.mutate(assignment.prUserId)}
+                              disabled={removePrMutationNew.isPending}
+                              data-testid={`btn-remove-pr-${assignment.prUserId}`}
                             >
                               <X className="h-3.5 w-3.5 sm:h-4 sm:w-4" />
                             </Button>
@@ -8845,7 +8408,7 @@ export default function EventHub() {
                       <p className="text-sm text-muted-foreground mb-4">
                         Assegna PR a questo evento
                       </p>
-                      <Button onClick={() => setShowAssignPrDialog(true)} data-testid="btn-assign-first-pr">
+                      <Button onClick={() => setShowAssignPrDialogNew(true)} data-testid="btn-assign-first-pr">
                         <Plus className="h-4 w-4 mr-2" />
                         Assegna PR
                       </Button>
@@ -9607,239 +9170,6 @@ export default function EventHub() {
                 <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Creazione...</>
               ) : (
                 'Crea Tipologia'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Assign Staff Dialog */}
-      <Dialog open={showAssignStaffDialog} onOpenChange={setShowAssignStaffDialog}>
-        <DialogContent className="max-w-[95vw] sm:max-w-lg md:max-w-xl p-4 sm:p-6">
-          <DialogHeader className="pb-3 sm:pb-4">
-            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Users className="h-4 w-4 sm:h-5 sm:w-5 text-teal-400" />
-              Assegna Staff
-            </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              Seleziona un membro dello staff da assegnare a questo evento
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
-            <div className="space-y-2">
-              <Label htmlFor="staff-user" className="text-xs sm:text-sm">Seleziona Utente *</Label>
-              <select
-                id="staff-user"
-                className="w-full min-h-10 px-3 rounded-md border bg-background text-sm"
-                value={newStaffData.userId}
-                onChange={(e) => setNewStaffData(prev => ({ ...prev, userId: e.target.value }))}
-                data-testid="select-staff-user"
-              >
-                <option value="">Seleziona un utente...</option>
-                {users
-                  .filter(u => ['staff', 'capo_staff', 'admin', 'super_admin'].includes(u.role))
-                  .filter(u => !e4uStaff.some((s: any) => s.userId === u.id))
-                  .map(u => (
-                    <option key={u.id} value={u.id}>
-                      {u.firstName} {u.lastName} ({u.role})
-                    </option>
-                  ))}
-              </select>
-            </div>
-            <div className="space-y-2 sm:space-y-3">
-              <Label className="text-xs sm:text-sm">Permessi</Label>
-              <div className="flex items-center justify-between gap-3 p-2.5 sm:p-3 rounded-lg bg-background/50 border">
-                <div className="min-w-0">
-                  <div className="font-medium text-xs sm:text-sm">Gestione Liste</div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground">Può gestire le liste ospiti</div>
-                </div>
-                <Switch
-                  checked={newStaffData.canManageLists}
-                  onCheckedChange={(checked) => setNewStaffData(prev => ({ ...prev, canManageLists: checked }))}
-                  data-testid="switch-staff-lists"
-                />
-              </div>
-              <div className="flex items-center justify-between gap-3 p-2.5 sm:p-3 rounded-lg bg-background/50 border">
-                <div className="min-w-0">
-                  <div className="font-medium text-xs sm:text-sm">Gestione Tavoli</div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground">Può gestire i tavoli</div>
-                </div>
-                <Switch
-                  checked={newStaffData.canManageTables}
-                  onCheckedChange={(checked) => setNewStaffData(prev => ({ ...prev, canManageTables: checked }))}
-                  data-testid="switch-staff-tables"
-                />
-              </div>
-              <div className="flex items-center justify-between gap-3 p-2.5 sm:p-3 rounded-lg bg-background/50 border">
-                <div className="min-w-0">
-                  <div className="font-medium text-xs sm:text-sm">Crea PR</div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground">Può creare e gestire PR</div>
-                </div>
-                <Switch
-                  checked={newStaffData.canCreatePr}
-                  onCheckedChange={(checked) => setNewStaffData(prev => ({ ...prev, canCreatePr: checked }))}
-                  data-testid="switch-staff-create-pr"
-                />
-              </div>
-              <div className="flex items-center justify-between gap-3 p-2.5 sm:p-3 rounded-lg bg-background/50 border">
-                <div className="min-w-0">
-                  <div className="font-medium text-xs sm:text-sm">Approva Tavoli</div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground">Può approvare prenotazioni tavoli</div>
-                </div>
-                <Switch
-                  checked={newStaffData.canApproveTables}
-                  onCheckedChange={(checked) => setNewStaffData(prev => ({ ...prev, canApproveTables: checked }))}
-                  data-testid="switch-staff-approve-tables"
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-3">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setShowAssignStaffDialog(false);
-                setNewStaffData({ userId: '', canManageLists: true, canManageTables: true, canCreatePr: false, canApproveTables: false });
-              }}
-              data-testid="btn-cancel-assign-staff"
-              className="w-full sm:w-auto"
-            >
-              Annulla
-            </Button>
-            <Button 
-              onClick={() => {
-                if (!newStaffData.userId) {
-                  toast({ title: "Errore", description: "Seleziona un utente", variant: "destructive" });
-                  return;
-                }
-                assignStaffMutation.mutate(newStaffData);
-              }}
-              disabled={assignStaffMutation.isPending}
-              data-testid="btn-confirm-assign-staff"
-              className="w-full sm:w-auto"
-            >
-              {assignStaffMutation.isPending ? (
-                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Assegnazione...</>
-              ) : (
-                'Assegna Staff'
-              )}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Assign PR Dialog */}
-      <Dialog open={showAssignPrDialog} onOpenChange={setShowAssignPrDialog}>
-        <DialogContent className="max-w-[95vw] sm:max-w-lg md:max-w-xl p-4 sm:p-6">
-          <DialogHeader className="pb-3 sm:pb-4">
-            <DialogTitle className="flex items-center gap-2 text-base sm:text-lg">
-              <Megaphone className="h-4 w-4 sm:h-5 sm:w-5 text-orange-400" />
-              Assegna PR
-            </DialogTitle>
-            <DialogDescription className="text-xs sm:text-sm">
-              Seleziona un PR da assegnare a questo evento
-            </DialogDescription>
-          </DialogHeader>
-          <div className="space-y-3 sm:space-y-4 py-3 sm:py-4">
-            <div className="space-y-2">
-              <Label htmlFor="pr-user" className="text-xs sm:text-sm">Seleziona PR *</Label>
-              <select
-                id="pr-user"
-                className="w-full min-h-10 px-3 rounded-md border bg-background text-sm"
-                value={newPrData.userId}
-                onChange={(e) => setNewPrData(prev => ({ ...prev, userId: e.target.value }))}
-                data-testid="select-pr-user"
-              >
-                <option value="">Seleziona un utente...</option>
-                {users
-                  .filter(u => u.role === 'pr' || u.role === 'staff' || u.role === 'capo_staff')
-                  .filter(u => !e4uPr.some((p: any) => p.userId === u.id))
-                  .map(u => (
-                    <option key={u.id} value={u.id}>
-                      {u.firstName} {u.lastName} ({u.role})
-                    </option>
-                  ))}
-              </select>
-            </div>
-            <div className="space-y-2">
-              <Label htmlFor="pr-supervisor" className="text-xs sm:text-sm">Supervisore Staff (opzionale)</Label>
-              <select
-                id="pr-supervisor"
-                className="w-full min-h-10 px-3 rounded-md border bg-background text-sm"
-                value={newPrData.staffUserId}
-                onChange={(e) => setNewPrData(prev => ({ ...prev, staffUserId: e.target.value }))}
-                data-testid="select-pr-supervisor"
-              >
-                <option value="">Nessun supervisore</option>
-                {e4uStaff.map((staff: any) => {
-                  const staffUser = users.find(u => u.id === staff.userId);
-                  return (
-                    <option key={staff.id} value={staff.userId}>
-                      {staffUser ? `${staffUser.firstName} ${staffUser.lastName}` : 'Staff sconosciuto'}
-                    </option>
-                  );
-                })}
-              </select>
-            </div>
-            <div className="space-y-2 sm:space-y-3">
-              <Label className="text-xs sm:text-sm">Permessi</Label>
-              <div className="flex items-center justify-between gap-3 p-2.5 sm:p-3 rounded-lg bg-background/50 border">
-                <div className="min-w-0">
-                  <div className="font-medium text-xs sm:text-sm">Aggiungere alle Liste</div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground">Può aggiungere ospiti alle liste</div>
-                </div>
-                <Switch
-                  checked={newPrData.canAddToLists}
-                  onCheckedChange={(checked) => setNewPrData(prev => ({ ...prev, canAddToLists: checked }))}
-                  data-testid="switch-pr-lists"
-                />
-              </div>
-              <div className="flex items-center justify-between gap-3 p-2.5 sm:p-3 rounded-lg bg-background/50 border">
-                <div className="min-w-0">
-                  <div className="font-medium text-xs sm:text-sm">Proporre Tavoli</div>
-                  <div className="text-[10px] sm:text-xs text-muted-foreground">Può proporre prenotazioni tavoli</div>
-                </div>
-                <Switch
-                  checked={newPrData.canProposeTables}
-                  onCheckedChange={(checked) => setNewPrData(prev => ({ ...prev, canProposeTables: checked }))}
-                  data-testid="switch-pr-tables"
-                />
-              </div>
-            </div>
-          </div>
-          <DialogFooter className="flex-col-reverse sm:flex-row gap-2 sm:gap-3">
-            <Button 
-              variant="outline" 
-              onClick={() => {
-                setShowAssignPrDialog(false);
-                setNewPrData({ userId: '', staffUserId: '', canAddToLists: true, canProposeTables: false });
-              }}
-              data-testid="btn-cancel-assign-pr"
-              className="w-full sm:w-auto"
-            >
-              Annulla
-            </Button>
-            <Button 
-              onClick={() => {
-                if (!newPrData.userId) {
-                  toast({ title: "Errore", description: "Seleziona un utente", variant: "destructive" });
-                  return;
-                }
-                assignPrMutation.mutate({
-                  userId: newPrData.userId,
-                  staffUserId: newPrData.staffUserId || undefined,
-                  canAddToLists: newPrData.canAddToLists,
-                  canProposeTables: newPrData.canProposeTables,
-                });
-              }}
-              disabled={assignPrMutation.isPending}
-              data-testid="btn-confirm-assign-pr"
-              className="w-full sm:w-auto"
-            >
-              {assignPrMutation.isPending ? (
-                <><Loader2 className="h-4 w-4 mr-2 animate-spin" /> Assegnazione...</>
-              ) : (
-                'Assegna PR'
               )}
             </Button>
           </DialogFooter>

@@ -1,7 +1,7 @@
 // Event Four You (E4U) Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
 import { db } from "./db";
-import { eq, and, desc, sql } from "drizzle-orm";
+import { eq, and, desc, sql, or } from "drizzle-orm";
 import { z } from "zod";
 import crypto from "crypto";
 import {
@@ -15,6 +15,7 @@ import {
   eventScanners,
   events,
   users,
+  prProfiles,
   siaeTickets,
   siaeTicketedEvents,
   siaeEventSectors,
@@ -74,6 +75,32 @@ function generateQrCode(type: 'LST' | 'TBL', id: string): string {
 // ==================== Authentication Middleware ====================
 
 function requireAuth(req: Request, res: Response, next: NextFunction) {
+  // Check for passport authentication OR PR session authentication
+  const prSession = (req.session as any)?.prProfile;
+  
+  if (prSession?.id) {
+    // Always attach prProfileId to request for PR-related permission checks
+    // This allows multi-role users (staff who are also PRs) to maintain both identities
+    (req as any).prProfileId = prSession.id;
+    
+    // If user is already authenticated via Passport (staff/gestore/etc.), DON'T overwrite req.user
+    // This preserves their real userId for staff assignments, scanner assignments, createdBy fields, etc.
+    if (req.user) {
+      // User is both passport-authenticated AND has PR session
+      // Keep passport user, prProfileId is attached above for PR permission checks
+      return next();
+    }
+    
+    // Pure PR wallet user (no passport auth) - create virtual user object
+    (req as any).user = {
+      id: prSession.id,
+      role: 'pr',
+      companyId: prSession.companyId,
+      isPrSession: true,
+    };
+    return next();
+  }
+  
   if (!req.isAuthenticated || !req.isAuthenticated()) {
     return res.status(401).json({ message: "Non autorizzato" });
   }
@@ -106,29 +133,65 @@ function requireStaffOrHigher(req: Request, res: Response, next: NextFunction) {
 // ==================== Permission Checking Helpers ====================
 
 // Check if user has list management permission for event
-async function checkListPermission(userId: string, eventId: string, action: 'manage' | 'add'): Promise<boolean> {
-  // For staff: check e4uStaffAssignments
-  const [staffAssignment] = await db.select()
-    .from(e4uStaffAssignments)
-    .where(and(
-      eq(e4uStaffAssignments.eventId, eventId),
-      eq(e4uStaffAssignments.userId, userId),
-      eq(e4uStaffAssignments.isActive, true)
-    ));
-  
-  if (staffAssignment) {
-    return action === 'manage' ? staffAssignment.canManageLists : staffAssignment.canManageLists;
+// prProfileId: optional - pass from request for PR Wallet users (req as any).prProfileId || (req.session as any)?.prProfile?.id
+async function checkListPermission(userId: string, eventId: string, action: 'manage' | 'add', prProfileId?: string): Promise<boolean> {
+  // For staff: check e4uStaffAssignments (only if userId is provided)
+  if (userId) {
+    const [staffAssignment] = await db.select()
+      .from(e4uStaffAssignments)
+      .where(and(
+        eq(e4uStaffAssignments.eventId, eventId),
+        eq(e4uStaffAssignments.userId, userId),
+        eq(e4uStaffAssignments.isActive, true)
+      ));
+    
+    if (staffAssignment) {
+      return action === 'manage' ? staffAssignment.canManageLists : staffAssignment.canManageLists;
+    }
   }
   
-  // For PR: check eventPrAssignments
+  // For PR: check eventPrAssignments (support both legacy userId and new prProfileId)
   if (action === 'add') {
-    const [prAssignment] = await db.select()
-      .from(eventPrAssignments)
-      .where(and(
+    // First find the user's prProfile (if any) to match both legacy userId and new prProfileId
+    let userPrProfileId = prProfileId; // Use session prProfileId if passed
+    if (!userPrProfileId && userId) {
+      const userPrProfile = await db.select({ id: prProfiles.id })
+        .from(prProfiles)
+        .where(eq(prProfiles.userId, userId))
+        .limit(1);
+      userPrProfileId = userPrProfile[0]?.id;
+    }
+    
+    // Build query conditions - check legacy userId, prProfileId from prProfiles.userId, or session prProfileId
+    let prConditions;
+    if (userPrProfileId && userId) {
+      prConditions = and(
+        eq(eventPrAssignments.eventId, eventId),
+        or(
+          eq(eventPrAssignments.userId, userId),
+          eq(eventPrAssignments.prProfileId, userPrProfileId)
+        ),
+        eq(eventPrAssignments.isActive, true)
+      );
+    } else if (userPrProfileId) {
+      prConditions = and(
+        eq(eventPrAssignments.eventId, eventId),
+        eq(eventPrAssignments.prProfileId, userPrProfileId),
+        eq(eventPrAssignments.isActive, true)
+      );
+    } else if (userId) {
+      prConditions = and(
         eq(eventPrAssignments.eventId, eventId),
         eq(eventPrAssignments.userId, userId),
         eq(eventPrAssignments.isActive, true)
-      ));
+      );
+    } else {
+      return false; // No userId or prProfileId provided
+    }
+    
+    const [prAssignment] = await db.select()
+      .from(eventPrAssignments)
+      .where(prConditions);
     
     if (prAssignment && prAssignment.canAddToLists) {
       return true;
@@ -139,30 +202,66 @@ async function checkListPermission(userId: string, eventId: string, action: 'man
 }
 
 // Check if user has table management permission for event
-async function checkTablePermission(userId: string, eventId: string, action: 'manage' | 'propose' | 'approve'): Promise<boolean> {
-  // For staff
-  const [staffAssignment] = await db.select()
-    .from(e4uStaffAssignments)
-    .where(and(
-      eq(e4uStaffAssignments.eventId, eventId),
-      eq(e4uStaffAssignments.userId, userId),
-      eq(e4uStaffAssignments.isActive, true)
-    ));
-  
-  if (staffAssignment) {
-    if (action === 'approve') return staffAssignment.canApproveTables;
-    return staffAssignment.canManageTables;
+// prProfileId: optional - pass from request for PR Wallet users (req as any).prProfileId || (req.session as any)?.prProfile?.id
+async function checkTablePermission(userId: string, eventId: string, action: 'manage' | 'propose' | 'approve', prProfileId?: string): Promise<boolean> {
+  // For staff (only if userId is provided)
+  if (userId) {
+    const [staffAssignment] = await db.select()
+      .from(e4uStaffAssignments)
+      .where(and(
+        eq(e4uStaffAssignments.eventId, eventId),
+        eq(e4uStaffAssignments.userId, userId),
+        eq(e4uStaffAssignments.isActive, true)
+      ));
+    
+    if (staffAssignment) {
+      if (action === 'approve') return staffAssignment.canApproveTables;
+      return staffAssignment.canManageTables;
+    }
   }
   
-  // For PR: only can propose
+  // For PR: only can propose (support both legacy userId and new prProfileId)
   if (action === 'propose') {
-    const [prAssignment] = await db.select()
-      .from(eventPrAssignments)
-      .where(and(
+    // First find the user's prProfile (if any) to match both legacy userId and new prProfileId
+    let userPrProfileId = prProfileId; // Use session prProfileId if passed
+    if (!userPrProfileId && userId) {
+      const userPrProfile = await db.select({ id: prProfiles.id })
+        .from(prProfiles)
+        .where(eq(prProfiles.userId, userId))
+        .limit(1);
+      userPrProfileId = userPrProfile[0]?.id;
+    }
+    
+    // Build query conditions - check legacy userId, prProfileId from prProfiles.userId, or session prProfileId
+    let prConditions;
+    if (userPrProfileId && userId) {
+      prConditions = and(
+        eq(eventPrAssignments.eventId, eventId),
+        or(
+          eq(eventPrAssignments.userId, userId),
+          eq(eventPrAssignments.prProfileId, userPrProfileId)
+        ),
+        eq(eventPrAssignments.isActive, true)
+      );
+    } else if (userPrProfileId) {
+      prConditions = and(
+        eq(eventPrAssignments.eventId, eventId),
+        eq(eventPrAssignments.prProfileId, userPrProfileId),
+        eq(eventPrAssignments.isActive, true)
+      );
+    } else if (userId) {
+      prConditions = and(
         eq(eventPrAssignments.eventId, eventId),
         eq(eventPrAssignments.userId, userId),
         eq(eventPrAssignments.isActive, true)
-      ));
+      );
+    } else {
+      return false; // No userId or prProfileId provided
+    }
+    
+    const [prAssignment] = await db.select()
+      .from(eventPrAssignments)
+      .where(prConditions);
     
     if (prAssignment && prAssignment.canProposeTables) {
       return true;
@@ -292,28 +391,67 @@ async function checkScannerPermission(userId: string, eventId: string, scanType:
 }
 
 // Check if user is gestore/super_admin or has event assignment
-async function checkEventAccess(user: any, eventId: string): Promise<boolean> {
+// prProfileId: optional - pass from request for PR Wallet users (req as any).prProfileId || (req.session as any)?.prProfile?.id
+async function checkEventAccess(user: any, eventId: string, prProfileId?: string): Promise<boolean> {
   // Super admins and gestores have full access to their company's events
-  if (user.role === 'super_admin' || user.role === 'gestore') {
+  if (user && (user.role === 'super_admin' || user.role === 'gestore')) {
     const [event] = await db.select().from(events).where(eq(events.id, eventId));
     return event && event.companyId === user.companyId;
   }
   
-  // Check if user has any assignment to this event
-  const [staffAssignment] = await db.select()
-    .from(e4uStaffAssignments)
-    .where(and(eq(e4uStaffAssignments.eventId, eventId), eq(e4uStaffAssignments.userId, getUserId(user))));
-  if (staffAssignment) return true;
+  const userId = user ? getUserId(user) : '';
+  
+  // Check if user has any assignment to this event (only if userId is provided)
+  if (userId) {
+    const [staffAssignment] = await db.select()
+      .from(e4uStaffAssignments)
+      .where(and(eq(e4uStaffAssignments.eventId, eventId), eq(e4uStaffAssignments.userId, userId)));
+    if (staffAssignment) return true;
+  }
+  
+  // Check PR assignment (support both legacy userId and new prProfileId)
+  let userPrProfileId = prProfileId; // Use session prProfileId if passed
+  if (!userPrProfileId && userId) {
+    const userPrProfile = await db.select({ id: prProfiles.id })
+      .from(prProfiles)
+      .where(eq(prProfiles.userId, userId))
+      .limit(1);
+    userPrProfileId = userPrProfile[0]?.id;
+  }
+  
+  // Build query conditions - check legacy userId, prProfileId from prProfiles.userId, or session prProfileId
+  let prConditions;
+  if (userPrProfileId && userId) {
+    prConditions = and(
+      eq(eventPrAssignments.eventId, eventId),
+      or(
+        eq(eventPrAssignments.userId, userId),
+        eq(eventPrAssignments.prProfileId, userPrProfileId)
+      )
+    );
+  } else if (userPrProfileId) {
+    prConditions = and(
+      eq(eventPrAssignments.eventId, eventId),
+      eq(eventPrAssignments.prProfileId, userPrProfileId)
+    );
+  } else if (userId) {
+    prConditions = and(eq(eventPrAssignments.eventId, eventId), eq(eventPrAssignments.userId, userId));
+  } else {
+    return false; // No userId or prProfileId provided
+  }
   
   const [prAssignment] = await db.select()
     .from(eventPrAssignments)
-    .where(and(eq(eventPrAssignments.eventId, eventId), eq(eventPrAssignments.userId, getUserId(user))));
+    .where(prConditions);
   if (prAssignment) return true;
   
-  const [scannerAssignment] = await db.select()
-    .from(eventScanners)
-    .where(and(eq(eventScanners.eventId, eventId), eq(eventScanners.userId, getUserId(user))));
-  if (scannerAssignment) return true;
+  // Check scanner assignment (only if userId is provided)
+  if (userId) {
+    const [scannerAssignment] = await db.select()
+      .from(eventScanners)
+      .where(and(eq(eventScanners.eventId, eventId), eq(eventScanners.userId, userId)));
+    if (scannerAssignment) return true;
+  }
   
   return false;
 }
@@ -357,7 +495,8 @@ router.post("/api/e4u/events/:eventId/lists", requireAuth, async (req: Request, 
     
     // Check permissions: gestore/super_admin OR staff with canManageLists
     const isGestore = await isGestoreForEvent(user, eventId);
-    const hasListPermission = await checkListPermission(getUserId(user), eventId, 'manage');
+    const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
+    const hasListPermission = await checkListPermission(getUserId(user), eventId, 'manage', sessionPrProfileId);
     
     if (!isGestore && !hasListPermission) {
       return res.status(403).json({ message: "Non hai i permessi per creare liste per questo evento" });
@@ -446,7 +585,8 @@ router.post("/api/e4u/lists/:listId/entries", requireAuth, async (req: Request, 
     // Check permissions: gestore/super_admin OR user with list add permission
     const isGestore = await isGestoreForEvent(user, list.eventId);
     if (!isGestore) {
-      const hasPermission = await checkListPermission(getUserId(user), list.eventId, 'add');
+      const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
+      const hasPermission = await checkListPermission(getUserId(user), list.eventId, 'add', sessionPrProfileId);
       if (!hasPermission) {
         return res.status(403).json({ message: "Non hai i permessi per aggiungere persone a questa lista" });
       }
@@ -488,7 +628,8 @@ router.patch("/api/e4u/entries/:id", requireAuth, async (req: Request, res: Resp
     // Check permissions: gestore/super_admin OR user with list manage permission
     const isGestore = await isGestoreForEvent(user, entry.eventId);
     if (!isGestore) {
-      const hasPermission = await checkListPermission(getUserId(user), entry.eventId, 'manage');
+      const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
+      const hasPermission = await checkListPermission(getUserId(user), entry.eventId, 'manage', sessionPrProfileId);
       if (!hasPermission) {
         return res.status(403).json({ message: "Non hai i permessi per modificare questa voce" });
       }
@@ -522,7 +663,8 @@ router.delete("/api/e4u/entries/:id", requireAuth, async (req: Request, res: Res
     // Check permissions: gestore/super_admin OR user with list manage permission
     const isGestore = await isGestoreForEvent(user, entry.eventId);
     if (!isGestore) {
-      const hasPermission = await checkListPermission(getUserId(user), entry.eventId, 'manage');
+      const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
+      const hasPermission = await checkListPermission(getUserId(user), entry.eventId, 'manage', sessionPrProfileId);
       if (!hasPermission) {
         return res.status(403).json({ message: "Non hai i permessi per eliminare questa voce" });
       }
@@ -604,7 +746,8 @@ router.post("/api/e4u/events/:eventId/table-types", requireAuth, async (req: Req
     // Check permissions: gestore/super_admin OR staff with canManageTables
     const isGestore = await isGestoreForEvent(user, eventId);
     if (!isGestore) {
-      const hasPermission = await checkTablePermission(getUserId(user), eventId, 'manage');
+      const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
+      const hasPermission = await checkTablePermission(getUserId(user), eventId, 'manage', sessionPrProfileId);
       if (!hasPermission) {
         return res.status(403).json({ message: "Non hai i permessi per gestire i tipi di tavolo" });
       }
@@ -638,7 +781,8 @@ router.patch("/api/e4u/table-types/:id", requireAuth, async (req: Request, res: 
     // Check permissions: gestore/super_admin OR staff with canManageTables
     const isGestore = await isGestoreForEvent(user, tableType.eventId);
     if (!isGestore) {
-      const hasPermission = await checkTablePermission(getUserId(user), tableType.eventId, 'manage');
+      const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
+      const hasPermission = await checkTablePermission(getUserId(user), tableType.eventId, 'manage', sessionPrProfileId);
       if (!hasPermission) {
         return res.status(403).json({ message: "Non hai i permessi per modificare i tipi di tavolo" });
       }
@@ -672,7 +816,8 @@ router.delete("/api/e4u/table-types/:id", requireAuth, async (req: Request, res:
     // Check permissions: gestore/super_admin OR staff with canManageTables
     const isGestore = await isGestoreForEvent(user, tableType.eventId);
     if (!isGestore) {
-      const hasPermission = await checkTablePermission(getUserId(user), tableType.eventId, 'manage');
+      const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
+      const hasPermission = await checkTablePermission(getUserId(user), tableType.eventId, 'manage', sessionPrProfileId);
       if (!hasPermission) {
         return res.status(403).json({ message: "Non hai i permessi per eliminare i tipi di tavolo" });
       }
@@ -725,8 +870,9 @@ router.post("/api/e4u/events/:eventId/reservations", requireAuth, async (req: Re
     // Check permissions: gestore, staff with canManageTables, or PR with canProposeTables
     const isGestore = await isGestoreForEvent(user, eventId);
     if (!isGestore) {
-      const canManage = await checkTablePermission(getUserId(user), eventId, 'manage');
-      const canPropose = await checkTablePermission(getUserId(user), eventId, 'propose');
+      const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
+      const canManage = await checkTablePermission(getUserId(user), eventId, 'manage', sessionPrProfileId);
+      const canPropose = await checkTablePermission(getUserId(user), eventId, 'propose', sessionPrProfileId);
       if (!canManage && !canPropose) {
         return res.status(403).json({ message: "Non hai i permessi per creare prenotazioni tavoli" });
       }
@@ -783,7 +929,8 @@ router.post("/api/e4u/reservations/:id/approve", requireAuth, async (req: Reques
     // Check permissions: gestore/super_admin OR staff with canApproveTables (NOT PR)
     const isGestore = await isGestoreForEvent(user, reservation.eventId);
     if (!isGestore) {
-      const canApprove = await checkTablePermission(getUserId(user), reservation.eventId, 'approve');
+      const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
+      const canApprove = await checkTablePermission(getUserId(user), reservation.eventId, 'approve', sessionPrProfileId);
       if (!canApprove) {
         return res.status(403).json({ message: "Non hai i permessi per approvare prenotazioni" });
       }
@@ -821,7 +968,8 @@ router.post("/api/e4u/reservations/:id/reject", requireAuth, async (req: Request
     // Check permissions: gestore/super_admin OR staff with canApproveTables (NOT PR)
     const isGestore = await isGestoreForEvent(user, reservation.eventId);
     if (!isGestore) {
-      const canApprove = await checkTablePermission(getUserId(user), reservation.eventId, 'approve');
+      const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
+      const canApprove = await checkTablePermission(getUserId(user), reservation.eventId, 'approve', sessionPrProfileId);
       if (!canApprove) {
         return res.status(403).json({ message: "Non hai i permessi per rifiutare prenotazioni" });
       }
@@ -2610,7 +2758,43 @@ router.get("/api/e4u/my-events", requireAuth, async (req: Request, res: Response
     }
     
     // For PR: get their assignments
-    const prAssignments = await db.select({
+    // Check for PR session first (PR Wallet login), then fall back to user-linked prProfile
+    const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
+    const userId = getUserId(user);
+    
+    // Find user's prProfile (if any) to match both legacy userId and new prProfileId
+    let userPrProfileId = sessionPrProfileId;
+    if (!userPrProfileId && userId) {
+      const userPrProfile = await db.select({ id: prProfiles.id })
+        .from(prProfiles)
+        .where(eq(prProfiles.userId, userId))
+        .limit(1);
+      userPrProfileId = userPrProfile[0]?.id;
+    }
+    
+    // Build query conditions - check both legacy userId and new prProfileId
+    let prConditions;
+    if (userPrProfileId && userId) {
+      prConditions = and(
+        or(
+          eq(eventPrAssignments.userId, userId),
+          eq(eventPrAssignments.prProfileId, userPrProfileId)
+        ),
+        eq(eventPrAssignments.isActive, true)
+      );
+    } else if (userPrProfileId) {
+      prConditions = and(
+        eq(eventPrAssignments.prProfileId, userPrProfileId),
+        eq(eventPrAssignments.isActive, true)
+      );
+    } else if (userId) {
+      prConditions = and(
+        eq(eventPrAssignments.userId, userId),
+        eq(eventPrAssignments.isActive, true)
+      );
+    }
+    
+    const prAssignments = prConditions ? await db.select({
       eventId: eventPrAssignments.eventId,
       canAddToLists: eventPrAssignments.canAddToLists,
       canProposeTables: eventPrAssignments.canProposeTables,
@@ -2618,10 +2802,7 @@ router.get("/api/e4u/my-events", requireAuth, async (req: Request, res: Response
       isActive: eventPrAssignments.isActive,
     })
     .from(eventPrAssignments)
-    .where(and(
-      eq(eventPrAssignments.userId, getUserId(user)),
-      eq(eventPrAssignments.isActive, true)
-    ));
+    .where(prConditions) : [];
     
     // Get event details for PR assignments (avoid duplicates)
     const addedEventIds = new Set(result.map(r => r.id));
@@ -2716,9 +2897,45 @@ router.get("/api/e4u/my-stats", requireAuth, async (req: Request, res: Response)
       .from(e4uStaffAssignments)
       .where(and(eq(e4uStaffAssignments.userId, getUserId(user)), eq(e4uStaffAssignments.isActive, true)));
     
-    const prEvents = await db.select({ count: sql<number>`count(*)::int` })
-      .from(eventPrAssignments)
-      .where(and(eq(eventPrAssignments.userId, getUserId(user)), eq(eventPrAssignments.isActive, true)));
+    // Count PR events (support both legacy userId, new prProfileId, and session prProfileId)
+    const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
+    const currentUserId = getUserId(user);
+    
+    let statsUserPrProfileId = sessionPrProfileId;
+    if (!statsUserPrProfileId && currentUserId) {
+      const userPrProfile = await db.select({ id: prProfiles.id })
+        .from(prProfiles)
+        .where(eq(prProfiles.userId, currentUserId))
+        .limit(1);
+      statsUserPrProfileId = userPrProfile[0]?.id;
+    }
+    
+    let prConditions;
+    if (statsUserPrProfileId && currentUserId) {
+      prConditions = and(
+        or(
+          eq(eventPrAssignments.userId, currentUserId),
+          eq(eventPrAssignments.prProfileId, statsUserPrProfileId)
+        ),
+        eq(eventPrAssignments.isActive, true)
+      );
+    } else if (statsUserPrProfileId) {
+      prConditions = and(
+        eq(eventPrAssignments.prProfileId, statsUserPrProfileId),
+        eq(eventPrAssignments.isActive, true)
+      );
+    } else if (currentUserId) {
+      prConditions = and(
+        eq(eventPrAssignments.userId, currentUserId),
+        eq(eventPrAssignments.isActive, true)
+      );
+    }
+    
+    const prEvents = prConditions 
+      ? await db.select({ count: sql<number>`count(*)::int` })
+          .from(eventPrAssignments)
+          .where(prConditions)
+      : [{ count: 0 }];
     
     res.json({
       entriesCreated: entriesCreated[0]?.count || 0,
