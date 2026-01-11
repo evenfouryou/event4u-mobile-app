@@ -4380,6 +4380,14 @@ export const eventPrAssignments = pgTable("event_pr_assignments", {
   updatedAt: timestamp("updated_at").defaultNow(),
 });
 
+// PR List Assignments - Assegnazione liste specifiche ai PR
+export const prListAssignments = pgTable("pr_list_assignments", {
+  id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+  prAssignmentId: varchar("pr_assignment_id").notNull().references(() => eventPrAssignments.id, { onDelete: 'cascade' }),
+  listId: varchar("list_id").notNull().references(() => eventLists.id, { onDelete: 'cascade' }),
+  createdAt: timestamp("created_at").defaultNow(),
+});
+
 // Event Scanners - Scanner abilitati per evento
 export const eventScanners = pgTable("event_scanners", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -4513,7 +4521,7 @@ export const e4uStaffAssignmentsRelations = relations(e4uStaffAssignments, ({ on
   }),
 }));
 
-export const eventPrAssignmentsRelations = relations(eventPrAssignments, ({ one }) => ({
+export const eventPrAssignmentsRelations = relations(eventPrAssignments, ({ one, many }) => ({
   event: one(events, {
     fields: [eventPrAssignments.eventId],
     references: [events.id],
@@ -4529,6 +4537,22 @@ export const eventPrAssignmentsRelations = relations(eventPrAssignments, ({ one 
   company: one(companies, {
     fields: [eventPrAssignments.companyId],
     references: [companies.id],
+  }),
+  prProfile: one(prProfiles, {
+    fields: [eventPrAssignments.prProfileId],
+    references: [prProfiles.id],
+  }),
+  listAssignments: many(prListAssignments),
+}));
+
+export const prListAssignmentsRelations = relations(prListAssignments, ({ one }) => ({
+  prAssignment: one(eventPrAssignments, {
+    fields: [prListAssignments.prAssignmentId],
+    references: [eventPrAssignments.id],
+  }),
+  list: one(eventLists, {
+    fields: [prListAssignments.listId],
+    references: [eventLists.id],
   }),
 }));
 
@@ -4598,6 +4622,11 @@ export const insertEventPrAssignmentSchema = createInsertSchema(eventPrAssignmen
 });
 export const updateEventPrAssignmentSchema = insertEventPrAssignmentSchema.partial().omit({ eventId: true, userId: true, companyId: true });
 
+export const insertPrListAssignmentSchema = createInsertSchema(prListAssignments).omit({
+  id: true,
+  createdAt: true,
+});
+
 export const insertEventScannerSchema = createInsertSchema(eventScanners).omit({
   id: true,
   createdAt: true,
@@ -4633,6 +4662,9 @@ export type UpdateE4uStaffAssignment = z.infer<typeof updateE4uStaffAssignmentSc
 export type EventPrAssignment = typeof eventPrAssignments.$inferSelect;
 export type InsertEventPrAssignment = z.infer<typeof insertEventPrAssignmentSchema>;
 export type UpdateEventPrAssignment = z.infer<typeof updateEventPrAssignmentSchema>;
+
+export type PrListAssignment = typeof prListAssignments.$inferSelect;
+export type InsertPrListAssignment = z.infer<typeof insertPrListAssignmentSchema>;
 
 export type EventScanner = typeof eventScanners.$inferSelect;
 export type InsertEventScanner = z.infer<typeof insertEventScannerSchema>;
