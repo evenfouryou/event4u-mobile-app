@@ -1,0 +1,631 @@
+index-CbZag0Yr.js:1674 SW registered: https://manage.eventfouryou.com/
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: Array(0)
+index-CbZag0Yr.js:1144 [DEBUG SC] Fetching initial status via HTTP...
+index-CbZag0Yr.js:1144 [DEBUG SC] ====== SMART CARD CONNECTION START ======
+index-CbZag0Yr.js:1144 [DEBUG SC] URL: wss://manage.eventfouryou.com/ws/bridge
+index-CbZag0Yr.js:1144 [DEBUG SC] Cookies present: YES
+index-CbZag0Yr.js:1144 [DEBUG SC] Cookie value: _ga=GA1.1.962813290.1739208627; _fbp=fb.1.17397993...
+index-CbZag0Yr.js:1144 [DEBUG SC] WebSocket created, state: 0
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: Array(0)
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: Array(0)
+index-CbZag0Yr.js:1144 [DEBUG SC] WebSocket OPEN! State: 1
+index-CbZag0Yr.js:1144 [DEBUG SC] Sending get_status request...
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"connection_status","bridgeConnected":false,"connected":false,"message":"Bridge desktop app is not connected"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: connection_status
+index-CbZag0Yr.js:1144 [DEBUG SC] Handling bridge/connection status: connection_status Object
+index-CbZag0Yr.js:1144 [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+index-CbZag0Yr.js:1144 [DEBUG SC] Message type: connection_status
+index-CbZag0Yr.js:1144 [DEBUG SC] msg.connected: false
+index-CbZag0Yr.js:1144 [DEBUG SC] msg.bridgeConnected: false
+index-CbZag0Yr.js:1144 [DEBUG SC] isConnected (final): false
+index-CbZag0Yr.js:1144 [DEBUG SC] Full message: {"type":"connection_status","bridgeConnected":false,"connected":false,"message":"Bridge desktop app is not connected"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Bridge NOT connected - updating status to DISCONNECTED
+index-CbZag0Yr.js:1144 [DEBUG SC] Status after update: {"connected":false,"readerDetected":false,"cardInserted":false,"readerName":null,"cardAtr":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardType":null,"lastCheck":"2026-01-11T19:54:40.190Z","pinRetriesLeft":null,"pukRetriesLeft":null,"pinVerified":false,"pinBlocked":false,"error":"App desktop Event4U non connessa. Avviare l'applicazione sul PC.","bridgeConnected":false,"canEmitRealSeals":false,"demoMode":false,"relayConnected":true}
+index-CbZag0Yr.js:1144 [DEBUG SC] HTTP status received: {
+  "bridgeConnected": false,
+  "readerConnected": false,
+  "cardInserted": false,
+  "readerName": null,
+  "cardSerial": null
+}
+index-CbZag0Yr.js:1144 [DEBUG SC] HTTP - cardSerial: null
+index-CbZag0Yr.js:1144 [DEBUG SC] HTTP - cardCounter: undefined
+index-CbZag0Yr.js:1144 [DEBUG SC] HTTP - cardBalance: undefined
+index-CbZag0Yr.js:1144 [DEBUG SC] HTTP - cardKeyId: undefined
+index-CbZag0Yr.js:1144 [DEBUG SC] HTTP - cardInserted: false
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+/api/siae/ticketed-events/ecc3d8e1-00e5-4dbd-9369-6e35ac377fd8/name-changes:1  Failed to load resource: the server responded with a status of 500 ()
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"bridge_status","connected":true,"message":"Bridge desktop app connected"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: bridge_status
+index-CbZag0Yr.js:1144 [DEBUG SC] Handling bridge/connection status: bridge_status Object
+index-CbZag0Yr.js:1144 [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+index-CbZag0Yr.js:1144 [DEBUG SC] Message type: bridge_status
+index-CbZag0Yr.js:1144 [DEBUG SC] msg.connected: true
+index-CbZag0Yr.js:1144 [DEBUG SC] msg.bridgeConnected: undefined
+index-CbZag0Yr.js:1144 [DEBUG SC] isConnected (final): true
+index-CbZag0Yr.js:1144 [DEBUG SC] Full message: {"type":"bridge_status","connected":true,"message":"Bridge desktop app connected"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Bridge IS connected - updating status to CONNECTED
+index-CbZag0Yr.js:1144 [DEBUG SC] Status after update: {"connected":true,"relayConnected":true,"readerDetected":false,"cardInserted":false,"readerName":null,"cardAtr":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardType":null,"lastCheck":"2026-01-11T19:54:48.922Z","error":null,"bridgeConnected":true,"canEmitRealSeals":false,"demoMode":false}
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","data":{"bridgeConnected":true,"readerConnected":false,"cardInserted":false,"readerName":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardAtr":null,"
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: status
+index-CbZag0Yr.js:1144 [DEBUG SC] Handling status message
+index-CbZag0Yr.js:1144 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-CbZag0Yr.js:1144 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": false,
+  "cardInserted": false,
+  "readerName": null,
+  "cardSerial": null,
+  "cardCounter": null,
+  "cardBalance": null,
+  "cardKeyId": null,
+  "cardAtr": null,
+  "cardEmail": null,
+  "cardCertificateCN": null,
+  "cardCertificateExpiry": null,
+  "demoMode": false,
+  "canEmitTickets": false,
+  "relayConnected": true,
+  "pinLocked": true,
+  "pinRequired": true
+}
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardSerial: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardCounter: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardBalance: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardKeyId: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardInserted: false
+index-CbZag0Yr.js:1144 [DEBUG SC] data.readerDetected: undefined
+index-CbZag0Yr.js:1144 [DEBUG SC] data.readerConnected: false
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","data":{"bridgeConnected":true,"readerConnected":false,"cardInserted":false,"readerName":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardAtr":null,"
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: status
+index-CbZag0Yr.js:1144 [DEBUG SC] Handling status message
+index-CbZag0Yr.js:1144 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-CbZag0Yr.js:1144 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": false,
+  "cardInserted": false,
+  "readerName": null,
+  "cardSerial": null,
+  "cardCounter": null,
+  "cardBalance": null,
+  "cardKeyId": null,
+  "cardAtr": null,
+  "cardEmail": null,
+  "cardCertificateCN": null,
+  "cardCertificateExpiry": null,
+  "demoMode": false,
+  "canEmitTickets": false,
+  "relayConnected": true,
+  "pinLocked": true,
+  "pinRequired": true
+}
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardSerial: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardCounter: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardBalance: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardKeyId: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardInserted: false
+index-CbZag0Yr.js:1144 [DEBUG SC] data.readerDetected: undefined
+index-CbZag0Yr.js:1144 [DEBUG SC] data.readerConnected: false
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] WebSocket CLOSED: 1006 
+index-CbZag0Yr.js:1144 [DEBUG SC] ====== SMART CARD CONNECTION START ======
+index-CbZag0Yr.js:1144 [DEBUG SC] URL: wss://manage.eventfouryou.com/ws/bridge
+index-CbZag0Yr.js:1144 [DEBUG SC] Cookies present: YES
+index-CbZag0Yr.js:1144 [DEBUG SC] Cookie value: _ga=GA1.1.962813290.1739208627; _fbp=fb.1.17397993...
+index-CbZag0Yr.js:1144 [DEBUG SC] WebSocket created, state: 0
+index-CbZag0Yr.js:1144 [DEBUG SC] WebSocket OPEN! State: 1
+index-CbZag0Yr.js:1144 [DEBUG SC] Sending get_status request...
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"connection_status","bridgeConnected":true,"connected":true,"message":"Bridge desktop app is connected"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: connection_status
+index-CbZag0Yr.js:1144 [DEBUG SC] Handling bridge/connection status: connection_status Object
+index-CbZag0Yr.js:1144 [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+index-CbZag0Yr.js:1144 [DEBUG SC] Message type: connection_status
+index-CbZag0Yr.js:1144 [DEBUG SC] msg.connected: true
+index-CbZag0Yr.js:1144 [DEBUG SC] msg.bridgeConnected: true
+index-CbZag0Yr.js:1144 [DEBUG SC] isConnected (final): true
+index-CbZag0Yr.js:1144 [DEBUG SC] Full message: {"type":"connection_status","bridgeConnected":true,"connected":true,"message":"Bridge desktop app is connected"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Bridge IS connected - updating status to CONNECTED
+index-CbZag0Yr.js:1144 [DEBUG SC] Status after update: {"connected":true,"relayConnected":true,"readerDetected":false,"cardInserted":false,"readerName":null,"cardAtr":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardType":null,"lastCheck":"2026-01-11T19:59:46.903Z","error":null,"bridgeConnected":true,"canEmitRealSeals":false,"demoMode":false}
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","data":{"bridgeConnected":true,"readerConnected":false,"cardInserted":false,"readerName":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardAtr":null,"
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: status
+index-CbZag0Yr.js:1144 [DEBUG SC] Handling status message
+index-CbZag0Yr.js:1144 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-CbZag0Yr.js:1144 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": false,
+  "cardInserted": false,
+  "readerName": null,
+  "cardSerial": null,
+  "cardCounter": null,
+  "cardBalance": null,
+  "cardKeyId": null,
+  "cardAtr": null,
+  "cardEmail": null,
+  "cardCertificateCN": null,
+  "cardCertificateExpiry": null,
+  "demoMode": false,
+  "canEmitTickets": false,
+  "relayConnected": true,
+  "pinLocked": true,
+  "pinRequired": true
+}
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardSerial: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardCounter: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardBalance: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardKeyId: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardInserted: false
+index-CbZag0Yr.js:1144 [DEBUG SC] data.readerDetected: undefined
+index-CbZag0Yr.js:1144 [DEBUG SC] data.readerConnected: false
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","toCompanyId":"4186e56b-d6bd-4d1d-b7d6-f0b22ec12b91","toUserId":"1b809fda-2601-452a-9c70-5de6f23ecf97","data":{"bridgeConnected":true,"readerConnected":false,"cardInserted":false,"rea
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: status
+index-CbZag0Yr.js:1144 [DEBUG SC] Handling status message
+index-CbZag0Yr.js:1144 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-CbZag0Yr.js:1144 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": false,
+  "cardInserted": false,
+  "readerName": null,
+  "cardSerial": null,
+  "cardCounter": null,
+  "cardBalance": null,
+  "cardKeyId": null,
+  "cardAtr": null,
+  "cardEmail": null,
+  "cardCertificateCN": null,
+  "cardCertificateExpiry": null,
+  "demoMode": false,
+  "canEmitTickets": false,
+  "relayConnected": true,
+  "pinLocked": true,
+  "pinRequired": true
+}
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardSerial: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardCounter: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardBalance: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardKeyId: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardInserted: false
+index-CbZag0Yr.js:1144 [DEBUG SC] data.readerDetected: undefined
+index-CbZag0Yr.js:1144 [DEBUG SC] data.readerConnected: false
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"bridge_status","connected":false,"message":"Bridge desktop app disconnected"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: bridge_status
+index-CbZag0Yr.js:1144 [DEBUG SC] Handling bridge/connection status: bridge_status Object
+index-CbZag0Yr.js:1144 [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+index-CbZag0Yr.js:1144 [DEBUG SC] Message type: bridge_status
+index-CbZag0Yr.js:1144 [DEBUG SC] msg.connected: false
+index-CbZag0Yr.js:1144 [DEBUG SC] msg.bridgeConnected: undefined
+index-CbZag0Yr.js:1144 [DEBUG SC] isConnected (final): false
+index-CbZag0Yr.js:1144 [DEBUG SC] Full message: {"type":"bridge_status","connected":false,"message":"Bridge desktop app disconnected"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Bridge NOT connected - updating status to DISCONNECTED
+index-CbZag0Yr.js:1144 [DEBUG SC] Status after update: {"connected":false,"relayConnected":true,"readerDetected":false,"cardInserted":false,"readerName":null,"cardAtr":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardType":null,"lastCheck":"2026-01-11T19:59:49.739Z","error":"App desktop Event4U non connessa. Avviare l'applicazione sul PC.","bridgeConnected":false,"canEmitRealSeals":false,"demoMode":false}
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"bridge_status","connected":true,"message":"Bridge desktop app connected"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: bridge_status
+index-CbZag0Yr.js:1144 [DEBUG SC] Handling bridge/connection status: bridge_status Object
+index-CbZag0Yr.js:1144 [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+index-CbZag0Yr.js:1144 [DEBUG SC] Message type: bridge_status
+index-CbZag0Yr.js:1144 [DEBUG SC] msg.connected: true
+index-CbZag0Yr.js:1144 [DEBUG SC] msg.bridgeConnected: undefined
+index-CbZag0Yr.js:1144 [DEBUG SC] isConnected (final): true
+index-CbZag0Yr.js:1144 [DEBUG SC] Full message: {"type":"bridge_status","connected":true,"message":"Bridge desktop app connected"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Bridge IS connected - updating status to CONNECTED
+index-CbZag0Yr.js:1144 [DEBUG SC] Status after update: {"connected":true,"relayConnected":true,"readerDetected":false,"cardInserted":false,"readerName":null,"cardAtr":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardType":null,"lastCheck":"2026-01-11T19:59:51.277Z","error":null,"bridgeConnected":true,"canEmitRealSeals":false,"demoMode":false}
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","data":{"bridgeConnected":true,"readerConnected":false,"cardInserted":false,"readerName":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardAtr":null,"
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: status
+index-CbZag0Yr.js:1144 [DEBUG SC] Handling status message
+index-CbZag0Yr.js:1144 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-CbZag0Yr.js:1144 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": false,
+  "cardInserted": false,
+  "readerName": null,
+  "cardSerial": null,
+  "cardCounter": null,
+  "cardBalance": null,
+  "cardKeyId": null,
+  "cardAtr": null,
+  "cardEmail": null,
+  "cardCertificateCN": null,
+  "cardCertificateExpiry": null,
+  "demoMode": false,
+  "canEmitTickets": false,
+  "relayConnected": true,
+  "pinLocked": true,
+  "pinRequired": true
+}
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardSerial: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardCounter: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardBalance: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardKeyId: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardInserted: false
+index-CbZag0Yr.js:1144 [DEBUG SC] data.readerDetected: undefined
+index-CbZag0Yr.js:1144 [DEBUG SC] data.readerConnected: false
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","data":{"bridgeConnected":true,"readerConnected":false,"cardInserted":false,"readerName":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardAtr":null,"
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: status
+index-CbZag0Yr.js:1144 [DEBUG SC] Handling status message
+index-CbZag0Yr.js:1144 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-CbZag0Yr.js:1144 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": false,
+  "cardInserted": false,
+  "readerName": null,
+  "cardSerial": null,
+  "cardCounter": null,
+  "cardBalance": null,
+  "cardKeyId": null,
+  "cardAtr": null,
+  "cardEmail": null,
+  "cardCertificateCN": null,
+  "cardCertificateExpiry": null,
+  "demoMode": false,
+  "canEmitTickets": false,
+  "relayConnected": true,
+  "pinLocked": true,
+  "pinRequired": true
+}
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardSerial: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardCounter: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardBalance: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardKeyId: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardInserted: false
+index-CbZag0Yr.js:1144 [DEBUG SC] data.readerDetected: undefined
+index-CbZag0Yr.js:1144 [DEBUG SC] data.readerConnected: false
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] WebSocket CLOSED: 1006 
+index-CbZag0Yr.js:1144 [DEBUG SC] ====== SMART CARD CONNECTION START ======
+index-CbZag0Yr.js:1144 [DEBUG SC] URL: wss://manage.eventfouryou.com/ws/bridge
+index-CbZag0Yr.js:1144 [DEBUG SC] Cookies present: YES
+index-CbZag0Yr.js:1144 [DEBUG SC] Cookie value: _ga=GA1.1.962813290.1739208627; _fbp=fb.1.17397993...
+index-CbZag0Yr.js:1144 [DEBUG SC] WebSocket created, state: 0
+index-CbZag0Yr.js:1144 [DEBUG SC] WebSocket OPEN! State: 1
+index-CbZag0Yr.js:1144 [DEBUG SC] Sending get_status request...
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"connection_status","bridgeConnected":false,"connected":false,"message":"Bridge desktop app is not connected"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: connection_status
+index-CbZag0Yr.js:1144 [DEBUG SC] Handling bridge/connection status: connection_status Object
+index-CbZag0Yr.js:1144 [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+index-CbZag0Yr.js:1144 [DEBUG SC] Message type: connection_status
+index-CbZag0Yr.js:1144 [DEBUG SC] msg.connected: false
+index-CbZag0Yr.js:1144 [DEBUG SC] msg.bridgeConnected: false
+index-CbZag0Yr.js:1144 [DEBUG SC] isConnected (final): false
+index-CbZag0Yr.js:1144 [DEBUG SC] Full message: {"type":"connection_status","bridgeConnected":false,"connected":false,"message":"Bridge desktop app is not connected"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Bridge NOT connected - updating status to DISCONNECTED
+index-CbZag0Yr.js:1144 [DEBUG SC] Status after update: {"connected":false,"relayConnected":true,"readerDetected":false,"cardInserted":false,"readerName":null,"cardAtr":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardType":null,"lastCheck":"2026-01-11T20:04:53.871Z","error":"App desktop Event4U non connessa. Avviare l'applicazione sul PC.","bridgeConnected":false,"canEmitRealSeals":false,"demoMode":false}
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"bridge_status","connected":true,"message":"Bridge desktop app connected"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: bridge_status
+index-CbZag0Yr.js:1144 [DEBUG SC] Handling bridge/connection status: bridge_status Object
+index-CbZag0Yr.js:1144 [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+index-CbZag0Yr.js:1144 [DEBUG SC] Message type: bridge_status
+index-CbZag0Yr.js:1144 [DEBUG SC] msg.connected: true
+index-CbZag0Yr.js:1144 [DEBUG SC] msg.bridgeConnected: undefined
+index-CbZag0Yr.js:1144 [DEBUG SC] isConnected (final): true
+index-CbZag0Yr.js:1144 [DEBUG SC] Full message: {"type":"bridge_status","connected":true,"message":"Bridge desktop app connected"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Bridge IS connected - updating status to CONNECTED
+index-CbZag0Yr.js:1144 [DEBUG SC] Status after update: {"connected":true,"relayConnected":true,"readerDetected":false,"cardInserted":false,"readerName":null,"cardAtr":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardType":null,"lastCheck":"2026-01-11T20:04:53.933Z","error":null,"bridgeConnected":true,"canEmitRealSeals":false,"demoMode":false}
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","data":{"bridgeConnected":true,"readerConnected":false,"cardInserted":false,"readerName":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardAtr":null,"
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: status
+index-CbZag0Yr.js:1144 [DEBUG SC] Handling status message
+index-CbZag0Yr.js:1144 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-CbZag0Yr.js:1144 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": false,
+  "cardInserted": false,
+  "readerName": null,
+  "cardSerial": null,
+  "cardCounter": null,
+  "cardBalance": null,
+  "cardKeyId": null,
+  "cardAtr": null,
+  "cardEmail": null,
+  "cardCertificateCN": null,
+  "cardCertificateExpiry": null,
+  "demoMode": false,
+  "canEmitTickets": false,
+  "relayConnected": true,
+  "pinLocked": true,
+  "pinRequired": true
+}
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardSerial: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardCounter: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardBalance: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardKeyId: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardInserted: false
+index-CbZag0Yr.js:1144 [DEBUG SC] data.readerDetected: undefined
+index-CbZag0Yr.js:1144 [DEBUG SC] data.readerConnected: false
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","data":{"bridgeConnected":true,"readerConnected":false,"cardInserted":false,"readerName":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardAtr":null,"
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: status
+index-CbZag0Yr.js:1144 [DEBUG SC] Handling status message
+index-CbZag0Yr.js:1144 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-CbZag0Yr.js:1144 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": false,
+  "cardInserted": false,
+  "readerName": null,
+  "cardSerial": null,
+  "cardCounter": null,
+  "cardBalance": null,
+  "cardKeyId": null,
+  "cardAtr": null,
+  "cardEmail": null,
+  "cardCertificateCN": null,
+  "cardCertificateExpiry": null,
+  "demoMode": false,
+  "canEmitTickets": false,
+  "relayConnected": true,
+  "pinLocked": true,
+  "pinRequired": true
+}
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardSerial: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardCounter: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardBalance: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardKeyId: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardInserted: false
+index-CbZag0Yr.js:1144 [DEBUG SC] data.readerDetected: undefined
+index-CbZag0Yr.js:1144 [DEBUG SC] data.readerConnected: false
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","toCompanyId":"4186e56b-d6bd-4d1d-b7d6-f0b22ec12b91","toUserId":"1b809fda-2601-452a-9c70-5de6f23ecf97","data":{"bridgeConnected":true,"readerConnected":false,"cardInserted":false,"rea
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: status
+index-CbZag0Yr.js:1144 [DEBUG SC] Handling status message
+index-CbZag0Yr.js:1144 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-CbZag0Yr.js:1144 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": false,
+  "cardInserted": false,
+  "readerName": null,
+  "cardSerial": null,
+  "cardCounter": null,
+  "cardBalance": null,
+  "cardKeyId": null,
+  "cardAtr": null,
+  "cardEmail": null,
+  "cardCertificateCN": null,
+  "cardCertificateExpiry": null,
+  "demoMode": false,
+  "canEmitTickets": false,
+  "relayConnected": true,
+  "pinLocked": true,
+  "pinRequired": true
+}
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardSerial: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardCounter: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardBalance: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardKeyId: null
+index-CbZag0Yr.js:1144 [DEBUG SC] data.cardInserted: false
+index-CbZag0Yr.js:1144 [DEBUG SC] data.readerDetected: undefined
+index-CbZag0Yr.js:1144 [DEBUG SC] data.readerConnected: false
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+installHook.js:1 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+overrideMethod @ installHook.js:1
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: [{…}]
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: [{…}]
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: [{…}]
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: [{…}]
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: [{…}]
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: [{…}]
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: pong
+index-CbZag0Yr.js:1144 [DEBUG SC] Pong received
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: [{…}]
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: [{…}]
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: [{…}]
+index-CbZag0Yr.js:1448 [EVENT-HUB] availablePrUsers: [{…}]
+index-CbZag0Yr.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-CbZag0Yr.js:1144 [DEBUG SC] Parsed message type: ping
+index-CbZag0Yr.js:1144 [DEBUG SC] Ping received, sending pong
