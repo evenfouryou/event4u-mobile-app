@@ -80,6 +80,17 @@ import {
   RotateCcw,
 } from "lucide-react";
 import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
+import { Separator } from "@/components/ui/separator";
+
+interface SearchedUser {
+  id: string;
+  firstName: string | null;
+  lastName: string | null;
+  email: string | null;
+  phone: string | null;
+  role: string | null;
+  isAlreadyPr: boolean;
+}
 
 interface PrProfile {
   id: string;
@@ -154,6 +165,8 @@ export default function PrManagement() {
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
   const [selectedPr, setSelectedPr] = useState<PrProfile | null>(null);
+  const [phoneSearchQuery, setPhoneSearchQuery] = useState("");
+  const [selectedExistingUser, setSelectedExistingUser] = useState<SearchedUser | null>(null);
 
   const canManagePr = user?.role === 'gestore' || user?.role === 'super_admin';
 
@@ -165,6 +178,17 @@ export default function PrManagement() {
       return res.json();
     },
     enabled: canManagePr,
+  });
+
+  const { data: searchedUsers = [], isFetching: isSearching } = useQuery<SearchedUser[]>({
+    queryKey: ["/api/reservations/search-users", phoneSearchQuery],
+    queryFn: async () => {
+      if (phoneSearchQuery.length < 5) return [];
+      const res = await fetch(`/api/reservations/search-users?phone=${encodeURIComponent(phoneSearchQuery)}`, { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    enabled: phoneSearchQuery.length >= 5,
   });
 
   const filteredProfiles = useMemo(() => {
@@ -197,7 +221,7 @@ export default function PrManagement() {
   });
 
   const createPrMutation = useMutation({
-    mutationFn: async (data: CreatePrFormData) => {
+    mutationFn: async (data: CreatePrFormData & { existingUserId?: string }) => {
       const response = await apiRequest("POST", "/api/reservations/pr-profiles", data);
       return response.json();
     },
@@ -205,9 +229,13 @@ export default function PrManagement() {
       queryClient.invalidateQueries({ queryKey: ["/api/reservations/pr-profiles"] });
       setIsCreateDialogOpen(false);
       createForm.reset();
+      setSelectedExistingUser(null);
+      setPhoneSearchQuery("");
       toast({
         title: "PR Creato",
-        description: "Il profilo PR è stato creato e le credenziali inviate via SMS",
+        description: selectedExistingUser 
+          ? "Il cliente è stato promosso a PR"
+          : "Il profilo PR è stato creato e le credenziali inviate via SMS",
       });
     },
     onError: (error: any) => {
@@ -750,16 +778,109 @@ export default function PrManagement() {
         </CardContent>
       </Card>
 
-      <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-        <DialogContent className="sm:max-w-md">
+      <Dialog open={isCreateDialogOpen} onOpenChange={(open) => {
+        setIsCreateDialogOpen(open);
+        if (!open) {
+          setSelectedExistingUser(null);
+          setPhoneSearchQuery("");
+          createForm.reset();
+        }
+      }}>
+        <DialogContent className="sm:max-w-lg">
           <DialogHeader>
             <DialogTitle>Nuovo PR</DialogTitle>
             <DialogDescription>
-              Crea un nuovo profilo PR. Le credenziali saranno inviate automaticamente via SMS.
+              Cerca un cliente esistente o crea un nuovo profilo PR.
             </DialogDescription>
           </DialogHeader>
+          
+          <div className="space-y-4">
+            <div className="space-y-2">
+              <Label className="flex items-center gap-2">
+                <Search className="h-4 w-4" />
+                Cerca cliente per telefono
+              </Label>
+              <Input
+                placeholder="Inserisci numero telefono (min 5 cifre)..."
+                value={phoneSearchQuery}
+                onChange={(e) => setPhoneSearchQuery(e.target.value)}
+                data-testid="input-search-customer-phone"
+              />
+              {isSearching && (
+                <p className="text-sm text-muted-foreground">Ricerca in corso...</p>
+              )}
+              {searchedUsers.length > 0 && !selectedExistingUser && (
+                <div className="border rounded-md max-h-40 overflow-y-auto">
+                  {searchedUsers.map((u) => (
+                    <div
+                      key={u.id}
+                      className={`p-2 hover-elevate cursor-pointer flex items-center justify-between ${
+                        u.isAlreadyPr ? 'opacity-50' : ''
+                      }`}
+                      onClick={() => {
+                        if (!u.isAlreadyPr) {
+                          setSelectedExistingUser(u);
+                          createForm.setValue('firstName', u.firstName || '');
+                          createForm.setValue('lastName', u.lastName || '');
+                          const phoneMatch = u.phone?.match(/^(\+\d{1,4})(\d+)$/);
+                          if (phoneMatch) {
+                            createForm.setValue('phonePrefix', phoneMatch[1]);
+                            createForm.setValue('phone', phoneMatch[2]);
+                          } else if (u.phone) {
+                            createForm.setValue('phone', u.phone.replace(/^\+\d{1,4}/, ''));
+                          }
+                        }
+                      }}
+                      data-testid={`button-select-user-${u.id}`}
+                    >
+                      <div>
+                        <p className="font-medium">{u.firstName} {u.lastName}</p>
+                        <p className="text-sm text-muted-foreground">{u.phone}</p>
+                      </div>
+                      {u.isAlreadyPr ? (
+                        <Badge variant="secondary">Già PR</Badge>
+                      ) : (
+                        <Badge variant="outline">Seleziona</Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+              {phoneSearchQuery.length >= 5 && searchedUsers.length === 0 && !isSearching && (
+                <p className="text-sm text-muted-foreground">Nessun cliente trovato. Compila i dati per creare un nuovo PR.</p>
+              )}
+            </div>
+            
+            {selectedExistingUser && (
+              <div className="p-3 bg-primary/10 rounded-md flex items-center justify-between">
+                <div>
+                  <p className="font-medium text-sm">Cliente selezionato:</p>
+                  <p className="text-sm">{selectedExistingUser.firstName} {selectedExistingUser.lastName} - {selectedExistingUser.phone}</p>
+                </div>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => {
+                    setSelectedExistingUser(null);
+                    createForm.reset();
+                  }}
+                >
+                  <XCircle className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
+            
+            <Separator />
+          </div>
+          
           <Form {...createForm}>
-            <form onSubmit={createForm.handleSubmit((data) => createPrMutation.mutate(data))} className="space-y-4">
+            <form onSubmit={createForm.handleSubmit((data) => 
+              createPrMutation.mutate({
+                ...data,
+                existingUserId: selectedExistingUser?.id,
+              })
+            )} className="space-y-4">
               <div className="grid grid-cols-2 gap-4">
                 <FormField
                   control={createForm.control}
@@ -828,7 +949,10 @@ export default function PrManagement() {
                 />
               </div>
               <p className="text-sm text-muted-foreground">
-                Le commissioni possono essere configurate successivamente modificando il profilo PR.
+                {selectedExistingUser 
+                  ? "Il cliente verrà promosso a PR con le credenziali esistenti."
+                  : "Le credenziali saranno inviate automaticamente via SMS."
+                }
               </p>
               <DialogFooter>
                 <Button
@@ -842,12 +966,12 @@ export default function PrManagement() {
                   {createPrMutation.isPending ? (
                     <>
                       <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                      Creando...
+                      {selectedExistingUser ? "Promuovendo..." : "Creando..."}
                     </>
                   ) : (
                     <>
                       <Plus className="h-4 w-4 mr-2" />
-                      Crea PR
+                      {selectedExistingUser ? "Promuovi a PR" : "Crea PR"}
                     </>
                   )}
                 </Button>

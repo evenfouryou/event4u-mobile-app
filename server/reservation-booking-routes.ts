@@ -125,6 +125,67 @@ function calculateCommission(
 
 // ==================== PR Profile APIs ====================
 
+// Search users by phone for customer-to-PR promotion
+router.get("/api/reservations/search-users", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const phone = req.query.phone as string;
+    
+    if (!phone || phone.length < 5) {
+      return res.json([]);
+    }
+    
+    // Clean phone number (remove spaces, dashes)
+    const cleanPhone = phone.replace(/[\s\-]/g, '');
+    
+    // Search for users by phone (partial match)
+    const results = await db.select({
+      id: users.id,
+      firstName: users.firstName,
+      lastName: users.lastName,
+      email: users.email,
+      phone: users.phone,
+      role: users.role,
+      companyId: users.companyId,
+    })
+      .from(users)
+      .where(
+        and(
+          sql`${users.phone} LIKE ${'%' + cleanPhone + '%'}`,
+          or(
+            eq(users.companyId, user.companyId),
+            sql`${users.companyId} IS NULL`
+          )
+        )
+      )
+      .limit(10);
+    
+    // Check which users already have a PR profile for this company
+    const userIds = results.map(u => u.id);
+    const existingPrProfiles = userIds.length > 0 
+      ? await db.select({ userId: prProfiles.userId })
+          .from(prProfiles)
+          .where(and(
+            sql`${prProfiles.userId} IN (${sql.join(userIds.map(id => sql`${id}`), sql`, `)})`,
+            eq(prProfiles.companyId, user.companyId)
+          ))
+      : [];
+    
+    const existingPrUserIds = new Set(existingPrProfiles.map(p => p.userId));
+    
+    // Return users with flag indicating if they're already PR
+    const enrichedResults = results.map(u => ({
+      ...u,
+      isAlreadyPr: existingPrUserIds.has(u.id),
+    }));
+    
+    res.json(enrichedResults);
+  } catch (error: any) {
+    console.error("Error searching users:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
+
 // Get all PR profiles for company
 router.get("/api/reservations/pr-profiles", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
