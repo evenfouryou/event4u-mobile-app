@@ -724,6 +724,12 @@ export default function EventHub() {
   const [selectedPrUserId, setSelectedPrUserId] = useState<string>('');
   const [newPrPermissions, setNewPrPermissions] = useState({ canAddToLists: true, canProposeTables: true });
 
+  // PR List Assignment Dialog State
+  const [showPrListAssignmentDialog, setShowPrListAssignmentDialog] = useState(false);
+  const [selectedPrAssignmentForLists, setSelectedPrAssignmentForLists] = useState<any>(null);
+  const [prAssignedListIds, setPrAssignedListIds] = useState<string[]>([]);
+  const [prAssignedListsLoading, setPrAssignedListsLoading] = useState(false);
+
   // Biglietti Emessi state
   const [ticketSectorFilter, setTicketSectorFilter] = useState<string>("all");
   const [ticketStatusFilter, setTicketStatusFilter] = useState<string>("all");
@@ -1608,6 +1614,58 @@ export default function EventHub() {
       toast({ title: "Errore", description: error?.message || "Impossibile rimuovere il PR", variant: "destructive" });
     },
   });
+
+  // Update PR assigned lists mutation
+  const updatePrAssignedListsMutation = useMutation({
+    mutationFn: async ({ assignmentId, listIds }: { assignmentId: string; listIds: string[] }) => {
+      return apiRequest('POST', `/api/e4u/pr-assignments/${assignmentId}/lists`, { listIds });
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['/api/events', id, 'pr-assignments'] });
+      toast({ title: "Liste aggiornate", description: "Le liste assegnate al PR sono state aggiornate." });
+      setShowPrListAssignmentDialog(false);
+      setSelectedPrAssignmentForLists(null);
+      setPrAssignedListIds([]);
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error?.message || "Impossibile aggiornare le liste", variant: "destructive" });
+    },
+  });
+
+  // Open PR list assignment dialog
+  const openPrListAssignmentDialog = async (assignment: any) => {
+    setSelectedPrAssignmentForLists(assignment);
+    setPrAssignedListsLoading(true);
+    setShowPrListAssignmentDialog(true);
+    
+    try {
+      const response = await apiRequest('GET', `/api/e4u/pr-assignments/${assignment.id}/lists`);
+      const assignedListIds = (response as any[]).map((item: any) => item.listId || item.id);
+      setPrAssignedListIds(assignedListIds);
+    } catch (error) {
+      setPrAssignedListIds([]);
+    } finally {
+      setPrAssignedListsLoading(false);
+    }
+  };
+
+  // Toggle PR list selection
+  const togglePrListSelection = (listId: string) => {
+    setPrAssignedListIds(prev => 
+      prev.includes(listId) 
+        ? prev.filter(id => id !== listId)
+        : [...prev, listId]
+    );
+  };
+
+  // Save PR list assignments
+  const handleSavePrListAssignments = () => {
+    if (!selectedPrAssignmentForLists) return;
+    updatePrAssignedListsMutation.mutate({ 
+      assignmentId: selectedPrAssignmentForLists.id, 
+      listIds: prAssignedListIds 
+    });
+  };
 
   // Open scanner access dialog
   const openScannerAccessDialog = (scanner: any) => {
@@ -4076,13 +4134,14 @@ export default function EventHub() {
                       <TableRow>
                         <TableHead>Nome</TableHead>
                         <TableHead>Email</TableHead>
-                        <TableHead>Ruolo</TableHead>
-                        <TableHead className="w-12"></TableHead>
+                        <TableHead>Liste Assegnate</TableHead>
+                        <TableHead className="w-24"></TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
                       {prAssignments.map((assignment: any) => {
                         const prProfile = assignment.prProfile;
+                        const assignedListCount = assignment.assignedListIds?.length || 0;
                         return (
                           <TableRow key={assignment.id || assignment.prUserId} data-testid={`row-pr-assignment-${assignment.prUserId}`}>
                             <TableCell className="font-medium">
@@ -4093,18 +4152,33 @@ export default function EventHub() {
                               {prProfile?.email || prProfile?.phone || '-'}
                             </TableCell>
                             <TableCell>
-                              <Badge variant="secondary">PR</Badge>
+                              {assignedListCount === 0 ? (
+                                <Badge className="bg-emerald-500/20 text-emerald-400">Tutte le liste</Badge>
+                              ) : (
+                                <Badge className="bg-amber-500/20 text-amber-400">{assignedListCount} {assignedListCount === 1 ? 'lista' : 'liste'}</Badge>
+                              )}
                             </TableCell>
                             <TableCell>
-                              <Button 
-                                variant="ghost" 
-                                size="icon" 
-                                onClick={() => removePrMutationNew.mutate(assignment.prUserId)}
-                                disabled={removePrMutationNew.isPending}
-                                data-testid={`button-remove-pr-${assignment.prUserId}`}
-                              >
-                                <Trash2 className="h-4 w-4" />
-                              </Button>
+                              <div className="flex gap-1">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  onClick={() => openPrListAssignmentDialog(assignment)}
+                                  data-testid={`button-manage-pr-lists-${assignment.prUserId}`}
+                                  title="Gestisci liste"
+                                >
+                                  <Settings className="h-4 w-4" />
+                                </Button>
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  onClick={() => removePrMutationNew.mutate(assignment.prUserId)}
+                                  disabled={removePrMutationNew.isPending}
+                                  data-testid={`button-remove-pr-${assignment.prUserId}`}
+                                >
+                                  <Trash2 className="h-4 w-4" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         );
@@ -4959,6 +5033,120 @@ export default function EventHub() {
               >
                 {assignPrMutationNew.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
                 Assegna PR
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+
+        {/* PR List Assignment Dialog */}
+        <Dialog open={showPrListAssignmentDialog} onOpenChange={(open) => {
+          setShowPrListAssignmentDialog(open);
+          if (!open) {
+            setSelectedPrAssignmentForLists(null);
+            setPrAssignedListIds([]);
+          }
+        }}>
+          <DialogContent data-testid="dialog-pr-list-assignment">
+            <DialogHeader>
+              <DialogTitle>Liste Assegnate</DialogTitle>
+              <DialogDescription>
+                Seleziona le liste a cui questo PR può aggiungere ospiti
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              <div className="p-3 rounded-lg border border-blue-500/30 bg-blue-500/10">
+                <p className="text-sm text-blue-400">
+                  <AlertCircle className="h-4 w-4 inline mr-2" />
+                  Nessuna lista selezionata = accesso a tutte le liste
+                </p>
+              </div>
+              
+              {prAssignedListsLoading ? (
+                <div className="space-y-2">
+                  {[1, 2, 3].map(i => <Skeleton key={i} className="h-12 w-full" />)}
+                </div>
+              ) : e4uLists.length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <FileText className="h-10 w-10 mx-auto mb-3 opacity-50" />
+                  <p className="text-sm">Nessuna lista disponibile</p>
+                  <p className="text-xs mt-1">Crea prima una lista per questo evento</p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[300px] overflow-y-auto">
+                  <div className="flex items-center justify-between p-2 border-b">
+                    <span className="text-sm font-medium">Seleziona liste</span>
+                    <div className="flex gap-2">
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setPrAssignedListIds(e4uLists.map((l: any) => l.id))}
+                      >
+                        Tutte
+                      </Button>
+                      <Button 
+                        variant="ghost" 
+                        size="sm" 
+                        onClick={() => setPrAssignedListIds([])}
+                      >
+                        Nessuna
+                      </Button>
+                    </div>
+                  </div>
+                  {e4uLists.map((list: any) => (
+                    <div 
+                      key={list.id} 
+                      className="flex items-center gap-3 p-3 rounded-lg border hover-elevate cursor-pointer"
+                      onClick={() => togglePrListSelection(list.id)}
+                      data-testid={`checkbox-list-${list.id}`}
+                    >
+                      <Checkbox
+                        checked={prAssignedListIds.includes(list.id)}
+                        onCheckedChange={() => togglePrListSelection(list.id)}
+                      />
+                      <div className="flex-1">
+                        <p className="text-sm font-medium">{list.name}</p>
+                        {list.maxCapacity && (
+                          <p className="text-xs text-muted-foreground">
+                            Capacità max: {list.maxCapacity}
+                          </p>
+                        )}
+                      </div>
+                      {list.price && parseFloat(list.price) > 0 && (
+                        <Badge variant="secondary">{list.price}€</Badge>
+                      )}
+                    </div>
+                  ))}
+                </div>
+              )}
+
+              <div className="text-sm text-muted-foreground">
+                {prAssignedListIds.length === 0 ? (
+                  <span className="text-emerald-400">
+                    <CheckCircle2 className="h-4 w-4 inline mr-1" />
+                    Il PR avrà accesso a tutte le liste
+                  </span>
+                ) : (
+                  <span>
+                    {prAssignedListIds.length} {prAssignedListIds.length === 1 ? 'lista selezionata' : 'liste selezionate'}
+                  </span>
+                )}
+              </div>
+            </div>
+            <DialogFooter>
+              <Button variant="outline" onClick={() => {
+                setShowPrListAssignmentDialog(false);
+                setSelectedPrAssignmentForLists(null);
+                setPrAssignedListIds([]);
+              }}>
+                Annulla
+              </Button>
+              <Button 
+                onClick={handleSavePrListAssignments}
+                disabled={updatePrAssignedListsMutation.isPending}
+                data-testid="button-save-pr-lists"
+              >
+                {updatePrAssignedListsMutation.isPending ? <Loader2 className="h-4 w-4 mr-2 animate-spin" /> : null}
+                Salva
               </Button>
             </DialogFooter>
           </DialogContent>
