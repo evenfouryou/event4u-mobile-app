@@ -271,6 +271,44 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
       console.log(`[PR] Phone ${fullPhone} already PR in another company, linking to existing user ${userId}`);
     }
     
+    // If no existing user found, create a new user account automatically
+    if (!userId) {
+      // Generate a unique email for the PR user (they can update it later)
+      const prEmail = (req.body.email as string) || `pr-${validated.phone}@pr.event4u.local`;
+      
+      // Check if email already exists in the SAME company
+      const [existingEmailUser] = await db.select({ id: users.id, companyId: users.companyId })
+        .from(users)
+        .where(eq(users.email, prEmail));
+      
+      if (existingEmailUser && existingEmailUser.companyId === user.companyId) {
+        // Only link to existing user if in the same company
+        userId = existingEmailUser.id;
+        isExistingUser = true;
+        console.log(`[PR] Email ${prEmail} already exists in same company, linking to user ${userId}`);
+      } else {
+        // Generate unique email to avoid conflicts with other companies
+        const uniqueEmail = existingEmailUser 
+          ? `pr-${validated.phone}-${Date.now()}@pr.event4u.local`
+          : prEmail;
+        
+        // Create new user account
+        const [newUser] = await db.insert(users).values({
+          email: uniqueEmail,
+          passwordHash: passwordHash, // Same password as PR profile
+          firstName: validated.firstName,
+          lastName: validated.lastName,
+          phone: fullPhone,
+          role: 'pr',
+          companyId: user.companyId,
+          emailVerified: false, // Require verification - credentials sent via SMS
+        }).returning();
+        
+        userId = newUser.id;
+        console.log(`[PR] Created new user account ${userId} for PR ${validated.firstName} ${validated.lastName}`);
+      }
+    }
+    
     // Create PR profile for this company
     const [profile] = await db.insert(prProfiles).values({
       userId: userId,

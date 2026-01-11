@@ -10,6 +10,8 @@ import {
   prPayouts,
   events,
   companies,
+  users,
+  userCompanyRoles,
   insertPrProfileSchema,
   updatePrProfileSchema,
   insertEventPrAssignmentSchema,
@@ -18,6 +20,7 @@ import {
 import { z } from "zod";
 import { eq, and, desc, sql, isNull, gte, lte, inArray } from "drizzle-orm";
 import crypto from "crypto";
+import bcrypt from "bcryptjs";
 
 const router = Router();
 
@@ -173,17 +176,68 @@ router.post("/api/staff/subordinates", requireStaff, async (req: Request, res: R
     // Generate unique PR code
     const prCode = generatePrCode();
     
+    // Generate password for the new PR
+    const password = crypto.randomBytes(4).toString('hex').toUpperCase();
+    const passwordHash = await bcrypt.hash(password, 10);
+    
+    // Create user account for the PR
+    const fullPhone = `${validated.phonePrefix || '+39'}${validated.phone}`;
+    const prEmail = validated.email || `pr-${validated.phone}@pr.event4u.local`;
+    
+    let userId: string | null = null;
+    
+    // Check if email already exists in the SAME company
+    const [existingEmailUser] = await db.select({ id: users.id, companyId: users.companyId })
+      .from(users)
+      .where(eq(users.email, prEmail));
+    
+    if (existingEmailUser && existingEmailUser.companyId === prSession.companyId) {
+      // Only link to existing user if in the same company
+      userId = existingEmailUser.id;
+      console.log(`[Staff-PR] Email ${prEmail} already exists in same company, linking to user ${userId}`);
+    } else {
+      // Generate unique email to avoid conflicts with other companies
+      const uniqueEmail = existingEmailUser 
+        ? `pr-${validated.phone}-${Date.now()}@pr.event4u.local`
+        : prEmail;
+      
+      // Create new user account
+      const [newUser] = await db.insert(users).values({
+        email: uniqueEmail,
+        passwordHash: passwordHash,
+        firstName: validated.firstName,
+        lastName: validated.lastName,
+        phone: fullPhone,
+        role: 'pr',
+        companyId: prSession.companyId,
+        emailVerified: false, // Require verification
+      }).returning();
+      
+      userId = newUser.id;
+      console.log(`[Staff-PR] Created new user account ${userId} for subordinate PR`);
+    }
+    
+    // Create userCompanyRoles entry
+    await db.insert(userCompanyRoles).values({
+      userId: userId,
+      companyId: prSession.companyId,
+      role: 'pr',
+    }).onConflictDoNothing();
+    
     const [newPr] = await db.insert(prProfiles)
       .values({
         ...validated,
+        userId: userId,
         companyId: prSession.companyId,
         supervisorId: prSession.id,
         isStaff: false,
         prCode,
+        passwordHash,
         isActive: true,
       })
       .returning();
 
+    // Return the new PR profile (password is sent via SMS, not in response)
     res.status(201).json(newPr);
   } catch (error: any) {
     console.error("Error creating subordinate:", error);
