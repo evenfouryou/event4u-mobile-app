@@ -1179,47 +1179,23 @@ router.get("/api/users/prs", requireAuth, requireGestore, async (req: Request, r
     // Always filter by company (use user.companyId for all roles including super_admin)
     whereConditions.push(eq(prProfiles.companyId, user.companyId));
     
-    let prProfilesList;
-    
-    if (includeStaff) {
-      // Include all (both PR and Staff)
-      prProfilesList = await db
-        .select({
-          id: prProfiles.id,
-          firstName: prProfiles.firstName,
-          lastName: prProfiles.lastName,
-          email: prProfiles.email,
-          phone: prProfiles.phone,
-          prCode: prProfiles.prCode,
-          displayName: prProfiles.displayName,
-          isStaff: prProfiles.isStaff,
-        })
-        .from(prProfiles)
-        .where(and(...whereConditions))
-        .orderBy(prProfiles.lastName, prProfiles.firstName);
-    } else {
-      // Exclude Staff: isStaff=false OR isStaff IS NULL (old profiles without the field)
-      prProfilesList = await db
-        .select({
-          id: prProfiles.id,
-          firstName: prProfiles.firstName,
-          lastName: prProfiles.lastName,
-          email: prProfiles.email,
-          phone: prProfiles.phone,
-          prCode: prProfiles.prCode,
-          displayName: prProfiles.displayName,
-          isStaff: prProfiles.isStaff,
-        })
-        .from(prProfiles)
-        .where(and(
-          ...whereConditions,
-          or(
-            eq(prProfiles.isStaff, false),
-            isNull(prProfiles.isStaff)
-          )
-        ))
-        .orderBy(prProfiles.lastName, prProfiles.firstName);
-    }
+    // Align with /api/reservations/pr-profiles: no isActive or isStaff filter
+    // Just filter by companyId to match Gestione PR behavior
+    const prProfilesList = await db
+      .select({
+        id: prProfiles.id,
+        firstName: prProfiles.firstName,
+        lastName: prProfiles.lastName,
+        email: prProfiles.email,
+        phone: prProfiles.phone,
+        prCode: prProfiles.prCode,
+        displayName: prProfiles.displayName,
+        isStaff: prProfiles.isStaff,
+        isActive: prProfiles.isActive,
+      })
+      .from(prProfiles)
+      .where(and(...whereConditions))
+      .orderBy(prProfiles.lastName, prProfiles.firstName);
     
     console.log(`[PR-LIST] Returning ${prProfilesList.length} profiles:`, JSON.stringify(prProfilesList, null, 2));
     res.json(prProfilesList);
