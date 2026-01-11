@@ -3,6 +3,7 @@ import {
   systemSettings,
   users,
   companies,
+  userCompanies,
   companyFeatures,
   userFeatures,
   locations,
@@ -500,6 +501,7 @@ export class DatabaseStorage implements IStorage {
     await db.delete(eventScanners).where(eq(eventScanners.userId, id));
     await db.delete(cashierSessions).where(eq(cashierSessions.userId, id));
     await db.delete(printerAgents).where(eq(printerAgents.userId, id));
+    await db.delete(userCompanies).where(eq(userCompanies.userId, id));
     
     // Tables with optional userId - set to NULL
     await db.update(staff).set({ userId: null }).where(eq(staff.userId, id));
