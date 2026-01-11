@@ -1278,6 +1278,10 @@ export default function EventHub() {
   const { data: availablePrUsers = [] } = useQuery<any[]>({
     queryKey: ['/api/users/prs'],
   });
+  
+  // Debug: log PR data for troubleshooting
+  console.log('[Event Hub] availablePrUsers:', availablePrUsers);
+  console.log('[Event Hub] PR filtered (no staff):', availablePrUsers.filter((p: any) => !p.isStaff));
 
   // SIAE sector mutations
   const [editingSector, setEditingSector] = useState<SiaeEventSector | null>(null);
