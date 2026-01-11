@@ -144,6 +144,7 @@ export default function TemplateBuilder() {
   const { data: template, isLoading } = useQuery<TicketTemplate & { elements: TicketTemplateElement[] }>({
     queryKey: ['/api/ticket/templates', id],
     enabled: !!id,
+    staleTime: 0, // Always refetch to ensure fresh data after edits
   });
 
   // Fetch connected print agents (only when dialog is open)

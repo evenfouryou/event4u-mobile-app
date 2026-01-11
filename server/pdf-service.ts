@@ -1,5 +1,6 @@
 import puppeteer from 'puppeteer-core';
 import QRCode from 'qrcode';
+import type { DigitalTicketTemplate } from '@shared/schema';
 
 export async function generateWalletImage(
   ticketData: {
@@ -197,7 +198,8 @@ export async function generateDigitalTicketPdf(
     organizerCompany?: string;
     primaryColor?: string;
     logoUrl?: string;
-  }
+  },
+  template?: DigitalTicketTemplate
 ): Promise<Buffer> {
   let browser;
   
@@ -208,10 +210,37 @@ export async function generateDigitalTicketPdf(
       throw new Error('PUPPETEER_EXECUTABLE_PATH environment variable not set');
     }
     
+    // Extract template values with defaults
+    // SIAE COMPLIANCE: All mandatory fields are ALWAYS shown in the PDF output regardless of template settings.
+    // Template configuration only affects visual styling (colors, fonts, logo, QR appearance).
+    // The show* flags in the template schema are for digital preview only, not PDF output.
+    const primaryColor = template?.primaryColor || ticketData.primaryColor || '#6366f1';
+    const secondaryColor = template?.secondaryColor || '#4f46e5';
+    const backgroundColor = template?.backgroundColor || '#1e1b4b';
+    const textColor = template?.textColor || '#ffffff';
+    const accentColor = template?.accentColor || '#a855f7';
+    const fontFamily = template?.fontFamily || "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
+    const titleFontSize = template?.titleFontSize || 22;
+    const bodyFontSize = template?.bodyFontSize || 14;
+    const qrSize = template?.qrSize || 160;
+    const logoUrl = template?.logoUrl || ticketData.logoUrl;
+    const logoPosition = template?.logoPosition || 'top-center';
+    const logoSize = template?.logoSize || 'medium';
+    const backgroundStyle = template?.backgroundStyle || 'gradient';
+    const gradientDirection = template?.gradientDirection || 'to-bottom';
+    const showPerforatedEdge = template?.showPerforatedEdge !== false;
+    
+    // QR code configuration from template
+    const qrForegroundColor = template?.qrForegroundColor || '#000000';
+    const qrBackgroundColor = template?.qrBackgroundColor || 'transparent';
+    
     const qrDataUrl = await QRCode.toDataURL(ticketData.qrCode || `TICKET-${ticketData.ticketCode}`, {
-      width: 300,
+      width: Math.max(qrSize, 200),
       margin: 2,
-      color: { dark: '#000000', light: '#FFFFFF' },
+      color: { 
+        dark: qrForegroundColor, 
+        light: qrBackgroundColor === 'transparent' ? '#FFFFFF' : qrBackgroundColor 
+      },
       errorCorrectionLevel: 'H'
     });
 
@@ -226,7 +255,30 @@ export async function generateDigitalTicketPdf(
       minute: '2-digit' 
     });
 
-    const primaryColor = ticketData.primaryColor || '#6366f1';
+    // Generate background style based on template configuration
+    const getBackgroundStyle = () => {
+      if (backgroundStyle === 'solid') {
+        return `background: ${primaryColor};`;
+      }
+      if (backgroundStyle === 'gradient') {
+        if (gradientDirection === 'radial') {
+          return `background: radial-gradient(circle at center, ${primaryColor} 0%, ${secondaryColor} 100%);`;
+        }
+        const direction = gradientDirection === 'to-right' ? '90deg' : '135deg';
+        return `background: linear-gradient(${direction}, ${primaryColor} 0%, ${secondaryColor} 100%);`;
+      }
+      return `background: linear-gradient(135deg, ${primaryColor} 0%, ${secondaryColor} 100%);`;
+    };
+
+    // Logo HTML based on template configuration
+    const logoSizeMap = { small: '30px', medium: '50px', large: '70px' };
+    const logoHeight = logoSizeMap[logoSize as keyof typeof logoSizeMap] || '50px';
+    const logoPositionStyle = logoPosition === 'top-left' ? 'text-align: left;' : 
+                              logoPosition === 'top-right' ? 'text-align: right;' : 'text-align: center;';
+    const logoHtml = logoUrl ? 
+      `<div class="logo-container" style="${logoPositionStyle}">
+        <img src="${logoUrl}" alt="Logo" style="height: ${logoHeight}; max-width: 150px; object-fit: contain;" />
+      </div>` : '';
 
     const pdfHtml = `
 <!DOCTYPE html>
@@ -239,7 +291,7 @@ export async function generateDigitalTicketPdf(
     body {
       width: 148mm;
       height: 210mm;
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+      font-family: ${fontFamily};
       background: #f8fafc;
       color: #1e293b;
       padding: 15mm;
@@ -256,9 +308,12 @@ export async function generateDigitalTicketPdf(
       flex-direction: column;
     }
     .header {
-      background: linear-gradient(135deg, ${primaryColor} 0%, ${primaryColor}dd 100%);
-      color: white;
+      ${getBackgroundStyle()}
+      color: ${textColor};
       padding: 20px 24px;
+    }
+    .logo-container {
+      margin-bottom: 12px;
     }
     .header-logo {
       font-size: 10px;
@@ -268,7 +323,7 @@ export async function generateDigitalTicketPdf(
       margin-bottom: 8px;
     }
     .event-name {
-      font-size: 22px;
+      font-size: ${titleFontSize}px;
       font-weight: 700;
       line-height: 1.3;
       margin-bottom: 4px;
@@ -302,7 +357,7 @@ export async function generateDigitalTicketPdf(
       margin-bottom: 4px;
     }
     .info-value {
-      font-size: 14px;
+      font-size: ${bodyFontSize}px;
       font-weight: 600;
       color: #1e293b;
     }
@@ -314,8 +369,8 @@ export async function generateDigitalTicketPdf(
       margin-top: auto;
     }
     .qr-code {
-      width: 160px;
-      height: 160px;
+      width: ${qrSize}px;
+      height: ${qrSize}px;
       margin: 0 auto 12px;
     }
     .qr-instructions {
@@ -352,7 +407,7 @@ export async function generateDigitalTicketPdf(
       padding: 12px;
       font-size: 9px;
       color: #94a3b8;
-      border-top: 1px dashed #e2e8f0;
+      border-top: ${showPerforatedEdge ? '1px dashed #e2e8f0' : '1px solid #e2e8f0'};
     }
     .fiscal-seal {
       font-family: 'Courier New', monospace;
@@ -366,6 +421,7 @@ export async function generateDigitalTicketPdf(
 <body>
   <div class="ticket-card">
     <div class="header">
+      ${logoHtml}
       <div class="header-logo">${ticketData.organizerCompany || 'EVENT4U'}</div>
       <div class="event-name">${ticketData.eventName}</div>
       <div class="location">${ticketData.locationName}${ticketData.locationAddress ? ' - ' + ticketData.locationAddress : ''}</div>

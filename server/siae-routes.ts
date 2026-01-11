@@ -3583,6 +3583,9 @@ router.post("/api/siae/name-changes", requireAuth, async (req: Request, res: Res
                   const { sendTicketEmail } = await import('./email-service');
                   const { generateDigitalTicketPdf } = await import('./pdf-service');
                   
+                  // Fetch template for the company (if available)
+                  const template = await storage.getDefaultDigitalTicketTemplate(ticketedEvent.companyId || undefined);
+                  
                   const ticketData = {
                     eventName: event.name,
                     eventDate: event.date,
@@ -3595,7 +3598,7 @@ router.post("/api/siae/name-changes", requireAuth, async (req: Request, res: Res
                     fiscalSealCode: sealData.sealCode
                   };
                   
-                  const pdfBuffer = await generateDigitalTicketPdf(ticketData);
+                  const pdfBuffer = await generateDigitalTicketPdf(ticketData, template);
                   
                   const ticketHtml = `
                     <div style="border:1px solid #ddd; padding:20px; border-radius:8px;">
@@ -3930,6 +3933,9 @@ router.post("/api/siae/name-changes/:id/process", requireAuth, requireOrganizer,
         const { sendTicketEmail } = await import('./email-service');
         const { generateDigitalTicketPdf } = await import('./pdf-service');
         
+        // Fetch template for the company (if available)
+        const template = await storage.getDefaultDigitalTicketTemplate(ticketedEvent.companyId || undefined);
+        
         const ticketData = {
           eventName: event.name,
           eventDate: event.date,
@@ -3942,7 +3948,7 @@ router.post("/api/siae/name-changes/:id/process", requireAuth, requireOrganizer,
           fiscalSealCode: sealData.sealCode
         };
         
-        const pdfBuffer = await generateDigitalTicketPdf(ticketData);
+        const pdfBuffer = await generateDigitalTicketPdf(ticketData, template);
         
         // Simple HTML for email body
         const ticketHtml = `

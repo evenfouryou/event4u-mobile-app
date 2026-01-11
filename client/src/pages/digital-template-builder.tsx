@@ -491,6 +491,7 @@ export default function DigitalTemplateBuilder() {
   const { data: template, isLoading } = useQuery<DigitalTicketTemplate>({
     queryKey: ['/api/digital-templates', id],
     enabled: isEditing,
+    staleTime: 0, // Always refetch to ensure fresh data after edits
   });
 
   useEffect(() => {

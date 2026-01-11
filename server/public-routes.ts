@@ -56,6 +56,7 @@ import { sendTicketEmail, sendPasswordResetEmail } from "./email-service";
 import { ticketTemplates, ticketTemplateElements } from "@shared/schema";
 import { sendOTP as sendMSG91OTP, verifyOTP as verifyMSG91OTP, resendOTP as resendMSG91OTP, isMSG91Configured } from "./msg91-service";
 import { siaeStorage } from "./siae-storage";
+import { storage } from "./storage";
 import { siaeNameChanges, siaeResales, siaeWalletTransactions, eventReservationSettings, eventLists, listEntries, tableTypes, tableReservations, reservationPayments, prProfiles, siaeSubscriptionTypes, siaeSubscriptions, organizerCommissionProfiles } from "@shared/schema";
 import svgCaptcha from "svg-captcha";
 import QRCode from "qrcode";
@@ -3611,6 +3612,7 @@ router.get("/api/public/account/tickets/:id/pdf", async (req, res) => {
         eventStart: events.startDatetime,
         locationName: locations.name,
         sectorName: siaeEventSectors.name,
+        companyId: siaeTicketedEvents.companyId,
       })
       .from(siaeTickets)
       .innerJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
@@ -3634,6 +3636,9 @@ router.get("/api/public/account/tickets/:id/pdf", async (req, res) => {
     const holderName = `${ticket.participantFirstName || ''} ${ticket.participantLastName || ''}`.trim() || 'Ospite';
     const price = parseFloat(ticket.grossAmount || ticket.ticketPrice || '0').toFixed(2);
 
+    // Fetch template for the company (if available)
+    const template = await storage.getDefaultDigitalTicketTemplate(ticket.companyId || undefined);
+
     // Generate digital PDF with modern layout
     const pdfBuffer = await generateDigitalTicketPdf({
       eventName: ticket.eventName || 'Evento',
@@ -3645,7 +3650,7 @@ router.get("/api/public/account/tickets/:id/pdf", async (req, res) => {
       ticketCode: ticket.ticketCode || ticket.id.slice(-12).toUpperCase(),
       qrCode: ticket.qrCode || `TICKET-${ticket.id}`,
       fiscalSealCode: ticket.fiscalSealCode || undefined,
-    });
+    }, template);
 
     // Send PDF
     res.setHeader('Content-Type', 'application/pdf');
