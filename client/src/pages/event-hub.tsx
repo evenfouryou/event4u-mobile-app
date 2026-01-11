@@ -1222,16 +1222,24 @@ export default function EventHub() {
   });
 
   // E4U Lists
-  const { data: e4uLists = [] } = useQuery<any[]>({
+  const { data: e4uLists = [], isLoading: e4uListsLoading, error: e4uListsError } = useQuery<any[]>({
     queryKey: ['/api/e4u/events', id, 'lists'],
     enabled: !!id,
+    staleTime: 0, // Always refetch
   });
+  
+  // Debug log for lists
+  console.log('[EVENT-HUB] e4uLists:', { lists: e4uLists, loading: e4uListsLoading, error: e4uListsError, id });
 
   // E4U Table Types
-  const { data: e4uTableTypes = [] } = useQuery<any[]>({
+  const { data: e4uTableTypes = [], isLoading: e4uTableTypesLoading, error: e4uTableTypesError } = useQuery<any[]>({
     queryKey: ['/api/e4u/events', id, 'table-types'],
     enabled: !!id,
+    staleTime: 0, // Always refetch
   });
+  
+  // Debug log for table types
+  console.log('[EVENT-HUB] e4uTableTypes:', { types: e4uTableTypes, loading: e4uTableTypesLoading, error: e4uTableTypesError, id });
 
   // E4U Reservations
   const { data: e4uReservations = [] } = useQuery<any[]>({

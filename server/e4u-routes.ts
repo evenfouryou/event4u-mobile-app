@@ -2842,6 +2842,7 @@ router.get("/api/e4u/events/:eventId/report", requireAuth, async (req: Request, 
 router.get("/api/e4u/my-events", requireAuth, async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
+    console.log('[my-events] User:', user?.id, 'Role:', user?.role, 'prProfileId:', (req as any).prProfileId, 'session prProfile:', (req.session as any)?.prProfile?.id);
     
     // Gestore/SuperAdmin see all company events - redirect to normal events API
     if (user.role === 'super_admin' || user.role === 'gestore') {
@@ -2904,6 +2905,8 @@ router.get("/api/e4u/my-events", requireAuth, async (req: Request, res: Response
     const sessionPrProfileId = (req as any).prProfileId || (req.session as any)?.prProfile?.id;
     const userId = getUserId(user);
     
+    console.log('[my-events] Looking for PR assignments. sessionPrProfileId:', sessionPrProfileId, 'userId:', userId);
+    
     // Find user's prProfile (if any) to match both legacy userId and new prProfileId
     let userPrProfileId = sessionPrProfileId;
     if (!userPrProfileId && userId) {
@@ -2912,6 +2915,7 @@ router.get("/api/e4u/my-events", requireAuth, async (req: Request, res: Response
         .where(eq(prProfiles.userId, userId))
         .limit(1);
       userPrProfileId = userPrProfile[0]?.id;
+      console.log('[my-events] Found user prProfile:', userPrProfileId);
     }
     
     // Build query conditions - check both legacy userId and new prProfileId
@@ -2945,6 +2949,8 @@ router.get("/api/e4u/my-events", requireAuth, async (req: Request, res: Response
     })
     .from(eventPrAssignments)
     .where(prConditions) : [];
+    
+    console.log('[my-events] PR assignments found:', prAssignments.length, 'for user:', userId, 'prProfile:', userPrProfileId);
     
     // Get event details for PR assignments (avoid duplicates)
     const addedEventIds = new Set(result.map(r => r.id));
