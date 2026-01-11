@@ -77,7 +77,7 @@ import {
 } from "lucide-react";
 import { format, isToday, isTomorrow } from "date-fns";
 import { it } from "date-fns/locale";
-import type { GuestList, GuestListEntry, Event, EventTable, TableBooking, EventStaffAssignment } from "@shared/schema";
+import type { GuestList, GuestListEntry, Event, EventTable, TableBooking } from "@shared/schema";
 import { BrandLogo } from "@/components/brand-logo";
 
 type MainTab = 'home' | 'wallet' | 'profilo';
@@ -239,18 +239,10 @@ export default function PrAppPage() {
     }
   };
 
-  const { data: assignments = [] } = useQuery<EventStaffAssignment[]>({
-    queryKey: ["/api/pr/my-assignments"],
+  // Use the unified E4U system which supports both legacy userId and prProfileId
+  const { data: events = [], isLoading: loadingEvents } = useQuery<(Event & { permissions?: any })[]>({
+    queryKey: ["/api/e4u/my-events"],
     enabled: isAuthenticated,
-  });
-
-  const { data: events = [], isLoading: loadingEvents } = useQuery<Event[]>({
-    queryKey: ["/api/events"],
-    enabled: isAuthenticated,
-    select: (data: Event[]) => {
-      const assignedEventIds = assignments.map(a => a.eventId);
-      return data.filter(e => assignedEventIds.includes(e.id));
-    },
   });
 
   const { data: guestLists = [], isLoading: loadingLists, refetch: refetchLists } = useQuery<GuestList[]>({
