@@ -12,6 +12,7 @@ import {
   tableGuests,
   e4uStaffAssignments,
   eventPrAssignments,
+  prListAssignments,
   eventScanners,
   events,
   users,
@@ -134,7 +135,8 @@ function requireStaffOrHigher(req: Request, res: Response, next: NextFunction) {
 
 // Check if user has list management permission for event
 // prProfileId: optional - pass from request for PR Wallet users (req as any).prProfileId || (req.session as any)?.prProfile?.id
-async function checkListPermission(userId: string, eventId: string, action: 'manage' | 'add', prProfileId?: string): Promise<boolean> {
+// listId: optional - if provided, checks if PR has access to this specific list via prListAssignments
+async function checkListPermission(userId: string, eventId: string, action: 'manage' | 'add', prProfileId?: string, listId?: string): Promise<boolean> {
   // For staff: check e4uStaffAssignments (only if userId is provided)
   if (userId) {
     const [staffAssignment] = await db.select()
@@ -194,6 +196,24 @@ async function checkListPermission(userId: string, eventId: string, action: 'man
       .where(prConditions);
     
     if (prAssignment && prAssignment.canAddToLists) {
+      // Check if there are specific list restrictions for this PR
+      const listRestrictions = await db.select({ listId: prListAssignments.listId })
+        .from(prListAssignments)
+        .where(eq(prListAssignments.prAssignmentId, prAssignment.id));
+      
+      // If no prListAssignments exist, allow access to all lists (current behavior)
+      if (listRestrictions.length === 0) {
+        return true;
+      }
+      
+      // If prListAssignments exist and a listId is provided, check if it's in the allowed lists
+      if (listId) {
+        const allowedListIds = listRestrictions.map(r => r.listId);
+        return allowedListIds.includes(listId);
+      }
+      
+      // If prListAssignments exist but no listId provided, PR has restricted access
+      // Return true to indicate they have some list access (caller should check specific list)
       return true;
     }
   }
@@ -1257,6 +1277,128 @@ router.delete("/api/e4u/pr/:id", requireAuth, requireStaffOrHigher, async (req: 
       return res.status(404).json({ message: "Assegnazione PR non trovata" });
     }
     res.json({ message: "PR rimosso dall'evento" });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// ==================== PR LIST ASSIGNMENTS API ====================
+
+// GET /api/e4u/pr-assignments/:assignmentId/lists - Get list assignments for a PR
+router.get("/api/e4u/pr-assignments/:assignmentId/lists", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { assignmentId } = req.params;
+    const user = req.user as any;
+    
+    const [prAssignment] = await db.select()
+      .from(eventPrAssignments)
+      .where(eq(eventPrAssignments.id, assignmentId));
+    
+    if (!prAssignment) {
+      return res.status(404).json({ message: "Assegnazione PR non trovata" });
+    }
+    
+    if (user.role !== 'super_admin' && prAssignment.companyId !== user.companyId) {
+      return res.status(403).json({ message: "Non autorizzato per questa azienda" });
+    }
+    
+    const listAssignments = await db.select({
+      assignment: prListAssignments,
+      list: eventLists,
+    })
+      .from(prListAssignments)
+      .innerJoin(eventLists, eq(prListAssignments.listId, eventLists.id))
+      .where(eq(prListAssignments.prAssignmentId, assignmentId))
+      .orderBy(desc(prListAssignments.createdAt));
+    
+    res.json(listAssignments);
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// POST /api/e4u/pr-assignments/:assignmentId/lists - Set list assignments for a PR
+router.post("/api/e4u/pr-assignments/:assignmentId/lists", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { assignmentId } = req.params;
+    const { listIds } = req.body;
+    const user = req.user as any;
+    
+    if (!Array.isArray(listIds)) {
+      return res.status(400).json({ message: "listIds deve essere un array" });
+    }
+    
+    const [prAssignment] = await db.select()
+      .from(eventPrAssignments)
+      .where(eq(eventPrAssignments.id, assignmentId));
+    
+    if (!prAssignment) {
+      return res.status(404).json({ message: "Assegnazione PR non trovata" });
+    }
+    
+    if (user.role !== 'super_admin' && prAssignment.companyId !== user.companyId) {
+      return res.status(403).json({ message: "Non autorizzato per questa azienda" });
+    }
+    
+    await db.delete(prListAssignments)
+      .where(eq(prListAssignments.prAssignmentId, assignmentId));
+    
+    if (listIds.length === 0) {
+      return res.json([]);
+    }
+    
+    const newAssignments = listIds.map((listId: string) => ({
+      prAssignmentId: assignmentId,
+      listId,
+    }));
+    
+    await db.insert(prListAssignments).values(newAssignments);
+    
+    const listAssignments = await db.select({
+      assignment: prListAssignments,
+      list: eventLists,
+    })
+      .from(prListAssignments)
+      .innerJoin(eventLists, eq(prListAssignments.listId, eventLists.id))
+      .where(eq(prListAssignments.prAssignmentId, assignmentId))
+      .orderBy(desc(prListAssignments.createdAt));
+    
+    res.status(201).json(listAssignments);
+  } catch (error: any) {
+    res.status(400).json({ message: error.message });
+  }
+});
+
+// DELETE /api/e4u/pr-assignments/:assignmentId/lists/:listId - Remove a list assignment
+router.delete("/api/e4u/pr-assignments/:assignmentId/lists/:listId", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const { assignmentId, listId } = req.params;
+    const user = req.user as any;
+    
+    const [prAssignment] = await db.select()
+      .from(eventPrAssignments)
+      .where(eq(eventPrAssignments.id, assignmentId));
+    
+    if (!prAssignment) {
+      return res.status(404).json({ message: "Assegnazione PR non trovata" });
+    }
+    
+    if (user.role !== 'super_admin' && prAssignment.companyId !== user.companyId) {
+      return res.status(403).json({ message: "Non autorizzato per questa azienda" });
+    }
+    
+    const [deleted] = await db.delete(prListAssignments)
+      .where(and(
+        eq(prListAssignments.prAssignmentId, assignmentId),
+        eq(prListAssignments.listId, listId)
+      ))
+      .returning();
+    
+    if (!deleted) {
+      return res.status(404).json({ message: "Assegnazione lista non trovata" });
+    }
+    
+    res.json({ message: "Lista rimossa dalle assegnazioni PR" });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
