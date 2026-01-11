@@ -186,35 +186,51 @@ router.post("/api/staff/subordinates", requireStaff, async (req: Request, res: R
     
     let userId: string | null = null;
     
-    // Check if email already exists in the SAME company
-    const [existingEmailUser] = await db.select({ id: users.id, companyId: users.companyId })
+    // PRIORITY 1: Check if phone exists as a registered customer/user in the SAME company
+    const [existingPhoneUser] = await db.select({ id: users.id, companyId: users.companyId })
       .from(users)
-      .where(eq(users.email, prEmail));
+      .where(eq(users.phone, fullPhone));
     
-    if (existingEmailUser && existingEmailUser.companyId === prSession.companyId) {
-      // Only link to existing user if in the same company
-      userId = existingEmailUser.id;
-      console.log(`[Staff-PR] Email ${prEmail} already exists in same company, linking to user ${userId}`);
-    } else {
-      // Generate unique email to avoid conflicts with other companies
-      const uniqueEmail = existingEmailUser 
-        ? `pr-${validated.phone}-${Date.now()}@pr.event4u.local`
-        : prEmail;
+    if (existingPhoneUser && (!existingPhoneUser.companyId || existingPhoneUser.companyId === prSession.companyId)) {
+      userId = existingPhoneUser.id;
+      console.log(`[Staff-PR] Phone ${fullPhone} found as existing user, promoting to PR`);
       
-      // Create new user account
-      const [newUser] = await db.insert(users).values({
-        email: uniqueEmail,
-        passwordHash: passwordHash,
-        firstName: validated.firstName,
-        lastName: validated.lastName,
-        phone: fullPhone,
-        role: 'pr',
-        companyId: prSession.companyId,
-        emailVerified: false, // Require verification
-      }).returning();
+      // Update user's role and companyId if needed
+      await db.update(users)
+        .set({ companyId: prSession.companyId, role: 'pr' })
+        .where(eq(users.id, userId));
+    }
+    
+    // PRIORITY 2: Check if email already exists in the SAME company
+    if (!userId) {
+      const [existingEmailUser] = await db.select({ id: users.id, companyId: users.companyId })
+        .from(users)
+        .where(eq(users.email, prEmail));
       
-      userId = newUser.id;
-      console.log(`[Staff-PR] Created new user account ${userId} for subordinate PR`);
+      if (existingEmailUser && existingEmailUser.companyId === prSession.companyId) {
+        userId = existingEmailUser.id;
+        console.log(`[Staff-PR] Email ${prEmail} already exists in same company, linking to user ${userId}`);
+      } else {
+        // Generate unique email to avoid conflicts with other companies
+        const uniqueEmail = existingEmailUser 
+          ? `pr-${validated.phone}-${Date.now()}@pr.event4u.local`
+          : prEmail;
+        
+        // Create new user account
+        const [newUser] = await db.insert(users).values({
+          email: uniqueEmail,
+          passwordHash: passwordHash,
+          firstName: validated.firstName,
+          lastName: validated.lastName,
+          phone: fullPhone,
+          role: 'pr',
+          companyId: prSession.companyId,
+          emailVerified: false,
+        }).returning();
+        
+        userId = newUser.id;
+        console.log(`[Staff-PR] Created new user account ${userId} for subordinate PR`);
+      }
     }
     
     // Create userCompanyRoles entry

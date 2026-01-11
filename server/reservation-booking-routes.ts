@@ -264,16 +264,57 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
     let userId: string | null = null;
     let isExistingUser = false;
     
-    // If phone exists in other company, link to existing user
-    if (existingInOtherCompany && existingInOtherCompany.userId) {
+    // PRIORITY 1: Check if existingUserId is provided (promotion from customer search)
+    if (req.body.existingUserId) {
+      const [existingUser] = await db.select()
+        .from(users)
+        .where(eq(users.id, req.body.existingUserId));
+      
+      if (existingUser) {
+        // Verify user belongs to same company or has no company (customer)
+        if (!existingUser.companyId || existingUser.companyId === user.companyId) {
+          userId = existingUser.id;
+          isExistingUser = true;
+          console.log(`[PR] Promoting existing user ${userId} to PR (customer -> PR)`);
+          
+          // Always update user's role to 'pr' and set companyId if needed
+          await db.update(users)
+            .set({ companyId: user.companyId, role: 'pr' })
+            .where(eq(users.id, userId));
+        }
+      }
+    }
+    
+    // PRIORITY 2: Check if phone exists in other company (multi-company PR)
+    if (!userId && existingInOtherCompany && existingInOtherCompany.userId) {
       userId = existingInOtherCompany.userId;
       isExistingUser = true;
       console.log(`[PR] Phone ${fullPhone} already PR in another company, linking to existing user ${userId}`);
     }
     
-    // If no existing user found, create a new user account automatically
+    // PRIORITY 3: Check if phone exists as a registered customer/user in the SAME company
     if (!userId) {
-      // Generate a unique email for the PR user (they can update it later)
+      const [existingPhoneUser] = await db.select({ id: users.id, companyId: users.companyId, role: users.role })
+        .from(users)
+        .where(eq(users.phone, fullPhone));
+      
+      if (existingPhoneUser && (!existingPhoneUser.companyId || existingPhoneUser.companyId === user.companyId)) {
+        userId = existingPhoneUser.id;
+        isExistingUser = true;
+        console.log(`[PR] Phone ${fullPhone} found as existing user, promoting to PR`);
+        
+        // Update user's role and companyId if needed
+        await db.update(users)
+          .set({ 
+            companyId: user.companyId, 
+            role: 'pr' 
+          })
+          .where(eq(users.id, userId));
+      }
+    }
+    
+    // PRIORITY 4: If no existing user found, create a new user account
+    if (!userId) {
       const prEmail = (req.body.email as string) || `pr-${validated.phone}@pr.event4u.local`;
       
       // Check if email already exists in the SAME company
@@ -295,13 +336,13 @@ router.post("/api/reservations/pr-profiles", requireAuth, requireGestore, async 
         // Create new user account
         const [newUser] = await db.insert(users).values({
           email: uniqueEmail,
-          passwordHash: passwordHash, // Same password as PR profile
+          passwordHash: passwordHash,
           firstName: validated.firstName,
           lastName: validated.lastName,
           phone: fullPhone,
           role: 'pr',
           companyId: user.companyId,
-          emailVerified: false, // Require verification - credentials sent via SMS
+          emailVerified: false,
         }).returning();
         
         userId = newUser.id;
