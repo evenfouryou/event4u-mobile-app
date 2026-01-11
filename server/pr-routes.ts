@@ -1070,6 +1070,7 @@ router.post("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, 
           .set({ 
             isActive: true, 
             prProfileId: prUserId, // Backfill prProfileId for legacy records
+            userId: prProfile[0].userId || existing[0].userId || null, // Backfill userId if available
             updatedAt: new Date() 
           })
           .where(eq(eventPrAssignments.id, existing[0].id))
@@ -1079,10 +1080,11 @@ router.post("/api/events/:eventId/pr-assignments", requireAuth, requireGestore, 
       return res.status(409).json({ error: "PR già assegnato a questo evento" });
     }
     
-    // Create new assignment using prProfileId (new column)
+    // Create new assignment using prProfileId (new column) and userId if available
     const [assignment] = await db.insert(eventPrAssignments).values({
       eventId,
       prProfileId: prUserId, // Store in the new column
+      userId: prProfile[0].userId || null, // Also populate userId if PR has a linked user account
       companyId: event[0].companyId,
       staffUserId: user.id,
       canAddToLists,
