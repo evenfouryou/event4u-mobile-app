@@ -1482,8 +1482,8 @@ export default function EventHub() {
     mutationFn: async (data: { name: string; maxCapacity?: number; price?: string }) => {
       return apiRequest('POST', `/api/e4u/events/${id}/lists`, data);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/e4u/events', id, 'lists'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['/api/e4u/events', id, 'lists'] });
       queryClient.invalidateQueries({ queryKey: ['/api/pr/events', id, 'guest-lists'] });
       setShowCreateListDialog(false);
       setNewListData({ name: '', maxCapacity: '', price: '' });
@@ -1498,8 +1498,8 @@ export default function EventHub() {
     mutationFn: async (data: { name: string; price: string; maxGuests: number; totalQuantity: number }) => {
       return apiRequest('POST', `/api/e4u/events/${id}/table-types`, data);
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['/api/e4u/events', id, 'table-types'] });
+    onSuccess: async () => {
+      await queryClient.refetchQueries({ queryKey: ['/api/e4u/events', id, 'table-types'] });
       queryClient.invalidateQueries({ queryKey: ['/api/pr/events', id, 'tables'] });
       setShowCreateTableTypeDialog(false);
       setNewTableTypeData({ name: '', price: '', maxGuests: '', totalQuantity: '' });
