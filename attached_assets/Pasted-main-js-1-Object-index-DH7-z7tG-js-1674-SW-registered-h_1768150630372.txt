@@ -1,0 +1,178 @@
+main.js:1 Object
+index-DH7-z7tG.js:1674 SW registered: https://manage.eventfouryou.com/
+index-DH7-z7tG.js:1144 [DEBUG SC] Fetching initial status via HTTP...
+index-DH7-z7tG.js:1144 [DEBUG SC] ====== SMART CARD CONNECTION START ======
+index-DH7-z7tG.js:1144 [DEBUG SC] URL: wss://manage.eventfouryou.com/ws/bridge
+index-DH7-z7tG.js:1144 [DEBUG SC] Cookies present: YES
+index-DH7-z7tG.js:1144 [DEBUG SC] Cookie value: _ga=GA1.1.962813290.1739208627; _fbp=fb.1.17397993...
+index-DH7-z7tG.js:1144 [DEBUG SC] WebSocket created, state: 0
+manage.eventfouryou.com/:1 Banner not shown: beforeinstallpromptevent.preventDefault() called. The page must call beforeinstallpromptevent.prompt() to show the banner.
+index-DH7-z7tG.js:1144 [DEBUG SC] HTTP status received: {
+  "bridgeConnected": false,
+  "readerConnected": false,
+  "cardInserted": false,
+  "readerName": null,
+  "cardSerial": null
+}
+index-DH7-z7tG.js:1144 [DEBUG SC] HTTP - cardSerial: null
+index-DH7-z7tG.js:1144 [DEBUG SC] HTTP - cardCounter: undefined
+index-DH7-z7tG.js:1144 [DEBUG SC] HTTP - cardBalance: undefined
+index-DH7-z7tG.js:1144 [DEBUG SC] HTTP - cardKeyId: undefined
+index-DH7-z7tG.js:1144 [DEBUG SC] HTTP - cardInserted: false
+index-DH7-z7tG.js:1144 [DEBUG SC] WebSocket OPEN! State: 1
+index-DH7-z7tG.js:1144 [DEBUG SC] Sending get_status request...
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"connection_status","bridgeConnected":false,"connected":false,"message":"Bridge desktop app is not connected"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: connection_status
+index-DH7-z7tG.js:1144 [DEBUG SC] Handling bridge/connection status: connection_status Object
+index-DH7-z7tG.js:1144 [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+index-DH7-z7tG.js:1144 [DEBUG SC] Message type: connection_status
+index-DH7-z7tG.js:1144 [DEBUG SC] msg.connected: false
+index-DH7-z7tG.js:1144 [DEBUG SC] msg.bridgeConnected: false
+index-DH7-z7tG.js:1144 [DEBUG SC] isConnected (final): false
+index-DH7-z7tG.js:1144 [DEBUG SC] Full message: {"type":"connection_status","bridgeConnected":false,"connected":false,"message":"Bridge desktop app is not connected"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Bridge NOT connected - updating status to DISCONNECTED
+index-DH7-z7tG.js:1144 [DEBUG SC] Status after update: {"connected":false,"relayConnected":true,"readerDetected":false,"cardInserted":false,"readerName":null,"cardAtr":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardType":null,"lastCheck":"2026-01-11T16:50:12.824Z","error":"App desktop Event4U non connessa. Avviare l'applicazione sul PC.","bridgeConnected":false,"canEmitRealSeals":false,"demoMode":false}
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: pong
+index-DH7-z7tG.js:1144 [DEBUG SC] Pong received
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: pong
+index-DH7-z7tG.js:1144 [DEBUG SC] Pong received
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: pong
+index-DH7-z7tG.js:1144 [DEBUG SC] Pong received
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: pong
+index-DH7-z7tG.js:1144 [DEBUG SC] Pong received
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: pong
+index-DH7-z7tG.js:1144 [DEBUG SC] Pong received
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: pong
+index-DH7-z7tG.js:1144 [DEBUG SC] Pong received
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: pong
+index-DH7-z7tG.js:1144 [DEBUG SC] Pong received
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: pong
+index-DH7-z7tG.js:1144 [DEBUG SC] Pong received
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: pong
+index-DH7-z7tG.js:1144 [DEBUG SC] Pong received
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: pong
+index-DH7-z7tG.js:1144 [DEBUG SC] Pong received
+index-DH7-z7tG.js:1144 [DEBUG SC] WebSocket CLOSED: 1006 
+index-DH7-z7tG.js:1144 [DEBUG SC] ====== SMART CARD CONNECTION START ======
+index-DH7-z7tG.js:1144 [DEBUG SC] URL: wss://manage.eventfouryou.com/ws/bridge
+index-DH7-z7tG.js:1144 [DEBUG SC] Cookies present: YES
+index-DH7-z7tG.js:1144 [DEBUG SC] Cookie value: _ga=GA1.1.962813290.1739208627; _fbp=fb.1.17397993...
+index-DH7-z7tG.js:1144 [DEBUG SC] WebSocket created, state: 0
+index-DH7-z7tG.js:1144 [DEBUG SC] WebSocket OPEN! State: 1
+index-DH7-z7tG.js:1144 [DEBUG SC] Sending get_status request...
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"connection_status","bridgeConnected":false,"connected":false,"message":"Bridge desktop app is not connected"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: connection_status
+index-DH7-z7tG.js:1144 [DEBUG SC] Handling bridge/connection status: connection_status Object
+index-DH7-z7tG.js:1144 [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+index-DH7-z7tG.js:1144 [DEBUG SC] Message type: connection_status
+index-DH7-z7tG.js:1144 [DEBUG SC] msg.connected: false
+index-DH7-z7tG.js:1144 [DEBUG SC] msg.bridgeConnected: false
+index-DH7-z7tG.js:1144 [DEBUG SC] isConnected (final): false
+index-DH7-z7tG.js:1144 [DEBUG SC] Full message: {"type":"connection_status","bridgeConnected":false,"connected":false,"message":"Bridge desktop app is not connected"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Bridge NOT connected - updating status to DISCONNECTED
+index-DH7-z7tG.js:1144 [DEBUG SC] Status after update: {"connected":false,"relayConnected":true,"readerDetected":false,"cardInserted":false,"readerName":null,"cardAtr":null,"cardSerial":null,"cardCounter":null,"cardBalance":null,"cardKeyId":null,"cardType":null,"lastCheck":"2026-01-11T16:55:19.941Z","error":"App desktop Event4U non connessa. Avviare l'applicazione sul PC.","bridgeConnected":false,"canEmitRealSeals":false,"demoMode":false}
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: pong
+index-DH7-z7tG.js:1144 [DEBUG SC] Pong received
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: pong
+index-DH7-z7tG.js:1144 [DEBUG SC] Pong received
+/api/siae/ticketed-events/ecc3d8e1-00e5-4dbd-9369-6e35ac377fd8/name-changes:1  Failed to load resource: the server responded with a status of 500 ()
+index-DH7-z7tG.js:1448 WebSocket connection to 'ws://localhost:18765/events/3b2df4c8-6adb-43bd-b051-062a76e866d4' failed: WebSocket is closed before the connection is established.
+(anonymous) @ index-DH7-z7tG.js:1448
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+/api/siae/ticketed-events/2060e4da-9842-4138-9f4c-d1344e55e11d/name-changes:1  Failed to load resource: the server responded with a status of 500 ()
+installHook.js:1 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+overrideMethod @ installHook.js:1
+installHook.js:1 Warning: Missing `Description` or `aria-describedby={undefined}` for {DialogContent}.
+overrideMethod @ installHook.js:1
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: ping
+index-DH7-z7tG.js:1144 [DEBUG SC] Ping received, sending pong
+index-DH7-z7tG.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"pong"}
+index-DH7-z7tG.js:1144 [DEBUG SC] Parsed message type: pong
+index-DH7-z7tG.js:1144 [DEBUG SC] Pong received
