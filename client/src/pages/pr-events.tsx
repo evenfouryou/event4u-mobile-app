@@ -210,7 +210,7 @@ export default function PrEventsPage() {
         custom={index}
         className="w-full"
       >
-        <Link href={`/pr/staff?event=${event.id}`}>
+        <Link href={`/events/${event.id}/panel`}>
           <div 
             className={`
               relative rounded-3xl overflow-hidden
@@ -739,7 +739,7 @@ export default function PrEventsPage() {
                             >
                               <ChevronRight className="w-4 h-4" />
                             </Button>
-                            <Link href={`/pr/staff?event=${event.id}`}>
+                            <Link href={`/events/${event.id}/panel`}>
                               <Button size="sm" data-testid={`button-open-${event.id}`}>
                                 Apri
                               </Button>
@@ -827,7 +827,7 @@ export default function PrEventsPage() {
                 )}
 
                 <div className="flex justify-end pt-4">
-                  <Link href={`/pr/staff?event=${selectedEvent.id}`}>
+                  <Link href={`/events/${selectedEvent.id}/panel`}>
                     <Button data-testid="button-open-event">
                       Vai all'Evento
                       <ChevronRight className="w-4 h-4 ml-2" />

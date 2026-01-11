@@ -166,7 +166,7 @@ export default function PrMyEventsPage() {
         custom={index}
         className="w-full"
       >
-        <Link href={`/pr/staff?event=${event.id}`}>
+        <Link href={`/events/${event.id}/panel`}>
           <div 
             className={`
               relative min-h-[160px] rounded-2xl overflow-hidden
@@ -533,7 +533,7 @@ export default function PrMyEventsPage() {
                             >
                               <Eye className="w-4 h-4" />
                             </Button>
-                            <Link href={`/pr/staff?event=${event.id}`}>
+                            <Link href={`/events/${event.id}/panel`}>
                               <Button size="sm" data-testid={`button-open-${event.id}`}>
                                 Apri
                                 <ChevronRight className="w-4 h-4 ml-1" />
@@ -614,7 +614,7 @@ export default function PrMyEventsPage() {
                   <Button variant="outline" onClick={() => setIsDetailDialogOpen(false)}>
                     Chiudi
                   </Button>
-                  <Link href={`/pr/staff?event=${selectedEvent.id}`}>
+                  <Link href={`/events/${selectedEvent.id}/panel`}>
                     <Button>
                       Apri Evento
                       <ChevronRight className="w-4 h-4 ml-1" />
