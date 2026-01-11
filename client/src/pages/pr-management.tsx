@@ -158,7 +158,12 @@ export default function PrManagement() {
   const canManagePr = user?.role === 'gestore' || user?.role === 'super_admin';
 
   const { data: prProfiles = [], isLoading, refetch } = useQuery<PrProfile[]>({
-    queryKey: ["/api/reservations/pr-profiles"],
+    queryKey: ["/api/reservations/pr-profiles", { includeStaff: true }],
+    queryFn: async () => {
+      const res = await fetch("/api/reservations/pr-profiles?includeStaff=true", { credentials: "include" });
+      if (!res.ok) throw new Error("Failed to fetch PR profiles");
+      return res.json();
+    },
     enabled: canManagePr,
   });
 

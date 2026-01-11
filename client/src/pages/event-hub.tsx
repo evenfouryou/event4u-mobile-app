@@ -1278,6 +1278,9 @@ export default function EventHub() {
   const { data: availablePrUsers = [] } = useQuery<any[]>({
     queryKey: ['/api/reservations/pr-profiles'],
   });
+  
+  // Debug: log available PR users to understand filtering issues
+  console.log('[EVENT-HUB] availablePrUsers:', availablePrUsers.map((p: any) => ({ id: p.id, name: `${p.firstName} ${p.lastName}`, isStaff: p.isStaff, isStaffType: typeof p.isStaff })));
 
   // SIAE sector mutations
   const [editingSector, setEditingSector] = useState<SiaeEventSector | null>(null);
@@ -5210,13 +5213,13 @@ export default function EventHub() {
                   </SelectTrigger>
                   <SelectContent>
                     {availablePrUsers
-                      .filter((prUser: any) => (prUser.isStaff !== true && prUser.isStaff !== "true") && !prAssignments.some((a: any) => a.prUserId === prUser.id))
+                      .filter((prUser: any) => !prAssignments.some((a: any) => a.prUserId === prUser.id))
                       .map((prUser: any) => (
                         <SelectItem key={prUser.id} value={prUser.id} data-testid={`option-pr-${prUser.id}`}>
                           {prUser.firstName} {prUser.lastName} - {prUser.email}
                         </SelectItem>
                       ))}
-                    {availablePrUsers.filter((prUser: any) => (prUser.isStaff !== true && prUser.isStaff !== "true") && !prAssignments.some((a: any) => a.prUserId === prUser.id)).length === 0 && (
+                    {availablePrUsers.filter((prUser: any) => !prAssignments.some((a: any) => a.prUserId === prUser.id)).length === 0 && (
                       <div className="p-3 text-center text-muted-foreground text-sm">
                         Nessun PR disponibile
                       </div>

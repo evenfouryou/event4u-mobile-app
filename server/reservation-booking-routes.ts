@@ -129,6 +129,16 @@ function calculateCommission(
 router.get("/api/reservations/pr-profiles", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
     const user = req.user as any;
+    const includeStaff = req.query.includeStaff === 'true';
+    console.log(`[PR-PROFILES] User ${user.id} (company: ${user.companyId}) fetching PR profiles, includeStaff=${includeStaff}`);
+    
+    const whereConditions = [eq(prProfiles.companyId, user.companyId)];
+    
+    // By default, exclude Staff members (isStaff = true) unless specifically requested
+    if (!includeStaff) {
+      whereConditions.push(eq(prProfiles.isStaff, false));
+    }
+    
     const profiles = await db.select({
       profile: prProfiles,
       user: {
@@ -141,10 +151,13 @@ router.get("/api/reservations/pr-profiles", requireAuth, requireGestore, async (
     })
       .from(prProfiles)
       .leftJoin(users, eq(prProfiles.userId, users.id))
-      .where(eq(prProfiles.companyId, user.companyId))
+      .where(and(...whereConditions))
       .orderBy(desc(prProfiles.createdAt));
     
-    res.json(profiles.map(p => ({ ...p.profile, user: p.user })));
+    const result = profiles.map(p => ({ ...p.profile, user: p.user }));
+    console.log(`[PR-PROFILES] Found ${result.length} profiles:`, result.map(r => ({ id: r.id, name: `${r.firstName} ${r.lastName}`, isStaff: r.isStaff })));
+    
+    res.json(result);
   } catch (error: any) {
     console.error("Error getting PR profiles:", error);
     res.status(500).json({ error: error.message });
