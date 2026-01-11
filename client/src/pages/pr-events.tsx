@@ -52,7 +52,17 @@ import {
 } from "lucide-react";
 import { format, isAfter, isBefore, isToday, isTomorrow, differenceInDays } from "date-fns";
 import { it } from "date-fns/locale";
-import type { EventStaffAssignment, Event } from "@shared/schema";
+import type { Event } from "@shared/schema";
+
+interface MyEvent extends Event {
+  assignmentType?: string;
+  permissions?: {
+    canAddToLists?: boolean;
+    canProposeTables?: boolean;
+    canManageLists?: boolean;
+    canManageTables?: boolean;
+  };
+}
 
 const springTransition = {
   type: "spring" as const,
@@ -95,18 +105,10 @@ export default function PrEventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
-  const { data: assignments = [], isLoading: loadingAssignments, refetch, isRefetching } = useQuery<EventStaffAssignment[]>({
-    queryKey: ["/api/pr/my-assignments"],
+  // Use the unified E4U system which returns events with permissions
+  const { data: myEvents = [], isLoading, refetch, isRefetching } = useQuery<MyEvent[]>({
+    queryKey: ["/api/e4u/my-events"],
   });
-
-  const { data: allEvents = [], isLoading: loadingEvents } = useQuery<Event[]>({
-    queryKey: ["/api/events"],
-  });
-
-  const myEvents = useMemo(() => {
-    const assignedEventIds = new Set(assignments.filter(a => a.isActive).map(a => a.eventId));
-    return allEvents.filter(e => assignedEventIds.has(e.id));
-  }, [allEvents, assignments]);
 
   const upcomingEvents = useMemo(() =>
     myEvents
@@ -127,8 +129,9 @@ export default function PrEventsPage() {
     [myEvents]
   );
 
-  const getAssignmentForEvent = (eventId: string) =>
-    assignments.find(a => a.eventId === eventId && a.isActive);
+  // Get event with permissions from the unified response
+  const getEventWithPermissions = (eventId: string): MyEvent | undefined =>
+    myEvents.find(e => e.id === eventId);
 
   const getStatusConfig = (status: string) => {
     switch (status) {
@@ -166,8 +169,6 @@ export default function PrEventsPage() {
     return null;
   };
 
-  const isLoading = loadingAssignments || loadingEvents;
-
   const displayedEvents = useMemo(() => {
     switch (activeFilter) {
       case "today":
@@ -193,12 +194,11 @@ export default function PrEventsPage() {
     setShowFilterSheet(false);
   }, []);
 
-  const EventCard = ({ event, index }: { event: Event; index: number }) => {
-    const assignment = getAssignmentForEvent(event.id);
+  const EventCard = ({ event, index }: { event: MyEvent; index: number }) => {
     const eventDate = new Date(event.startDatetime);
     const isEventToday = isToday(eventDate);
     const statusConfig = getStatusConfig(event.status);
-    const roleConfig = assignment ? getRoleConfig(assignment.role) : null;
+    const roleConfig = event.assignmentType ? getRoleConfig(event.assignmentType) : null;
     const timeLabel = getTimeLabel(eventDate);
 
     return (
@@ -301,24 +301,18 @@ export default function PrEventsPage() {
                 </div>
               )}
 
-              {assignment?.permissions && assignment.permissions.length > 0 && (
+              {event.permissions && (event.permissions.canAddToLists || event.permissions.canProposeTables || event.permissions.canManageLists || event.permissions.canManageTables) && (
                 <div className="flex flex-wrap gap-3">
-                  {assignment.permissions.includes('gestione_liste') && (
+                  {(event.permissions.canAddToLists || event.permissions.canManageLists) && (
                     <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-emerald-500/10 text-emerald-400 min-h-[44px]">
                       <ListChecks className="w-5 h-5" />
                       <span className="text-base font-semibold">Liste</span>
                     </div>
                   )}
-                  {assignment.permissions.includes('gestione_tavoli') && (
+                  {(event.permissions.canProposeTables || event.permissions.canManageTables) && (
                     <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-blue-500/10 text-blue-400 min-h-[44px]">
                       <Armchair className="w-5 h-5" />
                       <span className="text-base font-semibold">Tavoli</span>
-                    </div>
-                  )}
-                  {assignment.permissions.includes('check_in') && (
-                    <div className="flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-purple-500/10 text-purple-400 min-h-[44px]">
-                      <QrCode className="w-5 h-5" />
-                      <span className="text-base font-semibold">Check-in</span>
                     </div>
                   )}
                 </div>
@@ -518,8 +512,8 @@ export default function PrEventsPage() {
   }
 
   if (!isMobile) {
-    const selectedEventAssignment = selectedEvent ? getAssignmentForEvent(selectedEvent.id) : null;
-    const selectedEventRoleConfig = selectedEventAssignment ? getRoleConfig(selectedEventAssignment.role) : null;
+    const selectedEventData = selectedEvent ? getEventWithPermissions(selectedEvent.id) : null;
+    const selectedEventRoleConfig = selectedEventData?.assignmentType ? getRoleConfig(selectedEventData.assignmentType) : null;
 
     return (
       <div className="container mx-auto p-6 space-y-6" data-testid="page-pr-events">
@@ -666,11 +660,10 @@ export default function PrEventsPage() {
                 </TableHeader>
                 <TableBody>
                   {displayedEvents.map((event) => {
-                    const assignment = getAssignmentForEvent(event.id);
                     const eventDate = new Date(event.startDatetime);
                     const isEventToday = isToday(eventDate);
                     const statusConfig = getStatusConfig(event.status);
-                    const roleConfig = assignment ? getRoleConfig(assignment.role) : null;
+                    const roleConfig = event.assignmentType ? getRoleConfig(event.assignmentType) : null;
                     const timeLabel = getTimeLabel(eventDate);
 
                     return (
@@ -722,22 +715,16 @@ export default function PrEventsPage() {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-1 flex-wrap">
-                            {assignment?.permissions?.includes('gestione_liste') && (
+                            {(event.permissions?.canAddToLists || event.permissions?.canManageLists) && (
                               <Badge variant="secondary" className="text-xs">
                                 <ListChecks className="w-3 h-3 mr-1" />
                                 Liste
                               </Badge>
                             )}
-                            {assignment?.permissions?.includes('gestione_tavoli') && (
+                            {(event.permissions?.canProposeTables || event.permissions?.canManageTables) && (
                               <Badge variant="secondary" className="text-xs">
                                 <Armchair className="w-3 h-3 mr-1" />
                                 Tavoli
-                              </Badge>
-                            )}
-                            {assignment?.permissions?.includes('check_in') && (
-                              <Badge variant="secondary" className="text-xs">
-                                <QrCode className="w-3 h-3 mr-1" />
-                                Check-in
                               </Badge>
                             )}
                           </div>
@@ -819,26 +806,20 @@ export default function PrEventsPage() {
                   </div>
                 )}
 
-                {selectedEventAssignment?.permissions && selectedEventAssignment.permissions.length > 0 && (
+                {selectedEventData?.permissions && (selectedEventData.permissions.canAddToLists || selectedEventData.permissions.canProposeTables || selectedEventData.permissions.canManageLists || selectedEventData.permissions.canManageTables) && (
                   <div className="space-y-2">
                     <p className="text-sm text-muted-foreground">I Tuoi Permessi</p>
                     <div className="flex gap-2 flex-wrap">
-                      {selectedEventAssignment.permissions.includes('gestione_liste') && (
+                      {(selectedEventData.permissions.canAddToLists || selectedEventData.permissions.canManageLists) && (
                         <Badge className="bg-emerald-500/10 text-emerald-400 border-emerald-500/30">
                           <ListChecks className="w-3 h-3 mr-1" />
                           Gestione Liste
                         </Badge>
                       )}
-                      {selectedEventAssignment.permissions.includes('gestione_tavoli') && (
+                      {(selectedEventData.permissions.canProposeTables || selectedEventData.permissions.canManageTables) && (
                         <Badge className="bg-blue-500/10 text-blue-400 border-blue-500/30">
                           <Armchair className="w-3 h-3 mr-1" />
                           Gestione Tavoli
-                        </Badge>
-                      )}
-                      {selectedEventAssignment.permissions.includes('check_in') && (
-                        <Badge className="bg-purple-500/10 text-purple-400 border-purple-500/30">
-                          <QrCode className="w-3 h-3 mr-1" />
-                          Check-in
                         </Badge>
                       )}
                     </div>

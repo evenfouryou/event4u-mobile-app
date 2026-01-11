@@ -48,7 +48,19 @@ import {
 } from "lucide-react";
 import { format, isAfter, isBefore, isToday } from "date-fns";
 import { it } from "date-fns/locale";
-import type { EventStaffAssignment, Event } from "@shared/schema";
+import type { Event } from "@shared/schema";
+
+interface MyEvent extends Event {
+  assignmentType?: string;
+  permissions?: {
+    canAddToLists?: boolean;
+    canProposeTables?: boolean;
+    canManageLists?: boolean;
+    canManageTables?: boolean;
+    canCreatePr?: boolean;
+    canApproveTables?: boolean;
+  };
+}
 
 const springTransition = {
   type: "spring",
@@ -82,18 +94,9 @@ export default function PrMyEventsPage() {
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
 
-  const { data: assignments = [], isLoading: loadingAssignments, refetch, isRefetching } = useQuery<EventStaffAssignment[]>({
-    queryKey: ["/api/pr/my-assignments"],
+  const { data: myEvents = [], isLoading, refetch, isRefetching } = useQuery<MyEvent[]>({
+    queryKey: ["/api/e4u/my-events"],
   });
-
-  const { data: allEvents = [], isLoading: loadingEvents } = useQuery<Event[]>({
-    queryKey: ["/api/events"],
-  });
-
-  const myEvents = useMemo(() => {
-    const assignedEventIds = new Set(assignments.filter(a => a.isActive).map(a => a.eventId));
-    return allEvents.filter(e => assignedEventIds.has(e.id));
-  }, [allEvents, assignments]);
 
   const upcomingEvents = useMemo(() =>
     myEvents
@@ -114,9 +117,6 @@ export default function PrMyEventsPage() {
     [myEvents]
   );
 
-  const getAssignmentForEvent = (eventId: string) =>
-    assignments.find(a => a.eventId === eventId && a.isActive);
-
   const getStatusBadge = (status: string) => {
     switch (status) {
       case 'draft':
@@ -132,20 +132,18 @@ export default function PrMyEventsPage() {
     }
   };
 
-  const getRoleBadge = (role: string) => {
-    switch (role) {
-      case 'gestore_covisione':
-        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-sm font-semibold">Co-Visione</Badge>;
-      case 'capo_staff':
-        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-sm font-semibold">Capo Staff</Badge>;
+  const getAssignmentTypeBadge = (type?: string) => {
+    switch (type) {
+      case 'owner':
+        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30 text-sm font-semibold">Owner</Badge>;
+      case 'staff':
+        return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30 text-sm font-semibold">Staff</Badge>;
       case 'pr':
         return <Badge className="bg-primary/20 text-primary border-primary/30 text-sm font-semibold">PR</Badge>;
       default:
-        return <Badge variant="outline" className="text-sm">{role}</Badge>;
+        return type ? <Badge variant="outline" className="text-sm">{type}</Badge> : null;
     }
   };
-
-  const isLoading = loadingAssignments || loadingEvents;
 
   const displayedEvents = activeFilter === "upcoming" ? upcomingEvents : pastEvents;
 
@@ -154,10 +152,10 @@ export default function PrMyEventsPage() {
     refetch();
   };
 
-  const EventCard = ({ event, index }: { event: Event; index: number }) => {
-    const assignment = getAssignmentForEvent(event.id);
+  const EventCard = ({ event, index }: { event: MyEvent; index: number }) => {
     const eventDate = new Date(event.startDatetime);
     const isEventToday = isToday(eventDate);
+    const hasPermissions = event.permissions && (event.permissions.canManageLists || event.permissions.canManageTables || event.permissions.canAddToLists);
 
     return (
       <motion.div
@@ -220,34 +218,34 @@ export default function PrMyEventsPage() {
                 )}
               </div>
 
-              {assignment && (
+              {event.assignmentType && (
                 <div className="flex items-center justify-between gap-3 pt-2 border-t border-border/50">
                   <div className="flex items-center gap-2">
                     <span className="text-sm text-muted-foreground">Ruolo:</span>
-                    {getRoleBadge(assignment.role)}
+                    {getAssignmentTypeBadge(event.assignmentType)}
                   </div>
                   <ChevronRight className="w-5 h-5 text-muted-foreground" />
                 </div>
               )}
 
-              {assignment?.permissions && assignment.permissions.length > 0 && (
+              {hasPermissions && (
                 <div className="flex flex-wrap gap-2">
-                  {assignment.permissions.includes('gestione_liste') && (
+                  {event.permissions?.canManageLists && (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-emerald-500/10 text-emerald-400">
                       <ListChecks className="w-4 h-4" />
                       <span className="text-sm font-medium">Liste</span>
                     </div>
                   )}
-                  {assignment.permissions.includes('gestione_tavoli') && (
+                  {event.permissions?.canManageTables && (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-blue-500/10 text-blue-400">
                       <Armchair className="w-4 h-4" />
                       <span className="text-sm font-medium">Tavoli</span>
                     </div>
                   )}
-                  {assignment.permissions.includes('check_in') && (
+                  {event.permissions?.canAddToLists && (
                     <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-purple-500/10 text-purple-400">
-                      <QrCode className="w-4 h-4" />
-                      <span className="text-sm font-medium">Check-in</span>
+                      <ListChecks className="w-4 h-4" />
+                      <span className="text-sm font-medium">Aggiungi Liste</span>
                     </div>
                   )}
                 </div>
@@ -476,8 +474,7 @@ export default function PrMyEventsPage() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {displayedEvents.map((event) => {
-                    const assignment = getAssignmentForEvent(event.id);
+                  {displayedEvents.map((event: MyEvent) => {
                     const eventDate = new Date(event.startDatetime);
                     const isEventToday = isToday(eventDate);
                     
@@ -503,25 +500,25 @@ export default function PrMyEventsPage() {
                         </TableCell>
                         <TableCell>{format(eventDate, "HH:mm", { locale: it })}</TableCell>
                         <TableCell>{getStatusBadge(event.status)}</TableCell>
-                        <TableCell>{assignment && getRoleBadge(assignment.role)}</TableCell>
+                        <TableCell>{event.assignmentType && getAssignmentTypeBadge(event.assignmentType)}</TableCell>
                         <TableCell>
                           <div className="flex gap-1">
-                            {assignment?.permissions?.includes('gestione_liste') && (
+                            {event.permissions?.canManageLists && (
                               <Badge variant="outline" className="text-xs">
                                 <ListChecks className="w-3 h-3 mr-1" />
                                 Liste
                               </Badge>
                             )}
-                            {assignment?.permissions?.includes('gestione_tavoli') && (
+                            {event.permissions?.canManageTables && (
                               <Badge variant="outline" className="text-xs">
                                 <Armchair className="w-3 h-3 mr-1" />
                                 Tavoli
                               </Badge>
                             )}
-                            {assignment?.permissions?.includes('check_in') && (
+                            {event.permissions?.canAddToLists && (
                               <Badge variant="outline" className="text-xs">
-                                <QrCode className="w-3 h-3 mr-1" />
-                                Check-in
+                                <ListChecks className="w-3 h-3 mr-1" />
+                                Aggiungi
                               </Badge>
                             )}
                           </div>
@@ -581,23 +578,34 @@ export default function PrMyEventsPage() {
                   <div>
                     <p className="text-sm text-muted-foreground">Ruolo</p>
                     <div className="mt-1">
-                      {getAssignmentForEvent(selectedEvent.id) && getRoleBadge(getAssignmentForEvent(selectedEvent.id)!.role)}
+                      {(selectedEvent as MyEvent).assignmentType && getAssignmentTypeBadge((selectedEvent as MyEvent).assignmentType)}
                     </div>
                   </div>
                 </div>
                 
-                {getAssignmentForEvent(selectedEvent.id)?.permissions && 
-                 getAssignmentForEvent(selectedEvent.id)!.permissions!.length > 0 && (
+                {(selectedEvent as MyEvent).permissions && (
+                  (selectedEvent as MyEvent).permissions!.canManageLists || 
+                  (selectedEvent as MyEvent).permissions!.canManageTables || 
+                  (selectedEvent as MyEvent).permissions!.canAddToLists
+                ) && (
                   <div>
                     <p className="text-sm text-muted-foreground mb-2">Permessi</p>
                     <div className="flex flex-wrap gap-2">
-                      {getAssignmentForEvent(selectedEvent.id)!.permissions!.map((perm) => (
-                        <Badge key={perm} variant="outline">
-                          {perm === 'gestione_liste' && <><ListChecks className="w-3 h-3 mr-1" />Gestione Liste</>}
-                          {perm === 'gestione_tavoli' && <><Armchair className="w-3 h-3 mr-1" />Gestione Tavoli</>}
-                          {perm === 'check_in' && <><QrCode className="w-3 h-3 mr-1" />Check-in</>}
+                      {(selectedEvent as MyEvent).permissions?.canManageLists && (
+                        <Badge variant="outline">
+                          <ListChecks className="w-3 h-3 mr-1" />Gestione Liste
                         </Badge>
-                      ))}
+                      )}
+                      {(selectedEvent as MyEvent).permissions?.canManageTables && (
+                        <Badge variant="outline">
+                          <Armchair className="w-3 h-3 mr-1" />Gestione Tavoli
+                        </Badge>
+                      )}
+                      {(selectedEvent as MyEvent).permissions?.canAddToLists && (
+                        <Badge variant="outline">
+                          <ListChecks className="w-3 h-3 mr-1" />Aggiungi Liste
+                        </Badge>
+                      )}
                     </div>
                   </div>
                 )}

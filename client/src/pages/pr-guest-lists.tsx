@@ -74,7 +74,19 @@ import {
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
-import type { GuestList, GuestListEntry, Event, EventStaffAssignment } from "@shared/schema";
+import type { GuestList, GuestListEntry, Event } from "@shared/schema";
+
+interface MyEvent extends Event {
+  assignmentType?: string;
+  permissions?: {
+    canAddToLists?: boolean;
+    canProposeTables?: boolean;
+    canManageLists?: boolean;
+    canManageTables?: boolean;
+    canCreatePr?: boolean;
+    canApproveTables?: boolean;
+  };
+}
 
 const guestEntryFormSchema = z.object({
   firstName: z.string().min(1, "Nome obbligatorio"),
@@ -157,19 +169,8 @@ export default function PrGuestListsPage() {
   const [isCreateListDialogOpen, setIsCreateListDialogOpen] = useState(false);
   const [isGuestDetailDialogOpen, setIsGuestDetailDialogOpen] = useState(false);
 
-  const { data: assignments = [], isLoading: loadingAssignments } = useQuery<EventStaffAssignment[]>({
-    queryKey: ["/api/pr/my-assignments"],
-  });
-
-  const { data: events = [], isLoading: loadingEvents } = useQuery<Event[]>({
-    queryKey: ["/api/events"],
-    select: (data: Event[]) => {
-      if (user?.role === 'gestore' || user?.role === 'super_admin') {
-        return data;
-      }
-      const assignedEventIds = assignments.map(a => a.eventId);
-      return data.filter(e => assignedEventIds.includes(e.id));
-    },
+  const { data: events = [], isLoading } = useQuery<MyEvent[]>({
+    queryKey: ["/api/e4u/my-events"],
   });
 
   const { data: guestLists = [], isLoading: loadingLists, refetch: refetchLists } = useQuery<GuestList[]>({
@@ -319,7 +320,7 @@ export default function PrGuestListsPage() {
     }
   };
 
-  if (loadingAssignments || loadingEvents) {
+  if (isLoading) {
     if (!isMobile) {
       return (
         <div className="container mx-auto p-6 space-y-6">
