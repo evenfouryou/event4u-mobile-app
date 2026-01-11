@@ -42,7 +42,6 @@ export interface IPrStorage {
   // ==================== Event Staff Assignments ====================
   
   getEventStaffAssignmentsByEvent(eventId: string): Promise<EventStaffAssignment[]>;
-  getEventStaffAssignmentsByUser(userId: string): Promise<EventStaffAssignment[]>;
   getEventStaffAssignmentsByCompany(companyId: string, eventId?: string): Promise<EventStaffAssignment[]>;
   getEventStaffAssignment(id: string): Promise<EventStaffAssignment | undefined>;
   getEventStaffAssignmentByUserAndEvent(userId: string, eventId: string): Promise<EventStaffAssignment | undefined>;
@@ -122,15 +121,6 @@ export class PrStorage implements IPrStorage {
   async getEventStaffAssignmentsByEvent(eventId: string): Promise<EventStaffAssignment[]> {
     return await db.select().from(eventStaffAssignments)
       .where(eq(eventStaffAssignments.eventId, eventId))
-      .orderBy(desc(eventStaffAssignments.createdAt));
-  }
-
-  async getEventStaffAssignmentsByUser(userId: string): Promise<EventStaffAssignment[]> {
-    return await db.select().from(eventStaffAssignments)
-      .where(and(
-        eq(eventStaffAssignments.userId, userId),
-        eq(eventStaffAssignments.isActive, true)
-      ))
       .orderBy(desc(eventStaffAssignments.createdAt));
   }
 

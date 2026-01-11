@@ -71,18 +71,6 @@ router.get("/api/pr/events/:eventId/staff", requireAuth, requireGestore, async (
   }
 });
 
-// Get my assignments (for PR users)
-router.get("/api/pr/my-assignments", requireAuth, async (req: Request, res: Response) => {
-  try {
-    const user = req.user as any;
-    const assignments = await prStorage.getEventStaffAssignmentsByUser(user.id);
-    res.json(assignments);
-  } catch (error: any) {
-    console.error("Error getting my assignments:", error);
-    res.status(500).json({ error: error.message });
-  }
-});
-
 // Create staff assignment
 router.post("/api/pr/events/:eventId/staff", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
