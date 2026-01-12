@@ -12,6 +12,7 @@ import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { useTranslation } from "react-i18next";
 import { 
   CheckCircle2, 
   Sparkles, 
@@ -87,6 +88,7 @@ const springTransition = { type: "spring", stiffness: 400, damping: 30 };
 export default function Register() {
   const [, navigate] = useLocation();
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
   const [accountType, setAccountType] = useState<AccountType>(null);
   const [gestoreSuccess, setGestoreSuccess] = useState(false);
   const [clienteOtpStep, setClienteOtpStep] = useState(false);
@@ -713,9 +715,9 @@ export default function Register() {
             className="text-center mt-8"
           >
             <p className="text-muted-foreground">
-              Hai già un account?{" "}
+              {t('auth.hasAccount')}{" "}
               <Link href="/login" className="text-primary font-semibold">
-                Accedi
+                {t('auth.login')}
               </Link>
             </p>
           </motion.div>
@@ -754,7 +756,7 @@ export default function Register() {
                       name="firstName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Nome</FormLabel>
+                          <FormLabel>{t('auth.firstName')}</FormLabel>
                           <FormControl>
                             <div className="relative">
                               <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -770,7 +772,7 @@ export default function Register() {
                       name="lastName"
                       render={({ field }) => (
                         <FormItem>
-                          <FormLabel>Cognome</FormLabel>
+                          <FormLabel>{t('auth.lastName')}</FormLabel>
                           <FormControl>
                             <Input {...field} placeholder="Rossi" data-testid="input-lastname" />
                           </FormControl>
@@ -784,7 +786,7 @@ export default function Register() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Email</FormLabel>
+                        <FormLabel>{t('auth.email')}</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -800,7 +802,7 @@ export default function Register() {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Password</FormLabel>
+                        <FormLabel>{t('auth.password')}</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -829,7 +831,7 @@ export default function Register() {
                     name="confirmPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Conferma Password</FormLabel>
+                        <FormLabel>{t('auth.confirmPassword')}</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -912,15 +914,15 @@ export default function Register() {
                       <Loader2 className="w-4 h-4 animate-spin" />
                     ) : (
                       <>
-                        Registrati
+                        {t('auth.register')}
                         <ArrowRight className="w-4 h-4 ml-2" />
                       </>
                     )}
                   </Button>
                   <div className="text-center pt-2">
                     <p className="text-muted-foreground text-sm">
-                      Hai già un account?{" "}
-                      <Link href="/login" className="text-primary font-semibold">Accedi</Link>
+                      {t('auth.hasAccount')}{" "}
+                      <Link href="/login" className="text-primary font-semibold">{t('auth.login')}</Link>
                     </p>
                   </div>
                 </form>
@@ -996,7 +998,7 @@ export default function Register() {
                     name="firstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-muted-foreground text-sm font-medium">Nome</FormLabel>
+                        <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.firstName')}</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -1017,7 +1019,7 @@ export default function Register() {
                     name="lastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-muted-foreground text-sm font-medium">Cognome</FormLabel>
+                        <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.lastName')}</FormLabel>
                         <FormControl>
                           <Input
                             {...field}
@@ -1042,7 +1044,7 @@ export default function Register() {
                     name="email"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-muted-foreground text-sm font-medium">Email</FormLabel>
+                        <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.email')}</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -1071,7 +1073,7 @@ export default function Register() {
                     name="password"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-muted-foreground text-sm font-medium">Password</FormLabel>
+                        <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.password')}</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -1110,7 +1112,7 @@ export default function Register() {
                     name="confirmPassword"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-muted-foreground text-sm font-medium">Conferma Password</FormLabel>
+                        <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.confirmPassword')}</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -1221,7 +1223,7 @@ export default function Register() {
                       <Loader2 className="w-5 h-5 animate-spin" />
                     ) : (
                       <>
-                        Registrati
+                        {t('auth.register')}
                         <ArrowRight className="w-5 h-5" />
                       </>
                     )}
@@ -1237,9 +1239,9 @@ export default function Register() {
               className="text-center mt-8"
             >
               <p className="text-muted-foreground">
-                Hai già un account?{" "}
+                {t('auth.hasAccount')}{" "}
                 <Link href="/login" className="text-primary font-semibold">
-                  Accedi
+                  {t('auth.login')}
                 </Link>
               </p>
             </motion.div>
@@ -1516,15 +1518,15 @@ export default function Register() {
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <>
-                      Registrati
+                      {t('auth.register')}
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </>
                   )}
                 </Button>
                 <div className="text-center pt-2">
                   <p className="text-muted-foreground text-sm">
-                    Hai già un account?{" "}
-                    <Link href="/login" className="text-primary font-semibold">Accedi</Link>
+                    {t('auth.hasAccount')}{" "}
+                    <Link href="/login" className="text-primary font-semibold">{t('auth.login')}</Link>
                   </p>
                 </div>
               </form>
@@ -1600,7 +1602,7 @@ export default function Register() {
                   name="firstName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-muted-foreground text-sm font-medium">Nome</FormLabel>
+                      <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.firstName')}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -1621,7 +1623,7 @@ export default function Register() {
                   name="lastName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-muted-foreground text-sm font-medium">Cognome</FormLabel>
+                      <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.lastName')}</FormLabel>
                       <FormControl>
                         <Input
                           {...field}
@@ -1646,7 +1648,7 @@ export default function Register() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-muted-foreground text-sm font-medium">Email</FormLabel>
+                      <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.email')}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -1704,7 +1706,7 @@ export default function Register() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-muted-foreground text-sm font-medium">Password</FormLabel>
+                      <FormLabel className="text-muted-foreground text-sm font-medium">{t('auth.password')}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
@@ -1962,7 +1964,7 @@ export default function Register() {
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     <>
-                      Registrati
+                      {t('auth.register')}
                       <ArrowRight className="w-5 h-5" />
                     </>
                   )}
@@ -1978,9 +1980,9 @@ export default function Register() {
             className="text-center mt-8"
           >
             <p className="text-muted-foreground">
-              Hai già un account?{" "}
+              {t('auth.hasAccount')}{" "}
               <Link href="/login" className="text-primary font-semibold">
-                Accedi
+                {t('auth.login')}
               </Link>
             </p>
           </motion.div>

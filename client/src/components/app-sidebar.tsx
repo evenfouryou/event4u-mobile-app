@@ -45,6 +45,7 @@ import {
 import { Link, useLocation } from "wouter";
 import { useQuery } from "@tanstack/react-query";
 import { queryClient } from "@/lib/queryClient";
+import { useTranslation } from "react-i18next";
 import {
   Sidebar,
   SidebarContent,
@@ -66,6 +67,7 @@ import type { UserFeatures } from "@shared/schema";
 export function AppSidebar() {
   const [location] = useLocation();
   const { user } = useAuth();
+  const { t } = useTranslation();
 
   const isSuperAdmin = user?.role === 'super_admin';
   const isAdmin = user?.role === 'gestore';
@@ -95,19 +97,19 @@ export function AppSidebar() {
   if (isSuperAdmin) {
     menuItems.push(
       {
-        title: "Dashboard",
+        title: t('nav.dashboard'),
         icon: BarChart3,
         url: "/super-admin",
         group: "Sistema",
       },
       {
-        title: "Gestori",
+        title: t('nav.users'),
         icon: Users,
         url: "/admin/gestori",
         group: "Sistema",
       },
       {
-        title: "Impostazioni Sito",
+        title: t('nav.settings'),
         icon: Settings,
         url: "/admin/site-settings",
         group: "Sistema",
@@ -244,7 +246,7 @@ export function AppSidebar() {
   if (isAdmin) {
     menuItems.push(
       {
-        title: "Home",
+        title: t('nav.home'),
         icon: Home,
         url: "/",
         group: "Bacheca",
@@ -253,7 +255,7 @@ export function AppSidebar() {
 
     // Add Eventi (always visible for admins)
     menuItems.push({
-      title: "Eventi",
+      title: t('nav.events'),
       icon: Calendar,
       url: "/events",
       group: "Moduli",
@@ -270,7 +272,7 @@ export function AppSidebar() {
     // Only show modules that are enabled for this user
     if (userFeatures?.beverageEnabled !== false) {
       menuItems.push({
-        title: "Beverage",
+        title: t('nav.inventory'),
         icon: Wine,
         url: "/beverage",
         group: "Moduli",
@@ -280,7 +282,7 @@ export function AppSidebar() {
 
     if (userFeatures?.contabilitaEnabled === true) {
       menuItems.push({
-        title: "Contabilità",
+        title: t('nav.accounting'),
         icon: Calculator,
         url: "/accounting",
         group: "Moduli",
@@ -289,7 +291,7 @@ export function AppSidebar() {
 
     if (userFeatures?.personaleEnabled === true) {
       menuItems.push({
-        title: "Personale",
+        title: t('nav.staff'),
         icon: UserCheck,
         url: "/personnel",
         group: "Moduli",
@@ -316,19 +318,19 @@ export function AppSidebar() {
 
     menuItems.push(
       {
-        title: "Aziende",
+        title: t('nav.companies'),
         icon: Building2,
         url: "/companies",
         group: "Gestione",
       },
       {
-        title: "Location",
+        title: t('nav.locations'),
         icon: MapPin,
         url: "/locations",
         group: "Gestione",
       },
       {
-        title: "Utenti",
+        title: t('nav.users'),
         icon: Users,
         url: "/users",
         group: "Gestione",
@@ -576,31 +578,31 @@ export function AppSidebar() {
   if (isWarehouse) {
     menuItems.push(
       {
-        title: "Home",
+        title: t('nav.home'),
         icon: Home,
         url: "/",
         group: "Generale",
       },
       {
-        title: "Eventi",
+        title: t('nav.events'),
         icon: Calendar,
         url: "/events",
         group: "Generale",
       },
       {
-        title: "Prodotti",
+        title: t('nav.products'),
         icon: Package,
         url: "/products",
         group: "Inventario",
       },
       {
-        title: "Fornitori",
+        title: t('nav.suppliers'),
         icon: Truck,
         url: "/suppliers",
         group: "Inventario",
       },
       {
-        title: "Magazzino",
+        title: t('nav.warehouse'),
         icon: Warehouse,
         url: "/warehouse",
         group: "Inventario",
@@ -639,7 +641,7 @@ export function AppSidebar() {
   if (isCliente) {
     menuItems.push(
       {
-        title: "Home",
+        title: t('nav.home'),
         icon: Home,
         url: "/",
         group: "Bacheca",
@@ -667,13 +669,13 @@ export function AppSidebar() {
   if (isAdmin) {
     menuItems.push(
       {
-        title: "Fatturazione",
+        title: t('nav.reports'),
         icon: Receipt,
         url: "/organizer/billing",
         group: "Account",
       },
       {
-        title: "Impostazioni",
+        title: t('nav.settings'),
         icon: Settings,
         url: "/settings",
         group: "Sistema",

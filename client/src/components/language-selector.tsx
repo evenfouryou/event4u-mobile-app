@@ -9,10 +9,10 @@ import {
 import { Button } from '@/components/ui/button';
 
 const languages = [
-  { code: 'it', name: 'Italiano', flag: '🇮🇹' },
-  { code: 'en', name: 'English', flag: '🇬🇧' },
-  { code: 'fr', name: 'Français', flag: '🇫🇷' },
-  { code: 'de', name: 'Deutsch', flag: '🇩🇪' },
+  { code: 'it', name: 'Italiano', abbr: 'IT' },
+  { code: 'en', name: 'English', abbr: 'EN' },
+  { code: 'fr', name: 'Français', abbr: 'FR' },
+  { code: 'de', name: 'Deutsch', abbr: 'DE' },
 ];
 
 export function LanguageSelector() {
@@ -40,7 +40,7 @@ export function LanguageSelector() {
             className={i18n.language === lang.code ? 'bg-accent' : ''}
             data-testid={`menu-item-lang-${lang.code}`}
           >
-            <span className="mr-2">{lang.flag}</span>
+            <span className="mr-2 font-medium text-xs text-muted-foreground">{lang.abbr}</span>
             {lang.name}
           </DropdownMenuItem>
         ))}

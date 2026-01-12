@@ -14,6 +14,7 @@ import { useIsMobile } from "@/hooks/use-mobile";
 import { motion } from "framer-motion";
 import { triggerHaptic, HapticButton, SafeArea } from "@/components/mobile-primitives";
 import { BrandLogo } from "@/components/brand-logo";
+import { useTranslation } from "react-i18next";
 
 // Login method types
 type LoginMethod = 'email' | 'username' | 'phone';
@@ -36,6 +37,7 @@ export default function Login() {
   const params = new URLSearchParams(searchString);
   const redirectTo = params.get("redirect");
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
   
   const [loginMethod, setLoginMethod] = useState<LoginMethod>('email');
   const [email, setEmail] = useState("");
@@ -173,8 +175,8 @@ export default function Login() {
               <BrandLogo variant="vertical" className="h-24 w-auto" />
             </Link>
             <div>
-              <CardTitle className="text-2xl">Bentornato</CardTitle>
-              <CardDescription>Accedi al tuo account per continuare</CardDescription>
+              <CardTitle className="text-2xl">{t('auth.login')}</CardTitle>
+              <CardDescription>{t('auth.noAccount')}</CardDescription>
             </div>
           </CardHeader>
           <CardContent>
@@ -226,7 +228,7 @@ export default function Login() {
 
               {loginMethod === 'email' && (
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">{t('auth.email')}</Label>
                   <Input
                     id="email"
                     type="email"
@@ -288,7 +290,7 @@ export default function Login() {
               )}
 
               <div className="space-y-2">
-                <Label htmlFor="password">Password</Label>
+                <Label htmlFor="password">{t('auth.password')}</Label>
                 <Input
                   id="password"
                   type="password"
@@ -306,7 +308,7 @@ export default function Login() {
                   className="text-sm text-primary font-medium hover:underline"
                   data-testid="link-forgot-password"
                 >
-                  Password dimenticata?
+                  {t('auth.forgotPassword')}
                 </Link>
               </div>
 
@@ -316,19 +318,19 @@ export default function Login() {
                 disabled={isLoading}
                 data-testid="button-submit"
               >
-                {isLoading ? "Accesso in corso..." : "Accedi"}
+                {isLoading ? t('common.loading') : t('auth.login')}
               </Button>
             </form>
 
             <div className="mt-6 text-center">
               <p className="text-sm text-muted-foreground">
-                Non hai un account?{" "}
+                {t('auth.noAccount')}{" "}
                 <Link 
                   href="/register" 
                   className="text-primary font-semibold hover:underline" 
                   data-testid="link-register"
                 >
-                  Registrati gratis
+                  {t('auth.register')}
                 </Link>
               </p>
             </div>
@@ -389,9 +391,9 @@ export default function Login() {
           className="w-full"
         >
           <div className="text-center mb-8">
-            <h1 className="text-2xl font-bold mb-2">Bentornato</h1>
+            <h1 className="text-2xl font-bold mb-2">{t('auth.login')}</h1>
             <p className="text-muted-foreground text-base">
-              Accedi al tuo account per continuare
+              {t('auth.noAccount')}
             </p>
           </div>
 
@@ -467,7 +469,7 @@ export default function Login() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ ...springConfig, delay: 0.18 }}
               >
-                <Label htmlFor="email-mobile" className="text-base font-medium">Email</Label>
+                <Label htmlFor="email-mobile" className="text-base font-medium">{t('auth.email')}</Label>
                 <Input
                   id="email-mobile"
                   type="email"
@@ -546,7 +548,7 @@ export default function Login() {
               animate={{ opacity: 1, x: 0 }}
               transition={{ ...springConfig, delay: 0.2 }}
             >
-              <Label htmlFor="password" className="text-base font-medium">Password</Label>
+              <Label htmlFor="password" className="text-base font-medium">{t('auth.password')}</Label>
               <Input
                 id="password"
                 type="password"
@@ -570,7 +572,7 @@ export default function Login() {
                 className="text-base text-primary font-medium min-h-[44px] flex items-center px-2"
                 data-testid="link-forgot-password"
               >
-                Password dimenticata?
+                {t('auth.forgotPassword')}
               </Link>
             </motion.div>
 
@@ -587,7 +589,7 @@ export default function Login() {
                 hapticType="medium"
                 data-testid="button-submit"
               >
-                {isLoading ? "Accesso in corso..." : "Accedi"}
+                {isLoading ? t('common.loading') : t('auth.login')}
               </HapticButton>
             </motion.div>
           </form>
@@ -600,13 +602,13 @@ export default function Login() {
           className="mt-10 text-center"
         >
           <p className="text-base text-muted-foreground">
-            Non hai un account?{" "}
+            {t('auth.noAccount')}{" "}
             <Link 
               href="/register" 
               className="text-primary font-semibold min-h-[44px] inline-flex items-center px-1" 
               data-testid="link-register"
             >
-              Registrati gratis
+              {t('auth.register')}
             </Link>
           </p>
         </motion.div>
