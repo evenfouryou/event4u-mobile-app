@@ -4967,15 +4967,26 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
     let fiscalSealCounter: number | null = null;
     let cardCode: string | null = null;
     
-    const isTestMode = process.env.SIAE_TEST_MODE === 'true';
     const bridgeStatus = getCachedBridgeStatus();
+    console.log(`[RESALE] Bridge status: connected=${bridgeStatus.bridgeConnected}, cardInserted=${bridgeStatus.cardInserted}`);
     
-    // In test mode, always use fallback seal for faster processing
-    if (!isTestMode && bridgeStatus.bridgeConnected && bridgeStatus.cardInserted) {
+    // Try to get real seal if bridge is available
+    if (bridgeStatus.bridgeConnected && bridgeStatus.cardInserted) {
       try {
-        // Request real fiscal seal from smart card
+        // Request real fiscal seal from smart card with outer timeout protection
         const priceInCents = Math.round(parseFloat(resale.resalePrice) * 100);
-        sealData = await requestFiscalSeal(priceInCents) as any;
+        console.log(`[RESALE] Attempting to get real fiscal seal for ${priceInCents} cents...`);
+        
+        // Use Promise.race with external timeout as extra safety
+        const SEAL_OUTER_TIMEOUT = 6000; // 6 seconds outer timeout
+        const timeoutPromise = new Promise<never>((_, reject) => 
+          setTimeout(() => reject(new Error('OUTER_TIMEOUT: Timeout esterno sigillo fiscale')), SEAL_OUTER_TIMEOUT)
+        );
+        
+        sealData = await Promise.race([
+          requestFiscalSeal(priceInCents),
+          timeoutPromise
+        ]) as any;
         fiscalSealCode = sealData!.sealCode;
         fiscalSealCounter = sealData!.counter;
         cardCode = sealData!.serialNumber;
@@ -5025,10 +5036,9 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
         fiscalSealCode = `R${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       }
     } else {
-      // Bridge not available or test mode, use temporary seal
+      // Bridge not available, use temporary seal
       fiscalSealCode = `R${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      const reason = isTestMode ? 'test mode active' : 'bridge not available';
-      console.log(`[RESALE] Using temporary seal (${reason}): ${fiscalSealCode}`);
+      console.log(`[RESALE] Bridge not available (connected=${bridgeStatus.bridgeConnected}, cardInserted=${bridgeStatus.cardInserted}), using temporary seal: ${fiscalSealCode}`);
     }
     
     // 5. Create new ticket for buyer with all original ticket data
