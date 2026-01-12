@@ -28,7 +28,7 @@ import {
 import {
   Users,
   Building2,
-  Calendar,
+  CalendarDays,
   ChevronLeft,
   Mail,
   Settings,
@@ -67,8 +67,28 @@ interface FeatureConfig {
   label: string;
   description: string;
   icon: React.ReactNode;
-  category?: 'general' | 'eventhub';
+  category?: 'general' | 'eventhub' | 'pr';
 }
+
+type FeatureCategory = 'general' | 'eventhub' | 'pr';
+
+const categoryConfig: Record<FeatureCategory, { label: string; icon: React.ReactNode; description: string }> = {
+  general: { 
+    label: 'Moduli Generali', 
+    icon: <Settings className="h-4 w-4" />,
+    description: 'Funzionalità base del sistema'
+  },
+  eventhub: { 
+    label: 'Event Hub', 
+    icon: <CalendarDays className="h-4 w-4" />,
+    description: 'Moduli per la gestione eventi'
+  },
+  pr: { 
+    label: 'PR & Promoter', 
+    icon: <UserPlus className="h-4 w-4" />,
+    description: 'Gestione PR e prenotazioni'
+  },
+};
 
 const featuresList: FeatureConfig[] = [
   // General modules
@@ -79,7 +99,6 @@ const featuresList: FeatureConfig[] = [
   { key: 'nightFileEnabled', label: 'File della Serata', description: 'Documento integrato per evento', icon: <FileText className="h-4 w-4" />, category: 'general' },
   { key: 'siaeEnabled', label: 'SIAE Biglietteria', description: 'Gestione biglietti, cassieri e lettore fiscale SIAE', icon: <Ticket className="h-4 w-4" />, category: 'general' },
   { key: 'scannerEnabled', label: 'Scanner', description: 'Gestione Scanner e Scanner QR', icon: <ScanLine className="h-4 w-4" />, category: 'general' },
-  { key: 'prEnabled', label: 'Gestione PR', description: 'Gestione promoter e prenotazioni', icon: <UserPlus className="h-4 w-4" />, category: 'general' },
   { key: 'badgesEnabled', label: 'Badge Scuola', description: 'Creazione badge digitali', icon: <GraduationCap className="h-4 w-4" />, category: 'general' },
   { key: 'cassaBigliettiEnabled', label: 'Cassa Biglietti', description: 'Vendita biglietti cassa', icon: <Store className="h-4 w-4" />, category: 'general' },
   { key: 'templateEnabled', label: 'Template Digitali', description: 'Creazione template QR e digitali', icon: <QrCode className="h-4 w-4" />, category: 'general' },
@@ -91,6 +110,8 @@ const featuresList: FeatureConfig[] = [
   { key: 'marketingEnabled', label: 'Marketing', description: 'Campagne email e notifiche push', icon: <Megaphone className="h-4 w-4" />, category: 'eventhub' },
   { key: 'accessControlEnabled', label: 'Controllo Accessi', description: 'Gestione ingressi e permessi', icon: <ShieldCheck className="h-4 w-4" />, category: 'eventhub' },
   { key: 'financeEnabled', label: 'Finanza', description: 'Report finanziari e pagamenti', icon: <Euro className="h-4 w-4" />, category: 'eventhub' },
+  // PR modules
+  { key: 'prEnabled', label: 'Gestione PR', description: 'Abilita modulo PR e promoter', icon: <UserPlus className="h-4 w-4" />, category: 'pr' },
 ];
 
 const springTransition = { type: "spring", stiffness: 400, damping: 30 };
@@ -115,6 +136,7 @@ export default function AdminGestori() {
 
   const [featuresDialogOpen, setFeaturesDialogOpen] = useState(false);
   const [selectedGestore, setSelectedGestore] = useState<User | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<FeatureCategory>('general');
   const [featureValues, setFeatureValues] = useState<Record<string, boolean>>({
     beverageEnabled: true,
     contabilitaEnabled: false,
@@ -309,7 +331,7 @@ export default function AdminGestori() {
                 onClick={() => handleViewEvents(gestore)}
                 data-testid={`button-view-events-${gestore.id}`}
               >
-                <Calendar className="h-4 w-4 mr-1" />
+                <CalendarDays className="h-4 w-4 mr-1" />
                 Eventi
               </Button>
             </div>
@@ -387,7 +409,7 @@ export default function AdminGestori() {
                       onClick={() => handleViewEvents(gestore)}
                       data-testid={`button-view-events-${gestore.id}`}
                     >
-                      <Calendar className="h-4 w-4 mr-1" />
+                      <CalendarDays className="h-4 w-4 mr-1" />
                       Eventi
                     </Button>
                   </div>
@@ -405,103 +427,121 @@ export default function AdminGestori() {
     </Card>
   );
 
-  const generalFeatures = featuresList.filter(f => f.category === 'general' || !f.category);
-  const eventHubFeatures = featuresList.filter(f => f.category === 'eventhub');
+  const categories: FeatureCategory[] = ['general', 'eventhub', 'pr'];
+  const currentCategoryFeatures = featuresList.filter(f => f.category === selectedCategory);
 
   const featuresDialog = (
-    <Dialog open={featuresDialogOpen} onOpenChange={setFeaturesDialogOpen}>
-      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2">
-            <Settings className="h-5 w-5" />
-            Moduli Attivi
-          </DialogTitle>
-          <DialogDescription>
-            Gestisci i moduli abilitati per {selectedGestore?.firstName} {selectedGestore?.lastName}
-          </DialogDescription>
-        </DialogHeader>
-        
-        {featuresLoading ? (
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin" />
-          </div>
-        ) : (
-          <div className="space-y-6 py-4">
-            <div>
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3">Moduli Generali</h3>
-              <div className="space-y-2">
-                {generalFeatures.map((feature) => (
-                  <div key={feature.key} className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/50">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-md bg-primary/10 text-primary">
-                        {feature.icon}
-                      </div>
-                      <div>
-                        <Label htmlFor={feature.key} className="font-medium">
-                          {feature.label}
-                        </Label>
-                        <p className="text-xs text-muted-foreground">{feature.description}</p>
-                      </div>
+    <Dialog open={featuresDialogOpen} onOpenChange={(open) => {
+      setFeaturesDialogOpen(open);
+      if (!open) setSelectedCategory('general');
+    }}>
+      <DialogContent className="sm:max-w-3xl max-h-[85vh] overflow-hidden p-0">
+        <div className="flex h-full">
+          <div className="w-48 border-r bg-muted/30 p-4 flex flex-col">
+            <DialogHeader className="pb-4">
+              <DialogTitle className="flex items-center gap-2 text-base">
+                <Settings className="h-4 w-4" />
+                Moduli
+              </DialogTitle>
+            </DialogHeader>
+            <nav className="space-y-1 flex-1">
+              {categories.map((cat) => {
+                const config = categoryConfig[cat];
+                const isActive = selectedCategory === cat;
+                const enabledCount = featuresList.filter(f => f.category === cat && featureValues[f.key]).length;
+                const totalCount = featuresList.filter(f => f.category === cat).length;
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setSelectedCategory(cat)}
+                    className={`w-full flex items-center gap-3 p-3 rounded-lg text-left transition-colors ${
+                      isActive 
+                        ? 'bg-primary text-primary-foreground' 
+                        : 'hover:bg-muted text-muted-foreground hover:text-foreground'
+                    }`}
+                    data-testid={`button-category-${cat}`}
+                  >
+                    <div className={`p-1.5 rounded-md ${isActive ? 'bg-primary-foreground/20' : 'bg-muted'}`}>
+                      {config.icon}
                     </div>
-                    <Switch
-                      id={feature.key}
-                      checked={featureValues[feature.key] ?? false}
-                      onCheckedChange={(checked) => 
-                        setFeatureValues(prev => ({ ...prev, [feature.key]: checked }))
-                      }
-                      data-testid={`switch-${feature.key}`}
-                    />
-                  </div>
-                ))}
-              </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="font-medium text-sm truncate">{config.label}</p>
+                      <p className="text-xs opacity-70">{enabledCount}/{totalCount} attivi</p>
+                    </div>
+                  </button>
+                );
+              })}
+            </nav>
+          </div>
+          
+          <div className="flex-1 flex flex-col overflow-hidden">
+            <div className="p-4 border-b bg-background">
+              <h3 className="font-semibold">{categoryConfig[selectedCategory].label}</h3>
+              <p className="text-sm text-muted-foreground">{categoryConfig[selectedCategory].description}</p>
+              <p className="text-xs text-muted-foreground mt-1">
+                Gestisci i moduli per {selectedGestore?.firstName} {selectedGestore?.lastName}
+              </p>
             </div>
             
-            <div>
-              <h3 className="text-sm font-semibold text-muted-foreground mb-3">Moduli Event Hub</h3>
-              <div className="space-y-2">
-                {eventHubFeatures.map((feature) => (
-                  <div key={feature.key} className="flex items-center justify-between gap-4 p-3 rounded-lg bg-accent/30">
-                    <div className="flex items-center gap-3">
-                      <div className="p-2 rounded-md bg-accent text-accent-foreground">
-                        {feature.icon}
+            <div className="flex-1 overflow-y-auto p-4">
+              {featuresLoading ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin" />
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {currentCategoryFeatures.map((feature) => (
+                    <div 
+                      key={feature.key} 
+                      className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/50 hover:bg-muted/70 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className="p-2 rounded-md bg-primary/10 text-primary">
+                          {feature.icon}
+                        </div>
+                        <div>
+                          <Label htmlFor={feature.key} className="font-medium cursor-pointer">
+                            {feature.label}
+                          </Label>
+                          <p className="text-xs text-muted-foreground">{feature.description}</p>
+                        </div>
                       </div>
-                      <div>
-                        <Label htmlFor={feature.key} className="font-medium">
-                          {feature.label}
-                        </Label>
-                        <p className="text-xs text-muted-foreground">{feature.description}</p>
-                      </div>
+                      <Switch
+                        id={feature.key}
+                        checked={featureValues[feature.key] ?? false}
+                        onCheckedChange={(checked) => 
+                          setFeatureValues(prev => ({ ...prev, [feature.key]: checked }))
+                        }
+                        data-testid={`switch-${feature.key}`}
+                      />
                     </div>
-                    <Switch
-                      id={feature.key}
-                      checked={featureValues[feature.key] ?? false}
-                      onCheckedChange={(checked) => 
-                        setFeatureValues(prev => ({ ...prev, [feature.key]: checked }))
-                      }
-                      data-testid={`switch-${feature.key}`}
-                    />
-                  </div>
-                ))}
-              </div>
+                  ))}
+                  {currentCategoryFeatures.length === 0 && (
+                    <div className="text-center py-8 text-muted-foreground">
+                      Nessun modulo in questa categoria
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
+            
+            <DialogFooter className="p-4 border-t bg-background">
+              <Button variant="outline" onClick={() => setFeaturesDialogOpen(false)}>
+                Annulla
+              </Button>
+              <Button 
+                onClick={handleSaveFeatures} 
+                disabled={updateFeaturesMutation.isPending}
+                data-testid="button-save-features"
+              >
+                {updateFeaturesMutation.isPending ? (
+                  <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                ) : null}
+                Salva
+              </Button>
+            </DialogFooter>
           </div>
-        )}
-        
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setFeaturesDialogOpen(false)}>
-            Annulla
-          </Button>
-          <Button 
-            onClick={handleSaveFeatures} 
-            disabled={updateFeaturesMutation.isPending}
-            data-testid="button-save-features"
-          >
-            {updateFeaturesMutation.isPending ? (
-              <Loader2 className="h-4 w-4 animate-spin mr-2" />
-            ) : null}
-            Salva
-          </Button>
-        </DialogFooter>
+        </div>
       </DialogContent>
     </Dialog>
   );
