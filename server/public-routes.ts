@@ -4946,18 +4946,11 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
       return res.status(500).json({ message: "Biglietto originale non trovato" });
     }
     
-    // 3. Annul original ticket (SIAE requirement)
-    await db
-      .update(siaeTickets)
-      .set({
-        status: 'annullato_rivendita',
-        annullamentoMotivo: `Rivendita completata - ID: ${id}`,
-        annullamentoData: new Date(),
-        updatedAt: new Date(),
-      })
-      .where(eq(siaeTickets.id, resale.originalTicketId));
+    // NOTE: We do NOT annul the original ticket here yet!
+    // We'll annul it ONLY after successfully creating the new ticket
+    // This prevents the ticket from "disappearing" if something fails
     
-    // 4. Try to get real fiscal seal from bridge if available (skip in test mode for faster processing)
+    // 3. Try to get real fiscal seal from bridge if available
     const now = new Date();
     const emissionDateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
     const emissionTimeStr = now.toTimeString().slice(0, 5).replace(':', '');
@@ -5111,11 +5104,20 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
         .where(eq(siaeTickets.id, newTicket.id));
     }
     
-    // Update original ticket with replacement reference
+    // NOW annul the original ticket (only after new ticket is successfully created)
+    // This is the critical fix: we only annul AFTER the new ticket exists
     await db
       .update(siaeTickets)
-      .set({ replacedByTicketId: newTicket.id })
+      .set({ 
+        status: 'annullato_rivendita',
+        cancellationReasonCode: 'RESALE',
+        cancellationDate: now,
+        replacedByTicketId: newTicket.id,
+        updatedAt: now,
+      })
       .where(eq(siaeTickets.id, originalTicket.id));
+    
+    console.log(`[RESALE] Original ticket ${originalTicket.id} annulled, replaced by ${newTicket.id}`);
     
     // 6. Update resale with new ticket and sigillo
     await db
