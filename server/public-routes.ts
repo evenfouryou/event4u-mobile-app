@@ -4961,19 +4961,27 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
     let cardCode: string | null = null;
     
     const bridgeStatus = getCachedBridgeStatus();
-    console.log(`[RESALE] Bridge status: connected=${bridgeStatus.bridgeConnected}, cardInserted=${bridgeStatus.cardInserted}`);
+    console.log(`[RESALE] Bridge status: connected=${bridgeStatus.bridgeConnected}, cardInserted=${bridgeStatus.cardInserted}, readerConnected=${bridgeStatus.readerConnected}`);
     
-    // Try to get real seal if bridge is available
-    if (bridgeStatus.bridgeConnected && bridgeStatus.cardInserted) {
+    // Only try real seal if bridge is TRULY available (connected + card inserted + reader connected)
+    // Use very strict check to avoid hanging
+    const bridgeTrulyReady = bridgeStatus.bridgeConnected === true && 
+                              bridgeStatus.cardInserted === true && 
+                              bridgeStatus.readerConnected === true;
+    
+    if (bridgeTrulyReady) {
       try {
         // Request real fiscal seal from smart card with outer timeout protection
         const priceInCents = Math.round(parseFloat(resale.resalePrice) * 100);
-        console.log(`[RESALE] Attempting to get real fiscal seal for ${priceInCents} cents...`);
+        console.log(`[RESALE] Bridge truly ready, attempting real fiscal seal for ${priceInCents} cents...`);
         
-        // Use Promise.race with external timeout as extra safety
-        const SEAL_OUTER_TIMEOUT = 6000; // 6 seconds outer timeout
+        // Use Promise.race with AGGRESSIVE external timeout
+        const SEAL_OUTER_TIMEOUT = 4000; // 4 seconds - fail fast
         const timeoutPromise = new Promise<never>((_, reject) => 
-          setTimeout(() => reject(new Error('OUTER_TIMEOUT: Timeout esterno sigillo fiscale')), SEAL_OUTER_TIMEOUT)
+          setTimeout(() => {
+            console.log(`[RESALE] OUTER TIMEOUT triggered after ${SEAL_OUTER_TIMEOUT}ms`);
+            reject(new Error('OUTER_TIMEOUT: Timeout esterno sigillo fiscale'));
+          }, SEAL_OUTER_TIMEOUT)
         );
         
         sealData = await Promise.race([
@@ -5029,9 +5037,9 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
         fiscalSealCode = `R${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       }
     } else {
-      // Bridge not available, use temporary seal
+      // Bridge not truly ready (missing connection, reader, or card), use temporary seal immediately
       fiscalSealCode = `R${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      console.log(`[RESALE] Bridge not available (connected=${bridgeStatus.bridgeConnected}, cardInserted=${bridgeStatus.cardInserted}), using temporary seal: ${fiscalSealCode}`);
+      console.log(`[RESALE] Bridge not truly ready (connected=${bridgeStatus.bridgeConnected}, cardInserted=${bridgeStatus.cardInserted}, readerConnected=${bridgeStatus.readerConnected}), using temporary seal: ${fiscalSealCode}`);
     }
     
     // 5. Create new ticket for buyer with all original ticket data
