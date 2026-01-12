@@ -6,6 +6,7 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
 import { AppSidebar } from "@/components/app-sidebar";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { LanguageSelector } from "@/components/language-selector";
 import { ThemeProvider } from "@/hooks/use-theme";
 import { MobileBottomNav } from "@/components/mobile-bottom-nav";
 import { InstallPrompt } from "@/components/install-prompt";
@@ -267,6 +268,7 @@ function Router() {
             <header className="flex items-center justify-between p-4 border-b gap-2">
               <SidebarTrigger data-testid="button-sidebar-toggle" />
               <div className="flex items-center gap-3">
+                <LanguageSelector />
                 <ThemeToggle />
               </div>
             </header>
@@ -352,6 +354,7 @@ function Router() {
             <SidebarTrigger data-testid="button-sidebar-toggle" />
             <div className="flex items-center gap-3">
               <SmartCardStatus data-testid="smart-card-status" />
+              <LanguageSelector />
               <ThemeToggle />
             </div>
           </header>
