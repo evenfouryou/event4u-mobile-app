@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import { motion } from "framer-motion";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { BrandLogo } from "@/components/brand-logo";
 import { ThemeToggle } from "@/components/theme-toggle";
@@ -36,6 +36,8 @@ import {
   RotateCcw,
   CreditCard,
 } from "lucide-react";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements, PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 
 interface ResaleDetail {
   id: string;
@@ -59,6 +61,14 @@ interface CustomerProfile {
   firstName: string;
   lastName: string;
   phone: string;
+}
+
+interface PaymentIntentResponse {
+  clientSecret: string;
+  resaleId: string;
+  resalePrice: number;
+  platformFee: number;
+  confirmToken: string;
 }
 
 const springConfig = {
@@ -85,6 +95,17 @@ const fadeInUp = {
     transition: springConfig,
   },
 };
+
+let stripePromiseCache: Promise<any> | null = null;
+
+async function getStripe() {
+  if (!stripePromiseCache) {
+    const res = await fetch("/api/stripe/config");
+    const { publishableKey } = await res.json();
+    stripePromiseCache = loadStripe(publishableKey);
+  }
+  return stripePromiseCache;
+}
 
 function ResaleProgressIndicator({ currentStep }: { currentStep: number }) {
   const steps = [
@@ -142,16 +163,60 @@ function ResaleProgressIndicator({ currentStep }: { currentStep: number }) {
   );
 }
 
+function PaymentElementWrapper({
+  onReady,
+  onStripeReady,
+  onElementsReady,
+}: {
+  onReady: () => void;
+  onStripeReady: (stripe: any) => void;
+  onElementsReady: (elements: any) => void;
+}) {
+  const stripe = useStripe();
+  const elements = useElements();
+
+  useEffect(() => {
+    if (stripe) {
+      onStripeReady(stripe);
+    }
+  }, [stripe, onStripeReady]);
+
+  useEffect(() => {
+    if (elements) {
+      onElementsReady(elements);
+    }
+  }, [elements, onElementsReady]);
+
+  return (
+    <div className="space-y-4">
+      <PaymentElement
+        options={{
+          layout: "tabs",
+        }}
+        onReady={onReady}
+      />
+    </div>
+  );
+}
+
 export default function PublicResaleCheckoutPage() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const isMobile = useIsMobile();
-  const [isReserving, setIsReserving] = useState(false);
+  
   const [captchaData, setCaptchaData] = useState<{ token: string; svg: string; width: number; height: number; enabled: boolean } | null>(null);
   const [captchaInput, setCaptchaInput] = useState("");
   const [captchaError, setCaptchaError] = useState<string | null>(null);
   const [captchaValidated, setCaptchaValidated] = useState(false);
+  
+  const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
+  const [isElementReady, setIsElementReady] = useState(false);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const [paymentError, setPaymentError] = useState<string | null>(null);
+  const paymentIntentCreated = useRef(false);
+  const stripeRef = useRef<any>(null);
+  const elementsRef = useRef<any>(null);
 
   const { data: resale, isLoading: resaleLoading, error: resaleError } = useQuery<ResaleDetail>({
     queryKey: [`/api/public/resales/${id}`],
@@ -174,6 +239,7 @@ export default function PublicResaleCheckoutPage() {
     setCaptchaValidated(false);
     setCaptchaInput("");
     setCaptchaError(null);
+    paymentIntentCreated.current = false;
     refetchCaptcha();
     triggerHaptic('light');
   };
@@ -186,6 +252,10 @@ export default function PublicResaleCheckoutPage() {
       setCaptchaValidated(false);
     }
   }, [captchaResponse]);
+
+  useEffect(() => {
+    getStripe().then(setStripePromise);
+  }, []);
 
   const validateCaptchaMutation = useMutation({
     mutationFn: async () => {
@@ -213,50 +283,142 @@ export default function PublicResaleCheckoutPage() {
     },
   });
 
-  const reserveMutation = useMutation({
+  const canProceedWithPayment = !captchaData?.enabled || (captchaData?.enabled && captchaValidated);
+
+  const createPaymentIntent = useMutation({
     mutationFn: async () => {
-      const response = await apiRequest("POST", `/api/public/resales/${id}/reserve`, {
+      const res = await apiRequest("POST", `/api/public/resales/${id}/payment-intent`, {
         captchaToken: captchaData?.token,
       });
-      return await response.json();
-    },
-    onSuccess: (data: any) => {
-      triggerHaptic('success');
-      if (data.checkoutUrl) {
-        window.location.href = data.checkoutUrl;
-      }
+      const data = await res.json();
+      return data as PaymentIntentResponse;
     },
     onError: (error: any) => {
-      triggerHaptic('error');
       const errorCode = error.data?.code || error.code || "";
       
       if (errorCode === "CAPTCHA_INVALID" || errorCode === "CAPTCHA_EXPIRED" || errorCode === "CAPTCHA_NOT_VALIDATED") {
         setCaptchaError(error.message);
         handleRefreshCaptcha();
+        return;
+      }
+      
+      if (error.message?.includes("autenticato") || error.message?.includes("loggato")) {
+        navigate(`/login?redirect=/rivendita/${id}`);
       } else {
         toast({
           title: "Errore",
-          description: error.message || "Impossibile procedere all'acquisto",
+          description: error.message || "Impossibile avviare il pagamento.",
           variant: "destructive",
         });
       }
-      setIsReserving(false);
     },
   });
 
-  const canProceedWithPurchase = !captchaData?.enabled || (captchaData?.enabled && captchaValidated);
+  useEffect(() => {
+    if (resale && customer && !paymentIntentCreated.current && canProceedWithPayment && resale.status === 'listed') {
+      paymentIntentCreated.current = true;
+      createPaymentIntent.mutate();
+    }
+  }, [resale, customer, canProceedWithPayment]);
 
-  const handlePurchase = () => {
-    if (!customer) {
-      navigate(`/login?redirect=/rivendita/${id}`);
+  const elementsOptions = createPaymentIntent.data?.clientSecret ? {
+    clientSecret: createPaymentIntent.data.clientSecret,
+    appearance: {
+      theme: 'stripe' as const,
+      variables: {
+        colorPrimary: '#0ea5e9',
+        colorBackground: 'hsl(var(--background))',
+        colorText: 'hsl(var(--foreground))',
+        colorDanger: 'hsl(var(--destructive))',
+        fontFamily: 'system-ui, sans-serif',
+        borderRadius: '12px',
+        spacingUnit: '4px',
+      },
+      rules: {
+        '.Input': {
+          backgroundColor: 'hsl(var(--muted))',
+          border: '1px solid hsl(var(--border))',
+          padding: '14px',
+        },
+        '.Input:focus': {
+          borderColor: 'hsl(var(--primary))',
+          boxShadow: '0 0 0 2px hsl(var(--primary) / 0.2)',
+        },
+        '.Label': {
+          fontWeight: '500',
+          marginBottom: '8px',
+        },
+        '.Tab': {
+          backgroundColor: 'hsl(var(--muted))',
+          border: '1px solid hsl(var(--border))',
+        },
+        '.Tab--selected': {
+          backgroundColor: 'hsl(var(--background))',
+          borderColor: 'hsl(var(--primary))',
+        },
+      },
+    },
+  } : null;
+
+  const handlePaymentSubmit = async () => {
+    if (!stripeRef.current || !elementsRef.current || !isElementReady) {
       return;
     }
-    if (!canProceedWithPurchase) {
-      return;
+
+    setIsProcessing(true);
+    setPaymentError(null);
+
+    try {
+      const { error, paymentIntent } = await stripeRef.current.confirmPayment({
+        elements: elementsRef.current,
+        confirmParams: {
+          return_url: `${window.location.origin}/account/resale-success?resale_id=${id}&token=${createPaymentIntent.data?.confirmToken}`,
+        },
+        redirect: "if_required",
+      });
+
+      if (error) {
+        setPaymentError(error.message || "Pagamento fallito. Riprova.");
+        setIsProcessing(false);
+        triggerHaptic('error');
+        return;
+      }
+
+      if (paymentIntent && paymentIntent.status === "succeeded") {
+        try {
+          const response = await apiRequest("POST", `/api/public/resales/${id}/confirm`, {
+            token: createPaymentIntent.data?.confirmToken,
+          });
+
+          const result = await response.json();
+
+          triggerHaptic('success');
+          toast({
+            title: "Acquisto completato!",
+            description: "Il biglietto è stato trasferito al tuo account.",
+          });
+
+          navigate(`/account/resale-success?resale_id=${id}&success=true`);
+        } catch (confirmError: any) {
+          setPaymentError(confirmError.message || "Si è verificato un problema. Riprova.");
+          toast({
+            title: "Errore",
+            description: confirmError.message || "Errore nella conferma acquisto",
+            variant: "destructive",
+          });
+          setIsProcessing(false);
+          return;
+        }
+      }
+    } catch (error: any) {
+      setPaymentError(error.message || "Errore durante il pagamento.");
+      setIsProcessing(false);
     }
-    setIsReserving(true);
-    reserveMutation.mutate();
   };
+
+  const resalePrice = resale ? parseFloat(resale.resalePrice) : 0;
+  const platformFee = createPaymentIntent.data?.platformFee ?? Math.round(resalePrice * 5) / 100;
+  const currentStep = !canProceedWithPayment ? 1 : 2;
 
   if (resaleLoading || customerLoading) {
     return (
@@ -314,7 +476,7 @@ export default function PublicResaleCheckoutPage() {
     );
   }
 
-  if (resale.status !== 'listed') {
+  if (resale.status !== 'listed' && resale.status !== 'reserved') {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
         <motion.div 
@@ -352,164 +514,126 @@ export default function PublicResaleCheckoutPage() {
 
   if (!customer) {
     return (
-      <div className="min-h-screen bg-background" data-testid="page-resale-checkout">
-        <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border">
-          <div className="container mx-auto px-4 py-3 flex items-center justify-between">
-            <Link href="/rivendite">
-              <Button variant="ghost" size="sm" data-testid="button-back">
-                <ChevronLeft className="w-4 h-4 mr-1" />
-                Indietro
-              </Button>
-            </Link>
-            <BrandLogo variant="horizontal" className="h-8" />
-            <ThemeToggle />
-          </div>
-        </header>
-        <main className="container mx-auto px-4 py-6 max-w-lg">
-          <motion.div 
-            initial={{ opacity: 0, scale: 0.95 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={springConfig}
-            className="flex flex-col items-center justify-center p-8 text-center"
+      <div className="min-h-screen bg-background flex items-center justify-center p-4">
+        <motion.div 
+          initial={{ opacity: 0, scale: 0.95 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={springConfig}
+          className="flex flex-col items-center justify-center p-8 text-center max-w-md"
+        >
+          <motion.div
+            initial={{ scale: 0 }}
+            animate={{ scale: 1 }}
+            transition={{ ...springConfig, delay: 0.1 }}
+            className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6"
           >
-            <motion.div
-              initial={{ scale: 0 }}
-              animate={{ scale: 1 }}
-              transition={{ ...springConfig, delay: 0.1 }}
-              className="w-20 h-20 rounded-full bg-primary/10 flex items-center justify-center mb-6"
-            >
-              <User className="w-10 h-10 text-primary" />
-            </motion.div>
-            <h3 className="text-xl font-semibold text-foreground mb-2">Accesso Richiesto</h3>
-            <p className="text-muted-foreground mb-8">
-              Per acquistare questo biglietto devi accedere al tuo account o registrarti.
-            </p>
-            <Link href={`/login?redirect=/rivendita/${id}`}>
-              <HapticButton 
-                className="h-14 px-8 text-base"
-                hapticType="medium"
-                data-testid="button-login"
-              >
-                Accedi o Registrati
-              </HapticButton>
-            </Link>
+            <User className="w-10 h-10 text-primary" />
           </motion.div>
-        </main>
+          <h3 className="text-xl font-semibold text-foreground mb-2">Accesso Richiesto</h3>
+          <p className="text-muted-foreground mb-8">
+            Per acquistare questo biglietto devi accedere al tuo account o registrarti.
+          </p>
+          <Link href={`/login?redirect=/rivendita/${id}`}>
+            <HapticButton 
+              className="h-14 px-8 text-base"
+              hapticType="medium"
+              data-testid="button-login"
+            >
+              <User className="w-4 h-4 mr-2" />
+              Accedi o Registrati
+            </HapticButton>
+          </Link>
+        </motion.div>
       </div>
     );
   }
 
-  const eventDate = new Date(resale.eventStart);
-  const originalPrice = parseFloat(resale.originalPrice);
-  const resalePrice = parseFloat(resale.resalePrice);
-  const discount = originalPrice > 0 ? Math.round(((originalPrice - resalePrice) / originalPrice) * 100) : 0;
-  const hasDiscount = discount > 0;
-  const currentStep = captchaValidated ? 2 : 1;
-
   return (
-    <div className="min-h-screen bg-background" data-testid="page-resale-checkout">
+    <div className="min-h-screen bg-background pb-32">
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur-xl border-b border-border">
-        <div className="container mx-auto px-4 py-3 flex items-center justify-between">
+        <div className="container mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <Link href="/rivendite">
-            <Button variant="ghost" size="sm" data-testid="button-back">
-              <ChevronLeft className="w-4 h-4 mr-1" />
-              Indietro
+            <Button variant="ghost" size="icon" className="shrink-0" data-testid="button-back">
+              <ChevronLeft className="w-5 h-5" />
             </Button>
           </Link>
-          <BrandLogo variant="horizontal" className="h-8" />
+          <div className="flex-1 flex justify-center">
+            <BrandLogo size="sm" />
+          </div>
           <ThemeToggle />
         </div>
       </header>
 
       <main className="container mx-auto px-4 py-6 max-w-lg">
+        <ResaleProgressIndicator currentStep={currentStep} />
+        
         <motion.div
           variants={staggerContainer}
           initial="hidden"
           animate="show"
-          className="space-y-4 pb-32"
+          className="space-y-4 mt-4"
         >
-          <motion.div variants={fadeInUp}>
-            <ResaleProgressIndicator currentStep={currentStep} />
+          <motion.div variants={fadeInUp} className="bg-card rounded-2xl border border-border overflow-hidden">
+            <div className="relative">
+              {resale.eventImageUrl ? (
+                <img
+                  src={resale.eventImageUrl}
+                  alt={resale.eventName}
+                  className="w-full h-36 object-cover"
+                />
+              ) : (
+                <div className="w-full h-36 bg-gradient-to-br from-primary/20 to-primary/5 flex items-center justify-center">
+                  <Ticket className="w-12 h-12 text-primary/30" />
+                </div>
+              )}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+              <div className="absolute bottom-3 left-3 right-3">
+                <Badge variant="secondary" className="mb-2 bg-teal-500/90 text-white border-0">
+                  Biglietto in Rivendita
+                </Badge>
+                <h1 className="text-lg font-bold text-white line-clamp-2">
+                  {resale.eventName}
+                </h1>
+              </div>
+            </div>
+            
+            <div className="p-4 space-y-3">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Calendar className="w-4 h-4 text-primary" />
+                <span>{format(new Date(resale.eventStart), "EEEE d MMMM yyyy 'alle' HH:mm", { locale: it })}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <MapPin className="w-4 h-4 text-primary" />
+                <span>{resale.locationName}</span>
+              </div>
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                <Ticket className="w-4 h-4 text-primary" />
+                <span>{resale.sectorName} - {resale.ticketType}</span>
+              </div>
+            </div>
           </motion.div>
 
           <motion.div variants={fadeInUp} className="bg-card rounded-2xl border border-border overflow-hidden">
             <div className="px-4 py-3 border-b border-border bg-muted/30">
               <h2 className="font-semibold text-foreground flex items-center gap-2">
-                <Ticket className="w-5 h-5 text-primary" />
-                Riepilogo Ordine
-                <Badge className="ml-auto bg-amber-500/90 text-white text-xs">
-                  <RefreshCw className="w-3 h-3 mr-1" />
-                  Rivendita
-                </Badge>
+                <CreditCard className="w-5 h-5 text-teal-400" />
+                Riepilogo Acquisto
               </h2>
             </div>
-            <div className="p-4 space-y-4">
-              {resale.eventImageUrl && (
-                <div className="relative aspect-video rounded-xl overflow-hidden">
-                  <img
-                    src={resale.eventImageUrl}
-                    alt={resale.eventName}
-                    className="absolute inset-0 w-full h-full object-cover"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-background via-background/50 to-transparent" />
-                </div>
-              )}
-
-              <div>
-                <p className="font-semibold text-lg text-foreground">{resale.eventName}</p>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  <Badge variant="secondary">
-                    <Ticket className="w-3 h-3 mr-1" />
-                    {resale.ticketType}
-                  </Badge>
-                  <Badge variant="outline">
-                    {resale.sectorName}
-                  </Badge>
-                </div>
+            <div className="p-4 space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Prezzo biglietto</span>
+                <span className="font-medium">€{resalePrice.toFixed(2)}</span>
               </div>
-
-              <div className="space-y-3">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-teal-500/10 flex items-center justify-center flex-shrink-0">
-                    <Calendar className="w-5 h-5 text-teal-400" />
-                  </div>
-                  <div>
-                    <p className="font-medium text-foreground">{format(eventDate, "EEEE d MMMM yyyy", { locale: it })}</p>
-                    <p className="text-sm text-muted-foreground">Ore {format(eventDate, "HH:mm")}</p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-teal-500/10 flex items-center justify-center flex-shrink-0">
-                    <MapPin className="w-5 h-5 text-teal-400" />
-                  </div>
-                  <p className="text-muted-foreground">{resale.locationName}</p>
-                </div>
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">Commissioni piattaforma</span>
+                <span className="text-teal-400">Incluse</span>
               </div>
-
-              <div className="pt-4 border-t border-border space-y-2">
-                <div className="flex justify-between items-center text-muted-foreground">
-                  <span>Quantità</span>
-                  <span className="text-foreground font-medium">1 biglietto</span>
-                </div>
-                <div className="flex justify-between items-center text-muted-foreground">
-                  <span>Prezzo originale</span>
-                  <span className={hasDiscount ? "line-through" : "text-foreground"}>
-                    €{originalPrice.toFixed(2)}
-                  </span>
-                </div>
-                {hasDiscount && (
-                  <div className="flex justify-between items-center text-muted-foreground">
-                    <span>Sconto</span>
-                    <span className="text-teal-400">-{discount}%</span>
-                  </div>
-                )}
-                <div className="flex justify-between items-center pt-2 border-t border-border">
-                  <span className="text-lg font-semibold text-foreground">Totale</span>
-                  <span className="text-2xl font-bold text-primary" data-testid="text-total">
-                    €{resalePrice.toFixed(2)}
-                  </span>
-                </div>
+              <div className="flex justify-between items-center pt-2 border-t border-border">
+                <span className="text-lg font-semibold text-foreground">Totale</span>
+                <span className="text-2xl font-bold text-primary" data-testid="text-total">
+                  €{resalePrice.toFixed(2)}
+                </span>
               </div>
             </div>
           </motion.div>
@@ -534,10 +658,6 @@ export default function PublicResaleCheckoutPage() {
                 <div className="col-span-2">
                   <Label className="text-muted-foreground text-xs">Email</Label>
                   <p className="text-foreground font-medium truncate" data-testid="text-email">{customer.email}</p>
-                </div>
-                <div className="col-span-2">
-                  <Label className="text-muted-foreground text-xs">Telefono</Label>
-                  <p className="text-foreground font-medium" data-testid="text-phone">{customer.phone}</p>
                 </div>
               </div>
             </div>
@@ -620,6 +740,98 @@ export default function PublicResaleCheckoutPage() {
             </motion.div>
           )}
 
+          <motion.div variants={fadeInUp} className="bg-card rounded-2xl border border-border overflow-hidden">
+            <div className="px-4 py-3 border-b border-border bg-muted/30">
+              <h2 className="font-semibold text-foreground flex items-center gap-2">
+                <CreditCard className="w-5 h-5 text-teal-400" />
+                Metodo di Pagamento
+              </h2>
+            </div>
+            <div className="p-4">
+              {!canProceedWithPayment && captchaData?.enabled ? (
+                <div className="space-y-4">
+                  <div className="flex items-center gap-2 p-3 bg-amber-500/10 border border-amber-500/30 rounded-lg">
+                    <ShieldCheck className="w-5 h-5 text-amber-400 flex-shrink-0" />
+                    <p className="text-sm text-amber-400">Completa la verifica CAPTCHA per inserire i dati della carta</p>
+                  </div>
+                  <div className="relative opacity-50 pointer-events-none">
+                    <div className="p-4 bg-muted/30 rounded-2xl border border-border space-y-4">
+                      <div className="space-y-2">
+                        <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                        <div className="h-12 bg-muted rounded-lg animate-pulse" />
+                      </div>
+                      <div className="grid grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <div className="h-4 w-16 bg-muted rounded animate-pulse" />
+                          <div className="h-12 bg-muted rounded-lg animate-pulse" />
+                        </div>
+                        <div className="space-y-2">
+                          <div className="h-4 w-12 bg-muted rounded animate-pulse" />
+                          <div className="h-12 bg-muted rounded-lg animate-pulse" />
+                        </div>
+                      </div>
+                    </div>
+                    <div className="absolute inset-0 flex items-center justify-center">
+                      <div className="bg-background/80 backdrop-blur-sm rounded-lg px-4 py-2 flex items-center gap-2">
+                        <Lock className="w-4 h-4 text-muted-foreground" />
+                        <span className="text-sm text-muted-foreground">Completa prima la verifica</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              ) : createPaymentIntent.isPending ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+                  <p className="text-muted-foreground">Preparazione pagamento...</p>
+                </div>
+              ) : createPaymentIntent.data && elementsOptions && stripePromise ? (
+                <Elements 
+                  stripe={stripePromise} 
+                  options={elementsOptions}
+                >
+                  <PaymentElementWrapper
+                    onReady={() => setIsElementReady(true)}
+                    onStripeReady={(stripe) => { stripeRef.current = stripe; }}
+                    onElementsReady={(elements) => { elementsRef.current = elements; }}
+                  />
+                </Elements>
+              ) : createPaymentIntent.isError ? (
+                <div className="text-center py-8">
+                  <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-400" />
+                  <p className="text-red-400 mb-4">Errore nel caricamento del modulo di pagamento.</p>
+                  <HapticButton
+                    onClick={() => {
+                      paymentIntentCreated.current = false;
+                      createPaymentIntent.mutate();
+                    }}
+                    variant="outline"
+                    className="h-12"
+                    hapticType="medium"
+                  >
+                    Riprova
+                  </HapticButton>
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+                  <p className="text-muted-foreground">Preparazione pagamento...</p>
+                </div>
+              )}
+            </div>
+          </motion.div>
+
+          {paymentError && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={springConfig}
+              className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3"
+            >
+              <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+              <p className="text-sm text-red-400">{paymentError}</p>
+            </motion.div>
+          )}
+
           <motion.div variants={fadeInUp} className="space-y-3 pt-2">
             <div className="flex items-center gap-3 text-muted-foreground">
               <Check className="w-5 h-5 text-teal-400 flex-shrink-0" />
@@ -635,53 +847,58 @@ export default function PublicResaleCheckoutPage() {
             </div>
           </motion.div>
         </motion.div>
-
-        <motion.div
-          initial={{ y: 100 }}
-          animate={{ y: 0 }}
-          transition={springConfig}
-          className="fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border"
-          style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
-        >
-          <div className="p-4 space-y-3">
-            <div className="flex justify-between items-center">
-              <div>
-                <p className="text-xs text-muted-foreground">Totale da pagare</p>
-                <p className="text-2xl font-bold text-primary">€{resalePrice.toFixed(2)}</p>
-              </div>
-              <div className="flex items-center gap-2 text-muted-foreground">
-                <ShieldCheck className="w-5 h-5" />
-                <span className="text-xs">Pagamento sicuro</span>
-              </div>
-            </div>
-            
-            <HapticButton
-              onClick={handlePurchase}
-              disabled={!canProceedWithPurchase || isReserving || reserveMutation.isPending}
-              className="w-full h-14 text-lg font-semibold"
-              hapticType="heavy"
-              data-testid="button-purchase-resale"
-            >
-              {isReserving || reserveMutation.isPending ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Elaborazione...
-                </>
-              ) : !canProceedWithPurchase && captchaData?.enabled ? (
-                <>
-                  <ShieldCheck className="w-5 h-5 mr-2" />
-                  Completa verifica CAPTCHA
-                </>
-              ) : (
-                <>
-                  <Lock className="w-5 h-5 mr-2" />
-                  Acquista ora - €{resalePrice.toFixed(2)}
-                </>
-              )}
-            </HapticButton>
-          </div>
-        </motion.div>
       </main>
+
+      <motion.div
+        initial={{ y: 100 }}
+        animate={{ y: 0 }}
+        transition={springConfig}
+        className="fixed bottom-0 left-0 right-0 z-40 bg-card/95 backdrop-blur-xl border-t border-border"
+        style={{ paddingBottom: 'env(safe-area-inset-bottom)' }}
+      >
+        <div className="p-4 space-y-3">
+          <div className="flex justify-between items-center">
+            <div>
+              <p className="text-xs text-muted-foreground">Totale da pagare</p>
+              <p className="text-2xl font-bold text-primary">€{resalePrice.toFixed(2)}</p>
+            </div>
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <ShieldCheck className="w-5 h-5" />
+              <span className="text-xs">Pagamento sicuro</span>
+            </div>
+          </div>
+          
+          <HapticButton
+            onClick={handlePaymentSubmit}
+            disabled={!isElementReady || isProcessing || !stripeRef.current || !canProceedWithPayment}
+            className="w-full h-14 text-lg font-semibold"
+            hapticType="heavy"
+            data-testid="button-purchase-resale"
+          >
+            {!isElementReady && canProceedWithPayment ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Caricamento...
+              </>
+            ) : isProcessing ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Elaborazione...
+              </>
+            ) : !canProceedWithPayment ? (
+              <>
+                <ShieldCheck className="w-5 h-5 mr-2" />
+                Completa verifica CAPTCHA
+              </>
+            ) : (
+              <>
+                <Lock className="w-5 h-5 mr-2" />
+                Paga €{resalePrice.toFixed(2)}
+              </>
+            )}
+          </HapticButton>
+        </div>
+      </motion.div>
     </div>
   );
 }

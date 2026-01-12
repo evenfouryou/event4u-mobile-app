@@ -4921,6 +4921,168 @@ router.post("/api/public/resales/:id/reserve", async (req, res) => {
   }
 });
 
+// Create PaymentIntent for resale purchase (Stripe Elements flow, requires auth)
+router.post("/api/public/resales/:id/payment-intent", async (req, res) => {
+  try {
+    const customer = await getAuthenticatedCustomer(req);
+    if (!customer) {
+      return res.status(401).json({ message: "Devi essere loggato per acquistare" });
+    }
+    
+    const { id } = req.params;
+    const { captchaToken } = req.body;
+    
+    // CAPTCHA validation (same logic as normal checkout)
+    const captchaEnabled = process.env.CAPTCHA_ENABLED !== 'false';
+    if (captchaEnabled) {
+      if (!captchaToken) {
+        return res.status(400).json({ 
+          message: "Verifica di sicurezza richiesta. Completa il CAPTCHA.",
+          code: "CAPTCHA_REQUIRED"
+        });
+      }
+
+      const captchaData = captchaStore.get(captchaToken);
+
+      if (!captchaData) {
+        return res.status(400).json({ 
+          message: "CAPTCHA non trovato o scaduto. Riprova.",
+          code: "CAPTCHA_EXPIRED"
+        });
+      }
+
+      if (captchaData.expiresAt < new Date()) {
+        captchaStore.delete(captchaToken);
+        return res.status(400).json({ 
+          message: "CAPTCHA scaduto. Riprova.",
+          code: "CAPTCHA_EXPIRED"
+        });
+      }
+
+      if (!captchaData.validated) {
+        return res.status(400).json({ 
+          message: "CAPTCHA non validato. Clicca Verifica prima di procedere.",
+          code: "CAPTCHA_NOT_VALIDATED"
+        });
+      }
+
+      // Delete token after successful check (one-time use after validation)
+      captchaStore.delete(captchaToken);
+      console.log("[RESALE-PAYMENT-INTENT] CAPTCHA validation passed");
+    }
+    
+    // Get resale with ticket info
+    const [resale] = await db
+      .select({
+        resale: siaeResales,
+        ticket: siaeTickets,
+        eventName: events.name,
+        sectorName: siaeEventSectors.name,
+      })
+      .from(siaeResales)
+      .innerJoin(siaeTickets, eq(siaeResales.originalTicketId, siaeTickets.id))
+      .innerJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .innerJoin(events, eq(siaeTicketedEvents.eventId, events.id))
+      .where(eq(siaeResales.id, id));
+    
+    if (!resale) {
+      return res.status(404).json({ message: "Rivendita non trovata" });
+    }
+    
+    // Check if already sold
+    if (resale.resale.status === 'fulfilled' || resale.resale.status === 'paid') {
+      return res.status(409).json({ message: "Questo biglietto è stato già venduto" });
+    }
+    
+    // Check buyer is not the seller
+    if (resale.resale.sellerId === customer.id) {
+      return res.status(400).json({ message: "Non puoi acquistare il tuo stesso biglietto" });
+    }
+    
+    // Reserve for 15 minutes (shorter than checkout session since user is on page)
+    const reservedUntil = new Date(Date.now() + 15 * 60 * 1000);
+    
+    // ATOMIC: Update resale to reserved status ONLY if still listed (or already reserved by same buyer)
+    const [updatedResale] = await db
+      .update(siaeResales)
+      .set({
+        status: 'reserved',
+        buyerId: customer.id,
+        reservedAt: new Date(),
+        reservedUntil,
+        updatedAt: new Date(),
+      })
+      .where(and(
+        eq(siaeResales.id, id),
+        or(
+          eq(siaeResales.status, 'listed'),
+          and(eq(siaeResales.status, 'reserved'), eq(siaeResales.buyerId, customer.id))
+        )
+      ))
+      .returning();
+    
+    // If no rows updated, another buyer grabbed it first
+    if (!updatedResale) {
+      return res.status(409).json({ message: "Questo biglietto è stato appena acquistato da un altro utente" });
+    }
+    
+    // Create Stripe PaymentIntent (not Checkout Session)
+    const stripe = (await import('stripe')).default;
+    const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-12-18.acacia' });
+    
+    const resalePrice = parseFloat(resale.resale.resalePrice);
+    const platformFeePercent = 5; // 5% platform fee
+    const platformFee = Math.round(resalePrice * platformFeePercent) / 100;
+    const sellerPayout = resalePrice - platformFee;
+    
+    // Generate secure confirmation token
+    const confirmToken = crypto.randomBytes(32).toString('hex');
+    
+    const paymentIntent = await stripeClient.paymentIntents.create({
+      amount: Math.round(resalePrice * 100), // cents
+      currency: 'eur',
+      automatic_payment_methods: {
+        enabled: true,
+      },
+      metadata: {
+        resaleId: id,
+        buyerId: customer.id,
+        sellerId: resale.resale.sellerId,
+        sellerPayout: sellerPayout.toFixed(2),
+        platformFee: platformFee.toFixed(2),
+        type: 'resale_purchase',
+        confirmToken: confirmToken,
+      },
+      description: `Rivendita: ${resale.eventName} - ${resale.sectorName}`,
+    });
+    
+    // Save PaymentIntent ID and confirmation token
+    await db
+      .update(siaeResales)
+      .set({
+        stripePaymentIntentId: paymentIntent.id,
+        platformFee: platformFee.toFixed(2),
+        sellerPayout: sellerPayout.toFixed(2),
+        confirmToken: confirmToken,
+      })
+      .where(eq(siaeResales.id, id));
+    
+    console.log(`[RESALE-PAYMENT-INTENT] Created PaymentIntent ${paymentIntent.id} for resale ${id}, buyer ${customer.id}`);
+    
+    res.json({
+      clientSecret: paymentIntent.client_secret,
+      resaleId: id,
+      resalePrice,
+      platformFee,
+      confirmToken,
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Create resale payment intent error:", error);
+    res.status(500).json({ message: "Errore nella creazione del pagamento" });
+  }
+});
+
 // Confirm resale purchase (called after Stripe payment success)
 router.post("/api/public/resales/:id/confirm", async (req, res) => {
   const startTime = Date.now();
@@ -4952,18 +5114,14 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
       return res.status(404).json({ message: "Rivendita non trovata" });
     }
     
-    // If no session auth, try token auth via Stripe metadata
-    if (!buyerId && token && resale.stripeCheckoutSessionId) {
+    // If no session auth, try token auth via Stripe metadata or stored confirmToken
+    if (!buyerId && token) {
       console.log(`[RESALE-CONFIRM] Trying token auth...`);
-      const stripe = (await import('stripe')).default;
-      const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-12-18.acacia' });
       
-      const stripeSession = await stripeClient.checkout.sessions.retrieve(resale.stripeCheckoutSessionId);
-      
-      // Validate token matches what was stored in Stripe metadata
-      if (stripeSession.metadata?.confirmToken === token) {
-        buyerId = stripeSession.metadata.buyerId || resale.buyerId;
-        console.log(`[RESALE-CONFIRM] Token auth SUCCESS: buyer=${buyerId}`);
+      // First try: stored confirmToken on resale (PaymentIntent flow)
+      if (resale.confirmToken && resale.confirmToken === token) {
+        buyerId = resale.buyerId;
+        console.log(`[RESALE-CONFIRM] Token auth via stored confirmToken SUCCESS: buyer=${buyerId}`);
         
         // Get customer data
         if (buyerId) {
@@ -4973,8 +5131,33 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
             .where(eq(siaeCustomers.id, buyerId));
           customer = customerData;
         }
+      }
+      // Fallback: check Stripe Checkout Session metadata (legacy flow)
+      else if (resale.stripeCheckoutSessionId) {
+        console.log(`[RESALE-CONFIRM] Trying legacy Checkout Session token auth...`);
+        const stripe = (await import('stripe')).default;
+        const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-12-18.acacia' });
+        
+        const stripeSession = await stripeClient.checkout.sessions.retrieve(resale.stripeCheckoutSessionId);
+        
+        // Validate token matches what was stored in Stripe metadata
+        if (stripeSession.metadata?.confirmToken === token) {
+          buyerId = stripeSession.metadata.buyerId || resale.buyerId;
+          console.log(`[RESALE-CONFIRM] Legacy token auth SUCCESS: buyer=${buyerId}`);
+          
+          // Get customer data
+          if (buyerId) {
+            const [customerData] = await db
+              .select()
+              .from(siaeCustomers)
+              .where(eq(siaeCustomers.id, buyerId));
+            customer = customerData;
+          }
+        } else {
+          console.log(`[RESALE-CONFIRM] Token auth FAILED: token mismatch`);
+        }
       } else {
-        console.log(`[RESALE-CONFIRM] Token auth FAILED: token mismatch`);
+        console.log(`[RESALE-CONFIRM] Token auth FAILED: no confirmToken or checkout session`);
       }
     }
     
@@ -5007,18 +5190,60 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
       return res.status(400).json({ message: "Stato rivendita non valido" });
     }
     
-    // Verify Stripe payment
-    if (!resale.stripeCheckoutSessionId) {
-      return res.status(400).json({ message: "Sessione pagamento non trovata" });
-    }
-    
+    // Verify Stripe payment - check PaymentIntent first (Elements flow), then Checkout Session (redirect flow)
     const stripe = (await import('stripe')).default;
     const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-12-18.acacia' });
     
-    const session = await stripeClient.checkout.sessions.retrieve(resale.stripeCheckoutSessionId);
+    let paymentIntentId: string | null = resale.stripePaymentIntentId || null;
+    const expectedAmountInCents = Math.round(parseFloat(resale.resalePrice) * 100);
     
-    if (session.payment_status !== 'paid') {
-      return res.status(400).json({ message: "Pagamento non completato" });
+    if (resale.stripePaymentIntentId) {
+      // PaymentIntent flow (Stripe Elements)
+      console.log(`[RESALE-CONFIRM] Verifying PaymentIntent ${resale.stripePaymentIntentId}`);
+      const paymentIntent = await stripeClient.paymentIntents.retrieve(resale.stripePaymentIntentId);
+      
+      // Check payment status
+      if (paymentIntent.status !== 'succeeded') {
+        console.log(`[RESALE-CONFIRM] PaymentIntent status: ${paymentIntent.status}`);
+        return res.status(400).json({ message: "Pagamento non completato" });
+      }
+      
+      // CRITICAL SECURITY: Verify amount matches expected resalePrice
+      if (paymentIntent.amount !== expectedAmountInCents) {
+        console.warn(
+          `[RESALE-CONFIRM] SECURITY: PaymentIntent amount mismatch! ` +
+          `Expected: ${expectedAmountInCents} cents (€${resale.resalePrice}), ` +
+          `Got: ${paymentIntent.amount} cents. ` +
+          `Resale: ${id}, PaymentIntent: ${paymentIntent.id}`
+        );
+        return res.status(400).json({ message: "L'importo del pagamento non corrisponde" });
+      }
+      
+      console.log(`[RESALE-CONFIRM] PaymentIntent verified: status=succeeded, amount=${paymentIntent.amount} cents`);
+    } else if (resale.stripeCheckoutSessionId) {
+      // Legacy Checkout Session flow (redirect)
+      console.log(`[RESALE-CONFIRM] Verifying Checkout Session ${resale.stripeCheckoutSessionId}`);
+      const session = await stripeClient.checkout.sessions.retrieve(resale.stripeCheckoutSessionId);
+      
+      if (session.payment_status !== 'paid') {
+        return res.status(400).json({ message: "Pagamento non completato" });
+      }
+      
+      // CRITICAL SECURITY: Verify amount matches expected resalePrice (Checkout Session amount is in cents)
+      if (session.amount_total !== expectedAmountInCents) {
+        console.warn(
+          `[RESALE-CONFIRM] SECURITY: Checkout Session amount mismatch! ` +
+          `Expected: ${expectedAmountInCents} cents (€${resale.resalePrice}), ` +
+          `Got: ${session.amount_total} cents. ` +
+          `Resale: ${id}, Session: ${session.id}`
+        );
+        return res.status(400).json({ message: "L'importo del pagamento non corrisponde" });
+      }
+      
+      paymentIntentId = session.payment_intent as string;
+      console.log(`[RESALE-CONFIRM] Checkout Session verified: status=paid, amount=${session.amount_total} cents`);
+    } else {
+      return res.status(400).json({ message: "Sessione pagamento non trovata" });
     }
     
     // === FULFILLMENT FLOW (SIAE-COMPLIANT WITH REAL FISCAL SEAL) ===
@@ -5033,7 +5258,7 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
       .update(siaeResales)
       .set({
         status: 'processing',
-        stripePaymentIntentId: session.payment_intent as string,
+        stripePaymentIntentId: paymentIntentId,
         updatedAt: new Date(),
       })
       .where(eq(siaeResales.id, id));
@@ -5230,6 +5455,7 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
     console.log(`[RESALE] Original ticket ${originalTicket.id} annulled, replaced by ${newTicket.id}`);
     
     // 6. Update resale with new ticket and sigillo (final successful state)
+    // SECURITY: Clear confirmToken after successful use (one-time token)
     await db
       .update(siaeResales)
       .set({
@@ -5243,6 +5469,7 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
         originalTicketAnnulledAt: new Date(),
         fulfilledAt: new Date(),
         updatedAt: new Date(),
+        confirmToken: null, // CRITICAL: Invalidate token after successful use
       })
       .where(eq(siaeResales.id, id));
     

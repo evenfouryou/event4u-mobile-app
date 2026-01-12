@@ -1685,6 +1685,7 @@ export const siaeResales = pgTable("siae_resales", {
   // Pagamento e payout
   stripePaymentIntentId: varchar("stripe_payment_intent_id", { length: 255 }),
   stripeCheckoutSessionId: varchar("stripe_checkout_session_id", { length: 255 }),
+  confirmToken: varchar("confirm_token", { length: 64 }), // Secure token for payment confirmation
   sellerPayout: decimal("seller_payout", { precision: 10, scale: 2 }), // Importo accreditato al venditore
   payoutTransactionId: varchar("payout_transaction_id").references(() => siaeWalletTransactions.id),
   
