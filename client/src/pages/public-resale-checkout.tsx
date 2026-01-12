@@ -70,7 +70,7 @@ export default function PublicResaleCheckoutPage() {
   const reserveMutation = useMutation({
     mutationFn: async () => {
       const response = await apiRequest("POST", `/api/public/resales/${id}/reserve`, {});
-      return response;
+      return await response.json();
     },
     onSuccess: (data: any) => {
       triggerHaptic('success');
