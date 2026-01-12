@@ -811,7 +811,19 @@ export default function EventHub() {
     queryKey: ['/api/events', id],
   });
 
-  const { data: userFeatures } = useQuery<{ beverageEnabled?: boolean }>({
+  const { data: userFeatures } = useQuery<{ 
+    beverageEnabled?: boolean;
+    guestListEnabled?: boolean;
+    tablesEnabled?: boolean;
+    pageEditorEnabled?: boolean;
+    resaleEnabled?: boolean;
+    marketingEnabled?: boolean;
+    accessControlEnabled?: boolean;
+    financeEnabled?: boolean;
+    siaeEnabled?: boolean;
+    cassaEnabled?: boolean;
+    prEnabled?: boolean;
+  }>({
     queryKey: ['/api/user-features/current/my'],
     enabled: !!user,
   });
@@ -2361,75 +2373,83 @@ export default function EventHub() {
         </AnimatePresence>
 
         {/* KPI Cards */}
-        <div className="grid grid-cols-4 gap-4">
-          <Card className="cursor-pointer hover-elevate" onClick={() => setActiveTab('ticketing')} data-testid="kpi-card-tickets">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Biglietti</p>
-                  <p className="text-2xl font-bold">{ticketedEvent?.ticketsSold || 0}</p>
-                  <p className="text-xs text-muted-foreground">{ticketedEvent ? `/ ${ticketedEvent.totalCapacity}` : 'Non attivo'}</p>
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+          {(userFeatures?.siaeEnabled !== false) && (
+            <Card className="cursor-pointer hover-elevate" onClick={() => setActiveTab('biglietteria')} data-testid="kpi-card-tickets">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Biglietti</p>
+                    <p className="text-2xl font-bold">{ticketedEvent?.ticketsSold || 0}</p>
+                    <p className="text-xs text-muted-foreground">{ticketedEvent ? `/ ${ticketedEvent.totalCapacity}` : 'Non attivo'}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
+                    <Ticket className="h-6 w-6 text-white" />
+                  </div>
                 </div>
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center">
-                  <Ticket className="h-6 w-6 text-white" />
-                </div>
-              </div>
-              {ticketedEvent && (
-                <Progress value={(ticketedEvent.ticketsSold / ticketedEvent.totalCapacity) * 100} className="h-1.5 mt-4" />
-              )}
-            </CardContent>
-          </Card>
+                {ticketedEvent && (
+                  <Progress value={(ticketedEvent.ticketsSold / ticketedEvent.totalCapacity) * 100} className="h-1.5 mt-4" />
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-          <Card className="cursor-pointer hover-elevate" onClick={() => setActiveTab('guests')} data-testid="kpi-card-guests">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Ospiti Liste</p>
-                  <p className="text-2xl font-bold">{checkedInGuests}/{totalGuests}</p>
-                  <p className="text-xs text-muted-foreground">{maxGuests > 0 ? `Max ${maxGuests}` : 'Nessuna lista'}</p>
+          {(userFeatures?.guestListEnabled !== false) && (
+            <Card className="cursor-pointer hover-elevate" onClick={() => setActiveTab('guests')} data-testid="kpi-card-guests">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Ospiti Liste</p>
+                    <p className="text-2xl font-bold">{checkedInGuests}/{totalGuests}</p>
+                    <p className="text-xs text-muted-foreground">{maxGuests > 0 ? `Max ${maxGuests}` : 'Nessuna lista'}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center">
+                    <Users className="h-6 w-6 text-white" />
+                  </div>
                 </div>
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-cyan-500 to-teal-600 flex items-center justify-center">
-                  <Users className="h-6 w-6 text-white" />
-                </div>
-              </div>
-              {maxGuests > 0 && (
-                <Progress value={(checkedInGuests / maxGuests) * 100} className="h-1.5 mt-4" />
-              )}
-            </CardContent>
-          </Card>
+                {maxGuests > 0 && (
+                  <Progress value={(checkedInGuests / maxGuests) * 100} className="h-1.5 mt-4" />
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-          <Card className="cursor-pointer hover-elevate" onClick={() => setActiveTab('tables')} data-testid="kpi-card-tables">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Tavoli</p>
-                  <p className="text-2xl font-bold">{bookedTables}/{tables.length}</p>
-                  <p className="text-xs text-muted-foreground">{tables.length > 0 ? 'Prenotati' : 'Nessun tavolo'}</p>
+          {(userFeatures?.tablesEnabled !== false) && (
+            <Card className="cursor-pointer hover-elevate" onClick={() => setActiveTab('tables')} data-testid="kpi-card-tables">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Tavoli</p>
+                    <p className="text-2xl font-bold">{bookedTables}/{tables.length}</p>
+                    <p className="text-xs text-muted-foreground">{tables.length > 0 ? 'Prenotati' : 'Nessun tavolo'}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
+                    <Armchair className="h-6 w-6 text-white" />
+                  </div>
                 </div>
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-purple-500 to-pink-600 flex items-center justify-center">
-                  <Armchair className="h-6 w-6 text-white" />
-                </div>
-              </div>
-              {tables.length > 0 && (
-                <Progress value={(bookedTables / tables.length) * 100} className="h-1.5 mt-4" />
-              )}
-            </CardContent>
-          </Card>
+                {tables.length > 0 && (
+                  <Progress value={(bookedTables / tables.length) * 100} className="h-1.5 mt-4" />
+                )}
+              </CardContent>
+            </Card>
+          )}
 
-          <Card className="cursor-pointer hover-elevate" onClick={() => setActiveTab('finance')} data-testid="kpi-card-revenue">
-            <CardContent className="pt-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm text-muted-foreground">Incasso</p>
-                  <p className="text-2xl font-bold">€{totalRevenue.toFixed(0)}</p>
-                  <p className="text-xs text-muted-foreground">Totale evento</p>
+          {(userFeatures?.financeEnabled !== false) && (
+            <Card className="cursor-pointer hover-elevate" onClick={() => setActiveTab('finance')} data-testid="kpi-card-revenue">
+              <CardContent className="pt-6">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Incasso</p>
+                    <p className="text-2xl font-bold">€{totalRevenue.toFixed(0)}</p>
+                    <p className="text-xs text-muted-foreground">Totale evento</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
+                    <Euro className="h-6 w-6 text-white" />
+                  </div>
                 </div>
-                <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center">
-                  <Euro className="h-6 w-6 text-white" />
-                </div>
-              </div>
-            </CardContent>
-          </Card>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         {/* Tabs */}
@@ -2439,41 +2459,55 @@ export default function EventHub() {
               <LayoutDashboard className="h-4 w-4 mr-2" />
               Panoramica
             </TabsTrigger>
-            <TabsTrigger value="biglietteria" data-testid="tab-biglietteria">
-              <Ticket className="h-4 w-4 mr-2" />
-              Biglietteria
-            </TabsTrigger>
-            <TabsTrigger value="cashiers" data-testid="tab-cashiers">
-              <Banknote className="h-4 w-4 mr-2" />
-              Cassieri
-            </TabsTrigger>
-            <TabsTrigger value="guests" data-testid="tab-guests">
-              <Users className="h-4 w-4 mr-2" />
-              Liste
-            </TabsTrigger>
-            <TabsTrigger value="tables" data-testid="tab-tables">
-              <Armchair className="h-4 w-4 mr-2" />
-              Tavoli
-            </TabsTrigger>
-            <TabsTrigger value="pr" data-testid="tab-pr">
-              <Megaphone className="h-4 w-4 mr-2" />
-              PR
-            </TabsTrigger>
-            <TabsTrigger value="access" data-testid="tab-access">
-              <QrCode className="h-4 w-4 mr-2" />
-              Accessi
-            </TabsTrigger>
+            {(userFeatures?.siaeEnabled !== false) && (
+              <TabsTrigger value="biglietteria" data-testid="tab-biglietteria">
+                <Ticket className="h-4 w-4 mr-2" />
+                Biglietteria
+              </TabsTrigger>
+            )}
+            {(userFeatures?.cassaEnabled !== false) && (
+              <TabsTrigger value="cashiers" data-testid="tab-cashiers">
+                <Banknote className="h-4 w-4 mr-2" />
+                Cassieri
+              </TabsTrigger>
+            )}
+            {(userFeatures?.guestListEnabled !== false) && (
+              <TabsTrigger value="guests" data-testid="tab-guests">
+                <Users className="h-4 w-4 mr-2" />
+                Liste
+              </TabsTrigger>
+            )}
+            {(userFeatures?.tablesEnabled !== false) && (
+              <TabsTrigger value="tables" data-testid="tab-tables">
+                <Armchair className="h-4 w-4 mr-2" />
+                Tavoli
+              </TabsTrigger>
+            )}
+            {(userFeatures?.prEnabled !== false) && (
+              <TabsTrigger value="pr" data-testid="tab-pr">
+                <Megaphone className="h-4 w-4 mr-2" />
+                PR
+              </TabsTrigger>
+            )}
+            {(userFeatures?.accessControlEnabled !== false) && (
+              <TabsTrigger value="access" data-testid="tab-access">
+                <QrCode className="h-4 w-4 mr-2" />
+                Accessi
+              </TabsTrigger>
+            )}
             {(userFeatures?.beverageEnabled !== false) && (
               <TabsTrigger value="inventory" data-testid="tab-inventory">
                 <Package className="h-4 w-4 mr-2" />
                 Stock
               </TabsTrigger>
             )}
-            <TabsTrigger value="finance" data-testid="tab-finance">
-              <Euro className="h-4 w-4 mr-2" />
-              Parte finanziaria
-            </TabsTrigger>
-            {ticketedEvent && (
+            {(userFeatures?.financeEnabled !== false) && (
+              <TabsTrigger value="finance" data-testid="tab-finance">
+                <Euro className="h-4 w-4 mr-2" />
+                Parte finanziaria
+              </TabsTrigger>
+            )}
+            {ticketedEvent && (userFeatures?.pageEditorEnabled !== false) && (
               <TabsTrigger value="page-editor" data-testid="tab-page-editor">
                 <Palette className="h-4 w-4 mr-2" />
                 Pagina Pubblica
@@ -6166,46 +6200,54 @@ export default function EventHub() {
 
       <div className="px-4 pb-24">
         <div className="grid grid-cols-2 gap-4 mb-6">
-          <KPICard
-            title="Biglietti"
-            value={ticketedEvent?.ticketsSold || 0}
-            subValue={ticketedEvent ? `/ ${ticketedEvent.totalCapacity}` : 'Non attivo'}
-            icon={Ticket}
-            gradient="from-blue-500 to-indigo-600"
-            progress={ticketedEvent ? (ticketedEvent.ticketsSold / ticketedEvent.totalCapacity) * 100 : 0}
-            onClick={() => setActiveTab('ticketing')}
-            testId="kpi-tickets"
-          />
-          <KPICard
-            title="Ospiti Liste"
-            value={`${checkedInGuests}/${totalGuests}`}
-            subValue={maxGuests > 0 ? `Max ${maxGuests}` : 'Nessuna lista'}
-            icon={Users}
-            gradient="from-cyan-500 to-teal-600"
-            progress={maxGuests > 0 ? (checkedInGuests / maxGuests) * 100 : 0}
-            onClick={() => setActiveTab('guests')}
-            testId="kpi-guests"
-          />
-          <KPICard
-            title="Tavoli"
-            value={`${bookedTables}/${tables.length}`}
-            subValue={tables.length > 0 ? 'Prenotati' : 'Nessun tavolo'}
-            icon={Armchair}
-            gradient="from-purple-500 to-pink-600"
-            progress={tables.length > 0 ? (bookedTables / tables.length) * 100 : 0}
-            onClick={() => setActiveTab('tables')}
-            testId="kpi-tables"
-          />
-          <KPICard
-            title="Incasso"
-            value={`€${totalRevenue.toFixed(0)}`}
-            subValue="Totale evento"
-            icon={Euro}
-            gradient="from-amber-500 to-orange-600"
-            trend={totalRevenue > 0 ? { value: 12, isPositive: true } : undefined}
-            onClick={() => setActiveTab('finance')}
-            testId="kpi-revenue"
-          />
+          {(userFeatures?.siaeEnabled !== false) && (
+            <KPICard
+              title="Biglietti"
+              value={ticketedEvent?.ticketsSold || 0}
+              subValue={ticketedEvent ? `/ ${ticketedEvent.totalCapacity}` : 'Non attivo'}
+              icon={Ticket}
+              gradient="from-blue-500 to-indigo-600"
+              progress={ticketedEvent ? (ticketedEvent.ticketsSold / ticketedEvent.totalCapacity) * 100 : 0}
+              onClick={() => setActiveTab('biglietteria')}
+              testId="kpi-tickets"
+            />
+          )}
+          {(userFeatures?.guestListEnabled !== false) && (
+            <KPICard
+              title="Ospiti Liste"
+              value={`${checkedInGuests}/${totalGuests}`}
+              subValue={maxGuests > 0 ? `Max ${maxGuests}` : 'Nessuna lista'}
+              icon={Users}
+              gradient="from-cyan-500 to-teal-600"
+              progress={maxGuests > 0 ? (checkedInGuests / maxGuests) * 100 : 0}
+              onClick={() => setActiveTab('guests')}
+              testId="kpi-guests"
+            />
+          )}
+          {(userFeatures?.tablesEnabled !== false) && (
+            <KPICard
+              title="Tavoli"
+              value={`${bookedTables}/${tables.length}`}
+              subValue={tables.length > 0 ? 'Prenotati' : 'Nessun tavolo'}
+              icon={Armchair}
+              gradient="from-purple-500 to-pink-600"
+              progress={tables.length > 0 ? (bookedTables / tables.length) * 100 : 0}
+              onClick={() => setActiveTab('tables')}
+              testId="kpi-tables"
+            />
+          )}
+          {(userFeatures?.financeEnabled !== false) && (
+            <KPICard
+              title="Incasso"
+              value={`€${totalRevenue.toFixed(0)}`}
+              subValue="Totale evento"
+              icon={Euro}
+              gradient="from-amber-500 to-orange-600"
+              trend={totalRevenue > 0 ? { value: 12, isPositive: true } : undefined}
+              onClick={() => setActiveTab('finance')}
+              testId="kpi-revenue"
+            />
+          )}
         </div>
 
         <Tabs 
@@ -6223,17 +6265,17 @@ export default function EventHub() {
               <TabsList className="inline-flex h-auto p-1.5 bg-muted/50 rounded-2xl gap-1 min-w-max">
                 {[
                   { id: 'overview', label: 'Panoramica', icon: LayoutDashboard },
-                  { id: 'biglietteria', label: 'Biglietteria', icon: Ticket },
-                  { id: 'cashiers', label: 'Cassieri', icon: Banknote },
-                  { id: 'guests', label: 'Liste', icon: Users },
-                  { id: 'tables', label: 'Tavoli', icon: Armchair },
+                  ...(userFeatures?.siaeEnabled !== false ? [{ id: 'biglietteria', label: 'Biglietteria', icon: Ticket }] : []),
+                  ...(userFeatures?.cassaEnabled !== false ? [{ id: 'cashiers', label: 'Cassieri', icon: Banknote }] : []),
+                  ...(userFeatures?.guestListEnabled !== false ? [{ id: 'guests', label: 'Liste', icon: Users }] : []),
+                  ...(userFeatures?.tablesEnabled !== false ? [{ id: 'tables', label: 'Tavoli', icon: Armchair }] : []),
                   { id: 'staff', label: 'Staff', icon: Shield },
-                  { id: 'pr', label: 'PR', icon: Megaphone },
-                  { id: 'access', label: 'Accessi', icon: QrCode },
+                  ...(userFeatures?.prEnabled !== false ? [{ id: 'pr', label: 'PR', icon: Megaphone }] : []),
+                  ...(userFeatures?.accessControlEnabled !== false ? [{ id: 'access', label: 'Accessi', icon: QrCode }] : []),
                   ...(userFeatures?.beverageEnabled !== false ? [{ id: 'inventory', label: 'Stock', icon: Package }] : []),
-                  { id: 'finance', label: 'Parte finanziaria', icon: Euro },
+                  ...(userFeatures?.financeEnabled !== false ? [{ id: 'finance', label: 'Parte finanziaria', icon: Euro }] : []),
                   { id: 'report', label: 'Report', icon: BarChart3 },
-                  ...(ticketedEvent ? [{ id: 'page-editor', label: 'Pagina', icon: Palette }] : []),
+                  ...(ticketedEvent && userFeatures?.pageEditorEnabled !== false ? [{ id: 'page-editor', label: 'Pagina', icon: Palette }] : []),
                 ].map(tab => (
                   <TabsTrigger
                     key={tab.id}

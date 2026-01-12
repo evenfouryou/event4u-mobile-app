@@ -44,6 +44,13 @@ import {
   GraduationCap,
   Store,
   QrCode,
+  ClipboardList,
+  Armchair,
+  Palette,
+  RefreshCw,
+  Megaphone,
+  ShieldCheck,
+  Euro,
 } from "lucide-react";
 import {
   MobileAppLayout,
@@ -60,20 +67,30 @@ interface FeatureConfig {
   label: string;
   description: string;
   icon: React.ReactNode;
+  category?: 'general' | 'eventhub';
 }
 
 const featuresList: FeatureConfig[] = [
-  { key: 'beverageEnabled', label: 'Beverage', description: 'Gestione stock bevande e consumi', icon: <Wine className="h-4 w-4" /> },
-  { key: 'contabilitaEnabled', label: 'Contabilità', description: 'Costi fissi, extra e manutenzioni', icon: <Calculator className="h-4 w-4" /> },
-  { key: 'personaleEnabled', label: 'Personale', description: 'Anagrafica staff e pagamenti', icon: <UserCheck className="h-4 w-4" /> },
-  { key: 'cassaEnabled', label: 'Cassa', description: 'Settori, postazioni e fondi cassa', icon: <Receipt className="h-4 w-4" /> },
-  { key: 'nightFileEnabled', label: 'File della Serata', description: 'Documento integrato per evento', icon: <FileText className="h-4 w-4" /> },
-  { key: 'siaeEnabled', label: 'SIAE Biglietteria', description: 'Gestione biglietti, cassieri e lettore fiscale SIAE', icon: <Ticket className="h-4 w-4" /> },
-  { key: 'scannerEnabled', label: 'Scanner', description: 'Gestione Scanner e Scanner QR', icon: <ScanLine className="h-4 w-4" /> },
-  { key: 'prEnabled', label: 'Gestione PR', description: 'Gestione promoter e prenotazioni', icon: <UserPlus className="h-4 w-4" /> },
-  { key: 'badgesEnabled', label: 'Badge Scuola', description: 'Creazione badge digitali', icon: <GraduationCap className="h-4 w-4" /> },
-  { key: 'cassaBigliettiEnabled', label: 'Cassa Biglietti', description: 'Vendita biglietti cassa', icon: <Store className="h-4 w-4" /> },
-  { key: 'templateEnabled', label: 'Template Digitali', description: 'Creazione template QR e digitali', icon: <QrCode className="h-4 w-4" /> },
+  // General modules
+  { key: 'beverageEnabled', label: 'Beverage', description: 'Gestione stock bevande e consumi', icon: <Wine className="h-4 w-4" />, category: 'general' },
+  { key: 'contabilitaEnabled', label: 'Contabilità', description: 'Costi fissi, extra e manutenzioni', icon: <Calculator className="h-4 w-4" />, category: 'general' },
+  { key: 'personaleEnabled', label: 'Personale', description: 'Anagrafica staff e pagamenti', icon: <UserCheck className="h-4 w-4" />, category: 'general' },
+  { key: 'cassaEnabled', label: 'Cassa', description: 'Settori, postazioni e fondi cassa', icon: <Receipt className="h-4 w-4" />, category: 'general' },
+  { key: 'nightFileEnabled', label: 'File della Serata', description: 'Documento integrato per evento', icon: <FileText className="h-4 w-4" />, category: 'general' },
+  { key: 'siaeEnabled', label: 'SIAE Biglietteria', description: 'Gestione biglietti, cassieri e lettore fiscale SIAE', icon: <Ticket className="h-4 w-4" />, category: 'general' },
+  { key: 'scannerEnabled', label: 'Scanner', description: 'Gestione Scanner e Scanner QR', icon: <ScanLine className="h-4 w-4" />, category: 'general' },
+  { key: 'prEnabled', label: 'Gestione PR', description: 'Gestione promoter e prenotazioni', icon: <UserPlus className="h-4 w-4" />, category: 'general' },
+  { key: 'badgesEnabled', label: 'Badge Scuola', description: 'Creazione badge digitali', icon: <GraduationCap className="h-4 w-4" />, category: 'general' },
+  { key: 'cassaBigliettiEnabled', label: 'Cassa Biglietti', description: 'Vendita biglietti cassa', icon: <Store className="h-4 w-4" />, category: 'general' },
+  { key: 'templateEnabled', label: 'Template Digitali', description: 'Creazione template QR e digitali', icon: <QrCode className="h-4 w-4" />, category: 'general' },
+  // Event Hub modules
+  { key: 'guestListEnabled', label: 'Liste Ospiti', description: 'Gestione liste ospiti e inviti', icon: <ClipboardList className="h-4 w-4" />, category: 'eventhub' },
+  { key: 'tablesEnabled', label: 'Tavoli', description: 'Gestione prenotazioni tavoli VIP', icon: <Armchair className="h-4 w-4" />, category: 'eventhub' },
+  { key: 'pageEditorEnabled', label: 'Editor Pagina', description: 'Personalizzazione pagina evento pubblica', icon: <Palette className="h-4 w-4" />, category: 'eventhub' },
+  { key: 'resaleEnabled', label: 'Rivendita', description: 'Marketplace rivendita biglietti (Secondary Ticketing)', icon: <RefreshCw className="h-4 w-4" />, category: 'eventhub' },
+  { key: 'marketingEnabled', label: 'Marketing', description: 'Campagne email e notifiche push', icon: <Megaphone className="h-4 w-4" />, category: 'eventhub' },
+  { key: 'accessControlEnabled', label: 'Controllo Accessi', description: 'Gestione ingressi e permessi', icon: <ShieldCheck className="h-4 w-4" />, category: 'eventhub' },
+  { key: 'financeEnabled', label: 'Finanza', description: 'Report finanziari e pagamenti', icon: <Euro className="h-4 w-4" />, category: 'eventhub' },
 ];
 
 const springTransition = { type: "spring", stiffness: 400, damping: 30 };
@@ -110,6 +127,14 @@ export default function AdminGestori() {
     badgesEnabled: true,
     cassaBigliettiEnabled: true,
     templateEnabled: true,
+    // Event Hub modules
+    guestListEnabled: true,
+    tablesEnabled: true,
+    pageEditorEnabled: true,
+    resaleEnabled: true,
+    marketingEnabled: true,
+    accessControlEnabled: true,
+    financeEnabled: true,
   });
 
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
@@ -162,6 +187,14 @@ export default function AdminGestori() {
         badgesEnabled: selectedUserFeatures.badgesEnabled ?? true,
         cassaBigliettiEnabled: selectedUserFeatures.cassaBigliettiEnabled ?? true,
         templateEnabled: selectedUserFeatures.templateEnabled ?? true,
+        // Event Hub modules
+        guestListEnabled: selectedUserFeatures.guestListEnabled ?? true,
+        tablesEnabled: selectedUserFeatures.tablesEnabled ?? true,
+        pageEditorEnabled: selectedUserFeatures.pageEditorEnabled ?? true,
+        resaleEnabled: selectedUserFeatures.resaleEnabled ?? true,
+        marketingEnabled: selectedUserFeatures.marketingEnabled ?? true,
+        accessControlEnabled: selectedUserFeatures.accessControlEnabled ?? true,
+        financeEnabled: selectedUserFeatures.financeEnabled ?? true,
       });
     }
   }, [selectedUserFeatures]);
@@ -372,9 +405,12 @@ export default function AdminGestori() {
     </Card>
   );
 
+  const generalFeatures = featuresList.filter(f => f.category === 'general' || !f.category);
+  const eventHubFeatures = featuresList.filter(f => f.category === 'eventhub');
+
   const featuresDialog = (
     <Dialog open={featuresDialogOpen} onOpenChange={setFeaturesDialogOpen}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-lg max-h-[85vh] overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5" />
@@ -390,30 +426,64 @@ export default function AdminGestori() {
             <Loader2 className="h-6 w-6 animate-spin" />
           </div>
         ) : (
-          <div className="space-y-4 py-4">
-            {featuresList.map((feature) => (
-              <div key={feature.key} className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/50">
-                <div className="flex items-center gap-3">
-                  <div className="p-2 rounded-md bg-primary/10 text-primary">
-                    {feature.icon}
+          <div className="space-y-6 py-4">
+            <div>
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3">Moduli Generali</h3>
+              <div className="space-y-2">
+                {generalFeatures.map((feature) => (
+                  <div key={feature.key} className="flex items-center justify-between gap-4 p-3 rounded-lg bg-muted/50">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-md bg-primary/10 text-primary">
+                        {feature.icon}
+                      </div>
+                      <div>
+                        <Label htmlFor={feature.key} className="font-medium">
+                          {feature.label}
+                        </Label>
+                        <p className="text-xs text-muted-foreground">{feature.description}</p>
+                      </div>
+                    </div>
+                    <Switch
+                      id={feature.key}
+                      checked={featureValues[feature.key] ?? false}
+                      onCheckedChange={(checked) => 
+                        setFeatureValues(prev => ({ ...prev, [feature.key]: checked }))
+                      }
+                      data-testid={`switch-${feature.key}`}
+                    />
                   </div>
-                  <div>
-                    <Label htmlFor={feature.key} className="font-medium">
-                      {feature.label}
-                    </Label>
-                    <p className="text-xs text-muted-foreground">{feature.description}</p>
-                  </div>
-                </div>
-                <Switch
-                  id={feature.key}
-                  checked={featureValues[feature.key] ?? false}
-                  onCheckedChange={(checked) => 
-                    setFeatureValues(prev => ({ ...prev, [feature.key]: checked }))
-                  }
-                  data-testid={`switch-${feature.key}`}
-                />
+                ))}
               </div>
-            ))}
+            </div>
+            
+            <div>
+              <h3 className="text-sm font-semibold text-muted-foreground mb-3">Moduli Event Hub</h3>
+              <div className="space-y-2">
+                {eventHubFeatures.map((feature) => (
+                  <div key={feature.key} className="flex items-center justify-between gap-4 p-3 rounded-lg bg-accent/30">
+                    <div className="flex items-center gap-3">
+                      <div className="p-2 rounded-md bg-accent text-accent-foreground">
+                        {feature.icon}
+                      </div>
+                      <div>
+                        <Label htmlFor={feature.key} className="font-medium">
+                          {feature.label}
+                        </Label>
+                        <p className="text-xs text-muted-foreground">{feature.description}</p>
+                      </div>
+                    </div>
+                    <Switch
+                      id={feature.key}
+                      checked={featureValues[feature.key] ?? false}
+                      onCheckedChange={(checked) => 
+                        setFeatureValues(prev => ({ ...prev, [feature.key]: checked }))
+                      }
+                      data-testid={`switch-${feature.key}`}
+                    />
+                  </div>
+                ))}
+              </div>
+            </div>
           </div>
         )}
         

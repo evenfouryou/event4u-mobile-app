@@ -207,14 +207,14 @@ export const userFeatures = pgTable("user_features", {
   templateEnabled: boolean("template_enabled").notNull().default(true), // Template Digitali
   canCreateProducts: boolean("can_create_products").notNull().default(false), // Warehouse permission to create products
   skipSiaeApproval: boolean("skip_siae_approval").notNull().default(false), // Gestore can auto-approve SIAE events
-  // Event Hub specific modules
-  guestListEnabled: boolean("guest_list_enabled").notNull().default(true), // Liste Ospiti
-  tablesEnabled: boolean("tables_enabled").notNull().default(true), // Gestione Tavoli
-  pageEditorEnabled: boolean("page_editor_enabled").notNull().default(true), // Editor Pagina Evento
-  resaleEnabled: boolean("resale_enabled").notNull().default(true), // Rivendita Biglietti (Secondary Ticketing)
-  marketingEnabled: boolean("marketing_enabled").notNull().default(true), // Marketing & Campagne Email
-  accessControlEnabled: boolean("access_control_enabled").notNull().default(true), // Controllo Accessi
-  financeEnabled: boolean("finance_enabled").notNull().default(true), // Finanza Evento
+  // Event Hub specific modules - default to true to preserve functionality for existing users
+  guestListEnabled: boolean("guest_list_enabled").default(true), // Liste Ospiti
+  tablesEnabled: boolean("tables_enabled").default(true), // Gestione Tavoli
+  pageEditorEnabled: boolean("page_editor_enabled").default(true), // Editor Pagina Evento
+  resaleEnabled: boolean("resale_enabled").default(true), // Rivendita Biglietti (Secondary Ticketing)
+  marketingEnabled: boolean("marketing_enabled").default(true), // Marketing & Campagne Email
+  accessControlEnabled: boolean("access_control_enabled").default(true), // Controllo Accessi
+  financeEnabled: boolean("finance_enabled").default(true), // Finanza Evento
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
