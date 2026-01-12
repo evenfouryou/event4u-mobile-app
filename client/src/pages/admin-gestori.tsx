@@ -63,7 +63,7 @@ import { useToast } from "@/hooks/use-toast";
 import type { User, Company, UserFeatures } from "@shared/schema";
 
 interface FeatureConfig {
-  key: keyof Omit<UserFeatures, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'canCreateProducts'>;
+  key: keyof Omit<UserFeatures, 'id' | 'userId' | 'createdAt' | 'updatedAt' | 'canCreateProducts' | 'skipSiaeApproval'>;
   label: string;
   description: string;
   icon: React.ReactNode;

@@ -152,6 +152,10 @@ export const companyFeatures = pgTable("company_features", {
   siaeEnabled: boolean("siae_enabled").notNull().default(false),
   scannerEnabled: boolean("scanner_enabled").notNull().default(true), // Gestione Scanner e Scanner QR
   prEnabled: boolean("pr_enabled").notNull().default(true), // Gestione PR
+  prWalletEnabled: boolean("pr_wallet_enabled").default(true), // Wallet PR per commissioni
+  prReservationsEnabled: boolean("pr_reservations_enabled").default(true), // Prenotazioni liste/tavoli via PR
+  prPayoutsEnabled: boolean("pr_payouts_enabled").default(true), // Gestione payout PR
+  prMultiCompanyEnabled: boolean("pr_multi_company_enabled").default(false), // Supporto multi-azienda per PR
   badgesEnabled: boolean("badges_enabled").notNull().default(true), // Badge Scuola
   cassaBigliettiEnabled: boolean("cassa_biglietti_enabled").notNull().default(true), // Cassa Biglietti
   templateEnabled: boolean("template_enabled").notNull().default(true), // Template Digitali
@@ -202,6 +206,10 @@ export const userFeatures = pgTable("user_features", {
   siaeEnabled: boolean("siae_enabled").notNull().default(false),
   scannerEnabled: boolean("scanner_enabled").notNull().default(true), // Gestione Scanner e Scanner QR
   prEnabled: boolean("pr_enabled").notNull().default(true), // Gestione PR
+  prWalletEnabled: boolean("pr_wallet_enabled").default(true), // Wallet PR per commissioni
+  prReservationsEnabled: boolean("pr_reservations_enabled").default(true), // Prenotazioni liste/tavoli via PR
+  prPayoutsEnabled: boolean("pr_payouts_enabled").default(true), // Gestione payout PR
+  prMultiCompanyEnabled: boolean("pr_multi_company_enabled").default(false), // Supporto multi-azienda per PR
   badgesEnabled: boolean("badges_enabled").notNull().default(true), // Badge Scuola
   cassaBigliettiEnabled: boolean("cassa_biglietti_enabled").notNull().default(true), // Cassa Biglietti
   templateEnabled: boolean("template_enabled").notNull().default(true), // Template Digitali
