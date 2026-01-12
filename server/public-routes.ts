@@ -4907,7 +4907,9 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
       return res.status(404).json({ message: "Rivendita non trovata" });
     }
     
-    if (resale.status !== 'reserved') {
+    // Accept 'reserved' or 'processing' (for retry after failure)
+    if (resale.status !== 'reserved' && resale.status !== 'processing') {
+      console.log(`[RESALE-CONFIRM] REJECTED: Invalid status ${resale.status}`);
       return res.status(400).json({ message: "Stato rivendita non valido" });
     }
     
@@ -4928,16 +4930,16 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
     // === FULFILLMENT FLOW (SIAE-COMPLIANT WITH REAL FISCAL SEAL) ===
     console.log(`[RESALE] Starting fulfillment for ${id}`);
     
-    // 1. Mark as paid
+    // IMPORTANT: We do NOT update status to 'paid' yet!
+    // We'll update status to 'fulfilled' only at the very end, after everything succeeds.
+    // This prevents data loss if the process fails mid-way.
+    
+    // 1. Mark as processing (temporary state, will be fulfilled or rolled back)
     await db
       .update(siaeResales)
       .set({
-        status: 'paid',
-        paidAt: new Date(),
-        soldAt: new Date(),
+        status: 'processing',
         stripePaymentIntentId: session.payment_intent as string,
-        acquirenteVerificato: true,
-        acquirenteVerificaData: new Date(),
         updatedAt: new Date(),
       })
       .where(eq(siaeResales.id, id));
@@ -5133,13 +5135,17 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
     
     console.log(`[RESALE] Original ticket ${originalTicket.id} annulled, replaced by ${newTicket.id}`);
     
-    // 6. Update resale with new ticket and sigillo
+    // 6. Update resale with new ticket and sigillo (final successful state)
     await db
       .update(siaeResales)
       .set({
         status: 'fulfilled',
+        paidAt: new Date(),
+        soldAt: new Date(),
+        acquirenteVerificato: true,
+        acquirenteVerificaData: new Date(),
         newTicketId: newTicket.id,
-        sigilloFiscaleRivendita: newSigillo,
+        sigilloFiscaleRivendita: fiscalSealCode,
         originalTicketAnnulledAt: new Date(),
         fulfilledAt: new Date(),
         updatedAt: new Date(),
@@ -5188,7 +5194,35 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
     });
   } catch (error: any) {
     console.error("[PUBLIC] Confirm resale error:", error);
-    res.status(500).json({ message: "Errore nella conferma acquisto" });
+    
+    // COMPENSATION: Reset resale status to allow retry
+    // Only reset if we have a valid resale ID
+    const resaleId = req.params.id;
+    if (resaleId) {
+      try {
+        // Check if resale is in 'processing' state (meaning we started but failed)
+        const [currentResale] = await db
+          .select()
+          .from(siaeResales)
+          .where(eq(siaeResales.id, resaleId));
+        
+        if (currentResale && currentResale.status === 'processing') {
+          // Reset to reserved so customer can retry
+          await db
+            .update(siaeResales)
+            .set({
+              status: 'reserved',
+              updatedAt: new Date(),
+            })
+            .where(eq(siaeResales.id, resaleId));
+          console.log(`[RESALE] Compensated: reset ${resaleId} from 'processing' to 'reserved'`);
+        }
+      } catch (compensationError) {
+        console.error("[RESALE] Compensation failed:", compensationError);
+      }
+    }
+    
+    res.status(500).json({ message: "Errore nella conferma acquisto. Riprova." });
   }
 });
 
