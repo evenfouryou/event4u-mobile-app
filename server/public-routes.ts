@@ -4880,13 +4880,19 @@ router.post("/api/public/resales/:id/reserve", async (req, res) => {
 
 // Confirm resale purchase (called after Stripe payment success)
 router.post("/api/public/resales/:id/confirm", async (req, res) => {
+  const startTime = Date.now();
+  console.log(`[RESALE-CONFIRM] === REQUEST RECEIVED === resale_id=${req.params.id}`);
+  
   try {
     const customer = await getAuthenticatedCustomer(req);
+    console.log(`[RESALE-CONFIRM] Auth check: customer=${customer?.id || 'NULL'}`);
     if (!customer) {
+      console.log(`[RESALE-CONFIRM] REJECTED: Not authenticated`);
       return res.status(401).json({ message: "Non autenticato" });
     }
     
     const { id } = req.params;
+    console.log(`[RESALE-CONFIRM] Processing resale ${id} for customer ${customer.id}`);
     
     // Get resale
     const [resale] = await db
