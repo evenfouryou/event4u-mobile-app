@@ -4762,7 +4762,46 @@ router.post("/api/public/resales/:id/reserve", async (req, res) => {
     }
     
     const { id } = req.params;
-    const { buyerDocumentoTipo, buyerDocumentoNumero } = req.body;
+    const { buyerDocumentoTipo, buyerDocumentoNumero, captchaToken } = req.body;
+    
+    // CAPTCHA validation (same logic as normal checkout)
+    const captchaEnabled = process.env.CAPTCHA_ENABLED !== 'false';
+    if (captchaEnabled) {
+      if (!captchaToken) {
+        return res.status(400).json({ 
+          message: "Verifica di sicurezza richiesta. Completa il CAPTCHA.",
+          code: "CAPTCHA_REQUIRED"
+        });
+      }
+
+      const captchaData = captchaStore.get(captchaToken);
+
+      if (!captchaData) {
+        return res.status(400).json({ 
+          message: "CAPTCHA non trovato o scaduto. Riprova.",
+          code: "CAPTCHA_EXPIRED"
+        });
+      }
+
+      if (captchaData.expiresAt < new Date()) {
+        captchaStore.delete(captchaToken);
+        return res.status(400).json({ 
+          message: "CAPTCHA scaduto. Riprova.",
+          code: "CAPTCHA_EXPIRED"
+        });
+      }
+
+      if (!captchaData.validated) {
+        return res.status(400).json({ 
+          message: "CAPTCHA non validato. Clicca Verifica prima di procedere.",
+          code: "CAPTCHA_NOT_VALIDATED"
+        });
+      }
+
+      // Delete token after successful check (one-time use after validation)
+      captchaStore.delete(captchaToken);
+      console.log("[RESALE] CAPTCHA validation passed");
+    }
     
     // Get resale with ticket info
     const [resale] = await db
