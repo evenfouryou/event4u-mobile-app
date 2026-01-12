@@ -100,145 +100,145 @@ export function AppSidebar() {
         title: t('nav.dashboard'),
         icon: BarChart3,
         url: "/super-admin",
-        group: "Sistema",
+        group: t('nav.groups.system'),
       },
       {
         title: t('nav.users'),
         icon: Users,
         url: "/admin/gestori",
-        group: "Sistema",
+        group: t('nav.groups.system'),
       },
       {
         title: t('nav.settings'),
         icon: Settings,
         url: "/admin/site-settings",
-        group: "Sistema",
+        group: t('nav.groups.system'),
       },
       {
-        title: "Approvazioni Eventi",
+        title: t('nav.eventApprovals'),
         icon: CheckCircle,
         url: "/siae-approvals",
-        group: "Biglietteria SIAE",
+        group: t('nav.groups.siae'),
       },
       {
-        title: "Tabelle SIAE",
+        title: t('nav.siaeTables'),
         icon: Table2,
         url: "/siae/tables",
-        group: "Biglietteria SIAE",
+        group: t('nav.groups.siae'),
       },
       {
-        title: "Lettore Carte SIAE",
+        title: t('nav.siaeCardReader'),
         icon: CreditCard,
         url: "/siae/activation-cards",
-        group: "Biglietteria SIAE",
+        group: t('nav.groups.siae'),
       },
       {
-        title: "Configurazione",
+        title: t('nav.siaeConfig'),
         icon: Settings,
         url: "/siae/system-config",
-        group: "Biglietteria SIAE",
+        group: t('nav.groups.siae'),
       },
       {
-        title: "Clienti",
+        title: t('nav.customers'),
         icon: Users,
         url: "/siae/customers",
-        group: "Biglietteria SIAE",
+        group: t('nav.groups.siae'),
       },
       {
-        title: "Console Biglietteria",
+        title: t('nav.siaeConsole'),
         icon: Ticket,
         url: "/siae/ticketing-console",
-        group: "Biglietteria SIAE",
+        group: t('nav.groups.siae'),
       },
       {
-        title: "Transazioni",
+        title: t('nav.transactions'),
         icon: Receipt,
         url: "/siae/transactions",
-        group: "Biglietteria SIAE",
+        group: t('nav.groups.siae'),
       },
       {
-        title: "Cambio Nominativo",
+        title: t('nav.siaeNameChanges'),
         icon: UserCog,
         url: "/siae/name-changes",
-        group: "Biglietteria SIAE",
+        group: t('nav.groups.siae'),
       },
       {
-        title: "Rivendite",
+        title: t('nav.siaeResales'),
         icon: RefreshCcw,
         url: "/siae/resales",
-        group: "Biglietteria SIAE",
+        group: t('nav.groups.siae'),
       },
       {
-        title: "Box Office",
+        title: t('nav.siaeBoxOffice'),
         icon: Store,
         url: "/siae/box-office",
-        group: "Biglietteria SIAE",
+        group: t('nav.groups.siae'),
       },
       {
-        title: "Abbonamenti",
+        title: t('nav.siaeSubscriptions'),
         icon: CreditCard,
         url: "/siae/subscriptions",
-        group: "Biglietteria SIAE",
+        group: t('nav.groups.siae'),
       },
       {
-        title: "Trasmissioni XML",
+        title: t('nav.siaeTransmissions'),
         icon: Send,
         url: "/siae/transmissions",
-        group: "Biglietteria SIAE",
+        group: t('nav.groups.siae'),
       },
       {
-        title: "Log Audit",
+        title: t('nav.siaeAuditLogs'),
         icon: ClipboardList,
         url: "/siae/audit-logs",
-        group: "Biglietteria SIAE",
+        group: t('nav.groups.siae'),
       },
       {
-        title: "Posti Numerati",
+        title: t('nav.siaeSeats'),
         icon: Grid3X3,
         url: "/siae/numbered-seats",
-        group: "Biglietteria SIAE",
+        group: t('nav.groups.siae'),
       },
       {
-        title: "Stampante",
+        title: t('nav.printer'),
         icon: Printer,
         url: "/printer-settings",
-        group: "Sistema",
+        group: t('nav.groups.system'),
       },
       {
-        title: "Template Digitali",
+        title: t('nav.digitalTemplates'),
         icon: QrCode,
         url: "/digital-template-builder",
-        group: "Sistema",
+        group: t('nav.groups.system'),
       },
       {
-        title: "Pagamenti Stripe",
+        title: t('nav.stripePayments'),
         icon: CreditCard,
         url: "/stripe-admin",
-        group: "Sistema",
+        group: t('nav.groups.system'),
       },
       {
-        title: "Piani Abbonamento",
+        title: t('nav.subscriptionPlans'),
         icon: Receipt,
         url: "/admin/billing/plans",
-        group: "Fatturazione",
+        group: t('nav.groups.billing'),
       },
       {
-        title: "Organizzatori",
+        title: t('nav.organizers'),
         icon: Building2,
         url: "/admin/billing/organizers",
-        group: "Fatturazione",
+        group: t('nav.groups.billing'),
       },
       {
-        title: "Fatture",
+        title: t('nav.invoices'),
         icon: FileText,
         url: "/admin/billing/invoices",
-        group: "Fatturazione",
+        group: t('nav.groups.billing'),
       },
       {
-        title: "Report Vendite",
+        title: t('nav.salesReports'),
         icon: BarChart3,
         url: "/admin/billing/reports",
-        group: "Fatturazione",
+        group: t('nav.groups.billing'),
       }
     );
   }
@@ -249,7 +249,7 @@ export function AppSidebar() {
         title: t('nav.home'),
         icon: Home,
         url: "/",
-        group: "Bacheca",
+        group: t('nav.groups.board'),
       }
     );
 
@@ -258,15 +258,15 @@ export function AppSidebar() {
       title: t('nav.events'),
       icon: Calendar,
       url: "/events",
-      group: "Moduli",
+      group: t('nav.groups.modules'),
     });
 
     // Add Formati Evento
     menuItems.push({
-      title: "Formati Evento",
+      title: t('nav.eventFormats'),
       icon: ListChecks,
       url: "/event-formats",
-      group: "Gestione",
+      group: t('nav.groups.management'),
     });
 
     // Only show modules that are enabled for this user
@@ -275,7 +275,7 @@ export function AppSidebar() {
         title: t('nav.inventory'),
         icon: Wine,
         url: "/beverage",
-        group: "Moduli",
+        group: t('nav.groups.modules'),
         accent: true,
       });
     }
@@ -285,7 +285,7 @@ export function AppSidebar() {
         title: t('nav.accounting'),
         icon: Calculator,
         url: "/accounting",
-        group: "Moduli",
+        group: t('nav.groups.modules'),
       });
     }
 
@@ -294,25 +294,25 @@ export function AppSidebar() {
         title: t('nav.staff'),
         icon: UserCheck,
         url: "/personnel",
-        group: "Moduli",
+        group: t('nav.groups.modules'),
       });
     }
 
     if (userFeatures?.cassaEnabled === true) {
       menuItems.push({
-        title: "Cassa",
+        title: t('nav.cashier'),
         icon: Receipt,
         url: "/cashier/dashboard",
-        group: "Moduli",
+        group: t('nav.groups.modules'),
       });
     }
 
     if (userFeatures?.nightFileEnabled === true) {
       menuItems.push({
-        title: "File Serata",
+        title: t('nav.nightFile'),
         icon: FileText,
         url: "/night-file",
-        group: "Moduli",
+        group: t('nav.groups.modules'),
       });
     }
 
@@ -321,63 +321,63 @@ export function AppSidebar() {
         title: t('nav.companies'),
         icon: Building2,
         url: "/companies",
-        group: "Gestione",
+        group: t('nav.groups.management'),
       },
       {
         title: t('nav.locations'),
         icon: MapPin,
         url: "/locations",
-        group: "Gestione",
+        group: t('nav.groups.management'),
       },
       {
         title: t('nav.users'),
         icon: Users,
         url: "/users",
-        group: "Gestione",
+        group: t('nav.groups.management'),
       },
       {
-        title: "Stampante",
+        title: t('nav.printer'),
         icon: Printer,
         url: "/printer-settings",
-        group: "Gestione",
+        group: t('nav.groups.management'),
       }
     );
 
     // Marketing Module - always visible for gestore
     menuItems.push(
       {
-        title: "Marketing Dashboard",
+        title: t('nav.marketingDashboard'),
         icon: Megaphone,
         url: "/marketing/dashboard",
-        group: "Marketing",
+        group: t('nav.groups.marketing'),
       },
       {
-        title: "Programma Fedeltà",
+        title: t('nav.loyaltyProgram'),
         icon: Gift,
         url: "/loyalty/admin",
-        group: "Marketing",
+        group: t('nav.groups.marketing'),
       },
       {
-        title: "Programma Referral",
+        title: t('nav.referralProgram'),
         icon: Share2,
         url: "/referral/admin",
-        group: "Marketing",
+        group: t('nav.groups.marketing'),
       },
       {
-        title: "Bundle Prodotti",
+        title: t('nav.productBundles'),
         icon: PackageOpen,
         url: "/bundles/admin",
-        group: "Marketing",
+        group: t('nav.groups.marketing'),
       }
     );
 
     // Cassa Biglietti Module
     if (userFeatures?.cassaBigliettiEnabled === true) {
       menuItems.push({
-        title: "Cassa Biglietti",
+        title: t('nav.ticketCashier'),
         icon: Store,
         url: "/cassa-biglietti",
-        group: "Gestione",
+        group: t('nav.groups.management'),
       });
     }
 
@@ -385,16 +385,16 @@ export function AppSidebar() {
     if (userFeatures?.scannerEnabled === true) {
       menuItems.push(
         {
-          title: "Gestione Scanner",
+          title: t('nav.scannerManagement'),
           icon: ScanLine,
           url: "/scanner-management",
-          group: "Gestione",
+          group: t('nav.groups.management'),
         },
         {
-          title: "Scanner QR",
+          title: t('nav.qrScanner'),
           icon: QrCode,
           url: "/scanner",
-          group: "Gestione",
+          group: t('nav.groups.management'),
         }
       );
     }
@@ -402,30 +402,30 @@ export function AppSidebar() {
     // PR Module
     if (userFeatures?.prEnabled === true) {
       menuItems.push({
-        title: "Gestione PR",
+        title: t('nav.prManagement'),
         icon: UserPlus,
         url: "/pr-management",
-        group: "Gestione",
+        group: t('nav.groups.management'),
       });
     }
 
     // Badge Scuola Module
     if (userFeatures?.badgesEnabled === true) {
       menuItems.push({
-        title: "Badge Scuola",
+        title: t('nav.schoolBadges'),
         icon: GraduationCap,
         url: "/school-badges",
-        group: "Gestione",
+        group: t('nav.groups.management'),
       });
     }
 
     // Template Digitali Module
     if (userFeatures?.templateEnabled === true) {
       menuItems.push({
-        title: "Template Digitali",
+        title: t('nav.digitalTemplates'),
         icon: QrCode,
         url: "/digital-template-builder",
-        group: "Gestione",
+        group: t('nav.groups.management'),
       });
     }
 
@@ -433,16 +433,16 @@ export function AppSidebar() {
     if (userFeatures?.siaeEnabled === true) {
       menuItems.push(
           {
-            title: "Gestione Cassieri",
+            title: t('nav.cashierManagement'),
             icon: UserPlus,
             url: "/cashier/management",
-            group: "Gestione",
+            group: t('nav.groups.management'),
           },
           {
-            title: "Clienti SIAE",
+            title: t('nav.siaeCustomers'),
             icon: Users,
             url: "/siae/customers",
-            group: "Gestione",
+            group: t('nav.groups.management'),
           }
       );
     }
@@ -453,40 +453,40 @@ export function AppSidebar() {
   if (isGestoreCovisione) {
     menuItems.push(
       {
-        title: "Dashboard",
+        title: t('nav.dashboard'),
         icon: Home,
         url: "/",
-        group: "Bacheca",
+        group: t('nav.groups.board'),
       },
       {
-        title: "I Miei Eventi",
+        title: t('nav.myEvents'),
         icon: Calendar,
         url: "/pr/my-events",
-        group: "Gestione",
+        group: t('nav.groups.management'),
       },
       {
-        title: "Liste",
+        title: t('nav.lists'),
         icon: ListChecks,
         url: "/pr/guest-lists",
-        group: "Gestione PR",
+        group: t('nav.groups.prManagement'),
       },
       {
-        title: "Tavoli Evento",
+        title: t('nav.eventTables'),
         icon: Armchair,
         url: "/pr/tables",
-        group: "Gestione PR",
+        group: t('nav.groups.prManagement'),
       },
       {
-        title: "Team PR",
+        title: t('nav.prTeam'),
         icon: Users,
         url: "/pr/staff",
-        group: "Gestione PR",
+        group: t('nav.groups.prManagement'),
       },
       {
-        title: "Impostazioni",
+        title: t('nav.settings'),
         icon: Settings,
         url: "/settings",
-        group: "Sistema",
+        group: t('nav.groups.system'),
       }
     );
   }
@@ -495,40 +495,40 @@ export function AppSidebar() {
   if (isCapoStaff) {
     menuItems.push(
       {
-        title: "Dashboard",
+        title: t('nav.dashboard'),
         icon: Home,
         url: "/staff-pr-home",
-        group: "Bacheca",
+        group: t('nav.groups.board'),
       },
       {
-        title: "I Miei Eventi",
+        title: t('nav.myEvents'),
         icon: Calendar,
         url: "/staff-pr-home",
-        group: "Gestione",
+        group: t('nav.groups.management'),
       },
       {
-        title: "Liste",
+        title: t('nav.lists'),
         icon: ListChecks,
         url: "/pr/guest-lists",
-        group: "Gestione PR",
+        group: t('nav.groups.prManagement'),
       },
       {
-        title: "Tavoli Evento",
+        title: t('nav.eventTables'),
         icon: Armchair,
         url: "/pr/tables",
-        group: "Gestione PR",
+        group: t('nav.groups.prManagement'),
       },
       {
-        title: "Team PR",
+        title: t('nav.prTeam'),
         icon: Users,
         url: "/pr/staff",
-        group: "Gestione PR",
+        group: t('nav.groups.prManagement'),
       },
       {
-        title: "Impostazioni",
+        title: t('nav.settings'),
         icon: Settings,
         url: "/settings",
-        group: "Sistema",
+        group: t('nav.groups.system'),
       }
     );
   }
@@ -537,40 +537,40 @@ export function AppSidebar() {
   if (isPr) {
     menuItems.push(
       {
-        title: "Dashboard",
+        title: t('nav.dashboard'),
         icon: Home,
         url: "/staff-pr-home",
-        group: "Bacheca",
+        group: t('nav.groups.board'),
       },
       {
-        title: "I Miei Eventi",
+        title: t('nav.myEvents'),
         icon: Calendar,
         url: "/pr/my-events",
-        group: "Gestione",
+        group: t('nav.groups.management'),
       },
       {
-        title: "Liste",
+        title: t('nav.lists'),
         icon: ListChecks,
         url: "/pr/guest-lists",
-        group: "Gestione PR",
+        group: t('nav.groups.prManagement'),
       },
       {
-        title: "Tavoli Evento",
+        title: t('nav.eventTables'),
         icon: Armchair,
         url: "/pr/tables",
-        group: "Gestione PR",
+        group: t('nav.groups.prManagement'),
       },
       {
-        title: "Wallet",
+        title: t('nav.wallet'),
         icon: Wallet,
         url: "/pr-wallet",
-        group: "Guadagni",
+        group: t('nav.groups.earnings'),
       },
       {
-        title: "Impostazioni",
+        title: t('nav.settings'),
         icon: Settings,
         url: "/settings",
-        group: "Sistema",
+        group: t('nav.groups.system'),
       }
     );
   }
@@ -581,31 +581,31 @@ export function AppSidebar() {
         title: t('nav.home'),
         icon: Home,
         url: "/",
-        group: "Generale",
+        group: t('nav.groups.general'),
       },
       {
         title: t('nav.events'),
         icon: Calendar,
         url: "/events",
-        group: "Generale",
+        group: t('nav.groups.general'),
       },
       {
         title: t('nav.products'),
         icon: Package,
         url: "/products",
-        group: "Inventario",
+        group: t('nav.groups.inventory'),
       },
       {
         title: t('nav.suppliers'),
         icon: Truck,
         url: "/suppliers",
-        group: "Inventario",
+        group: t('nav.groups.inventory'),
       },
       {
         title: t('nav.warehouse'),
         icon: Warehouse,
         url: "/warehouse",
-        group: "Inventario",
+        group: t('nav.groups.inventory'),
       }
     );
   }
@@ -613,10 +613,10 @@ export function AppSidebar() {
   if (isBartender) {
     menuItems.push(
       {
-        title: "I Miei Eventi",
+        title: t('nav.myEvents'),
         icon: Calendar,
         url: "/",
-        group: "Operazioni",
+        group: t('nav.groups.operations'),
       }
     );
   }
@@ -624,16 +624,16 @@ export function AppSidebar() {
   if (isCassiere) {
     menuItems.push(
       {
-        title: "I Miei Eventi",
+        title: t('nav.myEvents'),
         icon: Calendar,
         url: "/cashier/dashboard",
-        group: "Bacheca",
+        group: t('nav.groups.board'),
       },
       {
-        title: "Emetti Biglietti",
+        title: t('nav.issueTickets'),
         icon: Ticket,
         url: "/cassa-biglietti",
-        group: "Operazioni",
+        group: t('nav.groups.operations'),
       }
     );
   }
@@ -644,13 +644,13 @@ export function AppSidebar() {
         title: t('nav.home'),
         icon: Home,
         url: "/",
-        group: "Bacheca",
+        group: t('nav.groups.board'),
       },
       {
-        title: "Il Mio Wallet",
+        title: t('nav.myWallet'),
         icon: Wallet,
         url: "/wallet",
-        group: "I Miei QR",
+        group: t('nav.groups.myQr'),
       }
     );
   }
@@ -658,10 +658,10 @@ export function AppSidebar() {
   if (isWarehouse || isBartender) {
     menuItems.push(
       {
-        title: "Registra Consumi",
+        title: t('nav.recordConsumption'),
         icon: ShoppingCart,
         url: "/consumption",
-        group: "Operazioni",
+        group: t('nav.groups.operations'),
       }
     );
   }
@@ -672,13 +672,13 @@ export function AppSidebar() {
         title: t('nav.reports'),
         icon: Receipt,
         url: "/organizer/billing",
-        group: "Account",
+        group: t('nav.groups.account'),
       },
       {
         title: t('nav.settings'),
         icon: Settings,
         url: "/settings",
-        group: "Sistema",
+        group: t('nav.groups.system'),
       }
     );
   }
