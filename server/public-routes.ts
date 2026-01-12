@@ -48,7 +48,7 @@ import {
   eventSeatStatus,
   eventCategories,
 } from "@shared/schema";
-import { eq, and, gt, lt, desc, sql, gte, lte, or, isNull } from "drizzle-orm";
+import { eq, and, gt, lt, desc, sql, gte, lte, or, isNull, not } from "drizzle-orm";
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { generateTicketHtml } from "./template-routes";
 import { generateTicketPdf, generateWalletImage, generateDigitalTicketPdf } from "./pdf-service";
@@ -4951,6 +4951,17 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
       return res.status(403).json({ message: "Non autorizzato" });
     }
     
+    // Idempotency check: if already fulfilled, return success (prevents duplicate processing)
+    if (resale.status === 'fulfilled') {
+      console.log(`[RESALE-CONFIRM] Already fulfilled, returning cached success`);
+      return res.json({
+        success: true,
+        message: "Acquisto già completato!",
+        newTicketId: resale.newTicketId,
+        newTicketCode: null, // Not available in this path
+      });
+    }
+    
     // Accept 'reserved' or 'processing' (for retry after failure)
     if (resale.status !== 'reserved' && resale.status !== 'processing') {
       console.log(`[RESALE-CONFIRM] REJECTED: Invalid status ${resale.status}`);
@@ -5239,27 +5250,67 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
   } catch (error: any) {
     console.error("[PUBLIC] Confirm resale error:", error);
     
-    // COMPENSATION: Reset resale status to allow retry
-    // Only reset if we have a valid resale ID
+    // COMPENSATION: Handle partial failures gracefully
     const resaleId = req.params.id;
     if (resaleId) {
       try {
-        // Check if resale is in 'processing' state (meaning we started but failed)
         const [currentResale] = await db
           .select()
           .from(siaeResales)
           .where(eq(siaeResales.id, resaleId));
         
         if (currentResale && currentResale.status === 'processing') {
-          // Reset to reserved so customer can retry
-          await db
-            .update(siaeResales)
-            .set({
-              status: 'reserved',
-              updatedAt: new Date(),
-            })
-            .where(eq(siaeResales.id, resaleId));
-          console.log(`[RESALE] Compensated: reset ${resaleId} from 'processing' to 'reserved'`);
+          // Check if new ticket was already created (partial success case)
+          const [existingNewTicket] = await db
+            .select()
+            .from(siaeTickets)
+            .where(and(
+              eq(siaeTickets.originalTicketId, currentResale.originalTicketId),
+              eq(siaeTickets.paymentMethod, 'resale')
+            ));
+          
+          if (existingNewTicket) {
+            // Partial success: new ticket exists, complete the fulfillment
+            console.log(`[RESALE] Partial success detected: new ticket ${existingNewTicket.id} exists, completing fulfillment...`);
+            
+            // Annul original ticket if not already done
+            await db
+              .update(siaeTickets)
+              .set({ 
+                status: 'annullato_rivendita',
+                cancellationReasonCode: 'RESALE',
+                cancellationDate: new Date(),
+                replacedByTicketId: existingNewTicket.id,
+                updatedAt: new Date(),
+              })
+              .where(and(
+                eq(siaeTickets.id, currentResale.originalTicketId),
+                not(eq(siaeTickets.status, 'annullato_rivendita'))
+              ));
+            
+            // Mark resale as fulfilled
+            await db
+              .update(siaeResales)
+              .set({
+                status: 'fulfilled',
+                newTicketId: existingNewTicket.id,
+                fulfilledAt: new Date(),
+                updatedAt: new Date(),
+              })
+              .where(eq(siaeResales.id, resaleId));
+            
+            console.log(`[RESALE] Completed partial fulfillment for ${resaleId}`);
+          } else {
+            // No new ticket created, safe to reset to reserved for retry
+            await db
+              .update(siaeResales)
+              .set({
+                status: 'reserved',
+                updatedAt: new Date(),
+              })
+              .where(eq(siaeResales.id, resaleId));
+            console.log(`[RESALE] Compensated: reset ${resaleId} from 'processing' to 'reserved'`);
+          }
         }
       } catch (compensationError) {
         console.error("[RESALE] Compensation failed:", compensationError);
