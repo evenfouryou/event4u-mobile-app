@@ -654,7 +654,7 @@ export interface FiscalSealData {
 
 const pendingSealRequests = new Map<string, PendingSealRequest>();
 
-const SEAL_REQUEST_TIMEOUT = 15000; // 15 seconds
+const SEAL_REQUEST_TIMEOUT = 5000; // 5 seconds for better UX
 
 // Generate UUID for request tracking
 function generateRequestId(): string {

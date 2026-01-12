@@ -4957,7 +4957,7 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
       })
       .where(eq(siaeTickets.id, resale.originalTicketId));
     
-    // 4. Try to get real fiscal seal from bridge if available
+    // 4. Try to get real fiscal seal from bridge if available (skip in test mode for faster processing)
     const now = new Date();
     const emissionDateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
     const emissionTimeStr = now.toTimeString().slice(0, 5).replace(':', '');
@@ -4967,8 +4967,11 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
     let fiscalSealCounter: number | null = null;
     let cardCode: string | null = null;
     
+    const isTestMode = process.env.SIAE_TEST_MODE === 'true';
     const bridgeStatus = getCachedBridgeStatus();
-    if (bridgeStatus.bridgeConnected && bridgeStatus.cardInserted) {
+    
+    // In test mode, always use fallback seal for faster processing
+    if (!isTestMode && bridgeStatus.bridgeConnected && bridgeStatus.cardInserted) {
       try {
         // Request real fiscal seal from smart card
         const priceInCents = Math.round(parseFloat(resale.resalePrice) * 100);
@@ -5022,9 +5025,10 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
         fiscalSealCode = `R${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       }
     } else {
-      // Bridge not available, use temporary seal
+      // Bridge not available or test mode, use temporary seal
       fiscalSealCode = `R${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      console.log(`[RESALE] Bridge not available, using temporary seal: ${fiscalSealCode}`);
+      const reason = isTestMode ? 'test mode active' : 'bridge not available';
+      console.log(`[RESALE] Using temporary seal (${reason}): ${fiscalSealCode}`);
     }
     
     // 5. Create new ticket for buyer with all original ticket data
