@@ -8,6 +8,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import type { SiaeCashier } from "@shared/schema";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -86,20 +87,6 @@ interface PrinterAgent {
   lastSeen?: string;
 }
 
-const cashierFormSchema = z.object({
-  name: z.string().min(1, "Nome obbligatorio"),
-  username: z.string().min(1, "Username obbligatorio"),
-  password: z.string().optional(),
-  defaultPrinterAgentId: z.string().optional(),
-  isActive: z.boolean().default(true),
-});
-
-type CashierFormValues = z.infer<typeof cashierFormSchema>;
-
-const createCashierFormSchema = cashierFormSchema.extend({
-  password: z.string().min(6, "La password deve avere almeno 6 caratteri"),
-});
-
 const springTransition = {
   type: "spring" as const,
   stiffness: 400,
@@ -107,6 +94,7 @@ const springTransition = {
 };
 
 export default function CashierManagementPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -118,6 +106,20 @@ export default function CashierManagementPage() {
   const [cashierToDelete, setCashierToDelete] = useState<SiaeCashier | null>(null);
 
   const isGestore = user?.role === "gestore" || user?.role === "super_admin";
+
+  const cashierFormSchema = z.object({
+    name: z.string().min(1, t("cashier.validation.nameRequired")),
+    username: z.string().min(1, t("cashier.validation.usernameRequired")),
+    password: z.string().optional(),
+    defaultPrinterAgentId: z.string().optional(),
+    isActive: z.boolean().default(true),
+  });
+
+  type CashierFormValues = z.infer<typeof cashierFormSchema>;
+
+  const createCashierFormSchema = cashierFormSchema.extend({
+    password: z.string().min(6, t("cashier.validation.passwordMinLength")),
+  });
 
   const { data: cashiers, isLoading: cashiersLoading } = useQuery<SiaeCashier[]>({
     queryKey: ["/api/cashiers"],
@@ -152,15 +154,15 @@ export default function CashierManagementPage() {
       form.reset();
       triggerHaptic('success');
       toast({
-        title: "Cassiere Creato",
-        description: "Il nuovo cassiere è stato creato con successo.",
+        title: t("cashier.cashierCreated"),
+        description: t("cashier.cashierCreatedSuccess"),
       });
     },
     onError: (error: any) => {
       triggerHaptic('error');
       toast({
-        title: "Errore",
-        description: error.message || "Errore durante la creazione del cassiere",
+        title: t("common.error"),
+        description: error.message || t("cashier.createError"),
         variant: "destructive",
       });
     },
@@ -179,15 +181,15 @@ export default function CashierManagementPage() {
       form.reset();
       triggerHaptic('success');
       toast({
-        title: "Cassiere Aggiornato",
-        description: "Le informazioni del cassiere sono state aggiornate.",
+        title: t("cashier.cashierUpdated"),
+        description: t("cashier.cashierUpdatedSuccess"),
       });
     },
     onError: (error: any) => {
       triggerHaptic('error');
       toast({
-        title: "Errore",
-        description: error.message || "Errore durante l'aggiornamento del cassiere",
+        title: t("common.error"),
+        description: error.message || t("cashier.updateError"),
         variant: "destructive",
       });
     },
@@ -205,15 +207,15 @@ export default function CashierManagementPage() {
       setCashierToDelete(null);
       triggerHaptic('success');
       toast({
-        title: "Cassiere Disattivato",
-        description: "Il cassiere è stato disattivato con successo.",
+        title: t("cashier.cashierDeactivated"),
+        description: t("cashier.cashierDeactivatedSuccess"),
       });
     },
     onError: (error: any) => {
       triggerHaptic('error');
       toast({
-        title: "Errore",
-        description: error.message || "Errore durante la disattivazione del cassiere",
+        title: t("common.error"),
+        description: error.message || t("cashier.deactivateError"),
         variant: "destructive",
       });
     },
@@ -278,16 +280,16 @@ export default function CashierManagementPage() {
   };
 
   const getPrinterName = (agentId: string | null) => {
-    if (!agentId) return "Non assegnata";
+    if (!agentId) return t("cashier.printerNotAssigned");
     const agent = printerAgents?.find(a => a.id === agentId);
-    return agent?.name || "Sconosciuta";
+    return agent?.name || t("cashier.printerUnknown");
   };
 
   if (!isGestore) {
     return (
       <MobileAppLayout
         header={
-          <MobileHeader title="Accesso Negato" />
+          <MobileHeader title={t("cashier.accessDenied")} />
         }
       >
         <div className="flex flex-col items-center justify-center h-full px-6 pb-24">
@@ -300,9 +302,9 @@ export default function CashierManagementPage() {
             <div className="w-20 h-20 rounded-full bg-red-500/20 flex items-center justify-center mx-auto mb-6">
               <XCircle className="w-10 h-10 text-red-500" />
             </div>
-            <h3 className="text-xl font-semibold">Accesso Negato</h3>
+            <h3 className="text-xl font-semibold">{t("cashier.accessDenied")}</h3>
             <p className="text-muted-foreground mt-2">
-              Non hai i permessi per accedere a questa pagina.
+              {t("cashier.noPermission")}
             </p>
           </motion.div>
         </div>
@@ -318,7 +320,7 @@ export default function CashierManagementPage() {
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Nome</FormLabel>
+              <FormLabel>{t("common.name")}</FormLabel>
               <FormControl>
                 <Input 
                   placeholder="Mario Rossi" 
@@ -336,7 +338,7 @@ export default function CashierManagementPage() {
           name="username"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Username</FormLabel>
+              <FormLabel>{t("auth.username")}</FormLabel>
               <FormControl>
                 <Input 
                   placeholder="cassiere1"
@@ -356,12 +358,12 @@ export default function CashierManagementPage() {
           render={({ field }) => (
             <FormItem>
               <FormLabel>
-                Password {editingCashier && "(lascia vuoto per non modificare)"}
+                {t("auth.password")} {editingCashier && `(${t("cashier.leaveEmptyToKeep")})`}
               </FormLabel>
               <FormControl>
                 <Input 
                   type="password"
-                  placeholder={editingCashier ? "••••••••" : "Minimo 6 caratteri"} 
+                  placeholder={editingCashier ? "••••••••" : t("cashier.minSixChars")} 
                   {...field} 
                   data-testid="input-password"
                 />
@@ -376,18 +378,18 @@ export default function CashierManagementPage() {
           name="defaultPrinterAgentId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Stampante Predefinita</FormLabel>
+              <FormLabel>{t("cashier.defaultPrinter")}</FormLabel>
               <Select 
                 onValueChange={field.onChange} 
                 value={field.value || ""}
               >
                 <FormControl>
                   <SelectTrigger data-testid="select-printer">
-                    <SelectValue placeholder="Seleziona stampante..." />
+                    <SelectValue placeholder={t("cashier.selectPrinter")} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="none">Nessuna stampante</SelectItem>
+                  <SelectItem value="none">{t("cashier.noPrinter")}</SelectItem>
                   {printerAgents?.map((agent) => (
                     <SelectItem key={agent.id} value={agent.id}>
                       <div className="flex items-center gap-2">
@@ -412,9 +414,9 @@ export default function CashierManagementPage() {
           render={({ field }) => (
             <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
               <div className="space-y-0.5">
-                <FormLabel className="text-base">Attivo</FormLabel>
+                <FormLabel className="text-base">{t("common.active")}</FormLabel>
                 <p className="text-sm text-muted-foreground">
-                  Il cassiere può accedere al sistema
+                  {t("cashier.canAccessSystem")}
                 </p>
               </div>
               <FormControl>
@@ -439,7 +441,7 @@ export default function CashierManagementPage() {
             }}
             data-testid="button-cancel"
           >
-            Annulla
+            {t("common.cancel")}
           </Button>
           <Button
             type="submit"
@@ -449,7 +451,7 @@ export default function CashierManagementPage() {
             {(createCashierMutation.isPending || updateCashierMutation.isPending) && (
               <Loader2 className="w-4 h-4 mr-2 animate-spin" />
             )}
-            {editingCashier ? "Salva Modifiche" : "Crea Cassiere"}
+            {editingCashier ? t("cashier.saveChanges") : t("cashier.createCashier")}
           </Button>
         </DialogFooter>
       </form>
@@ -461,12 +463,12 @@ export default function CashierManagementPage() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-cashier-management">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Gestione Cassieri</h1>
-            <p className="text-muted-foreground">Gestisci gli operatori di cassa della tua azienda</p>
+            <h1 className="text-3xl font-bold">{t("cashier.title")}</h1>
+            <p className="text-muted-foreground">{t("cashier.subtitle")}</p>
           </div>
           <Button onClick={() => handleOpenForm(undefined, true)} data-testid="button-add-cashier">
             <UserPlus className="w-4 h-4 mr-2" />
-            Nuovo Cassiere
+            {t("cashier.newCashier")}
           </Button>
         </div>
 
@@ -474,7 +476,7 @@ export default function CashierManagementPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{cashiers?.length || 0}</div>
-              <p className="text-sm text-muted-foreground">Cassieri Totali</p>
+              <p className="text-sm text-muted-foreground">{t("cashier.totalCashiers")}</p>
             </CardContent>
           </Card>
           <Card>
@@ -482,7 +484,7 @@ export default function CashierManagementPage() {
               <div className="text-2xl font-bold text-emerald-500">
                 {cashiers?.filter(c => c.isActive).length || 0}
               </div>
-              <p className="text-sm text-muted-foreground">Attivi</p>
+              <p className="text-sm text-muted-foreground">{t("cashier.activeCashiers")}</p>
             </CardContent>
           </Card>
           <Card>
@@ -490,7 +492,7 @@ export default function CashierManagementPage() {
               <div className="text-2xl font-bold text-muted-foreground">
                 {cashiers?.filter(c => !c.isActive).length || 0}
               </div>
-              <p className="text-sm text-muted-foreground">Disattivi</p>
+              <p className="text-sm text-muted-foreground">{t("cashier.inactiveCashiers")}</p>
             </CardContent>
           </Card>
         </div>
@@ -499,10 +501,10 @@ export default function CashierManagementPage() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Users className="w-5 h-5" />
-              Elenco Cassieri
+              {t("cashier.cashierList")}
             </CardTitle>
             <CardDescription>
-              Tutti i cassieri registrati per la tua azienda
+              {t("cashier.allCashiersRegistered")}
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -523,9 +525,9 @@ export default function CashierManagementPage() {
                 <div className="w-16 h-16 rounded-full bg-muted/50 flex items-center justify-center mb-4">
                   <Users className="w-8 h-8 text-muted-foreground" />
                 </div>
-                <h3 className="font-semibold">Nessun Cassiere</h3>
+                <h3 className="font-semibold">{t("cashier.noCashiers")}</h3>
                 <p className="text-sm text-muted-foreground mt-1">
-                  Non hai ancora creato nessun cassiere
+                  {t("cashier.noCashiersYet")}
                 </p>
                 <Button 
                   className="mt-4"
@@ -533,18 +535,18 @@ export default function CashierManagementPage() {
                   data-testid="button-add-cashier-empty"
                 >
                   <UserPlus className="w-4 h-4 mr-2" />
-                  Aggiungi il primo cassiere
+                  {t("cashier.addFirstCashier")}
                 </Button>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Cassiere</TableHead>
-                    <TableHead>Username</TableHead>
-                    <TableHead>Stampante</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
+                    <TableHead>{t("cashier.cashier")}</TableHead>
+                    <TableHead>{t("auth.username")}</TableHead>
+                    <TableHead>{t("cashier.printer")}</TableHead>
+                    <TableHead>{t("common.status")}</TableHead>
+                    <TableHead className="text-right">{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -573,12 +575,12 @@ export default function CashierManagementPage() {
                         {cashier.isActive ? (
                           <Badge className="bg-emerald-500/20 text-emerald-400">
                             <CheckCircle2 className="w-3 h-3 mr-1" />
-                            Attivo
+                            {t("common.active")}
                           </Badge>
                         ) : (
                           <Badge variant="secondary" className="bg-red-500/20 text-red-400">
                             <XCircle className="w-3 h-3 mr-1" />
-                            Disattivo
+                            {t("common.inactive")}
                           </Badge>
                         )}
                       </TableCell>
@@ -591,7 +593,7 @@ export default function CashierManagementPage() {
                             data-testid={`button-edit-cashier-${cashier.id}`}
                           >
                             <Edit className="w-4 h-4 mr-1" />
-                            Modifica
+                            {t("common.edit")}
                           </Button>
                           <Button
                             variant="outline"
@@ -625,12 +627,12 @@ export default function CashierManagementPage() {
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>
-                {editingCashier ? "Modifica Cassiere" : "Nuovo Cassiere"}
+                {editingCashier ? t("cashier.editCashier") : t("cashier.newCashier")}
               </DialogTitle>
               <DialogDescription>
                 {editingCashier 
-                  ? "Modifica le informazioni del cassiere" 
-                  : "Crea un nuovo operatore di cassa"}
+                  ? t("cashier.editCashierInfo") 
+                  : t("cashier.createNewOperator")}
               </DialogDescription>
             </DialogHeader>
             {renderFormContent()}
@@ -640,15 +642,15 @@ export default function CashierManagementPage() {
         <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Disattivare Cassiere?</AlertDialogTitle>
+              <AlertDialogTitle>{t("cashier.deactivateCashierQuestion")}</AlertDialogTitle>
               <AlertDialogDescription>
-                Stai per disattivare il cassiere <strong>{cashierToDelete?.name}</strong>.
-                Il cassiere non potrà più accedere al sistema.
+                {t("cashier.deactivateWarning", { name: cashierToDelete?.name })}
+                {" "}{t("cashier.cashierNoAccess")}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel onClick={() => setCashierToDelete(null)}>
-                Annulla
+                {t("common.cancel")}
               </AlertDialogCancel>
               <AlertDialogAction
                 className="bg-red-500 hover:bg-red-600"
@@ -658,7 +660,7 @@ export default function CashierManagementPage() {
                 {deleteCashierMutation.isPending && (
                   <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                 )}
-                Disattiva
+                {t("cashier.deactivate")}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -671,7 +673,7 @@ export default function CashierManagementPage() {
     <MobileAppLayout
       header={
         <MobileHeader
-          title="Gestione Cassieri"
+          title={t("cashier.title")}
           showBackButton
           showMenuButton
           leftAction={
@@ -681,7 +683,7 @@ export default function CashierManagementPage() {
           }
           rightAction={
             <div className="text-xs text-muted-foreground">
-              {cashiers?.length || 0} totali
+              {cashiers?.length || 0} {t("cashier.total")}
             </div>
           }
         />
@@ -723,9 +725,9 @@ export default function CashierManagementPage() {
             <div className="w-24 h-24 rounded-3xl bg-muted/50 flex items-center justify-center mb-6">
               <Users className="w-12 h-12 text-muted-foreground" />
             </div>
-            <h3 className="text-xl font-semibold text-center">Nessun Cassiere</h3>
+            <h3 className="text-xl font-semibold text-center">{t("cashier.noCashiers")}</h3>
             <p className="text-muted-foreground mt-2 text-center">
-              Non hai ancora creato nessun cassiere.
+              {t("cashier.noCashiersYet")}
             </p>
             <HapticButton 
               className="mt-6 min-h-[52px] px-6"
@@ -734,7 +736,7 @@ export default function CashierManagementPage() {
               data-testid="button-add-cashier-empty"
             >
               <UserPlus className="w-5 h-5 mr-2" />
-              Aggiungi il primo cassiere
+              {t("cashier.addFirstCashier")}
             </HapticButton>
           </motion.div>
         ) : (
@@ -776,12 +778,12 @@ export default function CashierManagementPage() {
                           {cashier.isActive ? (
                             <Badge className="bg-emerald-500/20 text-emerald-400 flex-shrink-0">
                               <CheckCircle2 className="w-3 h-3 mr-1" />
-                              Attivo
+                              {t("common.active")}
                             </Badge>
                           ) : (
                             <Badge variant="secondary" className="bg-red-500/20 text-red-400 flex-shrink-0">
                               <XCircle className="w-3 h-3 mr-1" />
-                              Disattivo
+                              {t("common.inactive")}
                             </Badge>
                           )}
                         </div>
@@ -800,7 +802,7 @@ export default function CashierManagementPage() {
                             data-testid={`button-edit-cashier-${cashier.id}`}
                           >
                             <Edit className="w-4 h-4 mr-2" />
-                            Modifica
+                            {t("common.edit")}
                           </HapticButton>
                           <HapticButton
                             variant="outline"
@@ -840,7 +842,7 @@ export default function CashierManagementPage() {
           setEditingCashier(null);
           form.reset();
         }}
-        title={editingCashier ? "Modifica Cassiere" : "Nuovo Cassiere"}
+        title={editingCashier ? t("cashier.editCashier") : t("cashier.newCashier")}
       >
         <div className="p-4 pb-8">
           <Form {...form}>
@@ -850,7 +852,7 @@ export default function CashierManagementPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Nome</FormLabel>
+                    <FormLabel>{t("common.name")}</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="Mario Rossi" 
@@ -869,7 +871,7 @@ export default function CashierManagementPage() {
                 name="username"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Username</FormLabel>
+                    <FormLabel>{t("auth.username")}</FormLabel>
                     <FormControl>
                       <Input 
                         placeholder="cassiere1"
@@ -890,13 +892,13 @@ export default function CashierManagementPage() {
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>
-                      Password {editingCashier && "(lascia vuoto per non modificare)"}
+                      {t("auth.password")} {editingCashier && `(${t("cashier.leaveEmptyToKeep")})`}
                     </FormLabel>
                     <FormControl>
                       <Input 
                         type="password"
                         className="min-h-[48px] text-base"
-                        placeholder={editingCashier ? "••••••••" : "Minimo 6 caratteri"} 
+                        placeholder={editingCashier ? "••••••••" : t("cashier.minSixChars")} 
                         {...field} 
                         data-testid="input-password"
                       />
@@ -911,18 +913,18 @@ export default function CashierManagementPage() {
                 name="defaultPrinterAgentId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Stampante Predefinita</FormLabel>
+                    <FormLabel>{t("cashier.defaultPrinter")}</FormLabel>
                     <Select 
                       onValueChange={field.onChange} 
                       value={field.value || ""}
                     >
                       <FormControl>
                         <SelectTrigger className="min-h-[48px] text-base" data-testid="select-printer">
-                          <SelectValue placeholder="Seleziona stampante..." />
+                          <SelectValue placeholder={t("cashier.selectPrinter")} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="none">Nessuna stampante</SelectItem>
+                        <SelectItem value="none">{t("cashier.noPrinter")}</SelectItem>
                         {printerAgents?.map((agent) => (
                           <SelectItem key={agent.id} value={agent.id}>
                             <div className="flex items-center gap-2">
@@ -937,7 +939,7 @@ export default function CashierManagementPage() {
                       </SelectContent>
                     </Select>
                     <FormDescription>
-                      Stampante per l'emissione dei biglietti
+                      {t("cashier.printerForTickets")}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -950,9 +952,9 @@ export default function CashierManagementPage() {
                 render={({ field }) => (
                   <FormItem className="flex flex-row items-center justify-between rounded-xl border p-4">
                     <div className="space-y-0.5">
-                      <FormLabel className="text-base">Attivo</FormLabel>
+                      <FormLabel className="text-base">{t("common.active")}</FormLabel>
                       <FormDescription>
-                        Il cassiere può accedere al sistema
+                        {t("cashier.canAccessSystem")}
                       </FormDescription>
                     </div>
                     <FormControl>
@@ -982,7 +984,7 @@ export default function CashierManagementPage() {
                   hapticType="light"
                   data-testid="button-cancel"
                 >
-                  Annulla
+                  {t("common.cancel")}
                 </HapticButton>
                 <HapticButton
                   type="submit"
@@ -994,7 +996,7 @@ export default function CashierManagementPage() {
                   {(createCashierMutation.isPending || updateCashierMutation.isPending) && (
                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
                   )}
-                  {editingCashier ? "Salva" : "Crea"}
+                  {editingCashier ? t("common.save") : t("cashier.create")}
                 </HapticButton>
               </div>
             </form>
@@ -1008,7 +1010,7 @@ export default function CashierManagementPage() {
           setIsDeleteSheetOpen(false);
           setCashierToDelete(null);
         }}
-        title="Disattivare Cassiere?"
+        title={t("cashier.deactivateCashierQuestion")}
       >
         <div className="p-4 pb-8">
           <motion.div
@@ -1021,9 +1023,9 @@ export default function CashierManagementPage() {
               <Trash2 className="w-10 h-10 text-red-500" />
             </div>
             <p className="text-muted-foreground">
-              Stai per disattivare il cassiere{" "}
+              {t("cashier.deactivateWarning", { name: "" })}
               <strong className="text-foreground">{cashierToDelete?.name}</strong>.
-              Il cassiere non potrà più accedere al sistema.
+              {" "}{t("cashier.cashierNoAccess")}
             </p>
           </motion.div>
           
@@ -1038,7 +1040,7 @@ export default function CashierManagementPage() {
               hapticType="light"
               data-testid="button-cancel-delete"
             >
-              Annulla
+              {t("common.cancel")}
             </HapticButton>
             <HapticButton
               className="flex-1 min-h-[52px] bg-red-500 hover:bg-red-600"
@@ -1050,7 +1052,7 @@ export default function CashierManagementPage() {
               {deleteCashierMutation.isPending && (
                 <Loader2 className="w-5 h-5 mr-2 animate-spin" />
               )}
-              Disattiva
+              {t("cashier.deactivate")}
             </HapticButton>
           </div>
         </div>

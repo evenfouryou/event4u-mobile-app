@@ -1,4 +1,5 @@
 import { useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { Skeleton } from "@/components/ui/skeleton";
@@ -191,6 +192,7 @@ function UserHeader({
   getInitials: (firstName?: string, lastName?: string) => string;
   onMenuClick?: () => void;
 }) {
+  const { t } = useTranslation();
   return (
     <motion.div 
       initial={{ opacity: 0, y: -10 }}
@@ -216,13 +218,13 @@ function UserHeader({
         </Avatar>
         <div>
           <p className="text-sm text-muted-foreground">{getGreeting()}</p>
-          <h1 className="text-xl font-bold">{user?.firstName || 'Utente'}</h1>
+          <h1 className="text-xl font-bold">{user?.firstName || t('dashboard.user')}</h1>
         </div>
       </div>
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2 bg-teal/10 px-3 py-2 rounded-full">
           <div className="w-2 h-2 rounded-full bg-teal animate-pulse" />
-          <span className="text-sm text-teal font-medium">Online</span>
+          <span className="text-sm text-teal font-medium">{t('dashboard.online')}</span>
         </div>
       </div>
     </motion.div>
@@ -230,6 +232,7 @@ function UserHeader({
 }
 
 export default function Home() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toggleSidebar } = useSidebar();
@@ -280,9 +283,9 @@ export default function Home() {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Buongiorno';
-    if (hour < 18) return 'Buon pomeriggio';
-    return 'Buonasera';
+    if (hour < 12) return t('dashboard.greetingMorning');
+    if (hour < 18) return t('dashboard.greetingAfternoon');
+    return t('dashboard.greetingEvening');
   };
 
   if (isSuperAdmin) {
@@ -298,18 +301,18 @@ export default function Home() {
               </Avatar>
               <div>
                 <p className="text-sm text-muted-foreground">{getGreeting()}</p>
-                <h1 className="text-2xl font-bold">{user?.firstName || 'Utente'}</h1>
+                <h1 className="text-2xl font-bold">{user?.firstName || t('dashboard.user')}</h1>
               </div>
             </div>
             <div className="flex items-center gap-3">
               <div className="flex items-center gap-2 bg-teal/10 px-3 py-2 rounded-full">
                 <div className="w-2 h-2 rounded-full bg-teal animate-pulse" />
-                <span className="text-sm text-teal font-medium">Online</span>
+                <span className="text-sm text-teal font-medium">{t('dashboard.online')}</span>
               </div>
               <Link href="/companies">
                 <Button data-testid="button-create-company">
                   <Plus className="h-4 w-4 mr-2" />
-                  Nuova Azienda
+                  {t('dashboard.newCompany')}
                 </Button>
               </Link>
             </div>
@@ -324,7 +327,7 @@ export default function Home() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{companiesLoading ? '--' : companies?.length || 0}</p>
-                    <p className="text-sm text-muted-foreground">Aziende Totali</p>
+                    <p className="text-sm text-muted-foreground">{t('dashboard.totalCompanies')}</p>
                   </div>
                 </div>
               </CardContent>
@@ -337,7 +340,7 @@ export default function Home() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">{companiesLoading ? '--' : companies?.filter(c => c.active).length || 0}</p>
-                    <p className="text-sm text-muted-foreground">Aziende Attive</p>
+                    <p className="text-sm text-muted-foreground">{t('dashboard.activeCompanies')}</p>
                   </div>
                 </div>
               </CardContent>
@@ -350,7 +353,7 @@ export default function Home() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">--</p>
-                    <p className="text-sm text-muted-foreground">Eventi Mese</p>
+                    <p className="text-sm text-muted-foreground">{t('dashboard.monthlyEvents')}</p>
                   </div>
                 </div>
               </CardContent>
@@ -363,7 +366,7 @@ export default function Home() {
                   </div>
                   <div>
                     <p className="text-2xl font-bold">--</p>
-                    <p className="text-sm text-muted-foreground">Incasso Totale</p>
+                    <p className="text-sm text-muted-foreground">{t('dashboard.totalIncome')}</p>
                   </div>
                 </div>
               </CardContent>
@@ -375,9 +378,9 @@ export default function Home() {
               <div>
                 <CardTitle className="flex items-center gap-2">
                   <Building2 className="h-5 w-5" />
-                  Aziende
+                  {t('dashboard.companies')}
                 </CardTitle>
-                <CardDescription>Gestisci le aziende registrate</CardDescription>
+                <CardDescription>{t('dashboard.manageCompanies')}</CardDescription>
               </div>
             </CardHeader>
             <CardContent>
@@ -391,20 +394,20 @@ export default function Home() {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Nome</TableHead>
-                      <TableHead>P.IVA</TableHead>
-                      <TableHead>Stato</TableHead>
-                      <TableHead className="text-right">Azioni</TableHead>
+                      <TableHead>{t('common.name')}</TableHead>
+                      <TableHead>{t('dashboard.vatNumber')}</TableHead>
+                      <TableHead>{t('common.status')}</TableHead>
+                      <TableHead className="text-right">{t('common.actions')}</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {companies.map((company) => (
                       <TableRow key={company.id} data-testid={`company-row-${company.id}`}>
                         <TableCell className="font-medium">{company.name}</TableCell>
-                        <TableCell>{company.taxId || 'Non specificata'}</TableCell>
+                        <TableCell>{company.taxId || t('dashboard.notSpecified')}</TableCell>
                         <TableCell>
                           <Badge variant={company.active ? "default" : "secondary"}>
-                            {company.active ? 'Attiva' : 'Inattiva'}
+                            {company.active ? t('common.active') : t('common.inactive')}
                           </Badge>
                         </TableCell>
                         <TableCell className="text-right">
@@ -417,17 +420,17 @@ export default function Home() {
                             <DialogContent>
                               <DialogHeader>
                                 <DialogTitle>{company.name}</DialogTitle>
-                                <DialogDescription>Dettagli azienda</DialogDescription>
+                                <DialogDescription>{t('dashboard.companyDetails')}</DialogDescription>
                               </DialogHeader>
                               <div className="space-y-4">
                                 <div>
-                                  <p className="text-sm text-muted-foreground">P.IVA</p>
-                                  <p className="font-medium">{company.taxId || 'Non specificata'}</p>
+                                  <p className="text-sm text-muted-foreground">{t('dashboard.vatNumber')}</p>
+                                  <p className="font-medium">{company.taxId || t('dashboard.notSpecified')}</p>
                                 </div>
                                 <div>
-                                  <p className="text-sm text-muted-foreground">Stato</p>
+                                  <p className="text-sm text-muted-foreground">{t('common.status')}</p>
                                   <Badge variant={company.active ? "default" : "secondary"}>
-                                    {company.active ? 'Attiva' : 'Inattiva'}
+                                    {company.active ? t('common.active') : t('common.inactive')}
                                   </Badge>
                                 </div>
                               </div>
@@ -441,11 +444,11 @@ export default function Home() {
               ) : (
                 <div className="text-center py-12">
                   <Building2 className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                  <p className="text-lg text-muted-foreground mb-4">Nessuna azienda presente</p>
+                  <p className="text-lg text-muted-foreground mb-4">{t('dashboard.noCompanies')}</p>
                   <Link href="/companies">
                     <Button data-testid="button-create-first-company">
                       <Plus className="h-4 w-4 mr-2" />
-                      Crea Prima Azienda
+                      {t('dashboard.createFirstCompany')}
                     </Button>
                   </Link>
                 </div>
@@ -481,14 +484,14 @@ export default function Home() {
               <>
                 <MobileStatsCard 
                   icon={Building2} 
-                  label="Aziende Totali" 
+                  label={t('dashboard.totalCompanies')} 
                   value={companies?.length || 0}
                   gradient="from-indigo-500 to-purple-600"
                   delay={0.1}
                 />
                 <MobileStatsCard 
                   icon={Sparkles} 
-                  label="Aziende Attive" 
+                  label={t('dashboard.activeCompanies')} 
                   value={companies?.filter(c => c.active).length || 0}
                   gradient="from-teal-500 to-emerald-600"
                   trend="+12%"
@@ -496,14 +499,14 @@ export default function Home() {
                 />
                 <MobileStatsCard 
                   icon={Calendar} 
-                  label="Eventi Mese" 
+                  label={t('dashboard.monthlyEvents')} 
                   value="--"
                   gradient="from-amber-500 to-orange-600"
                   delay={0.2}
                 />
                 <MobileStatsCard 
                   icon={Euro} 
-                  label="Incasso Totale" 
+                  label={t('dashboard.totalIncome')} 
                   value="--"
                   gradient="from-rose-500 to-pink-600"
                   delay={0.25}
@@ -524,7 +527,7 @@ export default function Home() {
                 data-testid="button-create-company"
               >
                 <Plus className="h-6 w-6 mr-3" />
-                Nuova Azienda
+                {t('dashboard.newCompany')}
               </HapticButton>
             </Link>
           </motion.div>
@@ -538,7 +541,7 @@ export default function Home() {
             <div className="p-5 border-b border-white/5">
               <h2 className="text-xl font-semibold flex items-center gap-3">
                 <Building2 className="h-6 w-6 text-primary" />
-                Aziende Recenti
+                {t('dashboard.recentCompanies')}
               </h2>
             </div>
             <div className="p-4">
@@ -565,7 +568,7 @@ export default function Home() {
                         </div>
                         <div>
                           <p className="font-semibold text-lg">{company.name}</p>
-                          <p className="text-base text-muted-foreground">{company.taxId || 'P.IVA non specificata'}</p>
+                          <p className="text-base text-muted-foreground">{company.taxId || t('dashboard.vatNotSpecified')}</p>
                         </div>
                       </div>
                       <div className={`px-4 py-2 rounded-full text-sm font-medium min-h-[36px] flex items-center ${
@@ -573,7 +576,7 @@ export default function Home() {
                           ? 'bg-teal/20 text-teal' 
                           : 'bg-muted text-muted-foreground'
                       }`}>
-                        {company.active ? 'Attiva' : 'Inattiva'}
+                        {company.active ? t('common.active') : t('common.inactive')}
                       </div>
                     </motion.div>
                   ))}
@@ -583,7 +586,7 @@ export default function Home() {
                   <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
                     <Building2 className="h-10 w-10 text-primary" />
                   </div>
-                  <p className="text-lg text-muted-foreground mb-5">Nessuna azienda presente</p>
+                  <p className="text-lg text-muted-foreground mb-5">{t('dashboard.noCompanies')}</p>
                   <Link href="/companies">
                     <HapticButton 
                       className="gradient-golden text-black min-h-[52px] text-base" 
@@ -591,7 +594,7 @@ export default function Home() {
                       data-testid="button-create-first-company"
                     >
                       <Plus className="h-5 w-5 mr-2" />
-                      Crea Prima Azienda
+                      {t('dashboard.createFirstCompany')}
                     </HapticButton>
                   </Link>
                 </div>
@@ -615,18 +618,18 @@ export default function Home() {
             </Avatar>
             <div>
               <p className="text-sm text-muted-foreground">{getGreeting()}</p>
-              <h1 className="text-2xl font-bold">{user?.firstName || 'Utente'}</h1>
+              <h1 className="text-2xl font-bold">{user?.firstName || t('dashboard.user')}</h1>
             </div>
           </div>
           <div className="flex items-center gap-3">
             <div className="flex items-center gap-2 bg-teal/10 px-3 py-2 rounded-full">
               <div className="w-2 h-2 rounded-full bg-teal animate-pulse" />
-              <span className="text-sm text-teal font-medium">Online</span>
+              <span className="text-sm text-teal font-medium">{t('dashboard.online')}</span>
             </div>
             <Link href="/events/new">
               <Button data-testid="button-create-event">
                 <Plus className="h-4 w-4 mr-2" />
-                Nuovo Evento
+                {t('dashboard.newEvent')}
               </Button>
             </Link>
           </div>
@@ -641,7 +644,7 @@ export default function Home() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{events.filter(e => new Date(e.startDatetime) >= new Date()).length}</p>
-                  <p className="text-sm text-muted-foreground">Eventi Attivi</p>
+                  <p className="text-sm text-muted-foreground">{t('dashboard.activeEvents')}</p>
                 </div>
               </div>
             </CardContent>
@@ -654,7 +657,7 @@ export default function Home() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">--</p>
-                  <p className="text-sm text-muted-foreground">Biglietti Venduti</p>
+                  <p className="text-sm text-muted-foreground">{t('dashboard.soldTickets')}</p>
                 </div>
               </div>
             </CardContent>
@@ -667,7 +670,7 @@ export default function Home() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">€0</p>
-                  <p className="text-sm text-muted-foreground">Incasso Oggi</p>
+                  <p className="text-sm text-muted-foreground">{t('dashboard.todayIncome')}</p>
                 </div>
               </div>
             </CardContent>
@@ -680,7 +683,7 @@ export default function Home() {
                 </div>
                 <div>
                   <p className="text-2xl font-bold">{recentEvents[0] ? new Date(recentEvents[0].startDatetime).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }) : '--'}</p>
-                  <p className="text-sm text-muted-foreground">Prossimo Evento</p>
+                  <p className="text-sm text-muted-foreground">{t('dashboard.nextEvent')}</p>
                 </div>
               </div>
             </CardContent>
@@ -695,8 +698,8 @@ export default function Home() {
                   <Plus className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold">Nuovo Evento</p>
-                  <p className="text-sm text-muted-foreground">Crea un evento</p>
+                  <p className="font-semibold">{t('dashboard.newEvent')}</p>
+                  <p className="text-sm text-muted-foreground">{t('dashboard.createEvent')}</p>
                 </div>
               </CardContent>
             </Card>
@@ -708,8 +711,8 @@ export default function Home() {
                   <QrCode className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold">Scanner</p>
-                  <p className="text-sm text-muted-foreground">Scansiona biglietti</p>
+                  <p className="font-semibold">{t('dashboard.scanner')}</p>
+                  <p className="text-sm text-muted-foreground">{t('dashboard.scanTickets')}</p>
                 </div>
               </CardContent>
             </Card>
@@ -721,8 +724,8 @@ export default function Home() {
                   <Wine className="h-6 w-6 text-white" />
                 </div>
                 <div>
-                  <p className="font-semibold">Beverage</p>
-                  <p className="text-sm text-muted-foreground">Gestione bevande</p>
+                  <p className="font-semibold">{t('dashboard.beverage')}</p>
+                  <p className="text-sm text-muted-foreground">{t('dashboard.beverageManagement')}</p>
                 </div>
               </CardContent>
             </Card>
@@ -734,13 +737,13 @@ export default function Home() {
             <div>
               <CardTitle className="flex items-center gap-2">
                 <Calendar className="h-5 w-5" />
-                Eventi Recenti
+                {t('dashboard.recentEvents')}
               </CardTitle>
-              <CardDescription>I tuoi eventi più recenti</CardDescription>
+              <CardDescription>{t('dashboard.yourRecentEvents')}</CardDescription>
             </div>
             <Link href="/events">
               <Button variant="outline" data-testid="link-view-all-events">
-                Vedi tutti
+                {t('dashboard.viewAll')}
                 <ChevronRight className="h-4 w-4 ml-2" />
               </Button>
             </Link>
@@ -766,7 +769,7 @@ export default function Home() {
                               <Calendar className="h-6 w-6 text-primary" />
                             </div>
                             <Badge variant={isUpcoming ? "default" : "secondary"}>
-                              {isUpcoming ? 'In arrivo' : 'Passato'}
+                              {isUpcoming ? t('dashboard.eventUpcoming') : t('dashboard.eventPast')}
                             </Badge>
                           </div>
                           <div>
@@ -784,11 +787,11 @@ export default function Home() {
             ) : (
               <div className="text-center py-12">
                 <Calendar className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <p className="text-lg text-muted-foreground mb-4">Nessun evento recente</p>
+                <p className="text-lg text-muted-foreground mb-4">{t('dashboard.noRecentEvents')}</p>
                 <Link href="/event-wizard">
                   <Button data-testid="button-create-first-event">
                     <Plus className="h-4 w-4 mr-2" />
-                    Crea Primo Evento
+                    {t('dashboard.createFirstEvent')}
                   </Button>
                 </Link>
               </div>
@@ -815,21 +818,21 @@ export default function Home() {
         <div className="grid grid-cols-2 gap-4">
           <MobileStatsCard 
             icon={Calendar} 
-            label="Eventi Attivi" 
+            label={t('dashboard.activeEvents')} 
             value={events.filter(e => new Date(e.startDatetime) >= new Date()).length}
             gradient="from-indigo-500 to-purple-600"
             delay={0.1}
           />
           <MobileStatsCard 
             icon={Ticket} 
-            label="Biglietti Venduti" 
+            label={t('dashboard.soldTickets')} 
             value="--"
             gradient="from-amber-500 to-orange-600"
             delay={0.15}
           />
           <MobileStatsCard 
             icon={Euro} 
-            label="Incasso Oggi" 
+            label={t('dashboard.todayIncome')} 
             value="€0"
             gradient="from-teal-500 to-emerald-600"
             trend="+0%"
@@ -837,7 +840,7 @@ export default function Home() {
           />
           <MobileStatsCard 
             icon={Clock} 
-            label="Prossimo Evento" 
+            label={t('dashboard.nextEvent')} 
             value={recentEvents[0] ? new Date(recentEvents[0].startDatetime).toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }) : '--'}
             gradient="from-rose-500 to-pink-600"
             delay={0.25}
@@ -850,13 +853,13 @@ export default function Home() {
           transition={{ ...springConfig, delay: 0.3 }}
         >
           <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide mb-4">
-            Azioni Rapide
+            {t('dashboard.quickActions')}
           </h2>
           <div className="flex gap-4 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
             <div className="flex-shrink-0 w-[110px]">
               <QuickActionButton
                 icon={Plus}
-                label="Nuovo Evento"
+                label={t('dashboard.newEvent')}
                 href="/events/new"
                 gradient="from-indigo-500 to-purple-600"
                 delay={0.35}
@@ -866,7 +869,7 @@ export default function Home() {
               <div className="flex-shrink-0 w-[110px]">
                 <QuickActionButton
                   icon={ScanLine}
-                  label="Scanner"
+                  label={t('dashboard.scanner')}
                   href="/scanner"
                   gradient="from-teal-500 to-emerald-600"
                   delay={0.4}
@@ -877,7 +880,7 @@ export default function Home() {
               <div className="flex-shrink-0 w-[110px]">
                 <QuickActionButton
                   icon={Wine}
-                  label="Beverage"
+                  label={t('dashboard.beverage')}
                   href="/beverage"
                   gradient="from-amber-500 to-orange-600"
                   delay={0.45}
@@ -887,7 +890,7 @@ export default function Home() {
             <div className="flex-shrink-0 w-[110px]">
               <QuickActionButton
                 icon={Users}
-                label="Utenti"
+                label={t('dashboard.users')}
                 href="/users"
                 gradient="from-blue-500 to-cyan-600"
                 delay={0.5}
@@ -896,7 +899,7 @@ export default function Home() {
             <div className="flex-shrink-0 w-[110px]">
               <QuickActionButton
                 icon={MapPin}
-                label="Location"
+                label={t('dashboard.location')}
                 href="/locations"
                 gradient="from-rose-500 to-pink-600"
                 delay={0.55}
@@ -905,7 +908,7 @@ export default function Home() {
             <div className="flex-shrink-0 w-[110px]">
               <QuickActionButton
                 icon={Building2}
-                label="Aziende"
+                label={t('nav.companies')}
                 href="/companies"
                 gradient="from-violet-500 to-purple-600"
                 delay={0.6}
@@ -915,7 +918,7 @@ export default function Home() {
               <div className="flex-shrink-0 w-[110px]">
                 <QuickActionButton
                   icon={UserPlus}
-                  label="Gestione PR"
+                  label={t('dashboard.prManagement')}
                   href="/pr-management"
                   gradient="from-fuchsia-500 to-pink-600"
                   delay={0.65}
@@ -926,7 +929,7 @@ export default function Home() {
               <div className="flex-shrink-0 w-[110px]">
                 <QuickActionButton
                   icon={GraduationCap}
-                  label="Badge Scuola"
+                  label={t('dashboard.schoolBadge')}
                   href="/school-badges"
                   gradient="from-sky-500 to-blue-600"
                   delay={0.7}
@@ -937,7 +940,7 @@ export default function Home() {
               <div className="flex-shrink-0 w-[110px]">
                 <QuickActionButton
                   icon={Store}
-                  label="Cassa Biglietti"
+                  label={t('dashboard.ticketCashier')}
                   href="/cassa-biglietti"
                   gradient="from-lime-500 to-green-600"
                   delay={0.75}
@@ -947,7 +950,7 @@ export default function Home() {
             <div className="flex-shrink-0 w-[110px]">
               <QuickActionButton
                 icon={Package}
-                label="Prodotti"
+                label={t('dashboard.products')}
                 href="/products"
                 gradient="from-orange-500 to-red-600"
                 delay={0.8}
@@ -963,7 +966,7 @@ export default function Home() {
         >
           <div className="flex items-center justify-between mb-4">
             <h2 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
-              Eventi Recenti
+              {t('dashboard.recentEvents')}
             </h2>
             <Link href="/events">
               <HapticButton 
@@ -972,7 +975,7 @@ export default function Home() {
                 hapticType="light"
                 data-testid="link-view-all-events"
               >
-                Vedi tutti
+                {t('dashboard.viewAll')}
                 <ChevronRight className="h-5 w-5" />
               </HapticButton>
             </Link>
@@ -1004,7 +1007,7 @@ export default function Home() {
               <div className="w-20 h-20 rounded-3xl bg-primary/10 flex items-center justify-center mx-auto mb-5">
                 <Calendar className="h-10 w-10 text-primary" />
               </div>
-              <p className="text-lg text-muted-foreground mb-5">Nessun evento creato</p>
+              <p className="text-lg text-muted-foreground mb-5">{t('dashboard.noEventsCreated')}</p>
               <Link href="/event-wizard">
                 <HapticButton 
                   className="gradient-golden text-black min-h-[52px] text-base" 
@@ -1012,7 +1015,7 @@ export default function Home() {
                   data-testid="button-create-first-event"
                 >
                   <Plus className="h-5 w-5 mr-2" />
-                  Crea Primo Evento
+                  {t('dashboard.createFirstEvent')}
                 </HapticButton>
               </Link>
             </motion.div>

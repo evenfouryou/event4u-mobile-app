@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -67,14 +68,14 @@ import {
 } from "@/components/mobile-primitives";
 import type { Station, User, Event } from "@shared/schema";
 
-const stationFormSchema = z.object({
-  name: z.string().min(1, "Nome postazione richiesto"),
+const createStationFormSchema = (t: (key: string) => string) => z.object({
+  name: z.string().min(1, t('stations.nameRequired')),
   bartenderId: z.string().optional().nullable(),
   stationType: z.enum(['general', 'event']).default('general'),
   eventId: z.string().optional().nullable(),
 });
 
-type StationFormData = z.infer<typeof stationFormSchema>;
+type StationFormData = z.infer<ReturnType<typeof createStationFormSchema>>;
 
 const springTransition = {
   type: "spring" as const,
@@ -133,7 +134,6 @@ function StationCard({
             ) : (
               <Badge variant="outline" className="text-sm py-1 px-3 text-teal border-teal/30" data-testid={`badge-station-type-${station.id}`}>
                 <MapPin className="h-4 w-4 mr-1.5" />
-                Generale
               </Badge>
             )}
           </div>
@@ -159,7 +159,6 @@ function StationCard({
             data-testid={`button-edit-station-${station.id}`}
           >
             <Edit className="h-5 w-5" />
-            Modifica
           </HapticButton>
           <HapticButton
             variant="outline"
@@ -192,6 +191,7 @@ function StationCardSkeleton() {
 }
 
 export default function StationsPage() {
+  const { t } = useTranslation();
   const [sheetOpen, setSheetOpen] = useState(false);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingStation, setEditingStation] = useState<Station | null>(null);
@@ -216,6 +216,8 @@ export default function StationsPage() {
   });
 
   const bartenders = users?.filter(u => u.role === 'bartender') || [];
+
+  const stationFormSchema = createStationFormSchema(t);
 
   const form = useForm<StationFormData>({
     resolver: zodResolver(stationFormSchema),
@@ -245,24 +247,24 @@ export default function StationsPage() {
       form.reset();
       triggerHaptic('success');
       toast({
-        title: "Successo",
-        description: "Postazione creata con successo",
+        title: t('stations.createSuccess'),
+        description: t('stations.createSuccess'),
       });
     },
     onError: (error: any) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Non autorizzato",
-          description: "Effettua nuovamente il login...",
+          title: t('warehouse.unauthorized'),
+          description: t('warehouse.loginAgain'),
           variant: "destructive",
         });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
       toast({
-        title: "Errore",
-        description: error.message || "Impossibile creare la postazione",
+        title: t('stations.error'),
+        description: error.message || t('stations.createError'),
         variant: "destructive",
       });
     },
@@ -287,24 +289,24 @@ export default function StationsPage() {
       form.reset();
       triggerHaptic('success');
       toast({
-        title: "Successo",
-        description: "Postazione aggiornata con successo",
+        title: t('stations.updateSuccess'),
+        description: t('stations.updateSuccess'),
       });
     },
     onError: (error: any) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Non autorizzato",
-          description: "Effettua nuovamente il login...",
+          title: t('warehouse.unauthorized'),
+          description: t('warehouse.loginAgain'),
           variant: "destructive",
         });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
       toast({
-        title: "Errore",
-        description: error.message || "Impossibile aggiornare la postazione",
+        title: t('stations.error'),
+        description: error.message || t('stations.updateError'),
         variant: "destructive",
       });
     },
@@ -319,24 +321,24 @@ export default function StationsPage() {
       setDeleteStationId(null);
       triggerHaptic('success');
       toast({
-        title: "Successo",
-        description: "Postazione eliminata con successo.",
+        title: t('stations.deleteSuccess'),
+        description: t('stations.deleteSuccess'),
       });
     },
     onError: (error: any) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Non autorizzato",
-          description: "Effettua nuovamente il login...",
+          title: t('warehouse.unauthorized'),
+          description: t('warehouse.loginAgain'),
           variant: "destructive",
         });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
       toast({
-        title: "Errore",
-        description: error.message || "Impossibile eliminare la postazione",
+        title: t('stations.error'),
+        description: error.message || t('stations.deleteError'),
         variant: "destructive",
       });
     },
@@ -371,8 +373,8 @@ export default function StationsPage() {
     if (!canCreateStations) {
       triggerHaptic('error');
       toast({
-        title: "Accesso limitato",
-        description: "Solo gli admin possono creare postazioni",
+        title: t('stations.limitedAccess'),
+        description: t('stations.adminOnlyCreate'),
         variant: "destructive",
       });
       return;
@@ -396,8 +398,8 @@ export default function StationsPage() {
   const handleOpenDialog = () => {
     if (!canCreateStations) {
       toast({
-        title: "Accesso limitato",
-        description: "Solo gli admin possono creare postazioni",
+        title: t('stations.limitedAccess'),
+        description: t('stations.adminOnlyCreate'),
         variant: "destructive",
       });
       return;
@@ -436,14 +438,14 @@ export default function StationsPage() {
   const getEventName = (eventId: string | null) => {
     if (!eventId) return null;
     const event = events?.find(e => e.id === eventId);
-    return event?.name || 'Evento sconosciuto';
+    return event?.name || t('warehouse.unknown');
   };
 
   const getBartenderNames = (bartenderIds: string[] | null) => {
-    if (!bartenderIds || bartenderIds.length === 0) return 'Nessun barista assegnato';
+    if (!bartenderIds || bartenderIds.length === 0) return t('stations.none');
     const names = bartenderIds.map(id => {
       const bartender = users?.find(u => u.id === id);
-      if (!bartender) return 'Sconosciuto';
+      if (!bartender) return t('warehouse.unknown');
       return `${bartender.firstName} ${bartender.lastName}`;
     });
     return names.join(', ');
@@ -451,7 +453,7 @@ export default function StationsPage() {
 
   const headerContent = (
     <MobileHeader
-      title="Postazioni"
+      title={t('stations.title')}
       showBackButton showMenuButton
       rightAction={
         <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center">
@@ -469,11 +471,11 @@ export default function StationsPage() {
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Nome Postazione</FormLabel>
+              <FormLabel>{t('stations.stationName')}</FormLabel>
               <FormControl>
                 <Input 
                   {...field} 
-                  placeholder="Es. Bar Centrale, Privé 1" 
+                  placeholder={t('stations.stationNamePlaceholder')} 
                   data-testid="input-station-name-desktop" 
                 />
               </FormControl>
@@ -487,7 +489,7 @@ export default function StationsPage() {
           name="stationType"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Tipo Postazione</FormLabel>
+              <FormLabel>{t('stations.stationType')}</FormLabel>
               <Select
                 onValueChange={(value) => {
                   field.onChange(value);
@@ -500,20 +502,20 @@ export default function StationsPage() {
               >
                 <FormControl>
                   <SelectTrigger data-testid="select-station-type-desktop">
-                    <SelectValue placeholder="Seleziona tipo" />
+                    <SelectValue placeholder={t('stations.selectType')} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
                   <SelectItem value="general">
                     <div className="flex items-center gap-2">
                       <MapPin className="h-4 w-4 text-violet-500" />
-                      <span>Postazione Generale (Fissa)</span>
+                      <span>{t('stations.generalFixed')}</span>
                     </div>
                   </SelectItem>
                   <SelectItem value="event">
                     <div className="flex items-center gap-2">
                       <Calendar className="h-4 w-4 text-amber-500" />
-                      <span>Postazione per Evento</span>
+                      <span>{t('stations.eventStation')}</span>
                     </div>
                   </SelectItem>
                 </SelectContent>
@@ -529,14 +531,14 @@ export default function StationsPage() {
             name="eventId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Evento</FormLabel>
+                <FormLabel>{t('stations.event')}</FormLabel>
                 <Select
                   onValueChange={field.onChange}
                   value={field.value || undefined}
                 >
                   <FormControl>
                     <SelectTrigger data-testid="select-station-event-desktop">
-                      <SelectValue placeholder="Seleziona evento" />
+                      <SelectValue placeholder={t('stations.selectEvent')} />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
@@ -558,18 +560,18 @@ export default function StationsPage() {
           name="bartenderId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Barista Assegnato (opzionale)</FormLabel>
+              <FormLabel>{t('stations.assignedBartenderOptional')}</FormLabel>
               <Select
                 onValueChange={field.onChange}
                 value={field.value || undefined}
               >
                 <FormControl>
                   <SelectTrigger data-testid="select-station-bartender-desktop">
-                    <SelectValue placeholder="Seleziona bartender (opzionale)" />
+                    <SelectValue placeholder={t('stations.selectBartender')} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="null">Nessuno</SelectItem>
+                  <SelectItem value="null">{t('stations.none')}</SelectItem>
                   {bartenders.map((bartender) => (
                     <SelectItem key={bartender.id} value={bartender.id}>
                       {bartender.firstName} {bartender.lastName}
@@ -589,7 +591,7 @@ export default function StationsPage() {
             onClick={handleCloseDialog}
             data-testid="button-cancel-station-desktop"
           >
-            Annulla
+            {t('stations.cancel')}
           </Button>
           <Button
             type="submit"
@@ -599,10 +601,10 @@ export default function StationsPage() {
             {createMutation.isPending || updateMutation.isPending ? (
               <>
                 <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                Salvataggio...
+                {t('stations.saving')}
               </>
             ) : (
-              editingStation ? 'Aggiorna' : 'Crea'
+              editingStation ? t('stations.update') : t('stations.create')
             )}
           </Button>
         </DialogFooter>
@@ -615,13 +617,13 @@ export default function StationsPage() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-stations">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Postazioni</h1>
-            <p className="text-muted-foreground">Gestione delle postazioni bar</p>
+            <h1 className="text-3xl font-bold">{t('stations.title')}</h1>
+            <p className="text-muted-foreground">{t('stations.subtitle')}</p>
           </div>
           {canCreateStations && (
             <Button onClick={handleOpenDialog} data-testid="button-create-station-desktop">
               <Plus className="w-4 h-4 mr-2" />
-              Nuova Postazione
+              {t('stations.newStation')}
             </Button>
           )}
         </div>
@@ -630,7 +632,7 @@ export default function StationsPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{stations?.length || 0}</div>
-              <p className="text-sm text-muted-foreground">Totale Postazioni</p>
+              <p className="text-sm text-muted-foreground">{t('stations.totalStations')}</p>
             </CardContent>
           </Card>
           <Card>
@@ -638,7 +640,7 @@ export default function StationsPage() {
               <div className="text-2xl font-bold text-violet-500">
                 {stations?.filter(s => !s.eventId).length || 0}
               </div>
-              <p className="text-sm text-muted-foreground">Postazioni Generali</p>
+              <p className="text-sm text-muted-foreground">{t('stations.generalStations')}</p>
             </CardContent>
           </Card>
           <Card>
@@ -646,15 +648,15 @@ export default function StationsPage() {
               <div className="text-2xl font-bold text-amber-500">
                 {stations?.filter(s => s.eventId).length || 0}
               </div>
-              <p className="text-sm text-muted-foreground">Postazioni Evento</p>
+              <p className="text-sm text-muted-foreground">{t('stations.eventStations')}</p>
             </CardContent>
           </Card>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Lista Postazioni</CardTitle>
-            <CardDescription>Tutte le postazioni configurate</CardDescription>
+            <CardTitle>{t('stations.stationList')}</CardTitle>
+            <CardDescription>{t('stations.allConfiguredStations')}</CardDescription>
           </CardHeader>
           <CardContent>
             {stationsLoading ? (
@@ -667,11 +669,11 @@ export default function StationsPage() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Tipo</TableHead>
-                    <TableHead>Evento</TableHead>
-                    <TableHead>Barista Assegnato</TableHead>
-                    {canCreateStations && <TableHead className="text-right">Azioni</TableHead>}
+                    <TableHead>{t('stations.name')}</TableHead>
+                    <TableHead>{t('stations.type')}</TableHead>
+                    <TableHead>{t('stations.event')}</TableHead>
+                    <TableHead>{t('stations.assignedBartender')}</TableHead>
+                    {canCreateStations && <TableHead className="text-right">{t('inventory.actions')}</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -682,12 +684,12 @@ export default function StationsPage() {
                         {station.eventId ? (
                           <Badge variant="secondary">
                             <Calendar className="h-3 w-3 mr-1" />
-                            Evento
+                            {t('stations.event')}
                           </Badge>
                         ) : (
                           <Badge variant="outline" className="text-violet-500 border-violet-500/30">
                             <MapPin className="h-3 w-3 mr-1" />
-                            Generale
+                            {t('stations.general')}
                           </Badge>
                         )}
                       </TableCell>
@@ -723,14 +725,14 @@ export default function StationsPage() {
             ) : (
               <div className="text-center py-12">
                 <Boxes className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Nessuna postazione</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('stations.noStations')}</h3>
                 <p className="text-muted-foreground mb-4">
-                  Crea la tua prima postazione per iniziare
+                  {t('stations.createFirstToStart')}
                 </p>
                 {canCreateStations && (
                   <Button onClick={handleOpenDialog} data-testid="button-create-first-station-desktop">
                     <Plus className="w-4 h-4 mr-2" />
-                    Crea Postazione
+                    {t('stations.createStation')}
                   </Button>
                 )}
               </div>
@@ -741,9 +743,9 @@ export default function StationsPage() {
         <Dialog open={isDialogOpen} onOpenChange={(open) => !open && handleCloseDialog()}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingStation ? 'Modifica Postazione' : 'Nuova Postazione'}</DialogTitle>
+              <DialogTitle>{editingStation ? t('stations.editStation') : t('stations.newStation')}</DialogTitle>
               <DialogDescription>
-                {editingStation ? 'Modifica i dettagli della postazione' : 'Crea una nuova postazione per il bar'}
+                {editingStation ? t('stations.editStationDetails') : t('stations.createStationForBar')}
               </DialogDescription>
             </DialogHeader>
             {formContent}
@@ -753,21 +755,21 @@ export default function StationsPage() {
         <AlertDialog open={!!deleteStationId} onOpenChange={(open) => !open && setDeleteStationId(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Conferma Eliminazione</AlertDialogTitle>
+              <AlertDialogTitle>{t('stations.confirmDeletion')}</AlertDialogTitle>
               <AlertDialogDescription>
-                Sei sicuro di voler eliminare questa postazione? I dati storici degli eventi saranno conservati.
+                {t('stations.deleteConfirmMessage')}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
               <AlertDialogCancel data-testid="button-cancel-delete-station-desktop">
-                Annulla
+                {t('stations.cancel')}
               </AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => deleteStationId && deleteMutation.mutate(deleteStationId)}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 data-testid="button-confirm-delete-station-desktop"
               >
-                Elimina
+                {t('stations.delete')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -834,9 +836,9 @@ export default function StationsPage() {
             >
               <Boxes className="h-10 w-10 text-white" />
             </motion.div>
-            <h3 className="text-xl font-semibold mb-2">Nessuna postazione</h3>
+            <h3 className="text-xl font-semibold mb-2">{t('stations.noStations')}</h3>
             <p className="text-muted-foreground text-base mb-6">
-              Crea la tua prima postazione per iniziare
+              {t('stations.createFirstToStart')}
             </p>
             {canCreateStations && (
               <HapticButton 
@@ -846,7 +848,7 @@ export default function StationsPage() {
                 data-testid="button-create-first-station"
               >
                 <Plus className="h-6 w-6 mr-2" />
-                Crea Postazione
+                {t('stations.createStation')}
               </HapticButton>
             )}
           </motion.div>
@@ -866,7 +868,7 @@ export default function StationsPage() {
       <BottomSheet
         open={sheetOpen}
         onClose={handleCloseSheet}
-        title={editingStation ? 'Modifica Postazione' : 'Nuova Postazione'}
+        title={editingStation ? t('stations.editStation') : t('stations.newStation')}
       >
         <div className="p-4">
           <Form {...form}>
@@ -876,11 +878,11 @@ export default function StationsPage() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">Nome Postazione</FormLabel>
+                    <FormLabel className="text-base">{t('stations.stationName')}</FormLabel>
                     <FormControl>
                       <Input 
                         {...field} 
-                        placeholder="Es. Bar Centrale, Privé 1" 
+                        placeholder={t('stations.stationNamePlaceholder')} 
                         className="h-14 text-lg"
                         data-testid="input-station-name" 
                       />
@@ -895,7 +897,7 @@ export default function StationsPage() {
                 name="stationType"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">Tipo Postazione</FormLabel>
+                    <FormLabel className="text-base">{t('stations.stationType')}</FormLabel>
                     <Select
                       onValueChange={(value) => {
                         field.onChange(value);
@@ -908,20 +910,20 @@ export default function StationsPage() {
                     >
                       <FormControl>
                         <SelectTrigger className="h-14 text-base" data-testid="select-station-type">
-                          <SelectValue placeholder="Seleziona tipo" />
+                          <SelectValue placeholder={t('stations.selectType')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
                         <SelectItem value="general" className="h-14">
                           <div className="flex items-center gap-3">
                             <MapPin className="h-5 w-5 text-violet-500" />
-                            <span>Postazione Generale (Fissa)</span>
+                            <span>{t('stations.generalFixed')}</span>
                           </div>
                         </SelectItem>
                         <SelectItem value="event" className="h-14">
                           <div className="flex items-center gap-3">
                             <Calendar className="h-5 w-5 text-amber-500" />
-                            <span>Postazione per Evento</span>
+                            <span>{t('stations.eventStation')}</span>
                           </div>
                         </SelectItem>
                       </SelectContent>
@@ -943,14 +945,14 @@ export default function StationsPage() {
                     name="eventId"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel className="text-base">Evento</FormLabel>
+                        <FormLabel className="text-base">{t('stations.event')}</FormLabel>
                         <Select
                           onValueChange={field.onChange}
                           value={field.value || undefined}
                         >
                           <FormControl>
                             <SelectTrigger className="h-14 text-base" data-testid="select-station-event">
-                              <SelectValue placeholder="Seleziona evento" />
+                              <SelectValue placeholder={t('stations.selectEvent')} />
                             </SelectTrigger>
                           </FormControl>
                           <SelectContent>
@@ -973,18 +975,18 @@ export default function StationsPage() {
                 name="bartenderId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">Barista Assegnato (opzionale)</FormLabel>
+                    <FormLabel className="text-base">{t('stations.assignedBartenderOptional')}</FormLabel>
                     <Select
                       onValueChange={field.onChange}
                       value={field.value || undefined}
                     >
                       <FormControl>
                         <SelectTrigger className="h-14 text-base" data-testid="select-station-bartender">
-                          <SelectValue placeholder="Seleziona bartender (opzionale)" />
+                          <SelectValue placeholder={t('stations.selectBartender')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="null" className="h-12">Nessuno</SelectItem>
+                        <SelectItem value="null" className="h-12">{t('stations.none')}</SelectItem>
                         {bartenders.map((bartender) => (
                           <SelectItem key={bartender.id} value={bartender.id} className="h-12">
                             {bartender.firstName} {bartender.lastName}
@@ -1006,7 +1008,7 @@ export default function StationsPage() {
                   hapticType="light"
                   data-testid="button-cancel-station"
                 >
-                  Annulla
+                  {t('stations.cancel')}
                 </HapticButton>
                 <HapticButton
                   type="submit"
@@ -1022,7 +1024,7 @@ export default function StationsPage() {
                       className="w-6 h-6 border-2 border-black/30 border-t-black rounded-full"
                     />
                   ) : (
-                    editingStation ? 'Aggiorna' : 'Crea'
+                    editingStation ? t('stations.update') : t('stations.create')
                   )}
                 </HapticButton>
               </div>
@@ -1034,9 +1036,9 @@ export default function StationsPage() {
       <AlertDialog open={!!deleteStationId} onOpenChange={(open) => !open && setDeleteStationId(null)}>
         <AlertDialogContent className="glass-card border-white/10 mx-4 rounded-3xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl">Conferma Eliminazione</AlertDialogTitle>
+            <AlertDialogTitle className="text-xl">{t('stations.confirmDeletion')}</AlertDialogTitle>
             <AlertDialogDescription className="text-base">
-              Sei sicuro di voler eliminare questa postazione? I dati storici degli eventi saranno conservati.
+              {t('stations.deleteConfirmMessage')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col gap-3">
@@ -1045,13 +1047,13 @@ export default function StationsPage() {
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90 h-14 text-base w-full"
               data-testid="button-confirm-delete-station"
             >
-              Elimina Postazione
+              {t('stations.deleteStation')}
             </AlertDialogAction>
             <AlertDialogCancel 
               className="h-14 text-base w-full mt-0" 
               data-testid="button-cancel-delete-station"
             >
-              Annulla
+              {t('stations.cancel')}
             </AlertDialogCancel>
           </AlertDialogFooter>
         </AlertDialogContent>

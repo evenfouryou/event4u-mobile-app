@@ -1,5 +1,6 @@
 import { useState, useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { useLocation } from "wouter";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -51,11 +52,11 @@ type FilterType = 'in_corso' | 'futuri' | 'passati';
 
 const springConfig = { type: "spring", stiffness: 400, damping: 30 };
 
-const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: React.ElementType }> = {
-  draft: { label: 'Bozza', color: 'text-muted-foreground', bgColor: 'bg-muted/50', icon: FilePenLine },
-  scheduled: { label: 'Programmato', color: 'text-blue-400', bgColor: 'bg-blue-500/20', icon: CalendarCheck },
-  ongoing: { label: 'In Corso', color: 'text-teal', bgColor: 'bg-teal-500/20', icon: Clock },
-  closed: { label: 'Chiuso', color: 'text-rose-400', bgColor: 'bg-rose-500/20', icon: CheckCircle2 },
+const statusConfig: Record<string, { labelKey: string; color: string; bgColor: string; icon: React.ElementType }> = {
+  draft: { labelKey: 'events.draft', color: 'text-muted-foreground', bgColor: 'bg-muted/50', icon: FilePenLine },
+  scheduled: { labelKey: 'events.scheduled', color: 'text-blue-400', bgColor: 'bg-blue-500/20', icon: CalendarCheck },
+  ongoing: { labelKey: 'events.ongoing', color: 'text-teal', bgColor: 'bg-teal-500/20', icon: Clock },
+  closed: { labelKey: 'events.closed', color: 'text-rose-400', bgColor: 'bg-rose-500/20', icon: CheckCircle2 },
 };
 
 function FilterChip({ 
@@ -118,6 +119,7 @@ function EventCard({
   delay?: number;
   locationName?: string;
 }) {
+  const { t } = useTranslation();
   const status = statusConfig[event.status] || statusConfig.draft;
   const StatusIcon = status.icon;
 
@@ -149,7 +151,7 @@ function EventCard({
             <div className="flex items-center gap-2 flex-wrap">
               <span className={`inline-flex items-center gap-1.5 px-4 py-1.5 rounded-full text-sm font-medium min-h-[32px] ${status.bgColor} ${status.color}`}>
                 <StatusIcon className="h-4 w-4" />
-                {status.label}
+                {t(status.labelKey)}
               </span>
               {format && (
                 <span 
@@ -216,13 +218,13 @@ function EventCard({
             {event.capacity && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <Users className="h-5 w-5" />
-                <span className="text-base font-medium">{event.capacity} posti</span>
+                <span className="text-base font-medium">{event.capacity} {t('events.seats')}</span>
               </div>
             )}
             {stationCount > 0 && (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <ListFilter className="h-5 w-5" />
-                <span className="text-base font-medium">{stationCount} postazioni</span>
+                <span className="text-base font-medium">{stationCount} {t('events.stations')}</span>
               </div>
             )}
           </div>
@@ -237,7 +239,7 @@ function EventCard({
           >
             <div className="flex items-center gap-2 text-primary">
               <FilePenLine className="h-5 w-5" />
-              <span className="text-base font-medium">Tocca per continuare la configurazione</span>
+              <span className="text-base font-medium">{t('events.continueConfiguration')}</span>
             </div>
           </motion.div>
         )}
@@ -257,22 +259,23 @@ function EmptyState({
   canCreate: boolean;
   onCreateClick: () => void;
 }) {
-  const messages: Record<FilterType, { title: string; subtitle: string }> = {
+  const { t } = useTranslation();
+  const messages: Record<FilterType, { titleKey: string; subtitleKey: string }> = {
     in_corso: { 
-      title: "Nessun evento in corso", 
-      subtitle: "Gli eventi attualmente in svolgimento appariranno qui" 
+      titleKey: "events.noOngoingEvents", 
+      subtitleKey: "events.ongoingEventsWillAppear" 
     },
     futuri: { 
-      title: "Nessun evento futuro", 
-      subtitle: "Gli eventi programmati appariranno qui" 
+      titleKey: "events.noUpcomingEvents", 
+      subtitleKey: "events.upcomingEventsWillAppear" 
     },
     passati: { 
-      title: "Nessun evento passato", 
-      subtitle: "Gli eventi conclusi appariranno qui" 
+      titleKey: "events.noPastEvents", 
+      subtitleKey: "events.pastEventsWillAppear" 
     },
   };
 
-  const { title, subtitle } = messages[filter];
+  const { titleKey, subtitleKey } = messages[filter];
 
   return (
     <motion.div
@@ -298,10 +301,10 @@ function EmptyState({
       </motion.div>
       
       <h3 className="text-2xl font-bold mb-3">
-        {searchQuery ? `Nessun risultato per "${searchQuery}"` : title}
+        {searchQuery ? `${t('events.noResultsFor')} "${searchQuery}"` : t(titleKey)}
       </h3>
       <p className="text-lg text-muted-foreground mb-8 max-w-[300px]">
-        {searchQuery ? "Prova con un termine di ricerca diverso" : subtitle}
+        {searchQuery ? t('events.tryDifferentSearch') : t(subtitleKey)}
       </p>
       
       {canCreate && !searchQuery && filter === 'futuri' && (
@@ -312,7 +315,7 @@ function EmptyState({
           data-testid="button-create-event-empty"
         >
           <Sparkles className="h-6 w-6 mr-2" />
-          Crea Evento
+          {t('events.createEvent')}
         </HapticButton>
       )}
     </motion.div>
@@ -324,6 +327,7 @@ function EventsHeader({
 }: { 
   totalCount: number;
 }) {
+  const { t } = useTranslation();
   return (
     <motion.div 
       initial={{ opacity: 0, y: -20 }}
@@ -339,9 +343,9 @@ function EventsHeader({
         <CalendarIcon className="h-7 w-7 text-white" />
       </motion.div>
       <div>
-        <h1 className="text-2xl font-bold">I Miei Eventi</h1>
+        <h1 className="text-2xl font-bold">{t('events.myEvents')}</h1>
         <p className="text-base text-muted-foreground">
-          {totalCount} {totalCount === 1 ? 'evento' : 'eventi'} totali
+          {totalCount} {totalCount === 1 ? t('events.singleEvent') : t('events.eventsCount')} {t('events.totalEvents')}
         </p>
       </div>
     </motion.div>
@@ -349,6 +353,7 @@ function EventsHeader({
 }
 
 export default function Events() {
+  const { t } = useTranslation();
   const [, navigate] = useLocation();
   const [searchQuery] = useState("");
   const [activeFilter, setActiveFilter] = useState<FilterType>('in_corso');
@@ -474,7 +479,7 @@ export default function Events() {
     return (
       <Badge className={`${config.bgColor} ${config.color} border-0`}>
         <StatusIcon className="w-3 h-3 mr-1" />
-        {config.label}
+        {t(config.labelKey)}
       </Badge>
     );
   };
@@ -484,13 +489,13 @@ export default function Events() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-events">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Eventi</h1>
-            <p className="text-muted-foreground">Gestione degli eventi</p>
+            <h1 className="text-3xl font-bold">{t('events.title')}</h1>
+            <p className="text-muted-foreground">{t('events.eventsManagement')}</p>
           </div>
           {canCreateEvents && (
             <Button onClick={handleCreateEvent} data-testid="button-create-event">
               <Plus className="w-4 h-4 mr-2" />
-              Nuovo Evento
+              {t('events.newEvent')}
             </Button>
           )}
         </div>
@@ -503,7 +508,7 @@ export default function Events() {
           >
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-teal-500">{filterCounts.in_corso}</div>
-              <p className="text-sm text-muted-foreground">In Corso</p>
+              <p className="text-sm text-muted-foreground">{t('events.ongoing')}</p>
             </CardContent>
           </Card>
           <Card 
@@ -513,7 +518,7 @@ export default function Events() {
           >
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-blue-500">{filterCounts.futuri}</div>
-              <p className="text-sm text-muted-foreground">Futuri</p>
+              <p className="text-sm text-muted-foreground">{t('events.upcoming')}</p>
             </CardContent>
           </Card>
           <Card 
@@ -523,7 +528,7 @@ export default function Events() {
           >
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-rose-500">{filterCounts.passati}</div>
-              <p className="text-sm text-muted-foreground">Passati</p>
+              <p className="text-sm text-muted-foreground">{t('events.past')}</p>
             </CardContent>
           </Card>
         </div>
@@ -531,7 +536,7 @@ export default function Events() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between">
-              <CardTitle>Lista Eventi</CardTitle>
+              <CardTitle>{t('events.eventList')}</CardTitle>
               <div className="flex gap-2">
                 <Button
                   variant={activeFilter === 'in_corso' ? 'default' : 'outline'}
@@ -539,7 +544,7 @@ export default function Events() {
                   onClick={() => setActiveFilter('in_corso')}
                   data-testid="filter-in-corso-desktop"
                 >
-                  In Corso ({filterCounts.in_corso})
+                  {t('events.ongoing')} ({filterCounts.in_corso})
                 </Button>
                 <Button
                   variant={activeFilter === 'futuri' ? 'default' : 'outline'}
@@ -547,7 +552,7 @@ export default function Events() {
                   onClick={() => setActiveFilter('futuri')}
                   data-testid="filter-futuri-desktop"
                 >
-                  Futuri ({filterCounts.futuri})
+                  {t('events.upcoming')} ({filterCounts.futuri})
                 </Button>
                 <Button
                   variant={activeFilter === 'passati' ? 'default' : 'outline'}
@@ -555,7 +560,7 @@ export default function Events() {
                   onClick={() => setActiveFilter('passati')}
                   data-testid="filter-passati-desktop"
                 >
-                  Passati ({filterCounts.passati})
+                  {t('events.past')} ({filterCounts.passati})
                 </Button>
               </div>
             </div>
@@ -570,18 +575,18 @@ export default function Events() {
             ) : filteredEvents.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-12 text-center">
                 <CalendarIcon className="h-12 w-12 text-muted-foreground mb-4" />
-                <h3 className="text-lg font-semibold mb-2">Nessun evento trovato</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('events.noEvents')}</h3>
                 <p className="text-muted-foreground mb-4">
                   {activeFilter === 'in_corso' 
-                    ? "Nessun evento attualmente in svolgimento" 
+                    ? t('events.noCurrentEvents')
                     : activeFilter === 'futuri' 
-                    ? "Nessun evento programmato"
-                    : "Nessun evento concluso"}
+                    ? t('events.noScheduledEvents')
+                    : t('events.noConcludedEvents')}
                 </p>
                 {canCreateEvents && activeFilter === 'futuri' && (
                   <Button onClick={handleCreateEvent} data-testid="button-create-event-empty-desktop">
                     <Plus className="w-4 h-4 mr-2" />
-                    Crea Evento
+                    {t('events.createEvent')}
                   </Button>
                 )}
               </div>
@@ -589,13 +594,13 @@ export default function Events() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Orario</TableHead>
-                    <TableHead>Location</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead>Formato</TableHead>
-                    <TableHead>Capacità</TableHead>
+                    <TableHead>{t('common.name')}</TableHead>
+                    <TableHead>{t('common.date')}</TableHead>
+                    <TableHead>{t('events.timeSlot')}</TableHead>
+                    <TableHead>{t('events.location')}</TableHead>
+                    <TableHead>{t('common.status')}</TableHead>
+                    <TableHead>{t('events.format')}</TableHead>
+                    <TableHead>{t('events.capacity')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -681,7 +686,7 @@ export default function Events() {
 
   return (
     <MobileAppLayout
-      header={<MobileHeader title="Eventi" showBackButton onBack={() => navigate('/')} showMenuButton />}
+      header={<MobileHeader title={t('events.title')} showBackButton onBack={() => navigate('/')} showMenuButton />}
       noPadding
       contentClassName="pb-24"
     >
@@ -694,21 +699,21 @@ export default function Events() {
       >
         <FilterChip
           active={activeFilter === 'in_corso'}
-          label="In Corso"
+          label={t('events.ongoing')}
           count={filterCounts.in_corso}
           onClick={() => setActiveFilter('in_corso')}
           testId="filter-in-corso"
         />
         <FilterChip
           active={activeFilter === 'futuri'}
-          label="Futuri"
+          label={t('events.upcoming')}
           count={filterCounts.futuri}
           onClick={() => setActiveFilter('futuri')}
           testId="filter-futuri"
         />
         <FilterChip
           active={activeFilter === 'passati'}
-          label="Passati"
+          label={t('events.past')}
           count={filterCounts.passati}
           onClick={() => setActiveFilter('passati')}
           testId="filter-passati"

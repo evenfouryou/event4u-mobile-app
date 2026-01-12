@@ -4788,8 +4788,8 @@ router.post("/api/public/resales/:id/reserve", async (req, res) => {
       return res.status(400).json({ message: "Non puoi acquistare il tuo stesso biglietto" });
     }
     
-    // Reserve for 10 minutes
-    const reservedUntil = new Date(Date.now() + 10 * 60 * 1000);
+    // Reserve for 30 minutes (Stripe requires expires_at to be at least 30 minutes)
+    const reservedUntil = new Date(Date.now() + 30 * 60 * 1000);
     
     // ATOMIC: Update resale to reserved status ONLY if still listed
     // Uses returning() to verify exactly one row was updated

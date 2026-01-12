@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -73,25 +74,25 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import type { EventTable, TableBooking, Event } from "@shared/schema";
 
-const tableFormSchema = z.object({
-  name: z.string().min(1, "Nome tavolo obbligatorio"),
-  tableType: z.string().min(1, "Tipo tavolo obbligatorio").default("standard"),
-  capacity: z.coerce.number().min(1, "Minimo 1 posto"),
-  minSpend: z.coerce.number().min(0, "Non può essere negativo").optional(),
+const getTableFormSchema = (t: (key: string) => string) => z.object({
+  name: z.string().min(1, t('pr.validation.tableNameRequired')),
+  tableType: z.string().min(1, t('pr.validation.tableTypeRequired')).default("standard"),
+  capacity: z.coerce.number().min(1, t('pr.validation.minOneSeats')),
+  minSpend: z.coerce.number().min(0, t('pr.validation.notNegative')).optional(),
   notes: z.string().optional(),
 });
 
-type TableFormData = z.infer<typeof tableFormSchema>;
+type TableFormData = z.infer<ReturnType<typeof getTableFormSchema>>;
 
-const bookingFormSchema = z.object({
-  customerName: z.string().min(1, "Nome cliente obbligatorio"),
+const getBookingFormSchema = (t: (key: string) => string) => z.object({
+  customerName: z.string().min(1, t('pr.validation.customerNameRequired')),
   customerPhone: z.string().optional(),
-  customerEmail: z.string().email("Email non valida").optional().or(z.literal("")),
-  guestsCount: z.coerce.number().min(1, "Minimo 1 ospite"),
+  customerEmail: z.string().email(t('pr.validation.invalidEmail')).optional().or(z.literal("")),
+  guestsCount: z.coerce.number().min(1, t('pr.validation.minOneGuest')),
   notes: z.string().optional(),
 });
 
-type BookingFormData = z.infer<typeof bookingFormSchema>;
+type BookingFormData = z.infer<ReturnType<typeof getBookingFormSchema>>;
 
 const springTransition = {
   type: "spring",
@@ -116,6 +117,7 @@ const staggerContainer = {
 };
 
 export default function PrTablesPage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [selectedEventId, setSelectedEventId] = useState<string>("");
@@ -169,6 +171,9 @@ export default function PrTablesPage() {
   const getTableBooking = (tableId: string) =>
     bookings.find(b => b.tableId === tableId && b.status !== 'cancelled');
 
+  const tableFormSchema = getTableFormSchema(t);
+  const bookingFormSchema = getBookingFormSchema(t);
+
   const tableForm = useForm<TableFormData>({
     resolver: zodResolver(tableFormSchema),
     defaultValues: {
@@ -198,14 +203,14 @@ export default function PrTablesPage() {
     },
     onSuccess: () => {
       triggerHaptic('success');
-      toast({ title: "Tavolo creato" });
+      toast({ title: t('pr.tableCreated') });
       setIsAddTableOpen(false);
       tableForm.reset();
       queryClient.invalidateQueries({ queryKey: ["/api/pr/events", selectedEventId, "tables"] });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: error.message, variant: "destructive" });
     },
   });
 
@@ -216,13 +221,13 @@ export default function PrTablesPage() {
     },
     onSuccess: () => {
       triggerHaptic('success');
-      toast({ title: "Tavolo aggiornato" });
+      toast({ title: t('pr.tableUpdated') });
       setIsActionsOpen(false);
       queryClient.invalidateQueries({ queryKey: ["/api/pr/events", selectedEventId, "tables"] });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: error.message, variant: "destructive" });
     },
   });
 
@@ -232,14 +237,14 @@ export default function PrTablesPage() {
     },
     onSuccess: () => {
       triggerHaptic('success');
-      toast({ title: "Tavolo eliminato" });
+      toast({ title: t('pr.tableDeleted') });
       setIsActionsOpen(false);
       setSelectedTableId("");
       queryClient.invalidateQueries({ queryKey: ["/api/pr/events", selectedEventId, "tables"] });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: error.message, variant: "destructive" });
     },
   });
 
@@ -253,7 +258,7 @@ export default function PrTablesPage() {
     },
     onSuccess: () => {
       triggerHaptic('success');
-      toast({ title: "Prenotazione creata" });
+      toast({ title: t('pr.bookingCreated') });
       setIsBookTableOpen(false);
       bookingForm.reset();
       setSelectedTableId("");
@@ -262,7 +267,7 @@ export default function PrTablesPage() {
     },
     onError: (error: Error) => {
       triggerHaptic('error');
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: error.message, variant: "destructive" });
     },
   });
 
@@ -273,14 +278,14 @@ export default function PrTablesPage() {
     },
     onSuccess: () => {
       triggerHaptic('success');
-      toast({ title: "Prenotazione aggiornata" });
+      toast({ title: t('pr.bookingUpdated') });
       setIsActionsOpen(false);
       refetchTables();
       refetchBookings();
     },
     onError: (error: Error) => {
       triggerHaptic('error');
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: error.message, variant: "destructive" });
     },
   });
 
@@ -290,27 +295,27 @@ export default function PrTablesPage() {
     },
     onSuccess: () => {
       triggerHaptic('success');
-      toast({ title: "Prenotazione cancellata" });
+      toast({ title: t('pr.bookingCancelled') });
       setIsActionsOpen(false);
       refetchTables();
       refetchBookings();
     },
     onError: (error: Error) => {
       triggerHaptic('error');
-      toast({ title: "Errore", description: error.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: error.message, variant: "destructive" });
     },
   });
 
   const getStatusInfo = (status: string) => {
     switch (status) {
       case 'available':
-        return { color: "bg-green-500", textColor: "text-green-500", label: "Disponibile", icon: CheckCircle2 };
+        return { color: "bg-green-500", textColor: "text-green-500", label: t('pr.tableStatus.available'), icon: CheckCircle2 };
       case 'reserved':
-        return { color: "bg-blue-500", textColor: "text-blue-500", label: "Prenotato", icon: Clock };
+        return { color: "bg-blue-500", textColor: "text-blue-500", label: t('pr.tableStatus.reserved'), icon: Clock };
       case 'occupied':
-        return { color: "bg-amber-500", textColor: "text-amber-500", label: "Occupato", icon: Users };
+        return { color: "bg-amber-500", textColor: "text-amber-500", label: t('pr.tableStatus.occupied'), icon: Users };
       case 'blocked':
-        return { color: "bg-red-500", textColor: "text-red-500", label: "Bloccato", icon: XCircle };
+        return { color: "bg-red-500", textColor: "text-red-500", label: t('pr.tableStatus.blocked'), icon: XCircle };
       default:
         return { color: "bg-muted", textColor: "text-muted-foreground", label: status, icon: Armchair };
     }
@@ -318,9 +323,9 @@ export default function PrTablesPage() {
 
   const getTableTypeLabel = (type: string) => {
     switch (type) {
-      case 'standard': return 'Standard';
-      case 'vip': return 'VIP';
-      case 'prive': return 'Privé';
+      case 'standard': return t('pr.tableTypes.standard');
+      case 'vip': return t('pr.tableTypes.vip');
+      case 'prive': return t('pr.tableTypes.prive');
       default: return type;
     }
   };
@@ -344,9 +349,9 @@ export default function PrTablesPage() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-pr-tables">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Gestione Tavoli</h1>
+            <h1 className="text-3xl font-bold">{t('pr.tableManagement')}</h1>
             <p className="text-muted-foreground">
-              {selectedEvent ? format(new Date(selectedEvent.startDatetime), "d MMMM yyyy", { locale: it }) : "Seleziona un evento"}
+              {selectedEvent ? format(new Date(selectedEvent.startDatetime), "d MMMM yyyy", { locale: it }) : t('pr.selectEvent')}
             </p>
           </div>
           <div className="flex gap-2">
@@ -359,12 +364,12 @@ export default function PrTablesPage() {
               data-testid="button-refresh"
             >
               <RefreshCw className="w-4 h-4 mr-2" />
-              Aggiorna
+              {t('common.refresh')}
             </Button>
             {selectedEventId && (
               <Button onClick={() => setIsAddTableOpen(true)} data-testid="button-add-table">
                 <Plus className="w-4 h-4 mr-2" />
-                Nuovo Tavolo
+                {t('pr.newTable')}
               </Button>
             )}
           </div>
@@ -380,7 +385,7 @@ export default function PrTablesPage() {
           <CardContent>
             <Select value={selectedEventId} onValueChange={setSelectedEventId}>
               <SelectTrigger data-testid="select-event">
-                <SelectValue placeholder="Seleziona un evento..." />
+                <SelectValue placeholder={t('pr.selectEvent')} />
               </SelectTrigger>
               <SelectContent>
                 {events.map((event) => (
@@ -399,37 +404,37 @@ export default function PrTablesPage() {
               <Card>
                 <CardContent className="pt-6">
                   <div className="text-2xl font-bold">{stats.total}</div>
-                  <p className="text-sm text-muted-foreground">Totale Tavoli</p>
+                  <p className="text-sm text-muted-foreground">{t('pr.totalTables')}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-6">
                   <div className="text-2xl font-bold text-green-500">{stats.available}</div>
-                  <p className="text-sm text-muted-foreground">Liberi</p>
+                  <p className="text-sm text-muted-foreground">{t('pr.available')}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-6">
                   <div className="text-2xl font-bold text-blue-500">{stats.reserved}</div>
-                  <p className="text-sm text-muted-foreground">Prenotati</p>
+                  <p className="text-sm text-muted-foreground">{t('pr.reserved')}</p>
                 </CardContent>
               </Card>
               <Card>
                 <CardContent className="pt-6">
                   <div className="text-2xl font-bold text-purple-500">{stats.capacity}</div>
-                  <p className="text-sm text-muted-foreground">Posti Totali</p>
+                  <p className="text-sm text-muted-foreground">{t('pr.totalSeats')}</p>
                 </CardContent>
               </Card>
             </div>
 
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-2">
-                <CardTitle>Tavoli</CardTitle>
+                <CardTitle>{t('pr.tables')}</CardTitle>
                 <div className="flex gap-2">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Cerca tavolo..."
+                      placeholder={t('pr.searchTable')}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-9 w-64"
@@ -438,10 +443,10 @@ export default function PrTablesPage() {
                   </div>
                   <Select value={zoneFilter} onValueChange={setZoneFilter}>
                     <SelectTrigger className="w-40" data-testid="select-zone-filter">
-                      <SelectValue placeholder="Tutti i tipi" />
+                      <SelectValue placeholder={t('pr.allTypes')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="">Tutti i tipi</SelectItem>
+                      <SelectItem value="">{t('pr.allTypes')}</SelectItem>
                       {tableTypes.map((type) => (
                         <SelectItem key={type} value={type}>
                           {getTableTypeLabel(type)}
@@ -461,20 +466,20 @@ export default function PrTablesPage() {
                 ) : filteredTables.length === 0 ? (
                   <div className="text-center py-12">
                     <Armchair className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold mb-2">Nessun tavolo</h3>
-                    <p className="text-muted-foreground">Aggiungi il primo tavolo per questo evento</p>
+                    <h3 className="text-lg font-semibold mb-2">{t('pr.noTables')}</h3>
+                    <p className="text-muted-foreground">{t('pr.addFirstTable')}</p>
                   </div>
                 ) : (
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Posti</TableHead>
-                        <TableHead>Min. Spesa</TableHead>
-                        <TableHead>Stato</TableHead>
-                        <TableHead>Prenotazione</TableHead>
-                        <TableHead className="text-right">Azioni</TableHead>
+                        <TableHead>{t('common.name')}</TableHead>
+                        <TableHead>{t('pr.type')}</TableHead>
+                        <TableHead>{t('pr.seats')}</TableHead>
+                        <TableHead>{t('pr.minSpend')}</TableHead>
+                        <TableHead>{t('common.status')}</TableHead>
+                        <TableHead>{t('pr.booking')}</TableHead>
+                        <TableHead className="text-right">{t('common.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -501,7 +506,7 @@ export default function PrTablesPage() {
                               {booking ? (
                                 <div className="text-sm">
                                   <p className="font-medium">{booking.customerName}</p>
-                                  <p className="text-muted-foreground">{booking.guestsCount} ospiti</p>
+                                  <p className="text-muted-foreground">{booking.guestsCount} {t('pr.guests')}</p>
                                 </div>
                               ) : (
                                 <span className="text-muted-foreground">-</span>
@@ -520,7 +525,7 @@ export default function PrTablesPage() {
                                     data-testid={`button-book-${table.id}`}
                                   >
                                     <Clock className="w-3 h-3 mr-1" />
-                                    Prenota
+                                    {t('pr.book')}
                                   </Button>
                                 )}
                                 <Button
@@ -560,8 +565,8 @@ export default function PrTablesPage() {
           <Card>
             <CardContent className="py-12 text-center">
               <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold mb-2">Seleziona un evento</h3>
-              <p className="text-muted-foreground">Scegli un evento per gestire i tavoli</p>
+              <h3 className="text-lg font-semibold mb-2">{t('pr.selectAnEvent')}</h3>
+              <p className="text-muted-foreground">{t('pr.chooseEventManageTables')}</p>
             </CardContent>
           </Card>
         )}
@@ -569,7 +574,7 @@ export default function PrTablesPage() {
         <Dialog open={isAddTableOpen} onOpenChange={setIsAddTableOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Nuovo Tavolo</DialogTitle>
+              <DialogTitle>{t('pr.newTable')}</DialogTitle>
             </DialogHeader>
             <Form {...tableForm}>
               <form onSubmit={tableForm.handleSubmit((data) => createTableMutation.mutate(data))} className="space-y-4">
@@ -578,9 +583,9 @@ export default function PrTablesPage() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nome Tavolo</FormLabel>
+                      <FormLabel>{t('pr.tableName')}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Es: Tavolo 1, VIP-1" {...field} data-testid="input-table-name" />
+                        <Input placeholder={t('pr.tableNamePlaceholder')} {...field} data-testid="input-table-name" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -591,17 +596,17 @@ export default function PrTablesPage() {
                   name="tableType"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Tipo Tavolo</FormLabel>
+                      <FormLabel>{t('pr.tableType')}</FormLabel>
                       <Select onValueChange={field.onChange} defaultValue={field.value}>
                         <FormControl>
                           <SelectTrigger data-testid="input-table-type">
-                            <SelectValue placeholder="Seleziona tipo" />
+                            <SelectValue placeholder={t('pr.selectType')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="standard">Standard</SelectItem>
-                          <SelectItem value="vip">VIP</SelectItem>
-                          <SelectItem value="prive">Privé</SelectItem>
+                          <SelectItem value="standard">{t('pr.tableTypes.standard')}</SelectItem>
+                          <SelectItem value="vip">{t('pr.tableTypes.vip')}</SelectItem>
+                          <SelectItem value="prive">{t('pr.tableTypes.prive')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -614,7 +619,7 @@ export default function PrTablesPage() {
                     name="capacity"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Posti</FormLabel>
+                        <FormLabel>{t('pr.seats')}</FormLabel>
                         <FormControl>
                           <Input type="number" min="1" {...field} data-testid="input-capacity" />
                         </FormControl>
@@ -627,9 +632,9 @@ export default function PrTablesPage() {
                     name="minSpend"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Min. Spesa (€)</FormLabel>
+                        <FormLabel>{t('pr.minSpendLabel')}</FormLabel>
                         <FormControl>
-                          <Input type="number" min="0" placeholder="Opzionale" {...field} data-testid="input-minspend" />
+                          <Input type="number" min="0" placeholder={t('common.optional')} {...field} data-testid="input-minspend" />
                         </FormControl>
                         <FormMessage />
                       </FormItem>
@@ -641,9 +646,9 @@ export default function PrTablesPage() {
                   name="notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Note</FormLabel>
+                      <FormLabel>{t('common.notes')}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Note aggiuntive" {...field} data-testid="input-notes" />
+                        <Input placeholder={t('pr.additionalNotes')} {...field} data-testid="input-notes" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -651,11 +656,11 @@ export default function PrTablesPage() {
                 />
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setIsAddTableOpen(false)}>
-                    Annulla
+                    {t('common.cancel')}
                   </Button>
                   <Button type="submit" disabled={createTableMutation.isPending} data-testid="button-submit-table">
                     {createTableMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Plus className="w-4 h-4 mr-2" />}
-                    Crea Tavolo
+                    {t('pr.createTable')}
                   </Button>
                 </DialogFooter>
               </form>
@@ -669,7 +674,7 @@ export default function PrTablesPage() {
         }}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{selectedTable?.name || "Azioni Tavolo"}</DialogTitle>
+              <DialogTitle>{selectedTable?.name || t('pr.tableActions')}</DialogTitle>
             </DialogHeader>
             {selectedTable && (() => {
               const booking = getTableBooking(selectedTable.id);
@@ -686,7 +691,7 @@ export default function PrTablesPage() {
                       <div className="flex items-center gap-2 text-sm text-muted-foreground">
                         <span>{getTableTypeLabel(selectedTable.tableType)}</span>
                         <span>•</span>
-                        <span>{selectedTable.capacity} posti</span>
+                        <span>{selectedTable.capacity} {t('pr.seats')}</span>
                       </div>
                       <Badge variant="outline" className={`mt-2 ${statusInfo.color}/10 ${statusInfo.textColor} border-0`}>
                         {statusInfo.label}
@@ -696,11 +701,11 @@ export default function PrTablesPage() {
 
                   {booking && (
                     <div className="p-4 bg-card border border-border rounded-lg space-y-2">
-                      <h4 className="font-semibold">Prenotazione</h4>
+                      <h4 className="font-semibold">{t('pr.booking')}</h4>
                       <div className="flex items-center gap-2">
                         <Users className="w-4 h-4 text-muted-foreground" />
                         <span className="font-medium">{booking.customerName}</span>
-                        <span className="text-muted-foreground">({booking.guestsCount} ospiti)</span>
+                        <span className="text-muted-foreground">({booking.guestsCount} {t('pr.guests')})</span>
                       </div>
                       {booking.customerPhone && (
                         <div className="flex items-center gap-2 text-sm">
@@ -729,7 +734,7 @@ export default function PrTablesPage() {
                           data-testid={`action-book-${selectedTable.id}`}
                         >
                           <Clock className="w-4 h-4 mr-2" />
-                          Proponi Tavolo / Prenota
+                          {t('pr.proposeTableBook')}
                         </Button>
                         <Button
                           variant="outline"
@@ -737,7 +742,7 @@ export default function PrTablesPage() {
                           data-testid={`action-block-${selectedTable.id}`}
                         >
                           <XCircle className="w-4 h-4 mr-2" />
-                          Blocca Tavolo
+                          {t('pr.blockTable')}
                         </Button>
                       </>
                     )}
@@ -749,7 +754,7 @@ export default function PrTablesPage() {
                         data-testid={`action-unblock-${selectedTable.id}`}
                       >
                         <CheckCircle2 className="w-4 h-4 mr-2 text-green-500" />
-                        Sblocca Tavolo
+                        {t('pr.unblockTable')}
                       </Button>
                     )}
 
@@ -762,7 +767,7 @@ export default function PrTablesPage() {
                           data-testid={`action-arrived-${selectedTable.id}`}
                         >
                           <CheckCircle2 className="w-4 h-4 mr-2" />
-                          Cliente Arrivato
+                          {t('pr.customerArrived')}
                         </Button>
                         <Button
                           variant="outline"
@@ -771,14 +776,14 @@ export default function PrTablesPage() {
                           data-testid={`action-cancel-booking-${selectedTable.id}`}
                         >
                           <Trash2 className="w-4 h-4 mr-2" />
-                          Cancella Prenotazione
+                          {t('pr.cancelBooking')}
                         </Button>
                       </>
                     )}
 
                     <Button variant="outline" data-testid={`action-edit-${selectedTable.id}`}>
                       <Edit className="w-4 h-4 mr-2" />
-                      Modifica Tavolo
+                      {t('pr.editTable')}
                     </Button>
 
                     <Button
@@ -788,7 +793,7 @@ export default function PrTablesPage() {
                       data-testid={`action-delete-${selectedTable.id}`}
                     >
                       <Trash2 className="w-4 h-4 mr-2" />
-                      Elimina Tavolo
+                      {t('pr.deleteTable')}
                     </Button>
                   </div>
                 </div>
@@ -803,7 +808,7 @@ export default function PrTablesPage() {
         }}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Prenota Tavolo</DialogTitle>
+              <DialogTitle>{t('pr.bookTable')}</DialogTitle>
             </DialogHeader>
             <Form {...bookingForm}>
               <form onSubmit={bookingForm.handleSubmit((data) => createBookingMutation.mutate(data))} className="space-y-4">
@@ -812,9 +817,9 @@ export default function PrTablesPage() {
                   name="customerName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nome Cliente</FormLabel>
+                      <FormLabel>{t('pr.customerName')}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Nome completo" {...field} data-testid="input-customer-name" />
+                        <Input placeholder={t('pr.fullName')} {...field} data-testid="input-customer-name" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -826,7 +831,7 @@ export default function PrTablesPage() {
                     name="customerPhone"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Telefono</FormLabel>
+                        <FormLabel>{t('common.phone')}</FormLabel>
                         <FormControl>
                           <Input placeholder="+39 333..." {...field} data-testid="input-customer-phone" />
                         </FormControl>
@@ -839,7 +844,7 @@ export default function PrTablesPage() {
                     name="guestsCount"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Ospiti</FormLabel>
+                        <FormLabel>{t('pr.guests')}</FormLabel>
                         <FormControl>
                           <Input type="number" min="1" {...field} data-testid="input-guest-count" />
                         </FormControl>
@@ -853,9 +858,9 @@ export default function PrTablesPage() {
                   name="customerEmail"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email (opzionale)</FormLabel>
+                      <FormLabel>{t('pr.emailOptional')}</FormLabel>
                       <FormControl>
-                        <Input type="email" placeholder="email@esempio.com" {...field} data-testid="input-customer-email" />
+                        <Input type="email" placeholder={t('pr.emailPlaceholder')} {...field} data-testid="input-customer-email" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -866,9 +871,9 @@ export default function PrTablesPage() {
                   name="notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Note</FormLabel>
+                      <FormLabel>{t('common.notes')}</FormLabel>
                       <FormControl>
-                        <Input placeholder="Note aggiuntive" {...field} data-testid="input-booking-notes" />
+                        <Input placeholder={t('pr.additionalNotes')} {...field} data-testid="input-booking-notes" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -876,11 +881,11 @@ export default function PrTablesPage() {
                 />
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setIsBookTableOpen(false)}>
-                    Annulla
+                    {t('common.cancel')}
                   </Button>
                   <Button type="submit" disabled={createBookingMutation.isPending} data-testid="button-submit-booking">
                     {createBookingMutation.isPending ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <CheckCircle2 className="w-4 h-4 mr-2" />}
-                    Conferma Prenotazione
+                    {t('pr.confirmBooking')}
                   </Button>
                 </DialogFooter>
               </form>
@@ -895,7 +900,7 @@ export default function PrTablesPage() {
     return (
       <MobileAppLayout
         header={
-          <MobileHeader title="Gestione Tavoli" />
+          <MobileHeader title={t('pr.tableManagement')} />
         }
       >
         <div className="space-y-4 py-4 pb-24">
@@ -914,7 +919,7 @@ export default function PrTablesPage() {
     <MobileAppLayout
       header={
         <MobileHeader
-          title="Gestione Tavoli"
+          title={t('pr.tableManagement')}
           subtitle={selectedEvent ? format(new Date(selectedEvent.startDatetime), "d MMM yyyy", { locale: it }) : undefined}
           rightAction={
             <HapticButton
@@ -952,9 +957,9 @@ export default function PrTablesPage() {
               <Calendar className="w-7 h-7 text-primary" />
             </motion.div>
             <div className="text-left">
-              <p className="text-sm text-muted-foreground">Evento Selezionato</p>
+              <p className="text-sm text-muted-foreground">{t('pr.selectedEvent')}</p>
               <p className="font-bold text-lg">
-                {selectedEvent ? selectedEvent.name : "Seleziona evento"}
+                {selectedEvent ? selectedEvent.name : t('pr.selectEvent')}
               </p>
             </div>
           </div>
@@ -975,10 +980,10 @@ export default function PrTablesPage() {
               className="grid grid-cols-2 gap-3"
             >
               {[
-                { label: "Totale", value: stats.total, color: "text-foreground", bgColor: "bg-muted/50" },
-                { label: "Liberi", value: stats.available, color: "text-green-500", bgColor: "bg-green-500/10" },
-                { label: "Prenotati", value: stats.reserved, color: "text-blue-500", bgColor: "bg-blue-500/10" },
-                { label: "Posti Totali", value: stats.capacity, color: "text-purple-500", bgColor: "bg-purple-500/10" },
+                { label: t('pr.total'), value: stats.total, color: "text-foreground", bgColor: "bg-muted/50" },
+                { label: t('pr.available'), value: stats.available, color: "text-green-500", bgColor: "bg-green-500/10" },
+                { label: t('pr.reserved'), value: stats.reserved, color: "text-blue-500", bgColor: "bg-blue-500/10" },
+                { label: t('pr.totalSeats'), value: stats.capacity, color: "text-purple-500", bgColor: "bg-purple-500/10" },
               ].map((stat, idx) => (
                 <motion.div
                   key={stat.label}
@@ -1008,7 +1013,7 @@ export default function PrTablesPage() {
                     : "bg-card border border-border text-muted-foreground"
                 }`}
               >
-                Tutti
+                {t('pr.all')}
               </motion.button>
               {tableTypes.map((type) => (
                 <motion.button

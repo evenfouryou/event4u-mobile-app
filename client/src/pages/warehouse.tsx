@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -237,6 +238,7 @@ function MovementCard({
 }
 
 export default function Warehouse() {
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [loadDialogOpen, setLoadDialogOpen] = useState(false);
   const [unloadDialogOpen, setUnloadDialogOpen] = useState(false);
@@ -332,16 +334,16 @@ export default function Warehouse() {
       setLoadDialogOpen(false);
       loadForm.reset();
       triggerHaptic('success');
-      toast({ title: "Successo", description: "Carico effettuato con successo" });
+      toast({ title: t('warehouse.success'), description: t('warehouse.loadSuccess') });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
-        toast({ title: "Non autorizzato", description: "Effettua nuovamente il login...", variant: "destructive" });
+        toast({ title: t('warehouse.unauthorized'), description: t('warehouse.loginAgain'), variant: "destructive" });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
-      toast({ title: "Errore", description: "Impossibile effettuare il carico", variant: "destructive" });
+      toast({ title: t('warehouse.error'), description: t('warehouse.loadError'), variant: "destructive" });
     },
   });
 
@@ -356,16 +358,16 @@ export default function Warehouse() {
       setUnloadDialogOpen(false);
       unloadForm.reset();
       triggerHaptic('success');
-      toast({ title: "Successo", description: "Scarico effettuato con successo" });
+      toast({ title: t('warehouse.success'), description: t('warehouse.unloadSuccess') });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
-        toast({ title: "Non autorizzato", description: "Effettua nuovamente il login...", variant: "destructive" });
+        toast({ title: t('warehouse.unauthorized'), description: t('warehouse.loginAgain'), variant: "destructive" });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
-      toast({ title: "Errore", description: "Impossibile effettuare lo scarico", variant: "destructive" });
+      toast({ title: t('warehouse.error'), description: t('warehouse.unloadError'), variant: "destructive" });
     },
   });
 
@@ -380,16 +382,16 @@ export default function Warehouse() {
       setMultiLoadDialogOpen(false);
       setMultiLoadItems([]);
       triggerHaptic('success');
-      toast({ title: "Successo", description: `${variables.items.length} prodotti caricati` });
+      toast({ title: t('warehouse.success'), description: t('warehouse.bulkLoadSuccess', { count: variables.items.length }) });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
-        toast({ title: "Non autorizzato", description: "Effettua nuovamente il login...", variant: "destructive" });
+        toast({ title: t('warehouse.unauthorized'), description: t('warehouse.loginAgain'), variant: "destructive" });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
-      toast({ title: "Errore", description: "Impossibile effettuare il carico multiplo", variant: "destructive" });
+      toast({ title: t('warehouse.error'), description: t('warehouse.bulkLoadError'), variant: "destructive" });
     },
   });
 
@@ -415,7 +417,7 @@ export default function Warehouse() {
     });
     if (validItems.length === 0) {
       triggerHaptic('error');
-      toast({ title: "Errore", description: "Aggiungi almeno un prodotto con quantità valida (maggiore di 0)", variant: "destructive" });
+      toast({ title: t('warehouse.error'), description: t('warehouse.addValidProduct'), variant: "destructive" });
       return;
     }
     bulkLoadMutation.mutate({ items: validItems });
@@ -431,16 +433,16 @@ export default function Warehouse() {
       setMultiUnloadDialogOpen(false);
       setMultiUnloadItems([]);
       triggerHaptic('success');
-      toast({ title: "Successo", description: "Scarico multiplo effettuato con successo" });
+      toast({ title: t('warehouse.success'), description: t('warehouse.bulkUnloadSuccess') });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
-        toast({ title: "Non autorizzato", description: "Effettua nuovamente il login...", variant: "destructive" });
+        toast({ title: t('warehouse.unauthorized'), description: t('warehouse.loginAgain'), variant: "destructive" });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
-      toast({ title: "Errore", description: "Impossibile effettuare lo scarico multiplo", variant: "destructive" });
+      toast({ title: t('warehouse.error'), description: t('warehouse.bulkUnloadError'), variant: "destructive" });
     },
   });
 
@@ -466,7 +468,7 @@ export default function Warehouse() {
     });
     if (validItems.length === 0) {
       triggerHaptic('error');
-      toast({ title: "Errore", description: "Aggiungi almeno un prodotto con quantità valida", variant: "destructive" });
+      toast({ title: t('warehouse.error'), description: t('warehouse.addValidProduct'), variant: "destructive" });
       return;
     }
     bulkUnloadMutation.mutate({ items: validItems });
@@ -489,16 +491,16 @@ export default function Warehouse() {
       queryClient.invalidateQueries({ predicate: (query) => Boolean(query.queryKey[0]?.toString().includes('/api/events') && query.queryKey[2] === 'revenue-analysis') });
       setTransferQuantities(prev => ({ ...prev, [variables.productId]: "" }));
       triggerHaptic('success');
-      toast({ title: "Trasferimento completato", description: "Prodotto trasferito all'evento" });
+      toast({ title: t('warehouse.transferComplete'), description: t('warehouse.productTransferred') });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
-        toast({ title: "Non autorizzato", description: "Effettua nuovamente il login...", variant: "destructive" });
+        toast({ title: t('warehouse.unauthorized'), description: t('warehouse.loginAgain'), variant: "destructive" });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
-      toast({ title: "Errore", description: error.message || "Impossibile trasferire il prodotto", variant: "destructive" });
+      toast({ title: t('warehouse.error'), description: error.message || t('warehouse.transferError'), variant: "destructive" });
     },
   });
 
@@ -518,16 +520,16 @@ export default function Warehouse() {
       queryClient.invalidateQueries({ predicate: (query) => Boolean(query.queryKey[0]?.toString().includes('/api/events') && query.queryKey[2] === 'revenue-analysis') });
       setConsumeQuantities(prev => ({ ...prev, [variables.productId]: "" }));
       triggerHaptic('success');
-      toast({ title: "Scarico registrato", description: "Consumo registrato correttamente" });
+      toast({ title: t('warehouse.consumeRegistered'), description: t('warehouse.consumeSuccess') });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
-        toast({ title: "Non autorizzato", description: "Effettua nuovamente il login...", variant: "destructive" });
+        toast({ title: t('warehouse.unauthorized'), description: t('warehouse.loginAgain'), variant: "destructive" });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
-      toast({ title: "Errore", description: error.message || "Impossibile registrare lo scarico", variant: "destructive" });
+      toast({ title: t('warehouse.error'), description: error.message || t('warehouse.consumeError'), variant: "destructive" });
     },
   });
 
@@ -545,15 +547,15 @@ export default function Warehouse() {
       setAdjustQuantity("");
       setAdjustReason("");
       triggerHaptic('success');
-      toast({ title: "Correzione effettuata", description: "Quantità aggiornata correttamente" });
+      toast({ title: t('warehouse.success'), description: t('warehouse.adjustSuccess') });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
-        toast({ title: "Non autorizzato", description: "Solo gestore e admin possono correggere le quantità", variant: "destructive" });
+        toast({ title: t('warehouse.unauthorized'), description: t('warehouse.loginAgain'), variant: "destructive" });
         return;
       }
-      toast({ title: "Errore", description: error.message || "Impossibile effettuare la correzione", variant: "destructive" });
+      toast({ title: t('warehouse.error'), description: error.message || t('warehouse.adjustError'), variant: "destructive" });
     },
   });
 
@@ -567,15 +569,15 @@ export default function Warehouse() {
       queryClient.invalidateQueries({ predicate: (query) => Boolean(query.queryKey[0]?.toString().includes('/api/reports')) });
       setClearWarehouseDialogOpen(false);
       triggerHaptic('success');
-      toast({ title: "Magazzino svuotato", description: "Tutte le giacenze sono state azzerate" });
+      toast({ title: t('warehouse.success'), description: t('warehouse.clearSuccess') });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
-        toast({ title: "Non autorizzato", description: "Solo gestore e admin possono svuotare il magazzino", variant: "destructive" });
+        toast({ title: t('warehouse.unauthorized'), description: t('warehouse.loginAgain'), variant: "destructive" });
         return;
       }
-      toast({ title: "Errore", description: error.message || "Impossibile svuotare il magazzino", variant: "destructive" });
+      toast({ title: t('warehouse.error'), description: error.message || t('warehouse.clearError'), variant: "destructive" });
     },
   });
 
@@ -584,7 +586,7 @@ export default function Warehouse() {
     const qty = parseFloat(adjustQuantity);
     if (isNaN(qty) || qty < 0) {
       triggerHaptic('error');
-      toast({ title: "Errore", description: "Inserisci una quantità valida (maggiore o uguale a 0)", variant: "destructive" });
+      toast({ title: t('warehouse.error'), description: t('warehouse.addValidProduct'), variant: "destructive" });
       return;
     }
     adjustStockMutation.mutate({ productId: adjustingProduct.id, newQuantity: qty, reason: adjustReason || undefined });
@@ -602,7 +604,7 @@ export default function Warehouse() {
     const qty = parseFloat(transferQuantities[productId] || "0");
     if (qty <= 0) {
       triggerHaptic('error');
-      toast({ title: "Errore", description: "Inserisci una quantità valida", variant: "destructive" });
+      toast({ title: t('warehouse.error'), description: t('warehouse.addValidProduct'), variant: "destructive" });
       return;
     }
     transferToEventMutation.mutate({ eventId: selectedEventId, productId, quantity: qty });
@@ -613,7 +615,7 @@ export default function Warehouse() {
     const qty = parseFloat(consumeQuantities[productId] || "0");
     if (qty <= 0) {
       triggerHaptic('error');
-      toast({ title: "Errore", description: "Inserisci una quantità valida", variant: "destructive" });
+      toast({ title: t('warehouse.error'), description: t('warehouse.addValidProduct'), variant: "destructive" });
       return;
     }
     consumeFromEventMutation.mutate({ eventId: selectedEventId, productId, quantity: qty });
@@ -675,17 +677,17 @@ export default function Warehouse() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-warehouse">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Magazzino</h1>
-            <p className="text-muted-foreground">Gestione inventario e movimenti</p>
+            <h1 className="text-3xl font-bold">{t('warehouse.title')}</h1>
+            <p className="text-muted-foreground">{t('warehouse.subtitle')}</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setMultiUnloadDialogOpen(true)} data-testid="button-unload">
               <TrendingDown className="w-4 h-4 mr-2" />
-              Scarico
+              {t('warehouse.unload')}
             </Button>
             <Button onClick={() => setMultiLoadDialogOpen(true)} data-testid="button-load">
               <TrendingUp className="w-4 h-4 mr-2" />
-              Carico
+              {t('warehouse.load')}
             </Button>
           </div>
         </div>
@@ -699,7 +701,7 @@ export default function Warehouse() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold" data-testid="stat-total-products">{totalProducts}</div>
-                  <p className="text-sm text-muted-foreground">Prodotti</p>
+                  <p className="text-sm text-muted-foreground">{t('warehouse.products')}</p>
                 </div>
               </div>
             </CardContent>
@@ -712,7 +714,7 @@ export default function Warehouse() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold" data-testid="stat-total-quantity">{totalQuantity.toFixed(0)}</div>
-                  <p className="text-sm text-muted-foreground">Quantità Totale</p>
+                  <p className="text-sm text-muted-foreground">{t('warehouse.totalQuantity')}</p>
                 </div>
               </div>
             </CardContent>
@@ -725,7 +727,7 @@ export default function Warehouse() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-amber-500" data-testid="stat-low-stock">{lowStockCount}</div>
-                  <p className="text-sm text-muted-foreground">Stock Basso</p>
+                  <p className="text-sm text-muted-foreground">{t('warehouse.lowStock')}</p>
                 </div>
               </div>
             </CardContent>
@@ -738,7 +740,7 @@ export default function Warehouse() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold" data-testid="stat-today-movements">{todayMovements}</div>
-                  <p className="text-sm text-muted-foreground">Movimenti Oggi</p>
+                  <p className="text-sm text-muted-foreground">{t('warehouse.movementsToday')}</p>
                 </div>
               </div>
             </CardContent>
@@ -747,20 +749,20 @@ export default function Warehouse() {
 
         <Tabs value={activeTab} onValueChange={setActiveTab}>
           <TabsList>
-            <TabsTrigger value="stocks" data-testid="tab-stocks">Giacenze</TabsTrigger>
-            <TabsTrigger value="event-transfer" data-testid="tab-event-transfer">Trasferimenti Evento</TabsTrigger>
-            <TabsTrigger value="movements" data-testid="tab-movements">Movimenti</TabsTrigger>
+            <TabsTrigger value="stocks" data-testid="tab-stocks">{t('warehouse.stocks')}</TabsTrigger>
+            <TabsTrigger value="event-transfer" data-testid="tab-event-transfer">{t('warehouse.transferToEvent')}</TabsTrigger>
+            <TabsTrigger value="movements" data-testid="tab-movements">{t('warehouse.movements')}</TabsTrigger>
           </TabsList>
 
           <TabsContent value="stocks" className="mt-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0 pb-4">
-                <CardTitle>Giacenze Magazzino</CardTitle>
+                <CardTitle>{t('warehouse.stocks')}</CardTitle>
                 <div className="flex items-center gap-4">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Cerca prodotto..."
+                      placeholder={t('warehouse.searchProduct')}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-9 w-64"
@@ -775,7 +777,7 @@ export default function Warehouse() {
                       data-testid="button-clear-warehouse"
                     >
                       <Trash2 className="h-4 w-4 mr-2" />
-                      Svuota Magazzino
+                      {t('warehouse.clearWarehouse')}
                     </Button>
                   )}
                 </div>
@@ -789,12 +791,12 @@ export default function Warehouse() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Codice</TableHead>
-                        <TableHead>Prodotto</TableHead>
-                        <TableHead className="text-right">Quantità</TableHead>
-                        <TableHead>Unità</TableHead>
-                        <TableHead>Stato</TableHead>
-                        {canAdjustStock && <TableHead className="text-right">Azioni</TableHead>}
+                        <TableHead>{t('inventory.code')}</TableHead>
+                        <TableHead>{t('warehouse.product')}</TableHead>
+                        <TableHead className="text-right">{t('warehouse.quantity')}</TableHead>
+                        <TableHead>{t('inventory.unit')}</TableHead>
+                        <TableHead>{t('inventory.status')}</TableHead>
+                        {canAdjustStock && <TableHead className="text-right">{t('inventory.actions')}</TableHead>}
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -811,10 +813,10 @@ export default function Warehouse() {
                               {isLowStock ? (
                                 <Badge variant="destructive" className="gap-1" data-testid={`badge-low-stock-${stock.productId}`}>
                                   <AlertTriangle className="h-3 w-3" />
-                                  Stock Basso
+                                  {t('warehouse.lowStock')}
                                 </Badge>
                               ) : (
-                                <Badge variant="secondary" className="bg-teal/20 text-teal border-teal/30">OK</Badge>
+                                <Badge variant="secondary" className="bg-teal/20 text-teal border-teal/30">{t('inventory.ok')}</Badge>
                               )}
                             </TableCell>
                             {canAdjustStock && (
@@ -837,7 +839,7 @@ export default function Warehouse() {
                 ) : (
                   <div className="text-center py-12">
                     <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">Nessuna giacenza presente</p>
+                    <p className="text-muted-foreground">{t('warehouse.noStockPresent')}</p>
                   </div>
                 )}
               </CardContent>
@@ -847,18 +849,18 @@ export default function Warehouse() {
           <TabsContent value="event-transfer" className="mt-6 space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Trasferimenti a Evento</CardTitle>
-                <CardDescription>Seleziona un evento per gestire i trasferimenti di stock</CardDescription>
+                <CardTitle>{t('warehouse.eventTransfers')}</CardTitle>
+                <CardDescription>{t('warehouse.eventTransferDesc')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <Select value={selectedEventId} onValueChange={setSelectedEventId}>
                   <SelectTrigger data-testid="select-event">
-                    <SelectValue placeholder="Seleziona evento" />
+                    <SelectValue placeholder={t('warehouse.selectEvent')} />
                   </SelectTrigger>
                   <SelectContent>
                     {activeEvents.map(event => (
                       <SelectItem key={event.id} value={event.id}>
-                        {event.name} ({event.status === 'ongoing' ? 'In corso' : 'Programmato'})
+                        {event.name} ({event.status === 'ongoing' ? t('warehouse.ongoing') : t('warehouse.scheduled')})
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -870,12 +872,12 @@ export default function Warehouse() {
                       <CardHeader>
                         <CardTitle className="text-lg flex items-center gap-2">
                           <TrendingUp className="h-5 w-5 text-teal" />
-                          Trasferisci a Evento
+                          {t('warehouse.transferToEvent')}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
                         {productsWithGeneralStock.length === 0 ? (
-                          <p className="text-muted-foreground text-center py-8">Nessun prodotto disponibile</p>
+                          <p className="text-muted-foreground text-center py-8">{t('warehouse.noProductAvailable')}</p>
                         ) : (
                           <div className="space-y-3 max-h-[400px] overflow-y-auto">
                             {productsWithGeneralStock.map((product) => {
@@ -884,12 +886,12 @@ export default function Warehouse() {
                                 <div key={product.id} className="flex items-center gap-3 p-3 border rounded-lg" data-testid={`transfer-row-${product.id}`}>
                                   <div className="flex-1">
                                     <div className="font-medium">{product.name}</div>
-                                    <div className="text-sm text-muted-foreground">Disp: <span className="text-teal font-semibold">{generalStock.toFixed(1)}</span></div>
+                                    <div className="text-sm text-muted-foreground">{t('warehouse.availableShort')} <span className="text-teal font-semibold">{generalStock.toFixed(1)}</span></div>
                                   </div>
                                   <Input
                                     type="number"
                                     min="0"
-                                    placeholder="Qtà"
+                                    placeholder={t('warehouse.qtyShort')}
                                     value={transferQuantities[product.id] || ""}
                                     onChange={(e) => setTransferQuantities(prev => ({ ...prev, [product.id]: e.target.value }))}
                                     className="w-24 text-center"
@@ -915,12 +917,12 @@ export default function Warehouse() {
                       <CardHeader>
                         <CardTitle className="text-lg flex items-center gap-2">
                           <TrendingDown className="h-5 w-5 text-amber-500" />
-                          Scarica da Evento
+                          {t('warehouse.unloadFromEvent')}
                         </CardTitle>
                       </CardHeader>
                       <CardContent>
                         {productsWithEventStock.length === 0 ? (
-                          <p className="text-muted-foreground text-center py-8">Nessun prodotto nell'evento</p>
+                          <p className="text-muted-foreground text-center py-8">{t('warehouse.noProductInEvent')}</p>
                         ) : (
                           <div className="space-y-3 max-h-[400px] overflow-y-auto">
                             {productsWithEventStock.map((product) => {
@@ -929,12 +931,12 @@ export default function Warehouse() {
                                 <div key={product.id} className="flex items-center gap-3 p-3 border rounded-lg" data-testid={`consume-row-${product.id}`}>
                                   <div className="flex-1">
                                     <div className="font-medium">{product.name}</div>
-                                    <div className="text-sm text-muted-foreground">Disp: <span className="text-amber-500 font-semibold">{eventStock.toFixed(1)}</span></div>
+                                    <div className="text-sm text-muted-foreground">{t('warehouse.availableShort')} <span className="text-amber-500 font-semibold">{eventStock.toFixed(1)}</span></div>
                                   </div>
                                   <Input
                                     type="number"
                                     min="0"
-                                    placeholder="Qtà"
+                                    placeholder={t('warehouse.qtyShort')}
                                     value={consumeQuantities[product.id] || ""}
                                     onChange={(e) => setConsumeQuantities(prev => ({ ...prev, [product.id]: e.target.value }))}
                                     className="w-24 text-center"
@@ -965,12 +967,12 @@ export default function Warehouse() {
           <TabsContent value="movements" className="mt-6">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0 pb-4">
-                <CardTitle>Storico Movimenti</CardTitle>
+                <CardTitle>{t('warehouse.stockHistory')}</CardTitle>
                 <div className="flex items-center gap-4">
                   <div className="relative">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Cerca movimento..."
+                      placeholder={t('warehouse.searchMovements')}
                       value={movementSearchQuery}
                       onChange={(e) => setMovementSearchQuery(e.target.value)}
                       className="pl-9 w-64"
@@ -979,12 +981,12 @@ export default function Warehouse() {
                   </div>
                   <Select value={movementTypeFilter} onValueChange={setMovementTypeFilter}>
                     <SelectTrigger className="w-40" data-testid="select-movement-type">
-                      <SelectValue placeholder="Tipo" />
+                      <SelectValue placeholder={t('warehouse.type')} />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="all">Tutti</SelectItem>
-                      <SelectItem value="LOAD">Carico</SelectItem>
-                      <SelectItem value="UNLOAD">Scarico</SelectItem>
+                      <SelectItem value="all">{t('warehouse.allTypes')}</SelectItem>
+                      <SelectItem value="LOAD">{t('warehouse.load')}</SelectItem>
+                      <SelectItem value="UNLOAD">{t('warehouse.unload')}</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>
@@ -998,11 +1000,11 @@ export default function Warehouse() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Data/Ora</TableHead>
-                        <TableHead>Prodotto</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead className="text-right">Quantità</TableHead>
-                        <TableHead>Fornitore/Motivo</TableHead>
+                        <TableHead>{t('warehouse.dateTime')}</TableHead>
+                        <TableHead>{t('warehouse.product')}</TableHead>
+                        <TableHead>{t('warehouse.type')}</TableHead>
+                        <TableHead className="text-right">{t('warehouse.quantity')}</TableHead>
+                        <TableHead>{t('warehouse.supplierReason')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1014,12 +1016,12 @@ export default function Warehouse() {
                               {movement.createdAt ? new Date(movement.createdAt).toLocaleString('it-IT') : '-'}
                             </TableCell>
                             <TableCell>
-                              <div className="font-medium">{product?.name || 'Sconosciuto'}</div>
+                              <div className="font-medium">{product?.name || t('warehouse.unknown')}</div>
                               <div className="text-xs text-muted-foreground font-mono">{product?.code || '-'}</div>
                             </TableCell>
                             <TableCell>
                               <Badge variant={movement.type === 'LOAD' ? 'secondary' : 'outline'} className={movement.type === 'LOAD' ? 'bg-teal/20 text-teal border-teal/30' : ''}>
-                                {movement.type === 'LOAD' ? 'Carico' : 'Scarico'}
+                                {movement.type === 'LOAD' ? t('warehouse.load') : t('warehouse.unload')}
                               </Badge>
                             </TableCell>
                             <TableCell className={`text-right font-bold tabular-nums ${movement.type === 'LOAD' ? 'text-teal' : 'text-amber-500'}`}>
@@ -1036,7 +1038,7 @@ export default function Warehouse() {
                 ) : (
                   <div className="text-center py-12">
                     <WarehouseIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">Nessun movimento registrato</p>
+                    <p className="text-muted-foreground">{t('warehouse.noMovementsRegistered')}</p>
                   </div>
                 )}
               </CardContent>
@@ -1048,13 +1050,13 @@ export default function Warehouse() {
         <Dialog open={multiLoadDialogOpen} onOpenChange={setMultiLoadDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Carico Multiprodotto</DialogTitle>
-              <DialogDescription>Aggiungi prodotti al magazzino</DialogDescription>
+              <DialogTitle>{t('warehouse.multiLoad')}</DialogTitle>
+              <DialogDescription>{t('warehouse.addProductsToWarehouse')}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               {multiLoadItems.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8">
-                  Clicca "Aggiungi Prodotto" per iniziare
+                  {t('warehouse.clickAddProduct')}
                 </div>
               ) : (
                 multiLoadItems.map((item) => (
@@ -1064,7 +1066,7 @@ export default function Warehouse() {
                       onValueChange={(value) => handleUpdateMultiLoadItem(item.id, 'productId', value)}
                     >
                       <SelectTrigger className="flex-1" data-testid={`select-multi-product-${item.id}`}>
-                        <SelectValue placeholder="Seleziona prodotto" />
+                        <SelectValue placeholder={t('warehouse.selectProductPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         {products?.map((product) => (
@@ -1077,7 +1079,7 @@ export default function Warehouse() {
                     <Input
                       type="number"
                       step="0.01"
-                      placeholder="Quantità"
+                      placeholder={t('warehouse.quantityPlaceholder')}
                       value={item.quantity}
                       className="w-28 text-center"
                       onChange={(e) => handleUpdateMultiLoadItem(item.id, 'quantity', e.target.value)}
@@ -1088,10 +1090,10 @@ export default function Warehouse() {
                       onValueChange={(value) => handleUpdateMultiLoadItem(item.id, 'supplierId', value)}
                     >
                       <SelectTrigger className="w-40" data-testid={`select-multi-supplier-${item.id}`}>
-                        <SelectValue placeholder="Fornitore" />
+                        <SelectValue placeholder={t('warehouse.supplierPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">Nessuno</SelectItem>
+                        <SelectItem value="none">{t('warehouse.none')}</SelectItem>
                         {suppliers?.map((supplier) => (
                           <SelectItem key={supplier.id} value={supplier.id}>
                             {supplier.name}
@@ -1112,15 +1114,15 @@ export default function Warehouse() {
               )}
               <Button variant="outline" className="w-full" onClick={handleAddMultiLoadItem} data-testid="button-add-multi-product">
                 <Plus className="h-4 w-4 mr-2" />
-                Aggiungi Prodotto
+                {t('warehouse.addProduct')}
               </Button>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => { setMultiLoadDialogOpen(false); setMultiLoadItems([]); }} data-testid="button-cancel-multi-load">
-                Annulla
+                {t('common.cancel')}
               </Button>
               <Button onClick={handleSubmitBulkLoad} disabled={bulkLoadMutation.isPending || multiLoadItems.length === 0} data-testid="button-submit-multi-load">
-                {bulkLoadMutation.isPending ? 'Caricamento...' : `Carica (${multiLoadItems.length})`}
+                {bulkLoadMutation.isPending ? t('warehouse.loading') : t('warehouse.loadCount', { count: multiLoadItems.length })}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1129,13 +1131,13 @@ export default function Warehouse() {
         <Dialog open={multiUnloadDialogOpen} onOpenChange={setMultiUnloadDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Scarico Multiprodotto</DialogTitle>
-              <DialogDescription>Scarica prodotti dal magazzino</DialogDescription>
+              <DialogTitle>{t('warehouse.multiUnload')}</DialogTitle>
+              <DialogDescription>{t('warehouse.unloadProductsFromWarehouse')}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               {multiUnloadItems.length === 0 ? (
                 <div className="text-center text-muted-foreground py-8">
-                  Clicca "Aggiungi Prodotto" per iniziare
+                  {t('warehouse.clickAddProduct')}
                 </div>
               ) : (
                 multiUnloadItems.map((item) => (
@@ -1145,7 +1147,7 @@ export default function Warehouse() {
                       onValueChange={(value) => handleUpdateMultiUnloadItem(item.id, 'productId', value)}
                     >
                       <SelectTrigger className="flex-1" data-testid={`select-multi-unload-product-${item.id}`}>
-                        <SelectValue placeholder="Seleziona prodotto" />
+                        <SelectValue placeholder={t('warehouse.selectProductPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         {products?.filter(p => p.id).map((product) => (
@@ -1158,14 +1160,14 @@ export default function Warehouse() {
                     <Input
                       type="number"
                       step="0.01"
-                      placeholder="Quantità"
+                      placeholder={t('warehouse.quantityPlaceholder')}
                       value={item.quantity}
                       className="w-28 text-center"
                       onChange={(e) => handleUpdateMultiUnloadItem(item.id, 'quantity', e.target.value)}
                       data-testid={`input-multi-unload-quantity-${item.id}`}
                     />
                     <Input
-                      placeholder="Motivo"
+                      placeholder={t('warehouse.reasonPlaceholder')}
                       value={item.reason || ''}
                       className="w-40"
                       onChange={(e) => handleUpdateMultiUnloadItem(item.id, 'reason', e.target.value)}
@@ -1184,15 +1186,15 @@ export default function Warehouse() {
               )}
               <Button variant="outline" className="w-full" onClick={handleAddMultiUnloadItem} data-testid="button-add-multi-unload-product">
                 <Plus className="h-4 w-4 mr-2" />
-                Aggiungi Prodotto
+                {t('warehouse.addProduct')}
               </Button>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => { setMultiUnloadDialogOpen(false); setMultiUnloadItems([]); }} data-testid="button-cancel-multi-unload">
-                Annulla
+                {t('common.cancel')}
               </Button>
               <Button variant="destructive" onClick={handleSubmitBulkUnload} disabled={bulkUnloadMutation.isPending || multiUnloadItems.length === 0} data-testid="button-submit-multi-unload">
-                {bulkUnloadMutation.isPending ? 'Scaricando...' : `Scarica (${multiUnloadItems.length})`}
+                {bulkUnloadMutation.isPending ? t('warehouse.unloading') : t('warehouse.unloadCount', { count: multiUnloadItems.length })}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1201,42 +1203,42 @@ export default function Warehouse() {
         <Dialog open={adjustDialogOpen} onOpenChange={setAdjustDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Correggi Quantità</DialogTitle>
-              <DialogDescription>Modifica la quantità di {adjustingProduct?.name}</DialogDescription>
+              <DialogTitle>{t('warehouse.adjustQuantity')}</DialogTitle>
+              <DialogDescription>{t('warehouse.adjustQuantityDesc', { name: adjustingProduct?.name })}</DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="p-4 bg-muted rounded-lg">
-                <p className="text-sm text-muted-foreground">Quantità attuale</p>
+                <p className="text-sm text-muted-foreground">{t('warehouse.currentQuantity')}</p>
                 <p className="text-2xl font-bold tabular-nums">{adjustingProduct ? parseFloat(adjustingProduct.quantity).toFixed(2) : '-'}</p>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Nuova Quantità</label>
+                <label className="text-sm font-medium">{t('warehouse.newQuantity')}</label>
                 <Input
                   type="number"
                   min="0"
                   step="0.01"
                   value={adjustQuantity}
                   onChange={(e) => setAdjustQuantity(e.target.value)}
-                  placeholder="Inserisci nuova quantità"
+                  placeholder={t('warehouse.enterNewQuantity')}
                   data-testid="input-adjust-quantity"
                 />
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Motivo (opzionale)</label>
+                <label className="text-sm font-medium">{t('warehouse.reasonOptional')}</label>
                 <Textarea
                   value={adjustReason}
                   onChange={(e) => setAdjustReason(e.target.value)}
-                  placeholder="Es: Correzione inventario..."
+                  placeholder={t('warehouse.reasonExample')}
                   data-testid="input-adjust-reason"
                 />
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setAdjustDialogOpen(false)} data-testid="button-cancel-adjust">
-                Annulla
+                {t('common.cancel')}
               </Button>
               <Button onClick={handleAdjustStock} disabled={adjustStockMutation.isPending} data-testid="button-confirm-adjust">
-                {adjustStockMutation.isPending ? 'Salvataggio...' : 'Salva'}
+                {adjustStockMutation.isPending ? t('warehouse.saving') : t('common.save')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1245,20 +1247,20 @@ export default function Warehouse() {
         <AlertDialog open={clearWarehouseDialogOpen} onOpenChange={setClearWarehouseDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Svuota Magazzino</AlertDialogTitle>
+              <AlertDialogTitle>{t('warehouse.clearWarehouseTitle')}</AlertDialogTitle>
               <AlertDialogDescription>
-                Sei sicuro di voler azzerare tutte le giacenze del magazzino? Questa operazione non può essere annullata.
+                {t('warehouse.clearWarehouseDesc')}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel data-testid="button-cancel-clear">Annulla</AlertDialogCancel>
+              <AlertDialogCancel data-testid="button-cancel-clear">{t('common.cancel')}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => clearWarehouseMutation.mutate()}
                 disabled={clearWarehouseMutation.isPending}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 data-testid="button-confirm-clear"
               >
-                {clearWarehouseMutation.isPending ? 'Svuotamento...' : 'Svuota Magazzino'}
+                {clearWarehouseMutation.isPending ? t('warehouse.clearing') : t('warehouse.clearWarehouse')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -1269,8 +1271,8 @@ export default function Warehouse() {
 
   const header = (
     <MobileHeader
-      title="Magazzino"
-      subtitle="Gestione inventario"
+      title={t('warehouse.title')}
+      subtitle={t('warehouse.subtitle')}
       showBackButton showMenuButton
     />
   );
@@ -1284,10 +1286,10 @@ export default function Warehouse() {
           animate="show"
           className="grid grid-cols-2 gap-4"
         >
-          <StatsCard title="Prodotti" value={totalProducts} icon={BoxesIcon} gradient="from-blue-500 to-indigo-600" testId="stat-total-products" />
-          <StatsCard title="Quantità Totale" value={totalQuantity.toFixed(0)} icon={Package} gradient="from-emerald-500 to-teal-600" testId="stat-total-quantity" />
-          <StatsCard title="Stock Basso" value={lowStockCount} icon={AlertTriangle} gradient="from-amber-500 to-orange-600" testId="stat-low-stock" />
-          <StatsCard title="Movimenti Oggi" value={todayMovements} icon={Activity} gradient="from-violet-500 to-purple-600" testId="stat-today-movements" />
+          <StatsCard title={t('warehouse.products')} value={totalProducts} icon={BoxesIcon} gradient="from-blue-500 to-indigo-600" testId="stat-total-products" />
+          <StatsCard title={t('warehouse.totalQuantity')} value={totalQuantity.toFixed(0)} icon={Package} gradient="from-emerald-500 to-teal-600" testId="stat-total-quantity" />
+          <StatsCard title={t('warehouse.lowStock')} value={lowStockCount} icon={AlertTriangle} gradient="from-amber-500 to-orange-600" testId="stat-low-stock" />
+          <StatsCard title={t('warehouse.movementsToday')} value={todayMovements} icon={Activity} gradient="from-violet-500 to-purple-600" testId="stat-today-movements" />
         </motion.div>
 
         <motion.div
@@ -1298,13 +1300,13 @@ export default function Warehouse() {
           <Tabs value={activeTab} onValueChange={(v) => { setActiveTab(v); triggerHaptic('light'); }}>
             <TabsList className="w-full h-14 p-1 bg-card/50">
               <TabsTrigger value="stocks" className="flex-1 h-12 text-base font-medium" data-testid="tab-stocks">
-                Giacenze
+                {t('warehouse.stocks')}
               </TabsTrigger>
               <TabsTrigger value="event-transfer" className="flex-1 h-12 text-base font-medium" data-testid="tab-event-transfer">
-                Evento
+                {t('warehouse.event')}
               </TabsTrigger>
               <TabsTrigger value="movements" className="flex-1 h-12 text-base font-medium" data-testid="tab-movements">
-                Movimenti
+                {t('warehouse.movements')}
               </TabsTrigger>
             </TabsList>
 
@@ -1312,7 +1314,7 @@ export default function Warehouse() {
               <div className="relative">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                 <Input
-                  placeholder="Cerca prodotto..."
+                  placeholder={t('warehouse.searchProduct')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-12 h-14 text-base"
@@ -1329,7 +1331,7 @@ export default function Warehouse() {
                   hapticType="heavy"
                 >
                   <Trash2 className="h-5 w-5 mr-2" />
-                  Svuota Magazzino
+                  {t('warehouse.clearWarehouse')}
                 </HapticButton>
               )}
 
@@ -1364,7 +1366,7 @@ export default function Warehouse() {
                   <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center mx-auto mb-4">
                     <Package className="h-10 w-10 text-white" />
                   </div>
-                  <p className="text-muted-foreground text-lg">Nessuna giacenza presente</p>
+                  <p className="text-muted-foreground text-lg">{t('warehouse.noStockPresent')}</p>
                 </motion.div>
               )}
             </TabsContent>
@@ -1372,7 +1374,7 @@ export default function Warehouse() {
             <TabsContent value="event-transfer" className="mt-6 space-y-4">
               <Select value={selectedEventId} onValueChange={setSelectedEventId}>
                 <SelectTrigger className="h-14 text-base" data-testid="select-event">
-                  <SelectValue placeholder="Seleziona evento" />
+                  <SelectValue placeholder={t('warehouse.selectEvent')} />
                 </SelectTrigger>
                 <SelectContent>
                   {activeEvents.map(event => (
@@ -1380,7 +1382,7 @@ export default function Warehouse() {
                       <span className="flex items-center gap-2">
                         {event.name}
                         <span className={event.status === 'ongoing' ? 'text-teal' : 'text-muted-foreground'}>
-                          ({event.status === 'ongoing' ? 'In corso' : 'Programmato'})
+                          ({event.status === 'ongoing' ? t('warehouse.ongoing') : t('warehouse.scheduled')})
                         </span>
                       </span>
                     </SelectItem>
@@ -1398,7 +1400,7 @@ export default function Warehouse() {
                   <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
                     <Package className="h-10 w-10 text-white" />
                   </div>
-                  <p className="text-muted-foreground text-lg">Seleziona un evento</p>
+                  <p className="text-muted-foreground text-lg">{t('warehouse.selectAnEvent')}</p>
                 </motion.div>
               ) : (
                 <div className="space-y-4">
@@ -1414,8 +1416,8 @@ export default function Warehouse() {
                           <TrendingUp className="h-7 w-7 text-white" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-lg">Trasferisci a Evento</h3>
-                          <p className="text-sm text-muted-foreground">Dal magazzino all'evento</p>
+                          <h3 className="font-semibold text-lg">{t('warehouse.transferToEvent')}</h3>
+                          <p className="text-sm text-muted-foreground">{t('warehouse.fromWarehouseToEvent')}</p>
                         </div>
                       </div>
                     </div>
@@ -1423,7 +1425,7 @@ export default function Warehouse() {
                       {productsWithGeneralStock.length === 0 ? (
                         <div className="p-8 text-center">
                           <Package className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                          <p className="text-muted-foreground">Nessun prodotto disponibile</p>
+                          <p className="text-muted-foreground">{t('warehouse.noProductAvailable')}</p>
                         </div>
                       ) : (
                         productsWithGeneralStock.map((product) => {
@@ -1433,14 +1435,14 @@ export default function Warehouse() {
                               <div className="flex items-center justify-between">
                                 <div>
                                   <div className="font-medium text-base">{product.name}</div>
-                                  <div className="text-sm text-muted-foreground">Disponibile: <span className="text-teal font-semibold">{generalStock.toFixed(1)}</span></div>
+                                  <div className="text-sm text-muted-foreground">{t('warehouse.available')}: <span className="text-teal font-semibold">{generalStock.toFixed(1)}</span></div>
                                 </div>
                               </div>
                               <div className="flex items-center gap-3">
                                 <Input
                                   type="number"
                                   min="0"
-                                  placeholder="Qtà"
+                                  placeholder={t('warehouse.qtyShort')}
                                   value={transferQuantities[product.id] || ""}
                                   onChange={(e) => setTransferQuantities(prev => ({ ...prev, [product.id]: e.target.value }))}
                                   className="flex-1 h-14 text-center text-lg"
@@ -1474,8 +1476,8 @@ export default function Warehouse() {
                           <TrendingDown className="h-7 w-7 text-white" />
                         </div>
                         <div>
-                          <h3 className="font-semibold text-lg">Scarica da Evento</h3>
-                          <p className="text-sm text-muted-foreground">Registra il consumo</p>
+                          <h3 className="font-semibold text-lg">{t('warehouse.unloadFromEvent')}</h3>
+                          <p className="text-sm text-muted-foreground">{t('warehouse.consumeFromEventDesc')}</p>
                         </div>
                       </div>
                     </div>
@@ -1483,7 +1485,7 @@ export default function Warehouse() {
                       {productsWithEventStock.length === 0 ? (
                         <div className="p-8 text-center">
                           <Package className="h-10 w-10 text-muted-foreground mx-auto mb-2" />
-                          <p className="text-muted-foreground">Nessun prodotto nell'evento</p>
+                          <p className="text-muted-foreground">{t('warehouse.noProductInEvent')}</p>
                         </div>
                       ) : (
                         productsWithEventStock.map((product) => {
@@ -1493,14 +1495,14 @@ export default function Warehouse() {
                               <div className="flex items-center justify-between">
                                 <div>
                                   <div className="font-medium text-base">{product.name}</div>
-                                  <div className="text-sm text-muted-foreground">Disponibile: <span className="text-amber-500 font-semibold">{eventStock.toFixed(1)}</span></div>
+                                  <div className="text-sm text-muted-foreground">{t('warehouse.available')}: <span className="text-amber-500 font-semibold">{eventStock.toFixed(1)}</span></div>
                                 </div>
                               </div>
                               <div className="flex items-center gap-3">
                                 <Input
                                   type="number"
                                   min="0"
-                                  placeholder="Qtà"
+                                  placeholder={t('warehouse.qtyShort')}
                                   value={consumeQuantities[product.id] || ""}
                                   onChange={(e) => setConsumeQuantities(prev => ({ ...prev, [product.id]: e.target.value }))}
                                   className="flex-1 h-14 text-center text-lg"
@@ -1531,7 +1533,7 @@ export default function Warehouse() {
                 <div className="relative">
                   <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
                   <Input
-                    placeholder="Cerca movimento..."
+                    placeholder={t('warehouse.searchMovements')}
                     value={movementSearchQuery}
                     onChange={(e) => setMovementSearchQuery(e.target.value)}
                     className="pl-12 h-14 text-base"
@@ -1540,12 +1542,12 @@ export default function Warehouse() {
                 </div>
                 <Select value={movementTypeFilter} onValueChange={setMovementTypeFilter}>
                   <SelectTrigger className="h-14 text-base" data-testid="select-movement-type">
-                    <SelectValue placeholder="Tipo movimento" />
+                    <SelectValue placeholder={t('warehouse.type')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tutti</SelectItem>
-                    <SelectItem value="LOAD">Carico</SelectItem>
-                    <SelectItem value="UNLOAD">Scarico</SelectItem>
+                    <SelectItem value="all">{t('warehouse.allTypes')}</SelectItem>
+                    <SelectItem value="LOAD">{t('warehouse.load')}</SelectItem>
+                    <SelectItem value="UNLOAD">{t('warehouse.unload')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
@@ -1571,7 +1573,7 @@ export default function Warehouse() {
                   <div className="w-20 h-20 rounded-3xl bg-gradient-to-br from-violet-500 to-purple-600 flex items-center justify-center mx-auto mb-4">
                     <WarehouseIcon className="h-10 w-10 text-white" />
                   </div>
-                  <p className="text-muted-foreground text-lg">Nessun movimento registrato</p>
+                  <p className="text-muted-foreground text-lg">{t('warehouse.noMovementsRegistered')}</p>
                 </motion.div>
               )}
             </TabsContent>
@@ -1609,7 +1611,7 @@ export default function Warehouse() {
                 hapticType="medium"
               >
                 <TrendingUp className="h-5 w-5 mr-2" />
-                Carico
+                {t('warehouse.load')}
               </HapticButton>
             </motion.div>
             <motion.div
@@ -1628,7 +1630,7 @@ export default function Warehouse() {
                 hapticType="medium"
               >
                 <TrendingDown className="h-5 w-5 mr-2" />
-                Scarico
+                {t('warehouse.unload')}
               </HapticButton>
             </motion.div>
           </>
@@ -1650,7 +1652,7 @@ export default function Warehouse() {
       <BottomSheet
         open={multiLoadDialogOpen}
         onClose={() => { setMultiLoadDialogOpen(false); setMultiLoadItems([]); }}
-        title="Carico Multiprodotto"
+        title={t('warehouse.multiLoad')}
       >
         <div className="p-4 space-y-4 pb-8">
           <AnimatePresence>
@@ -1660,7 +1662,7 @@ export default function Warehouse() {
                 animate={{ opacity: 1 }}
                 className="text-center text-muted-foreground py-8"
               >
-                Clicca "+ Aggiungi Prodotto" per iniziare
+                {t('warehouse.clickAddProduct')}
               </motion.div>
             ) : (
               multiLoadItems.map((item) => (
@@ -1678,7 +1680,7 @@ export default function Warehouse() {
                       onValueChange={(value) => handleUpdateMultiLoadItem(item.id, 'productId', value)}
                     >
                       <SelectTrigger className="flex-1 h-14" data-testid={`select-multi-product-${item.id}`}>
-                        <SelectValue placeholder="Seleziona prodotto" />
+                        <SelectValue placeholder={t('warehouse.selectProductPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         {products?.map((product) => (
@@ -1701,7 +1703,7 @@ export default function Warehouse() {
                     <Input
                       type="number"
                       step="0.01"
-                      placeholder="Quantità"
+                      placeholder={t('warehouse.quantityPlaceholder')}
                       value={item.quantity}
                       className="h-14 text-lg text-center"
                       onChange={(e) => handleUpdateMultiLoadItem(item.id, 'quantity', e.target.value)}
@@ -1712,10 +1714,10 @@ export default function Warehouse() {
                       onValueChange={(value) => handleUpdateMultiLoadItem(item.id, 'supplierId', value)}
                     >
                       <SelectTrigger className="h-14" data-testid={`select-multi-supplier-${item.id}`}>
-                        <SelectValue placeholder="Fornitore" />
+                        <SelectValue placeholder={t('warehouse.supplierPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="none">Nessuno</SelectItem>
+                        <SelectItem value="none">{t('warehouse.none')}</SelectItem>
                         {suppliers?.map((supplier) => (
                           <SelectItem key={supplier.id} value={supplier.id}>
                             {supplier.name}
@@ -1736,7 +1738,7 @@ export default function Warehouse() {
             data-testid="button-add-multi-product"
           >
             <Plus className="h-5 w-5 mr-2" />
-            Aggiungi Prodotto
+            {t('warehouse.addProduct')}
           </HapticButton>
 
           <div className="grid grid-cols-2 gap-4 pt-4">
@@ -1746,7 +1748,7 @@ export default function Warehouse() {
               onClick={() => { setMultiLoadDialogOpen(false); setMultiLoadItems([]); }}
               data-testid="button-cancel-multi-load"
             >
-              Annulla
+              {t('common.cancel')}
             </HapticButton>
             <HapticButton
               onClick={handleSubmitBulkLoad}
@@ -1755,7 +1757,7 @@ export default function Warehouse() {
               data-testid="button-submit-multi-load"
               hapticType="success"
             >
-              {bulkLoadMutation.isPending ? 'Caricamento...' : `Carica (${multiLoadItems.length})`}
+              {bulkLoadMutation.isPending ? t('warehouse.loading') : t('warehouse.loadCount', { count: multiLoadItems.length })}
             </HapticButton>
           </div>
         </div>
@@ -1764,7 +1766,7 @@ export default function Warehouse() {
       <BottomSheet
         open={multiUnloadDialogOpen}
         onClose={() => { setMultiUnloadDialogOpen(false); setMultiUnloadItems([]); }}
-        title="Scarico Multiprodotto"
+        title={t('warehouse.multiUnload')}
       >
         <div className="p-4 space-y-4 pb-8">
           <AnimatePresence>
@@ -1774,7 +1776,7 @@ export default function Warehouse() {
                 animate={{ opacity: 1 }}
                 className="text-center text-muted-foreground py-8"
               >
-                Clicca "+ Aggiungi Prodotto" per iniziare
+                {t('warehouse.clickAddProduct')}
               </motion.div>
             ) : (
               multiUnloadItems.map((item) => (
@@ -1792,7 +1794,7 @@ export default function Warehouse() {
                       onValueChange={(value) => handleUpdateMultiUnloadItem(item.id, 'productId', value)}
                     >
                       <SelectTrigger className="flex-1 h-14" data-testid={`select-multi-unload-product-${item.id}`}>
-                        <SelectValue placeholder="Seleziona prodotto" />
+                        <SelectValue placeholder={t('warehouse.selectProductPlaceholder')} />
                       </SelectTrigger>
                       <SelectContent>
                         {products?.filter(p => p.id).map((product) => (
@@ -1815,14 +1817,14 @@ export default function Warehouse() {
                     <Input
                       type="number"
                       step="0.01"
-                      placeholder="Quantità"
+                      placeholder={t('warehouse.quantityPlaceholder')}
                       value={item.quantity}
                       className="h-14 text-lg text-center"
                       onChange={(e) => handleUpdateMultiUnloadItem(item.id, 'quantity', e.target.value)}
                       data-testid={`input-multi-unload-quantity-${item.id}`}
                     />
                     <Input
-                      placeholder="Motivo"
+                      placeholder={t('warehouse.reasonPlaceholder')}
                       value={item.reason || ''}
                       className="h-14"
                       onChange={(e) => handleUpdateMultiUnloadItem(item.id, 'reason', e.target.value)}
@@ -1841,7 +1843,7 @@ export default function Warehouse() {
             data-testid="button-add-multi-unload-product"
           >
             <Plus className="h-5 w-5 mr-2" />
-            Aggiungi Prodotto
+            {t('warehouse.addProduct')}
           </HapticButton>
 
           <div className="grid grid-cols-2 gap-4 pt-4">
@@ -1851,7 +1853,7 @@ export default function Warehouse() {
               onClick={() => { setMultiUnloadDialogOpen(false); setMultiUnloadItems([]); }}
               data-testid="button-cancel-multi-unload"
             >
-              Annulla
+              {t('common.cancel')}
             </HapticButton>
             <HapticButton
               variant="destructive"
@@ -1861,7 +1863,7 @@ export default function Warehouse() {
               data-testid="button-submit-multi-unload"
               hapticType="success"
             >
-              {bulkUnloadMutation.isPending ? 'Scaricando...' : `Scarica (${multiUnloadItems.length})`}
+              {bulkUnloadMutation.isPending ? t('warehouse.unloading') : t('warehouse.unloadCount', { count: multiUnloadItems.length })}
             </HapticButton>
           </div>
         </div>
@@ -1870,7 +1872,7 @@ export default function Warehouse() {
       <BottomSheet
         open={loadDialogOpen}
         onClose={() => setLoadDialogOpen(false)}
-        title="Carico Merce"
+        title={t('warehouse.loadGoods')}
       >
         <div className="p-4 pb-8">
           <Form {...loadForm}>
@@ -1880,11 +1882,11 @@ export default function Warehouse() {
                 name="productId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Prodotto</FormLabel>
+                    <FormLabel>{t('warehouse.productLabel')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="h-14" data-testid="select-load-product">
-                          <SelectValue placeholder="Seleziona prodotto" />
+                          <SelectValue placeholder={t('warehouse.selectProductPlaceholder')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -1904,7 +1906,7 @@ export default function Warehouse() {
                 name="quantity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Quantità</FormLabel>
+                    <FormLabel>{t('warehouse.quantityLabel')}</FormLabel>
                     <FormControl>
                       <Input {...field} type="number" step="0.01" className="h-14 text-lg" data-testid="input-load-quantity" />
                     </FormControl>
@@ -1917,7 +1919,7 @@ export default function Warehouse() {
                 name="supplier"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Fornitore (opzionale)</FormLabel>
+                    <FormLabel>{t('warehouse.supplierOptional')}</FormLabel>
                     <FormControl>
                       <Input {...field} className="h-14" data-testid="input-load-supplier" />
                     </FormControl>
@@ -1930,9 +1932,9 @@ export default function Warehouse() {
                 name="reason"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Note</FormLabel>
+                    <FormLabel>{t('warehouse.notes')}</FormLabel>
                     <FormControl>
-                      <Textarea {...field} placeholder="Es. fattura, DDT, ecc." className="min-h-[100px]" data-testid="input-load-reason" />
+                      <Textarea {...field} placeholder={t('warehouse.invoiceExample')} className="min-h-[100px]" data-testid="input-load-reason" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -1940,10 +1942,10 @@ export default function Warehouse() {
               />
               <div className="grid grid-cols-2 gap-4 pt-4">
                 <HapticButton type="button" variant="outline" className="h-14" onClick={() => setLoadDialogOpen(false)} data-testid="button-cancel-load">
-                  Annulla
+                  {t('common.cancel')}
                 </HapticButton>
                 <HapticButton type="submit" disabled={loadMutation.isPending} className="gradient-golden text-black font-semibold h-14" data-testid="button-submit-load" hapticType="success">
-                  Carica
+                  {t('warehouse.load')}
                 </HapticButton>
               </div>
             </form>
@@ -1954,7 +1956,7 @@ export default function Warehouse() {
       <BottomSheet
         open={unloadDialogOpen}
         onClose={() => setUnloadDialogOpen(false)}
-        title="Scarico Merce"
+        title={t('warehouse.unloadGoods')}
       >
         <div className="p-4 pb-8">
           <Form {...unloadForm}>
@@ -1964,11 +1966,11 @@ export default function Warehouse() {
                 name="productId"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Prodotto</FormLabel>
+                    <FormLabel>{t('warehouse.productLabel')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger className="h-14" data-testid="select-unload-product">
-                          <SelectValue placeholder="Seleziona prodotto" />
+                          <SelectValue placeholder={t('warehouse.selectProductPlaceholder')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -1988,7 +1990,7 @@ export default function Warehouse() {
                 name="quantity"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Quantità</FormLabel>
+                    <FormLabel>{t('warehouse.quantityLabel')}</FormLabel>
                     <FormControl>
                       <Input {...field} type="number" step="0.01" className="h-14 text-lg" data-testid="input-unload-quantity" />
                     </FormControl>
@@ -2001,9 +2003,9 @@ export default function Warehouse() {
                 name="reason"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Motivo</FormLabel>
+                    <FormLabel>{t('warehouse.reason')}</FormLabel>
                     <FormControl>
-                      <Textarea {...field} placeholder="Es. rottura, scarto, ecc." className="min-h-[100px]" data-testid="input-unload-reason" />
+                      <Textarea {...field} placeholder={t('warehouse.breakageExample')} className="min-h-[100px]" data-testid="input-unload-reason" />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -2011,10 +2013,10 @@ export default function Warehouse() {
               />
               <div className="grid grid-cols-2 gap-4 pt-4">
                 <HapticButton type="button" variant="outline" className="h-14" onClick={() => setUnloadDialogOpen(false)} data-testid="button-cancel-unload">
-                  Annulla
+                  {t('common.cancel')}
                 </HapticButton>
                 <HapticButton type="submit" disabled={unloadMutation.isPending} className="h-14 font-semibold" variant="destructive" data-testid="button-submit-unload" hapticType="success">
-                  Scarica
+                  {t('warehouse.unload')}
                 </HapticButton>
               </div>
             </form>
@@ -2025,43 +2027,43 @@ export default function Warehouse() {
       <BottomSheet
         open={adjustDialogOpen}
         onClose={() => setAdjustDialogOpen(false)}
-        title="Correggi Quantità"
+        title={t('warehouse.adjustQuantity')}
       >
         <div className="p-4 space-y-4 pb-8">
           <div className="glass-card p-5">
-            <p className="text-sm text-muted-foreground mb-1">Prodotto</p>
+            <p className="text-sm text-muted-foreground mb-1">{t('warehouse.productLabel')}</p>
             <p className="font-semibold text-lg">{adjustingProduct?.name}</p>
           </div>
           <div className="glass-card p-5">
-            <p className="text-sm text-muted-foreground mb-1">Quantità attuale</p>
+            <p className="text-sm text-muted-foreground mb-1">{t('warehouse.currentQuantity')}</p>
             <p className="font-bold text-3xl tabular-nums">{adjustingProduct ? parseFloat(adjustingProduct.quantity).toFixed(2) : '-'}</p>
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Nuova Quantità</label>
+            <label className="text-sm font-medium">{t('warehouse.newQuantity')}</label>
             <Input
               type="number"
               min="0"
               step="0.01"
               value={adjustQuantity}
               onChange={(e) => setAdjustQuantity(e.target.value)}
-              placeholder="Inserisci nuova quantità"
+              placeholder={t('warehouse.enterNewQuantity')}
               className="h-14 text-xl text-center"
               data-testid="input-adjust-quantity"
             />
           </div>
           <div className="space-y-2">
-            <label className="text-sm font-medium">Motivo (opzionale)</label>
+            <label className="text-sm font-medium">{t('warehouse.reasonOptional')}</label>
             <Textarea
               value={adjustReason}
               onChange={(e) => setAdjustReason(e.target.value)}
-              placeholder="Es: Correzione inventario..."
+              placeholder={t('warehouse.reasonExample')}
               className="min-h-[100px]"
               data-testid="input-adjust-reason"
             />
           </div>
           <div className="grid grid-cols-2 gap-4 pt-4">
             <HapticButton variant="outline" className="h-14" onClick={() => setAdjustDialogOpen(false)} data-testid="button-cancel-adjust">
-              Annulla
+              {t('common.cancel')}
             </HapticButton>
             <HapticButton
               onClick={handleAdjustStock}
@@ -2070,7 +2072,7 @@ export default function Warehouse() {
               data-testid="button-confirm-adjust"
               hapticType="success"
             >
-              {adjustStockMutation.isPending ? 'Salvataggio...' : 'Salva'}
+              {adjustStockMutation.isPending ? t('warehouse.saving') : t('common.save')}
             </HapticButton>
           </div>
         </div>
@@ -2079,15 +2081,15 @@ export default function Warehouse() {
       <AlertDialog open={clearWarehouseDialogOpen} onOpenChange={setClearWarehouseDialogOpen}>
         <AlertDialogContent className="mx-4 rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Svuota Magazzino</AlertDialogTitle>
+            <AlertDialogTitle>{t('warehouse.clearWarehouseTitle')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Sei sicuro di voler azzerare tutte le giacenze del magazzino? Questa operazione non può essere annullata.
+              {t('warehouse.clearWarehouseDesc')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="flex-col gap-3">
             <AlertDialogCancel asChild>
               <HapticButton variant="outline" className="h-14 w-full" data-testid="button-cancel-clear">
-                Annulla
+                {t('common.cancel')}
               </HapticButton>
             </AlertDialogCancel>
             <AlertDialogAction asChild>
@@ -2099,7 +2101,7 @@ export default function Warehouse() {
                 data-testid="button-confirm-clear"
                 hapticType="heavy"
               >
-                {clearWarehouseMutation.isPending ? 'Svuotamento...' : 'Svuota Magazzino'}
+                {clearWarehouseMutation.isPending ? t('warehouse.clearing') : t('warehouse.clearWarehouse')}
               </HapticButton>
             </AlertDialogAction>
           </AlertDialogFooter>

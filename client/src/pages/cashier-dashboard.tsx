@@ -1,9 +1,10 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { format } from "date-fns";
-import { it } from "date-fns/locale";
+import { it, enUS, fr, de } from "date-fns/locale";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTranslation } from "react-i18next";
 import { Link } from "wouter";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -52,11 +53,23 @@ interface CashierEventAllocation {
   isActive: boolean;
 }
 
+const getDateLocale = (lang: string) => {
+  switch (lang) {
+    case 'en': return enUS;
+    case 'fr': return fr;
+    case 'de': return de;
+    default: return it;
+  }
+};
+
 export default function CashierDashboardPage() {
+  const { t, i18n } = useTranslation();
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [selectedEvent, setSelectedEvent] = useState<CashierEventAllocation | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+
+  const dateLocale = getDateLocale(i18n.language);
 
   const { data: myEvents, isLoading } = useQuery<CashierEventAllocation[]>({
     queryKey: ["/api/cashier/my-events"],
@@ -80,8 +93,8 @@ export default function CashierDashboardPage() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-cashier-dashboard">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">I Miei Eventi</h1>
-            <p className="text-muted-foreground">Gestione quote biglietti assegnate</p>
+            <h1 className="text-3xl font-bold">{t("cashier.myEvents")}</h1>
+            <p className="text-muted-foreground">{t("cashier.quotaManagement")}</p>
           </div>
         </div>
 
@@ -89,33 +102,33 @@ export default function CashierDashboardPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{stats.totalEvents}</div>
-              <p className="text-sm text-muted-foreground">Eventi Assegnati</p>
+              <p className="text-sm text-muted-foreground">{t("cashier.assignedEvents")}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{stats.totalQuota}</div>
-              <p className="text-sm text-muted-foreground">Quota Totale</p>
+              <p className="text-sm text-muted-foreground">{t("cashier.totalQuota")}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-emerald-500">{stats.totalUsed}</div>
-              <p className="text-sm text-muted-foreground">Biglietti Emessi</p>
+              <p className="text-sm text-muted-foreground">{t("cashier.ticketsIssued")}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-amber-500">{stats.totalRemaining}</div>
-              <p className="text-sm text-muted-foreground">Rimanenti</p>
+              <p className="text-sm text-muted-foreground">{t("cashier.remaining")}</p>
             </CardContent>
           </Card>
         </div>
 
         <Card>
           <CardHeader>
-            <CardTitle>Elenco Eventi</CardTitle>
-            <CardDescription>Eventi con quote biglietti assegnate</CardDescription>
+            <CardTitle>{t("cashier.eventList")}</CardTitle>
+            <CardDescription>{t("cashier.eventsWithQuota")}</CardDescription>
           </CardHeader>
           <CardContent>
             {isLoading ? (
@@ -125,21 +138,21 @@ export default function CashierDashboardPage() {
             ) : !myEvents || myEvents.length === 0 ? (
               <div className="text-center py-8 text-muted-foreground">
                 <Calendar className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                <p>Nessun evento assegnato</p>
-                <p className="text-sm">Contatta il tuo gestore per ricevere le assegnazioni.</p>
+                <p>{t("cashier.noAssignedEvents")}</p>
+                <p className="text-sm">{t("cashier.contactManager")}</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Evento</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Orario</TableHead>
-                    <TableHead>Luogo</TableHead>
-                    <TableHead>Settore</TableHead>
-                    <TableHead>Quota</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
+                    <TableHead>{t("cashier.event")}</TableHead>
+                    <TableHead>{t("common.date")}</TableHead>
+                    <TableHead>{t("common.time")}</TableHead>
+                    <TableHead>{t("cashier.venue")}</TableHead>
+                    <TableHead>{t("cashier.sector")}</TableHead>
+                    <TableHead>{t("cashier.quota")}</TableHead>
+                    <TableHead>{t("common.status")}</TableHead>
+                    <TableHead className="text-right">{t("common.actions")}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -150,7 +163,7 @@ export default function CashierDashboardPage() {
                       <TableRow key={eventData.allocationId} data-testid={`row-event-${eventData.eventId}`}>
                         <TableCell className="font-medium">{eventData.eventName}</TableCell>
                         <TableCell>
-                          {eventData.eventDate ? format(new Date(eventData.eventDate), "dd/MM/yyyy", { locale: it }) : "-"}
+                          {eventData.eventDate ? format(new Date(eventData.eventDate), "dd/MM/yyyy", { locale: dateLocale }) : "-"}
                         </TableCell>
                         <TableCell>{eventData.eventTime || "-"}</TableCell>
                         <TableCell>{eventData.venueName || "-"}</TableCell>
@@ -169,9 +182,9 @@ export default function CashierDashboardPage() {
                         </TableCell>
                         <TableCell>
                           {remaining <= 0 ? (
-                            <Badge className="bg-red-500/20 text-red-400">Esaurita</Badge>
+                            <Badge className="bg-red-500/20 text-red-400">{t("cashier.exhausted")}</Badge>
                           ) : (
-                            <Badge className="bg-emerald-500/20 text-emerald-400">Attivo</Badge>
+                            <Badge className="bg-emerald-500/20 text-emerald-400">{t("common.active")}</Badge>
                           )}
                         </TableCell>
                         <TableCell className="text-right">
@@ -194,7 +207,7 @@ export default function CashierDashboardPage() {
                                 data-testid={`button-emit-tickets-${eventData.eventId}`}
                               >
                                 <Ticket className="w-4 h-4 mr-1" />
-                                Emetti
+                                {t("cashier.issue")}
                               </Button>
                             </Link>
                           </div>
@@ -212,33 +225,33 @@ export default function CashierDashboardPage() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{selectedEvent?.eventName}</DialogTitle>
-              <DialogDescription>Dettagli evento e quota assegnata</DialogDescription>
+              <DialogDescription>{t("cashier.eventAndQuotaDetails")}</DialogDescription>
             </DialogHeader>
             {selectedEvent && (
               <div className="space-y-4 py-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Data</p>
+                    <p className="text-sm text-muted-foreground">{t("common.date")}</p>
                     <p className="font-medium">
-                      {selectedEvent.eventDate ? format(new Date(selectedEvent.eventDate), "EEEE d MMMM yyyy", { locale: it }) : "-"}
+                      {selectedEvent.eventDate ? format(new Date(selectedEvent.eventDate), "EEEE d MMMM yyyy", { locale: dateLocale }) : "-"}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Orario</p>
+                    <p className="text-sm text-muted-foreground">{t("common.time")}</p>
                     <p className="font-medium">{selectedEvent.eventTime || "-"}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Luogo</p>
+                    <p className="text-sm text-muted-foreground">{t("cashier.venue")}</p>
                     <p className="font-medium">{selectedEvent.venueName || "-"}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Settore</p>
+                    <p className="text-sm text-muted-foreground">{t("cashier.sector")}</p>
                     <p className="font-medium">{selectedEvent.sectorName || "-"}</p>
                   </div>
                 </div>
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
-                    <span>Quota Biglietti</span>
+                    <span>{t("cashier.ticketQuota")}</span>
                     <span className={`font-medium ${selectedEvent.quotaRemaining <= 5 && selectedEvent.quotaRemaining > 0 ? "text-yellow-500" : selectedEvent.quotaRemaining <= 0 ? "text-red-500" : "text-emerald-400"}`}>
                       {selectedEvent.quotaUsed} / {selectedEvent.quotaQuantity}
                     </span>
@@ -248,13 +261,13 @@ export default function CashierDashboardPage() {
                     className={`h-3 ${getQuotaPercentage(selectedEvent.quotaUsed, selectedEvent.quotaQuantity) > 90 ? "[&>div]:bg-red-500" : getQuotaPercentage(selectedEvent.quotaUsed, selectedEvent.quotaQuantity) > 75 ? "[&>div]:bg-yellow-500" : ""}`}
                   />
                   <p className="text-sm text-muted-foreground text-center">
-                    {selectedEvent.quotaRemaining} biglietti rimanenti
+                    {selectedEvent.quotaRemaining} {t("cashier.ticketsRemaining")}
                   </p>
                 </div>
                 {selectedEvent.quotaRemaining <= 0 && (
                   <div className="flex items-center gap-2 text-sm text-yellow-500 p-3 rounded-md bg-yellow-500/10 border border-yellow-500/30">
                     <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                    Quota esaurita
+                    {t("cashier.quotaExhausted")}
                   </div>
                 )}
                 <Link href={`/cassa-biglietti?eventId=${selectedEvent.eventId}`}>
@@ -264,7 +277,7 @@ export default function CashierDashboardPage() {
                     onClick={() => setIsDetailDialogOpen(false)}
                   >
                     <Ticket className="w-4 h-4 mr-2" />
-                    Emetti Biglietti
+                    {t("cashier.issueTickets")}
                   </Button>
                 </Link>
               </div>
@@ -277,7 +290,7 @@ export default function CashierDashboardPage() {
 
   return (
     <MobileAppLayout
-      header={<MobileHeader title="I Miei Eventi" showBackButton showMenuButton />}
+      header={<MobileHeader title={t("cashier.myEvents")} showBackButton showMenuButton />}
       contentClassName="pb-24"
     >
       <div className="p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6" data-testid="page-cashier-dashboard">
@@ -302,10 +315,9 @@ export default function CashierDashboardPage() {
             <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-muted/30 flex items-center justify-center">
               <Calendar className="w-8 h-8 text-muted-foreground" />
             </div>
-            <h3 className="text-lg font-semibold">Nessun Evento Assegnato</h3>
+            <h3 className="text-lg font-semibold">{t("cashier.noAssignedEventsTitle")}</h3>
             <p className="text-muted-foreground mt-2">
-              Non hai ancora quote biglietti assegnate per nessun evento.
-              Contatta il tuo gestore per ricevere le assegnazioni.
+              {t("cashier.noQuotaAssigned")}
             </p>
           </CardContent>
         </Card>
@@ -326,17 +338,17 @@ export default function CashierDashboardPage() {
                     <CardTitle className="text-lg line-clamp-2">
                       {eventData.eventName}
                     </CardTitle>
-                    <Badge className="bg-emerald-500/20 text-emerald-400">Attivo</Badge>
+                    <Badge className="bg-emerald-500/20 text-emerald-400">{t("common.active")}</Badge>
                   </div>
                   <CardDescription className="flex items-center gap-2">
                     <Calendar className="w-3 h-3" />
-                    {eventData.eventDate ? format(new Date(eventData.eventDate), "EEEE d MMMM yyyy", { locale: it }) : "Data non specificata"}
+                    {eventData.eventDate ? format(new Date(eventData.eventDate), "EEEE d MMMM yyyy", { locale: dateLocale }) : t("cashier.dateNotSpecified")}
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Clock className="w-4 h-4" />
-                    {eventData.eventTime || "Orario non specificato"}
+                    {eventData.eventTime || t("cashier.timeNotSpecified")}
                   </div>
                   
                   {eventData.venueName && (
@@ -350,7 +362,7 @@ export default function CashierDashboardPage() {
                     <div className="flex items-center justify-between text-sm">
                       <span className="flex items-center gap-2">
                         <Ticket className="w-4 h-4 text-muted-foreground" />
-                        Quota Biglietti
+                        {t("cashier.ticketQuota")}
                       </span>
                       <span className={`font-medium ${remaining <= 5 && remaining > 0 ? "text-yellow-500" : remaining <= 0 ? "text-red-500" : "text-emerald-400"}`}>
                         {eventData.quotaUsed} / {eventData.quotaQuantity}
@@ -361,13 +373,13 @@ export default function CashierDashboardPage() {
                       className={`h-2 ${percentage > 90 ? "[&>div]:bg-red-500" : percentage > 75 ? "[&>div]:bg-yellow-500" : ""}`}
                     />
                     <div className="text-xs text-muted-foreground text-right">
-                      {remaining} biglietti rimanenti
+                      {remaining} {t("cashier.ticketsRemaining")}
                     </div>
                   </div>
 
                   {eventData.sectorName && (
                     <div className="space-y-1">
-                      <p className="text-xs text-muted-foreground">Settore assegnato:</p>
+                      <p className="text-xs text-muted-foreground">{t("cashier.assignedSector")}</p>
                       <Badge variant="outline" className="text-xs">
                         {eventData.sectorName}
                       </Badge>
@@ -377,7 +389,7 @@ export default function CashierDashboardPage() {
                   {remaining <= 0 && (
                     <div className="flex items-center gap-2 text-sm text-yellow-500 p-2 rounded-md bg-yellow-500/10 border border-yellow-500/30">
                       <AlertCircle className="w-4 h-4 flex-shrink-0" />
-                      Quota esaurita
+                      {t("cashier.quotaExhausted")}
                     </div>
                   )}
 
@@ -388,7 +400,7 @@ export default function CashierDashboardPage() {
                       data-testid={`button-emit-tickets-${eventData.eventId}`}
                     >
                       <Ticket className="w-4 h-4 mr-2" />
-                      Emetti Biglietti
+                      {t("cashier.issueTickets")}
                       <ChevronRight className="w-4 h-4 ml-auto" />
                     </Button>
                   </Link>

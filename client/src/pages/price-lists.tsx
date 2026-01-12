@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -87,6 +88,7 @@ const staggerItem = {
 };
 
 export default function PriceLists() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { user } = useAuth();
   const isMobile = useIsMobile();

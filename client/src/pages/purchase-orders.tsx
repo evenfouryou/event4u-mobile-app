@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -143,6 +144,7 @@ const staggerContainer = {
 };
 
 export default function PurchaseOrders() {
+  const { t } = useTranslation();
   const isMobile = useIsMobile();
   const [formSheetOpen, setFormSheetOpen] = useState(false);
   const [suggestionsSheetOpen, setSuggestionsSheetOpen] = useState(false);
@@ -182,16 +184,16 @@ export default function PurchaseOrders() {
     } catch (error: any) {
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Non autorizzato",
-          description: "Effettua nuovamente il login...",
+          title: t('common.unauthorized'),
+          description: t('common.loginAgain'),
           variant: "destructive",
         });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
       toast({
-        title: "Errore",
-        description: "Impossibile generare ordini suggeriti",
+        title: t('common.error'),
+        description: t('purchaseOrders.errorGeneratingSuggestions'),
         variant: "destructive",
       });
     } finally {
@@ -230,24 +232,24 @@ export default function PurchaseOrders() {
       form.reset();
       triggerHaptic('success');
       toast({
-        title: "Successo",
-        description: "Ordine creato con successo",
+        title: t('common.success'),
+        description: t('purchaseOrders.orderCreated'),
       });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Non autorizzato",
-          description: "Effettua nuovamente il login...",
+          title: t('common.unauthorized'),
+          description: t('common.loginAgain'),
           variant: "destructive",
         });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
       toast({
-        title: "Errore",
-        description: "Impossibile creare l'ordine",
+        title: t('common.error'),
+        description: t('purchaseOrders.errorCreatingOrder'),
         variant: "destructive",
       });
     },
@@ -270,24 +272,24 @@ export default function PurchaseOrders() {
       form.reset();
       triggerHaptic('success');
       toast({
-        title: "Successo",
-        description: "Ordine aggiornato con successo",
+        title: t('common.success'),
+        description: t('purchaseOrders.orderUpdated'),
       });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Non autorizzato",
-          description: "Effettua nuovamente il login...",
+          title: t('common.unauthorized'),
+          description: t('common.loginAgain'),
           variant: "destructive",
         });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
       toast({
-        title: "Errore",
-        description: "Impossibile aggiornare l'ordine",
+        title: t('common.error'),
+        description: t('purchaseOrders.errorUpdatingOrder'),
         variant: "destructive",
       });
     },
@@ -302,24 +304,24 @@ export default function PurchaseOrders() {
       setDeletingOrder(null);
       triggerHaptic('success');
       toast({
-        title: "Successo",
-        description: "Ordine eliminato con successo",
+        title: t('common.success'),
+        description: t('purchaseOrders.orderDeleted'),
       });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Non autorizzato",
-          description: "Effettua nuovamente il login...",
+          title: t('common.unauthorized'),
+          description: t('common.loginAgain'),
           variant: "destructive",
         });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
       toast({
-        title: "Errore",
-        description: "Impossibile eliminare l'ordine",
+        title: t('common.error'),
+        description: t('purchaseOrders.errorDeletingOrder'),
         variant: "destructive",
       });
     },
@@ -388,10 +390,10 @@ export default function PurchaseOrders() {
   }, [orders, statusFilter]);
 
   const statusLabels: Record<string, string> = {
-    draft: 'Bozza',
-    submitted: 'Inviato',
-    received: 'Ricevuto',
-    cancelled: 'Annullato',
+    draft: t('purchaseOrders.status.draft'),
+    submitted: t('purchaseOrders.status.submitted'),
+    received: t('purchaseOrders.status.received'),
+    cancelled: t('purchaseOrders.status.cancelled'),
   };
 
   const statusColors: Record<string, string> = {
@@ -403,7 +405,7 @@ export default function PurchaseOrders() {
 
   const getSupplierName = (supplierId: string) => {
     const supplier = suppliers?.find(s => s.id === supplierId);
-    return supplier?.name || 'Sconosciuto';
+    return supplier?.name || t('purchaseOrders.unknownSupplier');
   };
 
   const exportToPDF = async (order: PurchaseOrder) => {
@@ -412,39 +414,39 @@ export default function PurchaseOrders() {
     const supplier = suppliers?.find(s => s.id === order.supplierId);
     
     doc.setFontSize(20);
-    doc.text('Ordine d\'Acquisto', 20, 20);
+    doc.text(t('purchaseOrders.purchaseOrder'), 20, 20);
     
     doc.setFontSize(12);
-    doc.text(`Numero Ordine: ${order.orderNumber || 'N/A'}`, 20, 40);
-    doc.text(`Data: ${format(new Date(order.orderDate as any), 'dd/MM/yyyy')}`, 20, 50);
-    doc.text(`Fornitore: ${supplier?.name || 'N/A'}`, 20, 60);
+    doc.text(`${t('purchaseOrders.orderNumber')}: ${order.orderNumber || 'N/A'}`, 20, 40);
+    doc.text(`${t('common.date')}: ${format(new Date(order.orderDate as any), 'dd/MM/yyyy')}`, 20, 50);
+    doc.text(`${t('purchaseOrders.supplier')}: ${supplier?.name || 'N/A'}`, 20, 60);
     if (order.expectedDeliveryDate) {
-      doc.text(`Consegna Prevista: ${format(new Date(order.expectedDeliveryDate as any), 'dd/MM/yyyy')}`, 20, 70);
+      doc.text(`${t('purchaseOrders.expectedDelivery')}: ${format(new Date(order.expectedDeliveryDate as any), 'dd/MM/yyyy')}`, 20, 70);
     }
-    doc.text(`Stato: ${statusLabels[order.status]}`, 20, 80);
+    doc.text(`${t('common.status')}: ${statusLabels[order.status]}`, 20, 80);
     
     if (supplier) {
-      doc.text('Dettagli Fornitore:', 20, 100);
+      doc.text(`${t('purchaseOrders.supplierDetails')}:`, 20, 100);
       doc.setFontSize(10);
-      if (supplier.vatNumber) doc.text(`P.IVA: ${supplier.vatNumber}`, 20, 108);
+      if (supplier.vatNumber) doc.text(`${t('suppliers.vatNumber')}: ${supplier.vatNumber}`, 20, 108);
       if (supplier.email) doc.text(`Email: ${supplier.email}`, 20, 116);
-      if (supplier.phone) doc.text(`Tel: ${supplier.phone}`, 20, 124);
-      if (supplier.address) doc.text(`Indirizzo: ${supplier.address}`, 20, 132);
+      if (supplier.phone) doc.text(`${t('suppliers.phone')}: ${supplier.phone}`, 20, 124);
+      if (supplier.address) doc.text(`${t('suppliers.address')}: ${supplier.address}`, 20, 132);
     }
     
     doc.setFontSize(14);
-    doc.text(`Totale: € ${parseFloat(order.totalAmount || '0').toFixed(2)}`, 20, 160);
+    doc.text(`${t('common.total')}: € ${parseFloat(order.totalAmount || '0').toFixed(2)}`, 20, 160);
     
     if (order.notes) {
       doc.setFontSize(10);
-      doc.text(`Note: ${order.notes}`, 20, 175);
+      doc.text(`${t('common.notes')}: ${order.notes}`, 20, 175);
     }
     
     doc.save(`ordine_${order.orderNumber || order.id}.pdf`);
     
     toast({
-      title: "Successo",
-      description: "PDF esportato",
+      title: t('common.success'),
+      description: t('purchaseOrders.pdfExported'),
     });
   };
 
@@ -455,19 +457,19 @@ export default function PurchaseOrders() {
     const wb = new ExcelJS.Workbook();
     const ws = wb.addWorksheet('Ordine');
     
-    ws.addRow(['Ordine d\'Acquisto']);
+    ws.addRow([t('purchaseOrders.purchaseOrder')]);
     ws.addRow([]);
-    ws.addRow(['Numero Ordine', order.orderNumber || 'N/A']);
-    ws.addRow(['Data', format(new Date(order.orderDate as any), 'dd/MM/yyyy')]);
-    ws.addRow(['Fornitore', supplier?.name || 'N/A']);
-    ws.addRow(['P.IVA Fornitore', supplier?.vatNumber || '']);
-    ws.addRow(['Email Fornitore', supplier?.email || '']);
-    ws.addRow(['Telefono Fornitore', supplier?.phone || '']);
-    ws.addRow(['Indirizzo Fornitore', supplier?.address || '']);
-    ws.addRow(['Consegna Prevista', order.expectedDeliveryDate ? format(new Date(order.expectedDeliveryDate as any), 'dd/MM/yyyy') : '']);
-    ws.addRow(['Stato', statusLabels[order.status]]);
-    ws.addRow(['Totale (€)', parseFloat(order.totalAmount || '0').toFixed(2)]);
-    ws.addRow(['Note', order.notes || '']);
+    ws.addRow([t('purchaseOrders.orderNumber'), order.orderNumber || 'N/A']);
+    ws.addRow([t('common.date'), format(new Date(order.orderDate as any), 'dd/MM/yyyy')]);
+    ws.addRow([t('purchaseOrders.supplier'), supplier?.name || 'N/A']);
+    ws.addRow([t('purchaseOrders.supplierVat'), supplier?.vatNumber || '']);
+    ws.addRow([t('purchaseOrders.supplierEmail'), supplier?.email || '']);
+    ws.addRow([t('purchaseOrders.supplierPhone'), supplier?.phone || '']);
+    ws.addRow([t('purchaseOrders.supplierAddress'), supplier?.address || '']);
+    ws.addRow([t('purchaseOrders.expectedDelivery'), order.expectedDeliveryDate ? format(new Date(order.expectedDeliveryDate as any), 'dd/MM/yyyy') : '']);
+    ws.addRow([t('common.status'), statusLabels[order.status]]);
+    ws.addRow([t('purchaseOrders.totalAmount'), parseFloat(order.totalAmount || '0').toFixed(2)]);
+    ws.addRow([t('common.notes'), order.notes || '']);
     
     const buffer = await wb.xlsx.writeBuffer();
     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
@@ -479,16 +481,16 @@ export default function PurchaseOrders() {
     URL.revokeObjectURL(url);
     
     toast({
-      title: "Successo",
-      description: "Excel esportato",
+      title: t('common.success'),
+      description: t('purchaseOrders.excelExported'),
     });
   };
 
   const filterButtons = [
-    { value: 'all', label: 'Tutti' },
-    { value: 'draft', label: 'Bozze' },
-    { value: 'submitted', label: 'Inviati' },
-    { value: 'received', label: 'Ricevuti' },
+    { value: 'all', label: t('common.all') },
+    { value: 'draft', label: t('purchaseOrders.drafts') },
+    { value: 'submitted', label: t('purchaseOrders.submitted') },
+    { value: 'received', label: t('purchaseOrders.received') },
   ];
 
   const stats = {
@@ -504,8 +506,8 @@ export default function PurchaseOrders() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-purchase-orders">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Ordini d'Acquisto</h1>
-            <p className="text-muted-foreground">Gestione ordini fornitori</p>
+            <h1 className="text-3xl font-bold">{t('purchaseOrders.title')}</h1>
+            <p className="text-muted-foreground">{t('purchaseOrders.subtitle')}</p>
           </div>
           <div className="flex gap-2">
             <Button
@@ -515,11 +517,11 @@ export default function PurchaseOrders() {
               data-testid="button-generate-suggestions"
             >
               <Sparkles className="w-4 h-4 mr-2" />
-              Ordini Suggeriti
+              {t('purchaseOrders.suggestedOrders')}
             </Button>
             <Button onClick={() => handleOpenForm()} data-testid="button-create-order">
               <Plus className="w-4 h-4 mr-2" />
-              Nuovo Ordine
+              {t('purchaseOrders.newOrder')}
             </Button>
           </div>
         </div>
@@ -528,25 +530,25 @@ export default function PurchaseOrders() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-sm text-muted-foreground">Totale Ordini</p>
+              <p className="text-sm text-muted-foreground">{t('purchaseOrders.totalOrders')}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-muted-foreground">{stats.draft}</div>
-              <p className="text-sm text-muted-foreground">Bozze</p>
+              <p className="text-sm text-muted-foreground">{t('purchaseOrders.drafts')}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-primary">{stats.submitted}</div>
-              <p className="text-sm text-muted-foreground">Inviati</p>
+              <p className="text-sm text-muted-foreground">{t('purchaseOrders.submitted')}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-green-500">{stats.received}</div>
-              <p className="text-sm text-muted-foreground">Ricevuti</p>
+              <p className="text-sm text-muted-foreground">{t('purchaseOrders.received')}</p>
             </CardContent>
           </Card>
         </div>
@@ -554,7 +556,7 @@ export default function PurchaseOrders() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
-              <CardTitle>Lista Ordini</CardTitle>
+              <CardTitle>{t('purchaseOrders.orderList')}</CardTitle>
               <div className="flex gap-2">
                 {filterButtons.map((filter) => (
                   <Button
@@ -582,21 +584,21 @@ export default function PurchaseOrders() {
                 <ShoppingCart className="h-12 w-12 text-muted-foreground/50 mb-4" />
                 <p className="text-muted-foreground">
                   {statusFilter === 'all'
-                    ? "Nessun ordine creato"
-                    : `Nessun ordine ${statusLabels[statusFilter]?.toLowerCase()}`}
+                    ? t('purchaseOrders.noOrdersCreated')
+                    : t('purchaseOrders.noOrdersWithStatus', { status: statusLabels[statusFilter]?.toLowerCase() })}
                 </p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Numero Ordine</TableHead>
-                    <TableHead>Fornitore</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Consegna Prev.</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead className="text-right">Totale</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
+                    <TableHead>{t('purchaseOrders.orderNumber')}</TableHead>
+                    <TableHead>{t('purchaseOrders.supplier')}</TableHead>
+                    <TableHead>{t('common.date')}</TableHead>
+                    <TableHead>{t('purchaseOrders.expectedDeliveryShort')}</TableHead>
+                    <TableHead>{t('common.status')}</TableHead>
+                    <TableHead className="text-right">{t('common.total')}</TableHead>
+                    <TableHead className="text-right">{t('common.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -671,9 +673,9 @@ export default function PurchaseOrders() {
         }}>
           <DialogContent className="max-w-lg">
             <DialogHeader>
-              <DialogTitle>{editingOrder ? 'Modifica Ordine' : 'Nuovo Ordine'}</DialogTitle>
+              <DialogTitle>{editingOrder ? t('purchaseOrders.editOrder') : t('purchaseOrders.newOrder')}</DialogTitle>
               <DialogDescription>
-                {editingOrder ? 'Modifica i dettagli dell\'ordine' : 'Compila i dettagli per creare un nuovo ordine'}
+                {editingOrder ? t('purchaseOrders.editOrderDescription') : t('purchaseOrders.newOrderDescription')}
               </DialogDescription>
             </DialogHeader>
             <Form {...form}>
@@ -683,11 +685,11 @@ export default function PurchaseOrders() {
                   name="supplierId"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Fornitore</FormLabel>
+                      <FormLabel>{t('purchaseOrders.supplier')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
-                            <SelectValue placeholder="Seleziona fornitore" />
+                            <SelectValue placeholder={t('purchaseOrders.selectSupplier')} />
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
@@ -708,7 +710,7 @@ export default function PurchaseOrders() {
                   name="orderNumber"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Numero Ordine</FormLabel>
+                      <FormLabel>{t('purchaseOrders.orderNumber')}</FormLabel>
                       <FormControl>
                         <Input {...field} />
                       </FormControl>
@@ -723,7 +725,7 @@ export default function PurchaseOrders() {
                     name="orderDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Data Ordine</FormLabel>
+                        <FormLabel>{t('purchaseOrders.orderDate')}</FormLabel>
                         <FormControl>
                           <Input type="date" {...field} />
                         </FormControl>
@@ -737,7 +739,7 @@ export default function PurchaseOrders() {
                     name="expectedDeliveryDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Consegna Prevista</FormLabel>
+                        <FormLabel>{t('purchaseOrders.expectedDelivery')}</FormLabel>
                         <FormControl>
                           <Input type="date" {...field} value={field.value || ''} />
                         </FormControl>
@@ -752,7 +754,7 @@ export default function PurchaseOrders() {
                   name="status"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Stato</FormLabel>
+                      <FormLabel>{t('common.status')}</FormLabel>
                       <Select onValueChange={field.onChange} value={field.value}>
                         <FormControl>
                           <SelectTrigger>
@@ -760,10 +762,10 @@ export default function PurchaseOrders() {
                           </SelectTrigger>
                         </FormControl>
                         <SelectContent>
-                          <SelectItem value="draft">Bozza</SelectItem>
-                          <SelectItem value="submitted">Inviato</SelectItem>
-                          <SelectItem value="received">Ricevuto</SelectItem>
-                          <SelectItem value="cancelled">Annullato</SelectItem>
+                          <SelectItem value="draft">{t('purchaseOrders.status.draft')}</SelectItem>
+                          <SelectItem value="submitted">{t('purchaseOrders.status.submitted')}</SelectItem>
+                          <SelectItem value="received">{t('purchaseOrders.status.received')}</SelectItem>
+                          <SelectItem value="cancelled">{t('purchaseOrders.status.cancelled')}</SelectItem>
                         </SelectContent>
                       </Select>
                       <FormMessage />
@@ -776,7 +778,7 @@ export default function PurchaseOrders() {
                   name="totalAmount"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Totale (€)</FormLabel>
+                      <FormLabel>{t('purchaseOrders.totalAmountLabel')}</FormLabel>
                       <FormControl>
                         <Input type="number" step="0.01" {...field} value={field.value || ''} />
                       </FormControl>
@@ -790,9 +792,9 @@ export default function PurchaseOrders() {
                   name="notes"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Note</FormLabel>
+                      <FormLabel>{t('common.notes')}</FormLabel>
                       <FormControl>
-                        <Input {...field} value={field.value || ''} placeholder="Note aggiuntive..." />
+                        <Input {...field} value={field.value || ''} placeholder={t('purchaseOrders.additionalNotes')} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -808,12 +810,12 @@ export default function PurchaseOrders() {
                       setEditingOrder(null);
                     }}
                   >
-                    Annulla
+                    {t('common.cancel')}
                   </Button>
                   <Button type="submit" disabled={createMutation.isPending || updateMutation.isPending}>
                     {createMutation.isPending || updateMutation.isPending
-                      ? 'Salvataggio...'
-                      : editingOrder ? 'Aggiorna' : 'Crea'}
+                      ? t('common.saving')
+                      : editingOrder ? t('common.update') : t('common.create')}
                   </Button>
                 </DialogFooter>
               </form>
@@ -824,9 +826,9 @@ export default function PurchaseOrders() {
         <Dialog open={suggestionsDialogOpen} onOpenChange={setSuggestionsDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Ordini Suggeriti</DialogTitle>
+              <DialogTitle>{t('purchaseOrders.suggestedOrders')}</DialogTitle>
               <DialogDescription>
-                Prodotti che necessitano riordino in base a scorte e consumi
+                {t('purchaseOrders.suggestionsDescription')}
               </DialogDescription>
             </DialogHeader>
             {suggestionsLoading ? (
@@ -838,9 +840,9 @@ export default function PurchaseOrders() {
             ) : !suggestions || suggestions.length === 0 ? (
               <div className="flex flex-col items-center py-8">
                 <Package className="h-12 w-12 text-muted-foreground/50 mb-3" />
-                <p className="text-muted-foreground">Nessun prodotto necessita di riordino</p>
+                <p className="text-muted-foreground">{t('purchaseOrders.noProductsNeedReorder')}</p>
                 <p className="text-muted-foreground/70 text-sm mt-1">
-                  Tutte le scorte sono sopra la soglia minima
+                  {t('purchaseOrders.stockAboveThreshold')}
                 </p>
               </div>
             ) : (
@@ -869,19 +871,19 @@ export default function PurchaseOrders() {
                           </div>
                           <div className="grid grid-cols-4 gap-4 mt-2 text-sm">
                             <div>
-                              <span className="text-muted-foreground">Stock: </span>
+                              <span className="text-muted-foreground">{t('purchaseOrders.stock')}: </span>
                               <span className="font-medium">{suggestion.currentStock}</span>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Min: </span>
+                              <span className="text-muted-foreground">{t('purchaseOrders.min')}: </span>
                               <span className="font-medium">{suggestion.minThreshold}</span>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Consumo Medio: </span>
+                              <span className="text-muted-foreground">{t('purchaseOrders.avgConsumption')}: </span>
                               <span className="font-medium">{suggestion.avgConsumption}</span>
                             </div>
                             <div>
-                              <span className="text-muted-foreground">Suggerito: </span>
+                              <span className="text-muted-foreground">{t('purchaseOrders.suggested')}: </span>
                               <span className="font-bold text-primary">+{suggestion.suggestedQuantity}</span>
                             </div>
                           </div>
@@ -898,19 +900,18 @@ export default function PurchaseOrders() {
         <AlertDialog open={!!deletingOrder} onOpenChange={() => setDeletingOrder(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Conferma Eliminazione</AlertDialogTitle>
+              <AlertDialogTitle>{t('purchaseOrders.confirmDelete')}</AlertDialogTitle>
               <AlertDialogDescription>
-                Sei sicuro di voler eliminare l'ordine {deletingOrder?.orderNumber}?
-                Questa azione non può essere annullata.
+                {t('purchaseOrders.confirmDeleteDescription', { orderNumber: deletingOrder?.orderNumber })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Annulla</AlertDialogCancel>
+              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => deletingOrder && deleteMutation.mutate(deletingOrder.id)}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               >
-                Elimina
+                {t('common.delete')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -922,7 +923,7 @@ export default function PurchaseOrders() {
   // Mobile version
   const header = (
     <MobileHeader
-      title="Ordini d'Acquisto"
+      title={t('purchaseOrders.title')}
       showBackButton showMenuButton
       rightAction={
         <HapticButton
@@ -990,11 +991,11 @@ export default function PurchaseOrders() {
             </motion.div>
             <p className="text-muted-foreground mt-4 text-center">
               {statusFilter === 'all' 
-                ? "Nessun ordine creato" 
-                : `Nessun ordine ${statusLabels[statusFilter]?.toLowerCase()}`}
+                ? t('purchaseOrders.noOrdersCreated')
+                : t('purchaseOrders.noOrdersWithStatus', { status: statusLabels[statusFilter]?.toLowerCase() })}
             </p>
             <p className="text-muted-foreground/70 text-sm mt-1">
-              Tocca + per creare il primo ordine
+              {t('purchaseOrders.tapToCreateFirst')}
             </p>
           </motion.div>
         ) : (
@@ -1115,7 +1116,7 @@ export default function PurchaseOrders() {
           setFormSheetOpen(false);
           setEditingOrder(null);
         }}
-        title={editingOrder ? 'Modifica Ordine' : 'Nuovo Ordine'}
+        title={editingOrder ? t('purchaseOrders.editOrder') : t('purchaseOrders.newOrder')}
       >
         <Form {...form}>
           <form onSubmit={form.handleSubmit(onSubmit)} className="p-4 space-y-4">
@@ -1124,11 +1125,11 @@ export default function PurchaseOrders() {
               name="supplierId"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Fornitore</FormLabel>
+                  <FormLabel>{t('purchaseOrders.supplier')}</FormLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger className="min-h-[48px]">
-                        <SelectValue placeholder="Seleziona fornitore" />
+                        <SelectValue placeholder={t('purchaseOrders.selectSupplier')} />
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
@@ -1149,7 +1150,7 @@ export default function PurchaseOrders() {
               name="orderNumber"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Numero Ordine</FormLabel>
+                  <FormLabel>{t('purchaseOrders.orderNumber')}</FormLabel>
                   <FormControl>
                     <Input {...field} className="min-h-[48px]" />
                   </FormControl>

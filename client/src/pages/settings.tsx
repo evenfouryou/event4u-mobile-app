@@ -1,5 +1,6 @@
 import { motion } from "framer-motion";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { useTheme } from "@/hooks/use-theme";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -172,6 +173,7 @@ function ToggleRow({
 }
 
 export default function Settings() {
+  const { t } = useTranslation();
   const { user, isLoading } = useAuth();
   const { resolvedTheme, setTheme } = useTheme();
   const [, setLocation] = useLocation();
@@ -217,28 +219,28 @@ export default function Settings() {
 
   const userDisplayName = user?.firstName && user?.lastName
     ? `${user.firstName} ${user.lastName}`
-    : user?.email || 'Utente';
+    : user?.email || t('common.user');
 
-  const roleDisplay = user?.role === 'gestore' ? 'Gestore Azienda' 
-    : user?.role === 'super_admin' ? 'Super Admin'
-    : user?.role === 'bartender' ? 'Bartender'
-    : user?.role || 'Utente';
+  const roleDisplay = user?.role === 'gestore' ? t('settings.roles.manager') 
+    : user?.role === 'super_admin' ? t('settings.roles.superAdmin')
+    : user?.role === 'bartender' ? t('settings.roles.bartender')
+    : user?.role || t('common.user');
 
   if (!isMobile) {
     return (
       <div className="container mx-auto p-6 space-y-6" data-testid="page-settings">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Impostazioni</h1>
-            <p className="text-muted-foreground">Gestisci il tuo profilo e le preferenze</p>
+            <h1 className="text-3xl font-bold">{t('settings.title')}</h1>
+            <p className="text-muted-foreground">{t('settings.subtitle')}</p>
           </div>
         </div>
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <Card className="lg:col-span-1" data-testid="card-profile-section">
             <CardHeader>
-              <CardTitle>Profilo</CardTitle>
-              <CardDescription>Le tue informazioni personali</CardDescription>
+              <CardTitle>{t('settings.profile.title')}</CardTitle>
+              <CardDescription>{t('settings.profile.description')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex items-center gap-4">
@@ -266,23 +268,23 @@ export default function Settings() {
                 data-testid="button-edit-profile"
               >
                 <User className="h-4 w-4 mr-2" />
-                Modifica Profilo
+                {t('settings.profile.editProfile')}
               </Button>
             </CardContent>
           </Card>
 
           <Card className="lg:col-span-2">
             <CardHeader>
-              <CardTitle>Preferenze</CardTitle>
-              <CardDescription>Personalizza la tua esperienza</CardDescription>
+              <CardTitle>{t('settings.preferences.title')}</CardTitle>
+              <CardDescription>{t('settings.preferences.description')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Impostazione</TableHead>
-                    <TableHead>Descrizione</TableHead>
-                    <TableHead className="text-right">Azione</TableHead>
+                    <TableHead>{t('settings.table.setting')}</TableHead>
+                    <TableHead>{t('settings.table.description')}</TableHead>
+                    <TableHead className="text-right">{t('settings.table.action')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -290,11 +292,11 @@ export default function Settings() {
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         {isDarkMode ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
-                        Tema Scuro
+                        {t('settings.theme.darkTheme')}
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      {isDarkMode ? "Attivo" : "Disattivo"}
+                      {isDarkMode ? t('settings.theme.active') : t('settings.theme.inactive')}
                     </TableCell>
                     <TableCell className="text-right">
                       <Switch
@@ -308,11 +310,11 @@ export default function Settings() {
                     <TableCell className="font-medium">
                       <div className="flex items-center gap-2">
                         <Bell className="h-4 w-4" />
-                        Notifiche Push
+                        {t('settings.notifications.pushNotifications')}
                       </div>
                     </TableCell>
                     <TableCell className="text-muted-foreground">
-                      Ricevi aggiornamenti importanti
+                      {t('settings.notifications.receiveUpdates')}
                     </TableCell>
                     <TableCell className="text-right">
                       <Switch
@@ -336,8 +338,8 @@ export default function Settings() {
                   <Shield className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Privacy e Sicurezza</CardTitle>
-                  <CardDescription>Gestisci i tuoi dati</CardDescription>
+                  <CardTitle className="text-lg">{t('settings.privacy.title')}</CardTitle>
+                  <CardDescription>{t('settings.privacy.description')}</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -345,28 +347,28 @@ export default function Settings() {
               <Dialog>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="w-full">
-                    Visualizza Opzioni
+                    {t('settings.privacy.viewOptions')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Privacy e Sicurezza</DialogTitle>
+                    <DialogTitle>{t('settings.privacy.title')}</DialogTitle>
                     <DialogDescription>
-                      Gestisci le impostazioni di privacy e sicurezza del tuo account
+                      {t('settings.privacy.dialogDescription')}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <div className="flex items-center justify-between">
-                      <span>Autenticazione a due fattori</span>
+                      <span>{t('settings.privacy.twoFactor')}</span>
                       <Switch />
                     </div>
                     <div className="flex items-center justify-between">
-                      <span>Salva cronologia attività</span>
+                      <span>{t('settings.privacy.saveHistory')}</span>
                       <Switch defaultChecked />
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button variant="outline">Chiudi</Button>
+                    <Button variant="outline">{t('common.close')}</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -380,8 +382,8 @@ export default function Settings() {
                   <SettingsIcon className="h-5 w-5 text-white" />
                 </div>
                 <div>
-                  <CardTitle className="text-lg">Preferenze Avanzate</CardTitle>
-                  <CardDescription>Impostazioni dell'app</CardDescription>
+                  <CardTitle className="text-lg">{t('settings.advanced.title')}</CardTitle>
+                  <CardDescription>{t('settings.advanced.description')}</CardDescription>
                 </div>
               </div>
             </CardHeader>
@@ -389,28 +391,28 @@ export default function Settings() {
               <Dialog>
                 <DialogTrigger asChild>
                   <Button variant="outline" className="w-full">
-                    Visualizza Opzioni
+                    {t('settings.privacy.viewOptions')}
                   </Button>
                 </DialogTrigger>
                 <DialogContent>
                   <DialogHeader>
-                    <DialogTitle>Preferenze Avanzate</DialogTitle>
+                    <DialogTitle>{t('settings.advanced.title')}</DialogTitle>
                     <DialogDescription>
-                      Configura le impostazioni avanzate dell'applicazione
+                      {t('settings.advanced.dialogDescription')}
                     </DialogDescription>
                   </DialogHeader>
                   <div className="space-y-4 py-4">
                     <div className="flex items-center justify-between">
-                      <span>Modalità compatta</span>
+                      <span>{t('settings.advanced.compactMode')}</span>
                       <Switch />
                     </div>
                     <div className="flex items-center justify-between">
-                      <span>Animazioni</span>
+                      <span>{t('settings.advanced.animations')}</span>
                       <Switch defaultChecked />
                     </div>
                   </div>
                   <DialogFooter>
-                    <Button variant="outline">Chiudi</Button>
+                    <Button variant="outline">{t('common.close')}</Button>
                   </DialogFooter>
                 </DialogContent>
               </Dialog>
@@ -422,8 +424,8 @@ export default function Settings() {
           <CardContent className="pt-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="font-semibold">Esci dall'Account</p>
-                <p className="text-sm text-muted-foreground">Disconnetti da questo dispositivo</p>
+                <p className="font-semibold">{t('settings.logout.title')}</p>
+                <p className="text-sm text-muted-foreground">{t('settings.logout.description')}</p>
               </div>
               <Button 
                 variant="destructive" 
@@ -431,14 +433,14 @@ export default function Settings() {
                 data-testid="button-logout"
               >
                 <LogOut className="h-4 w-4 mr-2" />
-                Esci
+                {t('settings.logout.button')}
               </Button>
             </div>
           </CardContent>
         </Card>
 
         <p className="text-center text-sm text-muted-foreground">
-          Event4U v1.0.0
+          {t('settings.version')}
         </p>
       </div>
     );
@@ -446,7 +448,7 @@ export default function Settings() {
 
   return (
     <MobileAppLayout
-      header={<MobileHeader title="Impostazioni" showBackButton showMenuButton />}
+      header={<MobileHeader title={t('settings.title')} showBackButton showMenuButton />}
       contentClassName="pb-24"
     >
       <motion.div
@@ -460,7 +462,7 @@ export default function Settings() {
             variants={staggerItem}
             className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 px-1"
           >
-            Profilo
+            {t('settings.profile.title')}
           </motion.p>
           
           <motion.div
@@ -505,15 +507,15 @@ export default function Settings() {
             variants={staggerItem}
             className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 px-1"
           >
-            Aspetto
+            {t('settings.appearance')}
           </motion.p>
           
           <div className="space-y-3">
             <ToggleRow
               icon={isDarkMode ? Moon : Sun}
               iconColor="bg-gradient-to-br from-indigo-500 to-purple-600"
-              title="Tema Scuro"
-              subtitle={isDarkMode ? "Attivo" : "Disattivo"}
+              title={t('settings.theme.darkTheme')}
+              subtitle={isDarkMode ? t('settings.theme.active') : t('settings.theme.inactive')}
               checked={isDarkMode}
               onCheckedChange={handleThemeToggle}
               testId="toggle-dark-mode"
@@ -526,15 +528,15 @@ export default function Settings() {
             variants={staggerItem}
             className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 px-1"
           >
-            Notifiche
+            {t('settings.notifications.title')}
           </motion.p>
           
           <div className="space-y-3">
             <ToggleRow
               icon={Bell}
               iconColor="bg-gradient-to-br from-teal-500 to-cyan-600"
-              title="Notifiche Push"
-              subtitle="Ricevi aggiornamenti importanti"
+              title={t('settings.notifications.pushNotifications')}
+              subtitle={t('settings.notifications.receiveUpdates')}
               checked={true}
               onCheckedChange={() => {}}
               testId="toggle-notifications"
@@ -547,23 +549,23 @@ export default function Settings() {
             variants={staggerItem}
             className="text-xs font-semibold uppercase tracking-wide text-muted-foreground mb-3 px-1"
           >
-            Altro
+            {t('settings.other')}
           </motion.p>
           
           <div className="space-y-3">
             <SettingsCard
               icon={Shield}
               iconColor="bg-gradient-to-br from-green-500 to-emerald-600"
-              title="Privacy e Sicurezza"
-              subtitle="Gestisci i tuoi dati"
+              title={t('settings.privacy.title')}
+              subtitle={t('settings.privacy.description')}
               testId="card-privacy"
             />
             
             <SettingsCard
               icon={SettingsIcon}
               iconColor="bg-gradient-to-br from-slate-500 to-slate-700"
-              title="Preferenze Avanzate"
-              subtitle="Impostazioni dell'app"
+              title={t('settings.advanced.title')}
+              subtitle={t('settings.advanced.description')}
               testId="card-advanced"
             />
           </div>
@@ -581,7 +583,7 @@ export default function Settings() {
             data-testid="button-logout"
           >
             <LogOut className="h-5 w-5 mr-2" />
-            Esci dall'Account
+            {t('settings.logout.title')}
           </HapticButton>
         </motion.div>
 
@@ -589,7 +591,7 @@ export default function Settings() {
           variants={staggerItem}
           className="text-center text-xs text-muted-foreground pt-2 pb-4"
         >
-          Event4U v1.0.0
+          {t('settings.version')}
         </motion.p>
       </motion.div>
     </MobileAppLayout>

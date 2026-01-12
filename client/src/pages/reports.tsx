@@ -1,6 +1,7 @@
 import { useState, useMemo, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
@@ -145,6 +146,7 @@ const cardColors = {
 };
 
 export default function Reports() {
+  const { t } = useTranslation();
   const searchString = useSearch();
   const urlParams = new URLSearchParams(searchString);
   const urlEventId = urlParams.get('eventId');
@@ -246,22 +248,22 @@ export default function Reports() {
       });
       
       toast({
-        title: "Correzione effettuata",
-        description: "Il consumo è stato corretto e la giacenza aggiornata",
+        title: t('reports.correctionSuccess'),
+        description: t('reports.correctionSuccessDesc'),
       });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Non autorizzato",
-          description: "Non hai i permessi per correggere i consumi",
+          title: t('common.unauthorized'),
+          description: t('reports.noPermission'),
           variant: "destructive",
         });
       } else {
         toast({
-          title: "Errore",
-          description: error.message || "Impossibile correggere il consumo",
+          title: t('common.error'),
+          description: error.message || t('reports.correctionError'),
           variant: "destructive",
         });
       }
@@ -283,8 +285,8 @@ export default function Reports() {
     if (isNaN(qty) || qty < 0) {
       triggerHaptic('error');
       toast({
-        title: "Errore",
-        description: "Inserisci una quantità valida",
+        title: t('common.error'),
+        description: t('reports.invalidQuantity'),
         variant: "destructive",
       });
       return;
@@ -324,21 +326,21 @@ export default function Reports() {
     const pageWidth = pdf.internal.pageSize.getWidth();
     
     pdf.setFontSize(20);
-    pdf.text("Event Four You - Report Fine Serata", pageWidth / 2, 20, { align: "center" });
+    pdf.text(t('reports.pdfReportTitle'), pageWidth / 2, 20, { align: "center" });
     
     pdf.setFontSize(12);
-    pdf.text(`Evento: ${event.name}`, 20, 35);
-    pdf.text(`Data: ${new Date((event as any).startDatetime || (event as any).eventDate).toLocaleDateString('it-IT')}`, 20, 42);
+    pdf.text(`${t('reports.event')}: ${event.name}`, 20, 35);
+    pdf.text(`${t('common.date')}: ${new Date((event as any).startDatetime || (event as any).eventDate).toLocaleDateString('it-IT')}`, 20, 42);
     
     pdf.setFontSize(14);
-    pdf.text(`Costo Totale: €${reportData.totalCost.toFixed(2)}`, 20, 55);
+    pdf.text(`${t('reports.totalCost')}: €${reportData.totalCost.toFixed(2)}`, 20, 55);
 
     let yPosition = 70;
 
     if (reportData.consumedProducts && reportData.consumedProducts.length > 0) {
       pdf.setFontSize(14);
       pdf.setFont('helvetica', 'bold');
-      pdf.text("Riepilogo Consumo Beverage", 20, yPosition);
+      pdf.text(t('reports.beverageSummary'), 20, yPosition);
       yPosition += 10;
       
       pdf.setFont('helvetica', 'normal');
@@ -369,11 +371,11 @@ export default function Reports() {
 
       pdf.setFontSize(12);
       pdf.setFont('helvetica', 'bold');
-      pdf.text(`Postazione: ${station.stationName}`, 20, yPosition);
+      pdf.text(`${t('reports.station')}: ${station.stationName}`, 20, yPosition);
       yPosition += 7;
       
       pdf.setFont('helvetica', 'normal');
-      pdf.text(`Costo: €${station.totalCost.toFixed(2)}`, 20, yPosition);
+      pdf.text(`${t('reports.cost')}: €${station.totalCost.toFixed(2)}`, 20, yPosition);
       yPosition += 10;
 
       station.items.forEach((item) => {
@@ -396,8 +398,8 @@ export default function Reports() {
 
     pdf.save(`report-${event.name.replace(/\s+/g, '-')}-${Date.now()}.pdf`);
     toast({
-      title: "PDF Esportato",
-      description: "Il report è stato scaricato",
+      title: t('reports.pdfExported'),
+      description: t('reports.reportDownloaded'),
     });
   };
 
@@ -411,16 +413,16 @@ export default function Reports() {
 
     const wb = new ExcelJS.Workbook();
 
-    const summaryWs = wb.addWorksheet("Riepilogo");
-    summaryWs.addRow(["Event Four You - Report Fine Serata"]);
+    const summaryWs = wb.addWorksheet(t('reports.summarySheet'));
+    summaryWs.addRow([t('reports.pdfReportTitle')]);
     summaryWs.addRow([]);
-    summaryWs.addRow(["Evento", event.name]);
-    summaryWs.addRow(["Data", new Date((event as any).startDatetime || (event as any).eventDate).toLocaleDateString('it-IT')]);
-    summaryWs.addRow(["Costo Totale", `€${reportData.totalCost.toFixed(2)}`]);
+    summaryWs.addRow([t('reports.event'), event.name]);
+    summaryWs.addRow([t('common.date'), new Date((event as any).startDatetime || (event as any).eventDate).toLocaleDateString('it-IT')]);
+    summaryWs.addRow([t('reports.totalCost'), `€${reportData.totalCost.toFixed(2)}`]);
     summaryWs.addRow([]);
 
-    const detailedWs = wb.addWorksheet("Dettaglio");
-    detailedWs.addRow(["Postazione", "Prodotto", "Quantità", "Prezzo Unitario", "Costo Totale"]);
+    const detailedWs = wb.addWorksheet(t('reports.detailSheet'));
+    detailedWs.addRow([t('reports.station'), t('reports.product'), t('common.quantity'), t('reports.unitPrice'), t('reports.totalCost')]);
 
     reportData.stations.forEach((station) => {
       station.items.forEach((item) => {
@@ -435,10 +437,10 @@ export default function Reports() {
     });
 
     if (reportData.consumedProducts && reportData.consumedProducts.length > 0) {
-      const beverageWs = wb.addWorksheet("Consumo Beverage");
-      beverageWs.addRow(["Riepilogo Consumo Beverage"]);
+      const beverageWs = wb.addWorksheet(t('reports.beverageConsumption'));
+      beverageWs.addRow([t('reports.beverageSummary')]);
       beverageWs.addRow([]);
-      beverageWs.addRow(["Prodotto", "Quantità Totale", "Prezzo Unitario", "Costo Totale"]);
+      beverageWs.addRow([t('reports.product'), t('reports.totalQuantity'), t('reports.unitPrice'), t('reports.totalCost')]);
 
       reportData.consumedProducts.forEach((product) => {
         beverageWs.addRow([
@@ -449,7 +451,7 @@ export default function Reports() {
         ]);
       });
 
-      beverageWs.addRow(["", "", "TOTALE", `€${reportData.totalCost.toFixed(2)}`]);
+      beverageWs.addRow(["", "", t('common.total'), `€${reportData.totalCost.toFixed(2)}`]);
     }
 
     const buffer = await wb.xlsx.writeBuffer();
@@ -461,8 +463,8 @@ export default function Reports() {
     a.click();
     URL.revokeObjectURL(url);
     toast({
-      title: "Excel Esportato",
-      description: "Il report è stato scaricato",
+      title: t('reports.excelExported'),
+      description: t('reports.reportDownloaded'),
     });
   };
 
@@ -481,8 +483,8 @@ export default function Reports() {
     const qty = parseFloat(newQuantity);
     if (isNaN(qty) || qty < 0) {
       toast({
-        title: "Errore",
-        description: "Inserisci una quantità valida",
+        title: t('common.error'),
+        description: t('reports.invalidQuantity'),
         variant: "destructive",
       });
       return;
@@ -503,18 +505,18 @@ export default function Reports() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-reports">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Report Fine Serata</h1>
-            <p className="text-muted-foreground">Analisi consumi e ricavi per evento</p>
+            <h1 className="text-3xl font-bold">{t('reports.endOfNight')}</h1>
+            <p className="text-muted-foreground">{t('reports.analysisSubtitle')}</p>
           </div>
           {reportData && selectedEventId && (
             <div className="flex gap-2">
               <Button variant="outline" onClick={handleExportPDF} data-testid="button-export-pdf-desktop">
                 <FileText className="w-4 h-4 mr-2" />
-                Esporta PDF
+                {t('reports.exportPdf')}
               </Button>
               <Button variant="outline" onClick={handleExportExcel} data-testid="button-export-excel-desktop">
                 <FileSpreadsheet className="w-4 h-4 mr-2" />
-                Esporta Excel
+                {t('reports.exportExcel')}
               </Button>
             </div>
           )}
@@ -524,16 +526,16 @@ export default function Reports() {
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <Calendar className="w-5 h-5" />
-              Filtri
+              {t('reports.filters')}
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="flex flex-wrap gap-4 items-end">
               <div className="flex-1 min-w-[250px]">
-                <label className="text-sm font-medium mb-2 block">Evento</label>
+                <label className="text-sm font-medium mb-2 block">{t('reports.event')}</label>
                 <Select value={selectedEventId} onValueChange={setSelectedEventId}>
                   <SelectTrigger data-testid="select-event-desktop">
-                    <SelectValue placeholder="Seleziona un evento..." />
+                    <SelectValue placeholder={t('reports.selectEvent')} />
                   </SelectTrigger>
                   <SelectContent>
                     {filteredEvents.map((event) => (
@@ -555,7 +557,7 @@ export default function Reports() {
                 </Select>
               </div>
               <div className="w-[180px]">
-                <label className="text-sm font-medium mb-2 block">Data Inizio</label>
+                <label className="text-sm font-medium mb-2 block">{t('reports.startDate')}</label>
                 <Input
                   type="date"
                   value={startDate}
@@ -564,7 +566,7 @@ export default function Reports() {
                 />
               </div>
               <div className="w-[180px]">
-                <label className="text-sm font-medium mb-2 block">Data Fine</label>
+                <label className="text-sm font-medium mb-2 block">{t('reports.endDate')}</label>
                 <Input
                   type="date"
                   value={endDate}
@@ -578,7 +580,7 @@ export default function Reports() {
                   onClick={() => { setStartDate(""); setEndDate(""); }}
                   data-testid="button-clear-dates-desktop"
                 >
-                  Azzera
+                  {t('reports.clear')}
                 </Button>
               )}
             </div>
@@ -589,7 +591,7 @@ export default function Reports() {
           <div className="flex items-center justify-center py-16">
             <div className="text-center">
               <div className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin mx-auto" />
-              <p className="text-muted-foreground mt-4">Caricamento eventi...</p>
+              <p className="text-muted-foreground mt-4">{t('reports.loadingEvents')}</p>
             </div>
           </div>
         )}
@@ -598,7 +600,7 @@ export default function Reports() {
           <div className="flex items-center justify-center py-16">
             <div className="text-center">
               <div className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary animate-spin mx-auto" />
-              <p className="text-muted-foreground mt-4">Caricamento report...</p>
+              <p className="text-muted-foreground mt-4">{t('reports.loadingReport')}</p>
             </div>
           </div>
         )}
@@ -610,7 +612,7 @@ export default function Reports() {
                 <FileText className="w-8 h-8 text-muted-foreground/50" />
               </div>
               <p className="text-muted-foreground">
-                Seleziona un evento per visualizzare il report
+                {t('reports.selectEventPrompt')}
               </p>
             </CardContent>
           </Card>
@@ -627,7 +629,7 @@ export default function Reports() {
                         <div className={`w-10 h-10 rounded-xl ${cardColors.theoretical.icon} flex items-center justify-center`}>
                           <DollarSign className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-sm text-muted-foreground">Ricavo Teorico</span>
+                        <span className="text-sm text-muted-foreground">{t('reports.theoreticalRevenue')}</span>
                       </div>
                       <div className="text-2xl font-bold" data-testid="text-theoretical-revenue-desktop">
                         €{revenueAnalysis.theoreticalRevenue.toFixed(2)}
@@ -641,7 +643,7 @@ export default function Reports() {
                         <div className={`w-10 h-10 rounded-xl ${cardColors.actual.icon} flex items-center justify-center`}>
                           <CircleDollarSign className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-sm text-muted-foreground">Ricavo Effettivo</span>
+                        <span className="text-sm text-muted-foreground">{t('reports.actualRevenue')}</span>
                       </div>
                       <div className="text-2xl font-bold" data-testid="text-actual-revenue-desktop">
                         €{revenueAnalysis.actualRevenue.toFixed(2)}
@@ -659,7 +661,7 @@ export default function Reports() {
                             <TrendingDown className="w-5 h-5 text-white" />
                           )}
                         </div>
-                        <span className="text-sm text-muted-foreground">Varianza</span>
+                        <span className="text-sm text-muted-foreground">{t('reports.variance')}</span>
                       </div>
                       <div className={`text-2xl font-bold ${revenueAnalysis.variance >= 0 ? 'text-green-500' : 'text-red-500'}`} data-testid="text-variance-desktop">
                         €{revenueAnalysis.variance.toFixed(2)}
@@ -673,7 +675,7 @@ export default function Reports() {
                         <div className={`w-10 h-10 rounded-xl ${cardColors.percent.icon} flex items-center justify-center`}>
                           <Percent className="w-5 h-5 text-white" />
                         </div>
-                        <span className="text-sm text-muted-foreground">Varianza %</span>
+                        <span className="text-sm text-muted-foreground">{t('reports.variancePercent')}</span>
                       </div>
                       <div className={`text-2xl font-bold ${revenueAnalysis.variancePercent >= 0 ? 'text-green-500' : 'text-red-500'}`} data-testid="text-variance-percent-desktop">
                         {revenueAnalysis.variancePercent.toFixed(1)}%
@@ -686,15 +688,15 @@ export default function Reports() {
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
                       <BarChart3 className="w-5 h-5" />
-                      Analisi Ricavi
+                      {t('reports.revenueAnalysis')}
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
                     <ResponsiveContainer width="100%" height={300}>
                       <BarChart
                         data={[
-                          { name: 'Ricavo Teorico', value: revenueAnalysis.theoreticalRevenue, fill: '#3B82F6' },
-                          { name: 'Ricavo Effettivo', value: revenueAnalysis.actualRevenue, fill: '#10B981' },
+                          { name: t('reports.theoreticalRevenue'), value: revenueAnalysis.theoreticalRevenue, fill: '#3B82F6' },
+                          { name: t('reports.actualRevenue'), value: revenueAnalysis.actualRevenue, fill: '#10B981' },
                         ]}
                         margin={{ top: 20, right: 30, left: 20, bottom: 20 }}
                         barSize={80}
@@ -713,8 +715,8 @@ export default function Reports() {
                         />
                         <Bar dataKey="value" radius={[4, 4, 0, 0]}>
                           {[
-                            { name: 'Ricavo Teorico', value: revenueAnalysis.theoreticalRevenue, fill: '#3B82F6' },
-                            { name: 'Ricavo Effettivo', value: revenueAnalysis.actualRevenue, fill: '#10B981' },
+                            { name: t('reports.theoreticalRevenue'), value: revenueAnalysis.theoreticalRevenue, fill: '#3B82F6' },
+                            { name: t('reports.actualRevenue'), value: revenueAnalysis.actualRevenue, fill: '#10B981' },
                           ].map((entry, index) => (
                             <Cell key={`cell-${index}`} fill={entry.fill} />
                           ))}
@@ -731,7 +733,7 @@ export default function Reports() {
                 <CardContent className="py-8 text-center">
                   <BarChart3 className="w-8 h-8 text-muted-foreground mx-auto mb-3" />
                   <p className="text-muted-foreground">
-                    Nessun dato ricavi disponibile. Assicurati di aver assegnato un listino prezzi e registrato dei consumi.
+                    {t('reports.noRevenueData')}
                   </p>
                 </CardContent>
               </Card>
@@ -745,12 +747,12 @@ export default function Reports() {
                       <DollarSign className="w-7 h-7 text-primary-foreground" />
                     </div>
                     <div>
-                      <p className="text-sm text-muted-foreground">Costo Totale</p>
+                      <p className="text-sm text-muted-foreground">{t('reports.totalCost')}</p>
                       <div className="text-3xl font-bold" data-testid="text-total-cost-desktop">
                         €{reportData.totalCost.toFixed(2)}
                       </div>
                       <p className="text-xs text-muted-foreground mt-0.5">
-                        {reportData.stations.length} postazioni
+                        {reportData.stations.length} {t('reports.stations')}
                       </p>
                     </div>
                   </div>
@@ -763,18 +765,18 @@ export default function Reports() {
                 <CardHeader>
                   <CardTitle className="flex items-center gap-2">
                     <Package className="w-5 h-5 text-amber-500" />
-                    Consumo Beverage
+                    {t('reports.beverageConsumption')}
                   </CardTitle>
-                  <CardDescription>{reportData.consumedProducts.length} prodotti consumati</CardDescription>
+                  <CardDescription>{reportData.consumedProducts.length} {t('reports.consumedProducts')}</CardDescription>
                 </CardHeader>
                 <CardContent>
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Prodotto</TableHead>
-                        <TableHead className="text-right">Quantità</TableHead>
-                        <TableHead className="text-right">Prezzo Unitario</TableHead>
-                        <TableHead className="text-right">Costo Totale</TableHead>
+                        <TableHead>{t('reports.product')}</TableHead>
+                        <TableHead className="text-right">{t('common.quantity')}</TableHead>
+                        <TableHead className="text-right">{t('reports.unitPrice')}</TableHead>
+                        <TableHead className="text-right">{t('reports.totalCost')}</TableHead>
                         {canCorrect && <TableHead className="w-[60px]"></TableHead>}
                       </TableRow>
                     </TableHeader>
@@ -805,7 +807,7 @@ export default function Reports() {
                         </TableRow>
                       ))}
                       <TableRow className="bg-primary/10">
-                        <TableCell className="font-bold" colSpan={3}>TOTALE BEVERAGE</TableCell>
+                        <TableCell className="font-bold" colSpan={3}>{t('reports.totalBeverage')}</TableCell>
                         <TableCell className="text-right font-bold text-lg" data-testid="text-total-beverage-cost-desktop">
                           €{reportData.totalCost.toFixed(2)}
                         </TableCell>
@@ -821,9 +823,9 @@ export default function Reports() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <Store className="w-5 h-5 text-teal-500" />
-                  Dettaglio Postazioni
+                  {t('reports.stationDetails')}
                 </CardTitle>
-                <CardDescription>{reportData.stations.length} postazioni</CardDescription>
+                <CardDescription>{reportData.stations.length} {t('reports.stations')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <div className="space-y-4">
@@ -852,10 +854,10 @@ export default function Reports() {
                           <Table>
                             <TableHeader>
                               <TableRow>
-                                <TableHead>Prodotto</TableHead>
-                                <TableHead className="text-right">Quantità</TableHead>
-                                <TableHead className="text-right">Prezzo Unitario</TableHead>
-                                <TableHead className="text-right">Costo Totale</TableHead>
+                                <TableHead>{t('reports.product')}</TableHead>
+                                <TableHead className="text-right">{t('common.quantity')}</TableHead>
+                                <TableHead className="text-right">{t('reports.unitPrice')}</TableHead>
+                                <TableHead className="text-right">{t('reports.totalCost')}</TableHead>
                                 {canCorrect && <TableHead className="w-[60px]"></TableHead>}
                               </TableRow>
                             </TableHeader>
@@ -901,41 +903,41 @@ export default function Reports() {
         <Dialog open={correctionDialogOpen} onOpenChange={setCorrectionDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Correggi Consumo</DialogTitle>
+              <DialogTitle>{t('reports.correctConsumption')}</DialogTitle>
               <DialogDescription>
-                Modifica la quantità consumata per {correctingProduct?.productName}
+                {t('reports.correctDescription')} {correctingProduct?.productName}
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="p-4 bg-muted/30 rounded-lg">
-                <p className="text-xs text-muted-foreground mb-1">Prodotto</p>
+                <p className="text-xs text-muted-foreground mb-1">{t('reports.product')}</p>
                 <p className="font-semibold">{correctingProduct?.productName}</p>
               </div>
               <div className="p-4 bg-amber-500/10 rounded-lg">
-                <p className="text-xs text-muted-foreground mb-1">Quantità attuale</p>
+                <p className="text-xs text-muted-foreground mb-1">{t('reports.currentQuantity')}</p>
                 <p className="font-bold text-xl text-amber-600">{correctingProduct?.currentQuantity.toFixed(2)}</p>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Nuova Quantità</label>
+                <label className="text-sm font-medium">{t('reports.newQuantity')}</label>
                 <Input
                   type="number"
                   min="0"
                   step="0.01"
                   value={newQuantity}
                   onChange={(e) => setNewQuantity(e.target.value)}
-                  placeholder="Inserisci nuova quantità"
+                  placeholder={t('reports.enterNewQuantity')}
                   data-testid="input-correct-quantity-desktop"
                 />
                 <p className="text-xs text-muted-foreground">
-                  La giacenza verrà aggiornata automaticamente
+                  {t('reports.stockWillUpdate')}
                 </p>
               </div>
               <div className="space-y-2">
-                <label className="text-sm font-medium">Motivo (opzionale)</label>
+                <label className="text-sm font-medium">{t('reports.reasonOptional')}</label>
                 <Textarea
                   value={correctionReason}
                   onChange={(e) => setCorrectionReason(e.target.value)}
-                  placeholder="Es: Errore di conteggio..."
+                  placeholder={t('reports.reasonPlaceholder')}
                   data-testid="input-correct-reason-desktop"
                 />
               </div>
@@ -946,14 +948,14 @@ export default function Reports() {
                 onClick={() => setCorrectionDialogOpen(false)}
                 data-testid="button-cancel-correct-desktop"
               >
-                Annulla
+                {t('common.cancel')}
               </Button>
               <Button
                 onClick={handleCorrectConsumptionDesktop}
                 disabled={correctConsumptionMutation.isPending}
                 data-testid="button-confirm-correct-desktop"
               >
-                {correctConsumptionMutation.isPending ? 'Salvataggio...' : 'Salva Correzione'}
+                {correctConsumptionMutation.isPending ? t('reports.saving') : t('reports.saveCorrection')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -967,7 +969,7 @@ export default function Reports() {
       <MobileAppLayout
         header={
           <MobileHeader
-            title="Report"
+            title={t('reports.title')}
             showBackButton showMenuButton
           />
         }
@@ -984,7 +986,7 @@ export default function Reports() {
               transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
               className="w-14 h-14 rounded-full border-4 border-primary/20 border-t-primary mx-auto"
             />
-            <p className="text-muted-foreground mt-4 text-base">Caricamento...</p>
+            <p className="text-muted-foreground mt-4 text-base">{t('common.loading')}</p>
           </motion.div>
         </div>
       </MobileAppLayout>
@@ -995,8 +997,8 @@ export default function Reports() {
     <MobileAppLayout
       header={
         <MobileHeader
-          title="Report"
-          subtitle={selectedEvent ? selectedEvent.name : "Seleziona evento"}
+          title={t('reports.title')}
+          subtitle={selectedEvent ? selectedEvent.name : t('reports.selectEventShort')}
           showBackButton showMenuButton
           rightAction={
             <HapticButton
@@ -1035,7 +1037,7 @@ export default function Reports() {
                       <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                         <Calendar className="w-5 h-5 text-primary" />
                       </div>
-                      <span className="font-semibold">Filtra per Data</span>
+                      <span className="font-semibold">{t('reports.filterByDate')}</span>
                     </div>
                     {(startDate || endDate) && (
                       <HapticButton
@@ -1048,13 +1050,13 @@ export default function Reports() {
                         className="text-primary"
                         data-testid="button-clear-dates"
                       >
-                        Azzera
+                        {t('reports.clear')}
                       </HapticButton>
                     )}
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">Inizio</label>
+                      <label className="text-sm text-muted-foreground">{t('reports.start')}</label>
                       <Input
                         type="date"
                         value={startDate}
@@ -1064,7 +1066,7 @@ export default function Reports() {
                       />
                     </div>
                     <div className="space-y-2">
-                      <label className="text-sm text-muted-foreground">Fine</label>
+                      <label className="text-sm text-muted-foreground">{t('reports.end')}</label>
                       <Input
                         type="date"
                         value={endDate}
@@ -1087,14 +1089,14 @@ export default function Reports() {
                 <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center">
                   <Sparkles className="w-5 h-5 text-accent" />
                 </div>
-                <label className="text-sm font-medium">Seleziona Evento</label>
+                <label className="text-sm font-medium">{t('reports.event')}</label>
               </div>
               <Select value={selectedEventId} onValueChange={(v) => {
                 triggerHaptic('light');
                 setSelectedEventId(v);
               }}>
                 <SelectTrigger className="min-h-[52px] text-base rounded-xl" data-testid="select-event">
-                  <SelectValue placeholder="Scegli un evento..." />
+                  <SelectValue placeholder={t('reports.chooseEvent')} />
                 </SelectTrigger>
                 <SelectContent>
                   {filteredEvents.map((event) => (
@@ -1128,7 +1130,7 @@ export default function Reports() {
               transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
               className="w-12 h-12 rounded-full border-4 border-primary/20 border-t-primary mx-auto"
             />
-            <p className="text-muted-foreground mt-4">Caricamento report...</p>
+            <p className="text-muted-foreground mt-4">{t('reports.loadingReport')}</p>
           </motion.div>
         )}
 
@@ -1149,12 +1151,12 @@ export default function Reports() {
                           <DollarSign className={`w-7 h-7 ${cardColors.theoretical.iconColor}`} />
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm text-muted-foreground">Ricavo Teorico</p>
+                          <p className="text-sm text-muted-foreground">{t('reports.theoreticalRevenue')}</p>
                           <div className="text-2xl font-bold" data-testid="text-theoretical-revenue">
                             €{revenueAnalysis.theoreticalRevenue.toFixed(2)}
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            Basato sui consumi registrati
+                            {t('reports.basedOnConsumption')}
                           </p>
                         </div>
                       </div>
@@ -1170,12 +1172,12 @@ export default function Reports() {
                           <CircleDollarSign className={`w-7 h-7 ${cardColors.actual.iconColor}`} />
                         </div>
                         <div className="flex-1">
-                          <p className="text-sm text-muted-foreground">Ricavo Effettivo</p>
+                          <p className="text-sm text-muted-foreground">{t('reports.actualRevenue')}</p>
                           <div className="text-2xl font-bold" data-testid="text-actual-revenue">
                             €{revenueAnalysis.actualRevenue.toFixed(2)}
                           </div>
                           <p className="text-xs text-muted-foreground mt-0.5">
-                            Incasso reale dalla cassa
+                            {t('reports.actualCashIncome')}
                           </p>
                         </div>
                       </div>
@@ -1194,7 +1196,7 @@ export default function Reports() {
                             <TrendingDown className="w-6 h-6 text-white" />
                           )}
                         </div>
-                        <p className="text-xs text-muted-foreground mb-1">Varianza</p>
+                        <p className="text-xs text-muted-foreground mb-1">{t('reports.variance')}</p>
                         <div className={`text-xl font-bold ${revenueAnalysis.variance >= 0 ? 'text-green-500' : 'text-red-500'}`} data-testid="text-variance">
                           €{revenueAnalysis.variance.toFixed(2)}
                         </div>
@@ -1208,7 +1210,7 @@ export default function Reports() {
                         <div className={`w-12 h-12 rounded-xl ${cardColors.percent.icon} flex items-center justify-center mb-3 shadow-lg`}>
                           <Percent className={`w-6 h-6 ${cardColors.percent.iconColor}`} />
                         </div>
-                        <p className="text-xs text-muted-foreground mb-1">Varianza %</p>
+                        <p className="text-xs text-muted-foreground mb-1">{t('reports.variancePercent')}</p>
                         <div className={`text-xl font-bold ${revenueAnalysis.variancePercent >= 0 ? 'text-green-500' : 'text-red-500'}`} data-testid="text-variance-percent">
                           {revenueAnalysis.variancePercent.toFixed(1)}%
                         </div>
@@ -1224,15 +1226,15 @@ export default function Reports() {
                         <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center">
                           <BarChart3 className="w-5 h-5 text-primary" />
                         </div>
-                        <CardTitle className="text-base">Analisi Ricavi</CardTitle>
+                        <CardTitle className="text-base">{t('reports.revenueAnalysis')}</CardTitle>
                       </div>
                     </CardHeader>
                     <CardContent className="p-4 pt-2">
                       <ResponsiveContainer width="100%" height={220}>
                         <BarChart
                           data={[
-                            { name: 'Teorico', value: revenueAnalysis.theoreticalRevenue, fill: '#3B82F6' },
-                            { name: 'Effettivo', value: revenueAnalysis.actualRevenue, fill: '#10B981' },
+                            { name: t('reports.theoretical'), value: revenueAnalysis.theoreticalRevenue, fill: '#3B82F6' },
+                            { name: t('reports.actual'), value: revenueAnalysis.actualRevenue, fill: '#10B981' },
                           ]}
                           margin={{ top: 10, right: 10, left: -15, bottom: 10 }}
                           barSize={60}
@@ -1261,8 +1263,8 @@ export default function Reports() {
                           />
                           <Bar dataKey="value" radius={[8, 8, 0, 0]}>
                             {[
-                              { name: 'Teorico', value: revenueAnalysis.theoreticalRevenue, fill: '#3B82F6' },
-                              { name: 'Effettivo', value: revenueAnalysis.actualRevenue, fill: '#10B981' },
+                              { name: t('reports.theoretical'), value: revenueAnalysis.theoreticalRevenue, fill: '#3B82F6' },
+                              { name: t('reports.actual'), value: revenueAnalysis.actualRevenue, fill: '#10B981' },
                             ].map((entry, index) => (
                               <Cell key={`cell-${index}`} fill={entry.fill} />
                             ))}
@@ -1283,7 +1285,7 @@ export default function Reports() {
                       <BarChart3 className="w-7 h-7 text-muted-foreground" />
                     </div>
                     <p className="text-muted-foreground text-sm">
-                      Nessun dato ricavi disponibile. Assicurati di aver assegnato un listino prezzi e registrato dei consumi.
+                      {t('reports.noRevenueData')}
                     </p>
                   </CardContent>
                 </Card>
@@ -1299,12 +1301,12 @@ export default function Reports() {
                         <DollarSign className={`w-7 h-7 ${cardColors.total.iconColor}`} />
                       </div>
                       <div>
-                        <p className="text-sm text-muted-foreground">Costo Totale</p>
+                        <p className="text-sm text-muted-foreground">{t('reports.totalCost')}</p>
                         <div className="text-3xl font-bold" data-testid="text-total-cost">
                           €{reportData.totalCost.toFixed(2)}
                         </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
-                          {reportData.stations.length} postazioni
+                          {reportData.stations.length} {t('reports.stations')}
                         </p>
                       </div>
                     </div>
@@ -1334,8 +1336,8 @@ export default function Reports() {
                         <Package className="w-5 h-5 text-amber-500" />
                       </div>
                       <div>
-                        <CardTitle className="text-base">Consumo Beverage</CardTitle>
-                        <p className="text-xs text-muted-foreground">{reportData.consumedProducts.length} prodotti</p>
+                        <CardTitle className="text-base">{t('reports.beverageConsumption')}</CardTitle>
+                        <p className="text-xs text-muted-foreground">{reportData.consumedProducts.length} {t('reports.products')}</p>
                       </div>
                     </div>
                   </CardHeader>
@@ -1382,7 +1384,7 @@ export default function Reports() {
                         </motion.div>
                       ))}
                       <div className="flex items-center justify-between p-4 bg-primary/10 rounded-xl border-2 border-primary/20 mt-3">
-                        <span className="font-bold">TOTALE BEVERAGE</span>
+                        <span className="font-bold">{t('reports.totalBeverage')}</span>
                         <span className="font-bold text-xl" data-testid="text-total-beverage-cost">
                           €{reportData.totalCost.toFixed(2)}
                         </span>
@@ -1401,8 +1403,8 @@ export default function Reports() {
                       <Store className="w-5 h-5 text-teal-500" />
                     </div>
                     <div>
-                      <CardTitle className="text-base">Dettaglio Postazioni</CardTitle>
-                      <p className="text-xs text-muted-foreground">{reportData.stations.length} postazioni</p>
+                      <CardTitle className="text-base">{t('reports.stationDetails')}</CardTitle>
+                      <p className="text-xs text-muted-foreground">{reportData.stations.length} {t('reports.stations')}</p>
                     </div>
                   </div>
                 </CardHeader>
@@ -1521,7 +1523,7 @@ export default function Reports() {
                     <FileText className="w-10 h-10 text-muted-foreground/50" />
                   </div>
                   <p className="text-muted-foreground text-base">
-                    Seleziona un evento per visualizzare il report
+                    {t('reports.selectEventPrompt')}
                   </p>
                 </motion.div>
               </CardContent>
@@ -1533,7 +1535,7 @@ export default function Reports() {
       <BottomSheet
         open={showExportSheet}
         onClose={() => setShowExportSheet(false)}
-        title="Esporta Report"
+        title={t('reports.exportReport')}
       >
         <div className="p-4 space-y-3">
           <motion.button
@@ -1546,8 +1548,8 @@ export default function Reports() {
               <FileText className="w-6 h-6 text-white" />
             </div>
             <div className="text-left">
-              <p className="font-semibold">Esporta PDF</p>
-              <p className="text-sm text-muted-foreground">Documento formattato per stampa</p>
+              <p className="font-semibold">{t('reports.exportPdf')}</p>
+              <p className="text-sm text-muted-foreground">{t('reports.pdfDescription')}</p>
             </div>
           </motion.button>
 
@@ -1561,8 +1563,8 @@ export default function Reports() {
               <FileSpreadsheet className="w-6 h-6 text-white" />
             </div>
             <div className="text-left">
-              <p className="font-semibold">Esporta Excel</p>
-              <p className="text-sm text-muted-foreground">Foglio di calcolo modificabile</p>
+              <p className="font-semibold">{t('reports.exportExcel')}</p>
+              <p className="text-sm text-muted-foreground">{t('reports.excelDescription')}</p>
             </div>
           </motion.button>
         </div>
@@ -1571,42 +1573,42 @@ export default function Reports() {
       <BottomSheet
         open={correctionSheetOpen}
         onClose={() => setCorrectionSheetOpen(false)}
-        title="Correggi Consumo"
+        title={t('reports.correctConsumption')}
       >
         <div className="p-4 space-y-5">
           <div className="p-4 bg-muted/30 rounded-2xl">
-            <p className="text-xs text-muted-foreground mb-1">Prodotto</p>
+            <p className="text-xs text-muted-foreground mb-1">{t('reports.product')}</p>
             <p className="font-semibold text-lg">{correctingProduct?.productName}</p>
           </div>
           
           <div className="p-4 bg-amber-500/10 rounded-2xl">
-            <p className="text-xs text-muted-foreground mb-1">Quantità attuale</p>
+            <p className="text-xs text-muted-foreground mb-1">{t('reports.currentQuantity')}</p>
             <p className="font-bold text-2xl text-amber-600">{correctingProduct?.currentQuantity.toFixed(2)}</p>
           </div>
           
           <div className="space-y-2">
-            <label className="text-sm font-medium">Nuova Quantità</label>
+            <label className="text-sm font-medium">{t('reports.newQuantity')}</label>
             <Input
               type="number"
               min="0"
               step="0.01"
               value={newQuantity}
               onChange={(e) => setNewQuantity(e.target.value)}
-              placeholder="Inserisci nuova quantità"
+              placeholder={t('reports.enterNewQuantity')}
               className="min-h-[52px] text-lg rounded-xl"
               data-testid="input-correct-quantity"
             />
             <p className="text-xs text-muted-foreground">
-              La giacenza verrà aggiornata automaticamente
+              {t('reports.stockWillUpdate')}
             </p>
           </div>
           
           <div className="space-y-2">
-            <label className="text-sm font-medium">Motivo (opzionale)</label>
+            <label className="text-sm font-medium">{t('reports.reasonOptional')}</label>
             <Textarea
               value={correctionReason}
               onChange={(e) => setCorrectionReason(e.target.value)}
-              placeholder="Es: Errore di conteggio..."
+              placeholder={t('reports.reasonPlaceholder')}
               className="min-h-[100px] rounded-xl"
               data-testid="input-correct-reason"
             />
@@ -1619,7 +1621,7 @@ export default function Reports() {
               onClick={() => setCorrectionSheetOpen(false)}
               data-testid="button-cancel-correct"
             >
-              Annulla
+              {t('common.cancel')}
             </HapticButton>
             <HapticButton
               className="flex-1 min-h-[52px] rounded-xl"
@@ -1628,7 +1630,7 @@ export default function Reports() {
               hapticType="success"
               data-testid="button-confirm-correct"
             >
-              {correctConsumptionMutation.isPending ? 'Salvataggio...' : 'Salva'}
+              {correctConsumptionMutation.isPending ? t('reports.saving') : t('common.save')}
             </HapticButton>
           </div>
         </div>

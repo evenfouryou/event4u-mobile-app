@@ -1,0 +1,105 @@
+ssage received: type=ping
+2026-01-12 20:27:37.26
+89bbcb06
+User
+'request-id': 'req_vtI5fiRUgIHS01',
+2026-01-12 20:27:37.26
+89bbcb06
+User
+type: 'StripeInvalidRequestError',
+2026-01-12 20:27:37.26
+89bbcb06
+User
+code: undefined,
+2026-01-12 20:27:37.26
+89bbcb06
+User
+'access-control-allow-credentials': 'true',
+2026-01-12 20:27:37.26
+89bbcb06
+User
+'access-control-max-age': '300',
+2026-01-12 20:27:37.26
+89bbcb06
+User
+date: 'Mon, 12 Jan 2026 19:27:37 GMT',
+2026-01-12 20:27:37.26
+89bbcb06
+User
+connection: 'keep-alive',
+2026-01-12 20:27:37.26
+89bbcb06
+User
+headers: {
+2026-01-12 20:27:37.26
+89bbcb06
+User
+rawType: 'invalid_request_error',
+2026-01-12 20:27:37.26
+89bbcb06
+User
+param: undefined,
+2026-01-12 20:27:37.26
+89bbcb06
+User
+message: 'The `expires_at` timestamp must be at least 30 minutes from Checkout Session creation.',
+2026-01-12 20:27:37.26
+89bbcb06
+User
+'x-stripe-priority-routing-enabled': 'true',
+2026-01-12 20:27:37.26
+89bbcb06
+User
+'access-control-allow-credentials': 'true',
+2026-01-12 20:27:37.26
+89bbcb06
+User
+server: 'nginx',
+2026-01-12 20:27:37.26
+89bbcb06
+User
+raw: {
+2026-01-12 20:27:37.26
+89bbcb06
+User
+[PUBLIC] Reserve resale error: StripeInvalidRequestError: The `expires_at` timestamp must be at least 30 minutes from Checkout Session creation.
+2026-01-12 20:27:37.26
+89bbcb06
+User
+'access-control-expose-headers': 'Request-Id, Stripe-Manage-Version, Stripe-Should-Retry, X-Stripe-External-Auth-Required, X-Stripe-Privileged-Session-Required',
+2026-01-12 20:27:37.26
+89bbcb06
+User
+'stripe-should-retry': 'false',
+2026-01-12 20:27:37.26
+89bbcb06
+User
+'access-control-allow-origin': '*',
+2026-01-12 20:27:37.26
+89bbcb06
+User
+statusCode: 400,
+2026-01-12 20:27:37.26
+89bbcb06
+User
+'content-type': 'application/json',
+2026-01-12 20:27:37.26
+89bbcb06
+User
+vary: 'Origin',
+2026-01-12 20:27:37.26
+89bbcb06
+User
+'cache-control': 'no-cache, no-store',
+2026-01-12 20:27:37.26
+89bbcb06
+User
+doc_url: undefined,
+2026-01-12 20:27:37.26
+89bbcb06
+User
+request_log_url: 'https://dashboard.stripe.com/acct_1PkTcs083fDHdLKV/workbench/logs?object=req_vtI5fiRUgIHS01',
+2026-01-12 20:27:37.26
+89bbcb06
+User
+},

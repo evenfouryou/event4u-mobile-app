@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -78,6 +79,7 @@ function SupplierCard({
   canManage: boolean;
   delay?: number;
 }) {
+  const { t } = useTranslation();
   const isInactive = !supplier.active;
 
   return (
@@ -106,13 +108,13 @@ function SupplierCard({
               variant={supplier.active ? "default" : "secondary"} 
               className="text-xs flex-shrink-0"
             >
-              {supplier.active ? 'Attivo' : 'Disattivo'}
+              {supplier.active ? t('suppliers.activeStatus') : t('suppliers.inactiveStatus')}
             </Badge>
           </div>
           
           {supplier.vatNumber && (
             <p className="text-base text-muted-foreground mb-3">
-              P.IVA: {supplier.vatNumber}
+              {t('suppliers.vatPrefix')}: {supplier.vatNumber}
             </p>
           )}
           
@@ -163,7 +165,7 @@ function SupplierCard({
           hapticType="light"
         >
           <Edit className="h-5 w-5" />
-          <span>Modifica</span>
+          <span>{t('common.edit')}</span>
         </HapticButton>
         <HapticButton
           variant="ghost"
@@ -177,7 +179,7 @@ function SupplierCard({
           hapticType="medium"
         >
           <Trash2 className="h-5 w-5" />
-          <span>Elimina</span>
+          <span>{t('common.delete')}</span>
         </HapticButton>
       </motion.div>
     </motion.div>
@@ -192,6 +194,7 @@ export default function Suppliers() {
   const { toast } = useToast();
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
   
   const canManageSuppliers = user?.role === 'super_admin' || user?.role === 'gestore';
 
@@ -223,24 +226,24 @@ export default function Suppliers() {
       form.reset();
       triggerHaptic('success');
       toast({
-        title: "Successo",
-        description: "Fornitore creato con successo",
+        title: t('common.success'),
+        description: t('suppliers.createSuccess'),
       });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Non autorizzato",
-          description: "Effettua nuovamente il login...",
+          title: t('common.unauthorized'),
+          description: t('common.loginAgain'),
           variant: "destructive",
         });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
       toast({
-        title: "Errore",
-        description: "Impossibile creare il fornitore",
+        title: t('common.error'),
+        description: t('suppliers.createError'),
         variant: "destructive",
       });
     },
@@ -257,24 +260,24 @@ export default function Suppliers() {
       form.reset();
       triggerHaptic('success');
       toast({
-        title: "Successo",
-        description: "Fornitore aggiornato con successo",
+        title: t('common.success'),
+        description: t('suppliers.updateSuccess'),
       });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Non autorizzato",
-          description: "Effettua nuovamente il login...",
+          title: t('common.unauthorized'),
+          description: t('common.loginAgain'),
           variant: "destructive",
         });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
       toast({
-        title: "Errore",
-        description: "Impossibile aggiornare il fornitore",
+        title: t('common.error'),
+        description: t('suppliers.updateError'),
         variant: "destructive",
       });
     },
@@ -289,24 +292,24 @@ export default function Suppliers() {
       setDeletingSupplier(null);
       triggerHaptic('success');
       toast({
-        title: "Successo",
-        description: "Fornitore eliminato con successo",
+        title: t('common.success'),
+        description: t('suppliers.deleteSuccess'),
       });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Non autorizzato",
-          description: "Effettua nuovamente il login...",
+          title: t('common.unauthorized'),
+          description: t('common.loginAgain'),
           variant: "destructive",
         });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
       toast({
-        title: "Errore",
-        description: "Impossibile eliminare il fornitore",
+        title: t('common.error'),
+        description: t('suppliers.deleteError'),
         variant: "destructive",
       });
     },
@@ -373,11 +376,11 @@ export default function Suppliers() {
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Nome *</FormLabel>
+              <FormLabel>{t('suppliers.nameRequired')}</FormLabel>
               <FormControl>
                 <Input 
                   {...field} 
-                  placeholder="Nome fornitore" 
+                  placeholder={t('suppliers.namePlaceholder')} 
                   data-testid="input-supplier-name"
                 />
               </FormControl>
@@ -391,12 +394,12 @@ export default function Suppliers() {
           name="vatNumber"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Partita IVA</FormLabel>
+              <FormLabel>{t('suppliers.vatNumber')}</FormLabel>
               <FormControl>
                 <Input 
                   {...field} 
                   value={field.value ?? ''} 
-                  placeholder="IT12345678901" 
+                  placeholder={t('suppliers.vatPlaceholder')} 
                   data-testid="input-supplier-vat"
                 />
               </FormControl>
@@ -411,13 +414,13 @@ export default function Suppliers() {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email</FormLabel>
+                <FormLabel>{t('suppliers.email')}</FormLabel>
                 <FormControl>
                   <Input 
                     {...field} 
                     value={field.value ?? ''} 
                     type="email" 
-                    placeholder="info@fornitore.it" 
+                    placeholder={t('suppliers.emailPlaceholder')} 
                     data-testid="input-supplier-email"
                   />
                 </FormControl>
@@ -431,12 +434,12 @@ export default function Suppliers() {
             name="phone"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Telefono</FormLabel>
+                <FormLabel>{t('suppliers.phone')}</FormLabel>
                 <FormControl>
                   <Input 
                     {...field} 
                     value={field.value ?? ''} 
-                    placeholder="+39 02 1234567" 
+                    placeholder={t('suppliers.phonePlaceholder')} 
                     data-testid="input-supplier-phone"
                   />
                 </FormControl>
@@ -451,12 +454,12 @@ export default function Suppliers() {
           name="address"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Indirizzo</FormLabel>
+              <FormLabel>{t('suppliers.address')}</FormLabel>
               <FormControl>
                 <Textarea 
                   {...field} 
                   value={field.value ?? ''} 
-                  placeholder="Via, Città, CAP" 
+                  placeholder={t('suppliers.addressPlaceholder')} 
                   rows={2} 
                   data-testid="input-supplier-address"
                 />
@@ -471,12 +474,12 @@ export default function Suppliers() {
           name="notes"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Note</FormLabel>
+              <FormLabel>{t('suppliers.notes')}</FormLabel>
               <FormControl>
                 <Textarea 
                   {...field} 
                   value={field.value ?? ''} 
-                  placeholder="Note aggiuntive..." 
+                  placeholder={t('suppliers.notesPlaceholder')} 
                   rows={2} 
                   data-testid="input-supplier-notes"
                 />
@@ -500,7 +503,7 @@ export default function Suppliers() {
                   data-testid="checkbox-supplier-active"
                 />
               </FormControl>
-              <FormLabel className="!mt-0">Fornitore attivo</FormLabel>
+              <FormLabel className="!mt-0">{t('suppliers.supplierActive')}</FormLabel>
               <FormMessage />
             </FormItem>
           )}
@@ -513,15 +516,15 @@ export default function Suppliers() {
             onClick={() => setDialogOpen(false)}
             data-testid="button-cancel-supplier"
           >
-            Annulla
+            {t('common.cancel')}
           </Button>
           <Button
             type="submit"
             disabled={createMutation.isPending || updateMutation.isPending}
             data-testid="button-submit-supplier"
           >
-            {createMutation.isPending || updateMutation.isPending ? 'Salvataggio...' : 
-              editingSupplier ? 'Salva Modifiche' : 'Crea Fornitore'}
+            {createMutation.isPending || updateMutation.isPending ? t('suppliers.saving') : 
+              editingSupplier ? t('suppliers.saveChanges') : t('suppliers.createSupplier')}
           </Button>
         </DialogFooter>
       </form>
@@ -533,13 +536,13 @@ export default function Suppliers() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-suppliers">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Fornitori</h1>
-            <p className="text-muted-foreground">Gestione fornitori aziendali</p>
+            <h1 className="text-3xl font-bold">{t('suppliers.title')}</h1>
+            <p className="text-muted-foreground">{t('suppliers.companyManagement')}</p>
           </div>
           {canManageSuppliers && (
             <Button onClick={() => handleOpenDialog()} data-testid="button-create-supplier">
               <Plus className="w-4 h-4 mr-2" />
-              Nuovo Fornitore
+              {t('suppliers.newSupplier')}
             </Button>
           )}
         </div>
@@ -548,19 +551,19 @@ export default function Suppliers() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{suppliers?.length || 0}</div>
-              <p className="text-sm text-muted-foreground">Totale Fornitori</p>
+              <p className="text-sm text-muted-foreground">{t('suppliers.totalSuppliers')}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-green-500">{activeSuppliers.length}</div>
-              <p className="text-sm text-muted-foreground">Attivi</p>
+              <p className="text-sm text-muted-foreground">{t('suppliers.activeSuppliers')}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-muted-foreground">{inactiveSuppliers.length}</div>
-              <p className="text-sm text-muted-foreground">Disattivati</p>
+              <p className="text-sm text-muted-foreground">{t('suppliers.deactivated')}</p>
             </CardContent>
           </Card>
           <Card>
@@ -568,7 +571,7 @@ export default function Suppliers() {
               <div className="text-2xl font-bold text-blue-500">
                 {suppliers?.filter(s => s.email).length || 0}
               </div>
-              <p className="text-sm text-muted-foreground">Con Email</p>
+              <p className="text-sm text-muted-foreground">{t('suppliers.withEmail')}</p>
             </CardContent>
           </Card>
         </div>
@@ -577,13 +580,13 @@ export default function Suppliers() {
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
               <div>
-                <CardTitle>Elenco Fornitori</CardTitle>
-                <CardDescription>Gestisci i tuoi fornitori</CardDescription>
+                <CardTitle>{t('suppliers.supplierList')}</CardTitle>
+                <CardDescription>{t('suppliers.manageSuppliers')}</CardDescription>
               </div>
               <div className="relative w-72">
                 <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
                 <Input
-                  placeholder="Cerca per nome o P.IVA..."
+                  placeholder={t('suppliers.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -603,11 +606,11 @@ export default function Suppliers() {
               <div className="text-center py-12">
                 <Truck className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
                 <p className="text-lg text-muted-foreground">
-                  {searchQuery ? "Nessun fornitore trovato" : "Nessun fornitore configurato"}
+                  {searchQuery ? t('suppliers.noSuppliers') : t('suppliers.noSuppliersConfigured')}
                 </p>
                 {!searchQuery && canManageSuppliers && (
                   <p className="text-sm text-muted-foreground mt-2">
-                    Clicca "Nuovo Fornitore" per aggiungere il primo fornitore
+                    {t('suppliers.clickNewSupplier')}
                   </p>
                 )}
               </div>
@@ -615,12 +618,12 @@ export default function Suppliers() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>P.IVA</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Telefono</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
+                    <TableHead>{t('common.name')}</TableHead>
+                    <TableHead>{t('suppliers.vatNumber')}</TableHead>
+                    <TableHead>{t('suppliers.email')}</TableHead>
+                    <TableHead>{t('suppliers.phone')}</TableHead>
+                    <TableHead>{t('common.status')}</TableHead>
+                    <TableHead className="text-right">{t('common.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -653,7 +656,7 @@ export default function Suppliers() {
                       </TableCell>
                       <TableCell>
                         <Badge variant={supplier.active ? "default" : "secondary"}>
-                          {supplier.active ? 'Attivo' : 'Disattivo'}
+                          {supplier.active ? t('suppliers.activeStatus') : t('suppliers.inactiveStatus')}
                         </Badge>
                       </TableCell>
                       <TableCell className="text-right">
@@ -691,10 +694,10 @@ export default function Suppliers() {
           <DialogContent className="max-w-lg">
             <DialogHeader>
               <DialogTitle>
-                {editingSupplier ? 'Modifica Fornitore' : 'Nuovo Fornitore'}
+                {editingSupplier ? t('suppliers.editSupplier') : t('suppliers.newSupplier')}
               </DialogTitle>
               <DialogDescription>
-                {editingSupplier ? 'Modifica i dati del fornitore' : 'Inserisci i dati del nuovo fornitore'}
+                {editingSupplier ? t('suppliers.editSupplierDesc') : t('suppliers.newSupplierDesc')}
               </DialogDescription>
             </DialogHeader>
             {formContent}
@@ -704,20 +707,19 @@ export default function Suppliers() {
         <AlertDialog open={!!deletingSupplier} onOpenChange={(open) => !open && setDeletingSupplier(null)}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Conferma Eliminazione</AlertDialogTitle>
+              <AlertDialogTitle>{t('suppliers.confirmDelete')}</AlertDialogTitle>
               <AlertDialogDescription>
-                Sei sicuro di voler eliminare il fornitore "{deletingSupplier?.name}"?
-                Questa azione non può essere annullata.
+                {t('suppliers.confirmDeleteDesc', { name: deletingSupplier?.name })}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel data-testid="button-cancel-delete">Annulla</AlertDialogCancel>
+              <AlertDialogCancel data-testid="button-cancel-delete">{t('common.cancel')}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => deletingSupplier && deleteMutation.mutate(deletingSupplier.id)}
                 className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
                 data-testid="button-confirm-delete"
               >
-                Elimina
+                {t('common.delete')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -728,8 +730,8 @@ export default function Suppliers() {
 
   const headerContent = (
     <MobileHeader
-      title="Fornitori"
-      subtitle={`${suppliers?.length ?? 0} fornitori`}
+      title={t('suppliers.title')}
+      subtitle={t('suppliers.supplierCount', { count: suppliers?.length ?? 0 })}
       showBackButton showMenuButton
       rightAction={
         <motion.div 
@@ -758,7 +760,7 @@ export default function Suppliers() {
         <div className="relative">
           <Search className="absolute left-4 top-1/2 h-5 w-5 -translate-y-1/2 text-muted-foreground" />
           <Input
-            placeholder="Cerca per nome o partita IVA..."
+            placeholder={t('suppliers.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-12 h-12 text-base bg-transparent border-white/10 rounded-xl"
@@ -789,11 +791,11 @@ export default function Suppliers() {
             <Truck className="h-10 w-10 text-muted-foreground" />
           </motion.div>
           <p className="text-lg text-muted-foreground mb-2">
-            {searchQuery ? "Nessun fornitore trovato" : "Nessun fornitore configurato"}
+            {searchQuery ? t('suppliers.noSuppliers') : t('suppliers.noSuppliersConfigured')}
           </p>
           {!searchQuery && canManageSuppliers && (
             <p className="text-base text-muted-foreground">
-              Tocca + per aggiungere il primo fornitore
+              {t('suppliers.tapToAdd')}
             </p>
           )}
         </motion.div>
@@ -806,7 +808,7 @@ export default function Suppliers() {
               transition={{ ...springTransition, delay: 0.2 }}
             >
               <h2 className="text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wider px-1">
-                Fornitori Attivi ({activeSuppliers.length})
+                {t('suppliers.activeSuppliersCount', { count: activeSuppliers.length })}
               </h2>
               <div className="space-y-4">
                 {activeSuppliers.map((supplier, index) => (
@@ -830,7 +832,7 @@ export default function Suppliers() {
               transition={{ ...springTransition, delay: 0.3 }}
             >
               <h2 className="text-sm font-semibold text-muted-foreground mb-4 uppercase tracking-wider px-1">
-                Fornitori Disattivati ({inactiveSuppliers.length})
+                {t('suppliers.deactivatedSuppliersCount', { count: inactiveSuppliers.length })}
               </h2>
               <div className="space-y-4">
                 {inactiveSuppliers.map((supplier, index) => (
@@ -864,10 +866,10 @@ export default function Suppliers() {
         <DialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto glass border-white/10 rounded-2xl">
           <DialogHeader>
             <DialogTitle className="text-xl">
-              {editingSupplier ? 'Modifica Fornitore' : 'Nuovo Fornitore'}
+              {editingSupplier ? t('suppliers.editSupplier') : t('suppliers.newSupplier')}
             </DialogTitle>
             <DialogDescription className="text-base">
-              {editingSupplier ? 'Modifica i dati del fornitore' : 'Inserisci i dati del nuovo fornitore'}
+              {editingSupplier ? t('suppliers.editSupplierDesc') : t('suppliers.newSupplierDesc')}
             </DialogDescription>
           </DialogHeader>
           <Form {...form}>
@@ -877,11 +879,11 @@ export default function Suppliers() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">Nome *</FormLabel>
+                    <FormLabel className="text-base">{t('suppliers.nameRequired')}</FormLabel>
                     <FormControl>
                       <Input 
                         {...field} 
-                        placeholder="Nome fornitore" 
+                        placeholder={t('suppliers.namePlaceholder')} 
                         data-testid="input-supplier-name"
                         className="h-12 text-base bg-white/5 border-white/10 rounded-xl"
                       />
@@ -896,12 +898,12 @@ export default function Suppliers() {
                 name="vatNumber"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">Partita IVA</FormLabel>
+                    <FormLabel className="text-base">{t('suppliers.vatNumber')}</FormLabel>
                     <FormControl>
                       <Input 
                         {...field} 
                         value={field.value ?? ''} 
-                        placeholder="IT12345678901" 
+                        placeholder={t('suppliers.vatPlaceholder')} 
                         data-testid="input-supplier-vat"
                         className="h-12 text-base bg-white/5 border-white/10 rounded-xl"
                       />
@@ -916,13 +918,13 @@ export default function Suppliers() {
                 name="email"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">Email</FormLabel>
+                    <FormLabel className="text-base">{t('suppliers.email')}</FormLabel>
                     <FormControl>
                       <Input 
                         {...field} 
                         value={field.value ?? ''} 
                         type="email" 
-                        placeholder="info@fornitore.it" 
+                        placeholder={t('suppliers.emailPlaceholder')} 
                         data-testid="input-supplier-email"
                         className="h-12 text-base bg-white/5 border-white/10 rounded-xl"
                       />
@@ -937,12 +939,12 @@ export default function Suppliers() {
                 name="phone"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">Telefono</FormLabel>
+                    <FormLabel className="text-base">{t('suppliers.phone')}</FormLabel>
                     <FormControl>
                       <Input 
                         {...field} 
                         value={field.value ?? ''} 
-                        placeholder="+39 02 1234567" 
+                        placeholder={t('suppliers.phonePlaceholder')} 
                         data-testid="input-supplier-phone"
                         className="h-12 text-base bg-white/5 border-white/10 rounded-xl"
                       />
@@ -957,12 +959,12 @@ export default function Suppliers() {
                 name="address"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">Indirizzo</FormLabel>
+                    <FormLabel className="text-base">{t('suppliers.address')}</FormLabel>
                     <FormControl>
                       <Textarea 
                         {...field} 
                         value={field.value ?? ''} 
-                        placeholder="Via, Città, CAP" 
+                        placeholder={t('suppliers.addressPlaceholder')} 
                         rows={2} 
                         data-testid="input-supplier-address"
                         className="text-base bg-white/5 border-white/10 resize-none rounded-xl"
@@ -978,12 +980,12 @@ export default function Suppliers() {
                 name="notes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">Note</FormLabel>
+                    <FormLabel className="text-base">{t('suppliers.notes')}</FormLabel>
                     <FormControl>
                       <Textarea 
                         {...field} 
                         value={field.value ?? ''} 
-                        placeholder="Note aggiuntive..." 
+                        placeholder={t('suppliers.notesPlaceholder')} 
                         rows={3} 
                         data-testid="input-supplier-notes"
                         className="text-base bg-white/5 border-white/10 resize-none rounded-xl"
@@ -1008,7 +1010,7 @@ export default function Suppliers() {
                         data-testid="checkbox-supplier-active"
                       />
                     </FormControl>
-                    <FormLabel className="!mt-0 text-base">Fornitore attivo</FormLabel>
+                    <FormLabel className="!mt-0 text-base">{t('suppliers.supplierActive')}</FormLabel>
                     <FormMessage />
                   </FormItem>
                 )}
@@ -1023,7 +1025,7 @@ export default function Suppliers() {
                   className="flex-1 h-12 border-white/10 rounded-xl text-base"
                   hapticType="light"
                 >
-                  Annulla
+                  {t('common.cancel')}
                 </HapticButton>
                 <HapticButton
                   type="submit"
@@ -1032,7 +1034,7 @@ export default function Suppliers() {
                   className="flex-1 h-12 gradient-golden text-black font-semibold rounded-xl text-base"
                   hapticType="medium"
                 >
-                  {editingSupplier ? 'Aggiorna' : 'Crea'}
+                  {editingSupplier ? t('suppliers.update') : t('suppliers.create')}
                 </HapticButton>
               </DialogFooter>
             </form>
@@ -1043,10 +1045,9 @@ export default function Suppliers() {
       <AlertDialog open={!!deletingSupplier} onOpenChange={() => setDeletingSupplier(null)}>
         <AlertDialogContent className="w-[95vw] max-w-lg max-h-[90vh] overflow-y-auto glass border-white/10 rounded-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl">Conferma Eliminazione</AlertDialogTitle>
+            <AlertDialogTitle className="text-xl">{t('suppliers.confirmDelete')}</AlertDialogTitle>
             <AlertDialogDescription className="text-base">
-              Sei sicuro di voler eliminare il fornitore <strong>{deletingSupplier?.name}</strong>?
-              Questa azione non può essere annullata.
+              {t('suppliers.confirmDeleteDesc', { name: deletingSupplier?.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-3">
@@ -1054,14 +1055,14 @@ export default function Suppliers() {
               data-testid="button-cancel-delete-supplier"
               className="flex-1 h-12 border-white/10 rounded-xl text-base"
             >
-              Annulla
+              {t('common.cancel')}
             </AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deletingSupplier && deleteMutation.mutate(deletingSupplier.id)}
               data-testid="button-confirm-delete-supplier"
               className="flex-1 h-12 bg-destructive text-destructive-foreground rounded-xl text-base"
             >
-              Elimina
+              {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

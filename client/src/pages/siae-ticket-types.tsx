@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useParams, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from "react-i18next";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -117,6 +118,7 @@ const statusLabelOptions = [
 ];
 
 export default function SiaeTicketTypes() {
+  const { t } = useTranslation();
   const { eventId } = useParams<{ eventId: string }>();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -603,7 +605,7 @@ export default function SiaeTicketTypes() {
           <div>
             <h1 className="text-2xl font-bold flex items-center gap-2">
               <Ticket className="h-6 w-6 text-cyan-400" />
-              Tipologie Biglietti
+              {t('siae.ticketTypesPage.title')}
             </h1>
             {parentEvent && (
               <p className="text-sm text-muted-foreground">{parentEvent.name}</p>
@@ -612,7 +614,7 @@ export default function SiaeTicketTypes() {
         </div>
         <Button onClick={() => setIsCreateDialogOpen(true)} data-testid="btn-create-sector">
           <Plus className="h-4 w-4 mr-2" />
-          Nuova Tipologia
+          {t('siae.ticketTypesPage.newType')}
         </Button>
       </div>
 
@@ -621,10 +623,10 @@ export default function SiaeTicketTypes() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Settings className="h-5 w-5 text-amber-400" />
-            Impostazioni Vendita
+            {t('siae.ticketTypesPage.saleSettings')}
           </CardTitle>
           <CardDescription>
-            Controlla la visibilità dell'evento e lo stato della biglietteria
+            {t('siae.ticketTypesPage.saleSettingsDesc')}
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
@@ -640,9 +642,9 @@ export default function SiaeTicketTypes() {
                   )}
                 </div>
                 <div>
-                  <div className="font-medium">Visibilità Evento</div>
+                  <div className="font-medium">{t('siae.ticketTypesPage.eventVisibility')}</div>
                   <div className="text-sm text-muted-foreground">
-                    Mostra l'evento nella vetrina pubblica
+                    {t('siae.ticketTypesPage.showInPublic')}
                   </div>
                 </div>
               </div>
@@ -661,11 +663,11 @@ export default function SiaeTicketTypes() {
                   <Ticket className="h-5 w-5 text-emerald-400" />
                 </div>
                 <div>
-                  <div className="font-medium">Vendita Biglietti</div>
+                  <div className="font-medium">{t('siae.ticketTypesPage.ticketSales')}</div>
                   <div className="text-sm text-muted-foreground">
-                    {ticketedEvent?.ticketingStatus === 'active' ? 'Biglietteria attiva' : 
-                     ticketedEvent?.ticketingStatus === 'suspended' ? 'Biglietteria sospesa' :
-                     ticketedEvent?.ticketingStatus === 'closed' ? 'Biglietteria chiusa' : 'Bozza'}
+                    {ticketedEvent?.ticketingStatus === 'active' ? t('siae.ticketTypesPage.ticketingActive') : 
+                     ticketedEvent?.ticketingStatus === 'suspended' ? t('siae.ticketTypesPage.ticketingSuspended') :
+                     ticketedEvent?.ticketingStatus === 'closed' ? t('siae.ticketTypesPage.ticketingClosed') : t('siae.ticketTypesPage.draft')}
                   </div>
                 </div>
               </div>
@@ -678,10 +680,10 @@ export default function SiaeTicketTypes() {
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="draft">Bozza</SelectItem>
-                  <SelectItem value="active">Attiva</SelectItem>
-                  <SelectItem value="suspended">Sospesa</SelectItem>
-                  <SelectItem value="closed">Chiusa</SelectItem>
+                  <SelectItem value="draft">{t('siae.ticketTypesPage.draft')}</SelectItem>
+                  <SelectItem value="active">{t('siae.ticketTypesPage.statusActive')}</SelectItem>
+                  <SelectItem value="suspended">{t('siae.ticketTypesPage.statusSuspended')}</SelectItem>
+                  <SelectItem value="closed">{t('siae.ticketTypesPage.statusClosed')}</SelectItem>
                 </SelectContent>
               </Select>
             </div>
@@ -692,7 +694,7 @@ export default function SiaeTicketTypes() {
             <div className="p-4 rounded-lg border border-border bg-background/50">
               <div className="flex items-center gap-2 mb-2">
                 <Link2 className="h-4 w-4 text-primary" />
-                <span className="font-medium text-sm">Link Pubblico Biglietti</span>
+                <span className="font-medium text-sm">{t('siae.ticketTypesPage.publicTicketLink')}</span>
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex-1 p-2 rounded-lg bg-muted/50 font-mono text-xs break-all">
@@ -703,7 +705,7 @@ export default function SiaeTicketTypes() {
                   size="icon"
                   onClick={() => {
                     navigator.clipboard.writeText(`${window.location.origin}/e/${parentEvent.id.slice(0, 8)}`);
-                    toast({ title: "Link copiato!" });
+                    toast({ title: t('siae.ticketTypesPage.linkCopied') });
                   }}
                   data-testid="btn-copy-event-link"
                 >
@@ -724,18 +726,18 @@ export default function SiaeTicketTypes() {
           {/* Status summary badges */}
           <div className="flex flex-wrap gap-2 pt-2">
             {parentEvent?.isPublic ? (
-              <Badge className="bg-purple-600"><Eye className="h-3 w-3 mr-1" />Evento Pubblico</Badge>
+              <Badge className="bg-purple-600"><Eye className="h-3 w-3 mr-1" />{t('siae.ticketTypesPage.publicEvent')}</Badge>
             ) : (
-              <Badge variant="outline"><EyeOff className="h-3 w-3 mr-1" />Evento Nascosto</Badge>
+              <Badge variant="outline"><EyeOff className="h-3 w-3 mr-1" />{t('siae.ticketTypesPage.hiddenEvent')}</Badge>
             )}
             {ticketedEvent?.ticketingStatus === 'active' ? (
-              <Badge className="bg-emerald-600"><CheckCircle2 className="h-3 w-3 mr-1" />Vendita Attiva</Badge>
+              <Badge className="bg-emerald-600"><CheckCircle2 className="h-3 w-3 mr-1" />{t('siae.ticketTypesPage.saleActive')}</Badge>
             ) : ticketedEvent?.ticketingStatus === 'suspended' ? (
-              <Badge className="bg-amber-600"><AlertCircle className="h-3 w-3 mr-1" />Vendita Sospesa</Badge>
+              <Badge className="bg-amber-600"><AlertCircle className="h-3 w-3 mr-1" />{t('siae.ticketTypesPage.saleSuspended')}</Badge>
             ) : ticketedEvent?.ticketingStatus === 'closed' ? (
-              <Badge className="bg-rose-600"><XCircle className="h-3 w-3 mr-1" />Vendita Chiusa</Badge>
+              <Badge className="bg-rose-600"><XCircle className="h-3 w-3 mr-1" />{t('siae.ticketTypesPage.saleClosed')}</Badge>
             ) : (
-              <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />Bozza</Badge>
+              <Badge variant="secondary"><Clock className="h-3 w-3 mr-1" />{t('siae.ticketTypesPage.draft')}</Badge>
             )}
           </div>
         </CardContent>
@@ -745,24 +747,24 @@ export default function SiaeTicketTypes() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Users className="h-5 w-5 text-blue-400" />
-            Elenco Tipologie ({sectors.length})
+            {t('siae.ticketTypesPage.typesList')} ({sectors.length})
           </CardTitle>
           <CardDescription>
-            Gestisci le tipologie di biglietto per questo evento
+            {t('siae.ticketTypesPage.typesListDesc')}
           </CardDescription>
         </CardHeader>
         <CardContent>
           {sectors.length === 0 ? (
             <div className="text-center py-12">
               <Ticket className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-50" />
-              <p className="text-muted-foreground">Nessuna tipologia biglietto configurata</p>
+              <p className="text-muted-foreground">{t('siae.ticketTypesPage.noTypes')}</p>
               <Button 
                 className="mt-4" 
                 onClick={() => setIsCreateDialogOpen(true)}
                 data-testid="btn-create-sector-empty"
               >
                 <Plus className="h-4 w-4 mr-2" />
-                Crea la prima tipologia
+                {t('siae.ticketTypesPage.createFirstType')}
               </Button>
             </div>
           ) : (
@@ -770,14 +772,14 @@ export default function SiaeTicketTypes() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Codice</TableHead>
-                    <TableHead>Prezzi</TableHead>
-                    <TableHead>Capienza</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead>Disponibilità</TableHead>
-                    <TableHead>Attivo</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
+                    <TableHead>{t('common.name')}</TableHead>
+                    <TableHead>{t('siae.ticketTypesPage.code')}</TableHead>
+                    <TableHead>{t('siae.ticketTypesPage.prices')}</TableHead>
+                    <TableHead>{t('siae.ticketTypesPage.capacity')}</TableHead>
+                    <TableHead>{t('common.status')}</TableHead>
+                    <TableHead>{t('siae.ticketTypesPage.availability')}</TableHead>
+                    <TableHead>{t('siae.ticketTypesPage.active')}</TableHead>
+                    <TableHead className="text-right">{t('common.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -791,12 +793,12 @@ export default function SiaeTicketTypes() {
                         </TableCell>
                         <TableCell>
                           <div className="text-sm space-y-0.5">
-                            <div>Intero: €{Number(sector.priceIntero).toFixed(2)}</div>
+                            <div>{t('siae.ticketTypesPage.fullPrice')}: €{Number(sector.priceIntero).toFixed(2)}</div>
                             {sector.priceRidotto && (
-                              <div className="text-muted-foreground">Ridotto: €{Number(sector.priceRidotto).toFixed(2)}</div>
+                              <div className="text-muted-foreground">{t('siae.ticketTypesPage.reducedPrice')}: €{Number(sector.priceRidotto).toFixed(2)}</div>
                             )}
                             {sector.prevendita && Number(sector.prevendita) > 0 && (
-                              <div className="text-muted-foreground">DDP: €{Number(sector.prevendita).toFixed(2)}</div>
+                              <div className="text-muted-foreground">{t('siae.ticketTypesPage.presale')}: €{Number(sector.prevendita).toFixed(2)}</div>
                             )}
                           </div>
                         </TableCell>
@@ -806,7 +808,7 @@ export default function SiaeTicketTypes() {
                             <span className="text-muted-foreground"> / {sector.capacity}</span>
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {sector.availableSeats} disponibili
+                            {sector.availableSeats} {t('siae.ticketTypesPage.available')}
                           </div>
                         </TableCell>
                         <TableCell>{getStatusBadge(sector)}</TableCell>
@@ -827,7 +829,7 @@ export default function SiaeTicketTypes() {
                               )}
                             </div>
                           ) : (
-                            <span className="text-xs text-muted-foreground">Sempre</span>
+                            <span className="text-xs text-muted-foreground">{t('siae.ticketTypesPage.always')}</span>
                           )}
                         </TableCell>
                         <TableCell>
@@ -872,9 +874,9 @@ export default function SiaeTicketTypes() {
       <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Nuova Tipologia Biglietto</DialogTitle>
+            <DialogTitle>{t('siae.ticketTypesPage.newTicketType')}</DialogTitle>
             <DialogDescription>
-              Crea una nuova tipologia di biglietto per questo evento
+              {t('siae.ticketTypesPage.createTypeDesc')}
             </DialogDescription>
           </DialogHeader>
           <Form {...createForm}>
@@ -882,11 +884,11 @@ export default function SiaeTicketTypes() {
               <SectorFormFields form={createForm} />
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setIsCreateDialogOpen(false)} data-testid="btn-cancel-create">
-                  Annulla
+                  {t('common.cancel')}
                 </Button>
                 <Button type="submit" disabled={createMutation.isPending} data-testid="btn-submit-create">
                   {createMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Crea Tipologia
+                  {t('siae.ticketTypesPage.createType')}
                 </Button>
               </DialogFooter>
             </form>
@@ -897,9 +899,9 @@ export default function SiaeTicketTypes() {
       <Dialog open={!!editingSector} onOpenChange={(open) => !open && setEditingSector(null)}>
         <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <DialogTitle>Modifica Tipologia Biglietto</DialogTitle>
+            <DialogTitle>{t('siae.ticketTypesPage.editTicketType')}</DialogTitle>
             <DialogDescription>
-              Modifica i dettagli della tipologia "{editingSector?.name}"
+              {t('siae.ticketTypesPage.editTypeDesc', { name: editingSector?.name })}
             </DialogDescription>
           </DialogHeader>
           <Form {...editForm}>
@@ -907,11 +909,11 @@ export default function SiaeTicketTypes() {
               <SectorFormFields form={editForm} isEdit={true} hasSoldTickets={!canEditPrices(editingSector || {} as SiaeEventSector)} />
               <DialogFooter>
                 <Button type="button" variant="outline" onClick={() => setEditingSector(null)} data-testid="btn-cancel-edit">
-                  Annulla
+                  {t('common.cancel')}
                 </Button>
                 <Button type="submit" disabled={updateMutation.isPending} data-testid="btn-submit-edit">
                   {updateMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-                  Salva Modifiche
+                  {t('common.saveChanges')}
                 </Button>
               </DialogFooter>
             </form>
@@ -922,21 +924,20 @@ export default function SiaeTicketTypes() {
       <AlertDialog open={!!deletingSector} onOpenChange={(open) => !open && setDeletingSector(null)}>
         <AlertDialogContent>
           <AlertDialogHeader>
-            <AlertDialogTitle>Elimina Tipologia Biglietto</AlertDialogTitle>
+            <AlertDialogTitle>{t('siae.ticketTypesPage.deleteTicketType')}</AlertDialogTitle>
             <AlertDialogDescription>
-              Sei sicuro di voler eliminare la tipologia "{deletingSector?.name}"? 
-              Questa azione non può essere annullata.
+              {t('siae.ticketTypesPage.deleteTypeConfirm', { name: deletingSector?.name })}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter>
-            <AlertDialogCancel data-testid="btn-cancel-delete">Annulla</AlertDialogCancel>
+            <AlertDialogCancel data-testid="btn-cancel-delete">{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deletingSector && deleteMutation.mutate(deletingSector.id)}
               className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
               data-testid="btn-confirm-delete"
             >
               {deleteMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
-              Elimina
+              {t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

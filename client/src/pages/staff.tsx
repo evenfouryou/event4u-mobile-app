@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useLocation } from "wouter";
+import { useTranslation } from "react-i18next";
 import { motion, AnimatePresence } from "framer-motion";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
@@ -60,15 +61,7 @@ import {
 } from "lucide-react";
 import type { Staff } from "@shared/schema";
 
-const roleLabels: Record<string, string> = {
-  pr: "PR",
-  barista: "Barista",
-  sicurezza: "Sicurezza",
-  fotografo: "Fotografo",
-  dj: "DJ",
-  tecnico: "Tecnico",
-  altro: "Altro",
-};
+const roleKeys = ["pr", "barista", "sicurezza", "fotografo", "dj", "tecnico", "altro"] as const;
 
 const roleColors: Record<string, string> = {
   pr: "from-pink-500 to-rose-600",
@@ -93,6 +86,7 @@ function StaffCard({
   onDelete: (id: string) => void;
   isAdmin: boolean;
 }) {
+  const { t } = useTranslation();
   const initials = `${staff.firstName?.[0] || ""}${staff.lastName?.[0] || ""}`.toUpperCase();
   const gradient = roleColors[staff.role] || roleColors.altro;
 
@@ -124,15 +118,15 @@ function StaffCard({
               </h3>
               <div className="flex items-center gap-2 mt-1">
                 <Badge variant="outline" className="shrink-0 text-xs">
-                  {roleLabels[staff.role] || staff.role}
+                  {t(`staff.roles.${staff.role}`, staff.role)}
                 </Badge>
                 {staff.active ? (
                   <span className="flex items-center gap-1 text-xs text-teal">
                     <span className="w-1.5 h-1.5 rounded-full bg-teal animate-pulse" />
-                    Attivo
+                    {t("common.active")}
                   </span>
                 ) : (
-                  <span className="text-xs text-muted-foreground">Inattivo</span>
+                  <span className="text-xs text-muted-foreground">{t("common.inactive")}</span>
                 )}
               </div>
             </div>
@@ -167,7 +161,7 @@ function StaffCard({
                 <span>
                   {staff.hourlyRate && `€${parseFloat(staff.hourlyRate).toFixed(0)}/h`}
                   {staff.hourlyRate && staff.fixedRate && " · "}
-                  {staff.fixedRate && `€${parseFloat(staff.fixedRate).toFixed(0)} fisso`}
+                  {staff.fixedRate && `€${parseFloat(staff.fixedRate).toFixed(0)} ${t("staff.fixed")}`}
                 </span>
               </div>
             )}
@@ -209,6 +203,7 @@ function RoleFilter({
   selected: string | null;
   onChange: (role: string | null) => void;
 }) {
+  const { t } = useTranslation();
   const roles = ["all", "pr", "barista", "sicurezza", "fotografo", "dj", "tecnico", "altro"];
 
   return (
@@ -232,7 +227,7 @@ function RoleFilter({
           `}
           data-testid={`filter-role-${role}`}
         >
-          {role === "all" ? "Tutti" : roleLabels[role] || role}
+          {role === "all" ? t("staff.all") : t(`staff.roles.${role}`, role)}
         </motion.button>
       ))}
     </div>
@@ -240,6 +235,7 @@ function RoleFilter({
 }
 
 export default function StaffPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [, setLocation] = useLocation();
   const { toast } = useToast();
@@ -263,11 +259,11 @@ export default function StaffPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       setIsDialogOpen(false);
       triggerHaptic("success");
-      toast({ title: "Staff aggiunto con successo" });
+      toast({ title: t("staff.createSuccess") });
     },
     onError: (err: any) => {
       triggerHaptic("error");
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: err.message, variant: "destructive" });
     },
   });
 
@@ -279,11 +275,11 @@ export default function StaffPage() {
       setEditingStaff(null);
       setIsDialogOpen(false);
       triggerHaptic("success");
-      toast({ title: "Staff aggiornato" });
+      toast({ title: t("staff.updateSuccess") });
     },
     onError: (err: any) => {
       triggerHaptic("error");
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: err.message, variant: "destructive" });
     },
   });
 
@@ -293,11 +289,11 @@ export default function StaffPage() {
       queryClient.invalidateQueries({ queryKey: ["/api/staff"] });
       setDeleteConfirmId(null);
       triggerHaptic("success");
-      toast({ title: "Staff eliminato" });
+      toast({ title: t("staff.deleteSuccess") });
     },
     onError: (err: any) => {
       triggerHaptic("error");
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      toast({ title: t("common.error"), description: err.message, variant: "destructive" });
     },
   });
 
@@ -354,8 +350,8 @@ export default function StaffPage() {
 
   const header = (
     <MobileHeader
-      title="Staff"
-      subtitle={`${staffList.length} membri · ${activeCount} attivi`}
+      title={t("staff.title")}
+      subtitle={`${t("staff.membersCount", { count: staffList.length })} · ${t("staff.activeCount", { count: activeCount })}`}
       showBackButton showMenuButton
       rightAction={
         <HapticButton
@@ -375,7 +371,7 @@ export default function StaffPage() {
     <form onSubmit={handleSubmit} className="space-y-4">
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="firstName">Nome *</Label>
+          <Label htmlFor="firstName">{t("staff.firstName")} *</Label>
           <Input
             id="firstName"
             name="firstName"
@@ -386,7 +382,7 @@ export default function StaffPage() {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="lastName">Cognome *</Label>
+          <Label htmlFor="lastName">{t("staff.lastName")} *</Label>
           <Input
             id="lastName"
             name="lastName"
@@ -399,26 +395,22 @@ export default function StaffPage() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="role">Ruolo *</Label>
+        <Label htmlFor="role">{t("staff.role")} *</Label>
         <Select name="role" defaultValue={editingStaff?.role || "altro"}>
           <SelectTrigger className="h-12" data-testid="select-staff-role">
             <SelectValue />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="pr">PR</SelectItem>
-            <SelectItem value="barista">Barista</SelectItem>
-            <SelectItem value="sicurezza">Sicurezza</SelectItem>
-            <SelectItem value="fotografo">Fotografo</SelectItem>
-            <SelectItem value="dj">DJ</SelectItem>
-            <SelectItem value="tecnico">Tecnico</SelectItem>
-            <SelectItem value="altro">Altro</SelectItem>
+            {roleKeys.map((role) => (
+              <SelectItem key={role} value={role}>{t(`staff.roles.${role}`)}</SelectItem>
+            ))}
           </SelectContent>
         </Select>
       </div>
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="phone">Telefono</Label>
+          <Label htmlFor="phone">{t("staff.phone")}</Label>
           <Input
             id="phone"
             name="phone"
@@ -429,7 +421,7 @@ export default function StaffPage() {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
+          <Label htmlFor="email">{t("staff.email")}</Label>
           <Input
             id="email"
             name="email"
@@ -443,7 +435,7 @@ export default function StaffPage() {
 
       <div className="grid grid-cols-2 gap-4">
         <div className="space-y-2">
-          <Label htmlFor="hourlyRate">Tariffa Oraria (€)</Label>
+          <Label htmlFor="hourlyRate">{t("staff.hourlyRate")}</Label>
           <Input
             id="hourlyRate"
             name="hourlyRate"
@@ -456,7 +448,7 @@ export default function StaffPage() {
           />
         </div>
         <div className="space-y-2">
-          <Label htmlFor="fixedRate">Tariffa Fissa (€)</Label>
+          <Label htmlFor="fixedRate">{t("staff.fixedRate")}</Label>
           <Input
             id="fixedRate"
             name="fixedRate"
@@ -471,7 +463,7 @@ export default function StaffPage() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="fiscalCode">Codice Fiscale</Label>
+        <Label htmlFor="fiscalCode">{t("staff.fiscalCode")}</Label>
         <Input
           id="fiscalCode"
           name="fiscalCode"
@@ -483,7 +475,7 @@ export default function StaffPage() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="bankIban">IBAN</Label>
+        <Label htmlFor="bankIban">{t("staff.iban")}</Label>
         <Input
           id="bankIban"
           name="bankIban"
@@ -495,7 +487,7 @@ export default function StaffPage() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="address">Indirizzo</Label>
+        <Label htmlFor="address">{t("staff.address")}</Label>
         <Input
           id="address"
           name="address"
@@ -506,7 +498,7 @@ export default function StaffPage() {
       </div>
 
       <div className="space-y-2">
-        <Label htmlFor="notes">Note</Label>
+        <Label htmlFor="notes">{t("staff.notes")}</Label>
         <Textarea
           id="notes"
           name="notes"
@@ -524,7 +516,7 @@ export default function StaffPage() {
           data-testid="switch-staff-active"
         />
         <Label htmlFor="active" className="cursor-pointer">
-          Staff attivo
+          {t("staff.staffActive")}
         </Label>
       </div>
 
@@ -535,7 +527,7 @@ export default function StaffPage() {
           onClick={() => setIsDialogOpen(false)}
           className="flex-1 h-12"
         >
-          Annulla
+          {t("common.cancel")}
         </Button>
         <Button
           type="submit"
@@ -543,7 +535,7 @@ export default function StaffPage() {
           disabled={createMutation.isPending || updateMutation.isPending}
           data-testid="button-save-staff"
         >
-          {editingStaff ? "Aggiorna" : "Aggiungi"}
+          {editingStaff ? t("staff.update") : t("common.add")}
         </Button>
       </DialogFooter>
     </form>
@@ -554,8 +546,8 @@ export default function StaffPage() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-staff">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Staff</h1>
-            <p className="text-muted-foreground">{staffList.length} membri · {activeCount} attivi</p>
+            <h1 className="text-3xl font-bold">{t("staff.title")}</h1>
+            <p className="text-muted-foreground">{t("staff.membersCount", { count: staffList.length })} · {t("staff.activeCount", { count: activeCount })}</p>
           </div>
           {isAdmin && (
             <Button
@@ -566,7 +558,7 @@ export default function StaffPage() {
               data-testid="button-add-staff"
             >
               <Plus className="w-4 h-4 mr-2" />
-              Aggiungi Staff
+              {t("staff.addStaff")}
             </Button>
           )}
         </div>
@@ -575,25 +567,25 @@ export default function StaffPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{staffList.length}</div>
-              <p className="text-sm text-muted-foreground">Totale Staff</p>
+              <p className="text-sm text-muted-foreground">{t("staff.totalStaff")}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-green-500">{activeCount}</div>
-              <p className="text-sm text-muted-foreground">Attivi</p>
+              <p className="text-sm text-muted-foreground">{t("staff.activeStaff")}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-muted-foreground">{staffList.length - activeCount}</div>
-              <p className="text-sm text-muted-foreground">Inattivi</p>
+              <p className="text-sm text-muted-foreground">{t("staff.inactiveStaff")}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-pink-500">{staffList.filter(s => s.role === 'pr').length}</div>
-              <p className="text-sm text-muted-foreground">PR</p>
+              <p className="text-sm text-muted-foreground">{t("staff.prCount")}</p>
             </CardContent>
           </Card>
         </div>
@@ -601,14 +593,14 @@ export default function StaffPage() {
         <Card>
           <CardHeader className="flex flex-row items-center justify-between gap-4 space-y-0 pb-4">
             <div>
-              <CardTitle>Lista Staff</CardTitle>
-              <CardDescription>Gestisci il personale della tua organizzazione</CardDescription>
+              <CardTitle>{t("staff.staffList")}</CardTitle>
+              <CardDescription>{t("staff.manageStaff")}</CardDescription>
             </div>
             <div className="flex items-center gap-4">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Cerca staff..."
+                  placeholder={t("staff.searchPlaceholder")}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10 w-64"
@@ -617,17 +609,13 @@ export default function StaffPage() {
               </div>
               <Select value={selectedRole || "all"} onValueChange={(v) => setSelectedRole(v === "all" ? null : v)}>
                 <SelectTrigger className="w-40" data-testid="select-filter-role">
-                  <SelectValue placeholder="Tutti i ruoli" />
+                  <SelectValue placeholder={t("staff.allRoles")} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="all">Tutti i ruoli</SelectItem>
-                  <SelectItem value="pr">PR</SelectItem>
-                  <SelectItem value="barista">Barista</SelectItem>
-                  <SelectItem value="sicurezza">Sicurezza</SelectItem>
-                  <SelectItem value="fotografo">Fotografo</SelectItem>
-                  <SelectItem value="dj">DJ</SelectItem>
-                  <SelectItem value="tecnico">Tecnico</SelectItem>
-                  <SelectItem value="altro">Altro</SelectItem>
+                  <SelectItem value="all">{t("staff.allRoles")}</SelectItem>
+                  {roleKeys.map((role) => (
+                    <SelectItem key={role} value={role}>{t(`staff.roles.${role}`)}</SelectItem>
+                  ))}
                 </SelectContent>
               </Select>
             </div>
@@ -643,24 +631,24 @@ export default function StaffPage() {
               <div className="flex flex-col items-center justify-center py-16 text-center">
                 <Users className="h-12 w-12 text-muted-foreground mb-4" />
                 <h3 className="font-semibold text-lg mb-1">
-                  {searchQuery || selectedRole ? "Nessun risultato" : "Nessun staff"}
+                  {searchQuery || selectedRole ? t("staff.noResults") : t("staff.noStaff")}
                 </h3>
                 <p className="text-muted-foreground text-sm">
                   {searchQuery || selectedRole
-                    ? "Prova a modificare i filtri"
-                    : "Aggiungi il primo membro del team"}
+                    ? t("staff.modifyFilters")
+                    : t("staff.addFirstMember")}
                 </p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Staff</TableHead>
-                    <TableHead>Ruolo</TableHead>
-                    <TableHead>Contatti</TableHead>
-                    <TableHead>Compensi</TableHead>
-                    <TableHead>Stato</TableHead>
-                    {isAdmin && <TableHead className="text-right">Azioni</TableHead>}
+                    <TableHead>{t("staff.title")}</TableHead>
+                    <TableHead>{t("staff.role")}</TableHead>
+                    <TableHead>{t("staff.contacts")}</TableHead>
+                    <TableHead>{t("staff.compensation")}</TableHead>
+                    <TableHead>{t("common.status")}</TableHead>
+                    {isAdmin && <TableHead className="text-right">{t("common.actions")}</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -688,7 +676,7 @@ export default function StaffPage() {
                         </TableCell>
                         <TableCell>
                           <Badge variant="outline">
-                            {roleLabels[staff.role] || staff.role}
+                            {t(`staff.roles.${staff.role}`, staff.role)}
                           </Badge>
                         </TableCell>
                         <TableCell>
@@ -713,7 +701,7 @@ export default function StaffPage() {
                             <span>
                               {staff.hourlyRate && `€${parseFloat(staff.hourlyRate).toFixed(0)}/h`}
                               {staff.hourlyRate && staff.fixedRate && " · "}
-                              {staff.fixedRate && `€${parseFloat(staff.fixedRate).toFixed(0)} fisso`}
+                              {staff.fixedRate && `€${parseFloat(staff.fixedRate).toFixed(0)} ${t("staff.fixed")}`}
                               {!staff.hourlyRate && !staff.fixedRate && "-"}
                             </span>
                           </div>
@@ -722,10 +710,10 @@ export default function StaffPage() {
                           {staff.active ? (
                             <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
                               <UserCheck className="h-3 w-3 mr-1" />
-                              Attivo
+                              {t("common.active")}
                             </Badge>
                           ) : (
-                            <Badge variant="secondary">Inattivo</Badge>
+                            <Badge variant="secondary">{t("common.inactive")}</Badge>
                           )}
                         </TableCell>
                         {isAdmin && (
@@ -770,7 +758,7 @@ export default function StaffPage() {
           <DialogContent className="max-h-[90vh] overflow-y-auto max-w-2xl">
             <DialogHeader>
               <DialogTitle>
-                {editingStaff ? "Modifica Staff" : "Nuovo Staff"}
+                {editingStaff ? t("staff.editStaff") : t("staff.newStaff")}
               </DialogTitle>
             </DialogHeader>
             {formContent}
@@ -785,14 +773,14 @@ export default function StaffPage() {
         >
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Conferma eliminazione</DialogTitle>
+              <DialogTitle>{t("staff.confirmDelete")}</DialogTitle>
             </DialogHeader>
             <p className="text-muted-foreground">
-              Sei sicuro di voler eliminare questo membro dello staff? L'azione non può essere annullata.
+              {t("staff.deleteMessage")}
             </p>
             <DialogFooter className="gap-2">
               <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>
-                Annulla
+                {t("common.cancel")}
               </Button>
               <Button
                 variant="destructive"
@@ -800,7 +788,7 @@ export default function StaffPage() {
                 disabled={deleteMutation.isPending}
                 data-testid="button-confirm-delete"
               >
-                Elimina
+                {t("common.delete")}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -821,7 +809,7 @@ export default function StaffPage() {
           <div className="relative mb-4">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
             <Input
-              placeholder="Cerca staff..."
+              placeholder={t("staff.searchPlaceholder")}
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="pl-10 h-12 rounded-xl bg-card border-border"
@@ -856,12 +844,12 @@ export default function StaffPage() {
               <Users className="h-8 w-8 text-muted-foreground" />
             </div>
             <h3 className="font-semibold text-lg mb-1">
-              {searchQuery || selectedRole ? "Nessun risultato" : "Nessun staff"}
+              {searchQuery || selectedRole ? t("staff.noResults") : t("staff.noStaff")}
             </h3>
             <p className="text-muted-foreground text-sm">
               {searchQuery || selectedRole
-                ? "Prova a modificare i filtri"
-                : "Aggiungi il primo membro del team"}
+                ? t("staff.modifyFilters")
+                : t("staff.addFirstMember")}
             </p>
           </motion.div>
         ) : (
@@ -908,7 +896,7 @@ export default function StaffPage() {
         <DialogContent className="max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>
-              {editingStaff ? "Modifica Staff" : "Nuovo Staff"}
+              {editingStaff ? t("staff.editStaff") : t("staff.newStaff")}
             </DialogTitle>
           </DialogHeader>
           {formContent}
@@ -918,11 +906,11 @@ export default function StaffPage() {
       <BottomSheet
         open={!!deleteConfirmId}
         onClose={() => setDeleteConfirmId(null)}
-        title="Conferma eliminazione"
+        title={t("staff.confirmDelete")}
       >
         <div className="p-4 space-y-4">
           <p className="text-muted-foreground">
-            Sei sicuro di voler eliminare questo membro dello staff? L'azione non può essere annullata.
+            {t("staff.deleteMessage")}
           </p>
           <div className="flex gap-3">
             <HapticButton
@@ -930,7 +918,7 @@ export default function StaffPage() {
               className="flex-1 h-12"
               onClick={() => setDeleteConfirmId(null)}
             >
-              Annulla
+              {t("common.cancel")}
             </HapticButton>
             <HapticButton
               variant="destructive"
@@ -940,7 +928,7 @@ export default function StaffPage() {
               disabled={deleteMutation.isPending}
               data-testid="button-confirm-delete"
             >
-              Elimina
+              {t("common.delete")}
             </HapticButton>
           </div>
         </div>

@@ -5,6 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import { isUnauthorizedError } from "@/lib/authUtils";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
+import { useTranslation } from "react-i18next";
 import {
   Form,
   FormControl,
@@ -115,6 +116,7 @@ function ProductCard({
   isBartender: boolean;
   index: number;
 }) {
+  const { t } = useTranslation();
   const handleCardPress = () => {
     if (canEdit) {
       triggerHaptic('light');
@@ -144,11 +146,11 @@ function ProductCard({
             </div>
             {product.active ? (
               <Badge className="bg-teal-500/20 text-teal border-teal-500/30 flex-shrink-0 h-7 px-3">
-                Attivo
+                {t('common.active')}
               </Badge>
             ) : (
               <Badge variant="outline" className="border-white/10 text-muted-foreground flex-shrink-0 h-7 px-3">
-                Inattivo
+                {t('common.inactive')}
               </Badge>
             )}
           </div>
@@ -175,7 +177,7 @@ function ProductCard({
               )}
               {product.minThreshold && (
                 <div className="text-sm text-muted-foreground">
-                  Min: <span className="font-medium">{product.minThreshold}</span>
+                  {t('products.minLabel')}: <span className="font-medium">{product.minThreshold}</span>
                 </div>
               )}
             </div>
@@ -210,6 +212,7 @@ export default function Products() {
   const { toast } = useToast();
   const { user } = useAuth();
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
   
   const canCreateProducts = user?.role === 'super_admin' || user?.role === 'gestore';
   const isBartender = user?.role === 'bartender';
@@ -259,24 +262,24 @@ export default function Products() {
       form.reset();
       triggerHaptic('success');
       toast({
-        title: "Successo",
-        description: "Prodotto creato con successo",
+        title: t('common.success'),
+        description: t('products.createSuccess'),
       });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Non autorizzato",
-          description: "Effettua nuovamente il login...",
+          title: t('common.unauthorized'),
+          description: t('common.loginAgain'),
           variant: "destructive",
         });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
       toast({
-        title: "Errore",
-        description: "Impossibile creare il prodotto",
+        title: t('common.error'),
+        description: t('products.createError'),
         variant: "destructive",
       });
     },
@@ -293,24 +296,24 @@ export default function Products() {
       form.reset();
       triggerHaptic('success');
       toast({
-        title: "Successo",
-        description: "Prodotto aggiornato con successo",
+        title: t('common.success'),
+        description: t('products.updateSuccess'),
       });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
         toast({
-          title: "Non autorizzato",
-          description: "Effettua nuovamente il login...",
+          title: t('common.unauthorized'),
+          description: t('common.loginAgain'),
           variant: "destructive",
         });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
       toast({
-        title: "Errore",
-        description: "Impossibile aggiornare il prodotto",
+        title: t('common.error'),
+        description: t('products.updateError'),
         variant: "destructive",
       });
     },
@@ -349,8 +352,8 @@ export default function Products() {
     if (!canCreateProducts) {
       triggerHaptic('error');
       toast({
-        title: "Accesso limitato",
-        description: "Solo gli admin possono creare prodotti",
+        title: t('products.accessLimited'),
+        description: t('products.adminOnly'),
         variant: "destructive",
       });
       return;
@@ -373,7 +376,7 @@ export default function Products() {
 
   const header = (
     <MobileHeader
-      title="Catalogo Prodotti"
+      title={t('products.catalog')}
       showBackButton showMenuButton
       rightAction={
         <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
@@ -391,7 +394,7 @@ export default function Products() {
           name="code"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Codice</FormLabel>
+              <FormLabel>{t('products.code')}</FormLabel>
               <FormControl>
                 <Input {...field} data-testid="input-product-code" />
               </FormControl>
@@ -404,7 +407,7 @@ export default function Products() {
           name="name"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Nome</FormLabel>
+              <FormLabel>{t('common.name')}</FormLabel>
               <FormControl>
                 <Input {...field} data-testid="input-product-name" />
               </FormControl>
@@ -417,11 +420,11 @@ export default function Products() {
           name="category"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Categoria</FormLabel>
+              <FormLabel>{t('products.category')}</FormLabel>
               <Select onValueChange={field.onChange} value={field.value ?? ''}>
                 <FormControl>
                   <SelectTrigger data-testid="select-product-category">
-                    <SelectValue placeholder="Seleziona categoria" />
+                    <SelectValue placeholder={t('products.selectCategory')} />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
@@ -441,7 +444,7 @@ export default function Products() {
           name="unitOfMeasure"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Unità di Misura</FormLabel>
+              <FormLabel>{t('products.unitOfMeasure')}</FormLabel>
               <Select onValueChange={field.onChange} value={field.value}>
                 <FormControl>
                   <SelectTrigger data-testid="select-product-unit">
@@ -465,7 +468,7 @@ export default function Products() {
           name="costPrice"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Prezzo di Costo (€)</FormLabel>
+              <FormLabel>{t('products.costPriceLabel')}</FormLabel>
               <FormControl>
                 <Input {...field} type="number" step="0.01" data-testid="input-product-cost" />
               </FormControl>
@@ -478,7 +481,7 @@ export default function Products() {
           name="minThreshold"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Soglia Minima (opzionale)</FormLabel>
+              <FormLabel>{t('products.minThresholdLabel')}</FormLabel>
               <FormControl>
                 <Input
                   {...field}
@@ -498,7 +501,7 @@ export default function Products() {
           render={({ field }) => (
             <FormItem>
               <div className="flex items-center justify-between py-2">
-                <FormLabel>Prodotto Attivo</FormLabel>
+                <FormLabel>{t('products.productActive')}</FormLabel>
                 <FormControl>
                   <Switch
                     checked={field.value}
@@ -518,14 +521,14 @@ export default function Products() {
             onClick={handleDialogClose}
             data-testid="button-cancel-product"
           >
-            Annulla
+            {t('common.cancel')}
           </Button>
           <Button
             type="submit"
             disabled={createMutation.isPending || updateMutation.isPending}
             data-testid="button-submit-product"
           >
-            {editingProduct ? 'Aggiorna' : 'Crea'}
+            {editingProduct ? t('products.update') : t('products.create')}
           </Button>
         </DialogFooter>
       </form>
@@ -537,13 +540,13 @@ export default function Products() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-products">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Catalogo Prodotti</h1>
-            <p className="text-muted-foreground">Gestione prodotti del magazzino</p>
+            <h1 className="text-3xl font-bold">{t('products.catalog')}</h1>
+            <p className="text-muted-foreground">{t('products.warehouseManagement')}</p>
           </div>
           {canCreateProducts && (
             <Button onClick={handleFabClick} data-testid="button-create-product">
               <Plus className="w-4 h-4 mr-2" />
-              Nuovo Prodotto
+              {t('products.newProduct')}
             </Button>
           )}
         </div>
@@ -557,7 +560,7 @@ export default function Products() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold" data-testid="stat-total-products">{products?.length || 0}</div>
-                  <p className="text-sm text-muted-foreground">Prodotti Totali</p>
+                  <p className="text-sm text-muted-foreground">{t('products.totalProducts')}</p>
                 </div>
               </div>
             </CardContent>
@@ -570,7 +573,7 @@ export default function Products() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold" data-testid="stat-active-products">{activeProducts}</div>
-                  <p className="text-sm text-muted-foreground">Prodotti Attivi</p>
+                  <p className="text-sm text-muted-foreground">{t('products.activeProducts')}</p>
                 </div>
               </div>
             </CardContent>
@@ -583,7 +586,7 @@ export default function Products() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold" data-testid="stat-categories">{totalCategories}</div>
-                  <p className="text-sm text-muted-foreground">Categorie</p>
+                  <p className="text-sm text-muted-foreground">{t('products.categories')}</p>
                 </div>
               </div>
             </CardContent>
@@ -596,7 +599,7 @@ export default function Products() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold">{(products?.length || 0) - activeProducts}</div>
-                  <p className="text-sm text-muted-foreground">Prodotti Inattivi</p>
+                  <p className="text-sm text-muted-foreground">{t('products.inactiveProducts')}</p>
                 </div>
               </div>
             </CardContent>
@@ -606,12 +609,12 @@ export default function Products() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
-              <CardTitle>Lista Prodotti</CardTitle>
+              <CardTitle>{t('products.productList')}</CardTitle>
               <div className="flex items-center gap-4">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Cerca prodotti..."
+                    placeholder={t('products.searchPlaceholder')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10 w-64"
@@ -620,10 +623,10 @@ export default function Products() {
                 </div>
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                   <SelectTrigger className="w-48" data-testid="select-category-filter">
-                    <SelectValue placeholder="Filtra per categoria" />
+                    <SelectValue placeholder={t('products.filterByCategory')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="all">Tutte le categorie</SelectItem>
+                    <SelectItem value="all">{t('products.allCategories')}</SelectItem>
                     {categories.map((cat) => (
                       <SelectItem key={cat} value={cat}>
                         {cat.charAt(0).toUpperCase() + cat.slice(1)}
@@ -645,14 +648,14 @@ export default function Products() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Codice</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead>Unità</TableHead>
-                    {!isBartender && <TableHead>Prezzo Costo</TableHead>}
-                    <TableHead>Soglia Min.</TableHead>
-                    <TableHead>Stato</TableHead>
-                    {canCreateProducts && <TableHead className="w-16">Azioni</TableHead>}
+                    <TableHead>{t('products.code')}</TableHead>
+                    <TableHead>{t('common.name')}</TableHead>
+                    <TableHead>{t('products.category')}</TableHead>
+                    <TableHead>{t('products.unit')}</TableHead>
+                    {!isBartender && <TableHead>{t('products.costPrice')}</TableHead>}
+                    <TableHead>{t('products.minThreshold')}</TableHead>
+                    <TableHead>{t('common.status')}</TableHead>
+                    {canCreateProducts && <TableHead className="w-16">{t('common.actions')}</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -672,9 +675,9 @@ export default function Products() {
                       <TableCell>{product.minThreshold || '-'}</TableCell>
                       <TableCell>
                         {product.active ? (
-                          <Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/30">Attivo</Badge>
+                          <Badge className="bg-emerald-500/20 text-emerald-500 border-emerald-500/30">{t('common.active')}</Badge>
                         ) : (
-                          <Badge variant="outline" className="text-muted-foreground">Inattivo</Badge>
+                          <Badge variant="outline" className="text-muted-foreground">{t('common.inactive')}</Badge>
                         )}
                       </TableCell>
                       {canCreateProducts && (
@@ -696,11 +699,11 @@ export default function Products() {
             ) : (
               <div className="text-center py-12">
                 <Package className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                <h3 className="font-semibold text-lg mb-2">Nessun prodotto trovato</h3>
+                <h3 className="font-semibold text-lg mb-2">{t('products.noProducts')}</h3>
                 <p className="text-sm text-muted-foreground">
                   {searchQuery || categoryFilter !== "all"
-                    ? "Prova a modificare i filtri di ricerca"
-                    : "Aggiungi il primo prodotto al catalogo"}
+                    ? t('products.noProductsHint')
+                    : t('products.addFirst')}
                 </p>
               </div>
             )}
@@ -710,7 +713,7 @@ export default function Products() {
         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>{editingProduct ? 'Modifica Prodotto' : 'Nuovo Prodotto'}</DialogTitle>
+              <DialogTitle>{editingProduct ? t('products.editProduct') : t('products.newProduct')}</DialogTitle>
             </DialogHeader>
             {formContent}
           </DialogContent>
@@ -730,7 +733,7 @@ export default function Products() {
         >
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
-            placeholder="Cerca prodotti..."
+            placeholder={t('products.searchPlaceholder')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="pl-12 h-14 bg-white/5 border-white/10 rounded-2xl text-base"
@@ -755,8 +758,7 @@ export default function Products() {
             hapticType="light"
             data-testid="filter-all"
           >
-            Tutti
-          </HapticButton>
+            {t('common.all')}</HapticButton>
           {categories.map((cat) => (
             <HapticButton
               key={cat}
@@ -785,7 +787,7 @@ export default function Products() {
           ) : (
             <>
               <StatsCard
-                title="Prodotti Totali"
+                title={t('products.totalProducts')}
                 value={products?.length || 0}
                 icon={Package}
                 gradient="from-blue-500 to-indigo-600"
@@ -793,7 +795,7 @@ export default function Products() {
                 delay={0.1}
               />
               <StatsCard
-                title="Prodotti Attivi"
+                title={t('products.activeProducts')}
                 value={activeProducts}
                 icon={CheckCircle2}
                 gradient="from-emerald-500 to-teal-600"
@@ -801,7 +803,7 @@ export default function Products() {
                 delay={0.15}
               />
               <StatsCard
-                title="Categorie"
+                title={t('products.categories')}
                 value={totalCategories}
                 icon={Tag}
                 gradient="from-amber-500 to-orange-600"
@@ -818,7 +820,7 @@ export default function Products() {
           transition={{ ...springTransition, delay: 0.25 }}
           className="flex items-center justify-between pt-2"
         >
-          <h2 className="font-semibold text-xl">Prodotti</h2>
+          <h2 className="font-semibold text-xl">{t('products.title')}</h2>
           <Badge className="bg-primary/20 text-primary border-primary/30 h-7 px-3">
             {filteredProducts.length}
           </Badge>
@@ -853,11 +855,11 @@ export default function Products() {
             <div className="w-20 h-20 rounded-2xl bg-muted/20 flex items-center justify-center mx-auto mb-5">
               <Package className="h-10 w-10 text-muted-foreground" />
             </div>
-            <h3 className="font-semibold text-lg mb-2">Nessun prodotto trovato</h3>
+            <h3 className="font-semibold text-lg mb-2">{t('products.noProducts')}</h3>
             <p className="text-sm text-muted-foreground">
               {searchQuery || categoryFilter !== "all" 
-                ? "Prova a modificare i filtri di ricerca" 
-                : "Aggiungi il primo prodotto al catalogo"}
+                ? t('products.noProductsHint')
+                : t('products.addFirst')}
             </p>
           </motion.div>
         )}
@@ -876,7 +878,7 @@ export default function Products() {
       <BottomSheet
         open={dialogOpen}
         onClose={handleDialogClose}
-        title={editingProduct ? 'Modifica Prodotto' : 'Nuovo Prodotto'}
+        title={editingProduct ? t('products.editProduct') : t('products.newProduct')}
       >
         <div className="p-5 pb-8">
           <Form {...form}>
@@ -886,7 +888,7 @@ export default function Products() {
                 name="code"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">Codice</FormLabel>
+                    <FormLabel className="text-base">{t('products.code')}</FormLabel>
                     <FormControl>
                       <Input 
                         {...field} 
@@ -904,7 +906,7 @@ export default function Products() {
                 name="name"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">Nome</FormLabel>
+                    <FormLabel className="text-base">{t('common.name')}</FormLabel>
                     <FormControl>
                       <Input 
                         {...field} 
@@ -922,14 +924,14 @@ export default function Products() {
                 name="category"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">Categoria</FormLabel>
+                    <FormLabel className="text-base">{t('products.category')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value ?? ''}>
                       <FormControl>
                         <SelectTrigger 
                           className="h-14 rounded-xl text-base" 
                           data-testid="select-product-category"
                         >
-                          <SelectValue placeholder="Seleziona categoria" />
+                          <SelectValue placeholder={t('products.selectCategory')} />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
@@ -950,7 +952,7 @@ export default function Products() {
                 name="unitOfMeasure"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">Unità di Misura</FormLabel>
+                    <FormLabel className="text-base">{t('products.unitOfMeasure')}</FormLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger 
@@ -978,7 +980,7 @@ export default function Products() {
                 name="costPrice"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">Prezzo di Costo (€)</FormLabel>
+                    <FormLabel className="text-base">{t('products.costPriceLabel')}</FormLabel>
                     <FormControl>
                       <Input 
                         {...field} 
@@ -998,7 +1000,7 @@ export default function Products() {
                 name="minThreshold"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-base">Soglia Minima (opzionale)</FormLabel>
+                    <FormLabel className="text-base">{t('products.minThresholdLabel')}</FormLabel>
                     <FormControl>
                       <Input
                         {...field}
@@ -1020,7 +1022,7 @@ export default function Products() {
                 render={({ field }) => (
                   <FormItem>
                     <div className="flex items-center justify-between py-3">
-                      <FormLabel className="text-base">Prodotto Attivo</FormLabel>
+                      <FormLabel className="text-base">{t('products.productActive')}</FormLabel>
                       <FormControl>
                         <Switch
                           checked={field.value}
@@ -1043,7 +1045,7 @@ export default function Products() {
                   hapticType="light"
                   data-testid="button-cancel-product"
                 >
-                  Annulla
+                  {t('common.cancel')}
                 </HapticButton>
                 <HapticButton
                   type="submit"
@@ -1052,7 +1054,7 @@ export default function Products() {
                   hapticType="medium"
                   data-testid="button-submit-product"
                 >
-                  {editingProduct ? 'Aggiorna' : 'Crea'}
+                  {editingProduct ? t('products.update') : t('products.create')}
                 </HapticButton>
               </div>
             </form>

@@ -1,5 +1,6 @@
 import { useState, useCallback } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
+import { useTranslation } from 'react-i18next';
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -44,11 +45,11 @@ const springConfig = { type: "spring" as const, stiffness: 400, damping: 30 };
 
 type TabType = "fixed-costs" | "extra-costs" | "maintenances" | "documents";
 
-const tabs: { id: TabType; label: string; icon: React.ElementType; gradient: string }[] = [
-  { id: "fixed-costs", label: "Costi Fissi", icon: Receipt, gradient: "from-blue-500 to-indigo-600" },
-  { id: "extra-costs", label: "Extra", icon: Euro, gradient: "from-amber-500 to-orange-600" },
-  { id: "maintenances", label: "Manutenzioni", icon: Wrench, gradient: "from-violet-500 to-purple-600" },
-  { id: "documents", label: "Documenti", icon: FileText, gradient: "from-rose-500 to-pink-600" },
+const tabs: { id: TabType; labelKey: string; icon: React.ElementType; gradient: string }[] = [
+  { id: "fixed-costs", labelKey: "accounting.tabs.fixedCosts", icon: Receipt, gradient: "from-blue-500 to-indigo-600" },
+  { id: "extra-costs", labelKey: "accounting.tabs.extraCosts", icon: Euro, gradient: "from-amber-500 to-orange-600" },
+  { id: "maintenances", labelKey: "accounting.tabs.maintenances", icon: Wrench, gradient: "from-violet-500 to-purple-600" },
+  { id: "documents", labelKey: "accounting.tabs.documents", icon: FileText, gradient: "from-rose-500 to-pink-600" },
 ];
 
 function MobileStatsCard({
@@ -105,6 +106,7 @@ function MobileTabPill({
   isActive: boolean;
   onSelect: () => void;
 }) {
+  const { t } = useTranslation();
   const Icon = tab.icon;
   
   return (
@@ -123,12 +125,13 @@ function MobileTabPill({
       data-testid={`tab-${tab.id}`}
     >
       <Icon className="h-4 w-4" />
-      <span className="text-sm">{tab.label}</span>
+      <span className="text-sm">{t(tab.labelKey)}</span>
     </motion.button>
   );
 }
 
 export default function Accounting() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const isMobile = useIsMobile();
   const [activeTab, setActiveTab] = useState<TabType>("fixed-costs");
@@ -167,8 +170,8 @@ export default function Accounting() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-accounting">
         <div className="flex items-center justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold">Contabilità</h1>
-            <p className="text-muted-foreground">Gestione costi fissi, extra, manutenzioni e documenti</p>
+            <h1 className="text-3xl font-bold">{t('accounting.title')}</h1>
+            <p className="text-muted-foreground">{t('accounting.subtitle')}</p>
           </div>
           <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
             <Calculator className="h-6 w-6 text-white" />
@@ -184,7 +187,7 @@ export default function Accounting() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold" data-testid="stat-desktop-fixed-costs">€{totalFixedCosts.toFixed(0)}</div>
-                  <p className="text-sm text-muted-foreground">Costi Fissi/Mese</p>
+                  <p className="text-sm text-muted-foreground">{t('accounting.stats.fixedCostsPerMonth')}</p>
                 </div>
               </div>
             </CardContent>
@@ -197,7 +200,7 @@ export default function Accounting() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold" data-testid="stat-desktop-extra-costs">€{totalExtraCosts.toFixed(0)}</div>
-                  <p className="text-sm text-muted-foreground">Costi Extra</p>
+                  <p className="text-sm text-muted-foreground">{t('accounting.stats.extraCosts')}</p>
                 </div>
               </div>
             </CardContent>
@@ -210,7 +213,7 @@ export default function Accounting() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold" data-testid="stat-desktop-maintenances">{pendingMaintenances}</div>
-                  <p className="text-sm text-muted-foreground">Manutenzioni</p>
+                  <p className="text-sm text-muted-foreground">{t('accounting.stats.maintenances')}</p>
                 </div>
               </div>
             </CardContent>
@@ -223,7 +226,7 @@ export default function Accounting() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold" data-testid="stat-desktop-documents">{pendingDocuments}</div>
-                  <p className="text-sm text-muted-foreground">Doc. in Attesa</p>
+                  <p className="text-sm text-muted-foreground">{t('accounting.stats.pendingDocs')}</p>
                 </div>
               </div>
             </CardContent>
@@ -234,19 +237,19 @@ export default function Accounting() {
           <TabsList className="grid grid-cols-4 w-full max-w-2xl">
             <TabsTrigger value="fixed-costs" className="flex items-center gap-2" data-testid="tab-desktop-fixed-costs">
               <Receipt className="h-4 w-4" />
-              Costi Fissi
+              {t('accounting.tabs.fixedCosts')}
             </TabsTrigger>
             <TabsTrigger value="extra-costs" className="flex items-center gap-2" data-testid="tab-desktop-extra-costs">
               <Euro className="h-4 w-4" />
-              Extra
+              {t('accounting.tabs.extraCosts')}
             </TabsTrigger>
             <TabsTrigger value="maintenances" className="flex items-center gap-2" data-testid="tab-desktop-maintenances">
               <Wrench className="h-4 w-4" />
-              Manutenzioni
+              {t('accounting.tabs.maintenances')}
             </TabsTrigger>
             <TabsTrigger value="documents" className="flex items-center gap-2" data-testid="tab-desktop-documents">
               <FileText className="h-4 w-4" />
-              Documenti
+              {t('accounting.tabs.documents')}
             </TabsTrigger>
           </TabsList>
 
@@ -269,8 +272,8 @@ export default function Accounting() {
 
   const header = (
     <MobileHeader
-      title="Contabilità"
-      subtitle="Gestione costi e documenti"
+      title={t('accounting.title')}
+      subtitle={t('accounting.subtitleMobile')}
       showBackButton showMenuButton
       rightAction={
         <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center">
@@ -290,7 +293,7 @@ export default function Accounting() {
           className="grid grid-cols-2 gap-3 py-4"
         >
           <MobileStatsCard
-            title="Costi Fissi/Mese"
+            title={t('accounting.stats.fixedCostsPerMonth')}
             value={`€${totalFixedCosts.toFixed(0)}`}
             icon={Receipt}
             gradient="from-blue-500 to-indigo-600"
@@ -298,7 +301,7 @@ export default function Accounting() {
             delay={0.05}
           />
           <MobileStatsCard
-            title="Costi Extra"
+            title={t('accounting.stats.extraCosts')}
             value={`€${totalExtraCosts.toFixed(0)}`}
             icon={Euro}
             gradient="from-amber-500 to-orange-600"
@@ -306,7 +309,7 @@ export default function Accounting() {
             delay={0.1}
           />
           <MobileStatsCard
-            title="Manutenzioni"
+            title={t('accounting.stats.maintenances')}
             value={pendingMaintenances}
             icon={Wrench}
             gradient="from-violet-500 to-purple-600"
@@ -314,7 +317,7 @@ export default function Accounting() {
             delay={0.15}
           />
           <MobileStatsCard
-            title="Doc. in Attesa"
+            title={t('accounting.stats.pendingDocs')}
             value={pendingDocuments}
             icon={FileText}
             gradient="from-rose-500 to-pink-600"
@@ -579,6 +582,7 @@ function EmptyState({
 }
 
 function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCost, setEditingCost] = useState<FixedCost | null>(null);
@@ -598,11 +602,11 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
       queryClient.invalidateQueries({ queryKey: ["/api/fixed-costs"] });
       setIsDialogOpen(false);
       triggerHaptic('success');
-      toast({ title: "Costo fisso creato con successo" });
+      toast({ title: t('accounting.fixedCosts.createSuccess') });
     },
     onError: (err: any) => {
       triggerHaptic('error');
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: err.message, variant: "destructive" });
     },
   });
 
@@ -614,11 +618,11 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
       setEditingCost(null);
       setIsDialogOpen(false);
       triggerHaptic('success');
-      toast({ title: "Costo fisso aggiornato" });
+      toast({ title: t('accounting.fixedCosts.updateSuccess') });
     },
     onError: (err: any) => {
       triggerHaptic('error');
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: err.message, variant: "destructive" });
     },
   });
 
@@ -627,11 +631,11 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/fixed-costs"] });
       triggerHaptic('success');
-      toast({ title: "Costo fisso eliminato" });
+      toast({ title: t('accounting.fixedCosts.deleteSuccess') });
     },
     onError: (err: any) => {
       triggerHaptic('error');
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: err.message, variant: "destructive" });
     },
   });
 
@@ -663,26 +667,26 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
   );
 
   const getLocationName = (locationId: string | null) => {
-    if (!locationId) return "Generale";
+    if (!locationId) return t('accounting.common.general');
     const location = locations.find(l => l.id === locationId);
-    return location?.name || "N/D";
+    return location?.name || t('accounting.common.notAvailable');
   };
 
   const frequencyLabels: Record<string, string> = {
-    monthly: "Mensile",
-    quarterly: "Trimestrale",
-    yearly: "Annuale",
-    per_event: "Per evento",
+    monthly: t('accounting.frequencies.monthly'),
+    quarterly: t('accounting.frequencies.quarterly'),
+    yearly: t('accounting.frequencies.yearly'),
+    per_event: t('accounting.frequencies.perEvent'),
   };
 
   const categoryLabels: Record<string, string> = {
-    affitto: "Affitto",
-    service: "Servizi",
-    permessi: "Permessi",
-    sicurezza: "Sicurezza",
-    amministrativi: "Amministrativi",
-    utenze: "Utenze",
-    altro: "Altro",
+    affitto: t('accounting.categories.affitto'),
+    service: t('accounting.categories.service'),
+    permessi: t('accounting.categories.permessi'),
+    sicurezza: t('accounting.categories.sicurezza'),
+    amministrativi: t('accounting.categories.amministrativi'),
+    utenze: t('accounting.categories.utenze'),
+    altro: t('accounting.categories.altro'),
   };
 
   if (isLoading) {
@@ -700,10 +704,10 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
       <MobileSectionHeader
         icon={Receipt}
         iconGradient="from-blue-500 to-indigo-600"
-        title="Costi Fissi"
-        subtitle="Costi ricorrenti"
+        title={t('accounting.fixedCosts.title')}
+        subtitle={t('accounting.fixedCosts.subtitle')}
         onAdd={() => setIsDialogOpen(true)}
-        addLabel="Nuovo"
+        addLabel={t('accounting.common.new')}
         isAdmin={isAdmin}
         testId="button-add-fixed-cost"
       />
@@ -711,7 +715,7 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
       <MobileSearchBar
         value={searchTerm}
         onChange={setSearchTerm}
-        placeholder="Cerca costi fissi..."
+        placeholder={t('accounting.fixedCosts.searchPlaceholder')}
         testId="input-search-fixed-costs"
       />
 
@@ -719,7 +723,7 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
         <EmptyState
           icon={Receipt}
           iconBg="bg-blue-500/20 text-blue-400"
-          message={searchTerm ? "Nessun risultato trovato" : "Nessun costo fisso registrato"}
+          message={searchTerm ? t('accounting.fixedCosts.noResults') : t('accounting.fixedCosts.empty')}
         />
       ) : (
         <div className="space-y-3">
@@ -762,16 +766,16 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
       }}>
         <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
-            <DialogTitle>{editingCost ? "Modifica Costo Fisso" : "Nuovo Costo Fisso"}</DialogTitle>
+            <DialogTitle>{editingCost ? t('accounting.fixedCosts.editTitle') : t('accounting.fixedCosts.newTitle')}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nome *</Label>
+              <Label htmlFor="name">{t('accounting.fields.nameRequired')}</Label>
               <Input
                 id="name"
                 name="name"
                 defaultValue={editingCost?.name || ""}
-                placeholder="es. Affitto locale"
+                placeholder={t('accounting.placeholders.rentExample')}
                 required
                 className="h-12 rounded-xl"
                 data-testid="input-fixed-cost-name"
@@ -779,31 +783,31 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="category">Categoria *</Label>
+                <Label htmlFor="category">{t('accounting.fields.categoryRequired')}</Label>
                 <Select name="category" defaultValue={editingCost?.category || "altro"}>
                   <SelectTrigger className="h-12 rounded-xl" data-testid="select-fixed-cost-category">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="affitto">Affitto</SelectItem>
-                    <SelectItem value="service">Servizi</SelectItem>
-                    <SelectItem value="permessi">Permessi</SelectItem>
-                    <SelectItem value="sicurezza">Sicurezza</SelectItem>
-                    <SelectItem value="amministrativi">Amministrativi</SelectItem>
-                    <SelectItem value="utenze">Utenze</SelectItem>
-                    <SelectItem value="altro">Altro</SelectItem>
+                    <SelectItem value="affitto">{t('accounting.categories.affitto')}</SelectItem>
+                    <SelectItem value="service">{t('accounting.categories.service')}</SelectItem>
+                    <SelectItem value="permessi">{t('accounting.categories.permessi')}</SelectItem>
+                    <SelectItem value="sicurezza">{t('accounting.categories.sicurezza')}</SelectItem>
+                    <SelectItem value="amministrativi">{t('accounting.categories.amministrativi')}</SelectItem>
+                    <SelectItem value="utenze">{t('accounting.categories.utenze')}</SelectItem>
+                    <SelectItem value="altro">{t('accounting.categories.altro')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="amount">Importo (€) *</Label>
+                <Label htmlFor="amount">{t('accounting.fields.amountRequired')}</Label>
                 <Input
                   id="amount"
                   name="amount"
                   type="number"
                   step="0.01"
                   defaultValue={editingCost?.amount || ""}
-                  placeholder="0.00"
+                  placeholder={t('accounting.placeholders.amountPlaceholder')}
                   required
                   className="h-12 rounded-xl"
                   data-testid="input-fixed-cost-amount"
@@ -812,27 +816,27 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="frequency">Frequenza *</Label>
+                <Label htmlFor="frequency">{t('accounting.fields.frequencyRequired')}</Label>
                 <Select name="frequency" defaultValue={editingCost?.frequency || "monthly"}>
                   <SelectTrigger className="h-12 rounded-xl" data-testid="select-fixed-cost-frequency">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="monthly">Mensile</SelectItem>
-                    <SelectItem value="quarterly">Trimestrale</SelectItem>
-                    <SelectItem value="yearly">Annuale</SelectItem>
-                    <SelectItem value="per_event">Per evento</SelectItem>
+                    <SelectItem value="monthly">{t('accounting.frequencies.monthly')}</SelectItem>
+                    <SelectItem value="quarterly">{t('accounting.frequencies.quarterly')}</SelectItem>
+                    <SelectItem value="yearly">{t('accounting.frequencies.yearly')}</SelectItem>
+                    <SelectItem value="per_event">{t('accounting.frequencies.perEvent')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="locationId">Location</Label>
+                <Label htmlFor="locationId">{t('accounting.fields.location')}</Label>
                 <Select name="locationId" defaultValue={editingCost?.locationId || "_none"}>
                   <SelectTrigger className="h-12 rounded-xl" data-testid="select-fixed-cost-location">
-                    <SelectValue placeholder="Generale" />
+                    <SelectValue placeholder={t('accounting.common.general')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="_none">Generale</SelectItem>
+                    <SelectItem value="_none">{t('accounting.common.general')}</SelectItem>
                     {locations.map((loc) => (
                       <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
                     ))}
@@ -842,7 +846,7 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="validFrom">Valido Da</Label>
+                <Label htmlFor="validFrom">{t('accounting.fields.validFrom')}</Label>
                 <Input
                   id="validFrom"
                   name="validFrom"
@@ -853,7 +857,7 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="validTo">Valido Fino</Label>
+                <Label htmlFor="validTo">{t('accounting.fields.validTo')}</Label>
                 <Input
                   id="validTo"
                   name="validTo"
@@ -865,12 +869,12 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="notes">Note</Label>
+              <Label htmlFor="notes">{t('accounting.fields.notes')}</Label>
               <Textarea
                 id="notes"
                 name="notes"
                 defaultValue={editingCost?.notes || ""}
-                placeholder="Note aggiuntive"
+                placeholder={t('accounting.fields.notesPlaceholder')}
                 className="rounded-xl"
                 data-testid="input-fixed-cost-notes"
               />
@@ -883,7 +887,7 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
                 hapticType="success"
                 data-testid="button-save-fixed-cost"
               >
-                {editingCost ? "Aggiorna" : "Crea"}
+                {editingCost ? t('accounting.common.update') : t('accounting.common.create')}
               </HapticButton>
             </DialogFooter>
           </form>
@@ -894,6 +898,7 @@ function FixedCostsSection({ isAdmin }: { isAdmin: boolean }) {
 }
 
 function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingCost, setEditingCost] = useState<ExtraCost | null>(null);
@@ -913,11 +918,11 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
       queryClient.invalidateQueries({ queryKey: ["/api/extra-costs"] });
       setIsDialogOpen(false);
       triggerHaptic('success');
-      toast({ title: "Costo extra creato con successo" });
+      toast({ title: t('accounting.extraCosts.createSuccess') });
     },
     onError: (err: any) => {
       triggerHaptic('error');
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: err.message, variant: "destructive" });
     },
   });
 
@@ -929,11 +934,11 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
       setEditingCost(null);
       setIsDialogOpen(false);
       triggerHaptic('success');
-      toast({ title: "Costo extra aggiornato" });
+      toast({ title: t('accounting.extraCosts.updateSuccess') });
     },
     onError: (err: any) => {
       triggerHaptic('error');
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: err.message, variant: "destructive" });
     },
   });
 
@@ -942,11 +947,11 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/extra-costs"] });
       triggerHaptic('success');
-      toast({ title: "Costo extra eliminato" });
+      toast({ title: t('accounting.extraCosts.deleteSuccess') });
     },
     onError: (err: any) => {
       triggerHaptic('error');
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: err.message, variant: "destructive" });
     },
   });
 
@@ -976,19 +981,19 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
   );
 
   const getEventName = (eventId: string | null) => {
-    if (!eventId) return "Nessun evento";
+    if (!eventId) return t('accounting.common.noEvent');
     const event = events.find(e => e.id === eventId);
-    return event?.name || "N/D";
+    return event?.name || t('accounting.common.notAvailable');
   };
 
   const categoryLabels: Record<string, string> = {
-    artisti: "Artisti",
-    promozione: "Promozione",
-    materiali: "Materiali",
-    personale: "Personale",
-    affitto: "Affitto",
-    catering: "Catering",
-    altro: "Altro",
+    artisti: t('accounting.categories.artisti'),
+    promozione: t('accounting.categories.promozione'),
+    materiali: t('accounting.categories.materiali'),
+    personale: t('accounting.categories.personale'),
+    affitto: t('accounting.categories.affitto'),
+    catering: t('accounting.categories.catering'),
+    altro: t('accounting.categories.altro'),
   };
 
   const totalExtra = filteredCosts.reduce((sum, cost) => sum + parseFloat(cost.amount || "0"), 0);
@@ -1008,10 +1013,10 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
       <MobileSectionHeader
         icon={Euro}
         iconGradient="from-amber-500 to-orange-600"
-        title="Costi Extra"
-        subtitle="Spese per evento"
+        title={t('accounting.extraCosts.title')}
+        subtitle={t('accounting.extraCosts.subtitle')}
         onAdd={() => setIsDialogOpen(true)}
-        addLabel="Nuovo"
+        addLabel={t('accounting.common.new')}
         isAdmin={isAdmin}
         testId="button-add-extra-cost"
       />
@@ -1019,7 +1024,7 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
       <MobileSearchBar
         value={searchTerm}
         onChange={setSearchTerm}
-        placeholder="Cerca costi extra..."
+        placeholder={t('accounting.extraCosts.searchPlaceholder')}
         testId="input-search-extra-costs"
       />
 
@@ -1027,7 +1032,7 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
         <EmptyState
           icon={Euro}
           iconBg="bg-amber-500/20 text-amber-400"
-          message={searchTerm ? "Nessun risultato trovato" : "Nessun costo extra registrato"}
+          message={searchTerm ? t('accounting.fixedCosts.noResults') : t('accounting.extraCosts.empty')}
         />
       ) : (
         <>
@@ -1050,7 +1055,7 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
                   ]}
                   metadata={[
                     { icon: Calendar, label: getEventName(cost.eventId) },
-                    ...(cost.invoiceNumber ? [{ icon: FileText, label: `Fatt. ${cost.invoiceNumber}` }] : []),
+                    ...(cost.invoiceNumber ? [{ icon: FileText, label: `${t('accounting.extraCosts.invoicePrefix')} ${cost.invoiceNumber}` }] : []),
                   ]}
                   onEdit={() => {
                     setEditingCost(cost);
@@ -1070,7 +1075,7 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
             transition={{ ...springConfig, delay: 0.2 }}
             className="mt-4 p-4 rounded-2xl bg-amber-500/10 flex items-center justify-between"
           >
-            <span className="text-muted-foreground font-medium">Totale:</span>
+            <span className="text-muted-foreground font-medium">{t('accounting.common.total')}</span>
             <span className="text-2xl font-bold text-amber-400">€{totalExtra.toFixed(2)}</span>
           </motion.div>
         </>
@@ -1082,16 +1087,16 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
       }}>
         <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
-            <DialogTitle>{editingCost ? "Modifica Costo Extra" : "Nuovo Costo Extra"}</DialogTitle>
+            <DialogTitle>{editingCost ? t('accounting.extraCosts.editTitle') : t('accounting.extraCosts.newTitle')}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nome *</Label>
+              <Label htmlFor="name">{t('accounting.fields.nameRequired')}</Label>
               <Input
                 id="name"
                 name="name"
                 defaultValue={editingCost?.name || ""}
-                placeholder="es. DJ Fee"
+                placeholder={t('accounting.placeholders.djFeeExample')}
                 required
                 className="h-12 rounded-xl"
                 data-testid="input-extra-cost-name"
@@ -1099,31 +1104,31 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="category">Categoria *</Label>
+                <Label htmlFor="category">{t('accounting.fields.categoryRequired')}</Label>
                 <Select name="category" defaultValue={editingCost?.category || "altro"}>
                   <SelectTrigger className="h-12 rounded-xl" data-testid="select-extra-cost-category">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="artisti">Artisti</SelectItem>
-                    <SelectItem value="promozione">Promozione</SelectItem>
-                    <SelectItem value="materiali">Materiali</SelectItem>
-                    <SelectItem value="personale">Personale</SelectItem>
-                    <SelectItem value="affitto">Affitto</SelectItem>
-                    <SelectItem value="catering">Catering</SelectItem>
-                    <SelectItem value="altro">Altro</SelectItem>
+                    <SelectItem value="artisti">{t('accounting.categories.artisti')}</SelectItem>
+                    <SelectItem value="promozione">{t('accounting.categories.promozione')}</SelectItem>
+                    <SelectItem value="materiali">{t('accounting.categories.materiali')}</SelectItem>
+                    <SelectItem value="personale">{t('accounting.categories.personale')}</SelectItem>
+                    <SelectItem value="affitto">{t('accounting.categories.affitto')}</SelectItem>
+                    <SelectItem value="catering">{t('accounting.categories.catering')}</SelectItem>
+                    <SelectItem value="altro">{t('accounting.categories.altro')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="amount">Importo (€) *</Label>
+                <Label htmlFor="amount">{t('accounting.fields.amountRequired')}</Label>
                 <Input
                   id="amount"
                   name="amount"
                   type="number"
                   step="0.01"
                   defaultValue={editingCost?.amount || ""}
-                  placeholder="0.00"
+                  placeholder={t('accounting.placeholders.amountPlaceholder')}
                   required
                   className="h-12 rounded-xl"
                   data-testid="input-extra-cost-amount"
@@ -1131,13 +1136,13 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="eventId">Evento</Label>
+              <Label htmlFor="eventId">{t('accounting.fields.event')}</Label>
               <Select name="eventId" defaultValue={editingCost?.eventId || "_none"}>
                 <SelectTrigger className="h-12 rounded-xl" data-testid="select-extra-cost-event">
-                  <SelectValue placeholder="Seleziona evento" />
+                  <SelectValue placeholder={t('accounting.common.selectEvent')} />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="_none">Nessun evento</SelectItem>
+                  <SelectItem value="_none">{t('accounting.common.noEvent')}</SelectItem>
                   {events.map((event) => (
                     <SelectItem key={event.id} value={event.id}>{event.name}</SelectItem>
                   ))}
@@ -1145,23 +1150,23 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
               </Select>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="invoiceNumber">N. Fattura</Label>
+              <Label htmlFor="invoiceNumber">{t('accounting.fields.invoiceNumber')}</Label>
               <Input
                 id="invoiceNumber"
                 name="invoiceNumber"
                 defaultValue={editingCost?.invoiceNumber || ""}
-                placeholder="es. FT-2024-001"
+                placeholder={t('accounting.placeholders.invoiceExample')}
                 className="h-12 rounded-xl"
                 data-testid="input-extra-cost-invoice"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="notes">Note</Label>
+              <Label htmlFor="notes">{t('accounting.fields.notes')}</Label>
               <Textarea
                 id="notes"
                 name="notes"
                 defaultValue={editingCost?.notes || ""}
-                placeholder="Note aggiuntive"
+                placeholder={t('accounting.fields.notesPlaceholder')}
                 className="rounded-xl"
                 data-testid="input-extra-cost-notes"
               />
@@ -1174,7 +1179,7 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
                 hapticType="success"
                 data-testid="button-save-extra-cost"
               >
-                {editingCost ? "Aggiorna" : "Crea"}
+                {editingCost ? t('accounting.common.update') : t('accounting.common.create')}
               </HapticButton>
             </DialogFooter>
           </form>
@@ -1185,6 +1190,7 @@ function ExtraCostsSection({ isAdmin }: { isAdmin: boolean }) {
 }
 
 function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingMaintenance, setEditingMaintenance] = useState<Maintenance | null>(null);
@@ -1204,11 +1210,11 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
       queryClient.invalidateQueries({ queryKey: ["/api/maintenances"] });
       setIsDialogOpen(false);
       triggerHaptic('success');
-      toast({ title: "Manutenzione creata con successo" });
+      toast({ title: t('accounting.maintenances.createSuccess') });
     },
     onError: (err: any) => {
       triggerHaptic('error');
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: err.message, variant: "destructive" });
     },
   });
 
@@ -1220,11 +1226,11 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
       setEditingMaintenance(null);
       setIsDialogOpen(false);
       triggerHaptic('success');
-      toast({ title: "Manutenzione aggiornata" });
+      toast({ title: t('accounting.maintenances.updateSuccess') });
     },
     onError: (err: any) => {
       triggerHaptic('error');
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: err.message, variant: "destructive" });
     },
   });
 
@@ -1233,11 +1239,11 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/maintenances"] });
       triggerHaptic('success');
-      toast({ title: "Manutenzione eliminata" });
+      toast({ title: t('accounting.maintenances.deleteSuccess') });
     },
     onError: (err: any) => {
       triggerHaptic('error');
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: err.message, variant: "destructive" });
     },
   });
 
@@ -1270,21 +1276,21 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
   );
 
   const getLocationName = (locationId: string | null) => {
-    if (!locationId) return "Generale";
+    if (!locationId) return t('accounting.common.general');
     const location = locations.find(l => l.id === locationId);
-    return location?.name || "N/D";
+    return location?.name || t('accounting.common.notAvailable');
   };
 
   const typeLabels: Record<string, string> = {
-    ordinaria: "Ordinaria",
-    straordinaria: "Straordinaria",
-    urgente: "Urgente",
+    ordinaria: t('accounting.maintenanceTypes.ordinaria'),
+    straordinaria: t('accounting.maintenanceTypes.straordinaria'),
+    urgente: t('accounting.maintenanceTypes.urgente'),
   };
 
   const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
-    pending: { label: "In attesa", variant: "secondary" },
-    scheduled: { label: "Programmata", variant: "outline" },
-    completed: { label: "Completata", variant: "default", className: "bg-teal-500/20 text-teal border-teal-500/30" },
+    pending: { label: t('accounting.maintenanceStatus.pending'), variant: "secondary" },
+    scheduled: { label: t('accounting.maintenanceStatus.scheduled'), variant: "outline" },
+    completed: { label: t('accounting.maintenanceStatus.completed'), variant: "default", className: "bg-teal-500/20 text-teal border-teal-500/30" },
   };
 
   if (isLoading) {
@@ -1302,10 +1308,10 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
       <MobileSectionHeader
         icon={Wrench}
         iconGradient="from-violet-500 to-purple-600"
-        title="Manutenzioni"
-        subtitle="Interventi programmati"
+        title={t('accounting.maintenances.title')}
+        subtitle={t('accounting.maintenances.subtitle')}
         onAdd={() => setIsDialogOpen(true)}
-        addLabel="Nuova"
+        addLabel={t('accounting.common.newFeminine')}
         isAdmin={isAdmin}
         testId="button-add-maintenance"
       />
@@ -1313,7 +1319,7 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
       <MobileSearchBar
         value={searchTerm}
         onChange={setSearchTerm}
-        placeholder="Cerca manutenzioni..."
+        placeholder={t('accounting.maintenances.searchPlaceholder')}
         testId="input-search-maintenances"
       />
 
@@ -1321,7 +1327,7 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
         <EmptyState
           icon={Wrench}
           iconBg="bg-violet-500/20 text-violet-400"
-          message={searchTerm ? "Nessun risultato trovato" : "Nessuna manutenzione registrata"}
+          message={searchTerm ? t('accounting.fixedCosts.noResults') : t('accounting.maintenances.empty')}
         />
       ) : (
         <div className="space-y-3">
@@ -1368,69 +1374,69 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
       }}>
         <DialogContent className="w-[95vw] max-w-md max-h-[90vh] overflow-y-auto rounded-2xl">
           <DialogHeader>
-            <DialogTitle>{editingMaintenance ? "Modifica Manutenzione" : "Nuova Manutenzione"}</DialogTitle>
+            <DialogTitle>{editingMaintenance ? t('accounting.maintenances.editTitle') : t('accounting.maintenances.newTitle')}</DialogTitle>
           </DialogHeader>
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-2">
-              <Label htmlFor="name">Nome *</Label>
+              <Label htmlFor="name">{t('accounting.fields.nameRequired')}</Label>
               <Input
                 id="name"
                 name="name"
                 defaultValue={editingMaintenance?.name || ""}
-                placeholder="es. Revisione impianto"
+                placeholder={t('accounting.placeholders.maintenanceExample')}
                 required
                 className="h-12 rounded-xl"
                 data-testid="input-maintenance-name"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="description">Descrizione</Label>
+              <Label htmlFor="description">{t('accounting.fields.description')}</Label>
               <Textarea
                 id="description"
                 name="description"
                 defaultValue={editingMaintenance?.description || ""}
-                placeholder="Descrizione intervento"
+                placeholder={t('accounting.placeholders.maintenanceDescription')}
                 className="rounded-xl"
                 data-testid="input-maintenance-description"
               />
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="type">Tipo *</Label>
+                <Label htmlFor="type">{t('accounting.fields.typeRequired')}</Label>
                 <Select name="type" defaultValue={editingMaintenance?.type || "ordinaria"}>
                   <SelectTrigger className="h-12 rounded-xl" data-testid="select-maintenance-type">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="ordinaria">Ordinaria</SelectItem>
-                    <SelectItem value="straordinaria">Straordinaria</SelectItem>
-                    <SelectItem value="urgente">Urgente</SelectItem>
+                    <SelectItem value="ordinaria">{t('accounting.maintenanceTypes.ordinaria')}</SelectItem>
+                    <SelectItem value="straordinaria">{t('accounting.maintenanceTypes.straordinaria')}</SelectItem>
+                    <SelectItem value="urgente">{t('accounting.maintenanceTypes.urgente')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="status">Stato *</Label>
+                <Label htmlFor="status">{t('accounting.fields.statusRequired')}</Label>
                 <Select name="status" defaultValue={editingMaintenance?.status || "pending"}>
                   <SelectTrigger className="h-12 rounded-xl" data-testid="select-maintenance-status">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="pending">In attesa</SelectItem>
-                    <SelectItem value="scheduled">Programmata</SelectItem>
-                    <SelectItem value="completed">Completata</SelectItem>
+                    <SelectItem value="pending">{t('accounting.maintenanceStatus.pending')}</SelectItem>
+                    <SelectItem value="scheduled">{t('accounting.maintenanceStatus.scheduled')}</SelectItem>
+                    <SelectItem value="completed">{t('accounting.maintenanceStatus.completed')}</SelectItem>
                   </SelectContent>
                 </Select>
               </div>
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="locationId">Location</Label>
+                <Label htmlFor="locationId">{t('accounting.fields.location')}</Label>
                 <Select name="locationId" defaultValue={editingMaintenance?.locationId || "_none"}>
                   <SelectTrigger className="h-12 rounded-xl" data-testid="select-maintenance-location">
-                    <SelectValue placeholder="Generale" />
+                    <SelectValue placeholder={t('accounting.common.general')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="_none">Generale</SelectItem>
+                    <SelectItem value="_none">{t('accounting.common.general')}</SelectItem>
                     {locations.map((loc) => (
                       <SelectItem key={loc.id} value={loc.id}>{loc.name}</SelectItem>
                     ))}
@@ -1438,7 +1444,7 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
                 </Select>
               </div>
               <div className="space-y-2">
-                <Label htmlFor="amount">Costo (€)</Label>
+                <Label htmlFor="amount">{t('accounting.fields.cost')}</Label>
                 <Input
                   id="amount"
                   name="amount"
@@ -1453,7 +1459,7 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
             </div>
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-2">
-                <Label htmlFor="scheduledDate">Data Prevista</Label>
+                <Label htmlFor="scheduledDate">{t('accounting.fields.scheduledDate')}</Label>
                 <Input
                   id="scheduledDate"
                   name="scheduledDate"
@@ -1464,7 +1470,7 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="completedDate">Completata il</Label>
+                <Label htmlFor="completedDate">{t('accounting.fields.completedDate')}</Label>
                 <Input
                   id="completedDate"
                   name="completedDate"
@@ -1476,12 +1482,12 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="notes">Note</Label>
+              <Label htmlFor="notes">{t('accounting.fields.notes')}</Label>
               <Textarea
                 id="notes"
                 name="notes"
                 defaultValue={editingMaintenance?.notes || ""}
-                placeholder="Note aggiuntive"
+                placeholder={t('accounting.fields.notesPlaceholder')}
                 className="rounded-xl"
                 data-testid="input-maintenance-notes"
               />
@@ -1494,7 +1500,7 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
                 hapticType="success"
                 data-testid="button-save-maintenance"
               >
-                {editingMaintenance ? "Aggiorna" : "Crea"}
+                {editingMaintenance ? t('accounting.common.update') : t('accounting.common.create')}
               </HapticButton>
             </DialogFooter>
           </form>
@@ -1505,6 +1511,7 @@ function MaintenancesSection({ isAdmin }: { isAdmin: boolean }) {
 }
 
 function DocumentsSection({ isAdmin }: { isAdmin: boolean }) {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingDocument, setEditingDocument] = useState<AccountingDocument | null>(null);
@@ -1520,11 +1527,11 @@ function DocumentsSection({ isAdmin }: { isAdmin: boolean }) {
       queryClient.invalidateQueries({ queryKey: ["/api/accounting-documents"] });
       setIsDialogOpen(false);
       triggerHaptic('success');
-      toast({ title: "Documento creato con successo" });
+      toast({ title: t('accounting.documents.createSuccess') });
     },
     onError: (err: any) => {
       triggerHaptic('error');
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: err.message, variant: "destructive" });
     },
   });
 
@@ -1536,11 +1543,11 @@ function DocumentsSection({ isAdmin }: { isAdmin: boolean }) {
       setEditingDocument(null);
       setIsDialogOpen(false);
       triggerHaptic('success');
-      toast({ title: "Documento aggiornato" });
+      toast({ title: t('accounting.documents.updateSuccess') });
     },
     onError: (err: any) => {
       triggerHaptic('error');
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: err.message, variant: "destructive" });
     },
   });
 
@@ -1549,11 +1556,11 @@ function DocumentsSection({ isAdmin }: { isAdmin: boolean }) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/accounting-documents"] });
       triggerHaptic('success');
-      toast({ title: "Documento eliminato" });
+      toast({ title: t('accounting.documents.deleteSuccess') });
     },
     onError: (err: any) => {
       triggerHaptic('error');
-      toast({ title: "Errore", description: err.message, variant: "destructive" });
+      toast({ title: t('common.error'), description: err.message, variant: "destructive" });
     },
   });
 
@@ -1584,18 +1591,18 @@ function DocumentsSection({ isAdmin }: { isAdmin: boolean }) {
   );
 
   const typeLabels: Record<string, string> = {
-    fattura: "Fattura",
-    preventivo: "Preventivo",
-    contratto: "Contratto",
-    ricevuta: "Ricevuta",
-    altro: "Altro",
+    fattura: t('accounting.documentTypes.fattura'),
+    preventivo: t('accounting.documentTypes.preventivo'),
+    contratto: t('accounting.documentTypes.contratto'),
+    ricevuta: t('accounting.documentTypes.ricevuta'),
+    altro: t('accounting.categories.altro'),
   };
 
   const statusConfig: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; className?: string }> = {
-    pending: { label: "In attesa", variant: "secondary" },
-    paid: { label: "Pagato", variant: "default", className: "bg-teal-500/20 text-teal border-teal-500/30" },
-    overdue: { label: "Scaduto", variant: "destructive" },
-    cancelled: { label: "Annullato", variant: "outline" },
+    pending: { label: t('accounting.documentStatus.pending'), variant: "secondary" },
+    paid: { label: t('accounting.documentStatus.paid'), variant: "default", className: "bg-teal-500/20 text-teal border-teal-500/30" },
+    overdue: { label: t('accounting.documentStatus.overdue'), variant: "destructive" },
+    cancelled: { label: t('accounting.documentStatus.cancelled'), variant: "outline" },
   };
 
   if (isLoading) {
@@ -1613,8 +1620,8 @@ function DocumentsSection({ isAdmin }: { isAdmin: boolean }) {
       <MobileSectionHeader
         icon={FileText}
         iconGradient="from-rose-500 to-pink-600"
-        title="Documenti"
-        subtitle="Fatture e contratti"
+        title={t('accounting.documents.title')}
+        subtitle={t('accounting.documents.subtitle')}
         onAdd={() => setIsDialogOpen(true)}
         addLabel="Nuovo"
         isAdmin={isAdmin}

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useLocation, Link } from "wouter";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { motion, AnimatePresence } from "framer-motion";
@@ -340,6 +341,7 @@ function DashboardHeader({ user, getRoleLabel }: { user: any; getRoleLabel: () =
 }
 
 export default function PrDashboard() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const [, navigate] = useLocation();
   const isMobile = useIsMobile();
@@ -367,13 +369,13 @@ export default function PrDashboard() {
   const getRoleBadge = (assignmentType: string) => {
     switch (assignmentType) {
       case 'staff':
-        return <Badge className="bg-teal-500/20 text-teal-400 border-teal-500/30 text-sm px-3 py-1">Staff</Badge>;
+        return <Badge className="bg-teal-500/20 text-teal-400 border-teal-500/30 text-sm px-3 py-1">{t('pr.roles.staff')}</Badge>;
       case 'pr':
-        return <Badge className="bg-pink-500/20 text-pink-400 border-pink-500/30 text-sm px-3 py-1">PR</Badge>;
+        return <Badge className="bg-pink-500/20 text-pink-400 border-pink-500/30 text-sm px-3 py-1">{t('pr.roles.pr')}</Badge>;
       case 'scanner':
-        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-sm px-3 py-1">Scanner</Badge>;
+        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 text-sm px-3 py-1">{t('pr.roles.scanner')}</Badge>;
       default:
-        return <Badge className="text-sm px-3 py-1">Gestore</Badge>;
+        return <Badge className="text-sm px-3 py-1">{t('pr.roles.owner')}</Badge>;
     }
   };
 
@@ -382,16 +384,16 @@ export default function PrDashboard() {
     const start = new Date(event.startDatetime);
     const end = event.endDatetime ? new Date(event.endDatetime) : null;
     
-    if (end && now > end) return { label: 'Concluso', color: 'bg-gray-500/20 text-gray-400' };
-    if (now >= start && (!end || now <= end)) return { label: 'In corso', color: 'bg-emerald-500/20 text-emerald-400' };
-    return { label: 'Programmato', color: 'bg-blue-500/20 text-blue-400' };
+    if (end && now > end) return { label: t('pr.concluded'), color: 'bg-gray-500/20 text-gray-400' };
+    if (now >= start && (!end || now <= end)) return { label: t('pr.ongoing'), color: 'bg-emerald-500/20 text-emerald-400' };
+    return { label: t('pr.scheduled'), color: 'bg-blue-500/20 text-blue-400' };
   };
 
   const getRoleLabel = () => {
-    if (isStaff) return "Capo Staff";
-    if (isPr) return "PR";
-    if (isScanner) return "Scanner";
-    return "Operatore";
+    if (isStaff) return t('pr.roles.capo_staff');
+    if (isPr) return t('pr.roles.pr');
+    if (isScanner) return t('pr.roles.scanner');
+    return t('pr.roles.operator');
   };
 
   const activeEvents = myEvents?.filter(e => {
@@ -409,9 +411,9 @@ export default function PrDashboard() {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Buongiorno';
-    if (hour < 18) return 'Buon pomeriggio';
-    return 'Buonasera';
+    if (hour < 12) return t('common.goodMorning');
+    if (hour < 18) return t('common.goodAfternoon');
+    return t('common.goodEvening');
   };
 
   const getInitials = () => {
@@ -421,8 +423,8 @@ export default function PrDashboard() {
   };
 
   const getDateLabel = (date: Date) => {
-    if (isToday(date)) return "Oggi";
-    if (isTomorrow(date)) return "Domani";
+    if (isToday(date)) return t('pr.today');
+    if (isTomorrow(date)) return t('pr.tomorrow');
     return format(date, "EEEE d MMMM", { locale: it });
   };
 
@@ -439,7 +441,7 @@ export default function PrDashboard() {
             <div>
               <p className="text-sm text-muted-foreground">{getGreeting()}</p>
               <h1 className="text-2xl font-bold" data-testid="text-user-name">
-                {user?.firstName || user?.email?.split('@')[0] || 'Utente'}
+                {user?.firstName || user?.email?.split('@')[0] || t('common.user')}
               </h1>
             </div>
           </div>
@@ -452,7 +454,7 @@ export default function PrDashboard() {
             </Badge>
             <Button variant="outline" onClick={() => { refetchEvents(); refetchStats(); }} data-testid="button-refresh">
               <RefreshCw className="w-4 h-4 mr-2" />
-              Aggiorna
+              {t('common.refresh')}
             </Button>
           </div>
         </div>
@@ -464,7 +466,7 @@ export default function PrDashboard() {
                 <div className="p-2 rounded-lg bg-blue-500/10">
                   <Calendar className="h-5 w-5 text-blue-500" />
                 </div>
-                <span className="text-sm text-muted-foreground">Eventi Attivi</span>
+                <span className="text-sm text-muted-foreground">{t('pr.activeEvents')}</span>
               </div>
               {statsLoading ? (
                 <Skeleton className="h-8 w-16" />
@@ -479,7 +481,7 @@ export default function PrDashboard() {
                 <div className="p-2 rounded-lg bg-teal-500/10">
                   <Users className="h-5 w-5 text-teal-500" />
                 </div>
-                <span className="text-sm text-muted-foreground">Persone Aggiunte</span>
+                <span className="text-sm text-muted-foreground">{t('pr.peopleAdded')}</span>
               </div>
               {statsLoading ? (
                 <Skeleton className="h-8 w-16" />
@@ -494,7 +496,7 @@ export default function PrDashboard() {
                 <div className="p-2 rounded-lg bg-emerald-500/10">
                   <CheckCircle2 className="h-5 w-5 text-emerald-500" />
                 </div>
-                <span className="text-sm text-muted-foreground">Check-in</span>
+                <span className="text-sm text-muted-foreground">{t('pr.checkIns')}</span>
               </div>
               {statsLoading ? (
                 <Skeleton className="h-8 w-16" />
@@ -509,7 +511,7 @@ export default function PrDashboard() {
                 <div className="p-2 rounded-lg bg-pink-500/10">
                   <Armchair className="h-5 w-5 text-pink-500" />
                 </div>
-                <span className="text-sm text-muted-foreground">Tavoli Proposti</span>
+                <span className="text-sm text-muted-foreground">{t('pr.proposedTables')}</span>
               </div>
               {statsLoading ? (
                 <Skeleton className="h-8 w-16" />
@@ -530,7 +532,7 @@ export default function PrDashboard() {
               data-testid="button-quick-lists"
             >
               <ListChecks className="h-6 w-6" />
-              <span>Liste Ospiti</span>
+              <span>{t('pr.guestLists')}</span>
             </Button>
           )}
           {(isStaff || isPr) && (
@@ -542,7 +544,7 @@ export default function PrDashboard() {
               data-testid="button-quick-tables"
             >
               <Armchair className="h-6 w-6" />
-              <span>Tavoli</span>
+              <span>{t('pr.tables')}</span>
             </Button>
           )}
           {isStaff && (
@@ -554,7 +556,7 @@ export default function PrDashboard() {
               data-testid="button-quick-pr"
             >
               <UserPlus className="h-6 w-6" />
-              <span>Gestione PR</span>
+              <span>{t('pr.prManagement')}</span>
             </Button>
           )}
           <Button 
@@ -564,7 +566,7 @@ export default function PrDashboard() {
             data-testid="button-quick-scanner"
           >
             <QrCode className="h-6 w-6" />
-            <span>Scanner QR</span>
+            <span>{t('pr.qrScanner')}</span>
           </Button>
         </div>
 
@@ -572,8 +574,8 @@ export default function PrDashboard() {
           <CardHeader>
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle>I Miei Eventi</CardTitle>
-                <CardDescription>Tutti gli eventi a cui sei assegnato</CardDescription>
+                <CardTitle>{t('pr.myEvents')}</CardTitle>
+                <CardDescription>{t('pr.allEventsAssigned')}</CardDescription>
               </div>
               <Badge className="bg-primary/20 text-primary border-primary/30">
                 {myEvents?.length || 0}
@@ -598,11 +600,11 @@ export default function PrDashboard() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Evento</TableHead>
-                    <TableHead>Data</TableHead>
-                    <TableHead>Ruolo</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
+                    <TableHead>{t('common.event')}</TableHead>
+                    <TableHead>{t('common.date')}</TableHead>
+                    <TableHead>{t('common.role')}</TableHead>
+                    <TableHead>{t('common.status')}</TableHead>
+                    <TableHead className="text-right">{t('common.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -636,14 +638,14 @@ export default function PrDashboard() {
                               }}
                               data-testid={`button-view-event-${event.id}`}
                             >
-                              Dettagli
+                              {t('common.details')}
                             </Button>
                             <Button 
                               size="sm"
                               onClick={() => navigate(`/events/${event.id}/panel`)}
                               data-testid={`button-enter-event-${event.id}`}
                             >
-                              Entra
+                              {t('pr.enter')}
                               <ArrowRight className="h-4 w-4 ml-1" />
                             </Button>
                           </div>
@@ -658,9 +660,9 @@ export default function PrDashboard() {
                 <div className="p-5 rounded-full bg-muted/20 inline-block mb-4">
                   <Calendar className="h-12 w-12 text-muted-foreground" />
                 </div>
-                <h3 className="text-lg font-semibold mb-2">Nessun evento assegnato</h3>
+                <h3 className="text-lg font-semibold mb-2">{t('pr.noEventsAssigned')}</h3>
                 <p className="text-muted-foreground">
-                  Contatta il tuo responsabile per essere aggiunto a un evento.
+                  {t('pr.contactManager')}
                 </p>
               </div>
             )}
@@ -671,63 +673,63 @@ export default function PrDashboard() {
           <DialogContent className="sm:max-w-[500px]">
             <DialogHeader>
               <DialogTitle>{selectedEvent?.name}</DialogTitle>
-              <DialogDescription>Dettagli dell'evento</DialogDescription>
+              <DialogDescription>{t('pr.eventDetails')}</DialogDescription>
             </DialogHeader>
             {selectedEvent && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Data</p>
+                    <p className="text-sm text-muted-foreground">{t('common.date')}</p>
                     <p className="font-medium">
                       {getDateLabel(new Date(selectedEvent.startDatetime))}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Orario</p>
+                    <p className="text-sm text-muted-foreground">{t('common.time')}</p>
                     <p className="font-medium">
                       {format(new Date(selectedEvent.startDatetime), "HH:mm", { locale: it })}
                     </p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Ruolo</p>
+                    <p className="text-sm text-muted-foreground">{t('common.role')}</p>
                     {getRoleBadge(selectedEvent.assignmentType)}
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Stato</p>
+                    <p className="text-sm text-muted-foreground">{t('common.status')}</p>
                     <Badge className={getEventStatus(selectedEvent).color}>
                       {getEventStatus(selectedEvent).label}
                     </Badge>
                   </div>
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground mb-2">Permessi</p>
+                  <p className="text-sm text-muted-foreground mb-2">{t('pr.permissions')}</p>
                   <div className="flex flex-wrap gap-2">
                     {selectedEvent.permissions?.canAddToLists && (
-                      <Badge variant="secondary">Aggiungi Liste</Badge>
+                      <Badge variant="secondary">{t('pr.addLists')}</Badge>
                     )}
                     {selectedEvent.permissions?.canProposeTables && (
-                      <Badge variant="secondary">Proponi Tavoli</Badge>
+                      <Badge variant="secondary">{t('pr.proposeTables')}</Badge>
                     )}
                     {selectedEvent.permissions?.canScanLists && (
-                      <Badge variant="secondary">Scansione Liste</Badge>
+                      <Badge variant="secondary">{t('pr.scanLists')}</Badge>
                     )}
                     {selectedEvent.permissions?.canManageLists && (
-                      <Badge variant="secondary">Gestisci Liste</Badge>
+                      <Badge variant="secondary">{t('pr.manageLists')}</Badge>
                     )}
                     {selectedEvent.permissions?.canManageTables && (
-                      <Badge variant="secondary">Gestisci Tavoli</Badge>
+                      <Badge variant="secondary">{t('pr.manageTables')}</Badge>
                     )}
                   </div>
                 </div>
                 <div className="flex justify-end gap-2">
                   <Button variant="outline" onClick={() => setIsEventDialogOpen(false)}>
-                    Chiudi
+                    {t('common.close')}
                   </Button>
                   <Button onClick={() => {
                     navigate(`/events/${selectedEvent.id}/panel`);
                     setIsEventDialogOpen(false);
                   }}>
-                    Vai all'Evento
+                    {t('pr.goToEvent')}
                     <ArrowRight className="h-4 w-4 ml-1" />
                   </Button>
                 </div>
@@ -754,7 +756,7 @@ export default function PrDashboard() {
           <div className="flex items-center justify-between gap-4">
             <div className="flex items-center gap-2">
               <Activity className="h-5 w-5 text-primary" />
-              <h2 className="text-xl font-bold">Le tue statistiche</h2>
+              <h2 className="text-xl font-bold">{t('pr.yourStats')}</h2>
             </div>
             <HapticButton
               variant="ghost"
@@ -775,7 +777,7 @@ export default function PrDashboard() {
         >
           <StatCard 
             icon={Calendar} 
-            label="Eventi Attivi" 
+            label={t('pr.activeEvents')} 
             value={myStats?.activeEvents || 0}
             gradient="from-blue-500 to-indigo-600"
             isLoading={statsLoading}
@@ -783,7 +785,7 @@ export default function PrDashboard() {
           />
           <StatCard 
             icon={Users} 
-            label="Persone Aggiunte" 
+            label={t('pr.peopleAdded')} 
             value={myStats?.entriesCreated || 0}
             gradient="from-teal-500 to-emerald-600"
             trend={{ value: 12, isPositive: true }}
@@ -792,7 +794,7 @@ export default function PrDashboard() {
           />
           <StatCard 
             icon={CheckCircle2} 
-            label="Check-in" 
+            label={t('pr.checkIns')} 
             value={myStats?.checkIns || 0}
             gradient="from-emerald-500 to-green-600"
             isLoading={statsLoading}
@@ -800,7 +802,7 @@ export default function PrDashboard() {
           />
           <StatCard 
             icon={Armchair} 
-            label="Tavoli Proposti" 
+            label={t('pr.proposedTables')} 
             value={myStats?.tablesProposed || 0}
             gradient="from-pink-500 to-rose-600"
             isLoading={statsLoading}
@@ -811,15 +813,15 @@ export default function PrDashboard() {
         <motion.div variants={fadeInUp} className="space-y-4 px-4">
           <div className="flex items-center gap-2">
             <Sparkles className="h-5 w-5 text-amber-400" />
-            <h2 className="text-xl font-bold">Azioni Rapide</h2>
+            <h2 className="text-xl font-bold">{t('pr.quickActions')}</h2>
           </div>
           
           <div className="grid grid-cols-2 gap-4">
             {(isStaff || isPr) && (
               <QuickActionCard
                 icon={ListChecks}
-                label="Liste"
-                description="Gestisci ospiti"
+                label={t('pr.lists')}
+                description={t('pr.manageGuests')}
                 onClick={() => myEvents?.[0] && navigate(`/events/${myEvents[0].id}/panel`)}
                 gradient="from-violet-500 to-purple-600"
                 disabled={!myEvents?.length}
@@ -830,8 +832,8 @@ export default function PrDashboard() {
             {(isStaff || isPr) && (
               <QuickActionCard
                 icon={Armchair}
-                label="Tavoli"
-                description="Proponi prenotazioni"
+                label={t('pr.tables')}
+                description={t('pr.proposeBookings')}
                 onClick={() => myEvents?.[0] && navigate(`/events/${myEvents[0].id}/panel?tab=tables`)}
                 gradient="from-rose-500 to-pink-600"
                 disabled={!myEvents?.length}
@@ -842,8 +844,8 @@ export default function PrDashboard() {
             {isStaff && (
               <QuickActionCard
                 icon={UserPlus}
-                label="Gestione PR"
-                description="Team e permessi"
+                label={t('pr.prManagement')}
+                description={t('pr.teamPermissions')}
                 onClick={() => myEvents?.[0] && navigate(`/events/${myEvents[0].id}/panel?tab=pr`)}
                 gradient="from-amber-500 to-orange-600"
                 disabled={!myEvents?.length}
@@ -853,8 +855,8 @@ export default function PrDashboard() {
 
             <QuickActionCard
               icon={QrCode}
-              label="Scanner QR"
-              description="Check-in ospiti"
+              label={t('pr.qrScanner')}
+              description={t('pr.guestCheckIn')}
               onClick={() => navigate('/scanner')}
               gradient="from-primary to-primary/80"
               testId="button-quick-scanner"
@@ -866,7 +868,7 @@ export default function PrDashboard() {
           <motion.div variants={fadeInUp} className="space-y-4 px-4">
             <div className="flex items-center gap-2">
               <Star className="h-5 w-5 text-amber-400" />
-              <h2 className="text-xl font-bold">Eventi di Oggi</h2>
+              <h2 className="text-xl font-bold">{t('pr.todayEvents')}</h2>
               <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30 ml-auto">
                 {todayEvents.length}
               </Badge>
@@ -889,7 +891,7 @@ export default function PrDashboard() {
         <motion.div variants={fadeInUp} className="space-y-4 px-4">
           <div className="flex items-center gap-2">
             <Calendar className="h-5 w-5 text-primary" />
-            <h2 className="text-xl font-bold">I Miei Eventi</h2>
+            <h2 className="text-xl font-bold">{t('pr.myEvents')}</h2>
             <Badge className="bg-primary/20 text-primary border-primary/30 ml-auto">
               {myEvents?.length || 0}
             </Badge>
@@ -932,9 +934,9 @@ export default function PrDashboard() {
                   <div className="p-5 rounded-full bg-muted/20 mb-5">
                     <Calendar className="h-12 w-12 text-muted-foreground" />
                   </div>
-                  <h3 className="text-xl font-semibold mb-3">Nessun evento assegnato</h3>
+                  <h3 className="text-xl font-semibold mb-3">{t('pr.noEventsAssigned')}</h3>
                   <p className="text-base text-muted-foreground">
-                    Contatta il tuo responsabile per essere aggiunto a un evento.
+                    {t('pr.contactManager')}
                   </p>
                 </CardContent>
               </Card>

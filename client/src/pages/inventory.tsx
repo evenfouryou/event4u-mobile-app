@@ -1,4 +1,5 @@
 import { useState, useMemo } from "react";
+import { useTranslation } from "react-i18next";
 import { useAuth } from "@/hooks/useAuth";
 import { useQuery } from "@tanstack/react-query";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -281,6 +282,7 @@ function LoadingSkeleton() {
 }
 
 export default function Inventory() {
+  const { t } = useTranslation();
   const [searchQuery, setSearchQuery] = useState("");
   const [categoryFilter, setCategoryFilter] = useState("all");
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
@@ -346,9 +348,9 @@ export default function Inventory() {
   const getStockStatus = (stock: number, minThreshold: number) => {
     const isLowStock = stock < minThreshold;
     const isCritical = stock < minThreshold * 0.5;
-    if (isCritical) return { label: "Critico", color: "bg-red-500/20 text-red-400 border-red-500/30" };
-    if (isLowStock) return { label: "Basso", color: "bg-amber-500/20 text-amber-400 border-amber-500/30" };
-    return { label: "OK", color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" };
+    if (isCritical) return { label: t('inventory.critical'), color: "bg-red-500/20 text-red-400 border-red-500/30" };
+    if (isLowStock) return { label: t('inventory.low'), color: "bg-amber-500/20 text-amber-400 border-amber-500/30" };
+    return { label: t('inventory.ok'), color: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30" };
   };
 
   const openProductDetail = (product: Product) => {
@@ -361,8 +363,8 @@ export default function Inventory() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-inventory">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Inventario</h1>
-            <p className="text-muted-foreground">Gestione stock e prodotti</p>
+            <h1 className="text-3xl font-bold">{t('inventory.title')}</h1>
+            <p className="text-muted-foreground">{t('inventory.subtitle')}</p>
           </div>
         </div>
 
@@ -375,7 +377,7 @@ export default function Inventory() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold">{stats.total}</div>
-                  <p className="text-sm text-muted-foreground">Prodotti Totali</p>
+                  <p className="text-sm text-muted-foreground">{t('inventory.totalProducts')}</p>
                 </div>
               </div>
             </CardContent>
@@ -388,7 +390,7 @@ export default function Inventory() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-red-500">{stats.critical}</div>
-                  <p className="text-sm text-muted-foreground">Stock Critico</p>
+                  <p className="text-sm text-muted-foreground">{t('inventory.criticalStock')}</p>
                 </div>
               </div>
             </CardContent>
@@ -401,7 +403,7 @@ export default function Inventory() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-amber-500">{stats.lowStock}</div>
-                  <p className="text-sm text-muted-foreground">Stock Basso</p>
+                  <p className="text-sm text-muted-foreground">{t('inventory.lowStock')}</p>
                 </div>
               </div>
             </CardContent>
@@ -414,7 +416,7 @@ export default function Inventory() {
                 </div>
                 <div>
                   <div className="text-2xl font-bold text-emerald-500">{stats.healthy}</div>
-                  <p className="text-sm text-muted-foreground">Stock OK</p>
+                  <p className="text-sm text-muted-foreground">{t('inventory.stockOk')}</p>
                 </div>
               </div>
             </CardContent>
@@ -424,13 +426,13 @@ export default function Inventory() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between gap-4 flex-wrap">
-              <CardTitle>Elenco Prodotti</CardTitle>
+              <CardTitle>{t('inventory.productList')}</CardTitle>
               <div className="flex items-center gap-3">
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
                     type="text"
-                    placeholder="Cerca prodotti..."
+                    placeholder={t('inventory.searchProducts')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-10 w-[250px]"
@@ -439,7 +441,7 @@ export default function Inventory() {
                 </div>
                 <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                   <SelectTrigger className="w-[180px]" data-testid="select-category-filter">
-                    <SelectValue placeholder="Categoria" />
+                    <SelectValue placeholder={t('inventory.category')} />
                   </SelectTrigger>
                   <SelectContent>
                     {categories.map((cat) => (
@@ -462,20 +464,20 @@ export default function Inventory() {
             ) : filteredProducts.length === 0 ? (
               <div className="text-center py-12">
                 <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="font-semibold text-lg mb-2">Nessun prodotto trovato</h3>
-                <p className="text-sm text-muted-foreground">Prova a modificare i filtri di ricerca</p>
+                <h3 className="font-semibold text-lg mb-2">{t('inventory.noProductFound')}</h3>
+                <p className="text-sm text-muted-foreground">{t('inventory.tryModifyFilters')}</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Codice</TableHead>
-                    <TableHead>Nome</TableHead>
-                    <TableHead>Categoria</TableHead>
-                    <TableHead>Unità</TableHead>
-                    <TableHead>Stock</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead className="text-right">Azioni</TableHead>
+                    <TableHead>{t('inventory.code')}</TableHead>
+                    <TableHead>{t('inventory.name')}</TableHead>
+                    <TableHead>{t('inventory.category')}</TableHead>
+                    <TableHead>{t('inventory.unit')}</TableHead>
+                    <TableHead>{t('inventory.stock')}</TableHead>
+                    <TableHead>{t('inventory.status')}</TableHead>
+                    <TableHead className="text-right">{t('inventory.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -529,35 +531,35 @@ export default function Inventory() {
           <DialogContent>
             <DialogHeader>
               <DialogTitle>{selectedProduct?.name}</DialogTitle>
-              <DialogDescription>Dettagli prodotto</DialogDescription>
+              <DialogDescription>{t('inventory.productDetails')}</DialogDescription>
             </DialogHeader>
             {selectedProduct && (
               <div className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-sm text-muted-foreground">Codice</p>
+                    <p className="text-sm text-muted-foreground">{t('inventory.code')}</p>
                     <p className="font-medium">{selectedProduct.code}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Categoria</p>
+                    <p className="text-sm text-muted-foreground">{t('inventory.category')}</p>
                     <p className="font-medium">{selectedProduct.category || "-"}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Unità di Misura</p>
+                    <p className="text-sm text-muted-foreground">{t('inventory.unitOfMeasure')}</p>
                     <p className="font-medium">{selectedProduct.unitOfMeasure}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Soglia Minima</p>
+                    <p className="text-sm text-muted-foreground">{t('inventory.minThreshold')}</p>
                     <p className="font-medium">{selectedProduct.minThreshold || 10}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Prezzo Costo</p>
+                    <p className="text-sm text-muted-foreground">{t('inventory.costPrice')}</p>
                     <p className="font-medium">€{Number(selectedProduct.costPrice || 0).toFixed(2)}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground">Stato</p>
+                    <p className="text-sm text-muted-foreground">{t('inventory.status')}</p>
                     <Badge className={selectedProduct.active ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400"}>
-                      {selectedProduct.active ? "Attivo" : "Inattivo"}
+                      {selectedProduct.active ? t('inventory.active') : t('inventory.inactive')}
                     </Badge>
                   </div>
                 </div>
@@ -571,7 +573,7 @@ export default function Inventory() {
 
   const headerContent = (
     <MobileHeader
-      title="Inventario"
+      title={t('inventory.title')}
       showBackButton showMenuButton
     />
   );
@@ -596,28 +598,28 @@ export default function Inventory() {
           className="grid grid-cols-2 gap-3"
         >
           <StatsCard
-            title="Prodotti Totali"
+            title={t('inventory.totalProducts')}
             value={stats.total}
             icon={Package}
             gradient="from-primary to-primary/70"
             delay={0}
           />
           <StatsCard
-            title="Stock Critico"
+            title={t('inventory.criticalStock')}
             value={stats.critical}
             icon={AlertTriangle}
             gradient="from-red-500 to-red-600"
             delay={0.05}
           />
           <StatsCard
-            title="Stock Basso"
+            title={t('inventory.lowStock')}
             value={stats.lowStock}
             icon={TrendingDown}
             gradient="from-amber-500 to-amber-600"
             delay={0.1}
           />
           <StatsCard
-            title="Stock OK"
+            title={t('inventory.stockOk')}
             value={stats.healthy}
             icon={CheckCircle2}
             gradient="from-teal to-teal/70"
@@ -634,7 +636,7 @@ export default function Inventory() {
           <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-muted-foreground" />
           <Input
             type="text"
-            placeholder="Cerca prodotti..."
+            placeholder={t('inventory.searchProducts')}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             className="h-14 pl-12 pr-4 rounded-2xl bg-card border-border text-base"
@@ -667,9 +669,9 @@ export default function Inventory() {
               <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-4">
                 <Package className="h-8 w-8 text-muted-foreground" />
               </div>
-              <h3 className="font-semibold text-lg mb-2">Nessun prodotto trovato</h3>
+              <h3 className="font-semibold text-lg mb-2">{t('inventory.noProductFound')}</h3>
               <p className="text-sm text-muted-foreground">
-                Prova a modificare i filtri di ricerca
+                {t('inventory.tryModifyFilters')}
               </p>
             </motion.div>
           ) : (

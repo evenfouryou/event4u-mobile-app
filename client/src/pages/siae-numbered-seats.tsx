@@ -5,6 +5,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
+import { useTranslation } from "react-i18next";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useAuth } from "@/hooks/useAuth";
 import { useToast } from "@/hooks/use-toast";
@@ -83,6 +84,7 @@ const seatFormSchema = z.object({
 type SeatFormData = z.infer<typeof seatFormSchema>;
 
 export default function SiaeNumberedSeatsPage() {
+  const { t } = useTranslation();
   const { user } = useAuth();
   const { toast } = useToast();
   const isMobile = useIsMobile();
@@ -696,8 +698,8 @@ export default function SiaeNumberedSeatsPage() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-siae-numbered-seats">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Posti Numerati</h1>
-            <p className="text-muted-foreground">Gestione posti a sedere per eventi</p>
+            <h1 className="text-3xl font-bold">{t('siae.numberedSeatsPage.title')}</h1>
+            <p className="text-muted-foreground">{t('siae.numberedSeatsPage.subtitle')}</p>
           </div>
           <Button
             onClick={() => setIsCreateDialogOpen(true)}
@@ -705,7 +707,7 @@ export default function SiaeNumberedSeatsPage() {
             data-testid="button-create-seat"
           >
             <Plus className="h-4 w-4 mr-2" />
-            Nuovo Posto
+            {t('siae.numberedSeatsPage.newSeat')}
           </Button>
         </div>
 
@@ -713,10 +715,10 @@ export default function SiaeNumberedSeatsPage() {
           <CardContent className="pt-6">
             <div className="flex items-center gap-4">
               <div className="flex-1 max-w-md">
-                <label className="text-sm text-muted-foreground mb-2 block">Seleziona Settore</label>
+                <label className="text-sm text-muted-foreground mb-2 block">{t('siae.numberedSeatsPage.selectSector')}</label>
                 <Select value={selectedSectorId} onValueChange={setSelectedSectorId}>
                   <SelectTrigger data-testid="select-sector">
-                    <SelectValue placeholder="Seleziona un settore..." />
+                    <SelectValue placeholder={t('siae.numberedSeatsPage.selectSectorPlaceholder')} />
                   </SelectTrigger>
                   <SelectContent>
                     {sectors?.map((sector) => (
@@ -740,7 +742,7 @@ export default function SiaeNumberedSeatsPage() {
                     <Armchair className="h-8 w-8 text-amber-500" />
                     <div>
                       <div className="text-2xl font-bold">{stats.total}</div>
-                      <p className="text-sm text-muted-foreground">Totale Posti</p>
+                      <p className="text-sm text-muted-foreground">{t('siae.numberedSeatsPage.totalSeats')}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -752,7 +754,7 @@ export default function SiaeNumberedSeatsPage() {
                     <CheckCircle2 className="h-8 w-8 text-green-500" />
                     <div>
                       <div className="text-2xl font-bold text-green-500">{stats.available}</div>
-                      <p className="text-sm text-muted-foreground">Disponibili</p>
+                      <p className="text-sm text-muted-foreground">{t('siae.numberedSeatsPage.available')}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -764,7 +766,7 @@ export default function SiaeNumberedSeatsPage() {
                     <ShoppingCart className="h-8 w-8 text-red-500" />
                     <div>
                       <div className="text-2xl font-bold text-red-500">{stats.sold}</div>
-                      <p className="text-sm text-muted-foreground">Venduti</p>
+                      <p className="text-sm text-muted-foreground">{t('siae.numberedSeatsPage.sold')}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -776,7 +778,7 @@ export default function SiaeNumberedSeatsPage() {
                     <Lock className="h-8 w-8 text-amber-500" />
                     <div>
                       <div className="text-2xl font-bold text-amber-500">{stats.reserved}</div>
-                      <p className="text-sm text-muted-foreground">Riservati</p>
+                      <p className="text-sm text-muted-foreground">{t('siae.numberedSeatsPage.reserved')}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -788,7 +790,7 @@ export default function SiaeNumberedSeatsPage() {
                     <AlertTriangle className="h-8 w-8 text-gray-500" />
                     <div>
                       <div className="text-2xl font-bold">{stats.blocked}</div>
-                      <p className="text-sm text-muted-foreground">Bloccati</p>
+                      <p className="text-sm text-muted-foreground">{t('siae.numberedSeatsPage.blocked')}</p>
                     </div>
                   </div>
                 </CardContent>
@@ -801,7 +803,7 @@ export default function SiaeNumberedSeatsPage() {
                   <div className="relative flex-1 max-w-md">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                     <Input
-                      placeholder="Cerca per fila o numero posto..."
+                      placeholder={t('siae.numberedSeatsPage.searchPlaceholder')}
                       value={searchQuery}
                       onChange={(e) => setSearchQuery(e.target.value)}
                       className="pl-10"
@@ -812,27 +814,27 @@ export default function SiaeNumberedSeatsPage() {
                   <div className="flex gap-2">
                     <Select value={statusFilter} onValueChange={setStatusFilter}>
                       <SelectTrigger className="w-[150px]" data-testid="select-status-filter">
-                        <SelectValue placeholder="Stato" />
+                        <SelectValue placeholder={t('common.status')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Tutti gli stati</SelectItem>
-                        <SelectItem value="available">Disponibile</SelectItem>
-                        <SelectItem value="sold">Venduto</SelectItem>
-                        <SelectItem value="reserved">Riservato</SelectItem>
-                        <SelectItem value="blocked">Bloccato</SelectItem>
+                        <SelectItem value="all">{t('siae.numberedSeatsPage.allStatuses')}</SelectItem>
+                        <SelectItem value="available">{t('siae.numberedSeatsPage.available')}</SelectItem>
+                        <SelectItem value="sold">{t('siae.numberedSeatsPage.sold')}</SelectItem>
+                        <SelectItem value="reserved">{t('siae.numberedSeatsPage.reserved')}</SelectItem>
+                        <SelectItem value="blocked">{t('siae.numberedSeatsPage.blocked')}</SelectItem>
                       </SelectContent>
                     </Select>
 
                     <Select value={categoryFilter} onValueChange={setCategoryFilter}>
                       <SelectTrigger className="w-[150px]" data-testid="select-category-filter">
-                        <SelectValue placeholder="Categoria" />
+                        <SelectValue placeholder={t('siae.numberedSeatsPage.category')} />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="all">Tutte</SelectItem>
-                        <SelectItem value="standard">Standard</SelectItem>
-                        <SelectItem value="vip">VIP</SelectItem>
-                        <SelectItem value="premium">Premium</SelectItem>
-                        <SelectItem value="accessibility">Accessibilità</SelectItem>
+                        <SelectItem value="all">{t('siae.numberedSeatsPage.allCategories')}</SelectItem>
+                        <SelectItem value="standard">{t('siae.numberedSeatsPage.standard')}</SelectItem>
+                        <SelectItem value="vip">{t('siae.numberedSeatsPage.vip')}</SelectItem>
+                        <SelectItem value="premium">{t('siae.numberedSeatsPage.premium')}</SelectItem>
+                        <SelectItem value="accessibility">{t('siae.numberedSeatsPage.accessibility')}</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -852,13 +854,13 @@ export default function SiaeNumberedSeatsPage() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Fila</TableHead>
-                        <TableHead>Posto</TableHead>
-                        <TableHead>Categoria</TableHead>
-                        <TableHead>Moltiplicatore</TableHead>
-                        <TableHead>Stato</TableHead>
-                        <TableHead>Posizione</TableHead>
-                        <TableHead className="text-right">Azioni</TableHead>
+                        <TableHead>{t('siae.numberedSeatsPage.row')}</TableHead>
+                        <TableHead>{t('siae.numberedSeatsPage.seat')}</TableHead>
+                        <TableHead>{t('siae.numberedSeatsPage.category')}</TableHead>
+                        <TableHead>{t('siae.numberedSeatsPage.multiplier')}</TableHead>
+                        <TableHead>{t('common.status')}</TableHead>
+                        <TableHead>{t('siae.numberedSeatsPage.position')}</TableHead>
+                        <TableHead className="text-right">{t('common.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -931,9 +933,9 @@ export default function SiaeNumberedSeatsPage() {
                           <TableCell colSpan={7} className="text-center py-12">
                             <div className="flex flex-col items-center gap-2">
                               <Armchair className="h-12 w-12 text-muted-foreground" />
-                              <p className="text-muted-foreground">Nessun posto trovato</p>
+                              <p className="text-muted-foreground">{t('siae.numberedSeatsPage.noSeatsFound')}</p>
                               <p className="text-sm text-muted-foreground">
-                                Crea nuovi posti per questo settore
+                                {t('siae.numberedSeatsPage.createNewSeats')}
                               </p>
                             </div>
                           </TableCell>
@@ -951,9 +953,9 @@ export default function SiaeNumberedSeatsPage() {
           <Card>
             <CardContent className="p-12 text-center">
               <Grid3X3 className="h-16 w-16 text-muted-foreground mx-auto mb-4" />
-              <h3 className="text-xl font-semibold mb-2">Seleziona un Settore</h3>
+              <h3 className="text-xl font-semibold mb-2">{t('siae.numberedSeatsPage.selectASector')}</h3>
               <p className="text-muted-foreground">
-                Seleziona un settore per visualizzare e gestire i posti numerati
+                {t('siae.numberedSeatsPage.selectSectorToManage')}
               </p>
             </CardContent>
           </Card>

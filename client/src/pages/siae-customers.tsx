@@ -4,6 +4,7 @@ import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
 import { motion, AnimatePresence } from "framer-motion";
+import { useTranslation } from "react-i18next";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useIsMobile } from "@/hooks/use-mobile";
@@ -100,22 +101,23 @@ function CustomerCard({
   onAction: (action: string, customer: SiaeCustomer) => void;
   index: number;
 }) {
+  const { t } = useTranslation();
   const initials = `${customer.firstName?.[0] || ""}${customer.lastName?.[0] || ""}`.toUpperCase();
   
   const getStatusBadge = () => {
     if (customer.blockedUntil && new Date(customer.blockedUntil) > new Date()) {
-      return <Badge variant="destructive" data-testid={`badge-status-${customer.id}`}><XCircle className="w-3 h-3 mr-1" />Bloccato</Badge>;
+      return <Badge variant="destructive" data-testid={`badge-status-${customer.id}`}><XCircle className="w-3 h-3 mr-1" />{t('siae.customersPage.status.blocked')}</Badge>;
     }
     if (customer.isActive && customer.phoneVerified) {
-      return <Badge variant="default" className="bg-green-600" data-testid={`badge-status-${customer.id}`}><CheckCircle2 className="w-3 h-3 mr-1" />Verificato</Badge>;
+      return <Badge variant="default" className="bg-green-600" data-testid={`badge-status-${customer.id}`}><CheckCircle2 className="w-3 h-3 mr-1" />{t('siae.customersPage.status.verified')}</Badge>;
     }
     if (customer.isActive) {
-      return <Badge variant="secondary" data-testid={`badge-status-${customer.id}`}>Attivo</Badge>;
+      return <Badge variant="secondary" data-testid={`badge-status-${customer.id}`}>{t('siae.customersPage.status.active')}</Badge>;
     }
     if (!customer.phoneVerified) {
-      return <Badge variant="outline" data-testid={`badge-status-${customer.id}`}><Clock className="w-3 h-3 mr-1" />In attesa</Badge>;
+      return <Badge variant="outline" data-testid={`badge-status-${customer.id}`}><Clock className="w-3 h-3 mr-1" />{t('siae.customersPage.status.pending')}</Badge>;
     }
-    return <Badge variant="outline" data-testid={`badge-status-${customer.id}`}>Inattivo</Badge>;
+    return <Badge variant="outline" data-testid={`badge-status-${customer.id}`}>{t('siae.customersPage.status.inactive')}</Badge>;
   };
 
   const getAvatarColor = () => {
@@ -188,6 +190,7 @@ function CustomerCard({
 }
 
 export default function SiaeCustomersPage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const isMobile = useIsMobile();
   const [isAddSheetOpen, setIsAddSheetOpen] = useState(false);
@@ -445,18 +448,18 @@ export default function SiaeCustomersPage() {
 
   const getStatusBadgeDesktop = (customer: SiaeCustomer) => {
     if (customer.blockedUntil && new Date(customer.blockedUntil) > new Date()) {
-      return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />Bloccato</Badge>;
+      return <Badge variant="destructive"><XCircle className="w-3 h-3 mr-1" />{t('siae.customersPage.status.blocked')}</Badge>;
     }
     if (customer.isActive && customer.phoneVerified) {
-      return <Badge variant="default" className="bg-green-600"><CheckCircle2 className="w-3 h-3 mr-1" />Verificato</Badge>;
+      return <Badge variant="default" className="bg-green-600"><CheckCircle2 className="w-3 h-3 mr-1" />{t('siae.customersPage.status.verified')}</Badge>;
     }
     if (customer.isActive) {
-      return <Badge variant="secondary">Attivo</Badge>;
+      return <Badge variant="secondary">{t('siae.customersPage.status.active')}</Badge>;
     }
     if (!customer.phoneVerified) {
-      return <Badge variant="outline"><Clock className="w-3 h-3 mr-1" />In attesa</Badge>;
+      return <Badge variant="outline"><Clock className="w-3 h-3 mr-1" />{t('siae.customersPage.status.pending')}</Badge>;
     }
-    return <Badge variant="outline">Inattivo</Badge>;
+    return <Badge variant="outline">{t('siae.customersPage.status.inactive')}</Badge>;
   };
 
   const stats = {
@@ -471,20 +474,20 @@ export default function SiaeCustomersPage() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-siae-customers">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Clienti SIAE</h1>
-            <p className="text-muted-foreground">Gestione clienti per biglietteria SIAE</p>
+            <h1 className="text-3xl font-bold">{t('siae.customersPage.title')}</h1>
+            <p className="text-muted-foreground">{t('siae.customersPage.subtitle')}</p>
           </div>
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => refetch()} data-testid="button-refresh">
               <RefreshCw className="w-4 h-4 mr-2" />
-              Aggiorna
+              {t('common.refresh')}
             </Button>
             <Button onClick={() => {
               form.setValue("uniqueCode", generateCustomerCode());
               setIsAddDialogOpen(true);
             }} data-testid="button-add-customer">
               <Plus className="w-4 h-4 mr-2" />
-              Nuovo Cliente
+              {t('siae.customersPage.newCustomer')}
             </Button>
           </div>
         </div>
@@ -493,25 +496,25 @@ export default function SiaeCustomersPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold">{stats.total}</div>
-              <p className="text-sm text-muted-foreground">Totale Clienti</p>
+              <p className="text-sm text-muted-foreground">{t('siae.customersPage.totalCustomers')}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-green-500">{stats.verified}</div>
-              <p className="text-sm text-muted-foreground">Verificati</p>
+              <p className="text-sm text-muted-foreground">{t('siae.customersPage.verified')}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-blue-500">{stats.active}</div>
-              <p className="text-sm text-muted-foreground">Attivi</p>
+              <p className="text-sm text-muted-foreground">{t('siae.customersPage.active')}</p>
             </CardContent>
           </Card>
           <Card>
             <CardContent className="pt-6">
               <div className="text-2xl font-bold text-red-500">{stats.blocked}</div>
-              <p className="text-sm text-muted-foreground">Bloccati</p>
+              <p className="text-sm text-muted-foreground">{t('siae.customersPage.blocked')}</p>
             </CardContent>
           </Card>
         </div>
@@ -519,11 +522,11 @@ export default function SiaeCustomersPage() {
         <Card>
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
-              <CardTitle>Elenco Clienti</CardTitle>
+              <CardTitle>{t('siae.customersPage.customerList')}</CardTitle>
               <div className="relative w-64">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                 <Input
-                  placeholder="Cerca clienti..."
+                  placeholder={t('siae.customersPage.searchPlaceholder')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-10"
@@ -542,20 +545,20 @@ export default function SiaeCustomersPage() {
             ) : filteredCustomers.length === 0 ? (
               <div className="flex flex-col items-center justify-center py-16 text-muted-foreground" data-testid="empty-state">
                 <Users className="w-16 h-16 mb-4 opacity-50" />
-                <p className="text-lg font-medium">Nessun cliente trovato</p>
-                <p className="text-sm mt-1">Aggiungi il primo cliente</p>
+                <p className="text-lg font-medium">{t('siae.customersPage.noCustomers')}</p>
+                <p className="text-sm mt-1">{t('siae.customersPage.addFirstCustomer')}</p>
               </div>
             ) : (
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Codice</TableHead>
-                    <TableHead>Email</TableHead>
-                    <TableHead>Telefono</TableHead>
-                    <TableHead>Stato</TableHead>
-                    <TableHead>Data Creazione</TableHead>
-                    <TableHead className="w-[100px]">Azioni</TableHead>
+                    <TableHead>{t('siae.customersPage.customer')}</TableHead>
+                    <TableHead>{t('siae.customersPage.code')}</TableHead>
+                    <TableHead>{t('auth.email')}</TableHead>
+                    <TableHead>{t('auth.phone')}</TableHead>
+                    <TableHead>{t('common.status')}</TableHead>
+                    <TableHead>{t('siae.customersPage.createdDate')}</TableHead>
+                    <TableHead className="w-[100px]">{t('common.actions')}</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -620,8 +623,8 @@ export default function SiaeCustomersPage() {
         <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>Nuovo Cliente</DialogTitle>
-              <DialogDescription>Registra un nuovo cliente per la biglietteria SIAE</DialogDescription>
+              <DialogTitle>{t('siae.customersPage.newCustomer')}</DialogTitle>
+              <DialogDescription>{t('siae.customersPage.subtitle')}</DialogDescription>
             </DialogHeader>
             <Form {...form}>
               <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4" data-testid="form-customer">
@@ -630,7 +633,7 @@ export default function SiaeCustomersPage() {
                   name="uniqueCode"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Codice Cliente</FormLabel>
+                      <FormLabel>{t('siae.customersPage.customerCode')}</FormLabel>
                       <div className="flex gap-2">
                         <FormControl>
                           <Input {...field} placeholder="CLI..." data-testid="input-unique-code" />
@@ -656,7 +659,7 @@ export default function SiaeCustomersPage() {
                     name="firstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Nome</FormLabel>
+                        <FormLabel>{t('auth.firstName')}</FormLabel>
                         <FormControl>
                           <Input {...field} placeholder="Mario" data-testid="input-first-name" />
                         </FormControl>
@@ -669,7 +672,7 @@ export default function SiaeCustomersPage() {
                     name="lastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Cognome</FormLabel>
+                        <FormLabel>{t('auth.lastName')}</FormLabel>
                         <FormControl>
                           <Input {...field} placeholder="Rossi" data-testid="input-last-name" />
                         </FormControl>
@@ -696,11 +699,11 @@ export default function SiaeCustomersPage() {
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Telefono</FormLabel>
+                      <FormLabel>{t('auth.phone')}</FormLabel>
                       <FormControl>
                         <Input {...field} placeholder="+39 333 1234567" data-testid="input-phone" />
                       </FormControl>
-                      <FormDescription>Per verifica OTP</FormDescription>
+                      <FormDescription>{t('siae.customersPage.forOtpVerification')}</FormDescription>
                       <FormMessage />
                     </FormItem>
                   )}
@@ -711,7 +714,7 @@ export default function SiaeCustomersPage() {
                     name="birthDate"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Data Nascita</FormLabel>
+                        <FormLabel>{t('siae.customersPage.birthDate')}</FormLabel>
                         <FormControl>
                           <Input type="date" {...field} data-testid="input-birth-date" />
                         </FormControl>
@@ -724,7 +727,7 @@ export default function SiaeCustomersPage() {
                     name="birthPlace"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Luogo Nascita</FormLabel>
+                        <FormLabel>{t('siae.customersPage.birthPlace')}</FormLabel>
                         <FormControl>
                           <Input {...field} placeholder="Roma" data-testid="input-birth-place" />
                         </FormControl>
@@ -735,18 +738,18 @@ export default function SiaeCustomersPage() {
                 </div>
                 <DialogFooter className="pt-4">
                   <Button type="button" variant="outline" onClick={() => setIsAddDialogOpen(false)} data-testid="button-cancel">
-                    Annulla
+                    {t('common.cancel')}
                   </Button>
                   <Button type="submit" disabled={createMutation.isPending} data-testid="button-submit">
                     {createMutation.isPending ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Registrazione...
+                        {t('siae.customersPage.registering')}
                       </>
                     ) : (
                       <>
                         <UserCheck className="w-4 h-4 mr-2" />
-                        Registra Cliente
+                        {t('siae.customersPage.registerCustomer')}
                       </>
                     )}
                   </Button>
@@ -759,8 +762,8 @@ export default function SiaeCustomersPage() {
         <Dialog open={isOtpDialogOpen} onOpenChange={setIsOtpDialogOpen}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
-              <DialogTitle>Verifica Telefono</DialogTitle>
-              <DialogDescription>Inserisci il codice OTP a 6 cifre inviato al telefono del cliente</DialogDescription>
+              <DialogTitle>{t('siae.customersPage.verifyPhone')}</DialogTitle>
+              <DialogDescription>{t('siae.customersPage.enterOtpCode')}</DialogDescription>
             </DialogHeader>
             <div className="flex items-center justify-center py-4">
               <div className="w-16 h-16 rounded-full bg-primary/20 flex items-center justify-center">
@@ -801,30 +804,30 @@ export default function SiaeCustomersPage() {
                     {otpCooldown > 0 ? (
                       <>
                         <Clock className="w-4 h-4 mr-2" />
-                        Reinvia tra {otpCooldown}s
+                        {t('siae.customersPage.resendIn', { seconds: otpCooldown })}
                       </>
                     ) : (
                       <>
                         <Send className="w-4 h-4 mr-2" />
-                        Reinvia OTP
+                        {t('siae.customersPage.resendOtp')}
                       </>
                     )}
                   </Button>
                 </div>
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setIsOtpDialogOpen(false)} data-testid="button-cancel-otp">
-                    Annulla
+                    {t('common.cancel')}
                   </Button>
                   <Button type="submit" disabled={verifyOtpMutation.isPending} data-testid="button-verify-otp">
                     {verifyOtpMutation.isPending ? (
                       <>
                         <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                        Verifica...
+                        {t('siae.customersPage.verifying')}
                       </>
                     ) : (
                       <>
                         <CheckCircle2 className="w-4 h-4 mr-2" />
-                        Verifica OTP
+                        {t('siae.customersPage.verifyOtp')}
                       </>
                     )}
                   </Button>
@@ -837,8 +840,8 @@ export default function SiaeCustomersPage() {
         <Dialog open={isActionDialogOpen} onOpenChange={setIsActionDialogOpen}>
           <DialogContent className="max-w-md">
             <DialogHeader>
-              <DialogTitle>{selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}` : "Dettagli Cliente"}</DialogTitle>
-              <DialogDescription>Gestisci le azioni per questo cliente</DialogDescription>
+              <DialogTitle>{selectedCustomer ? `${selectedCustomer.firstName} ${selectedCustomer.lastName}` : t('siae.customersPage.customerDetails')}</DialogTitle>
+              <DialogDescription>{t('siae.customersPage.manageCustomerActions')}</DialogDescription>
             </DialogHeader>
             {selectedCustomer && (
               <div className="space-y-4">
@@ -877,7 +880,7 @@ export default function SiaeCustomersPage() {
                         data-testid="action-verify"
                       >
                         <Shield className="w-4 h-4 mr-3" />
-                        Verifica Telefono (OTP)
+                        {t('siae.customersPage.verifyPhoneOtp')}
                       </Button>
                       <Button
                         variant="outline"
@@ -887,7 +890,7 @@ export default function SiaeCustomersPage() {
                         data-testid="action-verify-manual"
                       >
                         <ShieldCheck className="w-4 h-4 mr-3" />
-                        Verifica Manuale (Admin)
+                        {t('siae.customersPage.manualVerify')}
                       </Button>
                     </>
                   )}
@@ -900,7 +903,7 @@ export default function SiaeCustomersPage() {
                       data-testid="action-activate"
                     >
                       <CheckCircle2 className="w-4 h-4 mr-3 text-green-500" />
-                      Attiva Cliente
+                      {t('siae.customersPage.activateCustomer')}
                     </Button>
                   )}
                   {selectedCustomer.isActive && (
@@ -912,7 +915,7 @@ export default function SiaeCustomersPage() {
                       data-testid="action-block"
                     >
                       <XCircle className="w-4 h-4 mr-3" />
-                      Blocca Cliente
+                      {t('siae.customersPage.blockCustomer')}
                     </Button>
                   )}
                   <Button
@@ -925,7 +928,7 @@ export default function SiaeCustomersPage() {
                     data-testid="action-delete"
                   >
                     <Trash2 className="w-4 h-4 mr-3" />
-                    Elimina Cliente
+                    {t('siae.customersPage.deleteCustomer')}
                   </Button>
                 </div>
               </div>
@@ -942,7 +945,7 @@ export default function SiaeCustomersPage() {
         }}>
           <DialogContent className="max-w-sm">
             <DialogHeader>
-              <DialogTitle>Conferma Eliminazione</DialogTitle>
+              <DialogTitle>{t('siae.customersPage.confirmDeletion')}</DialogTitle>
             </DialogHeader>
             <div className="flex flex-col items-center py-4">
               <div className="w-16 h-16 rounded-full bg-destructive/20 flex items-center justify-center mb-4">
@@ -953,10 +956,10 @@ export default function SiaeCustomersPage() {
                   <span className="text-amber-500">{deleteErrorMessage}</span>
                 ) : (
                   <>
-                    Sei sicuro di voler eliminare{" "}
+                    {t('siae.customersPage.areYouSureDelete')}{" "}
                     <strong className="text-foreground">{selectedCustomer?.firstName} {selectedCustomer?.lastName}</strong>?
                     <br />
-                    Questa azione è irreversibile.
+                    {t('siae.customersPage.actionIrreversible')}
                   </>
                 )}
               </p>
@@ -971,7 +974,7 @@ export default function SiaeCustomersPage() {
                 }}
                 data-testid="button-cancel-delete"
               >
-                Annulla
+                {t('common.cancel')}
               </Button>
               {canForceDelete ? (
                 <Button
@@ -983,12 +986,12 @@ export default function SiaeCustomersPage() {
                   {deleteMutation.isPending ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Eliminazione...
+                      {t('siae.customersPage.deleting')}
                     </>
                   ) : (
                     <>
                       <Trash2 className="w-4 h-4 mr-2" />
-                      Elimina comunque
+                      {t('siae.customersPage.deleteAnyway')}
                     </>
                   )}
                 </Button>
@@ -1002,12 +1005,12 @@ export default function SiaeCustomersPage() {
                   {deleteMutation.isPending ? (
                     <>
                       <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Eliminazione...
+                      {t('siae.customersPage.deleting')}
                     </>
                   ) : (
                     <>
                       <Trash2 className="w-4 h-4 mr-2" />
-                      Elimina
+                      {t('common.delete')}
                     </>
                   )}
                 </Button>

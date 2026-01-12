@@ -3,6 +3,7 @@ import { useQuery, useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
+import { useTranslation } from "react-i18next";
 import { queryClient, apiRequest } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/useAuth";
@@ -78,28 +79,29 @@ import { format } from "date-fns";
 import { it } from "date-fns/locale";
 import type { EventStaffAssignment, Event, User } from "@shared/schema";
 
-const assignmentFormSchema = z.object({
-  userId: z.string().min(1, "Seleziona un utente"),
-  role: z.string().min(1, "Seleziona un ruolo"),
+const getAssignmentFormSchema = (t: (key: string) => string) => z.object({
+  userId: z.string().min(1, t('pr.validation.selectUser')),
+  role: z.string().min(1, t('pr.validation.selectRole')),
   permissions: z.array(z.string()).default([]),
 });
 
-type AssignmentFormData = z.infer<typeof assignmentFormSchema>;
+type AssignmentFormData = z.infer<ReturnType<typeof getAssignmentFormSchema>>;
 
-const PERMISSION_OPTIONS = [
-  { value: "gestione_liste", label: "Gestione Liste" },
-  { value: "gestione_tavoli", label: "Gestione Tavoli" },
-  { value: "check_in", label: "Check-in Ospiti" },
-  { value: "visualizza_stats", label: "Visualizza Statistiche" },
+const PERMISSION_KEYS = [
+  { value: "gestione_liste", labelKey: "pr.permissionLabels.gestione_liste" },
+  { value: "gestione_tavoli", labelKey: "pr.permissionLabels.gestione_tavoli" },
+  { value: "check_in", labelKey: "pr.permissionLabels.check_in" },
+  { value: "visualizza_stats", labelKey: "pr.permissionLabels.visualizza_stats" },
 ];
 
-const ROLE_OPTIONS = [
-  { value: "gestore_covisione", label: "Gestore Co-Visione" },
-  { value: "capo_staff", label: "Capo Staff" },
-  { value: "pr", label: "PR" },
+const ROLE_KEYS = [
+  { value: "gestore_covisione", labelKey: "pr.roles.gestore_covisione" },
+  { value: "capo_staff", labelKey: "pr.roles.capo_staff" },
+  { value: "pr", labelKey: "pr.roles.pr" },
 ];
 
 export default function PrStaffPage() {
+  const { t } = useTranslation();
   const { toast } = useToast();
   const { user } = useAuth();
   const isMobile = useIsMobile();
@@ -155,6 +157,8 @@ export default function PrStaffPage() {
     });
   }, [staffAssignments, searchQuery, allUsers]);
 
+  const assignmentFormSchema = getAssignmentFormSchema(t);
+
   const form = useForm<AssignmentFormData>({
     resolver: zodResolver(assignmentFormSchema),
     defaultValues: {
@@ -177,14 +181,14 @@ export default function PrStaffPage() {
       setIsAddStaffOpen(false);
       form.reset();
       toast({
-        title: "Staff Assegnato",
-        description: "Il membro dello staff è stato assegnato all'evento",
+        title: t('pr.staffAssigned'),
+        description: t('pr.staffAssignedSuccess'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Errore",
-        description: error.message || "Errore durante l'assegnazione",
+        title: t('common.error'),
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -198,14 +202,13 @@ export default function PrStaffPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/pr/events", selectedEventId, "staff"] });
       toast({
-        title: "Assegnazione Aggiornata",
-        description: "I permessi sono stati aggiornati",
+        title: t('pr.staffUpdated'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Errore",
-        description: error.message || "Errore durante l'aggiornamento",
+        title: t('common.error'),
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -218,14 +221,13 @@ export default function PrStaffPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/pr/events", selectedEventId, "staff"] });
       toast({
-        title: "Assegnazione Rimossa",
-        description: "Il membro dello staff è stato rimosso dall'evento",
+        title: t('pr.staffRemoved'),
       });
     },
     onError: (error: any) => {
       toast({
-        title: "Errore",
-        description: error.message || "Errore durante la rimozione",
+        title: t('common.error'),
+        description: error.message,
         variant: "destructive",
       });
     },
@@ -233,7 +235,7 @@ export default function PrStaffPage() {
 
   const getUserName = (userId: string) => {
     const assignedUser = allUsers.find(u => u.id === userId);
-    return assignedUser ? `${assignedUser.firstName} ${assignedUser.lastName}` : 'Utente sconosciuto';
+    return assignedUser ? `${assignedUser.firstName} ${assignedUser.lastName}` : t('pr.unknownUser');
   };
 
   const getUserEmail = (userId: string) => {
@@ -244,11 +246,11 @@ export default function PrStaffPage() {
   const getRoleBadge = (role: string) => {
     switch (role) {
       case 'gestore_covisione':
-        return <Badge className="bg-purple-500/10 text-purple-500 border-purple-500/20">Gestore Co-Visione</Badge>;
+        return <Badge className="bg-purple-500/10 text-purple-500 border-purple-500/20">{t('pr.roles.gestore_covisione')}</Badge>;
       case 'capo_staff':
-        return <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">Capo Staff</Badge>;
+        return <Badge className="bg-blue-500/10 text-blue-500 border-blue-500/20">{t('pr.roles.capo_staff')}</Badge>;
       case 'pr':
-        return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">PR</Badge>;
+        return <Badge className="bg-green-500/10 text-green-500 border-green-500/20">{t('pr.roles.pr')}</Badge>;
       default:
         return <Badge variant="outline">{role}</Badge>;
     }
@@ -261,11 +263,9 @@ export default function PrStaffPage() {
         <Card>
           <CardContent className="py-12 text-center">
             <Shield className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-            <h3 className="text-lg font-semibold">Accesso Non Autorizzato</h3>
+            <h3 className="text-lg font-semibold">{t('pr.unauthorizedAccess')}</h3>
             <p className="text-muted-foreground">
-              Non hai i permessi per accedere a questa pagina.
-              <br />
-              Solo i gestori possono gestire lo staff degli eventi.
+              {t('pr.noPermissions')}
             </p>
           </CardContent>
         </Card>
@@ -292,8 +292,8 @@ export default function PrStaffPage() {
       <div className="container mx-auto p-6 space-y-6" data-testid="page-pr-staff">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="text-3xl font-bold">Team PR</h1>
-            <p className="text-muted-foreground">Assegna e gestisci lo staff per ogni evento</p>
+            <h1 className="text-3xl font-bold">{t('pr.prTeam')}</h1>
+            <p className="text-muted-foreground">{t('pr.assignManageStaff')}</p>
           </div>
           <div className="flex gap-2">
             <Button
@@ -311,10 +311,10 @@ export default function PrStaffPage() {
           <CardContent className="pt-6">
             <div className="grid gap-4 md:grid-cols-2">
               <div className="space-y-2">
-                <label className="text-sm font-medium">Seleziona Evento</label>
+                <label className="text-sm font-medium">{t('pr.selectAnEvent')}</label>
                 <Select value={selectedEventId} onValueChange={setSelectedEventId}>
                   <SelectTrigger data-testid="select-event">
-                    <SelectValue placeholder="Scegli un evento" />
+                    <SelectValue placeholder={t('pr.chooseEvent')} />
                   </SelectTrigger>
                   <SelectContent>
                     {events.map((event) => (
@@ -327,11 +327,11 @@ export default function PrStaffPage() {
               </div>
 
               <div className="space-y-2">
-                <label className="text-sm font-medium">Cerca Staff</label>
+                <label className="text-sm font-medium">{t('pr.searchStaff')}</label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                   <Input
-                    placeholder="Cerca per nome o ruolo..."
+                    placeholder={t('pr.searchByNameRole')}
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
                     className="pl-9"
@@ -350,7 +350,7 @@ export default function PrStaffPage() {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <p className="text-sm text-muted-foreground">Totale Staff</p>
+                      <p className="text-sm text-muted-foreground">{t('pr.totalStaff')}</p>
                       <p className="text-2xl font-bold">{staffAssignments.length}</p>
                     </div>
                     <Users className="h-8 w-8 text-primary" />
@@ -362,7 +362,7 @@ export default function PrStaffPage() {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <p className="text-sm text-muted-foreground">PR</p>
+                      <p className="text-sm text-muted-foreground">{t('pr.roles.pr')}</p>
                       <p className="text-2xl font-bold text-green-500">
                         {staffAssignments.filter(a => a.role === 'pr').length}
                       </p>
@@ -376,7 +376,7 @@ export default function PrStaffPage() {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <p className="text-sm text-muted-foreground">Capo Staff</p>
+                      <p className="text-sm text-muted-foreground">{t('pr.roles.capo_staff')}</p>
                       <p className="text-2xl font-bold text-blue-500">
                         {staffAssignments.filter(a => a.role === 'capo_staff').length}
                       </p>
@@ -390,7 +390,7 @@ export default function PrStaffPage() {
                 <CardContent className="pt-6">
                   <div className="flex items-center justify-between gap-2">
                     <div>
-                      <p className="text-sm text-muted-foreground">Attivi</p>
+                      <p className="text-sm text-muted-foreground">{t('pr.active')}</p>
                       <p className="text-2xl font-bold text-purple-500">
                         {staffAssignments.filter(a => a.isActive).length}
                       </p>
@@ -414,14 +414,14 @@ export default function PrStaffPage() {
                     <DialogTrigger asChild>
                       <Button data-testid="button-add-staff">
                         <Plus className="w-4 h-4 mr-2" />
-                        Aggiungi Staff
+                        {t('pr.addStaff')}
                       </Button>
                     </DialogTrigger>
                     <DialogContent>
                       <DialogHeader>
-                        <DialogTitle>Assegna Staff all'Evento</DialogTitle>
+                        <DialogTitle>{t('pr.assignStaffToEvent')}</DialogTitle>
                         <DialogDescription>
-                          Seleziona un membro dello staff e assegna i permessi
+                          {t('pr.selectStaffMember')}
                         </DialogDescription>
                       </DialogHeader>
                       <Form {...form}>
@@ -431,11 +431,11 @@ export default function PrStaffPage() {
                             name="userId"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Membro Staff</FormLabel>
+                                <FormLabel>{t('pr.staffMember')}</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                   <FormControl>
                                     <SelectTrigger data-testid="select-user">
-                                      <SelectValue placeholder="Seleziona utente" />
+                                      <SelectValue placeholder={t('pr.selectUser')} />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
@@ -455,11 +455,11 @@ export default function PrStaffPage() {
                             name="role"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel>Ruolo per l'Evento</FormLabel>
+                                <FormLabel>{t('pr.eventRole')}</FormLabel>
                                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                                   <FormControl>
                                     <SelectTrigger data-testid="select-role">
-                                      <SelectValue placeholder="Seleziona ruolo" />
+                                      <SelectValue placeholder={t('pr.selectRole')} />
                                     </SelectTrigger>
                                   </FormControl>
                                   <SelectContent>
@@ -479,7 +479,7 @@ export default function PrStaffPage() {
                             name="permissions"
                             render={() => (
                               <FormItem>
-                                <FormLabel>Permessi</FormLabel>
+                                <FormLabel>{t('pr.permissions')}</FormLabel>
                                 <div className="grid grid-cols-2 gap-2">
                                   {PERMISSION_OPTIONS.map((permission) => (
                                     <FormField
@@ -513,7 +513,7 @@ export default function PrStaffPage() {
                           />
                           <DialogFooter>
                             <Button type="submit" disabled={createAssignmentMutation.isPending} data-testid="button-submit-staff">
-                              {createAssignmentMutation.isPending ? "Assegnando..." : "Assegna Staff"}
+                              {createAssignmentMutation.isPending ? t('pr.assigning') : t('pr.assignStaff')}
                             </Button>
                           </DialogFooter>
                         </form>
@@ -532,9 +532,9 @@ export default function PrStaffPage() {
                 ) : filteredAssignments.length === 0 ? (
                   <div className="text-center py-12">
                     <Users className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-                    <h3 className="text-lg font-semibold">Nessuno staff assegnato</h3>
+                    <h3 className="text-lg font-semibold">{t('pr.noStaffAssigned')}</h3>
                     <p className="text-muted-foreground">
-                      Aggiungi membri dello staff per questo evento
+                      {t('pr.addStaffMembers')}
                     </p>
                   </div>
                 ) : (
@@ -542,12 +542,12 @@ export default function PrStaffPage() {
                     <Table>
                       <TableHeader>
                         <TableRow>
-                          <TableHead>Nome</TableHead>
-                          <TableHead>Email</TableHead>
-                          <TableHead>Ruolo</TableHead>
-                          <TableHead>Permessi</TableHead>
-                          <TableHead className="text-center">Stato</TableHead>
-                          <TableHead className="text-right">Azioni</TableHead>
+                          <TableHead>{t('common.name')}</TableHead>
+                          <TableHead>{t('common.email')}</TableHead>
+                          <TableHead>{t('pr.role')}</TableHead>
+                          <TableHead>{t('pr.permissions')}</TableHead>
+                          <TableHead className="text-center">{t('common.status')}</TableHead>
+                          <TableHead className="text-right">{t('common.actions')}</TableHead>
                         </TableRow>
                       </TableHeader>
                       <TableBody>
@@ -573,9 +573,9 @@ export default function PrStaffPage() {
                             </TableCell>
                             <TableCell className="text-center">
                               {assignment.isActive ? (
-                                <Badge className="bg-green-500/10 text-green-500">Attivo</Badge>
+                                <Badge className="bg-green-500/10 text-green-500">{t('pr.active')}</Badge>
                               ) : (
-                                <Badge className="bg-red-500/10 text-red-500">Disattivato</Badge>
+                                <Badge className="bg-red-500/10 text-red-500">{t('pr.deactivated')}</Badge>
                               )}
                             </TableCell>
                             <TableCell className="text-right">
@@ -595,12 +595,12 @@ export default function PrStaffPage() {
                                     {assignment.isActive ? (
                                       <>
                                         <XCircle className="w-4 h-4 mr-2" />
-                                        Disattiva
+                                        {t('pr.deactivate')}
                                       </>
                                     ) : (
                                       <>
                                         <CheckCircle2 className="w-4 h-4 mr-2" />
-                                        Attiva
+                                        {t('pr.activate')}
                                       </>
                                     )}
                                   </DropdownMenuItem>
@@ -610,7 +610,7 @@ export default function PrStaffPage() {
                                     className="text-destructive"
                                   >
                                     <Trash2 className="w-4 h-4 mr-2" />
-                                    Rimuovi
+                                    {t('common.remove')}
                                   </DropdownMenuItem>
                                 </DropdownMenuContent>
                               </DropdownMenu>
@@ -630,9 +630,9 @@ export default function PrStaffPage() {
           <Card>
             <CardContent className="py-12 text-center">
               <Calendar className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
-              <h3 className="text-lg font-semibold">Seleziona un evento</h3>
+              <h3 className="text-lg font-semibold">{t('pr.selectAnEvent')}</h3>
               <p className="text-muted-foreground">
-                Scegli un evento per gestire lo staff assegnato
+                {t('pr.chooseEventManageStaff')}
               </p>
             </CardContent>
           </Card>
@@ -644,14 +644,14 @@ export default function PrStaffPage() {
   // Mobile version
   return (
     <MobileAppLayout
-      header={<MobileHeader title="Team PR" showBackButton showMenuButton />}
+      header={<MobileHeader title={t('pr.prTeam')} showBackButton showMenuButton />}
       contentClassName="pb-24"
     >
       <div className="container mx-auto p-3 sm:p-4 md:p-6 space-y-4 sm:space-y-6 pb-24 md:pb-8">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4">
           <div>
             <p className="text-muted-foreground text-sm sm:text-base">
-              Assegna e gestisci lo staff per ogni evento
+              {t('pr.assignManageStaff')}
             </p>
           </div>
           
@@ -671,10 +671,10 @@ export default function PrStaffPage() {
         <CardContent className="p-3 sm:p-4 md:pt-6">
           <div className="grid gap-3 sm:gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <label className="text-xs sm:text-sm font-medium">Seleziona Evento</label>
+              <label className="text-xs sm:text-sm font-medium">{t('pr.selectAnEvent')}</label>
               <Select value={selectedEventId} onValueChange={setSelectedEventId}>
                 <SelectTrigger className="h-10 sm:h-9" data-testid="select-event">
-                  <SelectValue placeholder="Scegli un evento" />
+                  <SelectValue placeholder={t('pr.chooseEvent')} />
                 </SelectTrigger>
                 <SelectContent>
                   {events.map((event) => (
@@ -687,11 +687,11 @@ export default function PrStaffPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs sm:text-sm font-medium">Cerca Staff</label>
+              <label className="text-xs sm:text-sm font-medium">{t('pr.searchStaff')}</label>
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
                 <Input
-                  placeholder="Cerca per nome o ruolo..."
+                  placeholder={t('pr.searchByNameRole')}
                   value={searchQuery}
                   onChange={(e) => setSearchQuery(e.target.value)}
                   className="pl-9 h-10 sm:h-9"
@@ -710,7 +710,7 @@ export default function PrStaffPage() {
               <CardContent className="p-3 sm:p-4 md:pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Totale Staff</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{t('pr.totalStaff')}</p>
                     <p className="text-xl sm:text-2xl font-bold">{staffAssignments.length}</p>
                   </div>
                   <Users className="h-6 w-6 sm:h-8 sm:w-8 text-primary" />
@@ -722,7 +722,7 @@ export default function PrStaffPage() {
               <CardContent className="p-3 sm:p-4 md:pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">PR</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{t('pr.roles.pr')}</p>
                     <p className="text-xl sm:text-2xl font-bold text-green-500">
                       {staffAssignments.filter(a => a.role === 'pr').length}
                     </p>
@@ -736,7 +736,7 @@ export default function PrStaffPage() {
               <CardContent className="p-3 sm:p-4 md:pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Capo Staff</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{t('pr.roles.capo_staff')}</p>
                     <p className="text-xl sm:text-2xl font-bold text-blue-500">
                       {staffAssignments.filter(a => a.role === 'capo_staff').length}
                     </p>
@@ -750,7 +750,7 @@ export default function PrStaffPage() {
               <CardContent className="p-3 sm:p-4 md:pt-6">
                 <div className="flex items-center justify-between">
                   <div>
-                    <p className="text-xs sm:text-sm text-muted-foreground">Attivi</p>
+                    <p className="text-xs sm:text-sm text-muted-foreground">{t('pr.active')}</p>
                     <p className="text-xl sm:text-2xl font-bold text-purple-500">
                       {staffAssignments.filter(a => a.isActive).length}
                     </p>

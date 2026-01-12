@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useTranslation } from 'react-i18next';
 import { useParams, Link, useLocation } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
@@ -103,20 +104,20 @@ type TransferResult = {
   failed: { productId: string; productName: string; error: string }[];
 };
 
-const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: React.ElementType }> = {
-  draft: { label: 'Bozza', color: 'text-muted-foreground', bgColor: 'bg-muted/50', icon: FilePenLine },
-  scheduled: { label: 'Programmato', color: 'text-blue-400', bgColor: 'bg-blue-500/20', icon: CalendarCheck },
-  ongoing: { label: 'In Corso', color: 'text-teal', bgColor: 'bg-teal-500/20', icon: Clock },
-  closed: { label: 'Chiuso', color: 'text-rose-400', bgColor: 'bg-rose-500/20', icon: CheckCircle2 },
+const statusConfig: Record<string, { labelKey: string; color: string; bgColor: string; icon: React.ElementType }> = {
+  draft: { labelKey: 'events.draft', color: 'text-muted-foreground', bgColor: 'bg-muted/50', icon: FilePenLine },
+  scheduled: { labelKey: 'events.scheduled', color: 'text-blue-400', bgColor: 'bg-blue-500/20', icon: CalendarCheck },
+  ongoing: { labelKey: 'events.ongoing', color: 'text-teal', bgColor: 'bg-teal-500/20', icon: Clock },
+  closed: { labelKey: 'events.closed', color: 'text-rose-400', bgColor: 'bg-rose-500/20', icon: CheckCircle2 },
 };
 
 type TabType = 'info' | 'tickets' | 'staff' | 'inventory';
 
-const tabs: { id: TabType; label: string; icon: React.ElementType }[] = [
-  { id: 'info', label: 'Info', icon: Info },
-  { id: 'tickets', label: 'Biglietti', icon: Ticket },
-  { id: 'staff', label: 'Staff', icon: Users },
-  { id: 'inventory', label: 'Inventario', icon: Package },
+const tabs: { id: TabType; labelKey: string; icon: React.ElementType }[] = [
+  { id: 'info', labelKey: 'eventDetail.tabs.info', icon: Info },
+  { id: 'tickets', labelKey: 'tickets.title', icon: Ticket },
+  { id: 'staff', labelKey: 'eventDetail.tabs.staff', icon: Users },
+  { id: 'inventory', labelKey: 'inventory.title', icon: Package },
 ];
 
 const springTransition = {
@@ -145,6 +146,7 @@ export default function EventDetail() {
   const { toast } = useToast();
   const { user, isLoading: authLoading } = useAuth();
   const isMobile = useIsMobile();
+  const { t } = useTranslation();
 
   const isBartender = user?.role === 'bartender';
   useEffect(() => {
@@ -214,16 +216,16 @@ export default function EventDetail() {
       setStationDialogOpen(false);
       stationForm.reset();
       setSelectedBartenderIds([]);
-      toast({ title: "Successo", description: "Postazione creata con successo" });
+      toast({ title: t('common.success'), description: t('eventDetail.stationCreated') });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
-        toast({ title: "Non autorizzato", description: "Effettua nuovamente il login...", variant: "destructive" });
+        toast({ title: t('common.unauthorized'), description: t('common.loginAgain'), variant: "destructive" });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
-      toast({ title: "Errore", description: "Impossibile creare la postazione", variant: "destructive" });
+      toast({ title: t('common.error'), description: t('eventDetail.stationCreateError'), variant: "destructive" });
     },
   });
 
@@ -244,16 +246,16 @@ export default function EventDetail() {
         newMap.delete(variables.stationId);
         return newMap;
       });
-      toast({ title: "Successo", description: "Baristi aggiornati con successo" });
+      toast({ title: t('common.success'), description: t('eventDetail.bartendersUpdated') });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
-        toast({ title: "Non autorizzato", description: "Effettua nuovamente il login...", variant: "destructive" });
+        toast({ title: t('common.unauthorized'), description: t('common.loginAgain'), variant: "destructive" });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
-      toast({ title: "Errore", description: "Impossibile aggiornare i baristi", variant: "destructive" });
+      toast({ title: t('common.error'), description: t('eventDetail.bartendersUpdateError'), variant: "destructive" });
     },
   });
 
@@ -289,19 +291,19 @@ export default function EventDetail() {
       setDestinationStationId('general');
       
       if (results.failed.length === 0) {
-        toast({ title: "Successo", description: `${results.successful.length} prodotti trasferiti` });
+        toast({ title: t('common.success'), description: t('eventDetail.productsTransferred', { count: results.successful.length }) });
       } else {
-        toast({ title: "Errore parziale", description: `Errori: ${results.failed.map(f => f.productName).join(', ')}`, variant: "destructive" });
+        toast({ title: t('eventDetail.partialError'), description: `${t('common.error')}: ${results.failed.map(f => f.productName).join(', ')}`, variant: "destructive" });
       }
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
-        toast({ title: "Non autorizzato", description: "Effettua nuovamente il login...", variant: "destructive" });
+        toast({ title: t('common.unauthorized'), description: t('common.loginAgain'), variant: "destructive" });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
-      toast({ title: "Errore", description: error.message || "Impossibile trasferire lo stock", variant: "destructive" });
+      toast({ title: t('common.error'), description: error.message || t('eventDetail.transferError'), variant: "destructive" });
     },
   });
 
@@ -314,16 +316,16 @@ export default function EventDetail() {
       queryClient.invalidateQueries({ queryKey: ['/api/events', id] });
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
       setStatusChangeDialogOpen(false);
-      toast({ title: "Successo", description: "Stato evento aggiornato" });
+      toast({ title: t('common.success'), description: t('eventDetail.statusUpdated') });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
-        toast({ title: "Non autorizzato", description: "Effettua nuovamente il login...", variant: "destructive" });
+        toast({ title: t('common.unauthorized'), description: t('common.loginAgain'), variant: "destructive" });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
-      toast({ title: "Errore", description: error.message || "Impossibile cambiare lo stato", variant: "destructive" });
+      toast({ title: t('common.error'), description: error.message || t('eventDetail.statusChangeError'), variant: "destructive" });
     },
   });
 
@@ -338,16 +340,16 @@ export default function EventDetail() {
       setEditingStock(null);
       setNewQuantity('');
       setAdjustReason('');
-      toast({ title: "Successo", description: "Quantità corretta" });
+      toast({ title: t('common.success'), description: t('eventDetail.quantityAdjusted') });
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
-        toast({ title: "Non autorizzato", description: "Effettua nuovamente il login...", variant: "destructive" });
+        toast({ title: t('common.unauthorized'), description: t('common.loginAgain'), variant: "destructive" });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
-      toast({ title: "Errore", description: error.message || "Impossibile correggere la quantità", variant: "destructive" });
+      toast({ title: t('common.error'), description: error.message || t('eventDetail.quantityAdjustError'), variant: "destructive" });
     },
   });
 
@@ -359,17 +361,17 @@ export default function EventDetail() {
       triggerHaptic('success');
       queryClient.invalidateQueries({ queryKey: ['/api/events'] });
       setDeleteDialogOpen(false);
-      toast({ title: "Successo", description: "Evento eliminato" });
+      toast({ title: t('common.success'), description: t('eventDetail.eventDeleted') });
       setLocation('/events');
     },
     onError: (error: Error) => {
       triggerHaptic('error');
       if (isUnauthorizedError(error)) {
-        toast({ title: "Non autorizzato", description: "Effettua nuovamente il login...", variant: "destructive" });
+        toast({ title: t('common.unauthorized'), description: t('common.loginAgain'), variant: "destructive" });
         setTimeout(() => window.location.href = '/api/login', 500);
         return;
       }
-      toast({ title: "Errore", description: error.message || "Impossibile eliminare l'evento", variant: "destructive" });
+      toast({ title: t('common.error'), description: error.message || t('eventDetail.eventDeleteError'), variant: "destructive" });
     },
   });
 
@@ -381,7 +383,7 @@ export default function EventDetail() {
       productId: stock.productId,
       stationId: stock.stationId,
       currentQuantity: stock.quantity,
-      productName: product?.name || 'Prodotto',
+      productName: product?.name || t('inventory.product'),
     });
     setNewQuantity(stock.quantity);
     setAdjustReason('');
@@ -393,7 +395,7 @@ export default function EventDetail() {
     const qty = parseFloat(newQuantity);
     if (isNaN(qty) || qty < 0) {
       triggerHaptic('error');
-      toast({ title: "Errore", description: "Inserisci una quantità valida", variant: "destructive" });
+      toast({ title: t('common.error'), description: t('eventDetail.enterValidQuantity'), variant: "destructive" });
       return;
     }
     adjustStockMutation.mutate({ productId: editingStock.productId, newQuantity: qty, reason: adjustReason || undefined, stationId: editingStock.stationId });
@@ -425,17 +427,17 @@ export default function EventDetail() {
     selectedProducts.forEach((quantity, productId) => {
       const stock = generalStocks?.find(s => s.productId === productId);
       if (!stock) {
-        errors.push(`Prodotto non trovato: ${productId}`);
+        errors.push(t('eventDetail.productNotFound', { productId }));
         return;
       }
       const quantityNum = parseFloat(quantity);
       const availableNum = parseFloat(stock.quantity);
       if (!quantity || isNaN(quantityNum) || quantityNum <= 0) {
-        errors.push(`Quantità non valida per ${stock.productName}`);
+        errors.push(t('eventDetail.invalidQuantityFor', { product: stock.productName }));
         return;
       }
       if (quantityNum > availableNum) {
-        errors.push(`Quantità per ${stock.productName} supera il disponibile`);
+        errors.push(t('eventDetail.quantityExceedsAvailable', { product: stock.productName }));
         return;
       }
       transfers.push({ productId, quantity: quantityNum });
@@ -443,12 +445,12 @@ export default function EventDetail() {
 
     if (errors.length > 0) {
       triggerHaptic('error');
-      toast({ title: "Errori di validazione", description: errors.join(', '), variant: "destructive" });
+      toast({ title: t('eventDetail.validationErrors'), description: errors.join(', '), variant: "destructive" });
       return;
     }
     if (transfers.length === 0) {
       triggerHaptic('error');
-      toast({ title: "Nessun prodotto selezionato", description: "Seleziona almeno un prodotto", variant: "destructive" });
+      toast({ title: t('eventDetail.noProductSelected'), description: t('eventDetail.selectAtLeastOne'), variant: "destructive" });
       return;
     }
     transferStockMutation.mutate(transfers);
@@ -500,7 +502,7 @@ export default function EventDetail() {
       <MobileAppLayout
         header={
           <MobileHeader
-            title="Evento"
+            title={t('eventDetail.event')}
             leftAction={
               <HapticButton variant="ghost" size="icon" onClick={() => setLocation('/events')}>
                 <ArrowLeft className="h-6 w-6" />
@@ -518,14 +520,14 @@ export default function EventDetail() {
           <div className="w-20 h-20 rounded-3xl bg-muted/50 flex items-center justify-center mb-6">
             <Package className="h-10 w-10 text-muted-foreground" />
           </div>
-          <p className="text-lg text-muted-foreground text-center mb-6">Evento non trovato</p>
+          <p className="text-lg text-muted-foreground text-center mb-6">{t('eventDetail.eventNotFound')}</p>
           <HapticButton 
             variant="outline" 
             onClick={() => setLocation('/events')} 
             className="h-14 px-8 rounded-2xl"
             data-testid="button-back-to-events"
           >
-            Torna agli Eventi
+            {t('eventDetail.backToEvents')}
           </HapticButton>
         </motion.div>
       </MobileAppLayout>
@@ -561,7 +563,7 @@ export default function EventDetail() {
           >
             <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${status.bgColor} ${status.color}`}>
               <StatusIcon className="h-3 w-3" />
-              {status.label}
+              {t(status.labelKey)}
             </span>
           </motion.div>
         </div>
@@ -581,18 +583,18 @@ export default function EventDetail() {
               className="h-12 rounded-xl"
             >
               <Clock className="h-5 w-5 mr-3" />
-              Cambia Stato
+              {t('eventDetail.changeStatus')}
             </DropdownMenuItem>
             <DropdownMenuItem asChild className="h-12 rounded-xl">
               <Link href={`/events/${id}/direct-stock`} className="flex items-center">
                 <Warehouse className="h-5 w-5 mr-3" />
-                Carico Diretto
+                {t('eventDetail.directLoad')}
               </Link>
             </DropdownMenuItem>
             <DropdownMenuItem asChild className="h-12 rounded-xl">
               <Link href={`/reports?eventId=${id}`} className="flex items-center">
                 <Package className="h-5 w-5 mr-3" />
-                Report
+                {t('reports.title')}
               </Link>
             </DropdownMenuItem>
             {user && (user.role === 'admin' || user.role === 'super_admin' || user.role === 'gestore') && (
@@ -604,7 +606,7 @@ export default function EventDetail() {
                 className="h-12 rounded-xl text-destructive focus:text-destructive"
               >
                 <Trash2 className="h-5 w-5 mr-3" />
-                Elimina Evento
+                {t('eventDetail.deleteEvent')}
               </DropdownMenuItem>
             )}
           </DropdownMenuContent>
@@ -635,7 +637,7 @@ export default function EventDetail() {
               )}
               <Icon className={`h-5 w-5 relative z-10 ${isActive ? 'text-primary' : 'text-muted-foreground'}`} />
               <span className={`text-[11px] font-semibold relative z-10 ${isActive ? 'text-primary' : 'text-muted-foreground'}`}>
-                {tab.label}
+                {t(tab.labelKey)}
               </span>
             </motion.button>
           );
@@ -667,7 +669,7 @@ export default function EventDetail() {
             <Calendar className="h-7 w-7 text-primary" />
           </motion.div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-muted-foreground mb-1">Data Evento</p>
+            <p className="text-sm text-muted-foreground mb-1">{t('events.eventDate')}</p>
             <p className="font-bold text-lg">
               {new Date(event.startDatetime).toLocaleDateString('it-IT', {
                 weekday: 'long',
@@ -688,7 +690,7 @@ export default function EventDetail() {
             <Clock className="h-7 w-7 text-teal-500" />
           </motion.div>
           <div className="flex-1 min-w-0">
-            <p className="text-sm text-muted-foreground mb-1">Orario</p>
+            <p className="text-sm text-muted-foreground mb-1">{t('events.timeSlot')}</p>
             <p className="font-bold text-lg">
               {new Date(event.startDatetime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
               {event.endDatetime && ` - ${new Date(event.endDatetime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`}
@@ -706,8 +708,8 @@ export default function EventDetail() {
               <MapPin className="h-7 w-7 text-violet-500" />
             </motion.div>
             <div className="flex-1 min-w-0">
-              <p className="text-sm text-muted-foreground mb-1">Location</p>
-              <p className="font-bold text-lg">Sede Evento</p>
+              <p className="text-sm text-muted-foreground mb-1">{t('events.location')}</p>
+              <p className="font-bold text-lg">{t('eventDetail.eventVenue')}</p>
             </div>
           </div>
         )}
@@ -725,7 +727,7 @@ export default function EventDetail() {
             <Package className="h-6 w-6 text-white" />
           </div>
           <p className="text-3xl font-bold">{totalStockItems}</p>
-          <p className="text-sm text-muted-foreground mt-1">Prodotti</p>
+          <p className="text-sm text-muted-foreground mt-1">{t('products.title')}</p>
         </motion.div>
 
         <motion.div 
@@ -739,7 +741,7 @@ export default function EventDetail() {
             <MapPin className="h-6 w-6 text-white" />
           </div>
           <p className="text-3xl font-bold">{totalStations}</p>
-          <p className="text-sm text-muted-foreground mt-1">Postazioni</p>
+          <p className="text-sm text-muted-foreground mt-1">{t('stations.title')}</p>
         </motion.div>
 
         <motion.div 
@@ -753,7 +755,7 @@ export default function EventDetail() {
             <Users className="h-6 w-6 text-white" />
           </div>
           <p className="text-3xl font-bold">{assignedBartendersCount}</p>
-          <p className="text-sm text-muted-foreground mt-1">Staff</p>
+          <p className="text-sm text-muted-foreground mt-1">{t('eventDetail.tabs.staff')}</p>
         </motion.div>
 
         <motion.div 
@@ -766,8 +768,8 @@ export default function EventDetail() {
           <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 flex items-center justify-center mb-4 shadow-lg shadow-amber-500/20">
             <StatusIcon className="h-6 w-6 text-white" />
           </div>
-          <p className="text-xl font-bold">{status.label}</p>
-          <p className="text-sm text-muted-foreground mt-1">Stato</p>
+          <p className="text-xl font-bold">{t(status.labelKey)}</p>
+          <p className="text-sm text-muted-foreground mt-1">{t('common.status')}</p>
         </motion.div>
       </div>
 
@@ -782,7 +784,7 @@ export default function EventDetail() {
           data-testid="button-change-status"
         >
           <Sparkles className="h-5 w-5 mr-2" />
-          Cambia Stato Evento
+          {t('eventDetail.changeEventStatus')}
         </HapticButton>
       </motion.div>
     </motion.div>
@@ -810,9 +812,9 @@ export default function EventDetail() {
         >
           <Ticket className="h-10 w-10 text-amber-500" />
         </motion.div>
-        <h3 className="font-bold text-xl mb-3">Gestione Biglietti</h3>
+        <h3 className="font-bold text-xl mb-3">{t('eventDetail.ticketManagement')}</h3>
         <p className="text-muted-foreground mb-6 leading-relaxed">
-          Visualizza e gestisci i biglietti per questo evento
+          {t('eventDetail.ticketManagementDesc')}
         </p>
         <HapticButton 
           variant="outline" 
@@ -820,7 +822,7 @@ export default function EventDetail() {
           onClick={() => setLocation(`/siae/ticketed-events/${id}`)}
           data-testid="button-manage-tickets"
         >
-          Vai alla Gestione Biglietti
+          {t('eventDetail.goToTicketManagement')}
           <ChevronRight className="h-5 w-5 ml-2" />
         </HapticButton>
       </motion.div>
@@ -836,14 +838,14 @@ export default function EventDetail() {
       className="space-y-5"
     >
       <div className="flex items-center justify-between">
-        <h3 className="font-bold text-lg">Postazioni</h3>
+        <h3 className="font-bold text-lg">{t('stations.title')}</h3>
         <HapticButton 
           className="h-11 px-4 rounded-xl"
           onClick={() => setStationDialogOpen(true)}
           data-testid="button-create-station"
         >
           <Plus className="h-5 w-5 mr-2" />
-          Nuova
+          {t('eventDetail.new')}
         </HapticButton>
       </div>
 
@@ -875,7 +877,7 @@ export default function EventDetail() {
                     <div>
                       <h4 className="font-bold text-base">{station.name}</h4>
                       {station.isGeneral && (
-                        <Badge variant="secondary" className="text-xs mt-1">Fissa</Badge>
+                        <Badge variant="secondary" className="text-xs mt-1">{t('eventDetail.fixed')}</Badge>
                       )}
                     </div>
                   </div>
@@ -903,7 +905,7 @@ export default function EventDetail() {
 
                 {!isEditing ? (
                   <div>
-                    <p className="text-sm text-muted-foreground mb-3">Staff assegnato:</p>
+                    <p className="text-sm text-muted-foreground mb-3">{t('eventDetail.assignedStaff')}:</p>
                     {assignedBartenders.length > 0 ? (
                       <div className="flex flex-wrap gap-2">
                         {assignedBartenders.map(bartender => (
@@ -915,7 +917,7 @@ export default function EventDetail() {
                         ))}
                       </div>
                     ) : (
-                      <p className="text-sm text-muted-foreground">Nessun barista assegnato</p>
+                      <p className="text-sm text-muted-foreground">{t('eventDetail.noBartenderAssigned')}</p>
                     )}
                   </div>
                 ) : (
@@ -962,7 +964,7 @@ export default function EventDetail() {
                         }}
                         disabled={updateBartendersMutation.isPending}
                       >
-                        Salva
+                        {t('common.save')}
                       </HapticButton>
                       <HapticButton
                         variant="outline"
@@ -981,7 +983,7 @@ export default function EventDetail() {
                           });
                         }}
                       >
-                        Annulla
+                        {t('common.cancel')}
                       </HapticButton>
                     </div>
                   </div>
@@ -1000,13 +1002,13 @@ export default function EventDetail() {
           <div className="w-16 h-16 rounded-3xl bg-violet-500/20 flex items-center justify-center mx-auto mb-5">
             <MapPin className="h-8 w-8 text-violet-400" />
           </div>
-          <p className="text-muted-foreground text-lg mb-5">Nessuna postazione</p>
+          <p className="text-muted-foreground text-lg mb-5">{t('eventDetail.noStations')}</p>
           <HapticButton 
             onClick={() => setStationDialogOpen(true)}
             className="h-12 px-6 rounded-xl"
           >
             <Plus className="h-5 w-5 mr-2" />
-            Crea Postazione
+            {t('stations.createStation')}
           </HapticButton>
         </motion.div>
       )}
@@ -1022,14 +1024,14 @@ export default function EventDetail() {
       className="space-y-5"
     >
       <div className="flex items-center justify-between">
-        <h3 className="font-bold text-lg">Stock Evento</h3>
+        <h3 className="font-bold text-lg">{t('warehouse.eventStock')}</h3>
         <HapticButton 
           className="h-11 px-4 rounded-xl"
           onClick={() => setTransferDialogOpen(true)}
           data-testid="button-transfer-stock"
         >
           <Plus className="h-5 w-5 mr-2" />
-          Trasferisci
+          {t('warehouse.transfer')}
         </HapticButton>
       </div>
 
@@ -1062,9 +1064,9 @@ export default function EventDetail() {
                       <Package className="h-6 w-6 text-blue-400" />
                     </div>
                     <div className="min-w-0">
-                      <h4 className="font-bold text-base truncate">{product?.name || 'Prodotto'}</h4>
+                      <h4 className="font-bold text-base truncate">{product?.name || t('inventory.product')}</h4>
                       <p className="text-sm text-muted-foreground truncate">
-                        {station ? station.name : 'Magazzino Evento'}
+                        {station ? station.name : t('eventDetail.eventWarehouse')}
                       </p>
                     </div>
                   </div>
@@ -1102,14 +1104,14 @@ export default function EventDetail() {
           <div className="w-16 h-16 rounded-3xl bg-blue-500/20 flex items-center justify-center mx-auto mb-5">
             <Package className="h-8 w-8 text-blue-400" />
           </div>
-          <p className="text-lg text-muted-foreground mb-2">Nessun prodotto trasferito</p>
-          <p className="text-sm text-muted-foreground mb-5">Trasferisci prodotti dal magazzino</p>
+          <p className="text-lg text-muted-foreground mb-2">{t('eventDetail.noProductsTransferred')}</p>
+          <p className="text-sm text-muted-foreground mb-5">{t('eventDetail.transferFromWarehouse')}</p>
           <HapticButton 
             onClick={() => setTransferDialogOpen(true)}
             className="h-12 px-6 rounded-xl"
           >
             <Plus className="h-5 w-5 mr-2" />
-            Trasferisci Stock
+            {t('warehouse.transferStock')}
           </HapticButton>
         </motion.div>
       )}
@@ -1131,7 +1133,7 @@ export default function EventDetail() {
               <div className="flex items-center gap-2 mt-1">
                 <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${status.bgColor} ${status.color}`}>
                   <StatusIcon className="h-3 w-3" />
-                  {status.label}
+                  {t(status.labelKey)}
                 </span>
               </div>
             </div>
@@ -1139,24 +1141,24 @@ export default function EventDetail() {
           <div className="flex gap-2">
             <Button variant="outline" onClick={() => setStatusChangeDialogOpen(true)} data-testid="button-change-status-desktop">
               <Clock className="w-4 h-4 mr-2" />
-              Cambia Stato
+              {t('eventDetail.changeStatus')}
             </Button>
             <Link href={`/events/${id}/direct-stock`}>
               <Button variant="outline" data-testid="button-direct-stock">
                 <Warehouse className="w-4 h-4 mr-2" />
-                Carico Diretto
+                {t('eventDetail.directLoad')}
               </Button>
             </Link>
             <Link href={`/reports?eventId=${id}`}>
               <Button variant="outline" data-testid="button-reports">
                 <Package className="w-4 h-4 mr-2" />
-                Report
+                {t('reports.title')}
               </Button>
             </Link>
             {user && (user.role === 'admin' || user.role === 'super_admin' || user.role === 'gestore') && (
               <Button variant="destructive" onClick={() => setDeleteDialogOpen(true)} data-testid="button-delete-event">
                 <Trash2 className="w-4 h-4 mr-2" />
-                Elimina
+                {t('common.delete')}
               </Button>
             )}
           </div>
@@ -1171,7 +1173,7 @@ export default function EventDetail() {
                   <Calendar className="h-5 w-5 text-primary" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Data</p>
+                  <p className="text-sm text-muted-foreground">{t('common.date')}</p>
                   <p className="font-semibold">
                     {new Date(event.startDatetime).toLocaleDateString('it-IT', { day: 'numeric', month: 'short', year: 'numeric' })}
                   </p>
@@ -1186,7 +1188,7 @@ export default function EventDetail() {
                   <Package className="h-5 w-5 text-blue-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Prodotti</p>
+                  <p className="text-sm text-muted-foreground">{t('products.title')}</p>
                   <p className="text-2xl font-bold">{totalStockItems}</p>
                 </div>
               </div>
@@ -1199,7 +1201,7 @@ export default function EventDetail() {
                   <MapPin className="h-5 w-5 text-violet-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Postazioni</p>
+                  <p className="text-sm text-muted-foreground">{t('stations.title')}</p>
                   <p className="text-2xl font-bold">{totalStations}</p>
                 </div>
               </div>
@@ -1212,7 +1214,7 @@ export default function EventDetail() {
                   <Users className="h-5 w-5 text-teal-500" />
                 </div>
                 <div>
-                  <p className="text-sm text-muted-foreground">Staff</p>
+                  <p className="text-sm text-muted-foreground">{t('eventDetail.tabs.staff')}</p>
                   <p className="text-2xl font-bold">{assignedBartendersCount}</p>
                 </div>
               </div>
@@ -1228,7 +1230,7 @@ export default function EventDetail() {
               return (
                 <TabsTrigger key={tab.id} value={tab.id} data-testid={`desktop-tab-${tab.id}`}>
                   <Icon className="h-4 w-4 mr-2" />
-                  {tab.label}
+                  {t(tab.labelKey)}
                 </TabsTrigger>
               );
             })}
@@ -1238,15 +1240,15 @@ export default function EventDetail() {
           <TabsContent value="info" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Dettagli Evento</CardTitle>
-                <CardDescription>Informazioni generali sull'evento</CardDescription>
+                <CardTitle>{t('eventDetail.eventDetails')}</CardTitle>
+                <CardDescription>{t('eventDetail.generalInfo')}</CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-4">
                   <div className="flex items-center gap-3">
                     <Calendar className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Data Evento</p>
+                      <p className="text-sm text-muted-foreground">{t('events.eventDate')}</p>
                       <p className="font-medium">
                         {new Date(event.startDatetime).toLocaleDateString('it-IT', {
                           weekday: 'long', day: 'numeric', month: 'long', year: 'numeric'
@@ -1257,7 +1259,7 @@ export default function EventDetail() {
                   <div className="flex items-center gap-3">
                     <Clock className="h-5 w-5 text-muted-foreground" />
                     <div>
-                      <p className="text-sm text-muted-foreground">Orario</p>
+                      <p className="text-sm text-muted-foreground">{t('events.timeSlot')}</p>
                       <p className="font-medium">
                         {new Date(event.startDatetime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}
                         {event.endDatetime && ` - ${new Date(event.endDatetime).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' })}`}
@@ -1273,13 +1275,13 @@ export default function EventDetail() {
           <TabsContent value="tickets" className="space-y-6">
             <Card>
               <CardHeader>
-                <CardTitle>Gestione Biglietti</CardTitle>
-                <CardDescription>Visualizza e gestisci i biglietti per questo evento</CardDescription>
+                <CardTitle>{t('eventDetail.ticketManagement')}</CardTitle>
+                <CardDescription>{t('eventDetail.ticketManagementDesc')}</CardDescription>
               </CardHeader>
               <CardContent>
                 <Button onClick={() => setLocation(`/siae/ticketed-events/${id}`)} data-testid="button-manage-tickets-desktop">
                   <Ticket className="h-4 w-4 mr-2" />
-                  Vai alla Gestione Biglietti
+                  {t('eventDetail.goToTicketManagement')}
                 </Button>
               </CardContent>
             </Card>
@@ -1290,12 +1292,12 @@ export default function EventDetail() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-4">
                 <div>
-                  <CardTitle>Postazioni</CardTitle>
-                  <CardDescription>Gestisci le postazioni e assegna lo staff</CardDescription>
+                  <CardTitle>{t('stations.title')}</CardTitle>
+                  <CardDescription>{t('eventDetail.manageStationsAndStaff')}</CardDescription>
                 </div>
                 <Button onClick={() => setStationDialogOpen(true)} data-testid="button-create-station-desktop">
                   <Plus className="h-4 w-4 mr-2" />
-                  Nuova Postazione
+                  {t('stations.newStation')}
                 </Button>
               </CardHeader>
               <CardContent>
@@ -1308,10 +1310,10 @@ export default function EventDetail() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Nome</TableHead>
-                        <TableHead>Tipo</TableHead>
-                        <TableHead>Staff Assegnato</TableHead>
-                        <TableHead className="text-right">Azioni</TableHead>
+                        <TableHead>{t('common.name')}</TableHead>
+                        <TableHead>{t('eventDetail.type')}</TableHead>
+                        <TableHead>{t('eventDetail.assignedStaff')}</TableHead>
+                        <TableHead className="text-right">{t('common.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1323,9 +1325,9 @@ export default function EventDetail() {
                             <TableCell className="font-medium">{station.name}</TableCell>
                             <TableCell>
                               {station.isGeneral ? (
-                                <Badge variant="secondary">Fissa</Badge>
+                                <Badge variant="secondary">{t('eventDetail.fixed')}</Badge>
                               ) : (
-                                <Badge>Evento</Badge>
+                                <Badge>{t('eventDetail.event')}</Badge>
                               )}
                             </TableCell>
                             <TableCell>
@@ -1368,7 +1370,7 @@ export default function EventDetail() {
                                   ))}
                                 </div>
                               ) : (
-                                <span className="text-muted-foreground text-sm">Nessuno assegnato</span>
+                                <span className="text-muted-foreground text-sm">{t('eventDetail.noneAssigned')}</span>
                               )}
                             </TableCell>
                             <TableCell className="text-right">
@@ -1382,7 +1384,7 @@ export default function EventDetail() {
                                     }}
                                     disabled={updateBartendersMutation.isPending}
                                   >
-                                    Salva
+                                    {t('common.save')}
                                   </Button>
                                   <Button
                                     size="sm"
@@ -1400,7 +1402,7 @@ export default function EventDetail() {
                                       });
                                     }}
                                   >
-                                    Annulla
+                                    {t('common.cancel')}
                                   </Button>
                                 </div>
                               ) : (
@@ -1431,10 +1433,10 @@ export default function EventDetail() {
                 ) : (
                   <div className="text-center py-10">
                     <MapPin className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">Nessuna postazione</p>
+                    <p className="text-muted-foreground">{t('eventDetail.noStations')}</p>
                     <Button className="mt-4" onClick={() => setStationDialogOpen(true)}>
                       <Plus className="h-4 w-4 mr-2" />
-                      Crea Postazione
+                      {t('stations.createStation')}
                     </Button>
                   </div>
                 )}
@@ -1447,12 +1449,12 @@ export default function EventDetail() {
             <Card>
               <CardHeader className="flex flex-row items-center justify-between gap-4">
                 <div>
-                  <CardTitle>Stock Evento</CardTitle>
-                  <CardDescription>Prodotti trasferiti a questo evento</CardDescription>
+                  <CardTitle>{t('warehouse.eventStock')}</CardTitle>
+                  <CardDescription>{t('eventDetail.productsTransferredToEvent')}</CardDescription>
                 </div>
                 <Button onClick={() => setTransferDialogOpen(true)} data-testid="button-transfer-stock-desktop">
                   <Plus className="h-4 w-4 mr-2" />
-                  Trasferisci Stock
+                  {t('warehouse.transferStock')}
                 </Button>
               </CardHeader>
               <CardContent>
@@ -1465,10 +1467,10 @@ export default function EventDetail() {
                   <Table>
                     <TableHeader>
                       <TableRow>
-                        <TableHead>Prodotto</TableHead>
-                        <TableHead>Postazione</TableHead>
-                        <TableHead className="text-right">Quantità</TableHead>
-                        <TableHead className="text-right">Azioni</TableHead>
+                        <TableHead>{t('inventory.product')}</TableHead>
+                        <TableHead>{t('stations.station')}</TableHead>
+                        <TableHead className="text-right">{t('inventory.quantity')}</TableHead>
+                        <TableHead className="text-right">{t('common.actions')}</TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
@@ -1481,7 +1483,7 @@ export default function EventDetail() {
                           <TableRow key={stock.id} data-testid={`stock-row-${stock.id}`}>
                             <TableCell className="font-medium">
                               <div className="flex items-center gap-2">
-                                {product?.name || 'Prodotto'}
+                                {product?.name || t('inventory.product')}
                                 {isLowStock && (
                                   <Badge variant="destructive">
                                     <AlertTriangle className="h-3 w-3" />
@@ -1489,7 +1491,7 @@ export default function EventDetail() {
                                 )}
                               </div>
                             </TableCell>
-                            <TableCell>{station ? station.name : 'Magazzino Evento'}</TableCell>
+                            <TableCell>{station ? station.name : t('eventDetail.eventWarehouse')}</TableCell>
                             <TableCell className="text-right font-mono">
                               {isNaN(quantity) ? '0' : quantity.toFixed(2)}
                             </TableCell>
@@ -1511,10 +1513,10 @@ export default function EventDetail() {
                 ) : (
                   <div className="text-center py-10">
                     <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-                    <p className="text-muted-foreground">Nessun prodotto trasferito</p>
+                    <p className="text-muted-foreground">{t('eventDetail.noProductsTransferred')}</p>
                     <Button className="mt-4" onClick={() => setTransferDialogOpen(true)}>
                       <Plus className="h-4 w-4 mr-2" />
-                      Trasferisci Stock
+                      {t('warehouse.transferStock')}
                     </Button>
                   </div>
                 )}
@@ -1527,19 +1529,19 @@ export default function EventDetail() {
         <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
           <AlertDialogContent>
             <AlertDialogHeader>
-              <AlertDialogTitle>Eliminare l'evento?</AlertDialogTitle>
+              <AlertDialogTitle>{t('eventDetail.deleteEventConfirm')}</AlertDialogTitle>
               <AlertDialogDescription>
-                Questa azione è irreversibile. Tutti i dati dell'evento verranno eliminati.
+                {t('eventDetail.deleteEventWarning')}
               </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
-              <AlertDialogCancel>Annulla</AlertDialogCancel>
+              <AlertDialogCancel>{t('common.cancel')}</AlertDialogCancel>
               <AlertDialogAction
                 onClick={() => deleteEventMutation.mutate()}
                 disabled={deleteEventMutation.isPending}
                 className="bg-destructive text-destructive-foreground"
               >
-                {deleteEventMutation.isPending ? 'Eliminazione...' : 'Elimina'}
+                {deleteEventMutation.isPending ? t('eventDetail.deleting') : t('common.delete')}
               </AlertDialogAction>
             </AlertDialogFooter>
           </AlertDialogContent>
@@ -1548,7 +1550,7 @@ export default function EventDetail() {
         <Dialog open={statusChangeDialogOpen} onOpenChange={setStatusChangeDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Cambia Stato Evento</DialogTitle>
+              <DialogTitle>{t('eventDetail.changeEventStatus')}</DialogTitle>
             </DialogHeader>
             <div className="space-y-3 py-4">
               {Object.entries(statusConfig).map(([key, config]) => {
@@ -1569,7 +1571,7 @@ export default function EventDetail() {
                     <div className={`w-10 h-10 rounded-md ${config.bgColor} flex items-center justify-center`}>
                       <Icon className={`h-5 w-5 ${config.color}`} />
                     </div>
-                    <span className="font-medium">{config.label}</span>
+                    <span className="font-medium">{t(config.labelKey)}</span>
                     {isCurrentStatus && <CheckCircle2 className="h-5 w-5 text-primary ml-auto" />}
                   </button>
                 );
@@ -1581,7 +1583,7 @@ export default function EventDetail() {
         <Dialog open={stationDialogOpen} onOpenChange={setStationDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Nuova Postazione</DialogTitle>
+              <DialogTitle>{t('stations.newStation')}</DialogTitle>
             </DialogHeader>
             <Form {...stationForm}>
               <form
@@ -1595,16 +1597,16 @@ export default function EventDetail() {
                   name="name"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Nome Postazione</FormLabel>
+                      <FormLabel>{t('stations.stationName')}</FormLabel>
                       <FormControl>
-                        <Input {...field} placeholder="Es. Bar Centrale" data-testid="input-station-name-desktop" />
+                        <Input {...field} placeholder={t('stations.stationNamePlaceholder')} data-testid="input-station-name-desktop" />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
                 <FormItem>
-                  <FormLabel>Baristi (opzionale)</FormLabel>
+                  <FormLabel>{t('eventDetail.bartendersOptional')}</FormLabel>
                   <div className="border rounded-md p-3 space-y-2 max-h-48 overflow-y-auto">
                     {bartenders.length > 0 ? bartenders.map((bartender) => (
                       <label key={bartender.id} className="flex items-center gap-3 p-2 rounded-md cursor-pointer hover-elevate">
@@ -1625,16 +1627,16 @@ export default function EventDetail() {
                         </span>
                       </label>
                     )) : (
-                      <p className="text-sm text-muted-foreground p-2">Nessun barista disponibile</p>
+                      <p className="text-sm text-muted-foreground p-2">{t('eventDetail.noBartendersAvailable')}</p>
                     )}
                   </div>
                 </FormItem>
                 <DialogFooter>
                   <Button type="button" variant="outline" onClick={() => setStationDialogOpen(false)}>
-                    Annulla
+                    {t('common.cancel')}
                   </Button>
                   <Button type="submit" disabled={createStationMutation.isPending}>
-                    {createStationMutation.isPending ? 'Creazione...' : 'Crea'}
+                    {createStationMutation.isPending ? t('eventDetail.creating') : t('common.create')}
                   </Button>
                 </DialogFooter>
               </form>
@@ -1645,17 +1647,17 @@ export default function EventDetail() {
         <Dialog open={transferDialogOpen} onOpenChange={setTransferDialogOpen}>
           <DialogContent className="max-w-2xl max-h-[80vh] overflow-y-auto">
             <DialogHeader>
-              <DialogTitle>Trasferisci Stock</DialogTitle>
+              <DialogTitle>{t('warehouse.transferStock')}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div>
-                <label className="text-sm font-medium mb-2 block">Destinazione</label>
+                <label className="text-sm font-medium mb-2 block">{t('eventDetail.destination')}</label>
                 <Select value={destinationStationId} onValueChange={setDestinationStationId}>
                   <SelectTrigger>
-                    <SelectValue placeholder="Seleziona destinazione" />
+                    <SelectValue placeholder={t('eventDetail.selectDestination')} />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="general">Magazzino Evento</SelectItem>
+                    <SelectItem value="general">{t('eventDetail.eventWarehouse')}</SelectItem>
                     {allStations.map((station) => (
                       <SelectItem key={station.id} value={station.id}>
                         {station.name}
@@ -1666,7 +1668,7 @@ export default function EventDetail() {
               </div>
               {generalStocks && generalStocks.length > 0 ? (
                 <div className="space-y-2">
-                  <p className="text-sm font-medium">Prodotti disponibili</p>
+                  <p className="text-sm font-medium">{t('eventDetail.availableProducts')}</p>
                   {generalStocks.map((stock) => {
                     const isSelected = selectedProducts.has(stock.productId);
                     const quantity = selectedProducts.get(stock.productId) || '';
@@ -1680,7 +1682,7 @@ export default function EventDetail() {
                         <div className="flex-1">
                           <p className="font-medium">{stock.productName}</p>
                           <p className="text-sm text-muted-foreground">
-                            Disponibili: {available.toFixed(2)} {stock.unitOfMeasure}
+                            {t('eventDetail.available')}: {available.toFixed(2)} {stock.unitOfMeasure}
                           </p>
                         </div>
                         {isSelected && (
@@ -1689,7 +1691,7 @@ export default function EventDetail() {
                             step="0.01"
                             min="0.01"
                             max={available}
-                            placeholder="Qtà"
+                            placeholder={t('eventDetail.qty')}
                             value={quantity}
                             onChange={(e) => handleQuantityChange(stock.productId, e.target.value)}
                             className="w-24"
@@ -1702,19 +1704,19 @@ export default function EventDetail() {
               ) : (
                 <div className="text-center py-8">
                   <Package className="h-10 w-10 text-muted-foreground mx-auto mb-3" />
-                  <p className="text-muted-foreground">Nessun prodotto disponibile</p>
+                  <p className="text-muted-foreground">{t('eventDetail.noProductsAvailable')}</p>
                 </div>
               )}
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setTransferDialogOpen(false)}>
-                Annulla
+                {t('common.cancel')}
               </Button>
               <Button
                 onClick={validateAndSubmitTransfers}
                 disabled={transferStockMutation.isPending || selectedProducts.size === 0}
               >
-                {transferStockMutation.isPending ? 'Trasferimento...' : 'Trasferisci'}
+                {transferStockMutation.isPending ? t('eventDetail.transferring') : t('warehouse.transfer')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1723,19 +1725,19 @@ export default function EventDetail() {
         <Dialog open={editStockDialogOpen} onOpenChange={setEditStockDialogOpen}>
           <DialogContent>
             <DialogHeader>
-              <DialogTitle>Correggi Quantità</DialogTitle>
+              <DialogTitle>{t('eventDetail.correctQuantity')}</DialogTitle>
             </DialogHeader>
             <div className="space-y-4 py-4">
               <div className="p-4 rounded-md bg-muted/50">
-                <p className="text-sm text-muted-foreground">Prodotto</p>
+                <p className="text-sm text-muted-foreground">{t('inventory.product')}</p>
                 <p className="font-bold">{editingStock?.productName}</p>
               </div>
               <div className="p-4 rounded-md bg-muted/50">
-                <p className="text-sm text-muted-foreground">Quantità attuale</p>
+                <p className="text-sm text-muted-foreground">{t('eventDetail.currentQuantity')}</p>
                 <p className="text-2xl font-bold">{editingStock?.currentQuantity}</p>
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Nuova Quantità</label>
+                <label className="text-sm font-medium mb-2 block">{t('eventDetail.newQuantity')}</label>
                 <Input
                   type="number"
                   step="0.01"
@@ -1746,20 +1748,20 @@ export default function EventDetail() {
                 />
               </div>
               <div>
-                <label className="text-sm font-medium mb-2 block">Motivo (opzionale)</label>
+                <label className="text-sm font-medium mb-2 block">{t('eventDetail.reasonOptional')}</label>
                 <Input
                   value={adjustReason}
                   onChange={(e) => setAdjustReason(e.target.value)}
-                  placeholder="Es. Correzione inventario"
+                  placeholder={t('eventDetail.reasonPlaceholder')}
                 />
               </div>
             </div>
             <DialogFooter>
               <Button variant="outline" onClick={() => setEditStockDialogOpen(false)}>
-                Annulla
+                {t('common.cancel')}
               </Button>
               <Button onClick={submitStockAdjustment} disabled={adjustStockMutation.isPending}>
-                {adjustStockMutation.isPending ? 'Salvataggio...' : 'Salva'}
+                {adjustStockMutation.isPending ? t('eventDetail.saving') : t('common.save')}
               </Button>
             </DialogFooter>
           </DialogContent>
@@ -1809,19 +1811,19 @@ export default function EventDetail() {
       <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
         <AlertDialogContent className="rounded-3xl mx-4">
           <AlertDialogHeader>
-            <AlertDialogTitle className="text-xl">Eliminare l'evento?</AlertDialogTitle>
+            <AlertDialogTitle className="text-xl">{t('eventDetail.deleteEventConfirm')}</AlertDialogTitle>
             <AlertDialogDescription className="text-base">
-              Questa azione è irreversibile. Tutti i dati dell'evento verranno eliminati.
+              {t('eventDetail.deleteEventWarning')}
             </AlertDialogDescription>
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-3">
-            <AlertDialogCancel className="h-12 rounded-xl flex-1">Annulla</AlertDialogCancel>
+            <AlertDialogCancel className="h-12 rounded-xl flex-1">{t('common.cancel')}</AlertDialogCancel>
             <AlertDialogAction
               onClick={() => deleteEventMutation.mutate()}
               disabled={deleteEventMutation.isPending}
               className="bg-destructive text-destructive-foreground h-12 rounded-xl flex-1"
             >
-              {deleteEventMutation.isPending ? 'Eliminazione...' : 'Elimina'}
+              {deleteEventMutation.isPending ? t('eventDetail.deleting') : t('common.delete')}
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
@@ -1830,7 +1832,7 @@ export default function EventDetail() {
       <BottomSheet
         open={statusChangeDialogOpen}
         onClose={() => setStatusChangeDialogOpen(false)}
-        title="Cambia Stato Evento"
+        title={t('eventDetail.changeEventStatus')}
       >
         <div className="space-y-3 p-4">
           {Object.entries(statusConfig).map(([key, config]) => {
@@ -1855,7 +1857,7 @@ export default function EventDetail() {
                 <div className={`w-12 h-12 rounded-xl ${config.bgColor} flex items-center justify-center`}>
                   <Icon className={`h-6 w-6 ${config.color}`} />
                 </div>
-                <span className="font-semibold text-base">{config.label}</span>
+                <span className="font-semibold text-base">{t(config.labelKey)}</span>
                 {isCurrentStatus && (
                   <CheckCircle2 className="h-6 w-6 text-primary ml-auto" />
                 )}
@@ -1868,7 +1870,7 @@ export default function EventDetail() {
       <BottomSheet
         open={stationDialogOpen}
         onClose={() => setStationDialogOpen(false)}
-        title="Nuova Postazione"
+        title={t('stations.newStation')}
       >
         <Form {...stationForm}>
           <form 
@@ -1882,11 +1884,11 @@ export default function EventDetail() {
               name="name"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel className="text-base">Nome Postazione</FormLabel>
+                  <FormLabel className="text-base">{t('stations.stationName')}</FormLabel>
                   <FormControl>
                     <Input 
                       {...field} 
-                      placeholder="Es. Bar Centrale" 
+                      placeholder={t('stations.stationNamePlaceholder')} 
                       className="h-14 text-base rounded-xl" 
                       data-testid="input-station-name" 
                     />
@@ -1897,7 +1899,7 @@ export default function EventDetail() {
             />
 
             <FormItem>
-              <FormLabel className="text-base">Baristi (opzionale)</FormLabel>
+              <FormLabel className="text-base">{t('eventDetail.bartendersOptional')}</FormLabel>
               <div className="border rounded-2xl p-3 space-y-2 max-h-48 overflow-y-auto bg-muted/30">
                 {bartenders.length > 0 ? bartenders.map((bartender) => (
                   <label 
@@ -1922,7 +1924,7 @@ export default function EventDetail() {
                     </span>
                   </label>
                 )) : (
-                  <p className="text-sm text-muted-foreground p-3">Nessun barista disponibile</p>
+                  <p className="text-sm text-muted-foreground p-3">{t('eventDetail.noBartendersAvailable')}</p>
                 )}
               </div>
             </FormItem>
@@ -1934,14 +1936,14 @@ export default function EventDetail() {
                 className="flex-1 h-14 rounded-xl text-base" 
                 onClick={() => setStationDialogOpen(false)}
               >
-                Annulla
+                {t('common.cancel')}
               </Button>
               <Button 
                 type="submit" 
                 disabled={createStationMutation.isPending} 
                 className="flex-1 h-14 rounded-xl text-base"
               >
-                {createStationMutation.isPending ? 'Creazione...' : 'Crea'}
+                {createStationMutation.isPending ? t('eventDetail.creating') : t('common.create')}
               </Button>
             </div>
           </form>
@@ -1951,17 +1953,17 @@ export default function EventDetail() {
       <BottomSheet
         open={transferDialogOpen}
         onClose={() => setTransferDialogOpen(false)}
-        title="Trasferisci Stock"
+        title={t('warehouse.transferStock')}
       >
         <div className="p-4 space-y-5 max-h-[70vh] overflow-y-auto">
           <div>
-            <label className="text-base font-medium mb-3 block">Destinazione</label>
+            <label className="text-base font-medium mb-3 block">{t('eventDetail.destination')}</label>
             <Select value={destinationStationId} onValueChange={setDestinationStationId}>
               <SelectTrigger className="h-14 text-base rounded-xl">
-                <SelectValue placeholder="Seleziona destinazione" />
+                <SelectValue placeholder={t('eventDetail.selectDestination')} />
               </SelectTrigger>
               <SelectContent className="rounded-xl">
-                <SelectItem value="general" className="h-12">Magazzino Evento</SelectItem>
+                <SelectItem value="general" className="h-12">{t('eventDetail.eventWarehouse')}</SelectItem>
                 {allStations.map((station) => (
                   <SelectItem key={station.id} value={station.id} className="h-12">
                     {station.name}
@@ -1973,7 +1975,7 @@ export default function EventDetail() {
 
           {generalStocks && generalStocks.length > 0 ? (
             <div className="space-y-3">
-              <p className="text-base font-medium">Prodotti disponibili</p>
+              <p className="text-base font-medium">{t('eventDetail.availableProducts')}</p>
               {generalStocks.map((stock) => {
                 const isSelected = selectedProducts.has(stock.productId);
                 const quantity = selectedProducts.get(stock.productId) || '';
@@ -1989,7 +1991,7 @@ export default function EventDetail() {
                       <div className="flex-1 min-w-0">
                         <p className="font-semibold truncate">{stock.productName}</p>
                         <p className="text-sm text-muted-foreground">
-                          Disponibili: {available.toFixed(2)} {stock.unitOfMeasure}
+                          {t('eventDetail.available')}: {available.toFixed(2)} {stock.unitOfMeasure}
                         </p>
                       </div>
                     </label>
@@ -2000,7 +2002,7 @@ export default function EventDetail() {
                           step="0.01"
                           min="0.01"
                           max={available}
-                          placeholder="Quantità"
+                          placeholder={t('inventory.quantity')}
                           value={quantity}
                           onChange={(e) => handleQuantityChange(stock.productId, e.target.value)}
                           className="h-12 text-base rounded-xl"
@@ -2014,7 +2016,7 @@ export default function EventDetail() {
           ) : (
             <div className="text-center py-10">
               <Package className="h-14 w-14 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground text-lg">Nessun prodotto disponibile</p>
+              <p className="text-muted-foreground text-lg">{t('eventDetail.noProductsAvailable')}</p>
             </div>
           )}
 
@@ -2024,14 +2026,14 @@ export default function EventDetail() {
               className="flex-1 h-14 rounded-xl text-base" 
               onClick={() => setTransferDialogOpen(false)}
             >
-              Annulla
+              {t('common.cancel')}
             </Button>
             <Button 
               className="flex-1 h-14 rounded-xl text-base"
               onClick={validateAndSubmitTransfers}
               disabled={transferStockMutation.isPending || selectedProducts.size === 0}
             >
-              {transferStockMutation.isPending ? 'Trasferimento...' : 'Trasferisci'}
+              {transferStockMutation.isPending ? t('eventDetail.transferring') : t('warehouse.transfer')}
             </Button>
           </div>
         </div>
@@ -2040,19 +2042,19 @@ export default function EventDetail() {
       <BottomSheet
         open={editStockDialogOpen}
         onClose={() => setEditStockDialogOpen(false)}
-        title="Correggi Quantità"
+        title={t('eventDetail.correctQuantity')}
       >
         <div className="p-4 space-y-5">
           <div className="p-5 rounded-2xl bg-muted/50">
-            <p className="text-sm text-muted-foreground mb-1">Prodotto</p>
+            <p className="text-sm text-muted-foreground mb-1">{t('inventory.product')}</p>
             <p className="font-bold text-lg">{editingStock?.productName}</p>
           </div>
           <div className="p-5 rounded-2xl bg-muted/50">
-            <p className="text-sm text-muted-foreground mb-1">Quantità attuale</p>
+            <p className="text-sm text-muted-foreground mb-1">{t('eventDetail.currentQuantity')}</p>
             <p className="font-bold text-2xl">{editingStock?.currentQuantity}</p>
           </div>
           <div>
-            <label className="text-base font-medium mb-3 block">Nuova Quantità</label>
+            <label className="text-base font-medium mb-3 block">{t('eventDetail.newQuantity')}</label>
             <Input
               type="number"
               step="0.01"
@@ -2064,11 +2066,11 @@ export default function EventDetail() {
             />
           </div>
           <div>
-            <label className="text-base font-medium mb-3 block">Motivo (opzionale)</label>
+            <label className="text-base font-medium mb-3 block">{t('eventDetail.reasonOptional')}</label>
             <Input
               value={adjustReason}
               onChange={(e) => setAdjustReason(e.target.value)}
-              placeholder="Es. Correzione inventario"
+              placeholder={t('eventDetail.reasonPlaceholder')}
               className="h-14 text-base rounded-xl"
             />
           </div>
@@ -2078,14 +2080,14 @@ export default function EventDetail() {
               className="flex-1 h-14 rounded-xl text-base" 
               onClick={() => setEditStockDialogOpen(false)}
             >
-              Annulla
+              {t('common.cancel')}
             </Button>
             <Button 
               className="flex-1 h-14 rounded-xl text-base"
               onClick={submitStockAdjustment}
               disabled={adjustStockMutation.isPending}
             >
-              {adjustStockMutation.isPending ? 'Salvataggio...' : 'Salva'}
+              {adjustStockMutation.isPending ? t('eventDetail.saving') : t('common.save')}
             </Button>
           </div>
         </div>
