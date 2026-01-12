@@ -4824,6 +4824,9 @@ router.post("/api/public/resales/:id/reserve", async (req, res) => {
     const platformFee = Math.round(resalePrice * platformFeePercent) / 100;
     const sellerPayout = resalePrice - platformFee;
     
+    // Generate secure confirmation token (survives Stripe redirect when cookies are lost)
+    const confirmToken = crypto.randomBytes(32).toString('hex');
+    
     const session = await stripeClient.checkout.sessions.create({
       payment_method_types: ['card'],
       line_items: [
@@ -4840,7 +4843,7 @@ router.post("/api/public/resales/:id/reserve", async (req, res) => {
         },
       ],
       mode: 'payment',
-      success_url: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/account/resale-success?resale_id=${id}`,
+      success_url: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/account/resale-success?resale_id=${id}&token=${confirmToken}`,
       cancel_url: `${process.env.REPLIT_DEV_DOMAIN ? `https://${process.env.REPLIT_DEV_DOMAIN}` : 'http://localhost:5000'}/account/tickets`,
       metadata: {
         resaleId: id,
@@ -4849,6 +4852,7 @@ router.post("/api/public/resales/:id/reserve", async (req, res) => {
         sellerPayout: sellerPayout.toFixed(2),
         platformFee: platformFee.toFixed(2),
         type: 'resale_purchase',
+        confirmToken: confirmToken,
       },
       expires_at: Math.floor(reservedUntil.getTime() / 1000),
     });
@@ -4884,27 +4888,67 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
   console.log(`[RESALE-CONFIRM] === REQUEST RECEIVED === resale_id=${req.params.id}`);
   
   try {
-    const customer = await getAuthenticatedCustomer(req);
-    console.log(`[RESALE-CONFIRM] Auth check: customer=${customer?.id || 'NULL'}`);
-    if (!customer) {
-      console.log(`[RESALE-CONFIRM] REJECTED: Not authenticated`);
-      return res.status(401).json({ message: "Non autenticato" });
+    const { id } = req.params;
+    const { token } = req.body; // Confirmation token from URL (survives Stripe redirect)
+    
+    console.log(`[RESALE-CONFIRM] Processing resale ${id}, token provided: ${!!token}`);
+    
+    // Try session auth first, then fall back to token auth
+    let customer = await getAuthenticatedCustomer(req);
+    let buyerId: string | null = null;
+    
+    if (customer?.id) {
+      console.log(`[RESALE-CONFIRM] Auth via session: customer=${customer.id}`);
+      buyerId = customer.id;
     }
     
-    const { id } = req.params;
-    console.log(`[RESALE-CONFIRM] Processing resale ${id} for customer ${customer.id}`);
-    
-    // Get resale
+    // Get resale first (we need it to validate token)
     const [resale] = await db
       .select()
       .from(siaeResales)
-      .where(and(
-        eq(siaeResales.id, id),
-        eq(siaeResales.buyerId, customer.id)
-      ));
+      .where(eq(siaeResales.id, id));
     
     if (!resale) {
+      console.log(`[RESALE-CONFIRM] REJECTED: Resale not found`);
       return res.status(404).json({ message: "Rivendita non trovata" });
+    }
+    
+    // If no session auth, try token auth via Stripe metadata
+    if (!buyerId && token && resale.stripeCheckoutSessionId) {
+      console.log(`[RESALE-CONFIRM] Trying token auth...`);
+      const stripe = (await import('stripe')).default;
+      const stripeClient = new stripe(process.env.STRIPE_SECRET_KEY || '', { apiVersion: '2024-12-18.acacia' });
+      
+      const stripeSession = await stripeClient.checkout.sessions.retrieve(resale.stripeCheckoutSessionId);
+      
+      // Validate token matches what was stored in Stripe metadata
+      if (stripeSession.metadata?.confirmToken === token) {
+        buyerId = stripeSession.metadata.buyerId || resale.buyerId;
+        console.log(`[RESALE-CONFIRM] Token auth SUCCESS: buyer=${buyerId}`);
+        
+        // Get customer data
+        if (buyerId) {
+          const [customerData] = await db
+            .select()
+            .from(siaeCustomers)
+            .where(eq(siaeCustomers.id, buyerId));
+          customer = customerData;
+        }
+      } else {
+        console.log(`[RESALE-CONFIRM] Token auth FAILED: token mismatch`);
+      }
+    }
+    
+    // Must have valid buyer
+    if (!buyerId) {
+      console.log(`[RESALE-CONFIRM] REJECTED: Not authenticated (no session, no valid token)`);
+      return res.status(401).json({ message: "Non autenticato" });
+    }
+    
+    // Verify buyer matches resale
+    if (resale.buyerId !== buyerId) {
+      console.log(`[RESALE-CONFIRM] REJECTED: Buyer mismatch (resale.buyerId=${resale.buyerId}, auth buyerId=${buyerId})`);
+      return res.status(403).json({ message: "Non autorizzato" });
     }
     
     // Accept 'reserved' or 'processing' (for retry after failure)

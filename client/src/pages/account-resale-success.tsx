@@ -24,11 +24,13 @@ export default function AccountResaleSuccess() {
   
   const urlParams = new URLSearchParams(window.location.search);
   const resaleId = urlParams.get('resale_id');
+  const confirmToken = urlParams.get('token'); // Secure token from Stripe redirect
   
   const confirmMutation = useMutation({
     mutationFn: async () => {
       if (!resaleId) throw new Error("ID rivendita mancante");
-      const response = await apiRequest('POST', `/api/public/resales/${resaleId}/confirm`);
+      // Include token in body for authentication when session cookies are lost after Stripe redirect
+      const response = await apiRequest('POST', `/api/public/resales/${resaleId}/confirm`, { token: confirmToken });
       return response;
     },
     onSuccess: (data: any) => {
