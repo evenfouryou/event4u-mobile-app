@@ -148,15 +148,15 @@ export default function Register() {
       triggerHaptic('success');
       setGestoreSuccess(true);
       toast({
-        title: "Registrazione completata",
-        description: "Controlla la tua email per il messaggio di benvenuto",
+        title: t('auth.registrationCompletedTitle'),
+        description: t('auth.checkEmailWelcome'),
       });
     },
     onError: (error: any) => {
       triggerHaptic('error');
       toast({
-        title: "Errore",
-        description: error.message || "Registrazione fallita",
+        title: t('auth.error'),
+        description: error.message || t('auth.registrationFailed'),
         variant: "destructive",
       });
     },
@@ -184,14 +184,14 @@ export default function Register() {
       setClienteOtpStep(true);
       triggerHaptic('success');
       toast({
-        title: "Registrazione avviata",
-        description: "Ti abbiamo inviato un codice OTP al telefono.",
+        title: t('auth.registrationStarted'),
+        description: t('auth.otpSentToPhone'),
       });
     } catch (error: any) {
       triggerHaptic('error');
       toast({
-        title: "Errore di registrazione",
-        description: error.message || "Impossibile completare la registrazione.",
+        title: t('auth.registrationError'),
+        description: error.message || t('auth.registrationFailedMessage'),
         variant: "destructive",
       });
     } finally {
@@ -210,15 +210,15 @@ export default function Register() {
       });
       triggerHaptic('success');
       toast({
-        title: "Verifica completata!",
-        description: "Il tuo account è stato attivato. Ora puoi accedere.",
+        title: t('auth.verificationCompleted'),
+        description: t('auth.accountActivated'),
       });
       navigate("/login");
     } catch (error: any) {
       triggerHaptic('error');
       toast({
-        title: "Errore verifica",
-        description: error.message || "Codice OTP non valido.",
+        title: t('auth.verificationError'),
+        description: error.message || t('auth.invalidOTPCode'),
         variant: "destructive",
       });
     } finally {
@@ -241,7 +241,7 @@ export default function Register() {
           className="flex flex-col items-center gap-4"
         >
           <Loader2 className="w-10 h-10 animate-spin text-primary" />
-          <p className="text-muted-foreground">Caricamento...</p>
+          <p className="text-muted-foreground">{t('auth.loading')}</p>
         </motion.div>
       </div>
     );
@@ -256,13 +256,13 @@ export default function Register() {
               <div className="w-20 h-20 rounded-full bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center mx-auto mb-6">
                 <CheckCircle2 className="w-10 h-10 text-black" />
               </div>
-              <h2 className="text-2xl font-bold text-foreground mb-3">Registrazione Completata!</h2>
+              <h2 className="text-2xl font-bold text-foreground mb-3">{t('auth.registrationCompletedTitle')}</h2>
               <p className="text-muted-foreground mb-6">
-                Controlla la tua email per verificare il tuo account.
+                {t('auth.checkEmailVerification')}
               </p>
               <Link href="/login">
                 <Button className="w-full" size="lg" data-testid="button-go-login">
-                  Vai al Login
+                  {t('auth.goToLogin')}
                 </Button>
               </Link>
             </CardContent>
@@ -301,9 +301,9 @@ export default function Register() {
           >
             <CheckCircle2 className="w-10 h-10 text-black" />
           </motion.div>
-          <h2 className="text-2xl font-bold text-foreground mb-3">Registrazione Completata!</h2>
+          <h2 className="text-2xl font-bold text-foreground mb-3">{t('auth.registrationCompletedTitle')}</h2>
           <p className="text-muted-foreground mb-6">
-            Controlla la tua email per verificare il tuo account.
+            {t('auth.checkEmailVerification')}
           </p>
           <Link href="/login">
             <button
@@ -311,7 +311,7 @@ export default function Register() {
               className="w-full h-14 rounded-xl gradient-golden text-black font-semibold text-lg active:scale-[0.98] transition-transform"
               data-testid="button-go-login"
             >
-              Vai al Login
+              {t('auth.goToLogin')}
             </button>
           </Link>
         </motion.div>
@@ -329,9 +329,9 @@ export default function Register() {
                 <Shield className="h-8 w-8 text-black" />
               </div>
               <div className="text-center mb-6">
-                <h1 className="text-2xl font-bold text-foreground mb-2">Verifica OTP</h1>
+                <h1 className="text-2xl font-bold text-foreground mb-2">{t('auth.verifyOTP')}</h1>
                 <p className="text-muted-foreground">
-                  Inserisci il codice a 6 cifre inviato al tuo telefono
+                  {t('auth.enterOTPCode')}
                 </p>
               </div>
               <div className="flex justify-center mb-6">
@@ -364,7 +364,7 @@ export default function Register() {
                     <Loader2 className="w-4 h-4 animate-spin" />
                   ) : (
                     <>
-                      Verifica
+                      {t('auth.verify')}
                       <ArrowRight className="w-4 h-4 ml-2" />
                     </>
                   )}
@@ -379,7 +379,7 @@ export default function Register() {
                   data-testid="button-back-to-form"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" />
-                  Torna indietro
+                  {t('common.back')}
                 </Button>
               </div>
             </CardContent>
@@ -428,9 +428,9 @@ export default function Register() {
                 transition={{ delay: 0.2 }}
                 className="text-center mb-8"
               >
-                <h1 className="text-2xl font-bold text-foreground mb-2">Verifica OTP</h1>
+                <h1 className="text-2xl font-bold text-foreground mb-2">{t('auth.verifyOTP')}</h1>
                 <p className="text-muted-foreground">
-                  Inserisci il codice a 6 cifre inviato al tuo telefono
+                  {t('auth.enterOTPCode')}
                 </p>
               </motion.div>
 
@@ -477,7 +477,7 @@ export default function Register() {
                     <Loader2 className="w-5 h-5 animate-spin" />
                   ) : (
                     <>
-                      Verifica
+                      {t('auth.verify')}
                       <ArrowRight className="w-5 h-5" />
                     </>
                   )}
@@ -493,7 +493,7 @@ export default function Register() {
                   data-testid="button-back-to-form"
                 >
                   <ArrowLeft className="w-5 h-5" />
-                  Torna indietro
+                  {t('common.back')}
                 </button>
               </motion.div>
             </motion.div>
@@ -510,16 +510,16 @@ export default function Register() {
           <Card className="w-full max-w-lg">
             <CardHeader className="text-center pb-2">
               <BrandLogo variant="vertical" className="h-20 w-auto mx-auto mb-4" />
-              <CardTitle className="text-2xl">Crea Account</CardTitle>
-              <CardDescription>Scegli il tipo di account</CardDescription>
+              <CardTitle className="text-2xl">{t('auth.createAccount')}</CardTitle>
+              <CardDescription>{t('auth.selectAccountType')}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <button
                 onClick={() => {
                   if (clienteRegEnabled?.enabled === false) {
                     toast({
-                      title: "Registrazioni clienti sospese",
-                      description: "Le registrazioni clienti sono temporaneamente disabilitate.",
+                      title: t('auth.customerRegistrationSuspended'),
+                      description: t('auth.customerRegistrationDisabled'),
                       variant: "destructive"
                     });
                     return;
@@ -533,9 +533,9 @@ export default function Register() {
                   <Ticket className="w-6 h-6 text-black" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-foreground">Cliente</h3>
+                  <h3 className="text-lg font-semibold text-foreground">{t('auth.customer')}</h3>
                   <p className="text-muted-foreground text-sm">
-                    Acquista biglietti, gestisci prenotazioni e rivendite
+                    {t('auth.customerDescription')}
                   </p>
                 </div>
                 <ArrowRight className="w-5 h-5 text-muted-foreground shrink-0" />
@@ -545,8 +545,8 @@ export default function Register() {
                 onClick={() => {
                   if (gestoreRegEnabled?.enabled === false) {
                     toast({
-                      title: "Registrazioni organizzatori sospese",
-                      description: "Le registrazioni per organizzatori sono temporaneamente disabilitate.",
+                      title: t('auth.organizerRegistrationSuspended'),
+                      description: t('auth.organizerRegistrationDisabled'),
                       variant: "destructive"
                     });
                     return;
@@ -560,12 +560,12 @@ export default function Register() {
                   <Building2 className="w-6 h-6 text-black" />
                 </div>
                 <div className="flex-1">
-                  <h3 className="text-lg font-semibold text-foreground">Organizzatore</h3>
+                  <h3 className="text-lg font-semibold text-foreground">{t('auth.organizer')}</h3>
                   <p className="text-muted-foreground text-sm">
-                    Crea eventi, gestisci staff, vendita biglietti e inventario
+                    {t('auth.organizerDescription')}
                   </p>
                   {gestoreRegEnabled?.enabled === false && (
-                    <p className="text-red-400 text-xs mt-1">Registrazioni sospese</p>
+                    <p className="text-red-400 text-xs mt-1">{t('common.suspended')}</p>
                   )}
                 </div>
                 <ArrowRight className="w-5 h-5 text-muted-foreground shrink-0" />
@@ -573,9 +573,9 @@ export default function Register() {
 
               <div className="text-center pt-4">
                 <p className="text-muted-foreground">
-                  Hai già un account?{" "}
+                  {t('auth.hasAccount')}{" "}
                   <Link href="/login" className="text-primary font-semibold">
-                    Accedi
+                    {t('auth.login')}
                   </Link>
                 </p>
               </div>
@@ -633,9 +633,9 @@ export default function Register() {
             className="flex flex-col items-center mb-10"
           >
             <BrandLogo variant="vertical" className="h-24 w-auto mb-4" />
-            <h1 className="text-2xl font-bold text-foreground">Crea Account</h1>
+            <h1 className="text-2xl font-bold text-foreground">{t('auth.createAccount')}</h1>
             <p className="text-muted-foreground text-center mt-2">
-              Scegli il tipo di account
+              {t('auth.selectAccountType')}
             </p>
           </motion.div>
 
@@ -649,8 +649,8 @@ export default function Register() {
                 triggerHaptic('medium');
                 if (clienteRegEnabled?.enabled === false) {
                   toast({
-                    title: "Registrazioni clienti sospese",
-                    description: "Le registrazioni clienti sono temporaneamente disabilitate.",
+                    title: t('auth.customerRegistrationSuspended'),
+                    description: t('auth.customerRegistrationDisabled'),
                     variant: "destructive"
                   });
                   return;
@@ -664,9 +664,9 @@ export default function Register() {
                 <Ticket className="w-8 h-8 text-black" />
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-bold text-foreground mb-1">Cliente</h3>
+                <h3 className="text-xl font-bold text-foreground mb-1">{t('auth.customer')}</h3>
                 <p className="text-muted-foreground text-sm">
-                  Acquista biglietti, gestisci prenotazioni e rivendite
+                  {t('auth.customerDescription')}
                 </p>
               </div>
               <ArrowRight className="w-6 h-6 text-muted-foreground shrink-0" />
@@ -681,8 +681,8 @@ export default function Register() {
                 triggerHaptic('medium');
                 if (gestoreRegEnabled?.enabled === false) {
                   toast({
-                    title: "Registrazioni organizzatori sospese",
-                    description: "Le registrazioni per organizzatori sono temporaneamente disabilitate.",
+                    title: t('auth.organizerRegistrationSuspended'),
+                    description: t('auth.organizerRegistrationDisabled'),
                     variant: "destructive"
                   });
                   return;
@@ -696,12 +696,12 @@ export default function Register() {
                 <Building2 className="w-8 h-8 text-black" />
               </div>
               <div className="flex-1">
-                <h3 className="text-xl font-bold text-foreground mb-1">Organizzatore</h3>
+                <h3 className="text-xl font-bold text-foreground mb-1">{t('auth.organizer')}</h3>
                 <p className="text-muted-foreground text-sm">
-                  Crea eventi, gestisci staff, vendita biglietti e inventario
+                  {t('auth.organizerDescription')}
                 </p>
                 {gestoreRegEnabled?.enabled === false && (
-                  <p className="text-red-400 text-xs mt-1">Registrazioni sospese</p>
+                  <p className="text-red-400 text-xs mt-1">{t('common.suspended')}</p>
                 )}
               </div>
               <ArrowRight className="w-6 h-6 text-muted-foreground shrink-0" />
@@ -744,8 +744,8 @@ export default function Register() {
               <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mx-auto mb-3">
                 <Building2 className="h-7 w-7 text-black" />
               </div>
-              <CardTitle className="text-xl">Registrati come Organizzatore</CardTitle>
-              <CardDescription>Crea il tuo account gestore</CardDescription>
+              <CardTitle className="text-xl">{t('auth.registerAsOrganizer')}</CardTitle>
+              <CardDescription>{t('auth.createManagerAccount')}</CardDescription>
             </CardHeader>
             <CardContent>
               <Form {...gestoreForm}>
@@ -871,8 +871,8 @@ export default function Register() {
                           </FormControl>
                           <div className="flex-1">
                             <FormLabel className="text-sm font-normal">
-                              Accetto i{" "}
-                              <Link href="/terms" className="text-primary underline">Termini e Condizioni</Link>
+                              {t('auth.acceptTerms')}{" - "}
+                              <Link href="/terms" className="text-primary underline">Terms</Link>
                             </FormLabel>
                             <FormMessage />
                           </div>
@@ -894,8 +894,8 @@ export default function Register() {
                           </FormControl>
                           <div className="flex-1">
                             <FormLabel className="text-sm font-normal">
-                              Accetto la{" "}
-                              <Link href="/privacy" className="text-primary underline">Privacy Policy</Link>
+                              {t('auth.acceptPrivacy')}{" - "}
+                              <Link href="/privacy" className="text-primary underline">Policy</Link>
                             </FormLabel>
                             <FormMessage />
                           </div>
@@ -979,9 +979,9 @@ export default function Register() {
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center mb-4 shadow-lg">
                 <Building2 className="h-8 w-8 text-black" />
               </div>
-              <h1 className="text-2xl font-bold text-foreground">Registrati come Organizzatore</h1>
+              <h1 className="text-2xl font-bold text-foreground">{t('auth.registerAsOrganizer')}</h1>
               <p className="text-muted-foreground text-center mt-1">
-                Crea il tuo account gestore
+                {t('auth.createManagerAccount')}
               </p>
             </motion.div>
 
@@ -1165,9 +1165,9 @@ export default function Register() {
                         </FormControl>
                         <div className="flex-1">
                           <FormLabel className="text-sm text-foreground font-normal leading-relaxed">
-                            Accetto i{" "}
+                            {t('auth.acceptTerms')}{" - "}
                             <Link href="/terms" className="text-primary underline">
-                              Termini e Condizioni
+                              Terms
                             </Link>
                           </FormLabel>
                           <FormMessage />
@@ -1194,9 +1194,9 @@ export default function Register() {
                         </FormControl>
                         <div className="flex-1">
                           <FormLabel className="text-sm text-foreground font-normal leading-relaxed">
-                            Accetto la{" "}
+                            {t('auth.acceptPrivacy')}{" - "}
                             <Link href="/privacy" className="text-primary underline">
-                              Privacy Policy
+                              Policy
                             </Link>
                           </FormLabel>
                           <FormMessage />
@@ -1268,8 +1268,8 @@ export default function Register() {
             <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center mx-auto mb-3">
               <Ticket className="h-7 w-7 text-black" />
             </div>
-            <CardTitle className="text-xl">Registrati come Cliente</CardTitle>
-            <CardDescription>Crea il tuo account</CardDescription>
+            <CardTitle className="text-xl">{t('auth.registerAsCustomer')}</CardTitle>
+            <CardDescription>{t('auth.register')}</CardDescription>
           </CardHeader>
           <CardContent>
             <Form {...clienteForm}>
@@ -1280,7 +1280,7 @@ export default function Register() {
                     name="firstName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Nome</FormLabel>
+                        <FormLabel>{t('auth.firstName')}</FormLabel>
                         <FormControl>
                           <div className="relative">
                             <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -1296,7 +1296,7 @@ export default function Register() {
                     name="lastName"
                     render={({ field }) => (
                       <FormItem>
-                        <FormLabel>Cognome</FormLabel>
+                        <FormLabel>{t('auth.lastName')}</FormLabel>
                         <FormControl>
                           <Input {...field} placeholder="Rossi" data-testid="input-lastname" />
                         </FormControl>
@@ -1310,7 +1310,7 @@ export default function Register() {
                   name="email"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Email</FormLabel>
+                      <FormLabel>{t('auth.email')}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -1326,7 +1326,7 @@ export default function Register() {
                   name="phone"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Telefono</FormLabel>
+                      <FormLabel>{t('auth.phone')}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -1342,7 +1342,7 @@ export default function Register() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <FormLabel>{t('auth.password')}</FormLabel>
                       <FormControl>
                         <div className="relative">
                           <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -1475,8 +1475,8 @@ export default function Register() {
                         </FormControl>
                         <div className="flex-1">
                           <FormLabel className="text-sm font-normal">
-                            Accetto i{" "}
-                            <Link href="/terms" className="text-primary underline">Termini e Condizioni</Link>
+                            {t('auth.acceptTerms')}{" - "}
+                            <Link href="/terms" className="text-primary underline">Terms</Link>
                           </FormLabel>
                           <FormMessage />
                         </div>
@@ -1498,8 +1498,8 @@ export default function Register() {
                         </FormControl>
                         <div className="flex-1">
                           <FormLabel className="text-sm font-normal">
-                            Accetto la{" "}
-                            <Link href="/privacy" className="text-primary underline">Privacy Policy</Link>
+                            {t('auth.acceptPrivacy')}{" - "}
+                            <Link href="/privacy" className="text-primary underline">Policy</Link>
                           </FormLabel>
                           <FormMessage />
                         </div>
@@ -1583,9 +1583,9 @@ export default function Register() {
             <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-teal-400 to-cyan-500 flex items-center justify-center mb-4 shadow-lg">
               <Ticket className="h-8 w-8 text-black" />
             </div>
-            <h1 className="text-2xl font-bold text-foreground">Registrati come Cliente</h1>
+            <h1 className="text-2xl font-bold text-foreground">{t('auth.registerAsCustomer')}</h1>
             <p className="text-muted-foreground text-center mt-1">
-              Crea il tuo account
+              {t('auth.register')}
             </p>
           </motion.div>
 
@@ -1906,9 +1906,9 @@ export default function Register() {
                       </FormControl>
                       <div className="flex-1">
                         <FormLabel className="text-sm text-foreground font-normal leading-relaxed">
-                          Accetto i{" "}
+                          {t('auth.acceptTerms')}{" - "}
                           <Link href="/terms" className="text-primary underline">
-                            Termini e Condizioni
+                            Terms
                           </Link>
                         </FormLabel>
                         <FormMessage />
@@ -1935,9 +1935,9 @@ export default function Register() {
                       </FormControl>
                       <div className="flex-1">
                         <FormLabel className="text-sm text-foreground font-normal leading-relaxed">
-                          Accetto la{" "}
+                          {t('auth.acceptPrivacy')}{" - "}
                           <Link href="/privacy" className="text-primary underline">
-                            Privacy Policy
+                            Policy
                           </Link>
                         </FormLabel>
                         <FormMessage />

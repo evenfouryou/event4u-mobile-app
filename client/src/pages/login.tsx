@@ -120,7 +120,7 @@ export default function Login() {
       }
     } catch (err: any) {
       triggerHaptic('error');
-      setError(err.message || "Credenziali non valide");
+      setError(err.message || t('auth.invalidCredentials'));
       if (err.message && err.message.includes("non verificata")) {
         setShowResendVerification(true);
       }
@@ -136,15 +136,15 @@ export default function Login() {
       const response: any = await apiRequest('POST', '/api/resend-verification', { email });
       triggerHaptic('success');
       toast({
-        title: "Email inviata",
-        description: response.message || "Controlla la tua casella di posta per il link di verifica.",
+        title: t('auth.emailSent'),
+        description: response.message || t('auth.checkInbox'),
       });
       setShowResendVerification(false);
     } catch (err: any) {
       triggerHaptic('error');
       toast({
-        title: "Errore",
-        description: err.message || "Impossibile inviare l'email. Riprova più tardi.",
+        title: t('auth.error'),
+        description: err.message || t('auth.errorSendingEmail'),
         variant: "destructive",
       });
     } finally {
@@ -193,7 +193,7 @@ export default function Login() {
                   <Mail className="h-4 w-4 text-primary" />
                   <AlertDescription>
                     <div className="space-y-3">
-                      <p>La tua email non è stata ancora verificata.</p>
+                      <p>{t('auth.emailNotVerified')}</p>
                       <Button 
                         type="button"
                         variant="outline"
@@ -202,7 +202,7 @@ export default function Login() {
                         className="w-full"
                         data-testid="button-resend-verification"
                       >
-                        {isResending ? "Invio in corso..." : "Rinvia Email di Verifica"}
+                        {isResending ? t('auth.resendingEmail') : t('auth.resendVerification')}
                       </Button>
                     </div>
                   </AlertDescription>
@@ -221,7 +221,7 @@ export default function Login() {
                   </TabsTrigger>
                   <TabsTrigger value="phone" className="flex items-center gap-1.5" data-testid="tab-phone">
                     <Phone className="h-4 w-4" />
-                    <span className="hidden sm:inline">Telefono</span>
+                    <span className="hidden sm:inline">{t('auth.phone')}</span>
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -232,7 +232,7 @@ export default function Login() {
                   <Input
                     id="email"
                     type="email"
-                    placeholder="nome@esempio.it"
+                    placeholder={t('auth.enterEmail')}
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     required
@@ -243,11 +243,11 @@ export default function Login() {
 
               {loginMethod === 'username' && (
                 <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
+                  <Label htmlFor="username">{t('auth.username')}</Label>
                   <Input
                     id="username"
                     type="text"
-                    placeholder="il_tuo_username"
+                    placeholder={t('auth.enterUsername')}
                     value={username}
                     onChange={(e) => setUsername(e.target.value)}
                     required
@@ -258,7 +258,7 @@ export default function Login() {
 
               {loginMethod === 'phone' && (
                 <div className="space-y-2">
-                  <Label>Numero di Telefono</Label>
+                  <Label>{t('auth.phoneLabel')}</Label>
                   <div className="flex gap-2">
                     <Select value={phonePrefix} onValueChange={setPhonePrefix}>
                       <SelectTrigger className="w-[120px]" data-testid="select-phone-prefix">
@@ -275,7 +275,7 @@ export default function Login() {
                     <Input
                       id="phone"
                       type="tel"
-                      placeholder="3381234567"
+                      placeholder={t('auth.enterPhone')}
                       value={phoneNumber}
                       onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
                       required
@@ -284,7 +284,7 @@ export default function Login() {
                     />
                   </div>
                   <p className="text-xs text-muted-foreground">
-                    Per accesso Staff e Promoter
+                    {t('auth.staffAndPromoterAccess')}
                   </p>
                 </div>
               )}
@@ -294,7 +294,7 @@ export default function Login() {
                 <Input
                   id="password"
                   type="password"
-                  placeholder="••••••••"
+                  placeholder={t('auth.enterPassword')}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   required
@@ -421,7 +421,7 @@ export default function Login() {
                   <Mail className="h-5 w-5 text-primary" />
                   <AlertDescription>
                     <div className="space-y-4">
-                      <p className="text-base">La tua email non è stata ancora verificata.</p>
+                      <p className="text-base">{t('auth.emailNotVerified')}</p>
                       <HapticButton 
                         type="button"
                         variant="outline"
@@ -431,7 +431,7 @@ export default function Login() {
                         hapticType="medium"
                         data-testid="button-resend-verification"
                       >
-                        {isResending ? "Invio in corso..." : "Rinvia Email di Verifica"}
+                        {isResending ? t('auth.resendingEmail') : t('auth.resendVerification')}
                       </HapticButton>
                     </div>
                   </AlertDescription>
@@ -456,7 +456,7 @@ export default function Login() {
                   </TabsTrigger>
                   <TabsTrigger value="phone" className="flex items-center justify-center gap-1.5 h-10" data-testid="tab-phone-mobile">
                     <Phone className="h-4 w-4" />
-                    <span className="text-xs">Telefono</span>
+                    <span className="text-xs">{t('auth.phone')}</span>
                   </TabsTrigger>
                 </TabsList>
               </Tabs>
@@ -473,7 +473,7 @@ export default function Login() {
                 <Input
                   id="email-mobile"
                   type="email"
-                  placeholder="nome@esempio.it"
+                  placeholder={t('auth.enterEmail')}
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
@@ -490,11 +490,11 @@ export default function Login() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ ...springConfig, delay: 0.18 }}
               >
-                <Label htmlFor="username-mobile" className="text-base font-medium">Username</Label>
+                <Label htmlFor="username-mobile" className="text-base font-medium">{t('auth.username')}</Label>
                 <Input
                   id="username-mobile"
                   type="text"
-                  placeholder="il_tuo_username"
+                  placeholder={t('auth.enterUsername')}
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   required
@@ -511,7 +511,7 @@ export default function Login() {
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ ...springConfig, delay: 0.18 }}
               >
-                <Label className="text-base font-medium">Telefono</Label>
+                <Label className="text-base font-medium">{t('auth.phoneLabel')}</Label>
                 <div className="flex gap-2">
                   <Select value={phonePrefix} onValueChange={setPhonePrefix}>
                     <SelectTrigger className="w-[120px] h-14 bg-background/50 border-white/10 rounded-xl" data-testid="select-phone-prefix-mobile">
@@ -528,7 +528,7 @@ export default function Login() {
                   <Input
                     id="phone-mobile"
                     type="tel"
-                    placeholder="3381234567"
+                    placeholder={t('auth.enterPhone')}
                     value={phoneNumber}
                     onChange={(e) => setPhoneNumber(e.target.value.replace(/\D/g, ''))}
                     required
@@ -537,7 +537,7 @@ export default function Login() {
                   />
                 </div>
                 <p className="text-xs text-muted-foreground">
-                  Per accesso Staff e Promoter
+                  {t('auth.staffAndPromoterAccess')}
                 </p>
               </motion.div>
             )}
@@ -552,7 +552,7 @@ export default function Login() {
               <Input
                 id="password"
                 type="password"
-                placeholder="••••••••"
+                placeholder={t('auth.enterPassword')}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 required
