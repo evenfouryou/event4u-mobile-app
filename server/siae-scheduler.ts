@@ -1038,6 +1038,37 @@ async function autoCloseExpiredEvents() {
 }
 
 /**
+ * Rilascia le riservazioni scadute (reservedUntil < now).
+ * Rimette il biglietto in vendita se l'utente non ha completato il checkout.
+ */
+async function releaseExpiredReservations() {
+  try {
+    const now = new Date();
+    
+    const result = await db.update(siaeResales)
+      .set({
+        status: 'listed',
+        buyerId: null,
+        reservedAt: null,
+        reservedUntil: null,
+        stripeCheckoutSessionId: null,
+        updatedAt: now,
+      })
+      .where(and(
+        eq(siaeResales.status, 'reserved'),
+        lt(siaeResales.reservedUntil, now)
+      ))
+      .returning();
+    
+    if (result.length > 0) {
+      log(`Rilasciate ${result.length} riservazioni scadute - biglietti tornati in vendita`);
+    }
+  } catch (error: any) {
+    log(`ERRORE rilascio riservazioni scadute: ${error.message}`);
+  }
+}
+
+/**
  * Scade automaticamente i biglietti in rivendita 1 ora prima dell'inizio evento.
  * Cambia lo status da "listed" a "expired" per proteggere venditore e acquirente.
  */
@@ -1129,12 +1160,16 @@ export function initSiaeScheduler() {
   // Job per scadenza automatica rivendite 1h prima evento - ogni 5 minuti
   resaleExpirationIntervalId = setInterval(autoExpireResales, 5 * 60 * 1000);
   
+  // Job per rilascio riservazioni scadute - ogni minuto
+  setInterval(releaseExpiredReservations, 60 * 1000);
+  
   // Job per invio automatico RCA 24 ore dopo chiusura eventi - ogni ora
   rcaIntervalId = setInterval(sendRCAReports, 60 * 60 * 1000);
   
   // Esegui subito al primo avvio per chiudere eventi già scaduti e scadere rivendite
   autoCloseExpiredEvents();
   autoExpireResales();
+  releaseExpiredReservations();
 
   log('Scheduler SIAE inizializzato:');
   log('  - Job RMG giornaliero: ogni notte alle 02:00');
@@ -1142,6 +1177,7 @@ export function initSiaeScheduler() {
   log('  - Job RCA evento: ogni ora (24h dopo chiusura evento)');
   log('  - Job chiusura eventi: ogni 5 minuti');
   log('  - Job scadenza rivendite: ogni 5 minuti (1h prima evento)');
+  log('  - Job rilascio riservazioni: ogni minuto');
   log(`  - System Code: ${SIAE_SYSTEM_CODE}`);
   log(`  - Test Mode: ${SIAE_TEST_MODE}`);
 }

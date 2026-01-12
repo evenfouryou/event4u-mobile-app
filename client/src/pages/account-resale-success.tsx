@@ -28,9 +28,7 @@ export default function AccountResaleSuccess() {
   const confirmMutation = useMutation({
     mutationFn: async () => {
       if (!resaleId) throw new Error("ID rivendita mancante");
-      const response = await apiRequest(`/api/public/resales/${resaleId}/confirm`, {
-        method: 'POST',
-      });
+      const response = await apiRequest('POST', `/api/public/resales/${resaleId}/confirm`);
       return response;
     },
     onSuccess: (data: any) => {
