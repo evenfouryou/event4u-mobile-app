@@ -31,7 +31,7 @@ export default function AccountResaleSuccess() {
       if (!resaleId) throw new Error("ID rivendita mancante");
       // Include token in body for authentication when session cookies are lost after Stripe redirect
       const response = await apiRequest('POST', `/api/public/resales/${resaleId}/confirm`, { token: confirmToken });
-      return response;
+      return await response.json();
     },
     onSuccess: (data: any) => {
       setConfirmationStatus('success');
