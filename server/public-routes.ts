@@ -5729,6 +5729,12 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
             // Partial success: new ticket exists, complete the fulfillment
             console.log(`[RESALE] Partial success detected: new ticket ${existingNewTicket.id} exists, completing fulfillment...`);
             
+            // Get original ticket for wallet credit
+            const [originalTicket] = await db
+              .select()
+              .from(siaeTickets)
+              .where(eq(siaeTickets.id, currentResale.originalTicketId));
+            
             // Annul original ticket if not already done
             await db
               .update(siaeTickets)
@@ -5755,7 +5761,43 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
               })
               .where(eq(siaeResales.id, resaleId));
             
+            // Credit seller wallet if not already done
+            const existingWalletTx = await db
+              .select()
+              .from(siaeWalletTransactions)
+              .where(eq(siaeWalletTransactions.resaleId, resaleId));
+            
+            if (existingWalletTx.length === 0 && currentResale.sellerId) {
+              let sellerPayout = parseFloat(currentResale.sellerPayout || '0');
+              if (sellerPayout <= 0) {
+                const resalePrice = parseFloat(currentResale.resalePrice);
+                const platformFee = Math.round(resalePrice * 5) / 100;
+                sellerPayout = resalePrice - platformFee;
+              }
+              if (sellerPayout > 0) {
+                await db
+                  .insert(siaeWalletTransactions)
+                  .values({
+                    customerId: currentResale.sellerId,
+                    type: 'resale_credit',
+                    amount: sellerPayout.toFixed(2),
+                    description: `Accredito rivendita biglietto ${originalTicket?.ticketCode || 'N/A'}`,
+                    resaleId: resaleId,
+                    status: 'completed',
+                  });
+                console.log(`[RESALE] Compensation: Credited seller ${currentResale.sellerId} with €${sellerPayout}`);
+              }
+            }
+            
             console.log(`[RESALE] Completed partial fulfillment for ${resaleId}`);
+            
+            // CRITICAL: Return success since compensation worked!
+            return res.status(200).send(JSON.stringify({
+              success: true,
+              message: "Acquisto completato!",
+              newTicketId: existingNewTicket.id,
+              recovered: true,
+            }));
           } else {
             // No new ticket created, safe to reset to reserved for retry
             await db
