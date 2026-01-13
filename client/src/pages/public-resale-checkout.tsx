@@ -320,7 +320,7 @@ export default function PublicResaleCheckoutPage() {
       paymentIntentCreated.current = true;
       createPaymentIntent.mutate();
     }
-  }, [resale, customer, canProceedWithPayment]);
+  }, [resale, customer, canProceedWithPayment, captchaValidated]);
 
   const elementsOptions = createPaymentIntent.data?.clientSecret ? {
     clientSecret: createPaymentIntent.data.clientSecret,
