@@ -186,6 +186,40 @@ async function getAuthenticatedCustomer(req: any): Promise<any | null> {
   return customer;
 }
 
+// ==================== DIAGNOSTICA BRIDGE ====================
+
+// Endpoint pubblico per verificare lo stato del bridge smartcard
+// Utile per diagnosticare problemi di connessione
+router.get("/api/public/bridge-status", async (req, res) => {
+  try {
+    const bridgeConnected = isBridgeConnected();
+    const cardStatus = isCardReadyForSeals();
+    const cachedStatus = getCachedBridgeStatus();
+    
+    console.log(`[PUBLIC] Bridge status check: connected=${bridgeConnected}, cardReady=${cardStatus.ready}`);
+    
+    res.json({
+      bridgeConnected,
+      cardReady: cardStatus.ready,
+      cardError: cardStatus.error,
+      cachedStatus: {
+        readerConnected: cachedStatus?.readerConnected ?? false,
+        cardInserted: cachedStatus?.cardInserted ?? false,
+        readerName: cachedStatus?.readerName ?? null,
+        cardSerial: cachedStatus?.cardSerial ?? null,
+      },
+      timestamp: new Date().toISOString(),
+    });
+  } catch (error: any) {
+    console.error("[PUBLIC] Bridge status error:", error);
+    res.status(500).json({ 
+      bridgeConnected: false,
+      cardReady: false,
+      error: error.message 
+    });
+  }
+});
+
 // ==================== CATEGORIE EVENTI ====================
 
 // Lista categorie eventi attive
