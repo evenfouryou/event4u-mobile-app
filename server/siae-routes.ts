@@ -1042,6 +1042,19 @@ router.post("/api/siae/activation-cards", requireAuth, requireSuperAdmin, async 
   try {
     const data = insertSiaeActivationCardSchema.parse(req.body);
     const card = await siaeStorage.createSiaeActivationCard(data);
+    
+    const user = req.user as any;
+    await siaeStorage.createAuditLog({
+      companyId: card.companyId || user.companyId,
+      userId: user.id,
+      action: 'activation_card_created',
+      entityType: 'activation_card',
+      entityId: card.id,
+      description: `Carta di attivazione creata: ${card.cardCode}`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
     res.status(201).json(card);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
@@ -1055,6 +1068,19 @@ router.patch("/api/siae/activation-cards/:id", requireAuth, requireSuperAdmin, a
     if (!card) {
       return res.status(404).json({ message: "Carta di attivazione non trovata" });
     }
+    
+    const user = req.user as any;
+    await siaeStorage.createAuditLog({
+      companyId: card.companyId || user.companyId,
+      userId: user.id,
+      action: 'activation_card_updated',
+      entityType: 'activation_card',
+      entityId: card.id,
+      description: `Carta di attivazione aggiornata: ${card.cardCode}`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
     res.json(card);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
@@ -1237,6 +1263,18 @@ router.post("/api/siae/customers", async (req: Request, res: Response) => {
     
     const data = insertSiaeCustomerSchema.parse(req.body);
     const customer = await siaeStorage.createSiaeCustomer(data);
+    
+    await siaeStorage.createAuditLog({
+      companyId: customer.companyId || null,
+      userId: null,
+      action: 'customer_created',
+      entityType: 'customer',
+      entityId: customer.id,
+      description: `Cliente registrato: ${customer.firstName} ${customer.lastName}`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
     res.status(201).json(customer);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
@@ -1250,6 +1288,19 @@ router.patch("/api/siae/customers/:id", requireAuth, async (req: Request, res: R
     if (!customer) {
       return res.status(404).json({ message: "Cliente non trovato" });
     }
+    
+    const user = req.user as any;
+    await siaeStorage.createAuditLog({
+      companyId: customer.companyId || user.companyId,
+      userId: user.id,
+      action: 'customer_updated',
+      entityType: 'customer',
+      entityId: customer.id,
+      description: `Cliente aggiornato: ${customer.firstName} ${customer.lastName}`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
     res.json(customer);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
@@ -1274,6 +1325,18 @@ router.post("/api/siae/customers/:id/verify-manual", requireAuth, requireGestore
     if (customer.phone) {
       await siaeStorage.markSiaeOtpVerifiedByPhone(customer.phone);
     }
+    
+    const user = req.user as any;
+    await siaeStorage.createAuditLog({
+      companyId: customer.companyId || user.companyId,
+      userId: user.id,
+      action: 'customer_verified_manual',
+      entityType: 'customer',
+      entityId: customer.id,
+      description: `Cliente verificato manualmente: ${customer.firstName} ${customer.lastName}`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
     
     res.json({ 
       message: "Cliente verificato manualmente con successo",
@@ -1382,6 +1445,18 @@ router.delete("/api/siae/customers/:id", requireAuth, requireGestore, async (req
     if (!deleted) {
       return res.status(500).json({ message: "Errore durante l'eliminazione" });
     }
+    
+    const user = req.user as any;
+    await siaeStorage.createAuditLog({
+      companyId: customer.companyId || user.companyId,
+      userId: user.id,
+      action: 'customer_deleted',
+      entityType: 'customer',
+      entityId: req.params.id,
+      description: `Cliente eliminato: ${customer.firstName} ${customer.lastName}${forceDelete ? ' (forzato)' : ''}`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
     
     console.log("[SIAE] Customer deleted successfully:", req.params.id);
     res.json({ message: "Cliente eliminato con successo" });
@@ -2037,6 +2112,18 @@ router.post("/api/siae/ticketed-events", requireAuth, requireOrganizer, async (r
       approvedBy,
       approvedAt,
     });
+    
+    await siaeStorage.createAuditLog({
+      companyId: event.companyId || user.companyId,
+      userId: user.id,
+      action: 'ticketed_event_created',
+      entityType: 'ticketed_event',
+      entityId: event.id,
+      description: `Evento biglietteria creato (eventId: ${event.eventId})`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
     res.status(201).json(event);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
@@ -2080,6 +2167,19 @@ router.patch("/api/siae/ticketed-events/:id", requireAuth, requireOrganizer, asy
     if (!event) {
       return res.status(404).json({ message: "Evento biglietteria non trovato" });
     }
+    
+    const user = req.user as any;
+    await siaeStorage.createAuditLog({
+      companyId: event.companyId || user.companyId,
+      userId: user.id,
+      action: 'ticketed_event_updated',
+      entityType: 'ticketed_event',
+      entityId: event.id,
+      description: `Evento biglietteria aggiornato (eventId: ${event.eventId})`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
     res.json(event);
   } catch (error: any) {
     console.log("[SIAE PATCH] Error:", error.message);
@@ -4158,6 +4258,19 @@ router.post("/api/siae/resales", requireAuth, async (req: Request, res: Response
     };
     
     const resale = await siaeStorage.createSiaeResale(dataWithControls);
+    
+    const user = req.user as any;
+    await siaeStorage.createAuditLog({
+      companyId: resale.companyId || user.companyId,
+      userId: user.id,
+      action: 'resale_created',
+      entityType: 'resale',
+      entityId: resale.id,
+      description: `Rimessa in vendita creata per biglietto ${resale.originalTicketId}`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
     res.status(201).json(resale);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
@@ -4267,6 +4380,19 @@ router.patch("/api/siae/resales/:id", requireAuth, async (req: Request, res: Res
     }
     
     const resale = await siaeStorage.updateSiaeResale(req.params.id, dataWithTimestamps);
+    
+    const user = req.user as any;
+    await siaeStorage.createAuditLog({
+      companyId: resale?.companyId || user.companyId,
+      userId: user.id,
+      action: 'resale_updated',
+      entityType: 'resale',
+      entityId: req.params.id,
+      description: `Rimessa in vendita aggiornata${data.status ? ` (status: ${data.status})` : ''}`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
     res.json(resale);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
@@ -4494,6 +4620,18 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
     
     console.log(`[SIAE-ROUTES] Created substitution transmission ${newTransmission.id} (progressivo: ${nextProgressivo}) for original ${id}`);
     
+    const user = req.user as any;
+    await siaeStorage.createAuditLog({
+      companyId: newTransmission.companyId,
+      userId: user.id,
+      action: 'transmission_resent',
+      entityType: 'transmission',
+      entityId: newTransmission.id,
+      description: `Trasmissione sostitutiva creata (progressivo: ${nextProgressivo}) per originale ${id}`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
     // If toEmail provided, send immediately
     if (toEmail) {
       const { sendSiaeTransmissionEmail } = await import('./email-service');
@@ -4537,6 +4675,19 @@ router.post("/api/siae/transmissions", requireAuth, requireGestore, async (req: 
   try {
     const data = insertSiaeTransmissionSchema.parse(req.body);
     const transmission = await siaeStorage.createSiaeTransmission(data);
+    
+    const user = req.user as any;
+    await siaeStorage.createAuditLog({
+      companyId: transmission.companyId,
+      userId: user.id,
+      action: 'transmission_created',
+      entityType: 'transmission',
+      entityId: transmission.id,
+      description: `Trasmissione creata: ${transmission.transmissionType || 'RCA'} - ${transmission.fileName || 'N/D'}`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
     res.status(201).json(transmission);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
@@ -4550,6 +4701,19 @@ router.patch("/api/siae/transmissions/:id", requireAuth, requireGestore, async (
     if (!transmission) {
       return res.status(404).json({ message: "Trasmissione non trovata" });
     }
+    
+    const user = req.user as any;
+    await siaeStorage.createAuditLog({
+      companyId: transmission.companyId,
+      userId: user.id,
+      action: 'transmission_updated',
+      entityType: 'transmission',
+      entityId: transmission.id,
+      description: `Trasmissione aggiornata: ${transmission.transmissionType || 'RCA'}${data.status ? ` (status: ${data.status})` : ''}`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
     res.json(transmission);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
@@ -4815,6 +4979,18 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
       status: 'sent',
       sentAt: new Date(),
       sentToPec: destinationEmail,
+    });
+    
+    const user = req.user as any;
+    await siaeStorage.createAuditLog({
+      companyId: transmission.companyId,
+      userId: user.id,
+      action: 'transmission_sent',
+      entityType: 'transmission',
+      entityId: id,
+      description: `Trasmissione ${transmission.transmissionType} inviata a ${destinationEmail}`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
     });
     
     res.json({ success: true, message: `Email inviata con successo${signatureInfo}` });
@@ -5395,6 +5571,17 @@ router.post("/api/siae/companies/:companyId/transmissions/send-c1", requireAuth,
     });
     
     if (result.success) {
+      const user = req.user as any;
+      await siaeStorage.createAuditLog({
+        companyId,
+        userId: user.id,
+        action: 'c1_report_sent',
+        entityType: 'transmission',
+        entityId: result.data?.transmission?.id || '',
+        description: `Trasmissione C1 ${type} inviata (${result.data?.transmission?.ticketsCount || 0} biglietti)`,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
       res.json({ success: true, ...result.data });
     } else {
       res.status(result.statusCode).json({ message: result.error, ...result.data });
@@ -5422,6 +5609,17 @@ router.post("/api/siae/companies/:companyId/transmissions/send-daily", requireAu
     });
     
     if (result.success) {
+      const user = req.user as any;
+      await siaeStorage.createAuditLog({
+        companyId,
+        userId: user.id,
+        action: 'daily_report_sent',
+        entityType: 'transmission',
+        entityId: result.data?.transmission?.id || '',
+        description: `Trasmissione giornaliera inviata (${result.data?.transmission?.ticketsCount || 0} biglietti)`,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
       res.json({ success: true, ...result.data });
     } else {
       res.status(result.statusCode).json({ message: result.error, ...result.data });
@@ -5813,6 +6011,18 @@ router.post("/api/siae/transmissions/:id/confirm-receipt", requireAuth, requireG
       transmissionId: id,
     });
     
+    const user = req.user as any;
+    await siaeStorage.createAuditLog({
+      companyId: transmission.companyId,
+      userId: user.id,
+      action: 'transmission_receipt_confirmed',
+      entityType: 'transmission',
+      entityId: id,
+      description: `Conferma ricezione trasmissione - Protocollo SIAE: ${receiptProtocol}`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
     res.json({
       success: true,
       message: "Conferma ricezione registrata con successo",
@@ -5868,6 +6078,35 @@ router.post("/api/siae/box-office/sessions", requireAuth, async (req: Request, r
     const user = req.user as any;
     const data = insertSiaeBoxOfficeSessionSchema.parse({ ...req.body, userId: user.id });
     const session = await siaeStorage.createSiaeBoxOfficeSession(data);
+    
+    // Get companyId from emission channel or ticketed event
+    let companyId = user.companyId;
+    if (data.emissionChannelId) {
+      const channel = await siaeStorage.getSiaeEmissionChannel(data.emissionChannelId);
+      if (channel?.companyId) {
+        companyId = channel.companyId;
+      }
+    }
+    if (!companyId && data.ticketedEventId) {
+      const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(data.ticketedEventId);
+      if (ticketedEvent?.companyId) {
+        companyId = ticketedEvent.companyId;
+      }
+    }
+    
+    if (companyId) {
+      await siaeStorage.createAuditLog({
+        companyId,
+        userId: user.id,
+        action: 'box_office_session_created',
+        entityType: 'box_office_session',
+        entityId: session.id,
+        description: `Sessione cassa aperta`,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+    }
+    
     res.status(201).json(session);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
@@ -5880,6 +6119,37 @@ router.post("/api/siae/box-office/sessions/:id/close", requireAuth, async (req: 
     if (!session) {
       return res.status(404).json({ message: "Sessione non trovata" });
     }
+    
+    const user = req.user as any;
+    
+    // Get companyId from emission channel or ticketed event
+    let companyId = user.companyId;
+    if (session.emissionChannelId) {
+      const channel = await siaeStorage.getSiaeEmissionChannel(session.emissionChannelId);
+      if (channel?.companyId) {
+        companyId = channel.companyId;
+      }
+    }
+    if (!companyId && session.ticketedEventId) {
+      const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(session.ticketedEventId);
+      if (ticketedEvent?.companyId) {
+        companyId = ticketedEvent.companyId;
+      }
+    }
+    
+    if (companyId) {
+      await siaeStorage.createAuditLog({
+        companyId,
+        userId: user.id,
+        action: 'box_office_session_closed',
+        entityType: 'box_office_session',
+        entityId: session.id,
+        description: `Sessione cassa chiusa`,
+        ipAddress: req.ip,
+        userAgent: req.get('user-agent'),
+      });
+    }
+    
     res.json(session);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -5970,6 +6240,19 @@ router.post("/api/siae/subscriptions", requireAuth, requireOrganizer, async (req
   try {
     const data = insertSiaeSubscriptionSchema.parse(req.body);
     const subscription = await siaeStorage.createSiaeSubscription(data);
+    
+    const user = req.user as any;
+    await siaeStorage.createAuditLog({
+      companyId: subscription.companyId || user.companyId,
+      userId: user.id,
+      action: 'subscription_created',
+      entityType: 'subscription',
+      entityId: subscription.id,
+      description: `Abbonamento creato: ${subscription.subscriptionCode}`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
     res.status(201).json(subscription);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
@@ -5983,6 +6266,19 @@ router.patch("/api/siae/subscriptions/:id", requireAuth, requireOrganizer, async
     if (!subscription) {
       return res.status(404).json({ message: "Abbonamento non trovato" });
     }
+    
+    const user = req.user as any;
+    await siaeStorage.createAuditLog({
+      companyId: subscription.companyId || user.companyId,
+      userId: user.id,
+      action: 'subscription_updated',
+      entityType: 'subscription',
+      entityId: subscription.id,
+      description: `Abbonamento aggiornato: ${subscription.subscriptionCode}`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
     res.json(subscription);
   } catch (error: any) {
     res.status(400).json({ message: error.message });
@@ -6064,21 +6360,15 @@ router.post("/api/siae/subscriptions/:id/cancel", requireAuth, requireOrganizer,
       .returning();
     
     // Create audit log entry
-    await db.insert(siaeAuditLogs).values({
+    await siaeStorage.createAuditLog({
       companyId: subscription.companyId,
       userId: user.id,
-      action: 'cancel',
+      action: 'subscription_cancelled',
       entityType: 'subscription',
       entityId: id,
       description: `Abbonamento ${subscription.subscriptionCode} annullato. Causale: ${reasonCode} - ${CANCELLATION_REASON_DESCRIPTIONS[reasonCode]}`,
-      oldData: JSON.stringify({ status: subscription.status }),
-      newData: JSON.stringify({ 
-        status: 'cancelled', 
-        cancellationDate, 
-        cancellationReasonCode: reasonCode 
-      }),
-      ipAddress: req.ip || req.socket?.remoteAddress,
-      userAgent: req.get('User-Agent'),
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
     });
     
     res.json({
