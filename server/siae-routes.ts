@@ -3678,17 +3678,6 @@ router.post("/api/siae/name-changes", requireAuth, async (req: Request, res: Res
             
             // Process the name change
             const result = await db.transaction(async (tx) => {
-              // Mark original ticket as replaced
-              await tx.update(siaeTickets)
-                .set({
-                  status: 'replaced',
-                  cancellationReasonCode: 'CN',
-                  cancellationDate: new Date(),
-                  cancelledByUserId: userId,
-                  updatedAt: new Date()
-                })
-                .where(eq(siaeTickets.id, originalTicket.id));
-              
               // Get next progressive number
               const [{ maxProgress }] = await tx
                 .select({ maxProgress: sql<number>`COALESCE(MAX(progressive_number), 0)` })
@@ -3731,15 +3720,23 @@ router.post("/api/siae/name-changes", requireAuth, async (req: Request, res: Res
                   issuedByUserId: userId,
                   isComplimentary: originalTicket.isComplimentary,
                   paymentMethod: 'name_change',
-                  status: 'active',
+                  status: 'sold',
                   originalTicketId: originalTicket.id,
                   qrCode: `SIAE-TKT-NC-${newProgressiveNumber}`
                 })
                 .returning();
               
-              // Update original ticket with replacement reference
+              // Update original ticket with replacement reference and SIAE-compliant annulment
               await tx.update(siaeTickets)
-                .set({ replacedByTicketId: newTicket.id })
+                .set({ 
+                  replacedByTicketId: newTicket.id,
+                  status: 'annullato_cambio_nominativo',
+                  cancellationReasonCode: '10', // TAB.5: "Cambio nominativo - vecchio titolo"
+                  cancellationDate: new Date(),
+                  cancelledByUserId: userId,
+                  annullamentoMotivo: `Cambio nominativo auto-approvato - Sigillo originale: ${originalTicket.fiscalSealCode || originalTicket.sigilloFiscale || 'N/A'} - Nuovo: ${sealData.sealCode}`,
+                  annullamentoData: new Date()
+                })
                 .where(eq(siaeTickets.id, originalTicket.id));
               
               // Update name change request
@@ -4022,13 +4019,15 @@ router.post("/api/siae/name-changes/:id/process", requireAuth, requireOrganizer,
     
     // 8. Begin transaction: Cancel old ticket and create new one
     const result = await db.transaction(async (tx) => {
-      // 8a. Mark original ticket as replaced
+      // 8a. Annul original ticket with SIAE-compliant causale (TAB.5 code '10')
       await tx.update(siaeTickets)
         .set({
-          status: 'replaced',
-          cancellationReasonCode: 'CN', // CN = Cambio Nominativo
+          status: 'annullato_cambio_nominativo',
+          cancellationReasonCode: '10', // TAB.5: "Cambio nominativo - vecchio titolo"
           cancellationDate: new Date(),
           cancelledByUserId: userId,
+          annullamentoMotivo: `Cambio nominativo - Sigillo originale: ${originalTicket.fiscalSealCode || originalTicket.sigilloFiscale || 'N/A'} - Nuovo: ${sealData.sealCode}`,
+          annullamentoData: new Date(),
           updatedAt: new Date()
         })
         .where(eq(siaeTickets.id, originalTicket.id));
@@ -4082,8 +4081,8 @@ router.post("/api/siae/name-changes/:id/process", requireAuth, requireOrganizer,
           issuedByUserId: userId,
           isComplimentary: originalTicket.isComplimentary,
           paymentMethod: 'name_change',
-          // Status
-          status: 'active',
+          // Status - use 'sold' for consistency with admin route
+          status: 'sold',
           // Reference to original
           originalTicketId: originalTicket.id,
           // QR Code
