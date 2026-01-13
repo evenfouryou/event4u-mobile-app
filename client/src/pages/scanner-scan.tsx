@@ -242,12 +242,14 @@ export default function ScannerScanPage() {
       setScanPaused(true);
       setShowConfirmModal(true);
       
-      // Pause the camera to prevent re-scanning
-      if (scannerRef.current) {
+      // On mobile, pause() can cause issues - just use the scanPaused flag instead
+      // The flag prevents handleScan from processing new scans
+      // Only attempt pause on desktop where it's more reliable
+      if (scannerRef.current && !isMobile) {
         try {
           scannerRef.current.pause(true);
         } catch (e) {
-          console.log('Could not pause scanner');
+          console.log('[Scanner] Could not pause scanner (expected on some devices)');
         }
       }
       
@@ -276,11 +278,12 @@ export default function ScannerScanPage() {
       setScanPaused(true);
       setShowConfirmModal(true);
       
-      if (scannerRef.current) {
+      // On mobile, skip pause to avoid camera freezing issues
+      if (scannerRef.current && !isMobile) {
         try {
           scannerRef.current.pause(true);
         } catch (e) {
-          console.log('Could not pause scanner');
+          console.log('[Scanner] Could not pause scanner (expected on some devices)');
         }
       }
     },
@@ -300,16 +303,65 @@ export default function ScannerScanPage() {
     setViewfinderState("scanning");
     setAutoCloseCountdown(2);
     
-    // Resume the camera
-    if (scannerRef.current) {
-      try {
-        scannerRef.current.resume();
-      } catch (e) {
-        console.log('Could not resume scanner, restarting...');
-        // If resume fails, restart the camera
-        stopCamera().then(() => startCamera());
+    // Resume the camera with retry logic for mobile
+    const resumeCamera = async () => {
+      // On mobile, we don't pause the camera, so nothing to resume
+      // Just ensure scanner is still active
+      if (!scannerRef.current) {
+        console.log('[Scanner] No scanner reference, restarting camera...');
+        // Camera was lost, need to restart it
+        setTimeout(async () => {
+          try {
+            const scanner = new Html5Qrcode(scannerContainerId, {
+              verbose: false,
+              formatsToSupport: [0],
+            });
+            scannerRef.current = scanner;
+            
+            await scanner.start(
+              { facingMode: "environment" },
+              {
+                fps: 15,
+                qrbox: { width: 300, height: 300 },
+                aspectRatio: 1,
+                disableFlip: false,
+              },
+              (decodedText) => {
+                console.log('[Scanner] QR code decoded:', decodedText);
+                handleScanRef.current(decodedText);
+              },
+              () => {}
+            );
+            
+            setCameraActive(true);
+            setViewfinderState("scanning");
+            console.log('[Scanner] Camera restarted successfully');
+          } catch (restartErr) {
+            console.error('[Scanner] Failed to restart camera:', restartErr);
+            setCameraError("Errore camera - riprova");
+            setCameraActive(false);
+          }
+        }, 300);
+        return;
       }
-    }
+      
+      try {
+        // Check if scanner is paused (only happens on desktop)
+        // @ts-ignore - getState exists but not in types
+        const state = scannerRef.current.getState?.();
+        if (state === 3) { // PAUSED state
+          scannerRef.current.resume();
+          console.log('[Scanner] Camera resumed from paused state');
+        } else {
+          console.log('[Scanner] Camera already running, state:', state);
+        }
+      } catch (e) {
+        console.log('[Scanner] Resume check failed, camera likely still running');
+        // On mobile, camera keeps running - this is expected
+      }
+    };
+    
+    resumeCamera();
   }, []);
 
   // Auto-close modal after 2 seconds
