@@ -785,22 +785,6 @@ export default function PublicResaleCheckoutPage() {
                     </div>
                   </div>
                 </div>
-              ) : createPaymentIntent.isPending ? (
-                <div className="flex flex-col items-center justify-center py-12">
-                  <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
-                  <p className="text-muted-foreground">Preparazione pagamento...</p>
-                </div>
-              ) : createPaymentIntent.data && elementsOptions && stripePromise ? (
-                <Elements 
-                  stripe={stripePromise} 
-                  options={elementsOptions}
-                >
-                  <PaymentElementWrapper
-                    onReady={() => setIsElementReady(true)}
-                    onStripeReady={(stripe) => { stripeRef.current = stripe; }}
-                    onElementsReady={(elements) => { elementsRef.current = elements; }}
-                  />
-                </Elements>
               ) : createPaymentIntent.isError ? (
                 <div className="text-center py-8">
                   <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-400" />
@@ -826,6 +810,22 @@ export default function PublicResaleCheckoutPage() {
                     Riprova
                   </HapticButton>
                 </div>
+              ) : createPaymentIntent.isPending || validateCaptchaMutation.isPending ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
+                  <p className="text-muted-foreground">Preparazione pagamento...</p>
+                </div>
+              ) : createPaymentIntent.data && elementsOptions && stripePromise ? (
+                <Elements 
+                  stripe={stripePromise} 
+                  options={elementsOptions}
+                >
+                  <PaymentElementWrapper
+                    onReady={() => setIsElementReady(true)}
+                    onStripeReady={(stripe) => { stripeRef.current = stripe; }}
+                    onElementsReady={(elements) => { elementsRef.current = elements; }}
+                  />
+                </Elements>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12">
                   <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
