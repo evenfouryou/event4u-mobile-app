@@ -4971,6 +4971,27 @@ router.post("/api/public/resales/:id/payment-intent", async (req, res) => {
       console.log("[RESALE-PAYMENT-INTENT] CAPTCHA validation passed");
     }
     
+    // CRITICAL: Verifica smart card SIAE PRIMA di creare il payment intent
+    // Non permettiamo pagamenti se non possiamo emettere sigilli fiscali
+    const bridgeConnected = isBridgeConnected();
+    const cardReadiness = isCardReadyForSeals();
+    
+    if (!bridgeConnected || !cardReadiness.ready) {
+      const errorCode = !bridgeConnected ? "SEAL_BRIDGE_OFFLINE" : "SEAL_CARD_NOT_READY";
+      const errorMessage = !bridgeConnected 
+        ? "Sistema sigilli fiscali non disponibile. L'app desktop Event4U deve essere connessa con la smart card SIAE inserita."
+        : `Smart card SIAE non pronta: ${cardReadiness.error}`;
+      
+      console.log(`[RESALE-PAYMENT-INTENT] Blocked: ${errorCode} - ${errorMessage}`);
+      
+      return res.status(503).json({ 
+        message: errorMessage,
+        code: errorCode,
+      });
+    }
+    
+    console.log("[RESALE-PAYMENT-INTENT] Smart card check passed, proceeding with payment intent creation");
+    
     // Get resale with ticket info
     const [resale] = await db
       .select({
@@ -5277,7 +5298,98 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
     // We'll annul it ONLY after successfully creating the new ticket
     // This prevents the ticket from "disappearing" if something fails
     
-    // 3. Try to get real fiscal seal from bridge if available
+    // Get ticketed event for company ID (needed for audit logs)
+    const [ticketedEvent] = await db
+      .select()
+      .from(siaeTicketedEvents)
+      .where(eq(siaeTicketedEvents.id, originalTicket.ticketedEventId));
+    
+    if (!ticketedEvent) {
+      return res.status(500).json({ message: "Evento non trovato" });
+    }
+    
+    // Helper function to refund payment and return error (like normal checkout)
+    const refundAndReturnError = async (errorReason: string, errorCode: string) => {
+      console.log(`[RESALE] Refunding payment due to: ${errorReason}`);
+      
+      try {
+        const refund = await stripeClient.refunds.create({
+          payment_intent: paymentIntentId!,
+          reason: 'requested_by_customer',
+          metadata: {
+            reason: 'fiscal_seal_unavailable_at_confirm',
+            error: errorReason,
+            resaleId: id,
+          }
+        });
+        
+        console.log(`[RESALE] Refund created successfully: ${refund.id}, status: ${refund.status}`);
+        
+        // Update resale status back to listed (undo reservation)
+        await db
+          .update(siaeResales)
+          .set({
+            status: 'listed',
+            buyerId: null,
+            reservedAt: null,
+            reservedUntil: null,
+            stripePaymentIntentId: null,
+            updatedAt: new Date(),
+          })
+          .where(eq(siaeResales.id, id));
+        
+        // Create audit log
+        await siaeStorage.createAuditLog({
+          companyId: ticketedEvent.companyId,
+          userId: 'system',
+          action: 'resale_blocked_no_smartcard',
+          entityType: 'resale',
+          entityId: id,
+          description: `Rivendita bloccata: ${errorReason}. Rimborso effettuato.`,
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+        });
+        
+        return res.status(503).json({ 
+          message: `Sistema sigilli fiscali non disponibile. Il pagamento è stato stornato automaticamente. ${errorReason}`,
+          code: `${errorCode}_REFUNDED`,
+          refunded: true,
+          refundId: refund.id,
+        });
+        
+      } catch (refundError: any) {
+        console.error(`[RESALE] Failed to refund payment:`, refundError.message);
+        
+        // Mark resale as needing manual refund
+        await db
+          .update(siaeResales)
+          .set({
+            status: 'refund_pending',
+            updatedAt: new Date(),
+          })
+          .where(eq(siaeResales.id, id));
+        
+        // Create audit log for failed refund
+        await siaeStorage.createAuditLog({
+          companyId: ticketedEvent.companyId,
+          userId: 'system',
+          action: 'resale_refund_failed',
+          entityType: 'resale',
+          entityId: id,
+          description: `Rivendita bloccata: ${errorReason}. Rimborso FALLITO: ${refundError.message}`,
+          ipAddress: req.ip,
+          userAgent: req.get('user-agent'),
+        });
+        
+        return res.status(503).json({ 
+          message: `Errore critico: sigillo fiscale non disponibile e storno fallito. Contatta l'assistenza per il rimborso.`,
+          code: "SEAL_ERROR_REFUND_FAILED",
+          refunded: false,
+        });
+      }
+    };
+    
+    // 3. CRITICAL: Verify smart card is available (SIAE compliance - no temporary seals allowed)
     const now = new Date();
     const emissionDateStr = now.toISOString().slice(0, 10).replace(/-/g, '');
     const emissionTimeStr = now.toTimeString().slice(0, 5).replace(':', '');
@@ -5290,83 +5402,95 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
     const bridgeStatus = getCachedBridgeStatus();
     console.log(`[RESALE] Bridge status: connected=${bridgeStatus.bridgeConnected}, cardInserted=${bridgeStatus.cardInserted}, readerConnected=${bridgeStatus.readerConnected}`);
     
-    // Only try real seal if bridge is TRULY available (connected + card inserted + reader connected)
-    // Use very strict check to avoid hanging
+    // SIAE COMPLIANCE: Bridge MUST be truly ready (connected + card inserted + reader connected)
+    // If not ready, we MUST refund the payment - no temporary seals allowed
     const bridgeTrulyReady = bridgeStatus.bridgeConnected === true && 
                               bridgeStatus.cardInserted === true && 
                               bridgeStatus.readerConnected === true;
     
-    if (bridgeTrulyReady) {
-      try {
-        // Request real fiscal seal from smart card with outer timeout protection
-        const priceInCents = Math.round(parseFloat(resale.resalePrice) * 100);
-        console.log(`[RESALE] Bridge truly ready, attempting real fiscal seal for ${priceInCents} cents...`);
-        
-        // Use Promise.race with AGGRESSIVE external timeout
-        const SEAL_OUTER_TIMEOUT = 4000; // 4 seconds - fail fast
-        const timeoutPromise = new Promise<never>((_, reject) => 
-          setTimeout(() => {
-            console.log(`[RESALE] OUTER TIMEOUT triggered after ${SEAL_OUTER_TIMEOUT}ms`);
-            reject(new Error('OUTER_TIMEOUT: Timeout esterno sigillo fiscale'));
-          }, SEAL_OUTER_TIMEOUT)
-        );
-        
-        sealData = await Promise.race([
-          requestFiscalSeal(priceInCents),
-          timeoutPromise
-        ]) as any;
-        fiscalSealCode = sealData!.sealCode;
-        fiscalSealCounter = sealData!.counter;
-        cardCode = sealData!.serialNumber;
-        console.log(`[RESALE] Got real fiscal seal: ${fiscalSealCode}`);
-        
-        // Find or create card in database
-        let [bridgeCard] = await db
-          .select()
-          .from(siaeActivationCards)
-          .where(eq(siaeActivationCards.cardCode, sealData!.serialNumber))
-          .limit(1);
-        
-        if (!bridgeCard) {
-          const cachedEfff = getCachedEfffData();
-          const systemCode = cachedEfff?.systemId || process.env.SIAE_SYSTEM_CODE || 'EVENT4U1';
-          const [ticketedEvent] = await db.select().from(siaeTicketedEvents).where(eq(siaeTicketedEvents.id, originalTicket.ticketedEventId));
-          [bridgeCard] = await db
-            .insert(siaeActivationCards)
-            .values({
-              cardCode: sealData!.serialNumber,
-              systemCode: systemCode,
-              companyId: ticketedEvent?.companyId || '',
-              status: "active",
-              activationDate: new Date(),
-              progressiveCounter: sealData!.counter,
-            })
-            .returning();
-        }
-        
-        // Create fiscal seal record for consistency with regular checkout
-        const [fiscalSeal] = await db
-          .insert(siaeFiscalSeals)
+    if (!bridgeTrulyReady) {
+      const errorReason = !bridgeStatus.bridgeConnected 
+        ? "Desktop bridge non connesso" 
+        : !bridgeStatus.readerConnected 
+          ? "Lettore smart card non connesso"
+          : "Smart card SIAE non inserita";
+      
+      console.log(`[RESALE] Bridge not truly ready, blocking operation and refunding: ${errorReason}`);
+      
+      return await refundAndReturnError(errorReason, "SEAL_BRIDGE_OFFLINE");
+    }
+    
+    // Bridge is ready, attempt to get real fiscal seal
+    try {
+      // Request real fiscal seal from smart card with outer timeout protection
+      const priceInCents = Math.round(parseFloat(resale.resalePrice) * 100);
+      console.log(`[RESALE] Bridge truly ready, attempting real fiscal seal for ${priceInCents} cents...`);
+      
+      // Use Promise.race with AGGRESSIVE external timeout
+      const SEAL_OUTER_TIMEOUT = 4000; // 4 seconds - fail fast
+      const timeoutPromise = new Promise<never>((_, reject) => 
+        setTimeout(() => {
+          console.log(`[RESALE] OUTER TIMEOUT triggered after ${SEAL_OUTER_TIMEOUT}ms`);
+          reject(new Error('OUTER_TIMEOUT: Timeout esterno sigillo fiscale'));
+        }, SEAL_OUTER_TIMEOUT)
+      );
+      
+      sealData = await Promise.race([
+        requestFiscalSeal(priceInCents),
+        timeoutPromise
+      ]) as any;
+      fiscalSealCode = sealData!.sealCode;
+      fiscalSealCounter = sealData!.counter;
+      cardCode = sealData!.serialNumber;
+      console.log(`[RESALE] Got real fiscal seal: ${fiscalSealCode}`);
+      
+      // Find or create card in database
+      let [bridgeCard] = await db
+        .select()
+        .from(siaeActivationCards)
+        .where(eq(siaeActivationCards.cardCode, sealData!.serialNumber))
+        .limit(1);
+      
+      if (!bridgeCard) {
+        const cachedEfff = getCachedEfffData();
+        const systemCode = cachedEfff?.systemId || process.env.SIAE_SYSTEM_CODE || 'EVENT4U1';
+        [bridgeCard] = await db
+          .insert(siaeActivationCards)
           .values({
-            cardId: bridgeCard.id,
-            sealCode: sealData!.sealCode,
-            progressiveNumber: sealData!.counter,
-            emissionDate: now.toISOString().slice(5, 10).replace("-", ""),
-            emissionTime: emissionTimeStr,
-            amount: resale.resalePrice.toString().padStart(8, "0"),
+            cardCode: sealData!.serialNumber,
+            systemCode: systemCode,
+            companyId: ticketedEvent.companyId,
+            status: "active",
+            activationDate: new Date(),
+            progressiveCounter: sealData!.counter,
           })
           .returning();
-        
-        fiscalSealId = fiscalSeal.id;
-        
-      } catch (sealError) {
-        console.error(`[RESALE] Failed to get real fiscal seal, using fallback:`, sealError);
-        fiscalSealCode = `R${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
       }
-    } else {
-      // Bridge not truly ready (missing connection, reader, or card), use temporary seal immediately
-      fiscalSealCode = `R${now.getFullYear().toString().slice(-2)}${(now.getMonth() + 1).toString().padStart(2, '0')}${now.getDate().toString().padStart(2, '0')}${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-      console.log(`[RESALE] Bridge not truly ready (connected=${bridgeStatus.bridgeConnected}, cardInserted=${bridgeStatus.cardInserted}, readerConnected=${bridgeStatus.readerConnected}), using temporary seal: ${fiscalSealCode}`);
+      
+      // Create fiscal seal record for consistency with regular checkout
+      const [fiscalSeal] = await db
+        .insert(siaeFiscalSeals)
+        .values({
+          cardId: bridgeCard.id,
+          sealCode: sealData!.sealCode,
+          progressiveNumber: sealData!.counter,
+          emissionDate: now.toISOString().slice(5, 10).replace("-", ""),
+          emissionTime: emissionTimeStr,
+          amount: resale.resalePrice.toString().padStart(8, "0"),
+        })
+        .returning();
+      
+      fiscalSealId = fiscalSeal.id;
+      
+    } catch (sealError: any) {
+      // SIAE COMPLIANCE: If seal fails, refund payment - no temporary seals allowed
+      console.error(`[RESALE] Failed to get fiscal seal, blocking operation and refunding:`, sealError);
+      
+      const errorReason = sealError.message?.includes('TIMEOUT') 
+        ? "Timeout comunicazione smart card SIAE" 
+        : `Errore sigillo fiscale: ${sealError.message || 'errore sconosciuto'}`;
+      
+      return await refundAndReturnError(errorReason, "SEAL_CARD_NOT_READY");
     }
     
     // 5. Create new ticket for buyer with all original ticket data
@@ -5491,7 +5615,7 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
           amount: sellerPayout.toFixed(2),
           description: `Accredito rivendita biglietto ${originalTicket.ticketCode}`,
           resaleId: id,
-          stripePaymentIntentId: session.payment_intent as string,
+          stripePaymentIntentId: paymentIntentId || null,
           status: 'completed',
         })
         .returning();
