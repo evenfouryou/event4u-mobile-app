@@ -826,6 +826,22 @@ export default function PublicResaleCheckoutPage() {
                     onElementsReady={(elements) => { elementsRef.current = elements; }}
                   />
                 </Elements>
+              ) : !paymentIntentCreated.current ? (
+                <div className="flex flex-col items-center justify-center py-12">
+                  <HapticButton
+                    onClick={() => {
+                      if (resale && customer && (resale.status === 'listed' || resale.status === 'reserved')) {
+                        paymentIntentCreated.current = true;
+                        createPaymentIntent.mutate();
+                      }
+                    }}
+                    className="h-12"
+                    hapticType="medium"
+                  >
+                    <CreditCard className="w-5 h-5 mr-2" />
+                    Procedi al pagamento
+                  </HapticButton>
+                </div>
               ) : (
                 <div className="flex flex-col items-center justify-center py-12">
                   <Loader2 className="w-10 h-10 animate-spin text-primary mb-4" />
