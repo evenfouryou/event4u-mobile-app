@@ -12,6 +12,7 @@ import {
   isBridgeConnected,
   getCachedBridgeStatus,
   getCachedEfffData,
+  getBridgeDebugStatus,
   type FiscalSealData 
 } from "./bridge-relay";
 import { creditLoyaltyPoints } from "./loyalty-routes";
@@ -195,8 +196,10 @@ router.get("/api/public/bridge-status", async (req, res) => {
     const bridgeConnected = isBridgeConnected();
     const cardStatus = isCardReadyForSeals();
     const cachedStatus = getCachedBridgeStatus();
+    const debugStatus = getBridgeDebugStatus();
     
     console.log(`[PUBLIC] Bridge status check: connected=${bridgeConnected}, cardReady=${cardStatus.ready}`);
+    console.log(`[PUBLIC] Debug status:`, JSON.stringify(debugStatus, null, 2));
     
     res.json({
       bridgeConnected,
@@ -207,8 +210,15 @@ router.get("/api/public/bridge-status", async (req, res) => {
         cardInserted: cachedStatus?.cardInserted ?? false,
         readerName: cachedStatus?.readerName ?? null,
         cardSerial: cachedStatus?.cardSerial ?? null,
+        cardCertificateCN: cachedStatus?.cardCertificateCN ?? null,
+        cardBalance: cachedStatus?.cardBalance ?? null,
       },
+      debug: debugStatus,
       timestamp: new Date().toISOString(),
+      expectedWebSocketPath: "/ws/bridge",
+      message: bridgeConnected 
+        ? "Bridge connesso correttamente" 
+        : "Bridge non connesso. L'app desktop deve connettersi a: wss://[domain]/ws/bridge"
     });
   } catch (error: any) {
     console.error("[PUBLIC] Bridge status error:", error);

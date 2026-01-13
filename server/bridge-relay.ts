@@ -59,23 +59,87 @@ const activeClients = new Map<string, ClientConnection[]>();
 const HEARTBEAT_INTERVAL = 15000;  // 15 seconds (aligned with desktop app)
 const CONNECTION_TIMEOUT = 20000;  // 20 seconds (15s + 5s grace period)
 
+// DEBUG: Get bridge status for diagnostics
+export function getBridgeDebugStatus(): {
+  globalBridgeExists: boolean;
+  globalBridgeWsState: number | null;
+  globalBridgeWsStateString: string | null;
+  globalBridgeConnectedAt: string | null;
+  globalBridgeLastPing: string | null;
+  cachedBridgeStatus: any;
+  cachedBridgeStatusTimestamp: string | null;
+  cachedBridgeStatusAge: number | null;
+  isStatusFresh: boolean;
+  activeClientsCount: number;
+  masterTokenConfigured: boolean;
+} {
+  const wsStateStrings: Record<number, string> = {
+    0: 'CONNECTING',
+    1: 'OPEN',
+    2: 'CLOSING',
+    3: 'CLOSED'
+  };
+  
+  const statusAge = cachedBridgeStatusTimestamp 
+    ? Date.now() - cachedBridgeStatusTimestamp.getTime() 
+    : null;
+  
+  let clientCount = 0;
+  activeClients.forEach(clients => clientCount += clients.length);
+  
+  return {
+    globalBridgeExists: !!globalBridge,
+    globalBridgeWsState: globalBridge?.ws?.readyState ?? null,
+    globalBridgeWsStateString: globalBridge?.ws?.readyState !== undefined 
+      ? wsStateStrings[globalBridge.ws.readyState] || 'UNKNOWN' 
+      : null,
+    globalBridgeConnectedAt: globalBridge?.connectedAt?.toISOString() ?? null,
+    globalBridgeLastPing: globalBridge?.lastPing?.toISOString() ?? null,
+    cachedBridgeStatus: cachedBridgeStatus,
+    cachedBridgeStatusTimestamp: cachedBridgeStatusTimestamp?.toISOString() ?? null,
+    cachedBridgeStatusAge: statusAge,
+    isStatusFresh: isStatusFresh(),
+    activeClientsCount: clientCount,
+    masterTokenConfigured: !!MASTER_TOKEN
+  };
+}
+
 export function setupBridgeRelay(server: Server): void {
   const wss = new WebSocketServer({ noServer: true });
+  
+  console.log(`[Bridge] ============================================`);
+  console.log(`[Bridge] BRIDGE RELAY STARTUP`);
+  console.log(`[Bridge] MASTER_TOKEN configured: ${!!MASTER_TOKEN}`);
+  console.log(`[Bridge] MASTER_TOKEN first 8 chars: ${MASTER_TOKEN?.substring(0, 8) || 'NONE'}...`);
+  console.log(`[Bridge] ============================================`);
 
   server.on('upgrade', async (request: IncomingMessage, socket, head) => {
     const url = new URL(request.url || '', `http://${request.headers.host}`);
     
+    console.log(`[Bridge] HTTP Upgrade request received: path=${url.pathname}`);
+    
     // Only handle /ws/bridge - let other handlers manage their paths
     if (url.pathname === '/ws/bridge') {
+      console.log(`[Bridge] Handling upgrade for /ws/bridge`);
       wss.handleUpgrade(request, socket, head, (ws) => {
         wss.emit('connection', ws, request);
       });
+    } else {
+      console.log(`[Bridge] Ignoring upgrade for path: ${url.pathname}`);
     }
     // Don't destroy socket for other paths - they may be handled by other WebSocket servers
   });
 
   wss.on('connection', async (ws: WebSocket, request: IncomingMessage) => {
-    console.log('[Bridge] New WebSocket connection');
+    const remoteAddr = request.socket.remoteAddress;
+    const userAgent = request.headers['user-agent']?.substring(0, 50) || 'unknown';
+    console.log(`[Bridge] ============================================`);
+    console.log(`[Bridge] NEW WEBSOCKET CONNECTION`);
+    console.log(`[Bridge] Remote address: ${remoteAddr}`);
+    console.log(`[Bridge] User-Agent: ${userAgent}...`);
+    console.log(`[Bridge] Current globalBridge exists: ${!!globalBridge}`);
+    console.log(`[Bridge] Current globalBridge ws state: ${globalBridge?.ws?.readyState ?? 'N/A'}`);
+    console.log(`[Bridge] ============================================`);
     
     let connectionType: 'bridge' | 'client' | null = null;
     let connectionInfo: { userId?: string; companyId?: string; effectiveCompanyId?: string } = {};
@@ -327,10 +391,18 @@ export function setupBridgeRelay(server: Server): void {
       }
     });
 
-    ws.on('close', () => {
-      console.log(`[Bridge] Connection closed: type=${connectionType}`);
+    ws.on('close', (code: number, reason: Buffer) => {
+      const reasonStr = reason?.toString() || 'no reason';
+      console.log(`[Bridge] ============================================`);
+      console.log(`[Bridge] CONNECTION CLOSED`);
+      console.log(`[Bridge] Type: ${connectionType}`);
+      console.log(`[Bridge] Close code: ${code}`);
+      console.log(`[Bridge] Close reason: ${reasonStr}`);
+      console.log(`[Bridge] Remote address: ${remoteAddr}`);
+      console.log(`[Bridge] ============================================`);
       
       if (connectionType === 'bridge') {
+        console.log(`[Bridge] GLOBAL BRIDGE DISCONNECTED - clearing state`);
         globalBridge = null;
         cachedBridgeStatus = null; // Clear cached status when bridge disconnects
         cachedBridgeStatusTimestamp = null;
@@ -343,6 +415,7 @@ export function setupBridgeRelay(server: Server): void {
         }
         
         // Notify ALL clients that bridge disconnected
+        console.log(`[Bridge] Notifying all clients of bridge disconnection`);
         notifyAllClientsOfBridgeStatus(false);
         console.log(`[Bridge] Global bridge disconnected`);
       } else if (connectionType === 'client' && connectionInfo.effectiveCompanyId && connectionInfo.userId) {
