@@ -156,15 +156,16 @@ export default function AccountTicketDetail() {
     if (showQrCode && ticket?.qrCode) {
       setQrLoading(true);
       const qrSize = 280;
-      const primaryColor = digitalTemplate?.primaryColor || '#000000';
-      const bgColor = '#FFFFFF';
+      // Use dedicated QR colors from template, fallback to black on white for readability
+      const qrForeground = digitalTemplate?.qrForegroundColor || '#000000';
+      const qrBackground = digitalTemplate?.qrBackgroundColor || '#FFFFFF';
       
       QRCodeLib.toDataURL(ticket.qrCode, {
         width: qrSize,
         margin: 2,
         color: {
-          dark: primaryColor,
-          light: bgColor,
+          dark: qrForeground,
+          light: qrBackground,
         },
         errorCorrectionLevel: 'H',
       })

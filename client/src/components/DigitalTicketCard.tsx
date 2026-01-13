@@ -53,6 +53,8 @@ interface DigitalTemplate {
   gradientDirection?: string | null;
   qrSize?: number | null;
   qrPosition?: string | null;
+  qrForegroundColor?: string | null;
+  qrBackgroundColor?: string | null;
   showEventName?: boolean | null;
   showEventDate?: boolean | null;
   showEventTime?: boolean | null;
@@ -88,8 +90,9 @@ export function DigitalTicketCard({ ticket, template }: DigitalTicketCardProps) 
   const showQrCode = (ticket.status === "emitted" || ticket.status === "active" || ticket.status === "valid") && !ticket.isListed && ticket.qrCode;
 
   const qrSizeValue = t.qrSize || 192;
-  const qrDarkColor = t.primaryColor || '#000000';
-  const qrLightColor = t.backgroundColor || '#FFFFFF';
+  // Use dedicated QR colors, fallback to black on white for readability
+  const qrDarkColor = t.qrForegroundColor || '#000000';
+  const qrLightColor = t.qrBackgroundColor || '#FFFFFF';
 
   useEffect(() => {
     if (showQrCode && ticket.qrCode) {
