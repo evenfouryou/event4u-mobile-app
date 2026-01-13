@@ -1,0 +1,102 @@
+2026-01-13 17:08:44.89
+644401de
+User
+PASSES ALL FILTERS: YES
+2026-01-13 17:08:44.89
+644401de
+User
+=== PUBLIC EVENTS DEBUG END ===
+2026-01-13 17:08:44.89
+644401de
+User
+endDatetime: Wed Jan 14 2026 02:00:00 GMT+0000 (Coordinated Universal Time) > 2026-01-13T16:08:44.861Z = true ✓
+2026-01-13 17:08:44.96
+644401de
+User
+4:08:44 PM [express] GET /api/public/events 304 in 126ms :: [{"id":"4db1e8b4-b5d4-4519-9970-d39df44f…
+2026-01-13 17:08:44.98
+644401de
+User
+4:08:44 PM [express] GET /api/public/event-categories 304 in 146ms :: []
+2026-01-13 17:08:44.98
+644401de
+User
+4:08:44 PM [express] GET /api/public/customers/me 304 in 144ms :: {"id":"6f8df413-3db5-4c11-8c26-bda…
+2026-01-13 17:08:46.64
+644401de
+User
+4:08:46 PM [express] GET /api/stripe/config 200 in 50ms
+2026-01-13 17:08:46.64
+644401de
+User
+4:08:46 PM [express] GET /api/public/resales/9c961bc8-26f1-487f-a988-604b3453d37b 304 in 69ms :: {"i…
+2026-01-13 17:08:46.97
+644401de
+User
+4:08:46 PM [express] GET /api/public/captcha/generate 200 in 81ms :: {"token":"aec23df4dfa6d30f267d0…
+2026-01-13 17:08:47.65
+644401de
+User
+[Bridge] Message received: type=ping
+2026-01-13 17:08:53.41
+644401de
+User
+4:08:53 PM [express] POST /api/public/captcha/validate 200 in 47ms :: {"valid":true,"token":"aec23df…
+2026-01-13 17:08:53.72
+644401de
+User
+[RESALE-PAYMENT-INTENT] CAPTCHA validation passed
+2026-01-13 17:08:53.72
+644401de
+User
+[Bridge] cachedBridgeStatus: {"type":"status","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":"4130313238343837","cardCounter":266,"cardBalance":423761,"cardKeyId":129,"cardAtr":null,"cardEmail":"tickefouryou@gmail.com","cardCertificateCN":"PETRELLI/JONATHAN/PTRJTH93M11I156B","cardCertificateExpiry":"2028-03-06","demoMode":false,"canEmitTickets":true,"relayConnected":true,"pinLocked":false,"pinRequired":false}}
+2026-01-13 17:08:53.72
+644401de
+User
+[Bridge] Extracted status: {"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":"4130313238343837","cardCounter":266,"cardBalance":423761,"cardKeyId":129,"cardAtr":null,"cardEmail":"tickefouryou@gmail.com","cardCertificateCN":"PETRELLI/JONATHAN/PTRJTH93M11I156B","cardCertificateExpiry":"2028-03-06","demoMode":false,"canEmitTickets":true,"relayConnected":true,"pinLocked":false,"pinRequired":false}
+2026-01-13 17:08:53.72
+644401de
+User
+[Bridge] globalBridge exists: true
+2026-01-13 17:08:53.72
+644401de
+User
+[Bridge] isCardReadyForSeals called
+2026-01-13 17:08:53.72
+644401de
+User
+[Bridge] ensureCardReadyForSeals called
+2026-01-13 17:08:53.72
+644401de
+User
+[RESALE-PAYMENT-INTENT] Smart card check passed, proceeding with payment intent creation
+2026-01-13 17:08:53.72
+644401de
+User
+[Bridge] Card ready for seals!
+2026-01-13 17:08:53.72
+644401de
+User
+[Bridge] Normalized values: readerConnected=true, cardInserted=true
+2026-01-13 17:08:54.12
+644401de
+User
+[RESALE-PAYMENT-INTENT] Created PaymentIntent pi_3SpA9K083fDHdLKV1hvi6puW for resale 9c961bc8-26f1-487f-a988-604b3453d37b, buyer 6f8df413-3db5-4c11-8c26-bda179d489be
+2026-01-13 17:08:54.15
+644401de
+User
+4:08:54 PM [express] POST /api/public/resales/9c961bc8-26f1-487f-a988-604b3453d37b/payment-intent 20…
+2026-01-13 17:08:59.08
+644401de
+User
+[Bridge] Message received: type=pong
+2026-01-13 17:08:59.08
+644401de
+User
+[Bridge] Message received: type=pong
+2026-01-13 17:09:02.66
+644401de
+User
+[Bridge] Message received: type=ping
+Wrap
+Colors
