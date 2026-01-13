@@ -142,6 +142,7 @@ interface BottomSheetProps {
   title?: string;
   snapPoints?: number[];
   className?: string;
+  contentClassName?: string;
 }
 
 export function BottomSheet({
@@ -150,6 +151,7 @@ export function BottomSheet({
   children,
   title,
   className,
+  contentClassName,
 }: BottomSheetProps) {
   const handleDragEnd = useCallback((_: any, info: PanInfo) => {
     if (info.velocity.y > 500 || info.offset.y > 100) {
@@ -203,7 +205,7 @@ export function BottomSheet({
               </div>
             )}
             
-            <div className="flex-1 overflow-y-auto overscroll-contain">
+            <div className={cn("flex-1 overflow-y-auto overscroll-contain", contentClassName)}>
               {children}
             </div>
           </motion.div>

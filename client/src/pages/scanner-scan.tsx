@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useDeferredValue } from "react";
+import { useState, useRef, useEffect, useCallback, useDeferredValue, startTransition } from "react";
 import { useParams, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -406,24 +406,36 @@ export default function ScannerScanPage() {
   handleScanRef.current = handleScan;
 
   // Effect-based search using deferred value to prevent camera interference
-  // This runs separately from the main render cycle, avoiding re-renders during typing
+  // Skip search when scanner is actively processing to avoid blocking the camera loop
+  // Use requestIdleCallback when available for non-blocking JSON parsing
   useEffect(() => {
     // Don't search if query is too short
     if (deferredSearchQuery.trim().length < 2) {
-      setSearchResults([]);
-      setIsSearching(false);
+      startTransition(() => {
+        setSearchResults([]);
+        setIsSearching(false);
+      });
       return;
     }
     
     // Don't search for QR codes - those go directly to scanner
     if (deferredSearchQuery.startsWith('E4U-')) {
-      setIsSearching(false);
+      startTransition(() => {
+        setIsSearching(false);
+      });
+      return;
+    }
+    
+    // Skip search entirely when scanner is actively processing to keep camera smooth
+    if (isProcessing || scanPaused) {
       return;
     }
     
     // Perform search with abort controller for cleanup
     const abortController = new AbortController();
-    setIsSearching(true);
+    startTransition(() => {
+      setIsSearching(true);
+    });
     
     const doSearch = async () => {
       try {
@@ -431,30 +443,47 @@ export default function ScannerScanPage() {
           `/api/e4u/scanner/search/${eventId}?q=${encodeURIComponent(deferredSearchQuery)}`,
           { signal: abortController.signal }
         );
-        const data = await response.json();
-        if (!abortController.signal.aborted) {
-          setSearchResults(data);
+        
+        // Use requestIdleCallback for JSON parsing to avoid blocking camera
+        const parseAndUpdate = async () => {
+          const data = await response.json();
+          if (!abortController.signal.aborted) {
+            startTransition(() => {
+              setSearchResults(data);
+            });
+          }
+        };
+        
+        if ('requestIdleCallback' in window) {
+          (window as any).requestIdleCallback(() => parseAndUpdate(), { timeout: 500 });
+        } else {
+          // Fallback: use setTimeout with 0 to yield to camera
+          setTimeout(() => parseAndUpdate(), 0);
         }
       } catch (error: any) {
         if (error.name !== 'AbortError') {
           console.error('[Scanner] Search error:', error);
-          setSearchResults([]);
+          startTransition(() => {
+            setSearchResults([]);
+          });
         }
       } finally {
         if (!abortController.signal.aborted) {
-          setIsSearching(false);
+          startTransition(() => {
+            setIsSearching(false);
+          });
         }
       }
     };
     
-    // Small delay to batch multiple deferred updates
-    const timeoutId = setTimeout(doSearch, 150);
+    // Increased delay to 300ms for less frequent network calls during typing
+    const timeoutId = setTimeout(doSearch, 300);
     
     return () => {
       clearTimeout(timeoutId);
       abortController.abort();
     };
-  }, [deferredSearchQuery, eventId]);
+  }, [deferredSearchQuery, eventId, isProcessing, scanPaused]);
 
   const handleSearchResultClick = (result: any) => {
     if (result.qrCode) {
@@ -1457,60 +1486,60 @@ export default function ScannerScanPage() {
         </div>
       </BottomSheet>
 
-      {/* Scan Confirmation BottomSheet - Responsive for mobile screens */}
+      {/* Scan Confirmation BottomSheet - 3-section layout for small screens */}
       <BottomSheet
         open={showConfirmModal}
         onClose={handleConfirmScan}
-        title={
-          scanResult?.success 
-            ? "Check-in Effettuato" 
-            : scanResult?.alreadyCheckedIn 
-              ? "Già Entrato" 
-              : "Errore"
-        }
+        className="max-h-[80dvh]"
       >
-        <div className="px-4 pb-6">
-          {/* Status Icon Header */}
-          <div className="flex justify-center mb-4">
-            <motion.div
-              initial={{ scale: 0, rotate: -180 }}
-              animate={{ scale: 1, rotate: 0 }}
-              transition={{ type: "spring", stiffness: 400, damping: 30 }}
-              className={`w-16 h-16 rounded-full flex items-center justify-center ${
-                scanResult?.success 
-                  ? 'bg-emerald-500/20' 
-                  : scanResult?.alreadyCheckedIn 
-                    ? 'bg-amber-500/20' 
-                    : 'bg-rose-500/20'
-              }`}
-            >
-              {scanResult?.success ? (
-                <CheckCircle2 className="w-9 h-9 text-emerald-500" />
-              ) : scanResult?.alreadyCheckedIn ? (
-                <AlertTriangle className="w-9 h-9 text-amber-500" />
-              ) : (
-                <XCircle className="w-9 h-9 text-rose-500" />
-              )}
-            </motion.div>
-          </div>
-
-          {/* Person Info - Compact layout for mobile */}
-          {scanResult?.person && (
-            <div className="space-y-2">
-              {/* Name - Large and centered */}
-              <div className="text-center mb-3">
-                <p className="text-xl font-bold text-foreground" data-testid="confirm-person-name">
-                  {scanResult.person.firstName} {scanResult.person.lastName}
+        <div className="flex flex-col h-full max-h-[calc(80dvh-48px)]">
+          {/* Fixed Header: Icon + Name + Status */}
+          <div className="shrink-0 px-4 pt-2 pb-3 border-b border-border/50">
+            <div className="flex items-center gap-3">
+              <motion.div
+                initial={{ scale: 0, rotate: -180 }}
+                animate={{ scale: 1, rotate: 0 }}
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                className={`w-12 h-12 rounded-full flex items-center justify-center shrink-0 ${
+                  scanResult?.success 
+                    ? 'bg-emerald-500/20' 
+                    : scanResult?.alreadyCheckedIn 
+                      ? 'bg-amber-500/20' 
+                      : 'bg-rose-500/20'
+                }`}
+              >
+                {scanResult?.success ? (
+                  <CheckCircle2 className="w-7 h-7 text-emerald-500" />
+                ) : scanResult?.alreadyCheckedIn ? (
+                  <AlertTriangle className="w-7 h-7 text-amber-500" />
+                ) : (
+                  <XCircle className="w-7 h-7 text-rose-500" />
+                )}
+              </motion.div>
+              <div className="min-w-0 flex-1">
+                <p className="text-lg font-bold text-foreground truncate" data-testid="confirm-person-name">
+                  {scanResult?.person ? `${scanResult.person.firstName} ${scanResult.person.lastName}` : (
+                    scanResult?.success ? "Check-in Effettuato" : scanResult?.alreadyCheckedIn ? "Già Entrato" : "Errore"
+                  )}
+                </p>
+                <p className={`text-sm ${
+                  scanResult?.success ? 'text-emerald-500' : scanResult?.alreadyCheckedIn ? 'text-amber-500' : 'text-rose-500'
+                }`}>
+                  {scanResult?.success ? "Check-in OK" : scanResult?.alreadyCheckedIn ? "Già registrato" : "Non valido"}
                 </p>
               </div>
-              
-              {/* Info Grid - 2 columns for compact display */}
+            </div>
+          </div>
+
+          {/* Scrollable Content: Details */}
+          <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-3 min-h-0">
+            {scanResult?.person && (
               <div className="grid grid-cols-2 gap-2">
                 {/* Ticket info */}
                 {scanResult.person.type === 'biglietto' && (
                   <>
                     {scanResult.person.ticketType && (
-                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/50">
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
                         <Ticket className="w-4 h-4 text-primary shrink-0" />
                         <div className="min-w-0">
                           <p className="text-[10px] text-muted-foreground">Tipo</p>
@@ -1522,7 +1551,7 @@ export default function ScannerScanPage() {
                     )}
                     
                     {scanResult.person.sector && (
-                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/50">
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-muted/50">
                         <MapPin className="w-4 h-4 text-primary shrink-0" />
                         <div className="min-w-0">
                           <p className="text-[10px] text-muted-foreground">Settore</p>
@@ -1534,7 +1563,7 @@ export default function ScannerScanPage() {
                     )}
                     
                     {scanResult.person.price && (
-                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/50 col-span-2">
+                      <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/10 col-span-2">
                         <CreditCard className="w-4 h-4 text-emerald-500 shrink-0" />
                         <div>
                           <p className="text-[10px] text-muted-foreground">Prezzo</p>
@@ -1549,7 +1578,7 @@ export default function ScannerScanPage() {
 
                 {/* List info */}
                 {(scanResult.person.type === 'lista' || scanResult.person.type === 'prenotazione_lista') && scanResult.person.listName && (
-                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-500/10 col-span-2">
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-blue-500/10 col-span-2">
                     <Users className="w-4 h-4 text-blue-500 shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-muted-foreground">Lista</p>
@@ -1563,7 +1592,7 @@ export default function ScannerScanPage() {
 
                 {/* Table info */}
                 {(scanResult.person.type === 'tavolo' || scanResult.person.type === 'prenotazione_tavolo') && (scanResult.person.tableName || scanResult.person.tableTypeName) && (
-                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-purple-500/10 col-span-2">
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-purple-500/10 col-span-2">
                     <Armchair className="w-4 h-4 text-purple-500 shrink-0" />
                     <div className="min-w-0 flex-1">
                       <p className="text-[10px] text-muted-foreground">Tavolo</p>
@@ -1577,7 +1606,7 @@ export default function ScannerScanPage() {
 
                 {/* Amount */}
                 {scanResult.person.amount && (
-                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 col-span-2">
+                  <div className="flex items-center gap-2 p-2 rounded-lg bg-emerald-500/10 col-span-2">
                     <CreditCard className="w-4 h-4 text-emerald-500 shrink-0" />
                     <div>
                       <p className="text-[10px] text-muted-foreground">Importo</p>
@@ -1588,38 +1617,40 @@ export default function ScannerScanPage() {
                   </div>
                 )}
               </div>
-            </div>
-          )}
+            )}
+            
+            {/* Error messages */}
+            {!scanResult?.success && scanResult?.message && (
+              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20">
+                <p className="text-rose-400 text-center text-sm">{scanResult.message}</p>
+              </div>
+            )}
+            
+            {!scanResult?.success && scanResult?.error && (
+              <div className="p-3 rounded-lg bg-rose-500/10 border border-rose-500/20">
+                <p className="text-rose-400 text-center text-sm">{scanResult.error}</p>
+              </div>
+            )}
+          </div>
           
-          {/* Error messages */}
-          {!scanResult?.success && scanResult?.message && (
-            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 mt-3">
-              <p className="text-rose-400 text-center text-sm">{scanResult.message}</p>
-            </div>
-          )}
-          
-          {!scanResult?.success && scanResult?.error && (
-            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 mt-3">
-              <p className="text-rose-400 text-center text-sm">{scanResult.error}</p>
-            </div>
-          )}
-          
-          {/* Action button */}
-          <HapticButton
-            onClick={handleConfirmScan}
-            className={`w-full h-14 text-lg rounded-xl mt-4 ${
-              scanResult?.success 
-                ? 'bg-emerald-500 hover:bg-emerald-600' 
-                : scanResult?.alreadyCheckedIn
-                  ? 'bg-amber-500 hover:bg-amber-600'
-                  : 'bg-rose-500 hover:bg-rose-600'
-            }`}
-            hapticType="medium"
-            data-testid="button-confirm-scan"
-          >
-            <CheckCircle2 className="w-5 h-5 mr-2" />
-            Prossimo ({autoCloseCountdown}s)
-          </HapticButton>
+          {/* Fixed Footer: Action button with safe-area */}
+          <div className="shrink-0 px-4 pt-2 pb-4 border-t border-border/50" style={{ paddingBottom: 'max(16px, env(safe-area-inset-bottom))' }}>
+            <HapticButton
+              onClick={handleConfirmScan}
+              className={`w-full h-12 text-base rounded-xl ${
+                scanResult?.success 
+                  ? 'bg-emerald-500 hover:bg-emerald-600' 
+                  : scanResult?.alreadyCheckedIn
+                    ? 'bg-amber-500 hover:bg-amber-600'
+                    : 'bg-rose-500 hover:bg-rose-600'
+              }`}
+              hapticType="medium"
+              data-testid="button-confirm-scan"
+            >
+              <CheckCircle2 className="w-5 h-5 mr-2" />
+              Prossimo ({autoCloseCountdown}s)
+            </HapticButton>
+          </div>
         </div>
       </BottomSheet>
 
