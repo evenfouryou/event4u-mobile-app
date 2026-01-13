@@ -2148,10 +2148,10 @@ router.post("/api/public/checkout/confirm", async (req, res) => {
               holderLastName: item.participantLastName || customer.lastName,
               status: 'active',
               qrCode,
-              fiscalSealId: sealData.sealId || null,
+              fiscalSealId: sealData.sealNumber || null,
               fiscalSealCode: sealData.sealCode,
               fiscalSealCounter: sealData.counter,
-              cardCode: subCard?.serialNumber || sealData.serialNumber || null,
+              cardCode: subCard?.cardCode || sealData.serialNumber || null,
               emissionChannelCode: 'WEB',
               emissionDate: new Date(),
               ticketedEventId: ticketedEvent.id,
@@ -6392,7 +6392,7 @@ router.get("/api/public/events/:eventId/seats", async (req, res) => {
         opacity: zone.opacity,
         capacity: zone.capacity,
         sectorId: mapping?.sectorId || null,
-        sectorName: sector?.sectorName || null,
+        sectorName: sector?.name || null,
         price: mapping?.priceOverride || sector?.priceIntero || null,
         seats: seatsWithStatus,
       };
@@ -6400,11 +6400,10 @@ router.get("/api/public/events/:eventId/seats", async (req, res) => {
 
     const sectorsResponse = sectors.map(s => ({
       id: s.id,
-      name: s.sectorName,
+      name: s.name,
       sectorCode: s.sectorCode,
       priceIntero: s.priceIntero,
       priceRidotto: s.priceRidotto,
-      ticketType: s.ticketType,
     }));
 
     res.json({
