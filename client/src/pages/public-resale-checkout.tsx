@@ -283,7 +283,8 @@ export default function PublicResaleCheckoutPage() {
     },
   });
 
-  const canProceedWithPayment = !captchaData?.enabled || (captchaData?.enabled && captchaValidated);
+  // Can proceed only when: CAPTCHA is loaded AND (disabled OR validated)
+  const canProceedWithPayment = captchaData !== null && (captchaData.enabled === false || captchaValidated);
 
   const createPaymentIntent = useMutation({
     mutationFn: async () => {
@@ -673,9 +674,9 @@ export default function PublicResaleCheckoutPage() {
                 </h2>
               </div>
               <div className="p-4 space-y-4">
-                <div className="flex items-center gap-4">
+                <div className="flex items-center gap-3 flex-wrap">
                   <div 
-                    className="bg-white rounded-lg p-2 border flex-shrink-0"
+                    className="bg-white rounded-lg p-2 border max-w-[200px] w-full overflow-hidden [&_svg]:w-full [&_svg]:h-auto"
                     dangerouslySetInnerHTML={{ __html: captchaData.svg }}
                     data-testid="captcha-image"
                   />
