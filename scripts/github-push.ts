@@ -5,10 +5,6 @@ import * as path from 'path';
 let connectionSettings: any;
 
 async function getAccessToken() {
-  if (connectionSettings && connectionSettings.settings.expires_at && new Date(connectionSettings.settings.expires_at).getTime() > Date.now()) {
-    return connectionSettings.settings.access_token;
-  }
-  
   const hostname = process.env.REPLIT_CONNECTORS_HOSTNAME;
   const xReplitToken = process.env.REPL_IDENTITY 
     ? 'repl ' + process.env.REPL_IDENTITY 
@@ -30,7 +26,7 @@ async function getAccessToken() {
     }
   ).then(res => res.json()).then(data => data.items?.[0]);
 
-  const accessToken = connectionSettings?.settings?.access_token || connectionSettings.settings?.oauth?.credentials?.access_token;
+  const accessToken = connectionSettings?.settings?.access_token || connectionSettings?.settings?.oauth?.credentials?.access_token;
 
   if (!connectionSettings || !accessToken) {
     throw new Error('GitHub not connected');
@@ -40,104 +36,87 @@ async function getAccessToken() {
 
 async function pushToGitHub() {
   const accessToken = await getAccessToken();
-  const octokit = new Octokit({ auth: accessToken });
   
   const owner = 'evenfouryou';
-  const repo = 'event-four-you-siae-lettore';
+  const repo = 'Event-Four-You-2026';
   const branch = 'main';
   
-  console.log('Getting current commit SHA...');
+  console.log('Pushing files to Event-Four-You-2026 via REST API...\n');
   
-  let currentSha: string = '';
-  try {
-    const { data: ref } = await octokit.git.getRef({
-      owner,
-      repo,
-      ref: `heads/${branch}`
-    });
-    currentSha = ref.object.sha;
-    console.log('Current SHA:', currentSha);
-  } catch (e: any) {
-    console.log('Branch not found, will create new:', e.message);
-  }
+  // Files to push
+  const filesToPush = [
+    '.github/workflows/android-build.yml',
+    '.github/workflows/ios-build.yml',
+    'capacitor.config.ts',
+    'client/src/workers/scanner-search.worker.ts',
+    'client/src/hooks/use-scanner-search-worker.ts'
+  ];
   
-  const baseDir = '/home/runner/workspace/desktop-app/SiaeBridge';
-  const files: { path: string; content: string }[] = [];
-  
-  function readDir(dir: string, prefix: string = '') {
-    const entries = fs.readdirSync(dir, { withFileTypes: true });
-    for (const entry of entries) {
-      const fullPath = path.join(dir, entry.name);
-      const relativePath = prefix ? `${prefix}/${entry.name}` : entry.name;
-      
-      if (entry.isDirectory()) {
-        if (entry.name !== 'bin' && entry.name !== 'obj' && entry.name !== '.git') {
-          readDir(fullPath, relativePath);
+  for (const filePath of filesToPush) {
+    const fullPath = path.join('/home/runner/workspace', filePath);
+    if (!fs.existsSync(fullPath)) {
+      console.log(`⚠ Skipping ${filePath} - not found`);
+      continue;
+    }
+    
+    const content = fs.readFileSync(fullPath);
+    const base64Content = content.toString('base64');
+    
+    // Check if file exists to get SHA
+    let sha: string | undefined;
+    try {
+      const checkResponse = await fetch(
+        `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(filePath)}?ref=${branch}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'Accept': 'application/vnd.github.v3+json',
+            'X-GitHub-Api-Version': '2022-11-28'
+          }
         }
-      } else {
-        const content = fs.readFileSync(fullPath, 'base64');
-        files.push({ path: relativePath, content });
+      );
+      if (checkResponse.ok) {
+        const data = await checkResponse.json();
+        sha = data.sha;
       }
+    } catch (e) {
+      // File doesn't exist, that's fine
+    }
+    
+    console.log(`Pushing ${filePath}${sha ? ' (updating)' : ' (creating)'}...`);
+    
+    const response = await fetch(
+      `https://api.github.com/repos/${owner}/${repo}/contents/${encodeURIComponent(filePath)}`,
+      {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Accept': 'application/vnd.github.v3+json',
+          'Content-Type': 'application/json',
+          'X-GitHub-Api-Version': '2022-11-28'
+        },
+        body: JSON.stringify({
+          message: `Add/update ${path.basename(filePath)}`,
+          content: base64Content,
+          branch,
+          ...(sha ? { sha } : {})
+        })
+      }
+    );
+    
+    if (!response.ok) {
+      const error = await response.text();
+      console.error(`✗ Failed to push ${filePath}:`, response.status, error);
+    } else {
+      console.log(`✓ ${filePath}`);
     }
   }
   
-  readDir(baseDir);
-  console.log(`Found ${files.length} files to push`);
-  
-  const blobs = await Promise.all(files.map(async (file) => {
-    const { data } = await octokit.git.createBlob({
-      owner,
-      repo,
-      content: file.content,
-      encoding: 'base64'
-    });
-    return { path: file.path, sha: data.sha };
-  }));
-  
-  console.log('Created blobs');
-  
-  const { data: tree } = await octokit.git.createTree({
-    owner,
-    repo,
-    tree: blobs.map(b => ({
-      path: b.path,
-      mode: '100644' as const,
-      type: 'blob' as const,
-      sha: b.sha
-    }))
-  });
-  
-  console.log('Created tree:', tree.sha);
-  
-  const { data: commit } = await octokit.git.createCommit({
-    owner,
-    repo,
-    message: 'Add S/MIME OPAQUE format and debug logging for SIAE compliance',
-    tree: tree.sha,
-    parents: currentSha ? [currentSha] : []
-  });
-  
-  console.log('Created commit:', commit.sha);
-  
-  try {
-    await octokit.git.updateRef({
-      owner,
-      repo,
-      ref: `heads/${branch}`,
-      sha: commit.sha,
-      force: true
-    });
-  } catch (e) {
-    await octokit.git.createRef({
-      owner,
-      repo,
-      ref: `refs/heads/${branch}`,
-      sha: commit.sha
-    });
-  }
-  
-  console.log('✅ Pushed to GitHub successfully!');
-  console.log(`https://github.com/${owner}/${repo}`);
+  console.log('\n✅ Push complete!');
+  console.log(`\nCheck build progress at:\nhttps://github.com/${owner}/${repo}/actions`);
 }
 
-pushToGitHub().catch(console.error);
+pushToGitHub().catch(e => {
+  console.error('Error:', e.message);
+  process.exit(1);
+});
