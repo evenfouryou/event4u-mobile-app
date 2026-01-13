@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useDeferredValue } from "react";
 import { useParams, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -201,6 +201,7 @@ export default function ScannerScanPage() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
+  const deferredSearchQuery = useDeferredValue(searchQuery);
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
@@ -404,42 +405,56 @@ export default function ScannerScanPage() {
   // Keep the ref updated with the latest handleScan
   handleScanRef.current = handleScan;
 
-  // Debounced search to prevent excessive re-renders and camera interference
-  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  
-  const handleSearch = useCallback((query: string) => {
-    // Clear any pending search
-    if (searchTimeoutRef.current) {
-      clearTimeout(searchTimeoutRef.current);
-      searchTimeoutRef.current = null;
-    }
-    
-    if (query.trim().length < 2) {
+  // Effect-based search using deferred value to prevent camera interference
+  // This runs separately from the main render cycle, avoiding re-renders during typing
+  useEffect(() => {
+    // Don't search if query is too short
+    if (deferredSearchQuery.trim().length < 2) {
       setSearchResults([]);
       setIsSearching(false);
       return;
     }
     
-    if (query.startsWith('E4U-')) {
+    // Don't search for QR codes - those go directly to scanner
+    if (deferredSearchQuery.startsWith('E4U-')) {
       setIsSearching(false);
       return;
     }
     
-    // Debounce the search to prevent too many API calls and re-renders
+    // Perform search with abort controller for cleanup
+    const abortController = new AbortController();
     setIsSearching(true);
-    searchTimeoutRef.current = setTimeout(async () => {
+    
+    const doSearch = async () => {
       try {
-        const response = await fetch(`/api/e4u/scanner/search/${eventId}?q=${encodeURIComponent(query)}`);
+        const response = await fetch(
+          `/api/e4u/scanner/search/${eventId}?q=${encodeURIComponent(deferredSearchQuery)}`,
+          { signal: abortController.signal }
+        );
         const data = await response.json();
-        setSearchResults(data);
-      } catch (error) {
-        console.error('[Scanner] Search error:', error);
-        setSearchResults([]);
+        if (!abortController.signal.aborted) {
+          setSearchResults(data);
+        }
+      } catch (error: any) {
+        if (error.name !== 'AbortError') {
+          console.error('[Scanner] Search error:', error);
+          setSearchResults([]);
+        }
       } finally {
-        setIsSearching(false);
+        if (!abortController.signal.aborted) {
+          setIsSearching(false);
+        }
       }
-    }, 300); // 300ms debounce
-  }, [eventId]);
+    };
+    
+    // Small delay to batch multiple deferred updates
+    const timeoutId = setTimeout(doSearch, 150);
+    
+    return () => {
+      clearTimeout(timeoutId);
+      abortController.abort();
+    };
+  }, [deferredSearchQuery, eventId]);
 
   const handleSearchResultClick = (result: any) => {
     if (result.qrCode) {
@@ -515,11 +530,6 @@ export default function ScannerScanPage() {
     
     return () => {
       clearTimeout(timer);
-      // Cleanup search timeout
-      if (searchTimeoutRef.current) {
-        clearTimeout(searchTimeoutRef.current);
-        searchTimeoutRef.current = null;
-      }
       if (scannerRef.current) {
         scannerRef.current.stop().catch(() => {});
       }
@@ -599,10 +609,7 @@ export default function ScannerScanPage() {
                     ref={inputRef}
                     placeholder="Cerca nome, telefono o codice QR..."
                     value={searchQuery}
-                    onChange={(e) => {
-                      setSearchQuery(e.target.value);
-                      handleSearch(e.target.value);
-                    }}
+                    onChange={(e) => setSearchQuery(e.target.value)}
                     onKeyDown={(e) => {
                       if (e.key === 'Enter' && searchQuery.trim()) {
                         if (searchQuery.startsWith('E4U-')) {
@@ -1240,7 +1247,6 @@ export default function ScannerScanPage() {
               value={searchQuery}
               onChange={(e) => {
                 setSearchQuery(e.target.value);
-                handleSearch(e.target.value);
                 if (e.target.value) setShowSearch(true);
               }}
               onFocus={() => setShowSearch(true)}
@@ -1451,58 +1457,64 @@ export default function ScannerScanPage() {
         </div>
       </BottomSheet>
 
-      {/* Scan Confirmation Modal */}
-      <Dialog open={showConfirmModal} onOpenChange={(open) => !open && handleConfirmScan()}>
-        <DialogContent className="max-w-md mx-4 rounded-2xl border-0 bg-card/95 backdrop-blur-xl">
-          <DialogHeader className="pb-2">
-            <DialogTitle className="flex items-center gap-3 text-xl">
+      {/* Scan Confirmation BottomSheet - Responsive for mobile screens */}
+      <BottomSheet
+        open={showConfirmModal}
+        onClose={handleConfirmScan}
+        title={
+          scanResult?.success 
+            ? "Check-in Effettuato" 
+            : scanResult?.alreadyCheckedIn 
+              ? "Già Entrato" 
+              : "Errore"
+        }
+      >
+        <div className="px-4 pb-6">
+          {/* Status Icon Header */}
+          <div className="flex justify-center mb-4">
+            <motion.div
+              initial={{ scale: 0, rotate: -180 }}
+              animate={{ scale: 1, rotate: 0 }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className={`w-16 h-16 rounded-full flex items-center justify-center ${
+                scanResult?.success 
+                  ? 'bg-emerald-500/20' 
+                  : scanResult?.alreadyCheckedIn 
+                    ? 'bg-amber-500/20' 
+                    : 'bg-rose-500/20'
+              }`}
+            >
               {scanResult?.success ? (
-                <>
-                  <div className="w-12 h-12 rounded-full bg-emerald-500/20 flex items-center justify-center">
-                    <CheckCircle2 className="w-7 h-7 text-emerald-500" />
-                  </div>
-                  <span className="text-emerald-500">Check-in Effettuato</span>
-                </>
+                <CheckCircle2 className="w-9 h-9 text-emerald-500" />
               ) : scanResult?.alreadyCheckedIn ? (
-                <>
-                  <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center">
-                    <AlertTriangle className="w-7 h-7 text-amber-500" />
-                  </div>
-                  <span className="text-amber-500">Già Entrato</span>
-                </>
+                <AlertTriangle className="w-9 h-9 text-amber-500" />
               ) : (
-                <>
-                  <div className="w-12 h-12 rounded-full bg-rose-500/20 flex items-center justify-center">
-                    <XCircle className="w-7 h-7 text-rose-500" />
-                  </div>
-                  <span className="text-rose-500">Errore</span>
-                </>
+                <XCircle className="w-9 h-9 text-rose-500" />
               )}
-            </DialogTitle>
-          </DialogHeader>
-          
-          <div className="space-y-4 py-4">
-            {scanResult?.person && (
-              <div className="space-y-3">
-                <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
-                  <User className="w-5 h-5 text-primary shrink-0" />
-                  <div>
-                    <p className="text-xs text-muted-foreground">Nome e Cognome</p>
-                    <p className="font-semibold text-lg" data-testid="confirm-person-name">
-                      {scanResult.person.firstName} {scanResult.person.lastName}
-                    </p>
-                  </div>
-                </div>
-                
-                {/* Ticket info - uses person fields from backend */}
+            </motion.div>
+          </div>
+
+          {/* Person Info - Compact layout for mobile */}
+          {scanResult?.person && (
+            <div className="space-y-2">
+              {/* Name - Large and centered */}
+              <div className="text-center mb-3">
+                <p className="text-xl font-bold text-foreground" data-testid="confirm-person-name">
+                  {scanResult.person.firstName} {scanResult.person.lastName}
+                </p>
+              </div>
+              
+              {/* Info Grid - 2 columns for compact display */}
+              <div className="grid grid-cols-2 gap-2">
+                {/* Ticket info */}
                 {scanResult.person.type === 'biglietto' && (
                   <>
                     {scanResult.person.ticketType && (
-                      <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
-                        <Ticket className="w-5 h-5 text-primary shrink-0" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Tipo Biglietto</p>
-                          <p className="font-semibold" data-testid="confirm-ticket-type">
+                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/50">
+                        <Ticket className="w-4 h-4 text-primary shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-muted-foreground">Tipo</p>
+                          <p className="font-medium text-sm truncate" data-testid="confirm-ticket-type">
                             {scanResult.person.ticketType}
                           </p>
                         </div>
@@ -1510,11 +1522,11 @@ export default function ScannerScanPage() {
                     )}
                     
                     {scanResult.person.sector && (
-                      <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
-                        <MapPin className="w-5 h-5 text-primary shrink-0" />
-                        <div>
-                          <p className="text-xs text-muted-foreground">Settore</p>
-                          <p className="font-semibold" data-testid="confirm-sector">
+                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/50">
+                        <MapPin className="w-4 h-4 text-primary shrink-0" />
+                        <div className="min-w-0">
+                          <p className="text-[10px] text-muted-foreground">Settore</p>
+                          <p className="font-medium text-sm truncate" data-testid="confirm-sector">
                             {scanResult.person.sector}
                           </p>
                         </div>
@@ -1522,10 +1534,10 @@ export default function ScannerScanPage() {
                     )}
                     
                     {scanResult.person.price && (
-                      <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
-                        <CreditCard className="w-5 h-5 text-primary shrink-0" />
+                      <div className="flex items-center gap-2 p-2.5 rounded-xl bg-muted/50 col-span-2">
+                        <CreditCard className="w-4 h-4 text-emerald-500 shrink-0" />
                         <div>
-                          <p className="text-xs text-muted-foreground">Prezzo</p>
+                          <p className="text-[10px] text-muted-foreground">Prezzo</p>
                           <p className="font-semibold text-emerald-500" data-testid="confirm-ticket-price">
                             €{Number(scanResult.person.price).toFixed(2)}
                           </p>
@@ -1535,13 +1547,13 @@ export default function ScannerScanPage() {
                   </>
                 )}
 
-                {/* List/Table info */}
+                {/* List info */}
                 {(scanResult.person.type === 'lista' || scanResult.person.type === 'prenotazione_lista') && scanResult.person.listName && (
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
-                    <Users className="w-5 h-5 text-blue-500 shrink-0" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Lista</p>
-                      <p className="font-semibold" data-testid="confirm-list-name">
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-blue-500/10 col-span-2">
+                    <Users className="w-4 h-4 text-blue-500 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] text-muted-foreground">Lista</p>
+                      <p className="font-medium text-sm truncate" data-testid="confirm-list-name">
                         {scanResult.person.listName}
                         {scanResult.person.plusOnes ? ` (+${scanResult.person.plusOnes})` : ''}
                       </p>
@@ -1549,12 +1561,13 @@ export default function ScannerScanPage() {
                   </div>
                 )}
 
+                {/* Table info */}
                 {(scanResult.person.type === 'tavolo' || scanResult.person.type === 'prenotazione_tavolo') && (scanResult.person.tableName || scanResult.person.tableTypeName) && (
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
-                    <Armchair className="w-5 h-5 text-purple-500 shrink-0" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">Tavolo</p>
-                      <p className="font-semibold" data-testid="confirm-table-name">
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-purple-500/10 col-span-2">
+                    <Armchair className="w-4 h-4 text-purple-500 shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-[10px] text-muted-foreground">Tavolo</p>
+                      <p className="font-medium text-sm truncate" data-testid="confirm-table-name">
                         {scanResult.person.tableName || scanResult.person.tableTypeName}
                         {scanResult.person.guestCount ? ` (${scanResult.person.guestCount} ospiti)` : ''}
                       </p>
@@ -1562,11 +1575,12 @@ export default function ScannerScanPage() {
                   </div>
                 )}
 
+                {/* Amount */}
                 {scanResult.person.amount && (
-                  <div className="flex items-center gap-3 p-3 rounded-xl bg-muted/50">
-                    <CreditCard className="w-5 h-5 text-primary shrink-0" />
+                  <div className="flex items-center gap-2 p-2.5 rounded-xl bg-emerald-500/10 col-span-2">
+                    <CreditCard className="w-4 h-4 text-emerald-500 shrink-0" />
                     <div>
-                      <p className="text-xs text-muted-foreground">Importo</p>
+                      <p className="text-[10px] text-muted-foreground">Importo</p>
                       <p className="font-semibold text-emerald-500" data-testid="confirm-amount">
                         €{scanResult.person.amount}
                       </p>
@@ -1574,24 +1588,26 @@ export default function ScannerScanPage() {
                   </div>
                 )}
               </div>
-            )}
-            
-            {!scanResult?.success && scanResult?.message && (
-              <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20">
-                <p className="text-rose-400 text-center">{scanResult.message}</p>
-              </div>
-            )}
-            
-            {!scanResult?.success && scanResult?.error && (
-              <div className="p-4 rounded-xl bg-rose-500/10 border border-rose-500/20">
-                <p className="text-rose-400 text-center">{scanResult.error}</p>
-              </div>
-            )}
-          </div>
+            </div>
+          )}
           
+          {/* Error messages */}
+          {!scanResult?.success && scanResult?.message && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 mt-3">
+              <p className="text-rose-400 text-center text-sm">{scanResult.message}</p>
+            </div>
+          )}
+          
+          {!scanResult?.success && scanResult?.error && (
+            <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 mt-3">
+              <p className="text-rose-400 text-center text-sm">{scanResult.error}</p>
+            </div>
+          )}
+          
+          {/* Action button */}
           <HapticButton
             onClick={handleConfirmScan}
-            className={`w-full h-14 text-lg rounded-xl ${
+            className={`w-full h-14 text-lg rounded-xl mt-4 ${
               scanResult?.success 
                 ? 'bg-emerald-500 hover:bg-emerald-600' 
                 : scanResult?.alreadyCheckedIn
@@ -1604,8 +1620,8 @@ export default function ScannerScanPage() {
             <CheckCircle2 className="w-5 h-5 mr-2" />
             Prossimo ({autoCloseCountdown}s)
           </HapticButton>
-        </DialogContent>
-      </Dialog>
+        </div>
+      </BottomSheet>
 
       {/* No Results Message */}
       <AnimatePresence>
