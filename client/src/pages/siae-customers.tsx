@@ -33,6 +33,13 @@ import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -67,6 +74,7 @@ import {
   Shield,
   ChevronRight,
   ArrowLeft,
+  Calendar,
 } from "lucide-react";
 import { format } from "date-fns";
 import { it } from "date-fns/locale";
@@ -207,9 +215,23 @@ export default function SiaeCustomersPage() {
   const [isOtpDialogOpen, setIsOtpDialogOpen] = useState(false);
   const [isActionDialogOpen, setIsActionDialogOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedEventId, setSelectedEventId] = useState<string>("");
+
+  const { data: events = [], isLoading: isLoadingEvents } = useQuery<{ id: number; name: string; startDate: string }[]>({
+    queryKey: ["/api/siae/ticketed-events"],
+  });
+
+  const customersQueryUrl = selectedEventId 
+    ? `/api/siae/customers?eventId=${selectedEventId}` 
+    : "/api/siae/customers";
 
   const { data: customers = [], isLoading, refetch } = useQuery<SiaeCustomer[]>({
-    queryKey: ["/api/siae/customers"],
+    queryKey: ["/api/siae/customers", selectedEventId],
+    queryFn: async () => {
+      const response = await fetch(customersQueryUrl, { credentials: "include" });
+      if (!response.ok) throw new Error("Failed to fetch customers");
+      return response.json();
+    },
   });
 
   const form = useForm<CustomerFormData>({
@@ -523,15 +545,34 @@ export default function SiaeCustomersPage() {
           <CardHeader>
             <div className="flex items-center justify-between gap-4">
               <CardTitle>{t('siae.customersPage.customerList')}</CardTitle>
-              <div className="relative w-64">
-                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                <Input
-                  placeholder={t('siae.customersPage.searchPlaceholder')}
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="pl-10"
-                  data-testid="input-search"
-                />
+              <div className="flex items-center gap-3">
+                <div className="relative w-64">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                  <Input
+                    placeholder={t('siae.customersPage.searchPlaceholder')}
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="pl-10"
+                    data-testid="input-search"
+                  />
+                </div>
+                <Select
+                  value={selectedEventId}
+                  onValueChange={(value) => setSelectedEventId(value === "all" ? "" : value)}
+                >
+                  <SelectTrigger className="w-[220px]" data-testid="select-event-filter">
+                    <Calendar className="w-4 h-4 mr-2 text-muted-foreground" />
+                    <SelectValue placeholder="Tutti gli eventi" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all" data-testid="select-event-all">Tutti gli eventi</SelectItem>
+                    {events.map((event) => (
+                      <SelectItem key={event.id} value={String(event.id)} data-testid={`select-event-${event.id}`}>
+                        {event.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
           </CardHeader>
@@ -1052,7 +1093,7 @@ export default function SiaeCustomersPage() {
           initial={{ opacity: 0, y: -10 }}
           animate={{ opacity: 1, y: 0 }}
           transition={springConfig}
-          className="sticky top-0 z-20 py-3 bg-background/95 backdrop-blur-sm"
+          className="sticky top-0 z-20 py-3 bg-background/95 backdrop-blur-sm space-y-3"
         >
           <div className="relative">
             <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
@@ -1064,6 +1105,23 @@ export default function SiaeCustomersPage() {
               data-testid="input-search"
             />
           </div>
+          <Select
+            value={selectedEventId}
+            onValueChange={(value) => setSelectedEventId(value === "all" ? "" : value)}
+          >
+            <SelectTrigger className="h-12 text-base rounded-xl bg-card border-border" data-testid="select-event-filter-mobile">
+              <Calendar className="w-5 h-5 mr-2 text-muted-foreground" />
+              <SelectValue placeholder="Tutti gli eventi" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Tutti gli eventi</SelectItem>
+              {events.map((event) => (
+                <SelectItem key={event.id} value={String(event.id)}>
+                  {event.name}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </motion.div>
 
         {isLoading ? (

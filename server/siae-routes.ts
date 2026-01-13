@@ -1232,11 +1232,95 @@ router.put("/api/siae/companies/:companyId/config", requireAuth, requireGestore,
 
 // ==================== Customers (Public - for registration) ====================
 
+// Endpoint per ottenere i clienti filtrati per evento e company del gestore
 router.get("/api/siae/customers", requireAuth, requireGestore, async (req: Request, res: Response) => {
   try {
-    const customers = await siaeStorage.getSiaeCustomers();
-    res.json(customers);
+    const user = req.user as any;
+    const { eventId } = req.query;
+    
+    // Super admin può vedere tutti i clienti
+    if (user.role === 'super_admin') {
+      const customers = await siaeStorage.getSiaeCustomers();
+      return res.json(customers);
+    }
+    
+    // Gestore deve avere una companyId
+    if (!user.companyId) {
+      return res.status(403).json({ message: "Nessuna azienda associata" });
+    }
+    
+    // Se viene fornito un eventId, restituisci solo i clienti che hanno acquistato biglietti per quell'evento
+    if (eventId && typeof eventId === 'string') {
+      // Verifica che l'evento appartenga alla company del gestore
+      const [ticketedEvent] = await db
+        .select()
+        .from(siaeTicketedEvents)
+        .where(and(
+          eq(siaeTicketedEvents.id, eventId),
+          eq(siaeTicketedEvents.companyId, user.companyId)
+        ));
+      
+      if (!ticketedEvent) {
+        return res.status(403).json({ message: "Evento non trovato o non autorizzato" });
+      }
+      
+      // Ottieni i clienti che hanno acquistato biglietti per questo evento
+      const customersWithTickets = await db
+        .selectDistinct({
+          id: siaeCustomers.id,
+          uniqueCode: siaeCustomers.uniqueCode,
+          firstName: siaeCustomers.firstName,
+          lastName: siaeCustomers.lastName,
+          email: siaeCustomers.email,
+          phone: siaeCustomers.phone,
+          phoneVerified: siaeCustomers.phoneVerified,
+          emailVerified: siaeCustomers.emailVerified,
+          isActive: siaeCustomers.isActive,
+          blockedUntil: siaeCustomers.blockedUntil,
+          blockReason: siaeCustomers.blockReason,
+          birthDate: siaeCustomers.birthDate,
+          birthPlace: siaeCustomers.birthPlace,
+          registrationCompleted: siaeCustomers.registrationCompleted,
+          createdAt: siaeCustomers.createdAt,
+          updatedAt: siaeCustomers.updatedAt,
+        })
+        .from(siaeCustomers)
+        .innerJoin(siaeTickets, eq(siaeTickets.customerId, siaeCustomers.id))
+        .where(eq(siaeTickets.ticketedEventId, eventId))
+        .orderBy(desc(siaeCustomers.createdAt));
+      
+      return res.json(customersWithTickets);
+    }
+    
+    // Senza eventId, restituisci tutti i clienti che hanno acquistato biglietti per eventi della company
+    const customersForCompany = await db
+      .selectDistinct({
+        id: siaeCustomers.id,
+        uniqueCode: siaeCustomers.uniqueCode,
+        firstName: siaeCustomers.firstName,
+        lastName: siaeCustomers.lastName,
+        email: siaeCustomers.email,
+        phone: siaeCustomers.phone,
+        phoneVerified: siaeCustomers.phoneVerified,
+        emailVerified: siaeCustomers.emailVerified,
+        isActive: siaeCustomers.isActive,
+        blockedUntil: siaeCustomers.blockedUntil,
+        blockReason: siaeCustomers.blockReason,
+        birthDate: siaeCustomers.birthDate,
+        birthPlace: siaeCustomers.birthPlace,
+        registrationCompleted: siaeCustomers.registrationCompleted,
+        createdAt: siaeCustomers.createdAt,
+        updatedAt: siaeCustomers.updatedAt,
+      })
+      .from(siaeCustomers)
+      .innerJoin(siaeTickets, eq(siaeTickets.customerId, siaeCustomers.id))
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .where(eq(siaeTicketedEvents.companyId, user.companyId))
+      .orderBy(desc(siaeCustomers.createdAt));
+    
+    res.json(customersForCompany);
   } catch (error: any) {
+    console.error("[SIAE] Error fetching customers:", error);
     res.status(500).json({ message: error.message });
   }
 });
