@@ -102,12 +102,12 @@ const featuresList: FeatureConfig[] = [
   { key: 'badgesEnabled', label: 'Badge Scuola', description: 'Creazione badge digitali', icon: <GraduationCap className="h-4 w-4" />, category: 'general' },
   { key: 'cassaBigliettiEnabled', label: 'Cassa Biglietti', description: 'Vendita biglietti cassa', icon: <Store className="h-4 w-4" />, category: 'general' },
   { key: 'templateEnabled', label: 'Template Digitali', description: 'Creazione template QR e digitali', icon: <QrCode className="h-4 w-4" />, category: 'general' },
+  { key: 'marketingEnabled', label: 'Marketing', description: 'Campagne email, loyalty, referral e bundle', icon: <Megaphone className="h-4 w-4" />, category: 'general' },
   // Event Hub modules
   { key: 'guestListEnabled', label: 'Liste Ospiti', description: 'Gestione liste ospiti e inviti', icon: <ClipboardList className="h-4 w-4" />, category: 'eventhub' },
   { key: 'tablesEnabled', label: 'Tavoli', description: 'Gestione prenotazioni tavoli VIP', icon: <Armchair className="h-4 w-4" />, category: 'eventhub' },
   { key: 'pageEditorEnabled', label: 'Editor Pagina', description: 'Personalizzazione pagina evento pubblica', icon: <Palette className="h-4 w-4" />, category: 'eventhub' },
   { key: 'resaleEnabled', label: 'Rivendita', description: 'Marketplace rivendita biglietti (Secondary Ticketing)', icon: <RefreshCw className="h-4 w-4" />, category: 'eventhub' },
-  { key: 'marketingEnabled', label: 'Marketing', description: 'Campagne email e notifiche push', icon: <Megaphone className="h-4 w-4" />, category: 'eventhub' },
   { key: 'accessControlEnabled', label: 'Controllo Accessi', description: 'Gestione ingressi e permessi', icon: <ShieldCheck className="h-4 w-4" />, category: 'eventhub' },
   { key: 'financeEnabled', label: 'Finanza', description: 'Report finanziari e pagamenti', icon: <Euro className="h-4 w-4" />, category: 'eventhub' },
   // PR modules
