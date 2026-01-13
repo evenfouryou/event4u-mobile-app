@@ -281,8 +281,13 @@ export function setupBridgeRelay(server: Server): void {
             console.log(`[Bridge] STATUS_RESPONSE payload:`, JSON.stringify(message.payload, null, 2));
             
             const payload = message.payload || {};
-            const isSuccess = payload.success === true;
-            const hasError = !!payload.error || !isSuccess;
+            // FIX: Treat response as success if no explicit error is present
+            // Desktop bridge may not send explicit success:true flag
+            const hasExplicitError = !!payload.error;
+            const isSuccess = payload.success === true || (!hasExplicitError && (payload.readerConnected !== undefined || payload.cardInserted !== undefined || payload.bridgeConnected !== undefined));
+            const hasError = hasExplicitError;
+            
+            console.log(`[Bridge] STATUS_RESPONSE evaluation: hasExplicitError=${hasExplicitError}, isSuccess=${isSuccess}, payload keys: ${Object.keys(payload).join(',')}`);
             
             // Only update cached status with fresh data if response is successful
             // This prevents transient errors from corrupting known-good state
