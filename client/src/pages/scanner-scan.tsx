@@ -404,28 +404,42 @@ export default function ScannerScanPage() {
   // Keep the ref updated with the latest handleScan
   handleScanRef.current = handleScan;
 
-  const handleSearch = async (query: string) => {
+  // Debounced search to prevent excessive re-renders and camera interference
+  const searchTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  
+  const handleSearch = useCallback((query: string) => {
+    // Clear any pending search
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+      searchTimeoutRef.current = null;
+    }
+    
     if (query.trim().length < 2) {
       setSearchResults([]);
+      setIsSearching(false);
       return;
     }
     
     if (query.startsWith('E4U-')) {
+      setIsSearching(false);
       return;
     }
     
+    // Debounce the search to prevent too many API calls and re-renders
     setIsSearching(true);
-    try {
-      const response = await fetch(`/api/e4u/scanner/search/${eventId}?q=${encodeURIComponent(query)}`);
-      const data = await response.json();
-      setSearchResults(data);
-    } catch (error) {
-      console.error('Search error:', error);
-      setSearchResults([]);
-    } finally {
-      setIsSearching(false);
-    }
-  };
+    searchTimeoutRef.current = setTimeout(async () => {
+      try {
+        const response = await fetch(`/api/e4u/scanner/search/${eventId}?q=${encodeURIComponent(query)}`);
+        const data = await response.json();
+        setSearchResults(data);
+      } catch (error) {
+        console.error('[Scanner] Search error:', error);
+        setSearchResults([]);
+      } finally {
+        setIsSearching(false);
+      }
+    }, 300); // 300ms debounce
+  }, [eventId]);
 
   const handleSearchResultClick = (result: any) => {
     if (result.qrCode) {
@@ -501,6 +515,11 @@ export default function ScannerScanPage() {
     
     return () => {
       clearTimeout(timer);
+      // Cleanup search timeout
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+        searchTimeoutRef.current = null;
+      }
       if (scannerRef.current) {
         scannerRef.current.stop().catch(() => {});
       }
