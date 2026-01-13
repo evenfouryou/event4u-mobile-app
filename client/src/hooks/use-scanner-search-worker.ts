@@ -68,18 +68,22 @@ export function useScannerSearchWorker({
     }
 
     // Don't search if too short or is a QR code
+    // IMPORTANT: Increment requestId to invalidate any pending worker responses
     if (query.trim().length < 2) {
+      requestIdRef.current += 1; // Invalidate pending responses
       setResults([]);
       setIsSearching(false);
       return;
     }
 
     if (query.startsWith('E4U-')) {
+      requestIdRef.current += 1; // Invalidate pending responses
       setIsSearching(false);
       return;
     }
 
     if (!workerRef.current || !eventId) {
+      requestIdRef.current += 1; // Invalidate pending responses
       return;
     }
 

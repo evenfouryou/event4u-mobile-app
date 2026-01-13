@@ -1,4 +1,5 @@
-import { useState, useRef, useEffect, useCallback, useDeferredValue, startTransition } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
+import { useScannerSearchWorker } from "@/hooks/use-scanner-search-worker";
 import { useParams, Link } from "wouter";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
@@ -201,10 +202,15 @@ export default function ScannerScanPage() {
   const [cameraError, setCameraError] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
-  const deferredSearchQuery = useDeferredValue(searchQuery);
-  const [searchResults, setSearchResults] = useState<any[]>([]);
-  const [isSearching, setIsSearching] = useState(false);
   const [showHistory, setShowHistory] = useState(false);
+  
+  // Web Worker for search - runs in separate thread, never blocks camera
+  const { 
+    search: workerSearch, 
+    results: searchResults, 
+    isSearching, 
+    clearResults: clearSearchResults 
+  } = useScannerSearchWorker({ eventId, enabled: true });
   const [showSearch, setShowSearch] = useState(false);
   const [flashEnabled, setFlashEnabled] = useState(false);
   const [viewfinderState, setViewfinderState] = useState<"idle" | "scanning" | "success" | "error">("idle");
@@ -235,7 +241,7 @@ export default function ScannerScanPage() {
       };
       setRecentScans(prev => [newScan, ...prev.slice(0, 99)]);
       setSearchQuery("");
-      setSearchResults([]);
+      clearSearchResults();
       setShowSearch(false);
       setIsProcessing(false);
       
@@ -405,85 +411,10 @@ export default function ScannerScanPage() {
   // Keep the ref updated with the latest handleScan
   handleScanRef.current = handleScan;
 
-  // Effect-based search using deferred value to prevent camera interference
-  // Skip search when scanner is actively processing to avoid blocking the camera loop
-  // Use requestIdleCallback when available for non-blocking JSON parsing
+  // Trigger worker search when query changes - completely off main thread
   useEffect(() => {
-    // Don't search if query is too short
-    if (deferredSearchQuery.trim().length < 2) {
-      startTransition(() => {
-        setSearchResults([]);
-        setIsSearching(false);
-      });
-      return;
-    }
-    
-    // Don't search for QR codes - those go directly to scanner
-    if (deferredSearchQuery.startsWith('E4U-')) {
-      startTransition(() => {
-        setIsSearching(false);
-      });
-      return;
-    }
-    
-    // Skip search entirely when scanner is actively processing to keep camera smooth
-    if (isProcessing || scanPaused) {
-      return;
-    }
-    
-    // Perform search with abort controller for cleanup
-    const abortController = new AbortController();
-    startTransition(() => {
-      setIsSearching(true);
-    });
-    
-    const doSearch = async () => {
-      try {
-        const response = await fetch(
-          `/api/e4u/scanner/search/${eventId}?q=${encodeURIComponent(deferredSearchQuery)}`,
-          { signal: abortController.signal }
-        );
-        
-        // Use requestIdleCallback for JSON parsing to avoid blocking camera
-        const parseAndUpdate = async () => {
-          const data = await response.json();
-          if (!abortController.signal.aborted) {
-            startTransition(() => {
-              setSearchResults(data);
-            });
-          }
-        };
-        
-        if ('requestIdleCallback' in window) {
-          (window as any).requestIdleCallback(() => parseAndUpdate(), { timeout: 500 });
-        } else {
-          // Fallback: use setTimeout with 0 to yield to camera
-          setTimeout(() => parseAndUpdate(), 0);
-        }
-      } catch (error: any) {
-        if (error.name !== 'AbortError') {
-          console.error('[Scanner] Search error:', error);
-          startTransition(() => {
-            setSearchResults([]);
-          });
-        }
-      } finally {
-        if (!abortController.signal.aborted) {
-          startTransition(() => {
-            setIsSearching(false);
-          });
-        }
-      }
-    };
-    
-    // Increased delay to 300ms for less frequent network calls during typing
-    const timeoutId = setTimeout(doSearch, 300);
-    
-    return () => {
-      clearTimeout(timeoutId);
-      abortController.abort();
-    };
-  }, [deferredSearchQuery, eventId, isProcessing, scanPaused]);
+    workerSearch(searchQuery);
+  }, [searchQuery, workerSearch]);
 
   const handleSearchResultClick = (result: any) => {
     if (result.qrCode) {
@@ -656,7 +587,7 @@ export default function ScannerScanPage() {
                       className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
                       onClick={() => {
                         setSearchQuery("");
-                        setSearchResults([]);
+                        clearSearchResults();
                       }}
                     >
                       <X className="h-4 w-4" />
@@ -1296,7 +1227,7 @@ export default function ScannerScanPage() {
                 className="absolute right-3 top-1/2 -translate-y-1/2 h-11 w-11 text-white/60 rounded-xl"
                 onClick={() => {
                   setSearchQuery("");
-                  setSearchResults([]);
+                  clearSearchResults();
                   setShowSearch(false);
                 }}
                 hapticType="light"
