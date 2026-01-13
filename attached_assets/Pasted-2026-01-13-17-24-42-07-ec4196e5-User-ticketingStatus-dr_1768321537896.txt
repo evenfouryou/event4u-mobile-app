@@ -1,0 +1,158 @@
+2026-01-13 17:24:42.07
+ec4196e5
+User
+ticketingStatus: draft (needs: active) ✗
+2026-01-13 17:24:42.07
+ec4196e5
+User
+eventStatus: closed (needs: scheduled/ongoing) ✗
+2026-01-13 17:24:42.07
+ec4196e5
+User
+EVENT 7: prova 13/01
+2026-01-13 17:24:42.07
+ec4196e5
+User
+endDatetime: Sun Jan 04 2026 16:02:00 GMT+0000 (Coordinated Universal Time) > 2026-01-13T16:24:42.040Z = false ✗
+2026-01-13 17:24:42.07
+ec4196e5
+User
+PASSES ALL FILTERS: NO
+2026-01-13 17:24:42.07
+ec4196e5
+User
+ticketingStatus: active (needs: active) ✓
+2026-01-13 17:24:42.07
+ec4196e5
+User
+endDatetime: Wed Dec 31 2025 22:30:00 GMT+0000 (Coordinated Universal Time) > 2026-01-13T16:24:42.040Z = false ✗
+2026-01-13 17:24:42.07
+ec4196e5
+User
+EVENT 5: PROVA 28-12
+2026-01-13 17:24:42.11
+ec4196e5
+User
+4:24:42 PM [express] GET /api/public/event-categories 304 in 71ms :: []
+2026-01-13 17:24:42.14
+ec4196e5
+User
+4:24:42 PM [express] GET /api/public/events 304 in 123ms :: [{"id":"4db1e8b4-b5d4-4519-9970-d39df44f…
+2026-01-13 17:24:43.37
+ec4196e5
+User
+4:24:43 PM [express] GET /api/public/resales 304 in 75ms :: [{"id":"9c961bc8-26f1-487f-a988-604b3453…
+2026-01-13 17:24:44.43
+644401de
+User
+[Bridge] Message received: type=pong
+2026-01-13 17:24:44.72
+ec4196e5
+User
+4:24:44 PM [express] GET /api/public/resales/9c961bc8-26f1-487f-a988-604b3453d37b 304 in 71ms :: {"i…
+2026-01-13 17:24:45.06
+ec4196e5
+User
+4:24:45 PM [express] GET /api/public/captcha/generate 200 in 97ms :: {"token":"03f62d6779037a8103911…
+2026-01-13 17:24:52.19
+ec4196e5
+User
+4:24:52 PM [express] POST /api/public/captcha/validate 200 in 48ms :: {"valid":true,"token":"03f62d6…
+2026-01-13 17:24:52.44
+ec4196e5
+User
+[RESALE-PAYMENT-INTENT] Blocked: Card not ready - App desktop Event4U non connessa
+2026-01-13 17:24:52.44
+ec4196e5
+User
+[RESALE-PAYMENT-INTENT] CAPTCHA validation passed
+2026-01-13 17:24:52.44
+ec4196e5
+User
+[Bridge] ensureCardReadyForSeals called
+2026-01-13 17:24:52.44
+ec4196e5
+User
+[Bridge] Bridge not connected
+2026-01-13 17:24:52.47
+ec4196e5
+User
+4:24:52 PM [express] POST /api/public/resales/9c961bc8-26f1-487f-a988-604b3453d37b/payment-intent 50…
+2026-01-13 17:24:55.03
+644401de
+User
+[Bridge] Message received: type=ping
+2026-01-13 17:24:59.36
+644401de
+User
+[Bridge] Message received: type=pong
+2026-01-13 17:25:01.37
+ec4196e5
+User
+4:25:01 PM [express] POST /api/public/resales/9c961bc8-26f1-487f-a988-604b3453d37b/payment-intent 40…
+2026-01-13 17:25:01.70
+ec4196e5
+User
+4:25:01 PM [express] GET /api/public/captcha/generate 200 in 86ms :: {"token":"7d5fee355369ec0a76aac…
+2026-01-13 17:25:10.05
+644401de
+User
+[Bridge] Message received: type=ping
+2026-01-13 17:25:12.46
+ec4196e5
+User
+4:25:12 PM [express] POST /api/public/captcha/validate 200 in 186ms :: {"valid":true,"token":"7d5fee…
+2026-01-13 17:25:12.85
+ec4196e5
+User
+[Bridge] ensureCardReadyForSeals called
+2026-01-13 17:25:12.85
+ec4196e5
+User
+[RESALE-PAYMENT-INTENT] CAPTCHA validation passed
+2026-01-13 17:25:12.85
+ec4196e5
+User
+[Bridge] Bridge not connected
+2026-01-13 17:25:12.85
+ec4196e5
+User
+[RESALE-PAYMENT-INTENT] Blocked: Card not ready - App desktop Event4U non connessa
+2026-01-13 17:25:12.87
+ec4196e5
+User
+4:25:12 PM [express] POST /api/public/resales/9c961bc8-26f1-487f-a988-604b3453d37b/payment-intent 50…
+2026-01-13 17:25:13.98
+ec4196e5
+User
+4:25:13 PM [express] POST /api/public/resales/9c961bc8-26f1-487f-a988-604b3453d37b/payment-intent 40…
+2026-01-13 17:25:14.36
+644401de
+User
+[Bridge] Message received: type=pong
+2026-01-13 17:25:14.38
+ec4196e5
+User
+4:25:14 PM [express] GET /api/public/captcha/generate 200 in 74ms :: {"token":"da1c6a5b565686b04fb7b…
+2026-01-13 17:25:14.38
+ec4196e5
+User
+4:25:14 PM [express] GET /api/public/captcha/generate 200 in 74ms :: {"token":"da1c6a5b565686b04fb7b…
+2026-01-13 17:25:14.38
+ec4196e5
+User
+4:25:14 PM [express] GET /api/public/captcha/generate 200 in 74ms :: {"token":"da1c6a5b565686b04fb7b…
+2026-01-13 17:25:14.38
+ec4196e5
+User
+4:25:14 PM [express] GET /api/public/captcha/generate 200 in 74ms :: {"token":"da1c6a5b565686b04fb7b…
+2026-01-13 17:25:25.05
+644401de
+User
+[Bridge] Message received: type=ping
+2026-01-13 17:25:29.37
+644401de
+User
+[Bridge] Message received: type=pong
+Wrap
+C
