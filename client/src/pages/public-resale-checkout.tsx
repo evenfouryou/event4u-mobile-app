@@ -458,6 +458,35 @@ export default function PublicResaleCheckoutPage() {
             return;
           }
           
+          // Try automatic recovery for stuck transactions
+          console.log("[Checkout] Attempting automatic recovery...");
+          try {
+            const recoveryResponse = await fetch(`/api/public/resales/${id}/recover`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              credentials: 'include',
+              body: JSON.stringify({ token: createPaymentIntent.data?.confirmToken }),
+            });
+            
+            if (recoveryResponse.ok) {
+              const recoveryResult = await recoveryResponse.json();
+              if (recoveryResult.success || recoveryResult.alreadyCompleted) {
+                console.log("[Checkout] Recovery successful:", recoveryResult);
+                triggerHaptic('success');
+                toast({
+                  title: "Acquisto completato!",
+                  description: recoveryResult.recovered 
+                    ? "Transazione recuperata con successo." 
+                    : "Il biglietto è stato trasferito al tuo account.",
+                });
+                navigate(`/account/resale-success?resale_id=${id}&success=true`);
+                return;
+              }
+            }
+          } catch (recoveryError) {
+            console.error("[Checkout] Recovery failed:", recoveryError);
+          }
+          
           // Parse error response for better messaging
           let errorMessage = confirmError.message || "Errore nella conferma acquisto";
           let wasRefunded = false;

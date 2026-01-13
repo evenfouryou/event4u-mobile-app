@@ -5756,6 +5756,149 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
   }
 });
 
+// Recovery endpoint for stuck "processing" resales
+router.post("/api/public/resales/:id/recover", async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { token } = req.body;
+    
+    console.log(`[RESALE-RECOVERY] Starting recovery for resale ${id}`);
+    
+    // Get current resale state
+    const [resale] = await db
+      .select()
+      .from(siaeResales)
+      .where(eq(siaeResales.id, id));
+    
+    if (!resale) {
+      return res.status(404).json({ message: "Rivendita non trovata" });
+    }
+    
+    // Validate token if provided (for security)
+    if (token && resale.confirmToken && token !== resale.confirmToken) {
+      return res.status(403).json({ message: "Token non valido" });
+    }
+    
+    // Only recover if stuck in processing
+    if (resale.status !== 'processing') {
+      return res.json({ 
+        success: true, 
+        message: `Rivendita già in stato: ${resale.status}`,
+        status: resale.status,
+        alreadyCompleted: resale.status === 'fulfilled'
+      });
+    }
+    
+    // Check if new ticket was already created
+    const [existingNewTicket] = await db
+      .select()
+      .from(siaeTickets)
+      .where(and(
+        eq(siaeTickets.originalTicketId, resale.originalTicketId),
+        eq(siaeTickets.paymentMethod, 'resale')
+      ));
+    
+    if (existingNewTicket) {
+      console.log(`[RESALE-RECOVERY] Found existing new ticket ${existingNewTicket.id}, completing fulfillment...`);
+      
+      // Get original ticket for info
+      const [originalTicket] = await db
+        .select()
+        .from(siaeTickets)
+        .where(eq(siaeTickets.id, resale.originalTicketId));
+      
+      // Annul original ticket if not already done
+      if (originalTicket && originalTicket.status !== 'annullato_rivendita') {
+        await db
+          .update(siaeTickets)
+          .set({ 
+            status: 'annullato_rivendita',
+            cancellationReasonCode: 'RESALE',
+            cancellationDate: new Date(),
+            replacedByTicketId: existingNewTicket.id,
+            updatedAt: new Date(),
+          })
+          .where(eq(siaeTickets.id, resale.originalTicketId));
+        console.log(`[RESALE-RECOVERY] Annulled original ticket ${resale.originalTicketId}`);
+      }
+      
+      // Mark resale as fulfilled
+      await db
+        .update(siaeResales)
+        .set({
+          status: 'fulfilled',
+          newTicketId: existingNewTicket.id,
+          fulfilledAt: new Date(),
+          paidAt: resale.paidAt || new Date(),
+          soldAt: resale.soldAt || new Date(),
+          originalTicketAnnulledAt: new Date(),
+          updatedAt: new Date(),
+          confirmToken: null,
+        })
+        .where(eq(siaeResales.id, id));
+      
+      // Credit seller wallet if not already done
+      const existingWalletTx = await db
+        .select()
+        .from(siaeWalletTransactions)
+        .where(eq(siaeWalletTransactions.resaleId, id))
+        .limit(1);
+      
+      if (existingWalletTx.length === 0) {
+        let sellerPayout = parseFloat(resale.sellerPayout || '0');
+        if (sellerPayout <= 0) {
+          const resalePrice = parseFloat(resale.resalePrice);
+          const platformFee = Math.round(resalePrice * 5) / 100;
+          sellerPayout = resalePrice - platformFee;
+        }
+        
+        if (sellerPayout > 0) {
+          const [walletTx] = await db
+            .insert(siaeWalletTransactions)
+            .values({
+              customerId: resale.sellerId,
+              type: 'resale_credit',
+              amount: sellerPayout.toFixed(2),
+              description: `Accredito rivendita biglietto ${originalTicket?.ticketCode || 'N/A'} (recovery)`,
+              resaleId: id,
+              stripePaymentIntentId: resale.stripePaymentIntentId || null,
+              status: 'completed',
+            })
+            .returning();
+          
+          await db
+            .update(siaeResales)
+            .set({ payoutTransactionId: walletTx.id })
+            .where(eq(siaeResales.id, id));
+          
+          console.log(`[RESALE-RECOVERY] Credited seller ${resale.sellerId} with €${sellerPayout}`);
+        }
+      } else {
+        console.log(`[RESALE-RECOVERY] Wallet transaction already exists, skipping credit`);
+      }
+      
+      console.log(`[RESALE-RECOVERY] Completed recovery for ${id}`);
+      
+      return res.json({
+        success: true,
+        message: "Rivendita completata con successo!",
+        newTicketId: existingNewTicket.id,
+        recovered: true,
+      });
+    } else {
+      // No new ticket exists - this is a real failure
+      console.log(`[RESALE-RECOVERY] No new ticket found for ${id}, cannot recover`);
+      return res.status(400).json({
+        success: false,
+        message: "Impossibile recuperare: biglietto nuovo non trovato. Contatta l'assistenza.",
+      });
+    }
+  } catch (error: any) {
+    console.error("[RESALE-RECOVERY] Error:", error);
+    res.status(500).json({ message: "Errore nel recupero" });
+  }
+});
+
 // Release expired reservations (cleanup job)
 router.post("/api/public/resales/cleanup-expired", async (req, res) => {
   try {
