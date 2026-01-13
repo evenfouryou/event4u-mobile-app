@@ -5007,16 +5007,17 @@ router.post("/api/public/resales/:id/payment-intent", async (req, res) => {
     
     // CRITICAL: Verifica smart card SIAE PRIMA di creare il payment intent
     // Non permettiamo pagamenti se non possiamo emettere sigilli fiscali
-    const bridgeConnected = isBridgeConnected();
-    const cardReadiness = isCardReadyForSeals();
+    // Usa versione async che richiede uno status fresco dal bridge se necessario (come negli acquisti normali)
+    const cardReadiness = await ensureCardReadyForSeals();
     
-    if (!bridgeConnected || !cardReadiness.ready) {
-      const errorCode = !bridgeConnected ? "SEAL_BRIDGE_OFFLINE" : "SEAL_CARD_NOT_READY";
-      const errorMessage = !bridgeConnected 
+    if (!cardReadiness.ready) {
+      console.log(`[RESALE-PAYMENT-INTENT] Blocked: Card not ready - ${cardReadiness.error}`);
+      
+      // Determina il codice errore appropriato
+      const errorCode = !isBridgeConnected() ? "SEAL_BRIDGE_OFFLINE" : "SEAL_CARD_NOT_READY";
+      const errorMessage = !isBridgeConnected() 
         ? "Sistema sigilli fiscali non disponibile. L'app desktop Event4U deve essere connessa con la smart card SIAE inserita."
         : `Smart card SIAE non pronta: ${cardReadiness.error}`;
-      
-      console.log(`[RESALE-PAYMENT-INTENT] Blocked: ${errorCode} - ${errorMessage}`);
       
       return res.status(503).json({ 
         message: errorMessage,
