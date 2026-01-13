@@ -176,7 +176,11 @@ class SmartCardService {
           error: this.getErrorFromData(data),
           bridgeConnected: data.bridgeConnected ?? false,
           canEmitRealSeals: data.bridgeConnected && data.readerConnected && data.cardInserted,
-          demoMode: false
+          demoMode: false,
+          pinRetriesLeft: data.pinRetriesLeft ?? null,
+          pukRetriesLeft: data.pukRetriesLeft ?? null,
+          pinVerified: data.pinVerified ?? false,
+          pinBlocked: data.pinBlocked ?? false
         });
       }
     } catch (err) {
@@ -366,7 +370,11 @@ class SmartCardService {
       error: this.getErrorMessage(data, bridgeConnected, readerDetected, cardInserted),
       bridgeConnected,
       canEmitRealSeals: data.canEmitTickets ?? (bridgeConnected && readerDetected && cardInserted),
-      demoMode: data.demoMode ?? data.simulationMode ?? false
+      demoMode: data.demoMode ?? data.simulationMode ?? false,
+      pinRetriesLeft: data.pinRetriesLeft ?? null,
+      pukRetriesLeft: data.pukRetriesLeft ?? null,
+      pinVerified: data.pinVerified ?? false,
+      pinBlocked: data.pinBlocked ?? false
     });
   }
 
@@ -679,7 +687,11 @@ class SmartCardService {
       error: null,
       bridgeConnected: true,
       canEmitRealSeals: false,
-      demoMode: true
+      demoMode: true,
+      pinRetriesLeft: 3,
+      pukRetriesLeft: 10,
+      pinVerified: true,
+      pinBlocked: false
     });
   }
 

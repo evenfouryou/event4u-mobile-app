@@ -1092,7 +1092,7 @@ export async function requestXmlSignature(xmlContent: string): Promise<XmlSignat
   if (!cardReady.ready) {
     auditEntry.status = 'failed';
     auditEntry.errorCode = SignatureErrorCode.CARD_NOT_READY;
-    auditEntry.errorMessage = cardReady.error;
+    auditEntry.errorMessage = cardReady.error ?? undefined;
     auditEntry.completedAt = new Date();
     auditEntry.durationMs = auditEntry.completedAt.getTime() - requestedAt.getTime();
     addSignatureAuditEntry(auditEntry);
@@ -1357,7 +1357,7 @@ export async function requestSmimeSignature(
   if (!cardReady.ready) {
     auditEntry.status = 'failed';
     auditEntry.errorCode = SignatureErrorCode.CARD_NOT_READY;
-    auditEntry.errorMessage = cardReady.error;
+    auditEntry.errorMessage = cardReady.error ?? undefined;
     auditEntry.completedAt = new Date();
     auditEntry.durationMs = auditEntry.completedAt.getTime() - requestedAt.getTime();
     addSignatureAuditEntry(auditEntry);
