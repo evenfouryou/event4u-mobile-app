@@ -112,6 +112,10 @@ const featuresList: FeatureConfig[] = [
   { key: 'financeEnabled', label: 'Finanza', description: 'Report finanziari e pagamenti', icon: <Euro className="h-4 w-4" />, category: 'eventhub' },
   // PR modules
   { key: 'prEnabled', label: 'Gestione PR', description: 'Abilita modulo PR e promoter', icon: <UserPlus className="h-4 w-4" />, category: 'pr' },
+  { key: 'prWalletEnabled', label: 'Wallet PR', description: 'Wallet e commissioni PR', icon: <Euro className="h-4 w-4" />, category: 'pr' },
+  { key: 'prReservationsEnabled', label: 'Prenotazioni PR', description: 'Gestione prenotazioni liste e tavoli via PR', icon: <ClipboardList className="h-4 w-4" />, category: 'pr' },
+  { key: 'prPayoutsEnabled', label: 'Payout PR', description: 'Gestione pagamenti e payout PR', icon: <Receipt className="h-4 w-4" />, category: 'pr' },
+  { key: 'prMultiCompanyEnabled', label: 'Multi-Azienda PR', description: 'Supporto PR multi-company', icon: <Building2 className="h-4 w-4" />, category: 'pr' },
 ];
 
 const springTransition = { type: "spring", stiffness: 400, damping: 30 };
@@ -157,6 +161,11 @@ export default function AdminGestori() {
     marketingEnabled: true,
     accessControlEnabled: true,
     financeEnabled: true,
+    // PR modules
+    prWalletEnabled: true,
+    prReservationsEnabled: true,
+    prPayoutsEnabled: true,
+    prMultiCompanyEnabled: false,
   });
 
   const { data: users, isLoading: usersLoading } = useQuery<User[]>({
@@ -217,6 +226,11 @@ export default function AdminGestori() {
         marketingEnabled: selectedUserFeatures.marketingEnabled ?? true,
         accessControlEnabled: selectedUserFeatures.accessControlEnabled ?? true,
         financeEnabled: selectedUserFeatures.financeEnabled ?? true,
+        // PR modules
+        prWalletEnabled: selectedUserFeatures.prWalletEnabled ?? true,
+        prReservationsEnabled: selectedUserFeatures.prReservationsEnabled ?? true,
+        prPayoutsEnabled: selectedUserFeatures.prPayoutsEnabled ?? true,
+        prMultiCompanyEnabled: selectedUserFeatures.prMultiCompanyEnabled ?? false,
       });
     }
   }, [selectedUserFeatures]);

@@ -1887,6 +1887,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           badgesEnabled: true,   // Default true per schema
           templateEnabled: true, // Default true per schema
           cassaBigliettiEnabled: true, // Default true per schema
+          // Event Hub modules
+          guestListEnabled: true,
+          tablesEnabled: true,
+          pageEditorEnabled: true,
+          resaleEnabled: true,
+          marketingEnabled: true,
+          accessControlEnabled: true,
+          financeEnabled: true,
+          // PR modules
+          prWalletEnabled: true,
+          prReservationsEnabled: true,
+          prPayoutsEnabled: true,
+          prMultiCompanyEnabled: false,
         });
       }
       res.json(features);
