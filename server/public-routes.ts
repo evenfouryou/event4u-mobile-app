@@ -5608,8 +5608,13 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
         .where(eq(siaeTickets.id, newTicket.id));
     }
     
+    // === CRITICAL: All DB operations MUST complete before sending response ===
+    // Wrap in try-finally to ensure we always complete or properly fail
+    
+    const fulfillmentStartTime = Date.now();
+    console.log(`[RESALE] Step 5: Annulling original ticket ${originalTicket.id}...`);
+    
     // NOW annul the original ticket (only after new ticket is successfully created)
-    // This is the critical fix: we only annul AFTER the new ticket exists
     await db
       .update(siaeTickets)
       .set({ 
@@ -5621,10 +5626,10 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
       })
       .where(eq(siaeTickets.id, originalTicket.id));
     
-    console.log(`[RESALE] Original ticket ${originalTicket.id} annulled, replaced by ${newTicket.id}`);
+    console.log(`[RESALE] Step 5 DONE: Original ticket annulled in ${Date.now() - fulfillmentStartTime}ms`);
     
     // 6. Update resale with new ticket and sigillo (final successful state)
-    // SECURITY: Clear confirmToken after successful use (one-time token)
+    console.log(`[RESALE] Step 6: Updating resale to fulfilled...`);
     await db
       .update(siaeResales)
       .set({
@@ -5642,7 +5647,10 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
       })
       .where(eq(siaeResales.id, id));
     
+    console.log(`[RESALE] Step 6 DONE: Resale marked fulfilled in ${Date.now() - fulfillmentStartTime}ms`);
+    
     // 7. Credit seller wallet (use stored payout, or recompute if missing)
+    console.log(`[RESALE] Step 7: Crediting seller wallet...`);
     let sellerPayout = parseFloat(resale.sellerPayout || '0');
     if (sellerPayout <= 0) {
       // Fallback: recompute from resale price with 5% platform fee
@@ -5651,6 +5659,8 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
       sellerPayout = resalePrice - platformFee;
       console.log(`[RESALE] Recomputed payout: €${sellerPayout} (stored was null/zero)`);
     }
+    
+    let walletTxId: string | null = null;
     if (sellerPayout > 0) {
       const [walletTx] = await db
         .insert(siaeWalletTransactions)
@@ -5665,23 +5675,34 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
         })
         .returning();
       
+      walletTxId = walletTx.id;
+      
       // Update resale with payout transaction
       await db
         .update(siaeResales)
         .set({ payoutTransactionId: walletTx.id })
         .where(eq(siaeResales.id, id));
       
-      console.log(`[RESALE] Credited seller ${resale.sellerId} with €${sellerPayout}`);
+      console.log(`[RESALE] Step 7 DONE: Credited seller ${resale.sellerId} with €${sellerPayout} in ${Date.now() - fulfillmentStartTime}ms`);
+    } else {
+      console.log(`[RESALE] Step 7 SKIPPED: No payout (sellerPayout=${sellerPayout})`);
     }
     
-    console.log(`[RESALE] Fulfilled ${id}: old ticket ${originalTicket.id} → new ticket ${newTicket.id}`);
+    const totalTime = Date.now() - startTime;
+    console.log(`[RESALE] === FULFILLMENT COMPLETE === ${id}: old ticket ${originalTicket.id} → new ticket ${newTicket.id} (total: ${totalTime}ms)`);
     
-    res.json({
+    // Send response AFTER all DB operations are complete
+    // Use res.status().send() instead of res.json() to avoid stream issues
+    const responsePayload = {
       success: true,
       message: "Acquisto completato!",
       newTicketId: newTicket.id,
       newTicketCode: newTicket.ticketCode,
-    });
+      totalTimeMs: totalTime,
+    };
+    
+    res.status(200).send(JSON.stringify(responsePayload));
+    console.log(`[RESALE] Response sent for ${id}`);
   } catch (error: any) {
     console.error("[PUBLIC] Confirm resale error:", error);
     
