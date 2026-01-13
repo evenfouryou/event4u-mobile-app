@@ -432,10 +432,27 @@ export default function PublicResaleCheckoutPage() {
 
           navigate(`/account/resale-success?resale_id=${id}&success=true`);
         } catch (confirmError: any) {
-          setPaymentError(confirmError.message || "Si è verificato un problema. Riprova.");
+          console.error("[Checkout] Confirm error:", confirmError);
+          
+          // Parse error response for better messaging
+          let errorMessage = confirmError.message || "Errore nella conferma acquisto";
+          let wasRefunded = false;
+          
+          try {
+            if (confirmError.data) {
+              if (confirmError.data.refunded) {
+                wasRefunded = true;
+                errorMessage = "Sistema sigilli fiscali non disponibile. Il pagamento è stato stornato automaticamente.";
+              } else if (confirmError.data.code?.includes('SEAL')) {
+                errorMessage = "Sistema fiscale temporaneamente non disponibile. Riprova più tardi.";
+              }
+            }
+          } catch (e) {}
+          
+          setPaymentError(errorMessage);
           toast({
-            title: "Errore",
-            description: confirmError.message || "Errore nella conferma acquisto",
+            title: wasRefunded ? "Pagamento stornato" : "Errore",
+            description: errorMessage,
             variant: "destructive",
           });
           setIsProcessing(false);
