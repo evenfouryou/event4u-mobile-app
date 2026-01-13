@@ -97,12 +97,32 @@ const fadeInUp = {
 };
 
 let stripePromiseCache: Promise<any> | null = null;
+let stripeLoadError: string | null = null;
 
 async function getStripe() {
+  if (stripeLoadError) {
+    throw new Error(stripeLoadError);
+  }
   if (!stripePromiseCache) {
-    const res = await fetch("/api/stripe/config");
-    const { publishableKey } = await res.json();
-    stripePromiseCache = loadStripe(publishableKey);
+    try {
+      const res = await fetch("/api/public/stripe-key");
+      if (!res.ok) {
+        const errorText = await res.text();
+        stripeLoadError = `Errore caricamento Stripe: ${res.status}`;
+        console.error("[Stripe] Config error:", errorText);
+        throw new Error(stripeLoadError);
+      }
+      const { publishableKey } = await res.json();
+      if (!publishableKey) {
+        stripeLoadError = "Chiave Stripe non configurata";
+        throw new Error(stripeLoadError);
+      }
+      stripePromiseCache = loadStripe(publishableKey);
+    } catch (error: any) {
+      console.error("[Stripe] Failed to load:", error);
+      stripeLoadError = error.message || "Errore caricamento Stripe";
+      throw error;
+    }
   }
   return stripePromiseCache;
 }
@@ -211,6 +231,7 @@ export default function PublicResaleCheckoutPage() {
   const [captchaValidated, setCaptchaValidated] = useState(false);
   
   const [stripePromise, setStripePromise] = useState<Promise<any> | null>(null);
+  const [stripeError, setStripeError] = useState<string | null>(null);
   const [isElementReady, setIsElementReady] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
   const [paymentError, setPaymentError] = useState<string | null>(null);
@@ -254,7 +275,12 @@ export default function PublicResaleCheckoutPage() {
   }, [captchaResponse]);
 
   useEffect(() => {
-    getStripe().then(setStripePromise);
+    getStripe()
+      .then(setStripePromise)
+      .catch((error) => {
+        console.error("[Stripe] Load error:", error);
+        setStripeError(error.message || "Errore caricamento sistema di pagamento");
+      });
   }, []);
 
   const validateCaptchaMutation = useMutation({
@@ -784,6 +810,31 @@ export default function PublicResaleCheckoutPage() {
                       </div>
                     </div>
                   </div>
+                </div>
+              ) : stripeError ? (
+                <div className="text-center py-8">
+                  <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-400" />
+                  <p className="text-red-400 mb-2 font-semibold">
+                    Errore sistema di pagamento
+                  </p>
+                  <p className="text-muted-foreground text-sm mb-4 max-w-xs mx-auto">
+                    {stripeError}
+                  </p>
+                  <HapticButton
+                    onClick={() => {
+                      setStripeError(null);
+                      stripeLoadError = null;
+                      stripePromiseCache = null;
+                      getStripe()
+                        .then(setStripePromise)
+                        .catch((error) => setStripeError(error.message));
+                    }}
+                    variant="outline"
+                    className="h-12"
+                    hapticType="medium"
+                  >
+                    Riprova
+                  </HapticButton>
                 </div>
               ) : createPaymentIntent.isError ? (
                 <div className="text-center py-8">
