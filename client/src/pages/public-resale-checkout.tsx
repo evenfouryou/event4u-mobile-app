@@ -328,8 +328,24 @@ export default function PublicResaleCheckoutPage() {
     onError: (error: any) => {
       const errorCode = error.data?.code || error.code || "";
       
+      // FIX: Reset flag to allow retry after transient errors
+      paymentIntentCreated.current = false;
+      
       if (errorCode === "CAPTCHA_INVALID" || errorCode === "CAPTCHA_EXPIRED" || errorCode === "CAPTCHA_NOT_VALIDATED") {
         setCaptchaError(error.message);
+        handleRefreshCaptcha();
+        return;
+      }
+      
+      // Bridge/smart card errors - show clear message and allow retry
+      if (errorCode === "SEAL_BRIDGE_OFFLINE" || errorCode === "SEAL_CARD_NOT_READY") {
+        setPaymentError(error.message || "Sistema sigilli fiscali non disponibile. Riprova tra poco.");
+        toast({
+          title: "Smart Card non pronta",
+          description: error.message || "Verifica che l'app desktop Event4U sia connessa con la smart card inserita.",
+          variant: "destructive",
+        });
+        // Refresh CAPTCHA for next retry attempt
         handleRefreshCaptcha();
         return;
       }
@@ -337,11 +353,14 @@ export default function PublicResaleCheckoutPage() {
       if (error.message?.includes("autenticato") || error.message?.includes("loggato")) {
         navigate(`/login?redirect=/rivendita/${id}`);
       } else {
+        setPaymentError(error.message || "Impossibile avviare il pagamento.");
         toast({
           title: "Errore",
           description: error.message || "Impossibile avviare il pagamento.",
           variant: "destructive",
         });
+        // Refresh CAPTCHA for retry
+        handleRefreshCaptcha();
       }
     },
   });
@@ -977,10 +996,26 @@ export default function PublicResaleCheckoutPage() {
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               transition={springConfig}
-              className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl flex items-start gap-3"
+              className="p-4 bg-red-500/10 border border-red-500/20 rounded-2xl"
             >
-              <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
-              <p className="text-sm text-red-400">{paymentError}</p>
+              <div className="flex items-start gap-3 mb-3">
+                <AlertCircle className="w-5 h-5 text-red-400 shrink-0 mt-0.5" />
+                <p className="text-sm text-red-400">{paymentError}</p>
+              </div>
+              <HapticButton
+                variant="outline"
+                onClick={() => {
+                  setPaymentError(null);
+                  handleRefreshCaptcha();
+                  triggerHaptic('light');
+                }}
+                className="w-full"
+                hapticType="medium"
+                data-testid="button-retry-payment"
+              >
+                <RotateCcw className="w-4 h-4 mr-2" />
+                Riprova
+              </HapticButton>
             </motion.div>
           )}
 
