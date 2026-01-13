@@ -230,7 +230,7 @@ export default function PublicResaleCheckoutPage() {
 
   const { data: captchaResponse, refetch: refetchCaptcha, isLoading: captchaLoading } = useQuery({
     queryKey: ['/api/public/captcha/generate'],
-    enabled: !!customer && !!resale && resale.status === 'listed',
+    enabled: !!customer && !!resale && (resale.status === 'listed' || resale.status === 'reserved'),
     staleTime: 0,
     refetchOnWindowFocus: false,
   });
@@ -315,7 +315,7 @@ export default function PublicResaleCheckoutPage() {
   });
 
   useEffect(() => {
-    if (resale && customer && !paymentIntentCreated.current && canProceedWithPayment && resale.status === 'listed') {
+    if (resale && customer && !paymentIntentCreated.current && canProceedWithPayment && (resale.status === 'listed' || resale.status === 'reserved')) {
       paymentIntentCreated.current = true;
       createPaymentIntent.mutate();
     }
@@ -558,7 +558,7 @@ export default function PublicResaleCheckoutPage() {
             </Button>
           </Link>
           <div className="flex-1 flex justify-center">
-            <BrandLogo size="sm" />
+            <BrandLogo className="h-8" />
           </div>
           <ThemeToggle />
         </div>
