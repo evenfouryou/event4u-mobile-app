@@ -270,6 +270,11 @@ export default function PublicResaleCheckoutPage() {
         setCaptchaValidated(true);
         setCaptchaError(null);
         triggerHaptic('success');
+        // Directly trigger payment intent creation after successful CAPTCHA validation
+        if (resale && customer && !paymentIntentCreated.current && (resale.status === 'listed' || resale.status === 'reserved')) {
+          paymentIntentCreated.current = true;
+          createPaymentIntent.mutate();
+        }
       } else {
         setCaptchaError(data.message || "Codice non corretto");
         setCaptchaValidated(false);
