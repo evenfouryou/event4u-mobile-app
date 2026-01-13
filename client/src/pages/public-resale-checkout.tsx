@@ -804,7 +804,16 @@ export default function PublicResaleCheckoutPage() {
               ) : createPaymentIntent.isError ? (
                 <div className="text-center py-8">
                   <AlertCircle className="w-12 h-12 mx-auto mb-4 text-red-400" />
-                  <p className="text-red-400 mb-4">Errore nel caricamento del modulo di pagamento.</p>
+                  <p className="text-red-400 mb-2 font-semibold">
+                    {(createPaymentIntent.error as any)?.data?.code === 'SEAL_BRIDGE_OFFLINE' || 
+                     (createPaymentIntent.error as any)?.data?.code === 'SEAL_CARD_NOT_READY'
+                      ? "Sistema fiscale non disponibile"
+                      : "Errore nel caricamento del pagamento"}
+                  </p>
+                  <p className="text-muted-foreground text-sm mb-4 max-w-xs mx-auto">
+                    {(createPaymentIntent.error as any)?.message || 
+                     "Si è verificato un errore. Riprova tra qualche istante."}
+                  </p>
                   <HapticButton
                     onClick={() => {
                       paymentIntentCreated.current = false;
