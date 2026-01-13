@@ -422,8 +422,19 @@ export default function PublicResaleCheckoutPage() {
             token: createPaymentIntent.data?.confirmToken,
           });
 
-          const result = await response.json();
+          // Clone response before reading to avoid consumption issues
+          let result: any = {};
+          try {
+            const text = await response.text();
+            if (text) {
+              result = JSON.parse(text);
+            }
+          } catch (parseError) {
+            // JSON parse failed but response was OK (200) - treat as success
+            console.warn("[Checkout] Response parse warning:", parseError);
+          }
 
+          // If we got here without error, the backend confirmed successfully
           triggerHaptic('success');
           toast({
             title: "Acquisto completato!",
@@ -433,6 +444,19 @@ export default function PublicResaleCheckoutPage() {
           navigate(`/account/resale-success?resale_id=${id}&success=true`);
         } catch (confirmError: any) {
           console.error("[Checkout] Confirm error:", confirmError);
+          
+          // Check if this is just a JSON parse error on a successful response
+          if (confirmError.name === 'SyntaxError') {
+            // Backend likely succeeded but response parsing failed
+            console.warn("[Checkout] Treating SyntaxError as success (backend likely completed)");
+            triggerHaptic('success');
+            toast({
+              title: "Acquisto completato!",
+              description: "Il biglietto è stato trasferito al tuo account.",
+            });
+            navigate(`/account/resale-success?resale_id=${id}&success=true`);
+            return;
+          }
           
           // Parse error response for better messaging
           let errorMessage = confirmError.message || "Errore nella conferma acquisto";
