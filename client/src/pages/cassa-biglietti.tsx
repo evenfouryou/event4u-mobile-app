@@ -332,10 +332,9 @@ export default function CassaBigliettiPage() {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["/api/siae/ticketed-events", selectedEventId, "subscriptions"] });
       
-      // Stampa automatica dell'abbonamento
+      // Stampa automatica dell'abbonamento (stessa logica dei biglietti)
       if (result.id) {
-        const agentId = connectedAgents.length === 1 ? connectedAgents[0].agentId : undefined;
-        printSubscriptionMutation.mutate({ subscriptionId: result.id, agentId });
+        printSubscriptionWithAgentSelection(result.id);
       }
       
       setSubFirstName("");
@@ -467,6 +466,31 @@ export default function CassaBigliettiPage() {
     setIsPrinterSelectOpen(false);
     setPendingPrintTicketIds([]);
     setSelectedPrintAgentId("");
+  };
+
+  // Function to print subscription with agent selection (same logic as tickets)
+  const printSubscriptionWithAgentSelection = async (subscriptionId: string) => {
+    // Refresh connected agents before printing
+    await refetchAgents();
+    
+    if (connectedAgents.length === 0) {
+      toast({
+        title: "Nessuna Stampante",
+        description: "Nessun Print Agent connesso. Avviare l'applicazione desktop.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    if (connectedAgents.length === 1) {
+      // Only one agent - use it automatically
+      const agentId = connectedAgents[0].agentId;
+      printSubscriptionMutation.mutate({ subscriptionId, agentId });
+    } else {
+      // Multiple agents - use first one (could add selection popup later)
+      const agentId = connectedAgents[0].agentId;
+      printSubscriptionMutation.mutate({ subscriptionId, agentId });
+    }
   };
 
   // Range cancellation mutation
