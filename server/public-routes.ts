@@ -53,6 +53,7 @@ import { eq, and, gt, lt, desc, sql, gte, lte, or, isNull, not } from "drizzle-o
 import { getUncachableStripeClient, getStripePublishableKey } from "./stripeClient";
 import { generateTicketHtml } from "./template-routes";
 import { generateTicketPdf, generateWalletImage, generateDigitalTicketPdf } from "./pdf-service";
+import { isCancelledStatus } from "./siae-utils";
 import { sendTicketEmail, sendPasswordResetEmail } from "./email-service";
 import { ticketTemplates, ticketTemplateElements } from "@shared/schema";
 import { sendOTP as sendMSG91OTP, verifyOTP as verifyMSG91OTP, resendOTP as resendMSG91OTP, isMSG91Configured } from "./msg91-service";
@@ -3201,10 +3202,10 @@ router.get("/api/public/account/tickets", async (req, res) => {
       };
     }));
 
-    // Separa biglietti futuri/passati/annullati
+    // Separa biglietti futuri/passati/annullati (include annullato_rivendita, refunded, etc.)
     const now = new Date();
-    const cancelled = tickets.filter(t => t.status === 'cancelled');
-    const activeTickets = tickets.filter(t => t.status !== 'cancelled');
+    const cancelled = tickets.filter(t => isCancelledStatus(t.status));
+    const activeTickets = tickets.filter(t => !isCancelledStatus(t.status));
     // Include both 'emitted' and 'active' status for valid tickets
     const validStatuses = ['emitted', 'active'];
     const upcoming = activeTickets.filter(t => t.eventStart && new Date(t.eventStart) >= now && validStatuses.includes(t.status || ''));

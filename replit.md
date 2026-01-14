@@ -62,6 +62,10 @@ This ensures the SIAE-compliant flow works correctly:
 
 **Annullato Rivendita Stats Fix (2026-01-14)**: Fixed ticket statistics to correctly count `annullato_rivendita` as cancelled. Previously, reports and dashboards only checked `status === 'cancelled'` - now uses `isCancelledStatus()` which includes all cancellation statuses (cancelled, annullato, refunded, rimborsato, voided, annullato_rimborso, annullato_rivendita).
 
+**Seller Wallet & Ticket Visibility Fix (2026-01-14)**: Fixed `/api/public/account/tickets` endpoint to correctly hide sold tickets from seller's wallet. Previously used `status === 'cancelled'` which didn't include `annullato_rivendita` - now uses `isCancelledStatus()`. When a ticket is sold via resale:
+- Original ticket status → `annullato_rivendita` (now correctly hidden from "I miei biglietti")
+- Seller wallet credited via `siaeWalletTransactions` with type `resale_credit`
+
 ### Scanner Management Module
 Manages event scanner operators for `gestore`/`super_admin` users, supporting scanner account creation, mobile-optimized UI, and granular event assignment with permissions.
 
