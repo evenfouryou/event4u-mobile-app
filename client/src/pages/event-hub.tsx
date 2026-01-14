@@ -133,6 +133,7 @@ import {
   Upload,
   Palette,
   XCircle,
+  Grid3X3,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
@@ -179,6 +180,7 @@ import type {
   SiaeResale,
   SiaeCustomer,
   SiaeSubscription,
+  SiaeNumberedSeat,
   User,
   Product,
   Location as LocationType,
@@ -222,6 +224,15 @@ const activateTicketingSchema = z.object({
   allowsResale: z.boolean().default(false),
 });
 type ActivateTicketingFormData = z.infer<typeof activateTicketingSchema>;
+
+const generateGridFormSchema = z.object({
+  rows: z.number().min(1).max(50),
+  seatsPerRow: z.number().min(1).max(100),
+  startRow: z.string().min(1).default("A"),
+  startSeat: z.number().min(1).default(1),
+  clearExisting: z.boolean().default(false),
+});
+type GenerateGridFormData = z.infer<typeof generateGridFormSchema>;
 
 const statusConfig: Record<string, { label: string; color: string; bgColor: string; icon: React.ElementType; gradient: string }> = {
   draft: { label: 'Bozza', color: 'text-slate-400', bgColor: 'bg-slate-500/20', icon: Circle, gradient: 'from-slate-500 to-slate-600' },
@@ -781,6 +792,9 @@ export default function EventHub() {
   const [syncSeatsSectorId, setSyncSeatsSectorId] = useState<string | null>(null);
   const [selectedZoneIdForSync, setSelectedZoneIdForSync] = useState<string>("");
 
+  // Numbered seats management state
+  const [selectedSectorForSeats, setSelectedSectorForSeats] = useState<string | null>(null);
+
   // Subscription type creation dialog state
   const [isSubscriptionTypeDialogOpen, setIsSubscriptionTypeDialogOpen] = useState(false);
 
@@ -1118,6 +1132,79 @@ export default function EventHub() {
     if (!syncSeatsSectorId || !selectedZoneIdForSync) return;
     syncSeatsMutation.mutate({ sectorId: syncSeatsSectorId, zoneId: selectedZoneIdForSync });
   };
+
+  // Numbered seats form
+  const generateGridForm = useForm<GenerateGridFormData>({
+    resolver: zodResolver(generateGridFormSchema),
+    defaultValues: {
+      rows: 5,
+      seatsPerRow: 10,
+      startRow: "A",
+      startSeat: 1,
+      clearExisting: false,
+    },
+  });
+
+  // Query for numbered seats of selected sector
+  const { data: numberedSeats = [], isLoading: numberedSeatsLoading, refetch: refetchNumberedSeats } = useQuery<SiaeNumberedSeat[]>({
+    queryKey: ['/api/siae/sectors', selectedSectorForSeats, 'numbered-seats'],
+    enabled: !!selectedSectorForSeats,
+  });
+
+  // Mutation for generating grid
+  const generateGridMutation = useMutation({
+    mutationFn: async (data: GenerateGridFormData & { sectorId: string }) => {
+      const response = await apiRequest("POST", `/api/siae/seats/generate-grid`, data);
+      return response.json();
+    },
+    onSuccess: (data) => {
+      refetchNumberedSeats();
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/events', id, 'ticketing'] });
+      toast({ title: "Griglia generata", description: data.message || `${data.count || 0} posti creati` });
+      generateGridForm.reset();
+    },
+    onError: (error: Error) => {
+      toast({ title: "Errore generazione griglia", description: error.message, variant: "destructive" });
+    },
+  });
+
+  // Mutation for updating seat status
+  const updateSeatStatusMutation = useMutation({
+    mutationFn: async ({ seatId, status }: { seatId: string; status: string }) => {
+      const response = await apiRequest("PATCH", `/api/siae/numbered-seats/${seatId}`, { status });
+      return response.json();
+    },
+    onSuccess: () => {
+      refetchNumberedSeats();
+      toast({ title: "Stato posto aggiornato" });
+    },
+    onError: (error: Error) => {
+      toast({ title: "Errore", description: error.message, variant: "destructive" });
+    },
+  });
+
+  const onSubmitGenerateGrid = (data: GenerateGridFormData) => {
+    if (!selectedSectorForSeats) {
+      toast({ title: "Errore", description: "Seleziona un settore", variant: "destructive" });
+      return;
+    }
+    generateGridMutation.mutate({ ...data, sectorId: selectedSectorForSeats });
+  };
+
+  // Compute numbered seats statistics
+  const numberedSeatsStats = useMemo(() => {
+    const total = numberedSeats.length;
+    const available = numberedSeats.filter(s => s.status === 'available').length;
+    const sold = numberedSeats.filter(s => s.status === 'sold').length;
+    const reserved = numberedSeats.filter(s => s.status === 'reserved').length;
+    const blocked = numberedSeats.filter(s => s.status === 'blocked').length;
+    return { total, available, sold, reserved, blocked };
+  }, [numberedSeats]);
+
+  // Get numbered sectors
+  const numberedSectors = useMemo(() => {
+    return ticketedEvent?.sectors?.filter(s => s.isNumbered) || [];
+  }, [ticketedEvent?.sectors]);
 
   const handleEditSector = (sectorId: string | null) => {
     if (!sectorId) return;
@@ -2488,6 +2575,12 @@ export default function EventHub() {
               <TabsTrigger value="biglietteria" data-testid="tab-biglietteria">
                 <Ticket className="h-4 w-4 mr-2" />
                 Biglietteria
+              </TabsTrigger>
+            )}
+            {(userFeatures?.siaeEnabled !== false) && (
+              <TabsTrigger value="seats" data-testid="tab-seats">
+                <Grid3X3 className="h-4 w-4 mr-2" />
+                Posti
               </TabsTrigger>
             )}
             {(userFeatures?.cassaEnabled !== false) && (
@@ -4075,6 +4168,264 @@ export default function EventHub() {
                 </div>
               </TabsContent>
             </Tabs>
+          </TabsContent>
+
+          {/* Seats Tab - Numbered seats management */}
+          <TabsContent value="seats" className="space-y-6">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Grid3X3 className="h-5 w-5" />
+                  Gestione Posti Numerati
+                </CardTitle>
+                <CardDescription>
+                  Gestisci i posti numerati per settori con posti assegnati
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {numberedSectors.length === 0 ? (
+                  <div className="text-center py-12 text-muted-foreground">
+                    <Grid3X3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nessun settore numerato configurato</p>
+                    <p className="text-sm mt-2">Crea un settore con "Posti numerati" abilitato nella tab Biglietteria</p>
+                  </div>
+                ) : (
+                  <>
+                    {/* Sector selector */}
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
+                      <Label htmlFor="sector-select" className="text-sm font-medium whitespace-nowrap">
+                        Seleziona Settore
+                      </Label>
+                      <Select
+                        value={selectedSectorForSeats || ""}
+                        onValueChange={(value) => setSelectedSectorForSeats(value || null)}
+                      >
+                        <SelectTrigger id="sector-select" className="w-full sm:w-[280px]" data-testid="select-sector-for-seats">
+                          <SelectValue placeholder="Seleziona un settore numerato..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {numberedSectors.map((sector) => (
+                            <SelectItem key={sector.id} value={sector.id} data-testid={`sector-option-${sector.id}`}>
+                              {sector.name} ({sector.capacity} posti)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {selectedSectorForSeats && (
+                      <>
+                        {/* Stats */}
+                        <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+                          <Card data-testid="stat-seats-total">
+                            <CardContent className="pt-4 pb-4 text-center">
+                              <p className="text-2xl font-bold">{numberedSeatsStats.total}</p>
+                              <p className="text-xs text-muted-foreground">Totale</p>
+                            </CardContent>
+                          </Card>
+                          <Card data-testid="stat-seats-available">
+                            <CardContent className="pt-4 pb-4 text-center">
+                              <p className="text-2xl font-bold text-emerald-600">{numberedSeatsStats.available}</p>
+                              <p className="text-xs text-muted-foreground">Disponibili</p>
+                            </CardContent>
+                          </Card>
+                          <Card data-testid="stat-seats-sold">
+                            <CardContent className="pt-4 pb-4 text-center">
+                              <p className="text-2xl font-bold text-blue-600">{numberedSeatsStats.sold}</p>
+                              <p className="text-xs text-muted-foreground">Venduti</p>
+                            </CardContent>
+                          </Card>
+                          <Card data-testid="stat-seats-reserved">
+                            <CardContent className="pt-4 pb-4 text-center">
+                              <p className="text-2xl font-bold text-amber-600">{numberedSeatsStats.reserved}</p>
+                              <p className="text-xs text-muted-foreground">Riservati</p>
+                            </CardContent>
+                          </Card>
+                          <Card data-testid="stat-seats-blocked">
+                            <CardContent className="pt-4 pb-4 text-center">
+                              <p className="text-2xl font-bold text-slate-500">{numberedSeatsStats.blocked}</p>
+                              <p className="text-xs text-muted-foreground">Bloccati</p>
+                            </CardContent>
+                          </Card>
+                        </div>
+
+                        {/* Generate Grid Form */}
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-base">Genera Griglia Posti</CardTitle>
+                            <CardDescription>Crea automaticamente una griglia di posti numerati</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            <form onSubmit={generateGridForm.handleSubmit(onSubmitGenerateGrid)} className="space-y-4">
+                              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                                <div className="space-y-2">
+                                  <Label htmlFor="rows">Numero File (1-50)</Label>
+                                  <Input
+                                    id="rows"
+                                    type="number"
+                                    min={1}
+                                    max={50}
+                                    {...generateGridForm.register("rows", { valueAsNumber: true })}
+                                    data-testid="input-grid-rows"
+                                  />
+                                  {generateGridForm.formState.errors.rows && (
+                                    <p className="text-xs text-destructive">{generateGridForm.formState.errors.rows.message}</p>
+                                  )}
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="seatsPerRow">Posti per Fila (1-100)</Label>
+                                  <Input
+                                    id="seatsPerRow"
+                                    type="number"
+                                    min={1}
+                                    max={100}
+                                    {...generateGridForm.register("seatsPerRow", { valueAsNumber: true })}
+                                    data-testid="input-grid-seats-per-row"
+                                  />
+                                  {generateGridForm.formState.errors.seatsPerRow && (
+                                    <p className="text-xs text-destructive">{generateGridForm.formState.errors.seatsPerRow.message}</p>
+                                  )}
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="startRow">Prima Fila</Label>
+                                  <Input
+                                    id="startRow"
+                                    type="text"
+                                    maxLength={2}
+                                    {...generateGridForm.register("startRow")}
+                                    data-testid="input-grid-start-row"
+                                  />
+                                  {generateGridForm.formState.errors.startRow && (
+                                    <p className="text-xs text-destructive">{generateGridForm.formState.errors.startRow.message}</p>
+                                  )}
+                                </div>
+                                <div className="space-y-2">
+                                  <Label htmlFor="startSeat">Primo Numero Posto</Label>
+                                  <Input
+                                    id="startSeat"
+                                    type="number"
+                                    min={1}
+                                    {...generateGridForm.register("startSeat", { valueAsNumber: true })}
+                                    data-testid="input-grid-start-seat"
+                                  />
+                                  {generateGridForm.formState.errors.startSeat && (
+                                    <p className="text-xs text-destructive">{generateGridForm.formState.errors.startSeat.message}</p>
+                                  )}
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  id="clearExisting"
+                                  checked={generateGridForm.watch("clearExisting")}
+                                  onCheckedChange={(checked) => generateGridForm.setValue("clearExisting", !!checked)}
+                                  data-testid="checkbox-clear-existing"
+                                />
+                                <Label htmlFor="clearExisting" className="text-sm cursor-pointer">
+                                  Cancella posti esistenti prima di generare
+                                </Label>
+                              </div>
+                              <Button
+                                type="submit"
+                                disabled={generateGridMutation.isPending}
+                                data-testid="button-generate-grid"
+                              >
+                                {generateGridMutation.isPending ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Generazione...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Grid3X3 className="h-4 w-4 mr-2" />
+                                    Genera Posti
+                                  </>
+                                )}
+                              </Button>
+                            </form>
+                          </CardContent>
+                        </Card>
+
+                        {/* Seats Table */}
+                        <Card>
+                          <CardHeader>
+                            <CardTitle className="text-base">Elenco Posti</CardTitle>
+                            <CardDescription>{numberedSeats.length} posti nel settore</CardDescription>
+                          </CardHeader>
+                          <CardContent>
+                            {numberedSeatsLoading ? (
+                              <div className="flex items-center justify-center py-8">
+                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                              </div>
+                            ) : numberedSeats.length === 0 ? (
+                              <div className="text-center py-8 text-muted-foreground">
+                                <Grid3X3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                <p>Nessun posto creato</p>
+                                <p className="text-sm mt-2">Usa il form sopra per generare una griglia</p>
+                              </div>
+                            ) : (
+                              <div className="max-h-[400px] overflow-y-auto">
+                                <Table>
+                                  <TableHeader>
+                                    <TableRow>
+                                      <TableHead>Fila</TableHead>
+                                      <TableHead>Posto</TableHead>
+                                      <TableHead>Stato</TableHead>
+                                      <TableHead>Categoria</TableHead>
+                                      <TableHead className="text-right">Azioni</TableHead>
+                                    </TableRow>
+                                  </TableHeader>
+                                  <TableBody>
+                                    {numberedSeats.map((seat) => (
+                                      <TableRow key={seat.id} data-testid={`seat-row-${seat.id}`}>
+                                        <TableCell className="font-medium">{seat.rowNumber}</TableCell>
+                                        <TableCell>{seat.seatNumber}</TableCell>
+                                        <TableCell>
+                                          <Badge
+                                            variant={
+                                              seat.status === 'available' ? 'outline' :
+                                              seat.status === 'sold' ? 'default' :
+                                              seat.status === 'reserved' ? 'secondary' : 'destructive'
+                                            }
+                                            data-testid={`seat-status-${seat.id}`}
+                                          >
+                                            {seat.status === 'available' ? 'Disponibile' :
+                                             seat.status === 'sold' ? 'Venduto' :
+                                             seat.status === 'reserved' ? 'Riservato' : 'Bloccato'}
+                                          </Badge>
+                                        </TableCell>
+                                        <TableCell>{seat.category || 'Standard'}</TableCell>
+                                        <TableCell className="text-right">
+                                          <Select
+                                            value={seat.status}
+                                            onValueChange={(newStatus) => {
+                                              updateSeatStatusMutation.mutate({ seatId: seat.id, status: newStatus });
+                                            }}
+                                          >
+                                            <SelectTrigger className="w-[130px]" data-testid={`select-seat-status-${seat.id}`}>
+                                              <SelectValue />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                              <SelectItem value="available">Disponibile</SelectItem>
+                                              <SelectItem value="sold">Venduto</SelectItem>
+                                              <SelectItem value="reserved">Riservato</SelectItem>
+                                              <SelectItem value="blocked">Bloccato</SelectItem>
+                                            </SelectContent>
+                                          </Select>
+                                        </TableCell>
+                                      </TableRow>
+                                    ))}
+                                  </TableBody>
+                                </Table>
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           {/* Cashiers Tab */}
@@ -6293,6 +6644,7 @@ export default function EventHub() {
                 {[
                   { id: 'overview', label: 'Panoramica', icon: LayoutDashboard },
                   ...(userFeatures?.siaeEnabled !== false ? [{ id: 'biglietteria', label: 'Biglietteria', icon: Ticket }] : []),
+                  ...(userFeatures?.siaeEnabled !== false ? [{ id: 'seats', label: 'Posti', icon: Grid3X3 }] : []),
                   ...(userFeatures?.cassaEnabled !== false ? [{ id: 'cashiers', label: 'Cassieri', icon: Banknote }] : []),
                   ...(userFeatures?.guestListEnabled !== false ? [{ id: 'guests', label: 'Liste', icon: Users }] : []),
                   ...(userFeatures?.tablesEnabled !== false ? [{ id: 'tables', label: 'Tavoli', icon: Armchair }] : []),
@@ -8253,6 +8605,212 @@ export default function EventHub() {
                 </div>
               </TabsContent>
             </Tabs>
+          </TabsContent>
+
+          {/* Seats Tab - Mobile */}
+          <TabsContent value="seats" className="space-y-4 sm:space-y-6">
+            <Card className="glass-card">
+              <CardHeader className="px-4">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                  <Grid3X3 className="h-5 w-5 text-primary" />
+                  Gestione Posti Numerati
+                </CardTitle>
+                <CardDescription>
+                  Gestisci i posti numerati per settori con posti assegnati
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="px-4 space-y-4">
+                {numberedSectors.length === 0 ? (
+                  <div className="text-center py-8 text-muted-foreground">
+                    <Grid3X3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                    <p>Nessun settore numerato</p>
+                    <p className="text-sm mt-2">Crea un settore con posti numerati nella tab Biglietteria</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="space-y-2">
+                      <Label htmlFor="sector-select-mobile" className="text-sm font-medium">
+                        Seleziona Settore
+                      </Label>
+                      <Select
+                        value={selectedSectorForSeats || ""}
+                        onValueChange={(value) => setSelectedSectorForSeats(value || null)}
+                      >
+                        <SelectTrigger id="sector-select-mobile" className="w-full" data-testid="select-sector-for-seats-mobile">
+                          <SelectValue placeholder="Seleziona un settore..." />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {numberedSectors.map((sector) => (
+                            <SelectItem key={sector.id} value={sector.id}>
+                              {sector.name} ({sector.capacity} posti)
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {selectedSectorForSeats && (
+                      <>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div className="p-3 rounded-lg bg-background/50 border text-center" data-testid="stat-seats-total-mobile">
+                            <p className="text-xl font-bold">{numberedSeatsStats.total}</p>
+                            <p className="text-xs text-muted-foreground">Totale</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/30 text-center" data-testid="stat-seats-available-mobile">
+                            <p className="text-xl font-bold text-emerald-400">{numberedSeatsStats.available}</p>
+                            <p className="text-xs text-muted-foreground">Disponibili</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-blue-500/10 border border-blue-500/30 text-center" data-testid="stat-seats-sold-mobile">
+                            <p className="text-xl font-bold text-blue-400">{numberedSeatsStats.sold}</p>
+                            <p className="text-xs text-muted-foreground">Venduti</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-center" data-testid="stat-seats-reserved-mobile">
+                            <p className="text-xl font-bold text-amber-400">{numberedSeatsStats.reserved}</p>
+                            <p className="text-xs text-muted-foreground">Riservati</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-slate-500/10 border border-slate-500/30 text-center col-span-2" data-testid="stat-seats-blocked-mobile">
+                            <p className="text-xl font-bold text-slate-400">{numberedSeatsStats.blocked}</p>
+                            <p className="text-xs text-muted-foreground">Bloccati</p>
+                          </div>
+                        </div>
+
+                        <Card>
+                          <CardHeader className="pb-3 px-4">
+                            <CardTitle className="text-sm">Genera Griglia</CardTitle>
+                          </CardHeader>
+                          <CardContent className="px-4 space-y-3">
+                            <form onSubmit={generateGridForm.handleSubmit(onSubmitGenerateGrid)} className="space-y-3">
+                              <div className="grid grid-cols-2 gap-3">
+                                <div className="space-y-1">
+                                  <Label htmlFor="rows-mobile" className="text-xs">File (1-50)</Label>
+                                  <Input
+                                    id="rows-mobile"
+                                    type="number"
+                                    min={1}
+                                    max={50}
+                                    {...generateGridForm.register("rows", { valueAsNumber: true })}
+                                    data-testid="input-grid-rows-mobile"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label htmlFor="seatsPerRow-mobile" className="text-xs">Posti/Fila</Label>
+                                  <Input
+                                    id="seatsPerRow-mobile"
+                                    type="number"
+                                    min={1}
+                                    max={100}
+                                    {...generateGridForm.register("seatsPerRow", { valueAsNumber: true })}
+                                    data-testid="input-grid-seats-per-row-mobile"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label htmlFor="startRow-mobile" className="text-xs">Prima Fila</Label>
+                                  <Input
+                                    id="startRow-mobile"
+                                    type="text"
+                                    maxLength={2}
+                                    {...generateGridForm.register("startRow")}
+                                    data-testid="input-grid-start-row-mobile"
+                                  />
+                                </div>
+                                <div className="space-y-1">
+                                  <Label htmlFor="startSeat-mobile" className="text-xs">Primo Posto</Label>
+                                  <Input
+                                    id="startSeat-mobile"
+                                    type="number"
+                                    min={1}
+                                    {...generateGridForm.register("startSeat", { valueAsNumber: true })}
+                                    data-testid="input-grid-start-seat-mobile"
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <Checkbox
+                                  id="clearExisting-mobile"
+                                  checked={generateGridForm.watch("clearExisting")}
+                                  onCheckedChange={(checked) => generateGridForm.setValue("clearExisting", !!checked)}
+                                  data-testid="checkbox-clear-existing-mobile"
+                                />
+                                <Label htmlFor="clearExisting-mobile" className="text-xs cursor-pointer">
+                                  Cancella posti esistenti
+                                </Label>
+                              </div>
+                              <Button
+                                type="submit"
+                                className="w-full"
+                                disabled={generateGridMutation.isPending}
+                                data-testid="button-generate-grid-mobile"
+                              >
+                                {generateGridMutation.isPending ? (
+                                  <>
+                                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                                    Generazione...
+                                  </>
+                                ) : (
+                                  <>
+                                    <Grid3X3 className="h-4 w-4 mr-2" />
+                                    Genera Posti
+                                  </>
+                                )}
+                              </Button>
+                            </form>
+                          </CardContent>
+                        </Card>
+
+                        <Card>
+                          <CardHeader className="pb-3 px-4">
+                            <CardTitle className="text-sm">Elenco Posti ({numberedSeats.length})</CardTitle>
+                          </CardHeader>
+                          <CardContent className="px-4">
+                            {numberedSeatsLoading ? (
+                              <div className="flex items-center justify-center py-8">
+                                <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+                              </div>
+                            ) : numberedSeats.length === 0 ? (
+                              <div className="text-center py-8 text-muted-foreground">
+                                <Grid3X3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                                <p className="text-sm">Nessun posto creato</p>
+                              </div>
+                            ) : (
+                              <div className="max-h-[300px] overflow-y-auto space-y-2">
+                                {numberedSeats.map((seat) => (
+                                  <div
+                                    key={seat.id}
+                                    className="flex items-center justify-between p-3 rounded-lg bg-background/50 border"
+                                    data-testid={`seat-row-mobile-${seat.id}`}
+                                  >
+                                    <div>
+                                      <span className="font-medium">Fila {seat.rowNumber}</span>
+                                      <span className="text-muted-foreground"> - Posto {seat.seatNumber}</span>
+                                    </div>
+                                    <Select
+                                      value={seat.status}
+                                      onValueChange={(newStatus) => {
+                                        updateSeatStatusMutation.mutate({ seatId: seat.id, status: newStatus });
+                                      }}
+                                    >
+                                      <SelectTrigger className="w-[100px]" data-testid={`select-seat-status-mobile-${seat.id}`}>
+                                        <SelectValue />
+                                      </SelectTrigger>
+                                      <SelectContent>
+                                        <SelectItem value="available">Disp.</SelectItem>
+                                        <SelectItem value="sold">Venduto</SelectItem>
+                                        <SelectItem value="reserved">Riservato</SelectItem>
+                                        <SelectItem value="blocked">Bloccato</SelectItem>
+                                      </SelectContent>
+                                    </Select>
+                                  </div>
+                                ))}
+                              </div>
+                            )}
+                          </CardContent>
+                        </Card>
+                      </>
+                    )}
+                  </>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
 
           <TabsContent value="cashiers">
