@@ -10812,6 +10812,103 @@ router.delete("/api/cashier-allocations/:id", requireAuth, requireGestore, async
 
 // ==================== CASHIER OPERATIONS (Cassiere Role) ====================
 
+// GET /api/cashier/dashboard - Get cashier dashboard data with real stats
+router.get("/api/cashier/dashboard", requireAuth, requireCashier, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    
+    const cashierId = getSiaeCashierId(user);
+    if (!cashierId) {
+      return res.status(400).json({ message: "ID cassiere non trovato nella sessione" });
+    }
+    
+    // Get all allocations for this cashier
+    const allocations = await siaeStorage.getCashierAllocationsByCashier(cashierId);
+    
+    // Find current/active event (in progress or scheduled for today)
+    let currentEvent = null;
+    let currentAllocation = null;
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    for (const alloc of allocations) {
+      if (!alloc.isActive) continue;
+      const event = await siaeStorage.getSiaeTicketedEvent(alloc.eventId);
+      if (!event) continue;
+      
+      const eventDate = event.eventDate ? new Date(event.eventDate) : null;
+      if (eventDate) {
+        eventDate.setHours(0, 0, 0, 0);
+      }
+      
+      // Check if event is today or ongoing
+      if (eventDate && eventDate.getTime() === today.getTime()) {
+        currentEvent = event;
+        currentAllocation = alloc;
+        break;
+      }
+      if (event.status === 'ongoing' || event.status === 'active') {
+        currentEvent = event;
+        currentAllocation = alloc;
+        break;
+      }
+    }
+    
+    // Get today's tickets for all events assigned to this cashier
+    let allTodayTickets: any[] = [];
+    for (const alloc of allocations) {
+      const tickets = await siaeStorage.getTodayTicketsByUser(cashierId, alloc.eventId);
+      allTodayTickets = allTodayTickets.concat(tickets);
+    }
+    
+    // Filter only active tickets (not cancelled)
+    const activeTickets = allTodayTickets.filter(t => t.status !== 'cancelled');
+    
+    // Calculate stats
+    const totalRevenue = activeTickets.reduce((sum, t) => sum + Number(t.ticketPrice || 0), 0);
+    const ticketsSold = activeTickets.length;
+    const cashTickets = activeTickets.filter(t => t.paymentMethod === 'cash' || t.paymentMethod === 'contanti');
+    const cardTickets = activeTickets.filter(t => t.paymentMethod === 'card' || t.paymentMethod === 'carta' || t.paymentMethod === 'pos');
+    const cashRevenue = cashTickets.reduce((sum, t) => sum + Number(t.ticketPrice || 0), 0);
+    const cardRevenue = cardTickets.reduce((sum, t) => sum + Number(t.ticketPrice || 0), 0);
+    
+    // Recent transactions (last 10 tickets)
+    const sortedTickets = allTodayTickets.sort((a, b) => 
+      new Date(b.emissionDate || 0).getTime() - new Date(a.emissionDate || 0).getTime()
+    );
+    const recentTransactions = sortedTickets.slice(0, 10).map(ticket => ({
+      id: ticket.id,
+      type: 'ticket' as const,
+      title: `${ticket.ticketType === 'omaggio' ? 'Omaggio' : ticket.ticketType === 'ridotto' ? 'Ridotto' : 'Intero'} - ${ticket.participantFirstName || ''} ${ticket.participantLastName || ''}`.trim() || `Biglietto ${ticket.ticketCode || ''}`,
+      amount: Number(ticket.ticketPrice || 0),
+      time: ticket.emissionDate ? new Date(ticket.emissionDate).toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '',
+      ticketType: ticket.ticketType,
+    }));
+    
+    res.json({
+      stats: {
+        totalRevenue,
+        ticketsSold,
+        transactionsCount: ticketsSold,
+        cashRevenue,
+        cardRevenue,
+      },
+      currentEvent: currentEvent ? {
+        id: currentEvent.id,
+        name: currentEvent.eventName,
+        date: currentEvent.eventDate ? new Date(currentEvent.eventDate).toLocaleDateString('it-IT') : '',
+        startTime: currentEvent.eventTime || '',
+        endTime: '',
+        status: currentEvent.status === 'ongoing' ? 'in_progress' : currentEvent.status === 'scheduled' ? 'scheduled' : 'ended',
+      } : null,
+      recentTransactions,
+    });
+  } catch (error: any) {
+    console.error('[CashierDashboard] Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // GET /api/cashier/my-events - Get events assigned to logged-in cashier
 router.get("/api/cashier/my-events", requireAuth, requireCashier, async (req: Request, res: Response) => {
   try {
