@@ -5458,7 +5458,6 @@ export const insertSeatHoldEventSchema = createInsertSchema(seatHoldEvents).omit
 
 export const insertEventSeatStatusSchema = createInsertSchema(eventSeatStatus).omit({
   id: true,
-  createdAt: true,
   updatedAt: true,
 });
 
