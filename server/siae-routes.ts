@@ -6670,8 +6670,9 @@ router.post("/api/siae/subscriptions/:id/print", requireAuth, async (req: Reques
       });
     }
     
-    // Build print data for subscription
-    const printData = {
+    // Build print payload for subscription (same flat structure as tickets)
+    const printPayload = {
+      id: `subscription-${subscription.id}-${Date.now()}`,
       type: 'subscription',
       subscriptionId: subscription.id,
       subscriptionCode: subscription.subscriptionCode,
@@ -6689,13 +6690,8 @@ router.post("/api/siae/subscriptions/:id/print", requireAuth, async (req: Reques
       skipBackground: true,
     };
     
-    // Send print command to agent via WebSocket
-    const printCommand = {
-      type: 'print_subscription',
-      payload: printData
-    };
-    
-    const sent = sendPrintJobToAgent(printerAgentId, printCommand);
+    // Send to print agent (same pattern as tickets)
+    const sent = sendPrintJobToAgent(printerAgentId, printPayload);
     
     if (!sent) {
       return res.status(503).json({
