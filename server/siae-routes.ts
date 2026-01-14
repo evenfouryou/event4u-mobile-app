@@ -6429,10 +6429,33 @@ router.get("/api/siae/admin/subscriptions", requireAuth, requireOrganizer, async
 
 router.post("/api/siae/subscriptions", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
   try {
-    const data = insertSiaeSubscriptionSchema.parse(req.body);
+    const user = req.user as any;
+    
+    let customerId = req.body.customerId;
+    
+    // Se customerId non è fornito, creare automaticamente un nuovo cliente SIAE
+    if (!customerId && req.body.holderFirstName && req.body.holderLastName) {
+      const newCustomer = await siaeStorage.createSiaeCustomer({
+        companyId: req.body.companyId || user.companyId,
+        firstName: req.body.holderFirstName,
+        lastName: req.body.holderLastName,
+        isActive: true,
+      });
+      customerId = newCustomer.id;
+    }
+    
+    if (!customerId) {
+      return res.status(400).json({ 
+        message: "customerId richiesto oppure fornire holderFirstName e holderLastName per creare un nuovo cliente" 
+      });
+    }
+    
+    const data = insertSiaeSubscriptionSchema.parse({
+      ...req.body,
+      customerId,
+    });
     const subscription = await siaeStorage.createSiaeSubscription(data);
     
-    const user = req.user as any;
     await siaeStorage.createAuditLog({
       companyId: subscription.companyId || user.companyId,
       userId: user.id,
@@ -6747,8 +6770,28 @@ router.post("/api/siae/ticketed-events/:eventId/subscriptions", requireAuth, asy
     const { eventId } = req.params;
     const user = req.user as any;
     
+    let customerId = req.body.customerId;
+    
+    // Se customerId non è fornito, creare automaticamente un nuovo cliente SIAE
+    if (!customerId && req.body.holderFirstName && req.body.holderLastName) {
+      const newCustomer = await siaeStorage.createSiaeCustomer({
+        companyId: user.companyId,
+        firstName: req.body.holderFirstName,
+        lastName: req.body.holderLastName,
+        isActive: true,
+      });
+      customerId = newCustomer.id;
+    }
+    
+    if (!customerId) {
+      return res.status(400).json({ 
+        message: "customerId richiesto oppure fornire holderFirstName e holderLastName per creare un nuovo cliente" 
+      });
+    }
+    
     const data = insertSiaeSubscriptionSchema.parse({
       ...req.body,
+      customerId,
       ticketedEventId: eventId,
       companyId: user.companyId,
     });
