@@ -25,6 +25,7 @@ export default function AccountResaleSuccess() {
   const urlParams = new URLSearchParams(window.location.search);
   const resaleId = urlParams.get('resale_id');
   const confirmToken = urlParams.get('token'); // Secure token from Stripe redirect
+  const alreadyConfirmed = urlParams.get('success') === 'true'; // Checkout already confirmed
   
   const confirmMutation = useMutation({
     mutationFn: async () => {
@@ -88,9 +89,19 @@ export default function AccountResaleSuccess() {
   
   useEffect(() => {
     if (resaleId && confirmationStatus === 'pending') {
-      confirmMutation.mutate();
+      if (alreadyConfirmed) {
+        // Checkout already confirmed successfully, skip redundant call
+        console.log("[ResaleSuccess] Skipping confirm - already confirmed by checkout");
+        setConfirmationStatus('success');
+        queryClient.invalidateQueries({ queryKey: ['/api/public/account/tickets'] });
+        queryClient.invalidateQueries({ queryKey: ['/api/public/account/resales'] });
+      } else {
+        // This is a Stripe redirect or recovery scenario - need to confirm
+        console.log("[ResaleSuccess] Confirming - this is a Stripe redirect or recovery");
+        confirmMutation.mutate();
+      }
     }
-  }, [resaleId]);
+  }, [resaleId, alreadyConfirmed]);
   
   if (!resaleId) {
     return (
