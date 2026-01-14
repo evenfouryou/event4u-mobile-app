@@ -6673,16 +6673,99 @@ router.post("/api/siae/subscriptions/:id/print", requireAuth, async (req: Reques
       });
     }
     
-    // Generate subscription HTML for thermal printing (80mm width default)
-    const paperWidthMm = 80;
-    const paperHeightMm = 120;
-    
+    // Prepare subscription data for template replacement
     const holderName = `${subscription.holderFirstName || ''} ${subscription.holderLastName || ''}`.trim();
     const validFromStr = subscription.validFrom ? new Date(subscription.validFrom).toLocaleDateString('it-IT') : '';
     const validToStr = subscription.validTo ? new Date(subscription.validTo).toLocaleDateString('it-IT') : '';
     const totalAmountStr = `€ ${Number(subscription.totalAmount || 0).toFixed(2).replace('.', ',')}`;
+    const emissionDateStr = subscription.issuedAt ? new Date(subscription.issuedAt).toLocaleString('it-IT') : new Date().toLocaleString('it-IT');
     
-    const subscriptionHtml = `
+    // Map subscription data to template field keys
+    const subscriptionData: Record<string, string> = {
+      subscription_code: subscription.subscriptionCode || '',
+      subscriber_name: holderName || 'N/D',
+      subscription_type: subscription.subscriptionType || '',
+      total_entries: String(subscription.eventsCount || 0),
+      used_entries: String(subscription.eventsUsed || 0),
+      remaining_entries: String((subscription.eventsCount || 0) - (subscription.eventsUsed || 0)),
+      valid_from: validFromStr,
+      valid_to: validToStr,
+      price: totalAmountStr,
+      venue_name: event?.eventName || '',
+      custom_text: '',
+      // SIAE required fields
+      organizer_company: systemConfig?.businessName || '',
+      ticketing_manager: systemConfig?.businessName || '',
+      emission_datetime: emissionDateStr,
+      fiscal_seal: subscription.fiscalSealCode || '',
+      fiscal_counter: String(subscription.fiscalSealCounter || ''),
+      card_code: subscription.cardCode || '',
+      qr_code: subscription.subscriptionCode || '',
+    };
+    
+    // Try to find a subscription template for this company
+    let subscriptionHtml: string;
+    let paperWidthMm = 80;
+    let paperHeightMm = 120;
+    let printOrientation = 'portrait';
+    
+    const [subscriptionTemplate] = await db.select()
+      .from(ticketTemplates)
+      .where(and(
+        eq(ticketTemplates.templateType, 'subscription'),
+        eq(ticketTemplates.isActive, true),
+        or(
+          eq(ticketTemplates.companyId, subscription.companyId),
+          isNull(ticketTemplates.companyId)
+        )
+      ))
+      .orderBy(desc(ticketTemplates.createdAt))
+      .limit(1);
+    
+    if (subscriptionTemplate) {
+      // Use template to generate HTML
+      const templateElements = await db.select()
+        .from(ticketTemplateElements)
+        .where(eq(ticketTemplateElements.templateId, subscriptionTemplate.id))
+        .orderBy(ticketTemplateElements.zIndex);
+      
+      const parsedElements = templateElements.map(el => ({
+        type: el.type,
+        x: parseFloat(el.x as any) || 0,
+        y: parseFloat(el.y as any) || 0,
+        width: parseFloat(el.width as any) || 20,
+        height: parseFloat(el.height as any) || 5,
+        content: el.fieldKey ? `{{${el.fieldKey}}}` : el.staticValue,
+        fontSize: el.fontSize,
+        fontFamily: el.fontFamily,
+        fontWeight: el.fontWeight,
+        fontColor: el.color,
+        textAlign: el.textAlign,
+        rotation: el.rotation,
+      }));
+      
+      paperWidthMm = subscriptionTemplate.paperWidthMm || 80;
+      paperHeightMm = subscriptionTemplate.paperHeightMm || 120;
+      printOrientation = (subscriptionTemplate as any).printOrientation || 'auto';
+      
+      subscriptionHtml = generateTicketHtml(
+        {
+          paperWidthMm,
+          paperHeightMm,
+          backgroundImageUrl: subscriptionTemplate.backgroundImageUrl,
+          dpi: subscriptionTemplate.dpi || 203,
+          printOrientation,
+        },
+        parsedElements,
+        subscriptionData,
+        true // skipBackground for thermal printing
+      );
+      
+      console.log('[SubscriptionPrint] Using template:', subscriptionTemplate.name);
+    } else {
+      // Fallback to hardcoded HTML
+      console.log('[SubscriptionPrint] No template found, using fallback HTML');
+      subscriptionHtml = `
 <!DOCTYPE html>
 <html>
 <head>
@@ -6771,6 +6854,11 @@ router.post("/api/siae/subscriptions/:id/print", requireAuth, async (req: Reques
   </div>
 </body>
 </html>`;
+    }
+    
+    // Determine effective orientation
+    const naturalOrientation = paperWidthMm > paperHeightMm ? 'landscape' : 'portrait';
+    const effectiveOrientation = printOrientation === 'auto' ? naturalOrientation : printOrientation;
     
     // Build print payload (use type 'ticket' for agent compatibility)
     const printPayload = {
@@ -6778,7 +6866,7 @@ router.post("/api/siae/subscriptions/:id/print", requireAuth, async (req: Reques
       type: 'ticket',
       paperWidthMm,
       paperHeightMm,
-      orientation: 'portrait',
+      orientation: effectiveOrientation,
       html: subscriptionHtml,
       ticketId: subscription.id,
     };
