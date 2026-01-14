@@ -87,3 +87,54 @@ A redesigned public-facing home page (`/acquista`, `/locali`, `/rivendite`) feat
 -   **QR Code**: `qrcode`.
 -   **Build Tools**: `vite`, `esbuild`, `typescript`, `tsx`.
 -   **Mobile App**: `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios`.
+
+## Mobile App (Expo React Native)
+
+### Location
+The mobile app source code is in `mobile-app/` folder using Expo SDK 52 with React Native.
+
+### Structure
+```
+mobile-app/
+├── App.tsx                    # Main entry point
+├── app.json                   # Expo configuration
+├── eas.json                   # EAS Build configuration
+├── src/
+│   ├── components/            # Reusable UI components (Button, Input, Card, etc.)
+│   ├── lib/                   # Theme, API client, utilities
+│   ├── navigation/            # React Navigation setup
+│   ├── screens/               # All app screens organized by feature
+│   │   ├── auth/              # Login, Register, ForgotPassword
+│   │   ├── public/            # Home, Events, EventDetail, Venues, Cart, Checkout
+│   │   ├── account/           # MyTickets, Profile, Wallet, NameChange, Resales
+│   │   ├── scanner/           # QR scanning for event entry
+│   │   ├── pr/                # Promoter dashboard, guest lists, tables, wallet
+│   │   ├── cashier/           # Ticket issuance screens
+│   │   └── management/        # Event management dashboard
+│   └── store/                 # Zustand stores (auth)
+└── assets/                    # App icons, splash screen
+```
+
+### Key Technologies
+- **Expo SDK 52** with React Native
+- **React Navigation** for routing
+- **TanStack Query** for data fetching
+- **Zustand** for state management
+- **expo-camera** for QR code scanning
+- **react-native-qrcode-svg** for ticket QR codes
+- **expo-secure-store** for auth token storage
+
+### Build Commands
+```bash
+cd mobile-app
+npm install
+npm start                          # Development with Expo Go
+eas build --platform android       # Android APK build
+eas build --platform ios           # iOS build
+```
+
+### Design System
+- Dark nightclub theme (#0A0A0A background)
+- Primary purple accent (#8B5CF6)
+- Card-based layouts with rounded corners
+- Consistent spacing and typography
