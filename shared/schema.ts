@@ -1327,6 +1327,10 @@ export const siaeTicketedEvents = pgTable("siae_ticketed_events", {
   organizerType: varchar("organizer_type", { length: 10 }), // Tipo organizzatore SIAE
   genreCode: varchar("genre_code", { length: 2 }).notNull(), // TAB.1
   genreIncidence: integer("genre_incidence").notNull().default(0), // IncidenzaGenere (0-100)
+  // Campi per report SIAE (Autore/Esecutore per Teatro/Concerti, NazionalitaFilm per Cinema)
+  author: varchar("author", { length: 255 }), // Autore opera (per TipoGenere 05-09, 45-59)
+  performer: varchar("performer", { length: 255 }), // Esecutore/Artista (per TipoGenere 05-09, 45-59)
+  filmNationality: varchar("film_nationality", { length: 2 }), // Codice ISO 3166 (per TipoGenere 01-04 Cinema)
   taxType: varchar("tax_type", { length: 1 }).notNull().default('S'), // S=spettacolo, I=intrattenimento
   entertainmentIncidence: integer("entertainment_incidence").notNull().default(100), // Incidenza intrattenimento (0-100)
   ivaPreassolta: varchar("iva_preassolta", { length: 1 }).notNull().default('N'), // N, B, F

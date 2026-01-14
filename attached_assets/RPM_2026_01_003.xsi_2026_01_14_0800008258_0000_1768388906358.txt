@@ -1,0 +1,13 @@
+REPLY:
+
+CODICE:      0000
+DESCRIZIONE: Il riepilogo e' stato elaborato correttamente
+DETTAGLIO:   
+
+
+WARNING
+CODICE:      3111
+DESCRIZIONE: Esecutore non indicato per il Tipo Evento
+DETTAGLIO:   
+
+
