@@ -250,6 +250,46 @@ export default function TemplateBuilder() {
     }
   }, [template]);
 
+  // Filter elements when template type changes (only for user-initiated changes, not initial load)
+  const [initialTypeLoaded, setInitialTypeLoaded] = useState(false);
+  const prevTemplateType = useRef(templateType);
+  
+  useEffect(() => {
+    // Skip on initial load from database
+    if (template && !initialTypeLoaded) {
+      setInitialTypeLoaded(true);
+      prevTemplateType.current = templateType;
+      return;
+    }
+    
+    // Only filter if type actually changed by user action
+    if (prevTemplateType.current !== templateType && elements.length > 0) {
+      // Get valid fieldKeys for the new type
+      const validFieldKeys = new Set(
+        (templateType === 'subscription' ? SUBSCRIPTION_ELEMENT_TYPES : TICKET_ELEMENT_TYPES)
+          .map(t => t.fieldKey)
+          .filter(Boolean)
+      );
+      
+      // Elements without fieldKey (static text, graphics, qr_code) are always kept
+      const filteredElements = elements.filter(el => {
+        if (!el.fieldKey) return true; // Static elements
+        if (el.type === 'qr_code' || el.type === 'barcode') return true; // QR/barcode always kept
+        return validFieldKeys.has(el.fieldKey);
+      });
+      
+      if (filteredElements.length !== elements.length) {
+        setElements(filteredElements);
+        toast({
+          title: 'Elementi aggiornati',
+          description: `Rimossi ${elements.length - filteredElements.length} elementi incompatibili con il tipo ${templateType === 'subscription' ? 'Abbonamento' : 'Biglietto'}`,
+        });
+      }
+      
+      prevTemplateType.current = templateType;
+    }
+  }, [templateType, elements.length, initialTypeLoaded]);
+
   // Save template mutation
   const saveMutation = useMutation({
     mutationFn: async () => {
