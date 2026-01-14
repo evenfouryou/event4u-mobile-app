@@ -6670,27 +6670,117 @@ router.post("/api/siae/subscriptions/:id/print", requireAuth, async (req: Reques
       });
     }
     
-    // Build print payload for subscription (same flat structure as tickets)
+    // Generate subscription HTML for thermal printing (80mm width default)
+    const paperWidthMm = 80;
+    const paperHeightMm = 120;
+    
+    const holderName = `${subscription.holderFirstName || ''} ${subscription.holderLastName || ''}`.trim();
+    const validFromStr = subscription.validFrom ? new Date(subscription.validFrom).toLocaleDateString('it-IT') : '';
+    const validToStr = subscription.validTo ? new Date(subscription.validTo).toLocaleDateString('it-IT') : '';
+    const totalAmountStr = `€ ${Number(subscription.totalAmount || 0).toFixed(2).replace('.', ',')}`;
+    
+    const subscriptionHtml = `
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { 
+      width: ${paperWidthMm}mm; 
+      font-family: Arial, sans-serif; 
+      font-size: 10pt;
+      padding: 3mm;
+    }
+    .header { text-align: center; margin-bottom: 4mm; }
+    .title { font-size: 14pt; font-weight: bold; margin-bottom: 2mm; }
+    .subtitle { font-size: 10pt; color: #666; }
+    .divider { border-top: 1px dashed #000; margin: 3mm 0; }
+    .row { display: flex; justify-content: space-between; margin: 1.5mm 0; }
+    .label { color: #666; font-size: 9pt; }
+    .value { font-weight: bold; text-align: right; }
+    .holder { font-size: 12pt; font-weight: bold; text-align: center; margin: 3mm 0; }
+    .code { font-family: monospace; font-size: 11pt; text-align: center; margin: 3mm 0; letter-spacing: 1px; }
+    .fiscal { font-size: 8pt; color: #666; text-align: center; margin-top: 3mm; }
+    .qr { text-align: center; margin: 3mm 0; }
+    .usage { text-align: center; font-size: 11pt; margin: 2mm 0; }
+    .events-box { border: 1px solid #000; padding: 2mm; text-align: center; margin: 2mm 0; }
+  </style>
+</head>
+<body>
+  <div class="header">
+    <div class="title">ABBONAMENTO</div>
+    <div class="subtitle">${event?.eventName || 'Evento'}</div>
+  </div>
+  
+  <div class="divider"></div>
+  
+  <div class="holder">${holderName || 'Intestatario N/D'}</div>
+  
+  <div class="code">${subscription.subscriptionCode || ''}</div>
+  
+  <div class="divider"></div>
+  
+  <div class="row">
+    <span class="label">Settore:</span>
+    <span class="value">${sector?.name || '-'}</span>
+  </div>
+  
+  <div class="row">
+    <span class="label">Turno:</span>
+    <span class="value">${subscription.turnType || '-'}</span>
+  </div>
+  
+  <div class="row">
+    <span class="label">Valido dal:</span>
+    <span class="value">${validFromStr || '-'}</span>
+  </div>
+  
+  <div class="row">
+    <span class="label">Valido al:</span>
+    <span class="value">${validToStr || '-'}</span>
+  </div>
+  
+  <div class="divider"></div>
+  
+  <div class="events-box">
+    <div class="label">INGRESSI</div>
+    <div class="usage">${subscription.eventsUsed || 0} / ${subscription.eventsCount || 0}</div>
+  </div>
+  
+  <div class="row">
+    <span class="label">Importo:</span>
+    <span class="value">${totalAmountStr}</span>
+  </div>
+  
+  ${subscription.fiscalSealCode ? `
+  <div class="row">
+    <span class="label">Sigillo:</span>
+    <span class="value" style="font-family: monospace;">${subscription.fiscalSealCode}</span>
+  </div>
+  ` : ''}
+  
+  <div class="divider"></div>
+  
+  <div class="fiscal">
+    ${systemConfig?.businessName || ''}<br/>
+    ${systemConfig?.vatNumber ? `P.IVA ${systemConfig.vatNumber}` : ''}
+  </div>
+</body>
+</html>`;
+    
+    // Build print payload (use type 'ticket' for agent compatibility)
     const printPayload = {
       id: `subscription-${subscription.id}-${Date.now()}`,
-      type: 'subscription',
-      subscriptionId: subscription.id,
-      subscriptionCode: subscription.subscriptionCode,
-      holderName: `${subscription.holderFirstName || ''} ${subscription.holderLastName || ''}`.trim(),
-      eventName: event?.eventName || 'Abbonamento',
-      sectorName: sector?.name || '',
-      turnType: subscription.turnType || '',
-      eventsCount: subscription.eventsCount || 0,
-      eventsUsed: subscription.eventsUsed || 0,
-      validFrom: subscription.validFrom,
-      validTo: subscription.validTo,
-      totalAmount: subscription.totalAmount,
-      businessName: systemConfig?.businessName || '',
-      fiscalCode: systemConfig?.fiscalCode || '',
-      skipBackground: true,
+      type: 'ticket',
+      paperWidthMm,
+      paperHeightMm,
+      orientation: 'portrait',
+      html: subscriptionHtml,
+      ticketId: subscription.id,
     };
     
-    // Send to print agent (same pattern as tickets)
+    // Send to print agent
     const sent = sendPrintJobToAgent(printerAgentId, printPayload);
     
     if (!sent) {
