@@ -7429,6 +7429,26 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
     const incidenzaGenere = ticketedEvent.genreIncidence ?? 0;
     const eventName = eventDetails.name || 'Evento';
     
+    // Determina se il genere richiede Autore/Esecutore (Warning 3111)
+    // TipoGenere 05-09: Musica/Concerti - richiedono Esecutore
+    // TipoGenere 45-59: Teatro/Concerti - richiedono Autore ed Esecutore
+    const genreNum = parseInt(genreCode);
+    const requiresPerformer = (genreNum >= 5 && genreNum <= 9) || (genreNum >= 45 && genreNum <= 59);
+    
+    // Genera elementi opzionali per TitoliOpere
+    let autoreXml = '';
+    let esecutoreXml = '';
+    if (requiresPerformer) {
+      if (ticketedEvent.author) {
+        autoreXml = `
+                        <Autore>${escapeXml(ticketedEvent.author)}</Autore>`;
+      }
+      // Esecutore: usa campo performer o fallback al nome evento
+      const performer = ticketedEvent.performer || eventName;
+      esecutoreXml = `
+                        <Esecutore>${escapeXml(performer)}</Esecutore>`;
+    }
+    
     // DTD Differenze per Intrattenimento:
     // - RiepilogoGiornaliero: (TipoTassazione, Incidenza?) - NO ImponibileIntrattenimenti
     // - RiepilogoMensile: (TipoTassazione, Incidenza?, ImponibileIntrattenimenti?)
@@ -7468,7 +7488,7 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
                 <TipoGenere>${escapeXml(genreCode)}</TipoGenere>
                 <IncidenzaGenere>${incidenzaGenere}</IncidenzaGenere>
                 <TitoliOpere>
-                    <Titolo>${escapeXml(eventName)}</Titolo>
+                    <Titolo>${escapeXml(eventName)}</Titolo>${autoreXml}${esecutoreXml}
                 </TitoliOpere>
             </MultiGenere>${sectorsXml}
         </Evento>`;
