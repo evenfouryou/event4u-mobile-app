@@ -51,6 +51,12 @@ A SIAE-compliant ticket holder name change workflow with configurable temporal l
 ### SIAE-Compliant Resale Marketplace (Secondary Ticketing)
 A marketplace for ticket resale compliant with Italian Allegato B regulations, featuring seller listing, buyer purchase, atomic reservation, fiscal compliance (original ticket annulment and new ticket emission), seller payouts, and C1 report integration.
 
+**Resale Idempotency Fix (2026-01-14)**: Fixed critical bug where the `/confirm` endpoint could be called twice (once from checkout, once from success page) and would create **duplicate tickets** if the first call partially failed. Now the confirm flow checks if a new ticket already exists before creating one. This prevents:
+- Duplicate tickets being created for the same resale
+- Original ticket not being annulled
+- Seller wallet not being credited
+- Resale stuck in "processing" status
+
 ### Scanner Management Module
 Manages event scanner operators for `gestore`/`super_admin` users, supporting scanner account creation, mobile-optimized UI, and granular event assignment with permissions.
 

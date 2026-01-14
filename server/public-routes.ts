@@ -5538,74 +5538,96 @@ router.post("/api/public/resales/:id/confirm", async (req, res) => {
       return await refundAndReturnError(errorReason, "SEAL_CARD_NOT_READY");
     }
     
-    // 5. Create new ticket for buyer with all original ticket data
-    const newTicketCode = `RT${now.getTime().toString(36).toUpperCase()}`;
-    
-    // Get next progressive number
-    const [maxProg] = await db
-      .select({ maxProg: sql<number>`COALESCE(MAX(${siaeTickets.progressiveNumber}), 0)` })
+    // CRITICAL FIX: Check if new ticket already exists (idempotency for retry scenarios)
+    // This handles cases where the first confirm call created the ticket but failed before completing
+    const [existingNewTicket] = await db
+      .select()
       .from(siaeTickets)
-      .where(eq(siaeTickets.ticketedEventId, originalTicket.ticketedEventId));
-    const newProgressiveNumber = (maxProg?.maxProg || 0) + 1;
+      .where(and(
+        eq(siaeTickets.originalTicketId, originalTicket.id),
+        eq(siaeTickets.paymentMethod, 'resale')
+      ));
     
-    // Generate QR code with fiscal seal data
-    const qrData = sealData ? JSON.stringify({
-      seal: sealData.sealCode,
-      sealNumber: sealData.sealNumber,
-      serialNumber: sealData.serialNumber,
-      counter: sealData.counter,
-      mac: sealData.mac,
-    }) : `SIAE-TKT-RESALE-${newProgressiveNumber}`;
+    let newTicket: typeof siaeTickets.$inferSelect;
     
-    const [newTicket] = await db
-      .insert(siaeTickets)
-      .values({
-        ticketedEventId: originalTicket.ticketedEventId,
-        transactionId: originalTicket.transactionId,
-        sectorId: originalTicket.sectorId,
-        ticketCode: newTicketCode,
-        qrCode: qrData,
-        ticketType: originalTicket.ticketType,
-        ticketTypeCode: originalTicket.ticketTypeCode,
-        sectorCode: originalTicket.sectorCode,
-        ticketPrice: resale.resalePrice,
-        seatNumber: originalTicket.seatNumber,
-        row: originalTicket.row,
-        seatId: originalTicket.seatId,
-        fiscalSealId: fiscalSealId,
-        fiscalSealCode: fiscalSealCode,
-        fiscalSealCounter: fiscalSealCounter,
-        cardCode: cardCode,
-        progressiveNumber: newProgressiveNumber,
-        grossAmount: resale.resalePrice,
-        netAmount: originalTicket.netAmount,
-        vatAmount: originalTicket.vatAmount,
-        prevendita: originalTicket.prevendita,
-        prevenditaVat: originalTicket.prevenditaVat,
-        customerId: customer.id,
-        participantFirstName: customer.firstName,
-        participantLastName: customer.lastName,
-        participantEmail: customer.email,
-        participantPhone: customer.phone,
-        participantFiscalCode: customer.fiscalCode,
-        emissionDate: now,
-        emissionDateStr: emissionDateStr,
-        emissionTimeStr: emissionTimeStr,
-        status: sealData ? 'active' : 'pending_fiscalization',
-        originalTicketId: originalTicket.id,
-        paymentMethod: 'resale',
-        isComplimentary: originalTicket.isComplimentary,
-      })
-      .returning();
-    
-    // Only update QR code with scannable format if seal is real
-    // Keep provisional QR for pending fiscalization tickets
-    if (sealData) {
-      const scannableQrCode = `SIAE-TKT-${newTicket.id}`;
-      await db
-        .update(siaeTickets)
-        .set({ qrCode: scannableQrCode })
-        .where(eq(siaeTickets.id, newTicket.id));
+    if (existingNewTicket) {
+      // Use existing ticket from a previous partial attempt
+      console.log(`[RESALE] Found existing new ticket ${existingNewTicket.id} from previous attempt, reusing`);
+      newTicket = existingNewTicket;
+    } else {
+      // 5. Create new ticket for buyer with all original ticket data
+      const newTicketCode = `RT${now.getTime().toString(36).toUpperCase()}`;
+      
+      // Get next progressive number
+      const [maxProg] = await db
+        .select({ maxProg: sql<number>`COALESCE(MAX(${siaeTickets.progressiveNumber}), 0)` })
+        .from(siaeTickets)
+        .where(eq(siaeTickets.ticketedEventId, originalTicket.ticketedEventId));
+      const newProgressiveNumber = (maxProg?.maxProg || 0) + 1;
+      
+      // Generate QR code with fiscal seal data
+      const qrData = sealData ? JSON.stringify({
+        seal: sealData.sealCode,
+        sealNumber: sealData.sealNumber,
+        serialNumber: sealData.serialNumber,
+        counter: sealData.counter,
+        mac: sealData.mac,
+      }) : `SIAE-TKT-RESALE-${newProgressiveNumber}`;
+      
+      const [createdTicket] = await db
+        .insert(siaeTickets)
+        .values({
+          ticketedEventId: originalTicket.ticketedEventId,
+          transactionId: originalTicket.transactionId,
+          sectorId: originalTicket.sectorId,
+          ticketCode: newTicketCode,
+          qrCode: qrData,
+          ticketType: originalTicket.ticketType,
+          ticketTypeCode: originalTicket.ticketTypeCode,
+          sectorCode: originalTicket.sectorCode,
+          ticketPrice: resale.resalePrice,
+          seatNumber: originalTicket.seatNumber,
+          row: originalTicket.row,
+          seatId: originalTicket.seatId,
+          fiscalSealId: fiscalSealId,
+          fiscalSealCode: fiscalSealCode,
+          fiscalSealCounter: fiscalSealCounter,
+          cardCode: cardCode,
+          progressiveNumber: newProgressiveNumber,
+          grossAmount: resale.resalePrice,
+          netAmount: originalTicket.netAmount,
+          vatAmount: originalTicket.vatAmount,
+          prevendita: originalTicket.prevendita,
+          prevenditaVat: originalTicket.prevenditaVat,
+          customerId: customer.id,
+          participantFirstName: customer.firstName,
+          participantLastName: customer.lastName,
+          participantEmail: customer.email,
+          participantPhone: customer.phone,
+          participantFiscalCode: customer.fiscalCode,
+          emissionDate: now,
+          emissionDateStr: emissionDateStr,
+          emissionTimeStr: emissionTimeStr,
+          status: sealData ? 'active' : 'pending_fiscalization',
+          originalTicketId: originalTicket.id,
+          paymentMethod: 'resale',
+          isComplimentary: originalTicket.isComplimentary,
+        })
+        .returning();
+      
+      newTicket = createdTicket;
+      
+      // Only update QR code with scannable format if seal is real
+      // Keep provisional QR for pending fiscalization tickets
+      if (sealData) {
+        const scannableQrCode = `SIAE-TKT-${newTicket.id}`;
+        await db
+          .update(siaeTickets)
+          .set({ qrCode: scannableQrCode })
+          .where(eq(siaeTickets.id, newTicket.id));
+      }
+      
+      console.log(`[RESALE] Created new ticket ${newTicket.id} with code ${newTicketCode}`);
     }
     
     // === CRITICAL: All DB operations MUST complete before sending response ===
