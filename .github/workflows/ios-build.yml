@@ -28,16 +28,13 @@ jobs:
       - name: Build web app
         run: npm run build
 
-      - name: Add iOS platform
-        run: npx cap add ios || true
-
-      - name: Sync Capacitor
+      - name: Sync Capacitor iOS
         run: npx cap sync ios
 
       - name: Setup Xcode
         uses: maxim-lobanov/setup-xcode@v1
         with:
-          xcode-version: latest-stable
+          xcode-version: '15.4'
 
       - name: Install CocoaPods dependencies
         run: |
