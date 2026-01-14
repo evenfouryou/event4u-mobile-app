@@ -6598,6 +6598,146 @@ router.post("/api/siae/subscriptions/:id/cancel", requireAuth, requireOrganizer,
   }
 });
 
+// Print subscription to thermal printer
+router.post("/api/siae/subscriptions/:id/print", requireAuth, async (req: Request, res: Response) => {
+  console.log('[SubscriptionPrint] Endpoint hit! subscriptionId:', req.params.id);
+  try {
+    const user = req.user as any;
+    const { id: subscriptionId } = req.params;
+    const { agentId } = req.body;
+    
+    // Get the subscription
+    const [subscription] = await db.select()
+      .from(siaeSubscriptions)
+      .where(eq(siaeSubscriptions.id, subscriptionId));
+    
+    if (!subscription) {
+      return res.status(404).json({ message: "Abbonamento non trovato" });
+    }
+    
+    // Verify company access
+    if (user.role !== 'super_admin' && subscription.companyId !== user.companyId) {
+      return res.status(403).json({ message: "Non autorizzato" });
+    }
+    
+    // Get event details
+    const event = subscription.ticketedEventId 
+      ? await siaeStorage.getSiaeTicketedEvent(subscription.ticketedEventId)
+      : null;
+    
+    // Get sector
+    const sector = subscription.sectorId 
+      ? await siaeStorage.getSiaeEventSector(subscription.sectorId)
+      : null;
+    
+    // Get SIAE system config
+    const systemConfig = await siaeStorage.getSiaeSystemConfig(subscription.companyId);
+    
+    // Get connected agents
+    const connectedAgents = getConnectedAgents(subscription.companyId);
+    
+    if (connectedAgents.length === 0) {
+      return res.status(503).json({ 
+        message: "Nessun agente di stampa connesso. Avviare l'applicazione desktop Event4U.",
+        errorCode: "NO_PRINT_AGENT"
+      });
+    }
+    
+    // Determine print agent
+    let printerAgentId = agentId;
+    if (!printerAgentId && connectedAgents.length === 1) {
+      printerAgentId = connectedAgents[0].agentId;
+    }
+    
+    if (!printerAgentId) {
+      return res.status(400).json({
+        message: "Selezionare un agente di stampa",
+        errorCode: "AGENT_SELECTION_REQUIRED",
+        availableAgents: connectedAgents.map(a => ({
+          agentId: a.agentId,
+          deviceName: a.deviceName,
+          printerName: a.printerName
+        }))
+      });
+    }
+    
+    // Verify agent is connected
+    const selectedAgent = connectedAgents.find(a => a.agentId === printerAgentId);
+    if (!selectedAgent) {
+      return res.status(400).json({
+        message: "Agente di stampa non connesso",
+        errorCode: "AGENT_NOT_CONNECTED"
+      });
+    }
+    
+    // Build print data for subscription
+    const printData = {
+      type: 'subscription',
+      subscriptionId: subscription.id,
+      subscriptionCode: subscription.subscriptionCode,
+      holderName: `${subscription.holderFirstName || ''} ${subscription.holderLastName || ''}`.trim(),
+      eventName: event?.eventName || 'Abbonamento',
+      sectorName: sector?.name || '',
+      turnType: subscription.turnType || '',
+      eventsCount: subscription.eventsCount || 0,
+      eventsUsed: subscription.eventsUsed || 0,
+      validFrom: subscription.validFrom,
+      validTo: subscription.validTo,
+      totalAmount: subscription.totalAmount,
+      businessName: systemConfig?.businessName || '',
+      fiscalCode: systemConfig?.fiscalCode || '',
+      skipBackground: true,
+    };
+    
+    // Send print command to agent via WebSocket
+    const printCommand = {
+      type: 'print_subscription',
+      payload: printData
+    };
+    
+    const sent = sendToAgent(subscription.companyId, printerAgentId, printCommand);
+    
+    if (!sent) {
+      return res.status(503).json({
+        message: "Impossibile inviare comando di stampa all'agente",
+        errorCode: "PRINT_SEND_FAILED"
+      });
+    }
+    
+    // Update subscription printed status
+    await db.update(siaeSubscriptions)
+      .set({ 
+        printedAt: new Date(),
+        updatedAt: new Date()
+      })
+      .where(eq(siaeSubscriptions.id, subscriptionId));
+    
+    // Audit log
+    await siaeStorage.createAuditLog({
+      companyId: subscription.companyId,
+      userId: user.id,
+      action: 'subscription_printed',
+      entityType: 'subscription',
+      entityId: subscriptionId,
+      description: `Abbonamento ${subscription.subscriptionCode} stampato`,
+      ipAddress: req.ip,
+      userAgent: req.get('user-agent'),
+    });
+    
+    res.json({
+      success: true,
+      subscriptionId,
+      subscriptionCode: subscription.subscriptionCode,
+      printedAt: new Date(),
+      agentId: printerAgentId,
+      deviceName: selectedAgent.deviceName
+    });
+  } catch (error: any) {
+    console.error('[SubscriptionPrint] Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // Get subscription usage history
 router.get("/api/siae/subscriptions/:id/usage", requireAuth, async (req: Request, res: Response) => {
   try {
