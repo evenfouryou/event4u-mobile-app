@@ -89,6 +89,26 @@ import {
 } from "lucide-react";
 import { MobileAppLayout, MobileHeader } from "@/components/mobile-primitives";
 
+// Helper: check if status is a cancelled status (SIAE compliant)
+const isCancelledStatus = (status: string) => {
+  const cancelledStatuses = ['cancelled', 'annullato', 'refunded', 'rimborsato', 'voided', 'annullato_rimborso', 'annullato_rivendita', 'annullato_cambio_nominativo'];
+  return cancelledStatuses.includes(status);
+};
+
+// Helper: get status badge for cashier view
+const getTicketStatusBadge = (status: string) => {
+  if (status === 'annullato_cambio_nominativo') {
+    return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">Cambio Nom.</Badge>;
+  }
+  if (status === 'annullato_rivendita') {
+    return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Rivenduto</Badge>;
+  }
+  if (isCancelledStatus(status)) {
+    return <Badge variant="destructive">Annullato</Badge>;
+  }
+  return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Valido</Badge>;
+};
+
 export default function CassaBigliettiPage() {
   const { user } = useAuth();
   const { toast } = useToast();
@@ -646,8 +666,8 @@ export default function CassaBigliettiPage() {
 
   const todayStats = {
     count: todayTickets?.length || 0,
-    revenue: todayTickets?.filter(t => t.status !== "cancelled").reduce((sum, t) => sum + (Number(t.ticketPrice) || 0), 0) || 0,
-    cancelled: todayTickets?.filter(t => t.status === "cancelled").length || 0,
+    revenue: todayTickets?.filter(t => !isCancelledStatus(t.status)).reduce((sum, t) => sum + (Number(t.ticketPrice) || 0), 0) || 0,
+    cancelled: todayTickets?.filter(t => isCancelledStatus(t.status)).length || 0,
   };
 
   // Shared dialogs component for both mobile and desktop
@@ -1552,11 +1572,7 @@ export default function CassaBigliettiPage() {
                                   </TableCell>
                                   <TableCell>
                                     <div className="flex items-center gap-2">
-                                      {ticket.status === "cancelled" ? (
-                                        <Badge variant="destructive">Annullato</Badge>
-                                      ) : (
-                                        <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Valido</Badge>
-                                      )}
+                                      {getTicketStatusBadge(ticket.status)}
                                       {printStatuses[ticket.id] === 'printing' && (
                                         <Loader2 className="w-4 h-4 animate-spin text-[#FFD700]" />
                                       )}
@@ -1569,7 +1585,7 @@ export default function CassaBigliettiPage() {
                                     </div>
                                   </TableCell>
                                   <TableCell className="text-right">
-                                    {ticket.status !== "cancelled" && (
+                                    {!isCancelledStatus(ticket.status) && (
                                       <Button
                                         size="sm"
                                         variant="ghost"
@@ -2423,11 +2439,7 @@ export default function CassaBigliettiPage() {
                             </TableCell>
                             <TableCell>
                               <div className="flex items-center gap-2">
-                                {ticket.status === "cancelled" ? (
-                                  <Badge variant="destructive">Annullato</Badge>
-                                ) : (
-                                  <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Valido</Badge>
-                                )}
+                                {getTicketStatusBadge(ticket.status)}
                                 {/* Print status icon */}
                                 {printStatuses[ticket.id] === 'printing' && (
                                   <Loader2 className="w-4 h-4 animate-spin text-[#FFD700]" data-testid={`icon-printing-${ticket.id}`} />
@@ -2444,7 +2456,7 @@ export default function CassaBigliettiPage() {
                               </div>
                             </TableCell>
                             <TableCell className="text-right">
-                              {ticket.status !== "cancelled" && (
+                              {!isCancelledStatus(ticket.status) && (
                                 <Button
                                   size="sm"
                                   variant="ghost"
