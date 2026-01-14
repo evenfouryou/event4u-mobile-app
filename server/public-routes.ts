@@ -4095,11 +4095,11 @@ router.post("/api/public/account/name-change", async (req, res) => {
           
           // Process the name change in a transaction
           const result = await db.transaction(async (tx) => {
-            // Mark original ticket as replaced
+            // Mark original ticket as annulled for name change (SIAE-compliant)
             await tx.update(siaeTickets)
               .set({
-                status: 'replaced',
-                cancellationReasonCode: 'CN', // Cambio Nominativo
+                status: 'annullato_cambio_nominativo',
+                cancellationReasonCode: '10', // TAB.5: "Cambio nominativo - vecchio titolo"
                 cancellationDate: new Date(),
                 updatedAt: new Date()
               })
@@ -4177,8 +4177,58 @@ router.post("/api/public/account/name-change", async (req, res) => {
           
           console.log(`[PUBLIC] Auto-approval completed for name change ${nameChange.id}, new ticket: ${result.newTicket.id}`);
           
+          // Send email to new holder (async, don't block response)
+          (async () => {
+            try {
+              // Fetch event data
+              const [ticketedEvent] = await db.select().from(siaeTicketedEvents).where(eq(siaeTicketedEvents.id, ticket.ticketedEventId));
+              if (!ticketedEvent) return;
+              
+              const [event] = await db.select().from(events).where(eq(events.id, ticketedEvent.eventId));
+              if (!event) return;
+              
+              const [sector] = await db.select().from(siaeEventSectors).where(eq(siaeEventSectors.id, ticket.sectorId));
+              
+              const ticketData = {
+                eventName: event.name,
+                eventDate: event.startDatetime,
+                locationName: 'N/A',
+                sectorName: sector?.name || 'N/A',
+                holderName: `${newFirstName} ${newLastName}`,
+                price: String(ticket.grossAmount || ticket.ticketPrice || '0'),
+                ticketCode: result.newTicket.ticketCode || '',
+                qrCode: result.newTicket.qrCode || '',
+                fiscalSealCode: sealData.sealCode
+              };
+              
+              const pdfBuffer = await generateDigitalTicketPdf(ticketData);
+              
+              const ticketHtml = `
+                <div style="border:1px solid #ddd; padding:20px; border-radius:8px;">
+                  <h2 style="color:#6366f1;">Biglietto - ${event.name}</h2>
+                  <p><strong>Intestatario:</strong> ${ticketData.holderName}</p>
+                  <p><strong>Settore:</strong> ${ticketData.sectorName}</p>
+                  <p><strong>Codice:</strong> ${ticketData.ticketCode}</p>
+                  <p><strong>Sigillo SIAE:</strong> ${ticketData.fiscalSealCode}</p>
+                </div>
+              `;
+              
+              await sendTicketEmail({
+                to: newEmail,
+                subject: `Cambio Nominativo Completato - ${event.name}`,
+                eventName: event.name,
+                tickets: [{ id: result.newTicket.id, html: ticketHtml }],
+                pdfBuffers: [pdfBuffer]
+              });
+              
+              console.log(`[PUBLIC] Email sent for name change ${nameChange.id} to ${newEmail}`);
+            } catch (emailError) {
+              console.error('[PUBLIC] Auto-approval email error:', emailError);
+            }
+          })();
+          
           return res.json({
-            message: "Cambio nominativo completato automaticamente. Il nuovo biglietto è stato emesso.",
+            message: "Cambio nominativo completato automaticamente. Il nuovo biglietto è stato emesso e inviato via email.",
             nameChangeId: nameChange.id,
             newTicketId: result.newTicket.id,
             fee: "0.00",

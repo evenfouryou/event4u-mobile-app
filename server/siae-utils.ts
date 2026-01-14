@@ -722,7 +722,8 @@ export const SIAE_CANCELLED_STATUSES = [
   'rimborsato',
   'voided',
   'annullato_rimborso',
-  'annullato_rivendita'  // Secondary ticketing marketplace
+  'annullato_rivendita',  // Secondary ticketing marketplace
+  'annullato_cambio_nominativo'  // Name change - original ticket
 ] as const;
 
 /**

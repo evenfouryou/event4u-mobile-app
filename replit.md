@@ -66,6 +66,12 @@ This ensures the SIAE-compliant flow works correctly:
 - Original ticket status → `annullato_rivendita` (now correctly hidden from "I miei biglietti")
 - Seller wallet credited via `siaeWalletTransactions` with type `resale_credit`
 
+**Name Change Auto-Approval Email Fix (2026-01-14)**: Fixed critical bug where auto-approved name changes in public-routes.ts would create a new ticket but NOT send the email to the new holder. Changes:
+1. Added async email sending after successful auto-approval (PDF attachment + HTML summary)
+2. Changed original ticket status from `replaced` to `annullato_cambio_nominativo` for SIAE compliance
+3. Changed cancellation reason code to `10` (TAB.5: "Cambio nominativo - vecchio titolo")
+4. Added `annullato_cambio_nominativo` to `SIAE_CANCELLED_STATUSES` array
+
 ### Scanner Management Module
 Manages event scanner operators for `gestore`/`super_admin` users, supporting scanner account creation, mobile-optimized UI, and granular event assignment with permissions.
 
