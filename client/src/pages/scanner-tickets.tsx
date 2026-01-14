@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo, useDeferredValue } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useParams, Link } from "wouter";
 import { format, parseISO } from "date-fns";
@@ -32,7 +32,6 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { motion } from "framer-motion";
 import { SafeArea, HapticButton, triggerHaptic } from "@/components/mobile-primitives";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
@@ -78,12 +77,6 @@ interface Event {
   startDatetime: string;
 }
 
-const springTransition = {
-  type: "spring" as const,
-  stiffness: 400,
-  damping: 30,
-};
-
 export default function ScannerTicketsPage() {
   const { eventId } = useParams<{ eventId: string }>();
   const isMobile = useIsMobile();
@@ -93,6 +86,8 @@ export default function ScannerTicketsPage() {
   const [typeFilter, setTypeFilter] = useState<'all' | 'list' | 'table' | 'ticket'>('all');
   const [selectedEntry, setSelectedEntry] = useState<EntryItem | null>(null);
   const [isDetailDialogOpen, setIsDetailDialogOpen] = useState(false);
+
+  const deferredSearchQuery = useDeferredValue(searchQuery);
 
   const { data: event } = useQuery<Event>({
     queryKey: ['/api/events', eventId],
@@ -128,26 +123,34 @@ export default function ScannerTicketsPage() {
     },
   });
 
-  const filteredEntries = entries?.filter(entry => {
-    const matchesSearch = searchQuery.trim() === '' || 
-      `${entry.firstName} ${entry.lastName}`.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      entry.phone?.includes(searchQuery) ||
-      entry.ticketCode?.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredEntries = useMemo(() => {
+    if (!entries) return [];
     
-    const matchesStatus = activeFilter === 'all' || 
-      (activeFilter === 'pending' && !entry.isCheckedIn) ||
-      (activeFilter === 'checked_in' && entry.isCheckedIn);
+    const searchLower = deferredSearchQuery.trim().toLowerCase();
     
-    const matchesType = typeFilter === 'all' || entry.type === typeFilter;
-    
-    return matchesSearch && matchesStatus && matchesType;
-  }) || [];
+    return entries.filter(entry => {
+      const matchesSearch = searchLower === '' || 
+        `${entry.firstName} ${entry.lastName}`.toLowerCase().includes(searchLower) ||
+        entry.phone?.includes(deferredSearchQuery) ||
+        entry.ticketCode?.toLowerCase().includes(searchLower);
+      
+      const matchesStatus = activeFilter === 'all' || 
+        (activeFilter === 'pending' && !entry.isCheckedIn) ||
+        (activeFilter === 'checked_in' && entry.isCheckedIn);
+      
+      const matchesType = typeFilter === 'all' || entry.type === typeFilter;
+      
+      return matchesSearch && matchesStatus && matchesType;
+    });
+  }, [entries, deferredSearchQuery, activeFilter, typeFilter]);
 
-  const pendingCount = entries?.filter(e => !e.isCheckedIn).length || 0;
-  const checkedInCount = entries?.filter(e => e.isCheckedIn).length || 0;
-  const listCount = entries?.filter(e => e.type === 'list').length || 0;
-  const tableCount = entries?.filter(e => e.type === 'table').length || 0;
-  const ticketCount = entries?.filter(e => e.type === 'ticket').length || 0;
+  const { pendingCount, checkedInCount, listCount, tableCount, ticketCount } = useMemo(() => ({
+    pendingCount: entries?.filter(e => !e.isCheckedIn).length || 0,
+    checkedInCount: entries?.filter(e => e.isCheckedIn).length || 0,
+    listCount: entries?.filter(e => e.type === 'list').length || 0,
+    tableCount: entries?.filter(e => e.type === 'table').length || 0,
+    ticketCount: entries?.filter(e => e.type === 'ticket').length || 0,
+  }), [entries]);
 
   const getTypeBadge = (type: string) => {
     switch (type) {
@@ -473,12 +476,7 @@ export default function ScannerTicketsPage() {
       top={true}
       bottom={true}
     >
-      <motion.header 
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={springTransition}
-        className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-4 py-3"
-      >
+      <header className="sticky top-0 z-10 bg-background/95 backdrop-blur border-b px-4 py-3">
         <div className="flex items-center gap-3">
           <Link href={`/scanner/scan/${eventId}`}>
             <HapticButton variant="ghost" size="icon" hapticType="light" data-testid="button-back">
@@ -493,7 +491,7 @@ export default function ScannerTicketsPage() {
             {pendingCount} da validare
           </Badge>
         </div>
-      </motion.header>
+      </header>
 
       <div className="p-4 space-y-4 flex-1">
         <div className="relative">
@@ -579,48 +577,42 @@ export default function ScannerTicketsPage() {
           <ScrollArea className="flex-1">
             <div className="space-y-3">
               {filteredEntries.map((entry) => (
-                <motion.div
+                <Card 
                   key={`${entry.type}-${entry.id}`}
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={springTransition}
+                  className={`hover-elevate cursor-pointer ${entry.isCheckedIn ? 'opacity-60' : ''}`}
+                  onClick={() => handleEntryClick(entry)}
+                  data-testid={`card-entry-${entry.id}`}
                 >
-                  <Card 
-                    className={`hover-elevate cursor-pointer ${entry.isCheckedIn ? 'opacity-60' : ''}`}
-                    onClick={() => handleEntryClick(entry)}
-                    data-testid={`card-entry-${entry.id}`}
-                  >
-                    <CardContent className="p-4">
-                      <div className="flex items-center justify-between">
-                        <div className="flex-1">
-                          <div className="flex items-center gap-2">
-                            <span className="font-semibold">{entry.firstName} {entry.lastName}</span>
-                            {getStatusBadge(entry.isCheckedIn)}
-                          </div>
-                          <div className="flex items-center gap-2 mt-1">
-                            {getTypeBadge(entry.type)}
-                            {entry.type === 'list' && entry.listName && (
-                              <span className="text-xs text-muted-foreground">{entry.listName}</span>
-                            )}
-                            {entry.type === 'table' && (
-                              <span className="text-xs text-muted-foreground">{entry.tableName}</span>
-                            )}
-                            {entry.type === 'ticket' && (
-                              <span className="text-xs text-muted-foreground">{entry.ticketCode}</span>
-                            )}
-                          </div>
-                          {entry.isCheckedIn && entry.checkedInAt && (
-                            <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
-                              <Clock className="h-3 w-3" />
-                              Scansionato: {format(parseISO(entry.checkedInAt), "dd/MM HH:mm", { locale: it })}
-                            </div>
+                  <CardContent className="p-4">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="font-semibold">{entry.firstName} {entry.lastName}</span>
+                          {getStatusBadge(entry.isCheckedIn)}
+                        </div>
+                        <div className="flex items-center gap-2 mt-1">
+                          {getTypeBadge(entry.type)}
+                          {entry.type === 'list' && entry.listName && (
+                            <span className="text-xs text-muted-foreground">{entry.listName}</span>
+                          )}
+                          {entry.type === 'table' && (
+                            <span className="text-xs text-muted-foreground">{entry.tableName}</span>
+                          )}
+                          {entry.type === 'ticket' && (
+                            <span className="text-xs text-muted-foreground">{entry.ticketCode}</span>
                           )}
                         </div>
-                        <Eye className="h-5 w-5 text-muted-foreground" />
+                        {entry.isCheckedIn && entry.checkedInAt && (
+                          <div className="flex items-center gap-1 mt-1 text-xs text-muted-foreground">
+                            <Clock className="h-3 w-3" />
+                            Scansionato: {format(parseISO(entry.checkedInAt), "dd/MM HH:mm", { locale: it })}
+                          </div>
+                        )}
                       </div>
-                    </CardContent>
-                  </Card>
-                </motion.div>
+                      <Eye className="h-5 w-5 text-muted-foreground" />
+                    </div>
+                  </CardContent>
+                </Card>
               ))}
               {filteredEntries.length === 0 && (
                 <div className="text-center py-8 text-muted-foreground">
