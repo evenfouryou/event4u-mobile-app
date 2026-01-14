@@ -529,7 +529,7 @@ export default function TemplateBuilder() {
             </p>
           </div>
           {/* Template type selector */}
-          <Select value={templateType} onValueChange={(v) => setTemplateType(v as 'ticket' | 'subscription')} disabled={!!id}>
+          <Select value={templateType} onValueChange={(v) => setTemplateType(v as 'ticket' | 'subscription')}>
             <SelectTrigger className="w-40" data-testid="select-template-type">
               <SelectValue placeholder="Tipo..." />
             </SelectTrigger>

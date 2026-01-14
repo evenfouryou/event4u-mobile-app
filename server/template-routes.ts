@@ -206,6 +206,7 @@ router.patch('/templates/:id', requireSuperAdmin, async (req: Request, res: Resp
     // Validate update data - explicitly exclude sensitive fields like companyId
     const updateSchema = z.object({
       name: z.string().optional(),
+      templateType: z.enum(['ticket', 'subscription', 'receipt', 'wristband']).optional(),
       backgroundImageUrl: z.string().nullable().optional(),
       paperWidthMm: z.number().optional(),
       paperHeightMm: z.number().optional(),
@@ -222,6 +223,7 @@ router.patch('/templates/:id', requireSuperAdmin, async (req: Request, res: Resp
       version: (existing.version || 1) + 1,
     };
     if (validated.name !== undefined) updateData.name = validated.name;
+    if (validated.templateType !== undefined) updateData.templateType = validated.templateType;
     if (validated.backgroundImageUrl !== undefined) updateData.backgroundImageUrl = validated.backgroundImageUrl;
     if (validated.paperWidthMm !== undefined) updateData.paperWidthMm = validated.paperWidthMm;
     if (validated.paperHeightMm !== undefined) updateData.paperHeightMm = validated.paperHeightMm;
