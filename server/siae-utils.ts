@@ -262,44 +262,56 @@ export function normalizeCausaleAnnullamento(rawCode: string | null | undefined)
 /**
  * Genera NOME FILE ALLEGATO conforme Allegato C SIAE (Sezione 1.4.1)
  * 
- * FORMATO ALLEGATO (breve): XXX_AAAA_MM_GG_###.TTT.p7m
- * Esempio: RCA_2008_02_01_001.xsi.p7m
+ * FORMATO ALLEGATO: XXX_<yyyyMMdd>_<Sistema8cifre>_<nnn>.xsi(.p7m)
+ * Esempio: RMG_20260113_P0004010_004.xsi
  * 
- * NOTA: Questo è DIVERSO dal Subject email che ha formato completo!
+ * NOTA: Questo è DIVERSO dal Subject email che ha formato con separatori!
  * 
  * - XXX = Prefisso (RCA, RMG, RPM)
- * - AAAA_MM_GG = Data
- * - ### = Progressivo (001-999)
- * - TTT = Tipo file (xsi per XML SIAE)
- * - .p7m = estensione per file firmati CAdES
+ * - yyyyMMdd = Data contigua (SENZA underscore)
+ * - Sistema8cifre = Codice sistema a 8 caratteri (es: P0004010)
+ * - nnn = Progressivo (001-999)
+ * - .xsi = Estensione XML SIAE
+ * - .p7m = aggiunta per file firmati CAdES
  */
 export function generateSiaeAttachmentName(
   reportType: 'giornaliero' | 'mensile' | 'rca' | 'log',
   date: Date,
   progressivo: number,
-  signatureFormat?: 'cades' | 'xmldsig' | null
+  signatureFormat?: 'cades' | 'xmldsig' | null,
+  systemCode?: string
 ): string {
   const year = date.getFullYear();
   const month = String(date.getMonth() + 1).padStart(2, '0');
   const day = String(date.getDate()).padStart(2, '0');
   const prog = String(progressivo).padStart(3, '0');
   
+  // Codice sistema: DEVE essere esattamente 8 caratteri
+  let sysCode = systemCode || SIAE_SYSTEM_CODE_DEFAULT;
+  if (sysCode.length !== 8) {
+    console.warn(`[SIAE-UTILS] WARNING: Codice sistema "${sysCode}" ha ${sysCode.length} caratteri invece di 8!`);
+  }
+  
   // Estensione: .xsi.p7m per CAdES, .xsi per non firmato
   const extension = signatureFormat === 'cades' ? '.xsi.p7m' : '.xsi';
   
-  // Formato breve allegato: XXX_AAAA_MM_GG_###.xsi.p7m
+  // Data contigua SENZA underscore (yyyyMMdd)
+  const dateStr = `${year}${month}${day}`;
+  const monthStr = `${year}${month}`;
+  
+  // Formato allegato conforme: XXX_yyyyMMdd_SSSSSSSS_nnn.xsi(.p7m)
   switch (reportType) {
     case 'mensile':
-      // RPM = Riepilogo Periodico Mensile
-      return `RPM_${year}_${month}_${prog}${extension}`;
+      // RPM = Riepilogo Periodico Mensile (usa solo anno-mese)
+      return `RPM_${monthStr}_${sysCode}_${prog}${extension}`;
     case 'log':
     case 'rca':
       // RCA = Riepilogo Controllo Accessi
-      return `RCA_${year}_${month}_${day}_${prog}${extension}`;
+      return `RCA_${dateStr}_${sysCode}_${prog}${extension}`;
     case 'giornaliero':
     default:
       // RMG = Riepilogo Mensile Giornaliero
-      return `RMG_${year}_${month}_${day}_${prog}${extension}`;
+      return `RMG_${dateStr}_${sysCode}_${prog}${extension}`;
   }
 }
 
@@ -351,7 +363,7 @@ export function generateSiaeSubject(
 
 /**
  * LEGACY: Mantiene compatibilità con codice esistente
- * Reindirizza a generateSiaeSubject per il Subject (non per allegato!)
+ * Reindirizza a generateSiaeAttachmentName
  * 
  * @deprecated Usa generateSiaeAttachmentName per il nome file allegato
  *             e generateSiaeSubject per il Subject email
@@ -363,10 +375,7 @@ export function generateSiaeFileName(
   signatureFormat?: 'cades' | 'xmldsig' | null,
   systemCode?: string
 ): string {
-  // BREAKING CHANGE: Ora restituisce il formato corretto per ALLEGATO
-  // Prima restituiva il formato Subject anche per allegato (SBAGLIATO)
-  console.log('[SIAE-UTILS] generateSiaeFileName now returns attachment format (not subject)');
-  return generateSiaeAttachmentName(reportType, date, progressivo, signatureFormat);
+  return generateSiaeAttachmentName(reportType, date, progressivo, signatureFormat, systemCode);
 }
 
 // ==================== C1 Log XML Generation ====================

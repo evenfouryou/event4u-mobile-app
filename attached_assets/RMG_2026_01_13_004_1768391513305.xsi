@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RiepilogoGiornaliero NomeFile="RMG_2026_01_13_004.xsi" Data="20260113" DataGenerazione="20260114" OraGenerazione="114606" ProgressivoGenerazione="4" Sostituzione="S">
+    <Titolare>
+        <Denominazione>HURAEX SRL</Denominazione>
+        <CodiceFiscale>02120820432</CodiceFiscale>
+        <SistemaEmissione>P0004010</SistemaEmissione>
+    </Titolare>
+    <Organizzatore>
+        <Denominazione>HURAEX SRL</Denominazione>
+        <CodiceFiscale>02120820432</CodiceFiscale>
+        <TipoOrganizzatore valore="G"/>
+        <Evento>
+            <Intrattenimento>
+                <TipoTassazione valore="I"/>
+                <Incidenza>100</Incidenza>
+            </Intrattenimento>
+            <Locale>
+                <Denominazione>Azure Club</Denominazione>
+                <CodiceLocale>0000000000001</CodiceLocale>
+            </Locale>
+            <DataEvento>20260113</DataEvento>
+            <OraEvento>2100</OraEvento>
+            <MultiGenere>
+                <TipoGenere>64</TipoGenere>
+                <IncidenzaGenere>0</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>prova 13/01</Titolo>
+                </TitoliOpere>
+            </MultiGenere>
+            <OrdineDiPosto>
+                <CodiceOrdine>A1</CodiceOrdine>
+                <Capienza>5000</Capienza>
+                <TitoliAccesso>
+                    <TipoTitolo>I1</TipoTitolo>
+                    <Quantita>11</Quantita>
+                    <CorrispettivoLordo>1100</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>0</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                    <ImportoPrestazione>0</ImportoPrestazione>
+                </TitoliAccesso>
+            </OrdineDiPosto>
+        </Evento>
+    </Organizzatore>
+</RiepilogoGiornaliero>
