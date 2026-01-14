@@ -44,29 +44,58 @@ function requireSuperAdmin(req: Request, res: Response, next: Function) {
 
 // GET all templates for company (gestore and super_admin can view)
 // Includes global templates (companyId = null) for all users
+// Optional query param: ?type=ticket|subscription
 router.get('/templates', requireAuth, async (req: Request, res: Response) => {
   try {
     const user = getUser(req);
     const companyId = user?.companyId;
+    const templateTypeFilter = req.query.type as string | undefined;
     
     let templates;
     if (user.role === 'super_admin') {
       // Super admin sees all templates
-      templates = await db.select().from(ticketTemplates)
-        .orderBy(desc(ticketTemplates.createdAt));
+      if (templateTypeFilter) {
+        templates = await db.select().from(ticketTemplates)
+          .where(eq(ticketTemplates.templateType, templateTypeFilter))
+          .orderBy(desc(ticketTemplates.createdAt));
+      } else {
+        templates = await db.select().from(ticketTemplates)
+          .orderBy(desc(ticketTemplates.createdAt));
+      }
     } else if (companyId) {
       // Regular users see their company templates + global templates
-      templates = await db.select().from(ticketTemplates)
-        .where(or(
-          eq(ticketTemplates.companyId, companyId),
-          isNull(ticketTemplates.companyId)
-        ))
-        .orderBy(desc(ticketTemplates.createdAt));
+      if (templateTypeFilter) {
+        templates = await db.select().from(ticketTemplates)
+          .where(and(
+            or(
+              eq(ticketTemplates.companyId, companyId),
+              isNull(ticketTemplates.companyId)
+            ),
+            eq(ticketTemplates.templateType, templateTypeFilter)
+          ))
+          .orderBy(desc(ticketTemplates.createdAt));
+      } else {
+        templates = await db.select().from(ticketTemplates)
+          .where(or(
+            eq(ticketTemplates.companyId, companyId),
+            isNull(ticketTemplates.companyId)
+          ))
+          .orderBy(desc(ticketTemplates.createdAt));
+      }
     } else {
       // No company, only show global templates
-      templates = await db.select().from(ticketTemplates)
-        .where(isNull(ticketTemplates.companyId))
-        .orderBy(desc(ticketTemplates.createdAt));
+      if (templateTypeFilter) {
+        templates = await db.select().from(ticketTemplates)
+          .where(and(
+            isNull(ticketTemplates.companyId),
+            eq(ticketTemplates.templateType, templateTypeFilter)
+          ))
+          .orderBy(desc(ticketTemplates.createdAt));
+      } else {
+        templates = await db.select().from(ticketTemplates)
+          .where(isNull(ticketTemplates.companyId))
+          .orderBy(desc(ticketTemplates.createdAt));
+      }
     }
     
     res.json(templates);
