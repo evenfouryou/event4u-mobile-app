@@ -7508,6 +7508,9 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
     }
   }
   
+  // FIX: Titolare DEVE usare la denominazione dalla smart card (systemConfig.businessName)
+  // SIAE Warning 3706: "La denominazione del titolare è diversa da quella presente sulla smart-card"
+  const titolareName = systemConfig?.businessName || companyName;
   const organizerName = systemConfig?.businessName || companyName;
   const organizerTaxId = taxId;
   const organizerType = 'G';
@@ -7520,7 +7523,7 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
   return `<?xml version="1.0" encoding="UTF-8"?>
 <${rootElement} ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressiveGen}" Sostituzione="${sostituzione}">
     <Titolare>
-        <Denominazione>${escapeXml(companyName)}</Denominazione>
+        <Denominazione>${escapeXml(titolareName)}</Denominazione>
         <CodiceFiscale>${escapeXml(taxId)}</CodiceFiscale>
         <SistemaEmissione>${escapeXml(systemEmissionCode)}</SistemaEmissione>
     </Titolare>
