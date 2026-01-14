@@ -5303,6 +5303,8 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   
   // Generate XML using appropriate function based on type
   let xml: string;
+  // FIX 2026-01-14: Calcola il progressivo UNA SOLA VOLTA e riusa per XML e nome file
+  let calculatedProgressivo: number;
   
   if (isRCA && eventId) {
     // RCA: Use RiepilogoControlloAccessi format per DTD ControlloAccessi_v0001_20080626.dtd
@@ -5378,6 +5380,8 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
       rcaProgressivo = rcaTransmissionsForEvent.length + 1;
     }
     console.log(`[SIAE-ROUTES] RCA progressivo: ${rcaProgressivo} (trasmissioni precedenti: ${rcaTransmissionsForEvent.length}, forceSubstitution: ${forceSubstitution})`);
+    // FIX 2026-01-14: Salva progressivo per riuso nel nome file
+    calculatedProgressivo = rcaProgressivo;
     
     // Generate RCA XML (RiepilogoControlloAccessi format - Allegato B Provvedimento 04/03/2008)
     // NOTA: Usa generateRCAXml invece di generateC1LogXml (deprecato - causa errore SIAE 40605)
@@ -5429,6 +5433,29 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     console.log(`[SIAE-ROUTES] Generated RiepilogoControlloAccessi for RCA with ${rcaResult.ticketCount} tickets`);
   } else {
     // RMG/RPM: Use existing RiepilogoGiornaliero/RiepilogoMensile format
+    // FIX 2026-01-14: Calcola il progressivo PRIMA della generazione XML per coerenza nome file/contenuto
+    const transmissionTypeForCalc = isMonthly ? 'monthly' : 'daily';
+    const existingTransmissionsForCalc = await siaeStorage.getSiaeTransmissionsByCompany(companyId);
+    const sameTypeTransmissionsForCalc = existingTransmissionsForCalc.filter(t => {
+      const tDate = new Date(t.periodDate);
+      if (isMonthly) {
+        // Per mensile, confronta anno e mese
+        return t.transmissionType === 'monthly' &&
+               tDate.getFullYear() === effectiveReportDate.getFullYear() &&
+               tDate.getMonth() === effectiveReportDate.getMonth();
+      } else {
+        // Per giornaliero, confronta anno, mese e giorno
+        return t.transmissionType === 'daily' &&
+               tDate.getFullYear() === effectiveReportDate.getFullYear() &&
+               tDate.getMonth() === effectiveReportDate.getMonth() &&
+               tDate.getDate() === effectiveReportDate.getDate();
+      }
+    });
+    const preCalculatedProgressivo = sameTypeTransmissionsForCalc.length + 1;
+    console.log(`[SIAE-ROUTES] Pre-calculated progressivo for ${transmissionTypeForCalc}: ${preCalculatedProgressivo} (existing: ${sameTypeTransmissionsForCalc.length})`);
+    // FIX 2026-01-14: Salva progressivo per riuso nel nome file
+    calculatedProgressivo = preCalculatedProgressivo;
+    
     xml = await generateC1ReportXml({
       companyId,
       reportDate: effectiveReportDate,
@@ -5440,6 +5467,7 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
       taxId,
       oraGen,
       rcaEventName,
+      progressivo: preCalculatedProgressivo, // FIX: Passa progressivo per coerenza
     });
   }
   
@@ -5560,29 +5588,11 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     }
   }
   
-  // Calculate progressive sequence number for this transmission
-  // RCA: progressivo per evento specifico (Allegato C SIAE)
-  // Daily/Monthly: progressivo per data
+  // FIX 2026-01-14: Usa il progressivo già calcolato prima della generazione XML
+  // Questo garantisce coerenza tra nome file e contenuto XML (evita errore SIAE 0600)
   const effectiveReportDateForCount = isRCA && rcaEventDate ? rcaEventDate : reportDate;
-  
-  let sequenceNumber: number;
-  if (isRCA && eventId) {
-    // RCA: conta trasmissioni esistenti per questo specifico evento SIAE
-    const eventTransmissions = await siaeStorage.getSiaeTransmissionsByTicketedEvent(eventId);
-    const rcaTransmissions = eventTransmissions.filter(t => t.transmissionType === 'rca');
-    sequenceNumber = rcaTransmissions.length + 1;
-  } else {
-    // Daily/Monthly: conta trasmissioni dello stesso tipo per la stessa data
-    const existingTransmissions = await siaeStorage.getSiaeTransmissionsByCompany(companyId);
-    const sameTypeTransmissions = existingTransmissions.filter(t => {
-      const tDate = new Date(t.periodDate);
-      return t.transmissionType === transmissionType &&
-             tDate.getFullYear() === effectiveReportDateForCount.getFullYear() &&
-             tDate.getMonth() === effectiveReportDateForCount.getMonth() &&
-             tDate.getDate() === effectiveReportDateForCount.getDate();
-    });
-    sequenceNumber = sameTypeTransmissions.length + 1;
-  }
+  const sequenceNumber = calculatedProgressivo;
+  console.log(`[SIAE-ROUTES] Using pre-calculated progressivo for filename: ${sequenceNumber}`);
   
   // Generate file name using the correct format (Allegato C SIAE)
   const reportTypeForFileName: 'giornaliero' | 'mensile' | 'rca' | 'log' = 
@@ -7144,10 +7154,11 @@ interface C1ReportParams {
   taxId: string;
   oraGen: string;
   rcaEventName?: string; // Event name for RCA reports
+  progressivo?: number; // FIX: Progressivo passato esternamente per coerenza nome file/XML
 }
 
 async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
-  const { companyId, reportDate, isMonthly, isRCA = false, filteredTickets, systemConfig, companyName, taxId, oraGen, rcaEventName } = params;
+  const { companyId, reportDate, isMonthly, isRCA = false, filteredTickets, systemConfig, companyName, taxId, oraGen, rcaEventName, progressivo: passedProgressivo } = params;
   
   // Try to get EFFF data from Smart Card for SIAE compliance
   const { getCachedEfffData } = await import('./bridge-relay');
@@ -7177,23 +7188,38 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
   const systemEmissionCode = cachedEfff?.systemId || systemConfig?.systemCode || 'EVENT4U1';
   
   // Get progressive number and determine if this is a substitution
-  const allTransmissions = await siaeStorage.getSiaeTransmissionsByCompany(companyId);
-  const relevantTransmissions = allTransmissions.filter(t => {
-    const tDate = new Date(t.periodDate);
-    if (isMonthly) {
-      return t.transmissionType === 'monthly' && 
-             tDate.getFullYear() === reportDate.getFullYear() && 
-             tDate.getMonth() === reportDate.getMonth();
-    } else {
-      return t.transmissionType === 'daily' && 
-             tDate.getFullYear() === reportDate.getFullYear() && 
-             tDate.getMonth() === reportDate.getMonth() &&
-             tDate.getDate() === reportDate.getDate();
-    }
-  });
-  const progressiveGen = relevantTransmissions.length + 1;
-  // Sostituzione = "S" se esiste già una trasmissione precedente, altrimenti "N"
-  const sostituzione = relevantTransmissions.length > 0 ? 'S' : 'N';
+  // FIX 2026-01-14: Usa il progressivo passato esternamente per coerenza con il nome file
+  // Il progressivo DEVE essere lo stesso nel nome file (RPM_YYYY_MM_###.xsi) e nel contenuto XML (ProgressivoGenerazione="###")
+  let progressiveGen: number;
+  let sostituzione: string;
+  
+  if (passedProgressivo !== undefined) {
+    // Usa il progressivo passato esternamente (già calcolato nella route chiamante)
+    progressiveGen = passedProgressivo;
+    // Sostituzione = "S" se progressivo > 1 (indica reinvio), altrimenti "N"
+    sostituzione = passedProgressivo > 1 ? 'S' : 'N';
+    console.log(`[SIAE-ROUTES] generateC1ReportXml: using passed progressivo=${progressiveGen}, sostituzione=${sostituzione}`);
+  } else {
+    // Fallback: calcola internamente (legacy behavior, non raccomandato)
+    const allTransmissions = await siaeStorage.getSiaeTransmissionsByCompany(companyId);
+    const relevantTransmissions = allTransmissions.filter(t => {
+      const tDate = new Date(t.periodDate);
+      if (isMonthly) {
+        return t.transmissionType === 'monthly' && 
+               tDate.getFullYear() === reportDate.getFullYear() && 
+               tDate.getMonth() === reportDate.getMonth();
+      } else {
+        return t.transmissionType === 'daily' && 
+               tDate.getFullYear() === reportDate.getFullYear() && 
+               tDate.getMonth() === reportDate.getMonth() &&
+               tDate.getDate() === reportDate.getDate();
+      }
+    });
+    progressiveGen = relevantTransmissions.length + 1;
+    // Sostituzione = "S" se esiste già una trasmissione precedente, altrimenti "N"
+    sostituzione = relevantTransmissions.length > 0 ? 'S' : 'N';
+    console.log(`[SIAE-ROUTES] generateC1ReportXml: WARNING - progressivo calculated internally (legacy mode), progressivo=${progressiveGen}`);
+  }
   
   // ==================== Get Subscriptions for period ====================
   const allSubscriptions = await siaeStorage.getSiaeSubscriptionsByCompany(companyId);
@@ -7671,6 +7697,7 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
     const sequenceNumber = sameTypeTransmissions.length + 1;
     
     // Generate RiepilogoMensile XML using shared helper
+    // FIX 2026-01-14: Passa progressivo per coerenza nome file/contenuto XML
     const xml = await generateC1ReportXml({
       companyId,
       reportDate,
@@ -7679,7 +7706,8 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
       systemConfig,
       companyName: company?.name || 'N/D',
       taxId,
-      oraGen
+      oraGen,
+      progressivo: sequenceNumber, // FIX: Passa progressivo calcolato
     });
     
     // Generate file name with correct format - use systemCode from config for consistency

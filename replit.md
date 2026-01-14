@@ -23,6 +23,10 @@ The core data model links Companies to Users, Locations, Events, Products, and P
 ### SIAE Ticketing Module
 A comprehensive SIAE-compliant ticketing and fiscal management system for Italian clubs, adhering to Italian fiscal regulations (Provvedimento 04/03/2008). It manages reference data, fiscal compliance, customer management, ticketing, transactions, and operations, including API endpoints for CRUD, activation cards, customer registration, ticket emission with fiscal seals, and XML transmission. Fiscal seal generation occurs server-side via a Desktop Bridge Relay System. The module is disabled by default and can be enabled per `gestore` user by a Super Admin. It integrates CAPTCHA and supports RCA, RMG, and RPM SIAE report types. The system correctly generates a single S/MIME signature for email transmissions.
 
+**SIAE Progressivo Fix (2026-01-14)**: Fixed critical bug where the `ProgressivoGenerazione` attribute in XML content could differ from the progressivo in the filename (e.g., `RPM_2026_01_001.xsi`). The progressivo is now calculated BEFORE XML generation and passed as a parameter to `generateC1ReportXml`, ensuring consistency and resolving SIAE error 0600 "Nome del file contenente il riepilogo sbagliato".
+
+**SIAE Titolare Fix (2026-01-14)**: Both Titolare and Organizzatore denominations now use `systemConfig?.businessName` (the value from the smart card EFFF data, e.g., "HURAEX SRL") instead of the generic company name, resolving SIAE warning 3706.
+
 **Cashier Ticket Cancellation**: Cashiers can cancel their own tickets with mandatory SIAE reason codes (`causale`). Security controls ensure:
 - Cashiers can only cancel tickets they issued (verified via `issuedByUserId`)
 - Event allocation verification (company scoping via `siaeCashierAllocations`)
