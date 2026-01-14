@@ -7809,7 +7809,7 @@ router.get("/api/siae/ticketed-events/:eventId/reports/xml", requireAuth, requir
     
     for (const sector of sectors) {
       const sectorTickets = allTickets.filter(t => t.sectorId === sector.id);
-      const soldTickets = sectorTickets.filter(t => t.status !== 'cancelled');
+      const soldTickets = sectorTickets.filter(t => !isCancelledStatus(t.status));
       
       xml += `
     <Settore>
@@ -7827,8 +7827,8 @@ router.get("/api/siae/ticketed-events/:eventId/reports/xml", requireAuth, requir
   </ElencoSettori>
   <Riepilogo>
     <TotaleBigliettiEmessi>${allTickets.length}</TotaleBigliettiEmessi>
-    <TotaleBigliettiValidi>${allTickets.filter(t => t.status !== 'cancelled').length}</TotaleBigliettiValidi>
-    <TotaleBigliettiAnnullati>${allTickets.filter(t => t.status === 'cancelled').length}</TotaleBigliettiAnnullati>
+    <TotaleBigliettiValidi>${allTickets.filter(t => !isCancelledStatus(t.status)).length}</TotaleBigliettiValidi>
+    <TotaleBigliettiAnnullati>${allTickets.filter(t => isCancelledStatus(t.status)).length}</TotaleBigliettiAnnullati>
     <TotaleIncassoLordo>${allTickets.reduce((sum, t) => sum + parseFloat(t.grossAmount || '0'), 0).toFixed(2)}</TotaleIncassoLordo>
     <TotaleDiritti>0.00</TotaleDiritti>
     <TotaleIVA>${allTickets.reduce((sum, t) => sum + parseFloat(t.vatAmount || '0'), 0).toFixed(2)}</TotaleIVA>
@@ -10892,8 +10892,8 @@ router.get("/api/cashier/dashboard", requireAuth, requireCashier, async (req: Re
       allTodayTickets = allTodayTickets.concat(tickets);
     }
     
-    // Filter only active tickets (not cancelled)
-    const activeTickets = allTodayTickets.filter(t => t.status !== 'cancelled');
+    // Filter only active tickets (not cancelled - includes annullato_rivendita, etc.)
+    const activeTickets = allTodayTickets.filter(t => !isCancelledStatus(t.status));
     
     // Calculate stats
     const totalRevenue = activeTickets.reduce((sum, t) => sum + Number(t.ticketPrice || 0), 0);
@@ -11311,8 +11311,8 @@ router.get("/api/cashier/events/:eventId/c1-report", requireAuth, requireCashier
       byType.set(type, current);
     }
     
-    const activeTickets = todayTickets.filter(t => t.status !== 'cancelled');
-    const cancelledTickets = todayTickets.filter(t => t.status === 'cancelled');
+    const activeTickets = todayTickets.filter(t => !isCancelledStatus(t.status));
+    const cancelledTickets = todayTickets.filter(t => isCancelledStatus(t.status));
     
     const totalRevenue = activeTickets.reduce((sum, t) => sum + Number(t.ticketPrice || 0), 0);
     
@@ -11484,7 +11484,7 @@ router.get("/api/siae/events/:eventId/report-c1", requireAuth, async (req: Reque
       }
     }
     
-    const activeTickets = tickets.filter(t => t.status !== 'cancelled');
+    const activeTickets = tickets.filter(t => !isCancelledStatus(t.status));
     const totalRevenue = activeTickets.reduce((sum, t) => sum + (Number(t.ticketPrice) || Number(t.grossAmount) || 0), 0);
     const vatRate = event.vatRate || 10;
     const vatAmount = totalRevenue * vatRate / (100 + vatRate);
@@ -11502,7 +11502,7 @@ router.get("/api/siae/events/:eventId/report-c1", requireAuth, async (req: Reque
       generatedBy: user.fullName || user.username,
       summary: {
         totalTicketsSold: activeTickets.length,
-        totalTicketsCancelled: tickets.filter(t => t.status === 'cancelled').length,
+        totalTicketsCancelled: tickets.filter(t => isCancelledStatus(t.status)).length,
         totalRevenue,
         vatRate,
         vatAmount,

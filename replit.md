@@ -60,6 +60,8 @@ This ensures the SIAE-compliant flow works correctly:
 - New ticket is created for the buyer
 - No duplicate tickets even if `/confirm` is called multiple times
 
+**Annullato Rivendita Stats Fix (2026-01-14)**: Fixed ticket statistics to correctly count `annullato_rivendita` as cancelled. Previously, reports and dashboards only checked `status === 'cancelled'` - now uses `isCancelledStatus()` which includes all cancellation statuses (cancelled, annullato, refunded, rimborsato, voided, annullato_rimborso, annullato_rivendita).
+
 ### Scanner Management Module
 Manages event scanner operators for `gestore`/`super_admin` users, supporting scanner account creation, mobile-optimized UI, and granular event assignment with permissions.
 
