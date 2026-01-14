@@ -408,10 +408,15 @@ export default function PublicResaleCheckoutPage() {
     setPaymentError(null);
 
     try {
+      // Build return URL with optional token (only append if defined)
+      const confirmToken = createPaymentIntent.data?.confirmToken;
+      const returnTokenParam = confirmToken ? `&token=${confirmToken}` : '';
+      const returnUrl = `${window.location.origin}/account/resale-success?resale_id=${id}${returnTokenParam}`;
+      
       const { error, paymentIntent } = await stripeRef.current.confirmPayment({
         elements: elementsRef.current,
         confirmParams: {
-          return_url: `${window.location.origin}/account/resale-success?resale_id=${id}&token=${createPaymentIntent.data?.confirmToken}`,
+          return_url: returnUrl,
         },
         redirect: "if_required",
       });
@@ -509,13 +514,30 @@ export default function PublicResaleCheckoutPage() {
             }
           } catch (e) {}
           
-          setPaymentError(errorMessage);
+          // If payment was refunded, stay on page with error
+          if (wasRefunded) {
+            setPaymentError(errorMessage);
+            toast({
+              title: "Pagamento stornato",
+              description: errorMessage,
+              variant: "destructive",
+            });
+            setIsProcessing(false);
+            return;
+          }
+          
+          // For non-refunded errors, redirect to success page for recovery attempt
+          // This ensures the user can retry confirmation even if this page fails
+          console.log("[Checkout] Redirecting to success page for recovery...");
           toast({
-            title: wasRefunded ? "Pagamento stornato" : "Errore",
-            description: errorMessage,
-            variant: "destructive",
+            title: "Completamento in corso",
+            description: "Stiamo completando la tua transazione...",
           });
-          setIsProcessing(false);
+          // Only append token if defined to avoid "token=undefined" in URL
+          const tokenParam = createPaymentIntent.data?.confirmToken 
+            ? `&token=${createPaymentIntent.data.confirmToken}` 
+            : '';
+          navigate(`/account/resale-success?resale_id=${id}${tokenParam}`);
           return;
         }
       }

@@ -43,7 +43,39 @@ export default function AccountResaleSuccess() {
         description: "Il tuo nuovo biglietto è pronto.",
       });
     },
-    onError: (error: any) => {
+    onError: async (error: any) => {
+      console.log("[ResaleSuccess] Confirm failed, attempting recovery...", error.message);
+      // Try automatic recovery before showing error
+      try {
+        const recoveryResponse = await fetch(`/api/public/resales/${resaleId}/recover`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          credentials: 'include',
+          body: JSON.stringify({ token: confirmToken }),
+        });
+        
+        if (recoveryResponse.ok) {
+          const recoveryResult = await recoveryResponse.json();
+          if (recoveryResult.success || recoveryResult.alreadyCompleted) {
+            console.log("[ResaleSuccess] Recovery successful:", recoveryResult);
+            setConfirmationStatus('success');
+            setNewTicketId(recoveryResult.newTicketId);
+            queryClient.invalidateQueries({ queryKey: ['/api/public/account/tickets'] });
+            queryClient.invalidateQueries({ queryKey: ['/api/public/account/resales'] });
+            toast({
+              title: "Acquisto completato!",
+              description: recoveryResult.recovered 
+                ? "Transazione recuperata con successo." 
+                : "Il tuo nuovo biglietto è pronto.",
+            });
+            return; // Don't show error
+          }
+        }
+      } catch (recoveryError) {
+        console.error("[ResaleSuccess] Recovery also failed:", recoveryError);
+      }
+      
+      // Recovery failed, show error
       setConfirmationStatus('error');
       setErrorMessage(error.message || "Errore nella conferma dell'acquisto");
       toast({
