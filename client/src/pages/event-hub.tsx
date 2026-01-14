@@ -1827,6 +1827,12 @@ export default function EventHub() {
     });
   };
 
+  // Helper: check if status is a cancelled status (SIAE compliant)
+  const isCancelledStatus = (status: string) => {
+    const cancelledStatuses = ['cancelled', 'annullato', 'refunded', 'rimborsato', 'voided', 'annullato_rimborso', 'annullato_rivendita', 'annullato_cambio_nominativo'];
+    return cancelledStatuses.includes(status);
+  };
+
   // Helper to get filtered tickets
   const filteredTickets = useMemo(() => {
     let filtered = siaeTickets;
@@ -1834,7 +1840,12 @@ export default function EventHub() {
       filtered = filtered.filter(t => t.sectorId === ticketSectorFilter);
     }
     if (ticketStatusFilter !== "all") {
-      filtered = filtered.filter(t => t.status === ticketStatusFilter);
+      if (ticketStatusFilter === "cancelled") {
+        // Group all cancelled statuses together
+        filtered = filtered.filter(t => isCancelledStatus(t.status));
+      } else {
+        filtered = filtered.filter(t => t.status === ticketStatusFilter);
+      }
     }
     return filtered;
   }, [siaeTickets, ticketSectorFilter, ticketStatusFilter]);
@@ -1893,15 +1904,29 @@ export default function EventHub() {
   const getTicketStatusBadge = (status: string) => {
     switch (status) {
       case 'valid':
+      case 'emitted':
+      case 'active':
         return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Valido</Badge>;
       case 'used':
+      case 'checked_in':
         return <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">Usato</Badge>;
       case 'cancelled':
+      case 'annullato':
+      case 'voided':
         return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">Annullato</Badge>;
+      case 'annullato_cambio_nominativo':
+        return <Badge className="bg-orange-500/20 text-orange-400 border-orange-500/30">Cambio Nominativo</Badge>;
+      case 'annullato_rivendita':
+        return <Badge className="bg-amber-500/20 text-amber-400 border-amber-500/30">Rivenduto</Badge>;
+      case 'annullato_rimborso':
+        return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">Rimborsato</Badge>;
       case 'sold':
         return <Badge className="bg-teal-500/20 text-teal-400 border-teal-500/30">Venduto</Badge>;
       case 'refunded':
+      case 'rimborsato':
         return <Badge className="bg-purple-500/20 text-purple-400 border-purple-500/30">Rimborsato</Badge>;
+      case 'replaced':
+        return <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">Sostituito</Badge>;
       default:
         return <Badge variant="secondary">{status}</Badge>;
     }
@@ -3423,7 +3448,9 @@ export default function EventHub() {
                         const sectorTickets = siaeTickets.filter(t => t.sectorId === selectedSectorId);
                         const filteredSectorTickets = ticketStatusFilter === 'all' 
                           ? sectorTickets 
-                          : sectorTickets.filter(t => t.status === ticketStatusFilter);
+                          : ticketStatusFilter === 'cancelled' 
+                            ? sectorTickets.filter(t => isCancelledStatus(t.status))
+                            : sectorTickets.filter(t => t.status === ticketStatusFilter);
                         const displayedSectorTickets = filteredSectorTickets.slice(0, ticketsDisplayLimit);
                         
                         if (sectorTickets.length === 0) {
@@ -7129,7 +7156,9 @@ export default function EventHub() {
                           const sectorTickets = siaeTickets.filter(t => t.sectorId === selectedSectorId);
                           const filteredSectorTickets = ticketStatusFilter === 'all' 
                             ? sectorTickets 
-                            : sectorTickets.filter(t => t.status === ticketStatusFilter);
+                            : ticketStatusFilter === 'cancelled' 
+                              ? sectorTickets.filter(t => isCancelledStatus(t.status))
+                              : sectorTickets.filter(t => t.status === ticketStatusFilter);
                           const displayedSectorTickets = filteredSectorTickets.slice(0, ticketsDisplayLimit);
                           
                           if (sectorTickets.length === 0) {

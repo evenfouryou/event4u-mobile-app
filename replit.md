@@ -72,6 +72,13 @@ This ensures the SIAE-compliant flow works correctly:
 3. Changed cancellation reason code to `10` (TAB.5: "Cambio nominativo - vecchio titolo")
 4. Added `annullato_cambio_nominativo` to `SIAE_CANCELLED_STATUSES` array
 
+**Event Hub Status Badge Fix (2026-01-14)**: Updated `getTicketStatusBadge()` function in event-hub.tsx to display all SIAE cancellation statuses correctly:
+- `annullato_cambio_nominativo` → Badge arancione "Cambio Nominativo"
+- `annullato_rivendita` → Badge ambra "Rivenduto"  
+- `annullato_rimborso` → Badge viola "Rimborsato"
+- `annullato`, `cancelled`, `voided` → Badge rosso "Annullato"
+- Added filter logic to group all cancelled statuses when filtering by "Annullati"
+
 ### Scanner Management Module
 Manages event scanner operators for `gestore`/`super_admin` users, supporting scanner account creation, mobile-optimized UI, and granular event assignment with permissions.
 
