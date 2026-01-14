@@ -347,6 +347,30 @@ export default function CassaBigliettiPage() {
 
   // Function to print tickets with agent selection popup if multiple agents connected
   const printTicketsWithAgentSelection = async (ticketIds: string[]) => {
+    // SIAE Compliance: Verifica presenza stampante e smartcard prima di stampare
+    // La smartcard è necessaria per verificare l'autenticità del sigillo fiscale sul biglietto
+    
+    // 1. Verifica Bridge SIAE connesso
+    if (!bridgeConnected && !isSuperAdmin) {
+      toast({
+        title: "Bridge SIAE Non Connesso",
+        description: "Connetti il Bridge SIAE (applicazione desktop) prima di stampare.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // 2. Verifica Smart Card inserita
+    if (!cardReady && !isSuperAdmin) {
+      toast({
+        title: "Smart Card Non Presente",
+        description: "Inserisci la Smart Card SIAE nel lettore prima di stampare.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // 3. Verifica stampante connessa
     // Refresh connected agents before printing
     await refetchAgents();
     

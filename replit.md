@@ -23,6 +23,12 @@ The core data model links Companies to Users, Locations, Events, Products, and P
 ### SIAE Ticketing Module
 A comprehensive SIAE-compliant ticketing and fiscal management system for Italian clubs, adhering to Italian fiscal regulations (Provvedimento 04/03/2008). It manages reference data, fiscal compliance, customer management, ticketing, transactions, and operations, including API endpoints for CRUD, activation cards, customer registration, ticket emission with fiscal seals, and XML transmission. Fiscal seal generation occurs server-side via a Desktop Bridge Relay System. The module is disabled by default and can be enabled per `gestore` user by a Super Admin. It integrates CAPTCHA and supports RCA, RMG, and RPM SIAE report types. The system correctly generates a single S/MIME signature for email transmissions.
 
+**Cashier Ticket Cancellation**: Cashiers can cancel their own tickets with mandatory SIAE reason codes (`causale`). Security controls ensure:
+- Cashiers can only cancel tickets they issued (verified via `issuedByUserId`)
+- Event allocation verification (company scoping via `siaeCashierAllocations`)
+- Pre-flight checks for Bridge connection, Smart Card, and printer before printing
+- Gestori/admins require explicit company association for cross-company protection
+
 ### Event Command Center (Event Hub)
 A real-time dashboard (`/events/:id/hub`) providing a centralized view of event operations with tabbed navigation for Overview, Ticketing, Guest Lists, Tables, Staff, Inventory, and Finance, featuring real-time updates via WebSockets.
 

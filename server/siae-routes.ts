@@ -2846,11 +2846,11 @@ router.post("/api/siae/tickets", requireAuth, requireOrganizer, async (req: Requ
   }
 });
 
-router.post("/api/siae/tickets/:id/cancel", requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+router.post("/api/siae/tickets/:id/cancel", requireAuth, async (req: Request, res: Response) => {
   try {
     const { reasonCode, refund, refundReason } = req.body;
     if (!reasonCode) {
-      return res.status(400).json({ message: "Causale annullamento richiesta" });
+      return res.status(400).json({ message: "Causale annullamento richiesta (codice SIAE obbligatorio)" });
     }
     const user = req.user as any;
     
@@ -2858,6 +2858,58 @@ router.post("/api/siae/tickets/:id/cancel", requireAuth, requireOrganizer, async
     const existingTicket = await siaeStorage.getSiaeTicket(req.params.id);
     if (!existingTicket) {
       return res.status(404).json({ message: "Biglietto non trovato" });
+    }
+    
+    // Controllo permessi: gestori/organizer/super_admin possono cancellare tutti i biglietti della propria azienda
+    // Cassieri possono cancellare solo i biglietti emessi dalla propria sessione/cassa
+    const isCassiere = user.role === 'cassiere';
+    const isGestore = user.role === 'gestore' || user.role === 'organizer' || user.role === 'super_admin' || user.role === 'admin';
+    
+    // Verifica che il biglietto appartenga alla stessa azienda dell'utente
+    const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(existingTicket.ticketedEventId);
+    if (!ticketedEvent) {
+      return res.status(404).json({ message: "Evento del biglietto non trovato" });
+    }
+    
+    // Per cassieri: usa getSiaeCashierId per ottenere l'ID corretto dalla sessione
+    // e verifica l'azienda tramite allocazione evento
+    if (isCassiere) {
+      const cashierId = getSiaeCashierId(user);
+      if (!cashierId) {
+        return res.status(403).json({ message: "Non autorizzato: impossibile identificare il cassiere" });
+      }
+      
+      // Verifica che il cassiere sia allocato a questo evento (questo garantisce anche la stessa azienda)
+      const allocation = await siaeStorage.getCashierAllocationByCashierAndEvent(cashierId, existingTicket.ticketedEventId);
+      if (!allocation) {
+        return res.status(403).json({ message: "Non autorizzato: non sei allocato a questo evento" });
+      }
+      
+      // SICUREZZA: I cassieri possono cancellare SOLO biglietti con issuedByUserId valido
+      if (!existingTicket.issuedByUserId) {
+        return res.status(403).json({ message: "Non autorizzato: questo biglietto può essere annullato solo da un gestore" });
+      }
+      
+      // Verifica che il biglietto sia stato emesso da questo cassiere
+      // Supporta entrambi i formati: user.id (vecchi biglietti) e cashierId (nuovi biglietti)
+      const isIssuedByCashier = existingTicket.issuedByUserId === cashierId || 
+                                existingTicket.issuedByUserId === user.id;
+      if (!isIssuedByCashier) {
+        return res.status(403).json({ message: "Non autorizzato: puoi annullare solo i biglietti emessi dalla tua cassa" });
+      }
+    } else if (isGestore) {
+      // Per gestori: verifica companyId obbligatoriamente (tranne super_admin)
+      const userCompanyId = user.companyId;
+      if (user.role !== 'super_admin') {
+        if (!userCompanyId) {
+          return res.status(403).json({ message: "Non autorizzato: impossibile verificare l'azienda dell'utente" });
+        }
+        if (ticketedEvent.companyId !== userCompanyId) {
+          return res.status(403).json({ message: "Non autorizzato: biglietto di un'altra azienda" });
+        }
+      }
+    } else {
+      return res.status(403).json({ message: "Non autorizzato ad annullare biglietti" });
     }
     
     // Processa rimborso se richiesto
