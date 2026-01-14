@@ -4991,11 +4991,13 @@ router.post("/api/public/resales/:id/reserve", async (req, res) => {
       expires_at: Math.floor(reservedUntil.getTime() / 1000),
     });
     
-    // Save checkout session ID
+    // Save checkout session ID AND confirmToken for authentication after redirect
+    // FIX 2026-01-14: confirmToken was not being saved, causing authentication failure in /confirm endpoint
     await db
       .update(siaeResales)
       .set({
         stripeCheckoutSessionId: session.id,
+        confirmToken: confirmToken, // CRITICAL: Must save token for /confirm endpoint authentication
         platformFee: platformFee.toFixed(2),
         sellerPayout: sellerPayout.toFixed(2),
       })
