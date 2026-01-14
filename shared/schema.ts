@@ -4119,6 +4119,7 @@ export const ticketTemplates = pgTable("ticket_templates", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   companyId: varchar("company_id").references(() => companies.id), // nullable for global/system templates
   name: varchar("name", { length: 255 }).notNull(), // e.g., "Template Standard", "VIP Gold"
+  templateType: varchar("template_type", { length: 20 }).notNull().default('ticket'), // 'ticket' or 'subscription'
   backgroundImageUrl: text("background_image_url"), // Uploaded background image
   paperWidthMm: integer("paper_width_mm").notNull().default(80),
   paperHeightMm: integer("paper_height_mm").notNull().default(50),

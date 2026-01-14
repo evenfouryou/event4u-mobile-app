@@ -24,8 +24,8 @@ import {
 import { MobileAppLayout, MobileHeader } from '@/components/mobile-primitives';
 import type { TicketTemplate, TicketTemplateElement } from '@shared/schema';
 
-// Element types available in the toolbox - SIAE compliant fields
-const ELEMENT_TYPES = [
+// Element types for TICKET templates - SIAE compliant fields
+const TICKET_ELEMENT_TYPES = [
   // Testo generico
   { type: 'text', label: 'Testo Statico', icon: Type, fieldKey: null, category: 'general' },
   
@@ -61,8 +61,43 @@ const ELEMENT_TYPES = [
   { type: 'qrcode', label: 'QR Code', icon: QrCode, fieldKey: 'qr_code', category: 'siae', required: true },
 ];
 
-// Sample data for preview - includes all SIAE required fields
-const SAMPLE_DATA: Record<string, string> = {
+// Element types for SUBSCRIPTION templates - SIAE compliant fields
+const SUBSCRIPTION_ELEMENT_TYPES = [
+  // Testo generico
+  { type: 'text', label: 'Testo Statico', icon: Type, fieldKey: null, category: 'general' },
+  
+  // Elementi grafici
+  { type: 'line', label: 'Linea', icon: Minus, fieldKey: null, category: 'graphics' },
+  { type: 'cutline', label: 'Linea di Taglio', icon: Scissors, fieldKey: null, category: 'graphics' },
+  { type: 'rectangle', label: 'Rettangolo', icon: Square, fieldKey: null, category: 'graphics' },
+  
+  // Campi abbonamento
+  { type: 'dynamic', label: 'Codice Abbonamento', icon: Hash, fieldKey: 'subscription_code', category: 'subscription' },
+  { type: 'dynamic', label: 'Nome Abbonato', icon: Type, fieldKey: 'subscriber_name', category: 'subscription' },
+  { type: 'dynamic', label: 'Tipo Abbonamento', icon: Type, fieldKey: 'subscription_type', category: 'subscription' },
+  { type: 'dynamic', label: 'Numero Ingressi', icon: Hash, fieldKey: 'total_entries', category: 'subscription' },
+  { type: 'dynamic', label: 'Ingressi Usati', icon: Hash, fieldKey: 'used_entries', category: 'subscription' },
+  { type: 'dynamic', label: 'Ingressi Rimanenti', icon: Hash, fieldKey: 'remaining_entries', category: 'subscription' },
+  { type: 'dynamic', label: 'Valido Dal', icon: Calendar, fieldKey: 'valid_from', category: 'subscription' },
+  { type: 'dynamic', label: 'Valido Al', icon: Calendar, fieldKey: 'valid_to', category: 'subscription' },
+  { type: 'dynamic', label: 'Prezzo', icon: Hash, fieldKey: 'price', category: 'subscription' },
+  { type: 'dynamic', label: 'Luogo', icon: Type, fieldKey: 'venue_name', category: 'subscription' },
+  { type: 'dynamic', label: 'Testo Libero', icon: Type, fieldKey: 'custom_text', category: 'subscription' },
+  
+  // CAMPI OBBLIGATORI SIAE
+  { type: 'dynamic', label: 'Ditta Organizzatrice', icon: Type, fieldKey: 'organizer_company', category: 'siae', required: true },
+  { type: 'dynamic', label: 'Gestore Biglietteria', icon: Type, fieldKey: 'ticketing_manager', category: 'siae', required: true },
+  { type: 'dynamic', label: 'Data/Ora Emissione', icon: Calendar, fieldKey: 'emission_datetime', category: 'siae', required: true },
+  { type: 'dynamic', label: 'Sigillo Fiscale', icon: Hash, fieldKey: 'fiscal_seal', category: 'siae', required: true },
+  { type: 'dynamic', label: 'Contatore Sigillo', icon: Hash, fieldKey: 'fiscal_counter', category: 'siae', required: true },
+  { type: 'dynamic', label: 'Carta Attivazione', icon: Hash, fieldKey: 'card_code', category: 'siae', required: true },
+  
+  // QR Code (obbligatorio per validazione)
+  { type: 'qrcode', label: 'QR Code', icon: QrCode, fieldKey: 'qr_code', category: 'siae', required: true },
+];
+
+// Sample data for TICKET preview - includes all SIAE required fields
+const TICKET_SAMPLE_DATA: Record<string, string> = {
   event_name: 'Concerto Rock Festival',
   event_date: '25/12/2024',
   event_time: '21:00',
@@ -81,6 +116,29 @@ const SAMPLE_DATA: Record<string, string> = {
   ticketing_manager: 'Biglietteria Centrale Srl',
   emission_datetime: '20/12/2024 15:30',
   fiscal_seal: 'SIAE-2024-A1B2C3D4',
+  qr_code: 'QR-VALIDATION-CODE',
+};
+
+// Sample data for SUBSCRIPTION preview - includes all SIAE required fields
+const SUBSCRIPTION_SAMPLE_DATA: Record<string, string> = {
+  subscription_code: 'ABB-2024-001234',
+  subscriber_name: 'Mario Rossi',
+  subscription_type: 'Abbonamento Stagionale',
+  total_entries: '10',
+  used_entries: '0',
+  remaining_entries: '10',
+  valid_from: '01/01/2024',
+  valid_to: '31/12/2024',
+  price: '€ 150,00',
+  venue_name: 'Club Paradise',
+  custom_text: 'Testo personalizzato',
+  // SIAE required fields
+  organizer_company: 'Eventi SpA',
+  ticketing_manager: 'Biglietteria Centrale Srl',
+  emission_datetime: '20/12/2024 15:30',
+  fiscal_seal: 'SIAE-2024-A1B2C3D4',
+  fiscal_counter: '1234',
+  card_code: '4130313238343837',
   qr_code: 'QR-VALIDATION-CODE',
 };
 
@@ -129,10 +187,15 @@ export default function TemplateBuilder() {
   
   // Template metadata
   const [templateName, setTemplateName] = useState('Nuovo Template');
+  const [templateType, setTemplateType] = useState<'ticket' | 'subscription'>('ticket');
   const [paperWidth, setPaperWidth] = useState(80);
   const [paperHeight, setPaperHeight] = useState(50);
   const [printOrientation, setPrintOrientation] = useState<'auto' | 'portrait' | 'landscape'>('auto');
   const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
+  
+  // Get element types and sample data based on template type
+  const ELEMENT_TYPES = templateType === 'subscription' ? SUBSCRIPTION_ELEMENT_TYPES : TICKET_ELEMENT_TYPES;
+  const SAMPLE_DATA = templateType === 'subscription' ? SUBSCRIPTION_SAMPLE_DATA : TICKET_SAMPLE_DATA;
   
   // Load companies for super_admin
   const { data: companies = [] } = useQuery<{ id: string; name: string }[]>({
@@ -158,6 +221,7 @@ export default function TemplateBuilder() {
   useEffect(() => {
     if (template) {
       setTemplateName(template.name);
+      setTemplateType(((template as any).templateType as 'ticket' | 'subscription') || 'ticket');
       setPaperWidth(template.paperWidthMm || 80);
       setPaperHeight(template.paperHeightMm || 50);
       setPrintOrientation((template as any).printOrientation || 'auto');
@@ -191,6 +255,7 @@ export default function TemplateBuilder() {
     mutationFn: async () => {
       const templateData: any = {
         name: templateName,
+        templateType: templateType,
         paperWidthMm: paperWidth,
         paperHeightMm: paperHeight,
         printOrientation: printOrientation,
@@ -463,11 +528,25 @@ export default function TemplateBuilder() {
               {paperWidth}mm × {paperHeight}mm
             </p>
           </div>
+          {/* Template type selector */}
+          <Select value={templateType} onValueChange={(v) => setTemplateType(v as 'ticket' | 'subscription')} disabled={!!id}>
+            <SelectTrigger className="w-40" data-testid="select-template-type">
+              <SelectValue placeholder="Tipo..." />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="ticket">
+                <span className="flex items-center gap-2">🎫 Biglietto</span>
+              </SelectItem>
+              <SelectItem value="subscription">
+                <span className="flex items-center gap-2">📅 Abbonamento</span>
+              </SelectItem>
+            </SelectContent>
+          </Select>
           {/* Company selector for super_admin creating new template */}
           {isSuperAdmin && !id && (
             <Select value={selectedCompanyId} onValueChange={setSelectedCompanyId}>
               <SelectTrigger className="w-56" data-testid="select-company-template">
-                <SelectValue placeholder="Seleziona tipo..." />
+                <SelectValue placeholder="Seleziona azienda..." />
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="__GLOBAL__">
@@ -562,39 +641,62 @@ export default function TemplateBuilder() {
                 ))}
               </div>
               
-              {/* Event Fields */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground uppercase">Campi Evento</Label>
-                {ELEMENT_TYPES.filter(el => (el as any).category === 'event').map((elType, idx) => (
-                  <Button
-                    key={idx}
-                    variant="outline"
-                    className="w-full justify-start gap-2"
-                    onClick={() => addElement(elType)}
-                    data-testid={`button-add-${elType.fieldKey || elType.type}`}
-                  >
-                    <elType.icon className="h-4 w-4" />
-                    {elType.label}
-                  </Button>
-                ))}
-              </div>
+              {/* Event Fields - only for ticket templates */}
+              {templateType === 'ticket' && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground uppercase">Campi Evento</Label>
+                  {ELEMENT_TYPES.filter(el => (el as any).category === 'event').map((elType, idx) => (
+                    <Button
+                      key={idx}
+                      variant="outline"
+                      className="w-full justify-start gap-2"
+                      onClick={() => addElement(elType)}
+                      data-testid={`button-add-${elType.fieldKey || elType.type}`}
+                    >
+                      <elType.icon className="h-4 w-4" />
+                      {elType.label}
+                    </Button>
+                  ))}
+                </div>
+              )}
               
-              {/* Ticket Fields */}
-              <div className="space-y-2">
-                <Label className="text-xs text-muted-foreground uppercase">Campi Biglietto</Label>
-                {ELEMENT_TYPES.filter(el => (el as any).category === 'ticket').map((elType, idx) => (
-                  <Button
-                    key={idx}
-                    variant="outline"
-                    className="w-full justify-start gap-2"
-                    onClick={() => addElement(elType)}
-                    data-testid={`button-add-${elType.fieldKey || elType.type}`}
-                  >
-                    <elType.icon className="h-4 w-4" />
-                    {elType.label}
-                  </Button>
-                ))}
-              </div>
+              {/* Ticket Fields - only for ticket templates */}
+              {templateType === 'ticket' && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground uppercase">Campi Biglietto</Label>
+                  {ELEMENT_TYPES.filter(el => (el as any).category === 'ticket').map((elType, idx) => (
+                    <Button
+                      key={idx}
+                      variant="outline"
+                      className="w-full justify-start gap-2"
+                      onClick={() => addElement(elType)}
+                      data-testid={`button-add-${elType.fieldKey || elType.type}`}
+                    >
+                      <elType.icon className="h-4 w-4" />
+                      {elType.label}
+                    </Button>
+                  ))}
+                </div>
+              )}
+              
+              {/* Subscription Fields - only for subscription templates */}
+              {templateType === 'subscription' && (
+                <div className="space-y-2">
+                  <Label className="text-xs text-muted-foreground uppercase">Campi Abbonamento</Label>
+                  {ELEMENT_TYPES.filter(el => (el as any).category === 'subscription').map((elType, idx) => (
+                    <Button
+                      key={idx}
+                      variant="outline"
+                      className="w-full justify-start gap-2"
+                      onClick={() => addElement(elType)}
+                      data-testid={`button-add-${elType.fieldKey || elType.type}`}
+                    >
+                      <elType.icon className="h-4 w-4" />
+                      {elType.label}
+                    </Button>
+                  ))}
+                </div>
+              )}
               
               {/* General Fields */}
               <div className="space-y-2">
