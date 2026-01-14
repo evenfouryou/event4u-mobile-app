@@ -721,6 +721,48 @@ export function generateC1LogXml(params: C1LogParams): C1LogResult {
 export const SIAE_SYSTEM_CODE_DEFAULT = 'EVENT4U1';
 
 /**
+ * Risolve il codice sistema SIAE da usare in modo consistente in tutto il sistema.
+ * 
+ * PRIORITÀ (dalla più affidabile alla meno affidabile):
+ * 1. Smart Card EFFF systemId - Codice ufficiale SIAE dalla carta di attivazione
+ * 2. systemConfig.systemCode - Configurazione manuale dell'utente
+ * 3. SIAE_SYSTEM_CODE_DEFAULT - Fallback hardcoded
+ * 
+ * IMPORTANTE: Questo codice DEVE essere usato in modo consistente per:
+ * - Nome file allegato (es: RPM_202601_P0004010_001.xsi)
+ * - Attributo NomeFile nell'XML
+ * - Elemento SistemaEmissione nell'XML
+ * 
+ * L'incongruenza tra questi valori causa errori SIAE:
+ * - 0600: "Nome del file contenente il riepilogo sbagliato"
+ * - 0603: "Le date dell'oggetto, del nome file, e del contenuto del riepilogo non sono coerenti"
+ * 
+ * @param cachedEfff - Dati EFFF dalla smart card (opzionale)
+ * @param systemConfig - Configurazione SIAE dell'azienda (opzionale)
+ * @returns Codice sistema a 8 caratteri da usare ovunque
+ */
+export function resolveSystemCode(
+  cachedEfff?: { systemId?: string } | null,
+  systemConfig?: { systemCode?: string } | null
+): string {
+  // Priorità 1: Smart Card EFFF (codice ufficiale SIAE)
+  if (cachedEfff?.systemId && cachedEfff.systemId.length === 8) {
+    console.log(`[SIAE-UTILS] resolveSystemCode: using Smart Card EFFF systemId = ${cachedEfff.systemId}`);
+    return cachedEfff.systemId;
+  }
+  
+  // Priorità 2: Configurazione utente
+  if (systemConfig?.systemCode && systemConfig.systemCode.length === 8) {
+    console.log(`[SIAE-UTILS] resolveSystemCode: using systemConfig.systemCode = ${systemConfig.systemCode}`);
+    return systemConfig.systemCode;
+  }
+  
+  // Priorità 3: Default
+  console.log(`[SIAE-UTILS] resolveSystemCode: using default = ${SIAE_SYSTEM_CODE_DEFAULT}`);
+  return SIAE_SYSTEM_CODE_DEFAULT;
+}
+
+/**
  * Stati ticket che indicano annullamento/cancellazione per conteggi SIAE
  * Usare questa costante in tutto il sistema per coerenza
  */

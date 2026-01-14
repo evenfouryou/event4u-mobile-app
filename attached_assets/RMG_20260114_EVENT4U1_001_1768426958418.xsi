@@ -1,0 +1,458 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RiepilogoGiornaliero NomeFile="RMG_20260114_P0004010_001.xsi" Data="20260114" DataGenerazione="20260114" OraGenerazione="213936" ProgressivoGenerazione="1" Sostituzione="N">
+    <Titolare>
+        <Denominazione>HURAEX SRL</Denominazione>
+        <CodiceFiscale>02120820432</CodiceFiscale>
+        <SistemaEmissione>P0004010</SistemaEmissione>
+    </Titolare>
+    <Organizzatore>
+        <Denominazione>HURAEX SRL</Denominazione>
+        <CodiceFiscale>02120820432</CodiceFiscale>
+        <TipoOrganizzatore valore="G"/>
+        <Evento>
+            <Intrattenimento>
+                <TipoTassazione valore="I"/>
+                <Incidenza>100</Incidenza>
+            </Intrattenimento>
+            <Locale>
+                <Denominazione>Azure Club</Denominazione>
+                <CodiceLocale>0000000000001</CodiceLocale>
+            </Locale>
+            <DataEvento>20260114</DataEvento>
+            <OraEvento>0926</OraEvento>
+            <MultiGenere>
+                <TipoGenere>64</TipoGenere>
+                <IncidenzaGenere>0</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>Test 14 gennaio 2025</Titolo>
+                </TitoliOpere>
+            </MultiGenere>
+            <OrdineDiPosto>
+                <CodiceOrdine>P0</CodiceOrdine>
+                <Capienza>100</Capienza>
+                <TitoliAccesso>
+                    <TipoTitolo>I1</TipoTitolo>
+                    <Quantita>24</Quantita>
+                    <CorrispettivoLordo>600</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>0</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                    <ImportoPrestazione>0</ImportoPrestazione>
+                </TitoliAccesso>
+            </OrdineDiPosto>
+            <OrdineDiPosto>
+                <CodiceOrdine>P0</CodiceOrdine>
+                <Capienza>100</Capienza>
+                <TitoliAccesso>
+                    <TipoTitolo>I1</TipoTitolo>
+                    <Quantita>10</Quantita>
+                    <CorrispettivoLordo>1000</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>0</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                    <ImportoPrestazione>0</ImportoPrestazione>
+                </TitoliAccesso>
+            </OrdineDiPosto>
+        </Evento>
+        <Evento>
+            <Intrattenimento>
+                <TipoTassazione valore="I"/>
+                <Incidenza>100</Incidenza>
+            </Intrattenimento>
+            <Locale>
+                <Denominazione>Azure Club</Denominazione>
+                <CodiceLocale>0000000000001</CodiceLocale>
+            </Locale>
+            <DataEvento>20260114</DataEvento>
+            <OraEvento>0926</OraEvento>
+            <MultiGenere>
+                <TipoGenere>60</TipoGenere>
+                <IncidenzaGenere>0</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>Test 14 Gennaio 2025</Titolo>
+                </TitoliOpere>
+            </MultiGenere>
+            <OrdineDiPosto>
+                <CodiceOrdine>A9</CodiceOrdine>
+                <Capienza>100</Capienza>
+                <TitoliAccesso>
+                    <TipoTitolo>I1</TipoTitolo>
+                    <Quantita>7</Quantita>
+                    <CorrispettivoLordo>700</CorrispettivoLordo>
+                    <Prevendita>0</Prevendita>
+                    <IVACorrispettivo>0</IVACorrispettivo>
+                    <IVAPrevendita>0</IVAPrevendita>
+                    <ImportoPrestazione>0</ImportoPrestazione>
+                </TitoliAccesso>
+            </OrdineDiPosto>
+        </Evento>
+        <Evento>
+            <Intrattenimento>
+                <TipoTassazione valore="I"/>
+                <Incidenza>100</Incidenza>
+            </Intrattenimento>
+            <Locale>
+                <Denominazione>Azure Club</Denominazione>
+                <CodiceLocale>0000000000001</CodiceLocale>
+            </Locale>
+            <DataEvento>20260131</DataEvento>
+            <OraEvento>2000</OraEvento>
+            <MultiGenere>
+                <TipoGenere>60</TipoGenere>
+                <IncidenzaGenere>0</IncidenzaGenere>
+                <TitoliOpere>
+                    <Titolo>Test 14 gennaio bis</Titolo>
+                </TitoliOpere>
+            </MultiGenere>
+            <OrdineDiPosto>
+                <CodiceOrdine>A0</CodiceOrdine>
+                <Capienza>100</Capienza>
+            </OrdineDiPosto>
+        </Evento>
+        <Abbonamenti>
+            <CodiceAbbonamento>ABB-1768424450533</CodiceAbbonamento>
+            <Validita>20270114</Validita>
+            <TipoTassazione valore="S"/>
+            <Turno valore="F"/>
+            <CodiceOrdine>I0</CodiceOrdine>
+            <TipoTitolo>I1</TipoTitolo>
+            <QuantitaEventiAbilitati>5</QuantitaEventiAbilitati>
+            <AbbonamentiEmessi>
+                <Quantita>1</Quantita>
+                <CorrispettivoLordo>1000</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiEmessi>
+            <AbbonamentiAnnullati>
+                <Quantita>0</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiAnnullati>
+        </Abbonamenti>
+        <Abbonamenti>
+            <CodiceAbbonamento>ABB-1768422896536</CodiceAbbonamento>
+            <Validita>20270114</Validita>
+            <TipoTassazione valore="S"/>
+            <Turno valore="F"/>
+            <CodiceOrdine>P0</CodiceOrdine>
+            <TipoTitolo>I1</TipoTitolo>
+            <QuantitaEventiAbilitati>5</QuantitaEventiAbilitati>
+            <AbbonamentiEmessi>
+                <Quantita>1</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiEmessi>
+            <AbbonamentiAnnullati>
+                <Quantita>0</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiAnnullati>
+        </Abbonamenti>
+        <Abbonamenti>
+            <CodiceAbbonamento>ABB-1768421467511</CodiceAbbonamento>
+            <Validita>20270114</Validita>
+            <TipoTassazione valore="S"/>
+            <Turno valore="F"/>
+            <CodiceOrdine>P0</CodiceOrdine>
+            <TipoTitolo>I1</TipoTitolo>
+            <QuantitaEventiAbilitati>5</QuantitaEventiAbilitati>
+            <AbbonamentiEmessi>
+                <Quantita>1</Quantita>
+                <CorrispettivoLordo>500</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiEmessi>
+            <AbbonamentiAnnullati>
+                <Quantita>0</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiAnnullati>
+        </Abbonamenti>
+        <Abbonamenti>
+            <CodiceAbbonamento>ABB-1768421405020</CodiceAbbonamento>
+            <Validita>20270114</Validita>
+            <TipoTassazione valore="S"/>
+            <Turno valore="F"/>
+            <CodiceOrdine>P0</CodiceOrdine>
+            <TipoTitolo>I1</TipoTitolo>
+            <QuantitaEventiAbilitati>5</QuantitaEventiAbilitati>
+            <AbbonamentiEmessi>
+                <Quantita>1</Quantita>
+                <CorrispettivoLordo>500</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiEmessi>
+            <AbbonamentiAnnullati>
+                <Quantita>0</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiAnnullati>
+        </Abbonamenti>
+        <Abbonamenti>
+            <CodiceAbbonamento>ABB-1768420807083</CodiceAbbonamento>
+            <Validita>20270114</Validita>
+            <TipoTassazione valore="S"/>
+            <Turno valore="F"/>
+            <CodiceOrdine>P0</CodiceOrdine>
+            <TipoTitolo>I1</TipoTitolo>
+            <QuantitaEventiAbilitati>5</QuantitaEventiAbilitati>
+            <AbbonamentiEmessi>
+                <Quantita>1</Quantita>
+                <CorrispettivoLordo>100</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiEmessi>
+            <AbbonamentiAnnullati>
+                <Quantita>0</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiAnnullati>
+        </Abbonamenti>
+        <Abbonamenti>
+            <CodiceAbbonamento>ABB-1768419956167</CodiceAbbonamento>
+            <Validita>20270114</Validita>
+            <TipoTassazione valore="S"/>
+            <Turno valore="F"/>
+            <CodiceOrdine>P0</CodiceOrdine>
+            <TipoTitolo>I1</TipoTitolo>
+            <QuantitaEventiAbilitati>5</QuantitaEventiAbilitati>
+            <AbbonamentiEmessi>
+                <Quantita>1</Quantita>
+                <CorrispettivoLordo>500</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiEmessi>
+            <AbbonamentiAnnullati>
+                <Quantita>0</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiAnnullati>
+        </Abbonamenti>
+        <Abbonamenti>
+            <CodiceAbbonamento>ABB-1768418011274</CodiceAbbonamento>
+            <Validita>20270114</Validita>
+            <TipoTassazione valore="S"/>
+            <Turno valore="F"/>
+            <CodiceOrdine>P0</CodiceOrdine>
+            <TipoTitolo>I1</TipoTitolo>
+            <QuantitaEventiAbilitati>5</QuantitaEventiAbilitati>
+            <AbbonamentiEmessi>
+                <Quantita>1</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiEmessi>
+            <AbbonamentiAnnullati>
+                <Quantita>0</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiAnnullati>
+        </Abbonamenti>
+        <Abbonamenti>
+            <CodiceAbbonamento>ABB-1768417796493</CodiceAbbonamento>
+            <Validita>20270114</Validita>
+            <TipoTassazione valore="S"/>
+            <Turno valore="F"/>
+            <CodiceOrdine>P0</CodiceOrdine>
+            <TipoTitolo>I1</TipoTitolo>
+            <QuantitaEventiAbilitati>5</QuantitaEventiAbilitati>
+            <AbbonamentiEmessi>
+                <Quantita>1</Quantita>
+                <CorrispettivoLordo>100</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiEmessi>
+            <AbbonamentiAnnullati>
+                <Quantita>0</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiAnnullati>
+        </Abbonamenti>
+        <Abbonamenti>
+            <CodiceAbbonamento>ABB-1768416957813</CodiceAbbonamento>
+            <Validita>20270114</Validita>
+            <TipoTassazione valore="S"/>
+            <Turno valore="F"/>
+            <CodiceOrdine>P0</CodiceOrdine>
+            <TipoTitolo>I1</TipoTitolo>
+            <QuantitaEventiAbilitati>5</QuantitaEventiAbilitati>
+            <AbbonamentiEmessi>
+                <Quantita>1</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiEmessi>
+            <AbbonamentiAnnullati>
+                <Quantita>0</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiAnnullati>
+        </Abbonamenti>
+        <Abbonamenti>
+            <CodiceAbbonamento>ABB-1768416865752</CodiceAbbonamento>
+            <Validita>20270114</Validita>
+            <TipoTassazione valore="S"/>
+            <Turno valore="F"/>
+            <CodiceOrdine>P0</CodiceOrdine>
+            <TipoTitolo>I1</TipoTitolo>
+            <QuantitaEventiAbilitati>5</QuantitaEventiAbilitati>
+            <AbbonamentiEmessi>
+                <Quantita>1</Quantita>
+                <CorrispettivoLordo>100</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiEmessi>
+            <AbbonamentiAnnullati>
+                <Quantita>0</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiAnnullati>
+        </Abbonamenti>
+        <Abbonamenti>
+            <CodiceAbbonamento>ABB-1768415905881</CodiceAbbonamento>
+            <Validita>20270114</Validita>
+            <TipoTassazione valore="S"/>
+            <Turno valore="F"/>
+            <CodiceOrdine>P0</CodiceOrdine>
+            <TipoTitolo>I1</TipoTitolo>
+            <QuantitaEventiAbilitati>5</QuantitaEventiAbilitati>
+            <AbbonamentiEmessi>
+                <Quantita>1</Quantita>
+                <CorrispettivoLordo>100</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiEmessi>
+            <AbbonamentiAnnullati>
+                <Quantita>0</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiAnnullati>
+        </Abbonamenti>
+        <Abbonamenti>
+            <CodiceAbbonamento>ABB-1768415553263</CodiceAbbonamento>
+            <Validita>20270114</Validita>
+            <TipoTassazione valore="S"/>
+            <Turno valore="F"/>
+            <CodiceOrdine>P0</CodiceOrdine>
+            <TipoTitolo>I1</TipoTitolo>
+            <QuantitaEventiAbilitati>5</QuantitaEventiAbilitati>
+            <AbbonamentiEmessi>
+                <Quantita>1</Quantita>
+                <CorrispettivoLordo>100</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiEmessi>
+            <AbbonamentiAnnullati>
+                <Quantita>0</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiAnnullati>
+        </Abbonamenti>
+        <Abbonamenti>
+            <CodiceAbbonamento>ABB-1768414237842</CodiceAbbonamento>
+            <Validita>20270114</Validita>
+            <TipoTassazione valore="S"/>
+            <Turno valore="F"/>
+            <CodiceOrdine>P0</CodiceOrdine>
+            <TipoTitolo>I1</TipoTitolo>
+            <QuantitaEventiAbilitati>5</QuantitaEventiAbilitati>
+            <AbbonamentiEmessi>
+                <Quantita>1</Quantita>
+                <CorrispettivoLordo>100</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiEmessi>
+            <AbbonamentiAnnullati>
+                <Quantita>0</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiAnnullati>
+        </Abbonamenti>
+        <Abbonamenti>
+            <CodiceAbbonamento>ABB-1768413430418</CodiceAbbonamento>
+            <Validita>20270114</Validita>
+            <TipoTassazione valore="S"/>
+            <Turno valore="F"/>
+            <CodiceOrdine>P0</CodiceOrdine>
+            <TipoTitolo>I1</TipoTitolo>
+            <QuantitaEventiAbilitati>5</QuantitaEventiAbilitati>
+            <AbbonamentiEmessi>
+                <Quantita>1</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiEmessi>
+            <AbbonamentiAnnullati>
+                <Quantita>0</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiAnnullati>
+        </Abbonamenti>
+        <Abbonamenti>
+            <CodiceAbbonamento>ABB-1768412878798</CodiceAbbonamento>
+            <Validita>20270114</Validita>
+            <TipoTassazione valore="S"/>
+            <Turno valore="F"/>
+            <CodiceOrdine>P0</CodiceOrdine>
+            <TipoTitolo>I1</TipoTitolo>
+            <QuantitaEventiAbilitati>5</QuantitaEventiAbilitati>
+            <AbbonamentiEmessi>
+                <Quantita>1</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiEmessi>
+            <AbbonamentiAnnullati>
+                <Quantita>0</Quantita>
+                <CorrispettivoLordo>0</CorrispettivoLordo>
+                <Prevendita>0</Prevendita>
+                <IVACorrispettivo>0</IVACorrispettivo>
+                <IVAPrevendita>0</IVAPrevendita>
+            </AbbonamentiAnnullati>
+        </Abbonamenti>
+    </Organizzatore>
+</RiepilogoGiornaliero>

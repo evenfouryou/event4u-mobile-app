@@ -3692,7 +3692,8 @@ router.post("/api/siae/name-changes", requireAuth, async (req: Request, res: Res
     }
     
     // Check if ticket status allows name change
-    if (originalTicket.status !== 'active') {
+    const validStatuses = ['active', 'sold', 'paid', 'emitted', 'valid'];
+    if (!validStatuses.includes(originalTicket.status || '')) {
       return res.status(400).json({ 
         message: `Il biglietto non è in stato valido per il cambio nominativo (stato: ${originalTicket.status})`,
         code: "INVALID_TICKET_STATUS"

@@ -4037,7 +4037,8 @@ router.post("/api/public/account/name-change", async (req, res) => {
       return res.status(404).json({ message: "Biglietto non trovato" });
     }
 
-    if (ticket.status !== 'emitted' && ticket.status !== 'active') {
+    const validStatuses = ['active', 'sold', 'paid', 'emitted', 'valid'];
+    if (!validStatuses.includes(ticket.status || '')) {
       return res.status(400).json({ message: "Biglietto non valido per cambio nominativo" });
     }
 
