@@ -1,0 +1,88 @@
+01-14 20:51:30
+at file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:708:19
+01-14 20:52:18
+at file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:63:22
+01-14 20:52:18
+at PgSelectBase._prepare (file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:683:19)
+01-14 20:52:18
+[ACTIVATION-CARDS] Error: TypeError: Cannot convert undefined or null to object
+01-14 20:52:18
+at orderSelectedFields (file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:53:17)
+01-14 20:52:18
+at orderSelectedFields (file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:53:33)
+01-14 20:52:24
+at orderSelectedFields (file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:53:17)
+01-14 20:52:29
+at orderSelectedFields (file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:53:17)
+01-14 20:52:29
+at Object.startActiveSpan (file:///home/runner/workspace/node_modules/drizzle-orm/tracing.js:8:14)
+01-14 20:52:29
+at PgSelectBase._prepare (file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:683:19)
+01-14 20:52:29
+at Function.entries ()
+01-14 20:52:29
+at file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:708:19
+01-14 20:52:29
+at file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:684:26
+01-14 20:52:29
+at Object.startActiveSpan (file:///home/runner/workspace/node_modules/drizzle-orm/tracing.js:8:14)
+01-14 20:52:29
+at orderSelectedFields (file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:53:33)
+01-14 20:52:29
+at Array.reduce ()
+01-14 20:52:29
+at file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:63:22
+01-14 20:52:29
+[ACTIVATION-CARDS] Error: TypeError: Cannot convert undefined or null to object
+01-14 20:52:34
+[ACTIVATION-CARDS] Error: TypeError: Cannot convert undefined or null to object
+01-14 20:52:34
+at orderSelectedFields (file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:53:17)
+01-14 20:52:34
+at orderSelectedFields (file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:53:33)
+01-14 20:52:34
+at Object.startActiveSpan (file:///home/runner/workspace/node_modules/drizzle-orm/tracing.js:8:14)
+01-14 20:52:34
+at file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:684:26
+01-14 20:52:34
+at Function.entries ()
+01-14 20:52:34
+at PgSelectBase._prepare (file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:683:19)
+01-14 20:52:34
+at Array.reduce ()
+01-14 20:52:34
+at file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:63:22
+01-14 20:52:34
+at Object.startActiveSpan (file:///home/runner/workspace/node_modules/drizzle-orm/tracing.js:8:14)
+01-14 20:52:34
+at file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:708:19
+01-14 20:52:39
+at file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:708:19
+01-14 20:52:39
+at Object.startActiveSpan (file:///home/runner/workspace/node_modules/drizzle-orm/tracing.js:8:14)
+01-14 20:52:39
+at orderSelectedFields (file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:53:17)
+01-14 20:52:39
+at Object.startActiveSpan (file:///home/runner/workspace/node_modules/drizzle-orm/tracing.js:8:14)
+01-14 20:52:39
+at Function.entries ()
+01-14 20:52:39
+at file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:63:22
+01-14 20:52:39
+at Array.reduce ()
+01-14 20:52:39
+[ACTIVATION-CARDS] Error: TypeError: Cannot convert undefined or null to object
+01-14 20:52:39
+at PgSelectBase._prepare (file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:683:19)
+01-14 20:52:39
+at orderSelectedFields (file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:53:33)
+01-14 20:52:39
+at file:///home/runner/workspace/node_modules/drizzle-orm/pg-core/query-builders/select.js:684:26
+01-14 20:52:45
+at Object.startActiveSpan (file:///home/runner/workspace/node_modules/drizzle-orm/tracing.js:8:14)
+01-14 20:52:45
+at orderSelectedFields (file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:53:17)
+01-14 20:52:45
+at orderSelectedFields (file:///home/runner/workspace/node_modules/drizzle-orm/utils.js:53:33)
+01-14 20:52:45
+at Function.entries ()

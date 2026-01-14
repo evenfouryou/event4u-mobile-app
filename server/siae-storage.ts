@@ -1866,15 +1866,16 @@ export class SiaeStorage implements ISiaeStorage {
     const ticketsWithOrganizers = await db
       .select({
         userId: siaeTickets.issuedByUserId,
-        username: users.username,
-        fullName: users.fullName,
+        email: users.email,
+        firstName: users.firstName,
+        lastName: users.lastName,
         ticketCount: count(),
         lastEmission: sql<Date>`MAX(${siaeTickets.emissionDate})`,
       })
       .from(siaeTickets)
       .leftJoin(users, eq(siaeTickets.issuedByUserId, users.id))
       .where(eq(siaeTickets.cardCode, cardCode))
-      .groupBy(siaeTickets.issuedByUserId, users.username, users.fullName);
+      .groupBy(siaeTickets.issuedByUserId, users.email, users.firstName, users.lastName);
 
     // Get total tickets by cardCode
     const totalTicketsResult = await db
@@ -1891,8 +1892,8 @@ export class SiaeStorage implements ISiaeStorage {
         .filter(row => row.userId) // Filter out null users
         .map(row => ({
           userId: row.userId || '',
-          username: row.username || '',
-          fullName: row.fullName || '',
+          username: row.email || '',
+          fullName: [row.firstName, row.lastName].filter(Boolean).join(' ') || '',
           ticketCount: Number(row.ticketCount),
           lastEmission: row.lastEmission,
         })),
