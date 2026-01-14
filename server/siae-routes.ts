@@ -6435,10 +6435,14 @@ router.post("/api/siae/subscriptions", requireAuth, requireOrganizer, async (req
     
     // Se customerId non è fornito, creare automaticamente un nuovo cliente SIAE
     if (!customerId && req.body.holderFirstName && req.body.holderLastName) {
+      const uniqueId = crypto.randomUUID().replace(/-/g, '').substring(0, 12).toUpperCase();
       const newCustomer = await siaeStorage.createSiaeCustomer({
         companyId: req.body.companyId || user.companyId,
         firstName: req.body.holderFirstName,
         lastName: req.body.holderLastName,
+        uniqueCode: `CLT${uniqueId}`,
+        email: `auto_${uniqueId}@placeholder.local`,
+        phone: `+39000${uniqueId.substring(0, 7)}`,
         isActive: true,
       });
       customerId = newCustomer.id;
@@ -6774,10 +6778,14 @@ router.post("/api/siae/ticketed-events/:eventId/subscriptions", requireAuth, asy
     
     // Se customerId non è fornito, creare automaticamente un nuovo cliente SIAE
     if (!customerId && req.body.holderFirstName && req.body.holderLastName) {
+      const uniqueId = crypto.randomUUID().replace(/-/g, '').substring(0, 12).toUpperCase();
       const newCustomer = await siaeStorage.createSiaeCustomer({
         companyId: user.companyId,
         firstName: req.body.holderFirstName,
         lastName: req.body.holderLastName,
+        uniqueCode: `CLT${uniqueId}`,
+        email: `auto_${uniqueId}@placeholder.local`,
+        phone: `+39000${uniqueId.substring(0, 7)}`,
         isActive: true,
       });
       customerId = newCustomer.id;
