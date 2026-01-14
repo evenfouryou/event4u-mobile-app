@@ -299,14 +299,45 @@ export default function CassaBigliettiPage() {
     refetchInterval: 10000, // Refresh every 10 seconds
   });
 
+  // Print subscription mutation
+  const printSubscriptionMutation = useMutation({
+    mutationFn: async ({ subscriptionId, agentId }: { subscriptionId: string; agentId?: string }) => {
+      const response = await apiRequest("POST", `/api/siae/subscriptions/${subscriptionId}/print`, {
+        agentId: agentId || undefined
+      });
+      return response.json();
+    },
+    onSuccess: (result) => {
+      toast({
+        title: "Abbonamento Stampato",
+        description: `Abbonamento ${result.subscriptionCode} inviato alla stampante.`,
+      });
+    },
+    onError: (error: any) => {
+      console.warn('[SubscriptionPrint] Error:', error.message);
+      toast({
+        title: "Errore Stampa",
+        description: error.message || "Errore durante la stampa dell'abbonamento",
+        variant: "destructive",
+      });
+    },
+  });
+
   // Create subscription mutation
   const createSubscriptionMutation = useMutation({
     mutationFn: async (data: any) => {
       const response = await apiRequest("POST", `/api/siae/ticketed-events/${selectedEventId}/subscriptions`, data);
       return response.json();
     },
-    onSuccess: () => {
+    onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["/api/siae/ticketed-events", selectedEventId, "subscriptions"] });
+      
+      // Stampa automatica dell'abbonamento se agente connesso
+      if (result.id && connectedAgents.length > 0) {
+        const agentId = connectedAgents.length === 1 ? connectedAgents[0].agentId : undefined;
+        printSubscriptionMutation.mutate({ subscriptionId: result.id, agentId });
+      }
+      
       setSubFirstName("");
       setSubLastName("");
       setSubCustomerId("");
