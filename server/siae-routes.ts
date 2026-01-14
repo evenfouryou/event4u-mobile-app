@@ -10299,13 +10299,17 @@ router.post("/api/cashiers/events/:eventId/tickets", requireAuth, async (req: Re
         });
       }
       
-      // Update ticket with fiscal seal if available
+      // Update ticket with fiscal seal data if available
       if (fiscalSealData?.sealCode && result.ticket) {
         await siaeStorage.updateSiaeTicket(result.ticket.id, {
-          fiscalSealCode: fiscalSealData.sealCode
+          fiscalSealCode: fiscalSealData.sealCode,
+          fiscalSealCounter: fiscalSealData.counter,
+          cardCode: fiscalSealData.serialNumber,
         });
         // Update result.ticket for response
         result.ticket.fiscalSealCode = fiscalSealData.sealCode;
+        (result.ticket as any).fiscalSealCounter = fiscalSealData.counter;
+        (result.ticket as any).cardCode = fiscalSealData.serialNumber;
       }
       
       // Update counters for next iteration
@@ -11450,10 +11454,12 @@ router.post("/api/cashier/events/:eventId/emit-ticket", requireAuth, requireCash
       });
     }
     
-    // Update ticket with fiscal seal if available
-    if (fiscalSealCode && result.ticket) {
+    // Update ticket with fiscal seal data if available
+    if (fiscalSeal && result.ticket) {
       await siaeStorage.updateSiaeTicket(result.ticket.id, {
-        fiscalSealCode
+        fiscalSealCode: fiscalSeal.sealCode,
+        fiscalSealCounter: fiscalSeal.counter,
+        cardCode: fiscalSeal.serialNumber,
       });
     }
     
