@@ -4033,9 +4033,13 @@ router.post("/api/siae/name-changes/:id/process", requireAuth, requireOrganizer,
       return res.status(404).json({ message: "Biglietto originale non trovato" });
     }
     
-    if (!['emitted', 'active', 'valid'].includes(originalTicket.status)) {
+    // Accept all valid ticket statuses that can be changed
+    const validStatuses = ['emitted', 'active', 'valid', 'sold', 'paid'];
+    if (!validStatuses.includes(originalTicket.status)) {
+      console.log(`[NAME-CHANGE] Ticket status not valid for change: ${originalTicket.status}`);
       return res.status(400).json({ message: `Biglietto non modificabile (stato: ${originalTicket.status})` });
     }
+    console.log(`[NAME-CHANGE] Processing name change for ticket ${originalTicket.id}, status: ${originalTicket.status}`);
     
     // 3. Get ticketed event details
     const [ticketedEvent] = await db.select().from(siaeTicketedEvents).where(eq(siaeTicketedEvents.id, originalTicket.ticketedEventId));
