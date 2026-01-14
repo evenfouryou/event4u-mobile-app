@@ -6695,7 +6695,7 @@ router.post("/api/siae/subscriptions/:id/print", requireAuth, async (req: Reques
       payload: printData
     };
     
-    const sent = sendToAgent(subscription.companyId, printerAgentId, printCommand);
+    const sent = sendPrintJobToAgent(subscription.companyId, printerAgentId, printCommand);
     
     if (!sent) {
       return res.status(503).json({
