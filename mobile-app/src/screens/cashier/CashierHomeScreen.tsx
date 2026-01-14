@@ -7,12 +7,48 @@ import {
   TouchableOpacity,
   FlatList,
   Dimensions,
+  ActivityIndicator,
+  RefreshControl,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { useQuery } from '@tanstack/react-query';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
 import { Card, Button, Header } from '../../components';
+import { api } from '../../lib/api';
+
+interface CashierStats {
+  totalRevenue: number;
+  ticketsSold: number;
+  transactionsCount: number;
+  cashRevenue: number;
+  cardRevenue: number;
+}
+
+interface CurrentEvent {
+  id: string;
+  name: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  status: 'scheduled' | 'in_progress' | 'ended';
+}
+
+interface RecentTransaction {
+  id: string;
+  type: 'ticket' | 'beverage' | 'other';
+  title: string;
+  amount: number;
+  time: string;
+  ticketType?: string;
+}
+
+interface CashierDashboard {
+  stats: CashierStats;
+  currentEvent: CurrentEvent | null;
+  recentTransactions: RecentTransaction[];
+}
 
 interface QuickAction {
   id: string;
@@ -22,49 +58,57 @@ interface QuickAction {
   action: () => void;
 }
 
-interface StatCard {
-  id: string;
-  label: string;
-  value: string;
-  unit?: string;
-  icon: string;
-  trend?: number;
+const { width } = Dimensions.get('window');
+
+function formatCurrency(amount: number): string {
+  return `€ ${amount.toFixed(2).replace('.', ',')}`;
 }
 
-const { width } = Dimensions.get('window');
+function formatTime(dateString: string): string {
+  const date = new Date(dateString);
+  return date.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+}
 
 export function CashierHomeScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
 
-  const stats: StatCard[] = [
+  const { data: dashboard, isLoading, refetch, isRefetching } = useQuery<CashierDashboard>({
+    queryKey: ['/api/cashier/dashboard'],
+    queryFn: () => api.get<CashierDashboard>('/api/cashier/dashboard'),
+    refetchInterval: 30000,
+  });
+
+  const stats = dashboard?.stats;
+  const currentEvent = dashboard?.currentEvent;
+  const recentTransactions = dashboard?.recentTransactions || [];
+
+  const statCards = [
     {
       id: '1',
       label: 'Incassi Oggi',
-      value: '€ 2.450',
-      unit: 'EUR',
+      value: stats ? formatCurrency(stats.totalRevenue) : '€ 0,00',
       icon: 'cash',
-      trend: 15,
+      trend: null,
     },
     {
       id: '2',
       label: 'Biglietti Venduti',
-      value: '87',
+      value: stats?.ticketsSold?.toString() || '0',
       icon: 'ticket',
-      trend: 8,
+      trend: null,
     },
     {
       id: '3',
       label: 'Transazioni',
-      value: '43',
+      value: stats?.transactionsCount?.toString() || '0',
       icon: 'swap-horizontal',
-      trend: 5,
+      trend: null,
     },
     {
       id: '4',
       label: 'Incassi Contanti',
-      value: '€ 1.200',
-      unit: 'EUR',
+      value: stats ? formatCurrency(stats.cashRevenue) : '€ 0,00',
       icon: 'wallet',
     },
   ];
@@ -106,20 +150,35 @@ export function CashierHomeScreen() {
     },
   ];
 
-  const renderStatCard = ({ item }: { item: StatCard }) => (
+  const getTransactionIcon = (type: string) => {
+    switch (type) {
+      case 'ticket':
+        return 'ticket';
+      case 'beverage':
+        return 'wine';
+      default:
+        return 'receipt';
+    }
+  };
+
+  const getTransactionColor = (type: string) => {
+    switch (type) {
+      case 'ticket':
+        return colors.primary;
+      case 'beverage':
+        return colors.accent;
+      default:
+        return colors.success;
+    }
+  };
+
+  const renderStatCard = ({ item }: { item: typeof statCards[0] }) => (
     <Card style={[styles.statCard, { width: (width - spacing.lg * 2 - spacing.md) / 2 }]}>
       <View style={styles.statHeader}>
         <Ionicons name={item.icon as any} size={24} color={colors.primary} />
-        {item.trend && (
-          <View style={styles.trendBadge}>
-            <Ionicons name="arrow-up" size={12} color={colors.success} />
-            <Text style={styles.trendText}>{item.trend}%</Text>
-          </View>
-        )}
       </View>
       <Text style={styles.statLabel}>{item.label}</Text>
       <Text style={styles.statValue}>{item.value}</Text>
-      {item.unit && <Text style={styles.statUnit}>{item.unit}</Text>}
     </Card>
   );
 
@@ -137,6 +196,31 @@ export function CashierHomeScreen() {
     </TouchableOpacity>
   );
 
+  const getEventStatusText = (status: string) => {
+    switch (status) {
+      case 'in_progress':
+        return 'In corso';
+      case 'scheduled':
+        return 'Programmato';
+      case 'ended':
+        return 'Terminato';
+      default:
+        return status;
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <Header title="Cassa" />
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color={colors.primary} />
+          <Text style={styles.loadingText}>Caricamento dati...</Text>
+        </View>
+      </View>
+    );
+  }
+
   return (
     <View style={styles.container}>
       <Header title="Cassa" />
@@ -144,27 +228,60 @@ export function CashierHomeScreen() {
         style={styles.content}
         contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
         showsVerticalScrollIndicator={false}
+        refreshControl={
+          <RefreshControl
+            refreshing={isRefetching}
+            onRefresh={refetch}
+            tintColor={colors.primary}
+          />
+        }
       >
-        {/* Current Event Section */}
-        <Card style={styles.eventCard} variant="elevated">
-          <View style={styles.eventHeader}>
-            <View>
-              <Text style={styles.eventLabel}>Evento Attuale</Text>
-              <Text style={styles.eventName}>Festival Notte d'Estate</Text>
-              <Text style={styles.eventTime}>Oggi • 20:00 - 04:00</Text>
+        {currentEvent ? (
+          <Card style={styles.eventCard} variant="elevated">
+            <View style={styles.eventHeader}>
+              <View style={styles.eventInfo}>
+                <Text style={styles.eventLabel}>Evento Attuale</Text>
+                <Text style={styles.eventName}>{currentEvent.name}</Text>
+                <Text style={styles.eventTime}>
+                  {currentEvent.date} • {currentEvent.startTime} - {currentEvent.endTime}
+                </Text>
+              </View>
+              <View style={[
+                styles.eventStatus,
+                currentEvent.status === 'in_progress' && styles.eventStatusActive,
+                currentEvent.status === 'ended' && styles.eventStatusEnded,
+              ]}>
+                <View style={[
+                  styles.statusIndicator,
+                  currentEvent.status === 'in_progress' && styles.statusIndicatorActive,
+                  currentEvent.status === 'ended' && styles.statusIndicatorEnded,
+                ]} />
+                <Text style={[
+                  styles.statusText,
+                  currentEvent.status === 'in_progress' && styles.statusTextActive,
+                  currentEvent.status === 'ended' && styles.statusTextEnded,
+                ]}>
+                  {getEventStatusText(currentEvent.status)}
+                </Text>
+              </View>
             </View>
-            <View style={styles.eventStatus}>
-              <View style={styles.statusIndicator} />
-              <Text style={styles.statusText}>In corso</Text>
+          </Card>
+        ) : (
+          <Card style={styles.eventCard} variant="elevated">
+            <View style={styles.noEventContainer}>
+              <Ionicons name="calendar-outline" size={40} color={colors.mutedForeground} />
+              <Text style={styles.noEventText}>Nessun evento assegnato</Text>
+              <Text style={styles.noEventSubtext}>
+                Attendi l'assegnazione ad un evento da parte del gestore
+              </Text>
             </View>
-          </View>
-        </Card>
+          </Card>
+        )}
 
-        {/* Statistics Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Statistiche Oggi</Text>
           <FlatList
-            data={stats}
+            data={statCards}
             renderItem={renderStatCard}
             keyExtractor={(item) => item.id}
             numColumns={2}
@@ -173,7 +290,6 @@ export function CashierHomeScreen() {
           />
         </View>
 
-        {/* Quick Actions Section */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Azioni Rapide</Text>
           <FlatList
@@ -186,7 +302,6 @@ export function CashierHomeScreen() {
           />
         </View>
 
-        {/* Recent Transactions */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Transazioni Recenti</Text>
@@ -195,62 +310,60 @@ export function CashierHomeScreen() {
             </TouchableOpacity>
           </View>
 
-          <Card style={styles.transactionCard}>
-            <View style={styles.transactionItem}>
-              <View style={styles.transactionIcon}>
-                <Ionicons name="ticket" size={20} color={colors.primary} />
+          {recentTransactions.length > 0 ? (
+            recentTransactions.map((transaction) => (
+              <Card key={transaction.id} style={styles.transactionCard}>
+                <View style={styles.transactionItem}>
+                  <View style={styles.transactionIcon}>
+                    <Ionicons 
+                      name={getTransactionIcon(transaction.type) as any} 
+                      size={20} 
+                      color={getTransactionColor(transaction.type)} 
+                    />
+                  </View>
+                  <View style={styles.transactionDetails}>
+                    <Text style={styles.transactionTitle}>{transaction.title}</Text>
+                    <Text style={styles.transactionTime}>{transaction.time}</Text>
+                  </View>
+                  <Text style={styles.transactionAmount}>
+                    {formatCurrency(transaction.amount)}
+                  </Text>
+                </View>
+              </Card>
+            ))
+          ) : (
+            <Card style={styles.emptyTransactionsCard}>
+              <View style={styles.emptyTransactions}>
+                <Ionicons name="receipt-outline" size={32} color={colors.mutedForeground} />
+                <Text style={styles.emptyTransactionsText}>
+                  Nessuna transazione recente
+                </Text>
               </View>
-              <View style={styles.transactionDetails}>
-                <Text style={styles.transactionTitle}>Biglietto VIP</Text>
-                <Text style={styles.transactionTime}>14:35</Text>
-              </View>
-              <Text style={styles.transactionAmount}>€ 50,00</Text>
-            </View>
-          </Card>
-
-          <Card style={styles.transactionCard}>
-            <View style={styles.transactionItem}>
-              <View style={styles.transactionIcon}>
-                <Ionicons name="wine" size={20} color={colors.accent} />
-              </View>
-              <View style={styles.transactionDetails}>
-                <Text style={styles.transactionTitle}>Bevande</Text>
-                <Text style={styles.transactionTime}>14:20</Text>
-              </View>
-              <Text style={styles.transactionAmount}>€ 25,50</Text>
-            </View>
-          </Card>
-
-          <Card style={styles.transactionCard}>
-            <View style={styles.transactionItem}>
-              <View style={styles.transactionIcon}>
-                <Ionicons name="ticket" size={20} color={colors.success} />
-              </View>
-              <View style={styles.transactionDetails}>
-                <Text style={styles.transactionTitle}>Biglietto Standard</Text>
-                <Text style={styles.transactionTime}>14:10</Text>
-              </View>
-              <Text style={styles.transactionAmount}>€ 30,00</Text>
-            </View>
-          </Card>
+            </Card>
+          )}
         </View>
 
-        {/* Daily Summary */}
         <View style={styles.section}>
           <Card style={styles.summaryCard}>
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Contanti</Text>
-              <Text style={styles.summaryValue}>€ 1.200,00</Text>
+              <Text style={styles.summaryValue}>
+                {stats ? formatCurrency(stats.cashRevenue) : '€ 0,00'}
+              </Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Carte</Text>
-              <Text style={styles.summaryValue}>€ 1.250,00</Text>
+              <Text style={styles.summaryValue}>
+                {stats ? formatCurrency(stats.cardRevenue) : '€ 0,00'}
+              </Text>
             </View>
             <View style={styles.summaryDivider} />
             <View style={styles.summaryRow}>
               <Text style={styles.summaryLabel}>Totale</Text>
-              <Text style={styles.summaryTotal}>€ 2.450,00</Text>
+              <Text style={styles.summaryTotal}>
+                {stats ? formatCurrency(stats.totalRevenue) : '€ 0,00'}
+              </Text>
             </View>
           </Card>
         </View>
@@ -266,6 +379,16 @@ const styles = StyleSheet.create({
   },
   content: {
     flex: 1,
+  },
+  loadingContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.md,
+  },
+  loadingText: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.sm,
   },
   section: {
     marginBottom: spacing.lg,
@@ -298,6 +421,9 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
   },
+  eventInfo: {
+    flex: 1,
+  },
   eventLabel: {
     color: colors.mutedForeground,
     fontSize: fontSize.xs,
@@ -319,21 +445,54 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: spacing.sm,
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+    backgroundColor: 'rgba(100, 100, 100, 0.1)',
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm,
     borderRadius: borderRadius.full,
+  },
+  eventStatusActive: {
+    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+  },
+  eventStatusEnded: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
   },
   statusIndicator: {
     width: 8,
     height: 8,
     borderRadius: borderRadius.full,
+    backgroundColor: colors.mutedForeground,
+  },
+  statusIndicatorActive: {
     backgroundColor: colors.success,
   },
+  statusIndicatorEnded: {
+    backgroundColor: colors.destructive,
+  },
   statusText: {
-    color: colors.success,
+    color: colors.mutedForeground,
     fontSize: fontSize.xs,
     fontWeight: fontWeight.semibold,
+  },
+  statusTextActive: {
+    color: colors.success,
+  },
+  statusTextEnded: {
+    color: colors.destructive,
+  },
+  noEventContainer: {
+    alignItems: 'center',
+    paddingVertical: spacing.lg,
+    gap: spacing.sm,
+  },
+  noEventText: {
+    color: colors.foreground,
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.semibold,
+  },
+  noEventSubtext: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.sm,
+    textAlign: 'center',
   },
   statsGrid: {
     gap: spacing.md,
@@ -347,20 +506,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: spacing.md,
   },
-  trendBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: spacing.xs,
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs,
-    borderRadius: borderRadius.md,
-  },
-  trendText: {
-    color: colors.success,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.semibold,
-  },
   statLabel: {
     color: colors.mutedForeground,
     fontSize: fontSize.xs,
@@ -371,11 +516,6 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
-  },
-  statUnit: {
-    color: colors.mutedForeground,
-    fontSize: fontSize.xs,
-    marginTop: spacing.xs,
   },
   actionsGrid: {
     gap: spacing.md,
@@ -437,6 +577,17 @@ const styles = StyleSheet.create({
     color: colors.foreground,
     fontSize: fontSize.base,
     fontWeight: fontWeight.semibold,
+  },
+  emptyTransactionsCard: {
+    padding: spacing.lg,
+  },
+  emptyTransactions: {
+    alignItems: 'center',
+    gap: spacing.sm,
+  },
+  emptyTransactionsText: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.sm,
   },
   summaryCard: {
     paddingVertical: spacing.md,
