@@ -1,6 +1,6 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode } from './siae-utils';
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -5466,14 +5466,19 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     
     // FIX 2026-01-14: Genera nome file PRIMA della generazione XML per attributo NomeFile obbligatorio
     // L'attributo NomeFile deve corrispondere esattamente al nome dell'allegato email (errore SIAE 0600)
+    // FIX 2026-01-14: Usa resolveSystemCode per coerenza codice sistema in nome file, NomeFile, SistemaEmissione (errori SIAE 0600/0603)
     const preReportTypeForFileName: 'giornaliero' | 'mensile' = isMonthly ? 'mensile' : 'giornaliero';
-    const preEffectiveSystemCode = systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT;
+    const { getCachedEfffData } = await import('./bridge-relay');
+    const preEfffData = getCachedEfffData();
+    const preResolvedSystemCode = resolveSystemCode(preEfffData, systemConfig);
+    console.log(`[SIAE-ROUTES] Pre-resolved system code for RMG/RPM: ${preResolvedSystemCode}`);
+    
     const preGeneratedFileName = generateSiaeFileName(
       preReportTypeForFileName,
       effectiveReportDate,
       preCalculatedProgressivo,
       null, // senza firma - il nome .xsi è quello che va nell'attributo NomeFile
-      preEffectiveSystemCode
+      preResolvedSystemCode
     );
     console.log(`[SIAE-ROUTES] Pre-generated filename for XML NomeFile attribute: ${preGeneratedFileName}`);
     
@@ -5490,6 +5495,7 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
       rcaEventName,
       progressivo: preCalculatedProgressivo, // FIX: Passa progressivo per coerenza
       nomeFile: preGeneratedFileName, // FIX 2026-01-14: NomeFile obbligatorio per errore SIAE 0600
+      resolvedSystemCode: preResolvedSystemCode, // FIX 2026-01-14: Codice sistema per coerenza (errori SIAE 0600/0603)
     });
   }
   
@@ -5621,7 +5627,10 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     isRCA ? 'rca' : (isMonthly ? 'mensile' : 'giornaliero');
   const effectiveSignatureFormat = p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : null);
   // CRITICAL: Use same systemCode as XML for consistency (Allegato C SIAE)
-  const effectiveSystemCode = systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT;
+  // FIX 2026-01-14: Usa resolveSystemCode per coerenza codice sistema (errori SIAE 0600/0603)
+  const { getCachedEfffData: getPostSignEfffData } = await import('./bridge-relay');
+  const postSignEfffData = getPostSignEfffData();
+  const effectiveSystemCode = resolveSystemCode(postSignEfffData, systemConfig);
   const generatedFileName = generateSiaeFileName(
     reportTypeForFileName, 
     effectiveReportDateForCount, 
@@ -7543,14 +7552,26 @@ interface C1ReportParams {
   rcaEventName?: string; // Event name for RCA reports
   progressivo?: number; // FIX: Progressivo passato esternamente per coerenza nome file/XML
   nomeFile?: string; // FIX 2026-01-14: NomeFile attributo obbligatorio per RiepilogoGiornaliero/RiepilogoMensile (errore SIAE 0600)
+  resolvedSystemCode?: string; // FIX 2026-01-14: Codice sistema risolto per coerenza nome file/XML (errore SIAE 0600/0603)
 }
 
 async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
-  const { companyId, reportDate, isMonthly, isRCA = false, filteredTickets, systemConfig, companyName, taxId, oraGen, rcaEventName, progressivo: passedProgressivo, nomeFile } = params;
+  const { companyId, reportDate, isMonthly, isRCA = false, filteredTickets, systemConfig, companyName, taxId, oraGen, rcaEventName, progressivo: passedProgressivo, nomeFile, resolvedSystemCode } = params;
   
-  // Try to get EFFF data from Smart Card for SIAE compliance
-  const { getCachedEfffData } = await import('./bridge-relay');
-  const cachedEfff = getCachedEfffData();
+  // FIX 2026-01-14: Usa il codice sistema risolto se passato, altrimenti calcola internamente
+  // Il codice sistema DEVE essere lo stesso usato per generare il nome file (errore SIAE 0600/0603)
+  let systemEmissionCode: string;
+  if (resolvedSystemCode) {
+    // Codice già risolto dal chiamante - garantisce coerenza con nome file
+    systemEmissionCode = resolvedSystemCode;
+    console.log(`[SIAE-ROUTES] generateC1ReportXml: using passed resolvedSystemCode = ${systemEmissionCode}`);
+  } else {
+    // Fallback: calcola internamente (legacy behavior - può causare inconsistenza!)
+    const { getCachedEfffData } = await import('./bridge-relay');
+    const cachedEfff = getCachedEfffData();
+    systemEmissionCode = resolveSystemCode(cachedEfff, systemConfig);
+    console.log(`[SIAE-ROUTES] generateC1ReportXml: WARNING - calculated systemCode internally = ${systemEmissionCode} (legacy mode, may cause inconsistency)`);
+  }
   
   const now = new Date();
   const dataGenAttr = `${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}`;
@@ -7571,9 +7592,6 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
                String(reportDate.getMonth() + 1).padStart(2, '0') + 
                String(reportDate.getDate()).padStart(2, '0');
   }
-  
-  // Prefer systemId from Smart Card EFFF, fallback to config
-  const systemEmissionCode = cachedEfff?.systemId || systemConfig?.systemCode || 'EVENT4U1';
   
   // Get progressive number and determine if this is a substitution
   // FIX 2026-01-14: Usa il progressivo passato esternamente per coerenza con il nome file
@@ -8110,10 +8128,14 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
     
     // FIX 2026-01-14: Genera nome file PRIMA della generazione XML per attributo NomeFile obbligatorio
     // L'attributo NomeFile deve corrispondere esattamente al nome dell'allegato (errore SIAE 0600)
-    const generatedFileName = generateSiaeFileName('giornaliero', reportDate, sequenceNumber, null, systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT);
+    // FIX 2026-01-14: Usa resolveSystemCode per coerenza codice sistema (errori SIAE 0600/0603)
+    const { getCachedEfffData } = await import('./bridge-relay');
+    const dailyEfffData = getCachedEfffData();
+    const dailyResolvedSystemCode = resolveSystemCode(dailyEfffData, systemConfig);
+    const generatedFileName = generateSiaeFileName('giornaliero', reportDate, sequenceNumber, null, dailyResolvedSystemCode);
     
     // Generate RiepilogoGiornaliero XML using shared helper
-    // FIX 2026-01-14: Passa progressivo e nomeFile per coerenza nome file/contenuto XML
+    // FIX 2026-01-14: Passa progressivo, nomeFile e resolvedSystemCode per coerenza nome file/contenuto XML
     const xml = await generateC1ReportXml({
       companyId,
       reportDate,
@@ -8125,6 +8147,7 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
       oraGen,
       progressivo: sequenceNumber, // FIX: Passa progressivo calcolato
       nomeFile: generatedFileName, // FIX 2026-01-14: NomeFile obbligatorio per errore SIAE 0600
+      resolvedSystemCode: dailyResolvedSystemCode, // FIX 2026-01-14: Codice sistema per coerenza (errori SIAE 0600/0603)
     });
     const fileExtension = '.xsi';
     
@@ -9338,13 +9361,18 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     const companyTaxId = company?.fiscalCode || company?.taxId || siaeConfig?.taxId || '';
     const companyBusinessName = company?.name || siaeConfig?.businessName || 'Azienda';
     
+    // FIX 2026-01-14: Risolvi codice sistema PRIMA della generazione XML per coerenza (errori SIAE 0600/0603)
+    const rcaEfffData = getCachedEfffData();
+    const rcaResolvedSystemCode = resolveSystemCode(rcaEfffData, siaeConfig);
+    console.log(`[RCA] Resolved system code for XML: ${rcaResolvedSystemCode}`);
+    
     const rcaParams: RCAParams = {
       companyId: event.companyId,
       eventId: event.id,
       event: eventForLog,
       tickets: ticketsForLog,
       systemConfig: {
-        systemCode: siaeConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT,
+        systemCode: rcaResolvedSystemCode, // FIX: Usa codice risolto per coerenza
         taxId: siaeConfig?.taxId || companyTaxId,
         businessName: siaeConfig?.businessName || companyBusinessName,
       },
@@ -9370,13 +9398,9 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     // Nome file conforme Allegato C SIAE (Provvedimento Agenzia Entrate 04/03/2008):
     // Formato: RCA_AAAA_MM_GG_SSSSSSSS_###_XSI_V.XX.YY.p7m
     // Usa generateSiaeFileName per garantire formato corretto
-    // FIX 2026-01-07: Usa codice sistema dalla smart card (EFFF) per coerenza con XML
-    // SIAE Error 40601: "Il prefisso o la lunghezza del nome del subject e' sbagliato"
-    const cachedEfff = getCachedEfffData();
-    const systemCode = cachedEfff?.systemId || siaeConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT;
-    console.log(`[RCA] System code for email: ${systemCode} (from: ${cachedEfff?.systemId ? 'smart card EFFF' : siaeConfig?.systemCode ? 'siaeConfig' : 'default'})`);
+    // Riusa rcaResolvedSystemCode già calcolato per coerenza con XML (errori SIAE 0600/0603)
     // fileName will be updated to .p7m if signed, otherwise .xsi
-    let fileName = generateSiaeFileName('rca', eventDate, progressivoGenerazione, null, systemCode);
+    let fileName = generateSiaeFileName('rca', eventDate, progressivoGenerazione, null, rcaResolvedSystemCode);
 
     // Check if digital signature is requested via smart card
     const { signWithSmartCard } = req.body;
@@ -9425,7 +9449,7 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
           signedAt: signature.signedAt
         };
         // Update filename to .p7m for signed files per Allegato C SIAE
-        fileName = generateSiaeFileName('rca', eventDate, progressivoGenerazione, 'cades', systemCode);
+        fileName = generateSiaeFileName('rca', eventDate, progressivoGenerazione, 'cades', rcaResolvedSystemCode);
         
       } catch (signError: any) {
         console.error('[C1 Send] Signature error:', signError.message);
