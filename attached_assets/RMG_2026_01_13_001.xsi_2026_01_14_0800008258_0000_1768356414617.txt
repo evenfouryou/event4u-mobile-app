@@ -1,0 +1,9 @@
+REPLY:
+
+ERRORE
+CODICE:      0601
+DESCRIZIONE: Oggetto del messaggio contenente il riepilogo sbagliato
+DETTAGLIO:   
+
+
+

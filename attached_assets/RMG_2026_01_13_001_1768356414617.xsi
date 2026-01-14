@@ -1,0 +1,55 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<RiepilogoControlloAccessi Sostituzione="N">
+  <Titolare>
+    <DenominazioneTitolareCA>Hyper Events</DenominazioneTitolareCA>
+    <CFTitolareCA>02114370436</CFTitolareCA>
+    <CodiceSistemaCA>EVENT4U1</CodiceSistemaCA>
+    <DataRiepilogo>20260113</DataRiepilogo>
+    <DataGenerazioneRiepilogo>20260114</DataGenerazioneRiepilogo>
+    <OraGenerazioneRiepilogo>020032</OraGenerazioneRiepilogo>
+    <ProgressivoRiepilogo>1</ProgressivoRiepilogo>
+  </Titolare>
+  <Evento>
+    <CFOrganizzatore>02114370436</CFOrganizzatore>
+    <DenominazioneOrganizzatore>Hyper Events</DenominazioneOrganizzatore>
+    <TipologiaOrganizzatore>G</TipologiaOrganizzatore>
+    <SpettacoloIntrattenimento>I</SpettacoloIntrattenimento>
+    <IncidenzaIntrattenimento>100</IncidenzaIntrattenimento>
+    <DenominazioneLocale>d30f5d70-2387-4f87-8646-d1d58ace618d</DenominazioneLocale>
+    <CodiceLocale>0000000000000</CodiceLocale>
+    <DataEvento>20260112</DataEvento>
+    <OraEvento>2100</OraEvento>
+    <TipoGenere>64</TipoGenere>
+    <TitoloEvento>Prova 12/01</TitoloEvento>
+    <Autore></Autore>
+    <Esecutore></Esecutore>
+    <NazionalitaFilm></NazionalitaFilm>
+    <NumOpereRappresentate>1</NumOpereRappresentate>
+    <SistemaEmissione CFTitolare="02114370436" CodiceSistema="EVENT4U1">
+      <Titoli>
+        <CodiceOrdinePosto>A0</CodiceOrdinePosto>
+        <Capienza>100</Capienza>
+        <TotaleTipoTitolo>
+          <TipoTitolo>IN</TipoTitolo>
+          <TotaleTitoliLTA>0</TotaleTitoliLTA>
+          <TotaleTitoliNoAccessoTradiz>0</TotaleTitoliNoAccessoTradiz>
+          <TotaleTitoliNoAccessoDigitali>0</TotaleTitoliNoAccessoDigitali>
+          <TotaleTitoliLTAAccessoTradiz>0</TotaleTitoliLTAAccessoTradiz>
+          <TotaleTitoliLTAAccessoDigitali>0</TotaleTitoliLTAAccessoDigitali>
+          <TotaleCorrispettiviLordi>0</TotaleCorrispettiviLordi>
+          <TotaleDirittiPrevendita>0</TotaleDirittiPrevendita>
+          <TotaleIVACorrispettivi>0</TotaleIVACorrispettivi>
+          <TotaleIVADirittiPrevendita>0</TotaleIVADirittiPrevendita>
+        </TotaleTipoTitolo>
+        <TotaleTitoliAnnullati>
+          <TipoTitolo>IN</TipoTitolo>
+          <TotaleTitoliAnnull>0</TotaleTitoliAnnull>
+          <TotaleCorrispettiviLordiAnnull>0</TotaleCorrispettiviLordiAnnull>
+          <TotaleDirittiPrevenditaAnnull>0</TotaleDirittiPrevenditaAnnull>
+          <TotaleIVACorrispettiviAnnull>0</TotaleIVACorrispettiviAnnull>
+          <TotaleIVADirittiPrevenditaAnnull>0</TotaleIVADirittiPrevenditaAnnull>
+        </TotaleTitoliAnnullati>
+      </Titoli>
+    </SistemaEmissione>
+  </Evento>
+</RiepilogoControlloAccessi>
