@@ -5394,6 +5394,38 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   const transmissionType = isRCA ? 'rca' : (isMonthly ? 'monthly' : 'daily');
   const typeLabel = isRCA ? `RCA evento "${rcaEventName}"` : (isMonthly ? 'mensile' : 'giornaliera');
   
+  // ==================== XML/TYPE COHERENCE VALIDATION (Fix SIAE Error 0601) ====================
+  // Verify that XML content matches the expected report type to prevent "Oggetto del messaggio sbagliato" error
+  const hasRCA = xml.includes('<RiepilogoControlloAccessi');
+  const hasRMG = xml.includes('<RiepilogoGiornaliero');
+  const hasRPM = xml.includes('<RiepilogoMensile');
+  
+  let xmlTypeError: string | null = null;
+  if (isRCA && !hasRCA) {
+    xmlTypeError = `ERRORE COERENZA: Richiesto report RCA ma XML contiene formato ${hasRMG ? 'RiepilogoGiornaliero' : hasRPM ? 'RiepilogoMensile' : 'sconosciuto'}. Il nome file sarebbe RCA_* ma il contenuto non corrisponde.`;
+  } else if (!isRCA && !isMonthly && !hasRMG) {
+    xmlTypeError = `ERRORE COERENZA: Richiesto report giornaliero (RMG) ma XML contiene formato ${hasRCA ? 'RiepilogoControlloAccessi' : hasRPM ? 'RiepilogoMensile' : 'sconosciuto'}. Il nome file sarebbe RMG_* ma il contenuto non corrisponde.`;
+  } else if (!isRCA && isMonthly && !hasRPM) {
+    xmlTypeError = `ERRORE COERENZA: Richiesto report mensile (RPM) ma XML contiene formato ${hasRCA ? 'RiepilogoControlloAccessi' : hasRMG ? 'RiepilogoGiornaliero' : 'sconosciuto'}. Il nome file sarebbe RPM_* ma il contenuto non corrisponde.`;
+  }
+  
+  if (xmlTypeError) {
+    console.error(`[SIAE-ROUTES] ${xmlTypeError}`);
+    return {
+      success: false,
+      statusCode: 400,
+      error: xmlTypeError,
+      data: {
+        code: 'XML_TYPE_MISMATCH',
+        expectedType: isRCA ? 'RCA (RiepilogoControlloAccessi)' : (isMonthly ? 'RPM (RiepilogoMensile)' : 'RMG (RiepilogoGiornaliero)'),
+        actualContent: hasRCA ? 'RiepilogoControlloAccessi' : hasRMG ? 'RiepilogoGiornaliero' : hasRPM ? 'RiepilogoMensile' : 'unknown',
+        suggestion: 'Verificare il tipo di report selezionato. Per eventi singoli usare RCA, per report giornalieri RMG, per mensili RPM.'
+      }
+    };
+  }
+  console.log(`[SIAE-ROUTES] Coerenza XML/tipo verificata: ${transmissionType} → ${hasRCA ? 'RCA' : hasRMG ? 'RMG' : 'RPM'}`);
+  // ==========================================================================================
+  
   // ==================== AUTOMATIC VALIDATION ====================
   // Validate XML before sending - blocks transmission if errors found
   const validation = validateC1Report(xml);
