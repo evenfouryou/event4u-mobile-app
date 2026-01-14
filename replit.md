@@ -21,17 +21,7 @@ The system supports Replit OAuth and email/password registration. Session manage
 The core data model links Companies to Users, Locations, Events, Products, and Price Lists. Events include Stations with detailed inventory tracking (Stocks, Stock Movements) covering all stages from loading to returns. Core features include email verification, AI analytics for inventory/consumption, an event creation wizard, and purchase order management.
 
 ### SIAE Ticketing Module
-A comprehensive SIAE-compliant ticketing and fiscal management system for Italian clubs, adhering to Italian fiscal regulations (Provvedimento 04/03/2008). It manages reference data, fiscal compliance, customer management, ticketing, transactions, and operations, including API endpoints for CRUD, activation cards, customer registration, ticket emission with fiscal seals, and XML transmission. Fiscal seal generation occurs server-side via a Desktop Bridge Relay System. The module is disabled by default and can be enabled per `gestore` user by a Super Admin. It integrates CAPTCHA and supports RCA, RMG, and RPM SIAE report types. The system correctly generates a single S/MIME signature for email transmissions.
-
-**SIAE Progressivo Fix (2026-01-14)**: Fixed critical bug where the `ProgressivoGenerazione` attribute in XML content could differ from the progressivo in the filename (e.g., `RPM_2026_01_001.xsi`). The progressivo is now calculated BEFORE XML generation and passed as a parameter to `generateC1ReportXml`, ensuring consistency and resolving SIAE error 0600 "Nome del file contenente il riepilogo sbagliato".
-
-**SIAE Titolare Fix (2026-01-14)**: Both Titolare and Organizzatore denominations now use `systemConfig?.businessName` (the value from the smart card EFFF data, e.g., "HURAEX SRL") instead of the generic company name, resolving SIAE warning 3706.
-
-**Cashier Ticket Cancellation**: Cashiers can cancel their own tickets with mandatory SIAE reason codes (`causale`). Security controls ensure:
-- Cashiers can only cancel tickets they issued (verified via `issuedByUserId`)
-- Event allocation verification (company scoping via `siaeCashierAllocations`)
-- Pre-flight checks for Bridge connection, Smart Card, and printer before printing
-- Gestori/admins require explicit company association for cross-company protection
+A comprehensive SIAE-compliant ticketing and fiscal management system for Italian clubs, adhering to Italian fiscal regulations. It manages reference data, fiscal compliance, customer management, ticketing, transactions, and operations, including API endpoints for CRUD, activation cards, customer registration, ticket emission with fiscal seals, and XML transmission. Fiscal seal generation occurs server-side via a Desktop Bridge Relay System. The module is disabled by default and can be enabled per `gestore` user by a Super Admin. It integrates CAPTCHA and supports RCA, RMG, and RPM SIAE report types.
 
 ### Event Command Center (Event Hub)
 A real-time dashboard (`/events/:id/hub`) providing a centralized view of event operations with tabbed navigation for Overview, Ticketing, Guest Lists, Tables, Staff, Inventory, and Finance, featuring real-time updates via WebSockets.
@@ -40,7 +30,7 @@ A real-time dashboard (`/events/:id/hub`) providing a centralized view of event 
 The public event detail page (`/public/event/:id`) features an interactive floor plan viewer for seat/sector selection with zoom and pan functionalities. The advanced ticketing system includes distributed seat hold management with real-time seat locking and WebSocket updates, along with a visual floor plan editor using SVG canvas and polygon drawing for zones, supporting draft/publish versioning, Smart Assist, and a heatmap overlay for occupancy recommendations.
 
 ### Desktop Bridge Relay System
-A WebSocket relay system (`/ws/bridge`) enabling remote smart card reader access from a desktop Electron application to the web application. It supports token-based authentication and company-scoped message routing, facilitating digital signatures for SIAE C1 reports using PKI functionality, managing signature error handling, and handling SIAE report transmission via email with an audit trail. It supports CAdES-BES digital signatures for SIAE report compliance and S/MIME email signatures for RCA transmissions.
+A WebSocket relay system enabling remote smart card reader access from a desktop Electron application to the web application. It supports token-based authentication and company-scoped message routing, facilitating digital signatures for SIAE C1 reports using PKI functionality, managing signature error handling, and handling SIAE report transmission via email with an audit trail. It supports CAdES-BES digital signatures for SIAE report compliance and S/MIME email signatures for RCA transmissions.
 
 ### Italian Fiscal Validation
 Server-side validation for Italian fiscal identifiers (Codice Fiscale, Partita IVA) incorporating checksum algorithms.
@@ -51,34 +41,6 @@ A SIAE-compliant ticket holder name change workflow with configurable temporal l
 ### SIAE-Compliant Resale Marketplace (Secondary Ticketing)
 A marketplace for ticket resale compliant with Italian Allegato B regulations, featuring seller listing, buyer purchase, atomic reservation, fiscal compliance (original ticket annulment and new ticket emission), seller payouts, and C1 report integration.
 
-**Resale Idempotency Fix (2026-01-14)**: Fixed duplicate confirmation calls issue:
-1. **Frontend fix**: Success page now checks `success=true` URL parameter - if checkout already confirmed, skips redundant `/confirm` call
-2. **Backend safety**: Added idempotency check that reuses existing new ticket if one was already created (prevents duplicates in edge cases)
-
-This ensures the SIAE-compliant flow works correctly:
-- Original ticket is ALWAYS annulled (as required by SIAE)
-- New ticket is created for the buyer
-- No duplicate tickets even if `/confirm` is called multiple times
-
-**Annullato Rivendita Stats Fix (2026-01-14)**: Fixed ticket statistics to correctly count `annullato_rivendita` as cancelled. Previously, reports and dashboards only checked `status === 'cancelled'` - now uses `isCancelledStatus()` which includes all cancellation statuses (cancelled, annullato, refunded, rimborsato, voided, annullato_rimborso, annullato_rivendita).
-
-**Seller Wallet & Ticket Visibility Fix (2026-01-14)**: Fixed `/api/public/account/tickets` endpoint to correctly hide sold tickets from seller's wallet. Previously used `status === 'cancelled'` which didn't include `annullato_rivendita` - now uses `isCancelledStatus()`. When a ticket is sold via resale:
-- Original ticket status → `annullato_rivendita` (now correctly hidden from "I miei biglietti")
-- Seller wallet credited via `siaeWalletTransactions` with type `resale_credit`
-
-**Name Change Auto-Approval Email Fix (2026-01-14)**: Fixed critical bug where auto-approved name changes in public-routes.ts would create a new ticket but NOT send the email to the new holder. Changes:
-1. Added async email sending after successful auto-approval (PDF attachment + HTML summary)
-2. Changed original ticket status from `replaced` to `annullato_cambio_nominativo` for SIAE compliance
-3. Changed cancellation reason code to `10` (TAB.5: "Cambio nominativo - vecchio titolo")
-4. Added `annullato_cambio_nominativo` to `SIAE_CANCELLED_STATUSES` array
-
-**Event Hub Status Badge Fix (2026-01-14)**: Updated `getTicketStatusBadge()` function in event-hub.tsx to display all SIAE cancellation statuses correctly:
-- `annullato_cambio_nominativo` → Badge arancione "Cambio Nominativo"
-- `annullato_rivendita` → Badge ambra "Rivenduto"  
-- `annullato_rimborso` → Badge viola "Rimborsato"
-- `annullato`, `cancelled`, `voided` → Badge rosso "Annullato"
-- Added filter logic to group all cancelled statuses when filtering by "Annullati"
-
 ### Scanner Management Module
 Manages event scanner operators for `gestore`/`super_admin` users, supporting scanner account creation, mobile-optimized UI, and granular event assignment with permissions.
 
@@ -86,16 +48,19 @@ Manages event scanner operators for `gestore`/`super_admin` users, supporting sc
 A digital badge creation system for schools and organizations, accessible to `gestore`/`admin` users. It allows custom branded landing pages, email verification, QR code generation, and a public view page, supporting custom domains.
 
 ### Paid Reservation Booking System (PR Wallet)
-A reservation system for event lists and tables with PR (promoter) commission tracking using a wallet model. It handles PR registration, authentication, commission accumulation, payout requests, and integrates with scanners for payment verification and check-in. The system uses an additive commission model, allows gestori to assign PRs to specific events, and supports multi-company PRs. A unified assignment system (`eventPrAssignments` table with `prProfileId`) has replaced legacy systems, with middleware supporting both Passport and PR session authentication.
+A reservation system for event lists and tables with PR (promoter) commission tracking using a wallet model. It handles PR registration, authentication, commission accumulation, payout requests, and integrates with scanners for payment verification and check-in. The system uses an additive commission model, allows gestori to assign PRs to specific events, and supports multi-company PRs.
 
 ### Event Management
 Events are categorized for `gestore` view into "In Corso" (ongoing), "Futuri" (upcoming), and "Passati" (past) based on dates and status.
 
 ### Customer Home with Event Discovery
-A redesigned public-facing home page (`/acquista`, `/locali`, `/rivendite`) featuring:
+A redesigned public-facing home page featuring:
 - **Event Categories**: Global event categories with icons, colors, and display order for filtering.
 - **Geolocation Support**: Locations table includes latitude/longitude, and a "Vicino a te" filter uses browser geolocation with Haversine formula for distance calculation.
 - **Google Maps Integration**: Venues page (`/locali`) features a map/list view toggle with `@vis.gl/react-google-maps` for displaying venue markers.
+
+### Mobile App (Expo React Native)
+The mobile app, located in the `mobile-app/` folder, is built with Expo SDK 52 and React Native. It features a dark nightclub theme, card-based layouts, and uses React Navigation for routing, TanStack Query for data fetching, and Zustand for state management. Key features include user authentication, public event browsing, ticket management, QR scanning for event entry, promoter dashboards, cashier functions for ticket issuance, and event management.
 
 ## External Dependencies
 
@@ -110,63 +75,12 @@ A redesigned public-facing home page (`/acquista`, `/locali`, `/rivendite`) feat
 
 ### Key NPM Packages
 -   **UI Components**: `@radix-ui/*`, `shadcn/ui`.
--   **Forms & Validation**: `react-hook-form`, `zod`, `@hookform/resolvers`.
+-   **Forms & Validation**: `react-hook-form`, `zod`.
 -   **Data Fetching**: `@tanstack/react-query`.
 -   **Database**: `drizzle-orm`, `drizzle-kit`, `@neondatabase/serverless`.
 -   **Authentication**: `passport`, `openid-client`, `express-session`, `bcryptjs`.
 -   **Charts**: `recharts`.
 -   **File Processing**: `papaparse`, `jspdf`, `exceljs`.
 -   **QR Code**: `qrcode`.
--   **Build Tools**: `vite`, `esbuild`, `typescript`, `tsx`.
--   **Mobile App**: `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios`.
-
-## Mobile App (Expo React Native)
-
-### Location
-The mobile app source code is in `mobile-app/` folder using Expo SDK 52 with React Native.
-
-### Structure
-```
-mobile-app/
-├── App.tsx                    # Main entry point
-├── app.json                   # Expo configuration
-├── eas.json                   # EAS Build configuration
-├── src/
-│   ├── components/            # Reusable UI components (Button, Input, Card, etc.)
-│   ├── lib/                   # Theme, API client, utilities
-│   ├── navigation/            # React Navigation setup
-│   ├── screens/               # All app screens organized by feature
-│   │   ├── auth/              # Login, Register, ForgotPassword
-│   │   ├── public/            # Home, Events, EventDetail, Venues, Cart, Checkout
-│   │   ├── account/           # MyTickets, Profile, Wallet, NameChange, Resales
-│   │   ├── scanner/           # QR scanning for event entry
-│   │   ├── pr/                # Promoter dashboard, guest lists, tables, wallet
-│   │   ├── cashier/           # Ticket issuance screens
-│   │   └── management/        # Event management dashboard
-│   └── store/                 # Zustand stores (auth)
-└── assets/                    # App icons, splash screen
-```
-
-### Key Technologies
-- **Expo SDK 52** with React Native
-- **React Navigation** for routing
-- **TanStack Query** for data fetching
-- **Zustand** for state management
-- **expo-camera** for QR code scanning
-- **react-native-qrcode-svg** for ticket QR codes
-- **expo-secure-store** for auth token storage
-
-### Build Commands
-```bash
-cd mobile-app
-npm install
-npm start                          # Development with Expo Go
-eas build --platform android       # Android APK build
-eas build --platform ios           # iOS build
-```
-
-### Design System
-- Dark nightclub theme (#0A0A0A background)
-- Primary purple accent (#8B5CF6)
-- Card-based layouts with rounded corners
-- Consistent spacing and typography
+-   **Build Tools**: `vite`, `esbuild`, `typescript`.
+-   **Mobile App**: `@capacitor/core`, `@capacitor/cli`, `@capacitor/ios`, `expo-camera`, `react-native-qrcode-svg`, `expo-secure-store`.

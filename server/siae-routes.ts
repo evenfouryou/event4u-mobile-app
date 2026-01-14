@@ -5456,6 +5456,19 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     // FIX 2026-01-14: Salva progressivo per riuso nel nome file
     calculatedProgressivo = preCalculatedProgressivo;
     
+    // FIX 2026-01-14: Genera nome file PRIMA della generazione XML per attributo NomeFile obbligatorio
+    // L'attributo NomeFile deve corrispondere esattamente al nome dell'allegato email (errore SIAE 0600)
+    const preReportTypeForFileName: 'giornaliero' | 'mensile' = isMonthly ? 'mensile' : 'giornaliero';
+    const preEffectiveSystemCode = systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT;
+    const preGeneratedFileName = generateSiaeFileName(
+      preReportTypeForFileName,
+      effectiveReportDate,
+      preCalculatedProgressivo,
+      null, // senza firma - il nome .xsi è quello che va nell'attributo NomeFile
+      preEffectiveSystemCode
+    );
+    console.log(`[SIAE-ROUTES] Pre-generated filename for XML NomeFile attribute: ${preGeneratedFileName}`);
+    
     xml = await generateC1ReportXml({
       companyId,
       reportDate: effectiveReportDate,
@@ -5468,6 +5481,7 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
       oraGen,
       rcaEventName,
       progressivo: preCalculatedProgressivo, // FIX: Passa progressivo per coerenza
+      nomeFile: preGeneratedFileName, // FIX 2026-01-14: NomeFile obbligatorio per errore SIAE 0600
     });
   }
   
@@ -7155,10 +7169,11 @@ interface C1ReportParams {
   oraGen: string;
   rcaEventName?: string; // Event name for RCA reports
   progressivo?: number; // FIX: Progressivo passato esternamente per coerenza nome file/XML
+  nomeFile?: string; // FIX 2026-01-14: NomeFile attributo obbligatorio per RiepilogoGiornaliero/RiepilogoMensile (errore SIAE 0600)
 }
 
 async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
-  const { companyId, reportDate, isMonthly, isRCA = false, filteredTickets, systemConfig, companyName, taxId, oraGen, rcaEventName, progressivo: passedProgressivo } = params;
+  const { companyId, reportDate, isMonthly, isRCA = false, filteredTickets, systemConfig, companyName, taxId, oraGen, rcaEventName, progressivo: passedProgressivo, nomeFile } = params;
   
   // Try to get EFFF data from Smart Card for SIAE compliance
   const { getCachedEfffData } = await import('./bridge-relay');
@@ -7546,8 +7561,12 @@ async function generateC1ReportXml(params: C1ReportParams): Promise<string> {
   // - RiepilogoMensile con attributo Mese="YYYYMM" per report mensili
   const rootElement = isMonthly ? 'RiepilogoMensile' : 'RiepilogoGiornaliero';
   
+  // FIX 2026-01-14: Attributo NomeFile obbligatorio (errore SIAE 0600 "Nome del file contenente il riepilogo sbagliato")
+  // Il nome file deve corrispondere esattamente al nome dell'allegato email
+  const nomeFileAttr = nomeFile ? `NomeFile="${escapeXml(nomeFile)}" ` : '';
+  
   return `<?xml version="1.0" encoding="UTF-8"?>
-<${rootElement} ${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressiveGen}" Sostituzione="${sostituzione}">
+<${rootElement} ${nomeFileAttr}${periodAttrName}="${periodAttrValue}" DataGenerazione="${dataGenAttr}" OraGenerazione="${oraGen}" ProgressivoGenerazione="${progressiveGen}" Sostituzione="${sostituzione}">
     <Titolare>
         <Denominazione>${escapeXml(titolareName)}</Denominazione>
         <CodiceFiscale>${escapeXml(taxId)}</CodiceFiscale>
@@ -7696,8 +7715,12 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
     });
     const sequenceNumber = sameTypeTransmissions.length + 1;
     
-    // Generate RiepilogoMensile XML using shared helper
-    // FIX 2026-01-14: Passa progressivo per coerenza nome file/contenuto XML
+    // FIX 2026-01-14: Genera nome file PRIMA della generazione XML per attributo NomeFile obbligatorio
+    // L'attributo NomeFile deve corrispondere esattamente al nome dell'allegato (errore SIAE 0600)
+    const generatedFileName = generateSiaeFileName('giornaliero', reportDate, sequenceNumber, null, systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT);
+    
+    // Generate RiepilogoGiornaliero XML using shared helper
+    // FIX 2026-01-14: Passa progressivo e nomeFile per coerenza nome file/contenuto XML
     const xml = await generateC1ReportXml({
       companyId,
       reportDate,
@@ -7708,10 +7731,8 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
       taxId,
       oraGen,
       progressivo: sequenceNumber, // FIX: Passa progressivo calcolato
+      nomeFile: generatedFileName, // FIX 2026-01-14: NomeFile obbligatorio per errore SIAE 0600
     });
-    
-    // Generate file name with correct format - use systemCode from config for consistency
-    const generatedFileName = generateSiaeFileName('giornaliero', reportDate, sequenceNumber, null, systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT);
     const fileExtension = '.xsi';
     
     // Create transmission record
