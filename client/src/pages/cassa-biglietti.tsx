@@ -332,8 +332,8 @@ export default function CassaBigliettiPage() {
     onSuccess: (result) => {
       queryClient.invalidateQueries({ queryKey: ["/api/siae/ticketed-events", selectedEventId, "subscriptions"] });
       
-      // Stampa automatica dell'abbonamento se agente connesso
-      if (result.id && connectedAgents.length > 0) {
+      // Stampa automatica dell'abbonamento
+      if (result.id) {
         const agentId = connectedAgents.length === 1 ? connectedAgents[0].agentId : undefined;
         printSubscriptionMutation.mutate({ subscriptionId: result.id, agentId });
       }
