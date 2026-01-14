@@ -1511,7 +1511,7 @@ export const siaeTickets = pgTable("siae_tickets", {
   isComplimentary: boolean("is_complimentary").default(false), // Biglietto omaggio
   paymentMethod: varchar("payment_method", { length: 30 }), // Metodo pagamento (cash, card, etc.)
   // Stato
-  status: varchar("status", { length: 20 }).notNull().default('valid'), // valid, used, cancelled
+  status: varchar("status", { length: 50 }).notNull().default('valid'), // valid, used, cancelled, annullato_cambio_nominativo
   usedAt: timestamp("used_at"), // Quando è stato usato per entrare
   usedByScannerId: varchar("used_by_scanner_id"), // ID scanner che ha validato
   // Annullamento
