@@ -445,11 +445,16 @@ export default function CassaBigliettiPage() {
       });
     } else {
       // Multiple agents - show selection popup
+      // Clear any pending subscription prints to ensure mutual exclusivity
+      setPendingPrintSubscriptionId(null);
       setPendingPrintTicketIds(ticketIds);
       setSelectedPrintAgentId("");
       setIsPrinterSelectOpen(true);
     }
   };
+
+  // Pending subscription print (for agent selection popup)
+  const [pendingPrintSubscriptionId, setPendingPrintSubscriptionId] = useState<string | null>(null);
 
   // Handle printer selection confirmation
   const handlePrinterSelected = () => {
@@ -470,7 +475,30 @@ export default function CassaBigliettiPage() {
 
   // Function to print subscription with agent selection (same logic as tickets)
   const printSubscriptionWithAgentSelection = async (subscriptionId: string) => {
-    // Refresh connected agents before printing
+    // SIAE Compliance: Verifica presenza stampante e smartcard prima di stampare
+    // (Stessa logica dei biglietti)
+    
+    // 1. Verifica Bridge SIAE connesso
+    if (!bridgeConnected && !isSuperAdmin) {
+      toast({
+        title: "Bridge SIAE Non Connesso",
+        description: "Connetti il Bridge SIAE (applicazione desktop) prima di stampare.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // 2. Verifica Smart Card inserita (stessa logica dei biglietti)
+    if (!cardReady && !isSuperAdmin) {
+      toast({
+        title: "Smart Card Non Presente",
+        description: "Inserisci la Smart Card SIAE nel lettore prima di stampare.",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    // 3. Refresh connected agents before printing
     await refetchAgents();
     
     if (connectedAgents.length === 0) {
@@ -487,10 +515,27 @@ export default function CassaBigliettiPage() {
       const agentId = connectedAgents[0].agentId;
       printSubscriptionMutation.mutate({ subscriptionId, agentId });
     } else {
-      // Multiple agents - use first one (could add selection popup later)
-      const agentId = connectedAgents[0].agentId;
-      printSubscriptionMutation.mutate({ subscriptionId, agentId });
+      // Multiple agents - show selection popup (reuse existing popup)
+      // Clear any pending ticket prints to ensure mutual exclusivity
+      setPendingPrintTicketIds([]);
+      setPendingPrintSubscriptionId(subscriptionId);
+      setSelectedPrintAgentId("");
+      setIsPrinterSelectOpen(true);
     }
+  };
+
+  // Handle printer selection for subscription
+  const handleSubscriptionPrinterSelected = () => {
+    if (!selectedPrintAgentId || !pendingPrintSubscriptionId) return;
+    
+    printSubscriptionMutation.mutate({ 
+      subscriptionId: pendingPrintSubscriptionId, 
+      agentId: selectedPrintAgentId 
+    });
+    
+    setIsPrinterSelectOpen(false);
+    setPendingPrintSubscriptionId(null);
+    setSelectedPrintAgentId("");
   };
 
   // Range cancellation mutation
@@ -842,6 +887,7 @@ export default function CassaBigliettiPage() {
         if (!open) {
           setIsPrinterSelectOpen(false);
           setPendingPrintTicketIds([]);
+          setPendingPrintSubscriptionId(null);
           setSelectedPrintAgentId("");
         }
       }}>
@@ -896,7 +942,13 @@ export default function CassaBigliettiPage() {
             <Button
               className="bg-[#FFD700] hover:bg-[#FFD700]/90 text-black"
               disabled={!selectedPrintAgentId}
-              onClick={handlePrinterSelected}
+              onClick={() => {
+                if (pendingPrintSubscriptionId) {
+                  handleSubscriptionPrinterSelected();
+                } else {
+                  handlePrinterSelected();
+                }
+              }}
               data-testid="button-confirm-printer-select"
             >
               Stampa
