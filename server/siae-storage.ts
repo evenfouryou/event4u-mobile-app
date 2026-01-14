@@ -1861,22 +1861,6 @@ export class SiaeStorage implements ISiaeStorage {
     
     const totalSeals = sealsResult[0]?.count || 0;
 
-    // Get tickets by cardCode directly (tickets store cardCode, not cardId)
-    // Use LEFT JOIN to handle cases where issuedByUserId might be null
-    const ticketsWithOrganizers = await db
-      .select({
-        userId: siaeTickets.issuedByUserId,
-        email: users.email,
-        firstName: users.firstName,
-        lastName: users.lastName,
-        ticketCount: count(),
-        lastEmission: sql<Date>`MAX(${siaeTickets.emissionDate})`,
-      })
-      .from(siaeTickets)
-      .leftJoin(users, eq(siaeTickets.issuedByUserId, users.id))
-      .where(eq(siaeTickets.cardCode, cardCode))
-      .groupBy(siaeTickets.issuedByUserId, users.email, users.firstName, users.lastName);
-
     // Get total tickets by cardCode
     const totalTicketsResult = await db
       .select({ count: count() })
@@ -1885,18 +1869,47 @@ export class SiaeStorage implements ISiaeStorage {
 
     const totalTickets = totalTicketsResult[0]?.count || 0;
 
+    // Get ticket stats grouped by user (simpler query without problematic LEFT JOIN)
+    const ticketsByUser = await db
+      .select({
+        userId: siaeTickets.issuedByUserId,
+        ticketCount: count(),
+        lastEmission: sql<Date>`MAX(${siaeTickets.emissionDate})`,
+      })
+      .from(siaeTickets)
+      .where(eq(siaeTickets.cardCode, cardCode))
+      .groupBy(siaeTickets.issuedByUserId);
+
+    // Fetch user details separately to avoid Drizzle LEFT JOIN issues
+    const organizers: {
+      userId: string;
+      username: string;
+      fullName: string;
+      ticketCount: number;
+      lastEmission: Date | null;
+    }[] = [];
+
+    for (const row of ticketsByUser) {
+      if (row.userId) {
+        const [user] = await db
+          .select({ email: users.email, firstName: users.firstName, lastName: users.lastName })
+          .from(users)
+          .where(eq(users.id, row.userId));
+        
+        organizers.push({
+          userId: row.userId,
+          username: user?.email || '',
+          fullName: [user?.firstName, user?.lastName].filter(Boolean).join(' ') || '',
+          ticketCount: Number(row.ticketCount),
+          lastEmission: row.lastEmission,
+        });
+      }
+    }
+
     return {
       totalSeals,
       totalTickets,
-      organizers: ticketsWithOrganizers
-        .filter(row => row.userId) // Filter out null users
-        .map(row => ({
-          userId: row.userId || '',
-          username: row.email || '',
-          fullName: [row.firstName, row.lastName].filter(Boolean).join(' ') || '',
-          ticketCount: Number(row.ticketCount),
-          lastEmission: row.lastEmission,
-        })),
+      organizers,
     };
   }
 
