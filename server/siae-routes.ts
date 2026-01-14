@@ -2714,7 +2714,7 @@ const manualTicketEmissionSchema = z.object({
   ticketedEventId: z.string().min(1, "ID evento richiesto"),
   sectorId: z.string().min(1, "ID settore richiesto"),
   ticketTypeCode: z.string().min(1, "Tipo biglietto richiesto"),
-  sectorCode: z.string().optional(),
+  sectorCode: z.string().max(2, "Codice settore max 2 caratteri").optional(),
   customerId: z.string().nullable().optional(),
   participantFirstName: z.string().nullable().optional(),
   participantLastName: z.string().nullable().optional(),
@@ -2818,11 +2818,14 @@ router.post("/api/siae/tickets", requireAuth, requireOrganizer, async (req: Requ
     // Calcola progressivo sequenziale dell'evento (non il contatore della carta)
     const eventProgressiveNumber = (ticketedEvent.ticketsSold || 0) + 1;
     
+    // Ensure sectorCode is max 2 chars (SIAE TAB.2 requirement)
+    const sectorCode = (data.sectorCode || sector.sectorCode || 'XX').slice(0, 2);
+    
     const ticketData = {
       ticketedEventId: data.ticketedEventId,
       sectorId: data.sectorId,
       ticketTypeCode: data.ticketTypeCode,
-      sectorCode: data.sectorCode || sector.sectorCode,
+      sectorCode,
       customerId: data.customerId || null,
       participantFirstName: data.participantFirstName || null,
       participantLastName: data.participantLastName || null,
@@ -10262,7 +10265,7 @@ router.post("/api/cashiers/events/:eventId/tickets", requireAuth, async (req: Re
         allocationId: allocation.id,
         eventId,
         sectorId: finalSectorId,
-        sectorCode: sector.sectorCode,
+        sectorCode: (sector.sectorCode || 'XX').slice(0, 2),
         ticketCode,
         ticketType: finalTicketType,
         ticketTypeCode,
@@ -11423,7 +11426,7 @@ router.post("/api/cashier/events/:eventId/emit-ticket", requireAuth, requireCash
       allocationId: allocation.id,
       eventId,
       sectorId,
-      sectorCode: sector.sectorCode || '',
+      sectorCode: (sector.sectorCode || 'XX').slice(0, 2),
       ticketCode,
       ticketType,
       ticketTypeCode: ticketType.substring(0, 2).toUpperCase(),
