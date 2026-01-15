@@ -1364,8 +1364,11 @@ export default function EventWizard() {
                   <Badge className={`text-xl px-5 py-2 ${siaeGenreCode ? 'bg-primary' : 'bg-muted-foreground/30'}`} data-testid="badge-vat-rate">
                     {(() => {
                       if (!siaeGenreCode) return '--%';
-                      const genre = siaeGenres?.find(g => g.code === siaeGenreCode);
-                      if (!genre) return 'N/D';
+                      if (isLoadingGenres || !siaeGenres) return '...';
+                      const genre = siaeGenres.find(g => g.code === siaeGenreCode);
+                      if (!genre) {
+                        return siaeTaxType === 'S' ? '10%' : '22%';
+                      }
                       const rate = genre.vatRate;
                       if (rate !== null && rate !== undefined) return `${Number(rate)}%`;
                       return genre.taxType === 'S' ? '10%' : '22%';
@@ -2620,8 +2623,13 @@ export default function EventWizard() {
                     <Badge className={`text-lg px-4 py-1.5 ${siaeGenreCode ? 'bg-primary' : 'bg-muted-foreground/30'}`} data-testid="badge-vat-rate">
                       {(() => {
                         if (!siaeGenreCode) return '--%';
-                        const rate = siaeGenres?.find(g => g.code === siaeGenreCode)?.vatRate;
-                        return rate !== null && rate !== undefined ? `${Number(rate)}%` : 'N/D';
+                        if (isLoadingGenres || !siaeGenres) return '...';
+                        const genre = siaeGenres.find(g => g.code === siaeGenreCode);
+                        if (!genre) {
+                          return siaeTaxType === 'S' ? '10%' : '22%';
+                        }
+                        const rate = genre.vatRate;
+                        return rate !== null && rate !== undefined ? `${Number(rate)}%` : (genre.taxType === 'S' ? '10%' : '22%');
                       })()}
                     </Badge>
                   </div>
