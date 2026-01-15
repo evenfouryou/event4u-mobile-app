@@ -24,6 +24,14 @@ export async function serveStatic(app: Express, _server: Server) {
 }
 
 (async () => {
-  await runApp(serveStatic);
-  initSiaeScheduler();
+  try {
+    console.log('[startup] Starting production server...');
+    await runApp(serveStatic);
+    console.log('[startup] Server started successfully');
+    initSiaeScheduler();
+    console.log('[startup] SIAE scheduler initialized');
+  } catch (error) {
+    console.error('[startup] Fatal error during startup:', error);
+    process.exit(1);
+  }
 })();
