@@ -5008,6 +5008,7 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
     );
     
     // Create new transmission with substitution flag
+    // FIX 2026-01-15: Salva systemCode per garantire coerenza nei reinvii (errori SIAE 0600/0603)
     const newTransmission = await siaeStorage.createSiaeTransmission({
       companyId: original.companyId,
       ticketedEventId: original.ticketedEventId,
@@ -5024,6 +5025,7 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
       ticketsCount: rcaResult.ticketsCount,
       ticketsCancelled: rcaResult.cancelledCount,
       totalAmount: rcaResult.totalRevenue.toFixed(2),
+      systemCode: resendResolvedSystemCode, // FIX: Salva codice per reinvii futuri
     });
     
     console.log(`[SIAE-ROUTES] Created substitution transmission ${newTransmission.id} (progressivo: ${nextProgressivo}) for original ${id}`);
@@ -5194,12 +5196,22 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     const company = await storage.getCompany(transmission.companyId);
     const companyName = company?.name || 'N/A';
     
-    // FIX 2026-01-15: Risolvi systemCode UNA VOLTA all'inizio e usalo ovunque
+    // FIX 2026-01-15: Usa systemCode salvato nella trasmissione per massima coerenza
+    // Se non esiste (trasmissioni legacy), risolvi con resolveSystemCode()
     // Questo previene errori SIAE 0600/0603 (incoerenza tra nome file, XML e subject email)
     const systemConfig = await siaeStorage.getSiaeSystemConfig(transmission.companyId);
-    const sendEmailCachedEfff = getCachedEfffData();
-    const resolvedSystemCodeForEmail = resolveSystemCode(sendEmailCachedEfff, systemConfig);
-    console.log(`[SIAE-ROUTES] SendEmail: Resolved systemCode=${resolvedSystemCodeForEmail} (cachedEfff.systemId=${sendEmailCachedEfff?.systemId}, systemConfig.systemCode=${systemConfig?.systemCode})`);
+    let resolvedSystemCodeForEmail: string;
+    if (transmission.systemCode && transmission.systemCode.length === 8) {
+      // Usa il systemCode salvato nella trasmissione (preferito per coerenza con XML esistente)
+      resolvedSystemCodeForEmail = transmission.systemCode;
+      console.log(`[SIAE-ROUTES] SendEmail: Using SAVED systemCode=${resolvedSystemCodeForEmail} from transmission record`);
+    } else {
+      // Fallback per trasmissioni legacy senza systemCode salvato
+      const sendEmailCachedEfff = getCachedEfffData();
+      resolvedSystemCodeForEmail = resolveSystemCode(sendEmailCachedEfff, systemConfig);
+      console.log(`[SIAE-ROUTES] SendEmail: Resolved systemCode=${resolvedSystemCodeForEmail} (legacy transmission without saved systemCode)`);
+      console.warn(`[SIAE-ROUTES] WARNING: Transmission ${id} has no saved systemCode - potential 0600 error if XML was generated with different code`);
+    }
     
     // CRITICAL FIX: Rigenera SEMPRE l'XML obbligatoriamente per garantire formato corretto
     // LogTransazione causa errore SIAE 40605 "Il riepilogo risulta illegibile"
@@ -6040,6 +6052,7 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   
   // Create transmission record - salva firma appropriata e nome file conforme
   // FIX: Includere ticketedEventId per tutti i tipi se un evento è selezionato
+  // FIX 2026-01-15: Salva systemCode per garantire coerenza nei reinvii (errori SIAE 0600/0603)
   const transmission = await siaeStorage.createSiaeTransmission({
     companyId,
     ticketedEventId: eventId || undefined, // Collegamento evento SIAE (sempre se selezionato)
@@ -6055,6 +6068,7 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     ticketsCount: filteredTickets.length,
     totalAmount: totalAmount.toString(),
     progressivoInvio: sequenceNumber, // Progressivo invio per periodo fiscale
+    systemCode: effectiveSystemCode, // FIX: Salva codice per reinvii futuri
   });
   
   // Import and send the email with SIAE-compliant format (Allegato C)
@@ -8577,6 +8591,7 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
     const fileExtension = '.xsi';
     
     // Create transmission record
+    // FIX 2026-01-15: Salva systemCode per garantire coerenza nei reinvii (errori SIAE 0600/0603)
     const transmission = await siaeStorage.createSiaeTransmission({
       companyId,
       transmissionType: 'daily',
@@ -8588,6 +8603,7 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
       ticketsCount: dayTickets.length,
       totalAmount: dayTickets.reduce((sum, t) => sum + parseFloat(t.grossAmount || '0'), 0).toString(),
       progressivoInvio: sequenceNumber, // Progressivo invio per periodo fiscale
+      systemCode: dailyResolvedSystemCode, // FIX: Salva codice per reinvii futuri
     });
     
     // Format date for filename
@@ -9904,6 +9920,7 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     const effectiveSignatureFormat = p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : null);
     const fileExtension = effectiveSignatureFormat === 'cades' ? '.p7m' : '.xsi';
     
+    // FIX 2026-01-15: Salva systemCode per garantire coerenza nei reinvii (errori SIAE 0600/0603)
     const transmission = await siaeStorage.createSiaeTransmission({
       companyId: event.companyId,
       ticketedEventId: id, // Collegamento all'evento SIAE
@@ -9920,6 +9937,7 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
       ticketsCancelled: reportData.cancelledTicketsCount,
       totalAmount: reportData.totalRevenue.toFixed(2),
       progressivoInvio: progressivoGenerazione, // Progressivo invio per periodo fiscale
+      systemCode: rcaResolvedSystemCode, // FIX: Salva codice per reinvii futuri
     });
 
     // Optionally send email

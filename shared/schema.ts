@@ -1820,6 +1820,10 @@ export const siaeTransmissions = pgTable("siae_transmissions", {
   sentToPec: varchar("sent_to_pec", { length: 255 }),
   pecMessageId: varchar("pec_message_id", { length: 255 }),
   
+  // Codice Sistema Emissione SIAE (8 caratteri) - CRITICO per coerenza errori 0600/0603
+  // Deve essere salvato per garantire che reinvii usino lo stesso codice dell'XML
+  systemCode: varchar("system_code", { length: 8 }),
+  
   // Firma S/MIME email (Allegato C - obbligatoria per conferma SIAE)
   smimeSigned: boolean("smime_signed").notNull().default(false), // Email firmata S/MIME
   smimeSignerEmail: varchar("smime_signer_email", { length: 255 }), // Email del firmatario dal certificato

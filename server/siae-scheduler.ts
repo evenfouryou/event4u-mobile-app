@@ -483,6 +483,7 @@ async function sendDailyReports() {
         let fileExtension = '.xsi'; // Default per non firmato
         let signatureFormat: 'cades' | 'xmldsig' | null = null;
 
+        // FIX 2026-01-15: Salva systemCode per garantire coerenza nei reinvii (errori SIAE 0600/0603)
         const transmission = await siaeStorage.createSiaeTransmission({
           companyId: ticketedEvent.companyId,
           ticketedEventId: ticketedEvent.id,
@@ -496,6 +497,7 @@ async function sendDailyReports() {
           ticketsCount: reportData.activeTicketsCount,
           ticketsCancelled: reportData.cancelledTicketsCount,
           totalAmount: reportData.totalRevenue.toFixed(2),
+          systemCode: systemCode, // FIX: Salva codice per reinvii futuri
         });
 
         log(`Evento ${ticketedEvent.id} (${event.name}) - Report RMG giornaliero creato: ${fileName}`);
@@ -698,6 +700,7 @@ async function sendMonthlyReports() {
         let fileExtension = '.xsi'; // Default per non firmato
         let signatureFormat: 'cades' | 'xmldsig' | null = null;
 
+        // FIX 2026-01-15: Salva systemCode per garantire coerenza nei reinvii (errori SIAE 0600/0603)
         const transmission = await siaeStorage.createSiaeTransmission({
           companyId: ticketedEvent.companyId,
           ticketedEventId: ticketedEvent.id,
@@ -711,6 +714,7 @@ async function sendMonthlyReports() {
           ticketsCount: reportData.activeTicketsCount,
           ticketsCancelled: reportData.cancelledTicketsCount,
           totalAmount: reportData.totalRevenue.toFixed(2),
+          systemCode: systemCode, // FIX: Salva codice per reinvii futuri
         });
 
         log(`Evento ${ticketedEvent.id} - Report RPM mensile creato: ${fileName}`);
@@ -1008,6 +1012,7 @@ async function sendRCAReports() {
         let signatureFormat: 'cades' | 'xmldsig' | null = null;
         
         // Crea trasmissione
+        // FIX 2026-01-15: Salva systemCode per garantire coerenza nei reinvii (errori SIAE 0600/0603)
         const transmission = await siaeStorage.createSiaeTransmission({
           companyId: ticketedEvent.companyId,
           ticketedEventId: ticketedEvent.id,
@@ -1021,6 +1026,7 @@ async function sendRCAReports() {
           ticketsCount: rcaResult.ticketCount,
           ticketsCancelled: 0,
           totalAmount: ticketsForLog.reduce((sum, t) => sum + t.grossAmount, 0).toFixed(2),
+          systemCode: systemCode, // FIX: Salva codice per reinvii futuri
         });
         
         log(`Evento ${ticketedEvent.id} (${event.name}) - Report RCA creato: ${fileName}`);
