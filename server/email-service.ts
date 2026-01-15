@@ -616,13 +616,16 @@ export async function sendSiaeTransmissionEmail(options: SiaeTransmissionEmailOp
       // L'allegato DEVE essere XML puro (.xsi), NON P7M (.xsi.p7m)
       // SMIMESignML crea: S/MIME(email con XML allegato) = UNA sola firma
       // ============================================================
-      const attachmentBase64Content = Buffer.from(xmlContent, 'utf-8').toString('base64');
-      console.log(`[EMAIL-SERVICE] FIX 2026-01-07: Using RAW XML as attachment (no P7M - S/MIME is the only signature)`);
+      // FIX 2026-01-15: Usa 'latin1' invece di 'utf-8' per encoding ISO-8859-1
+      // L'XML dichiara encoding="ISO-8859-1" quindi i byte devono corrispondere.
+      // Usando utf-8, caratteri accentati diventano multi-byte causando errore SIAE 40605.
+      const attachmentBase64Content = Buffer.from(xmlContent, 'latin1').toString('base64');
+      console.log(`[EMAIL-SERVICE] FIX 2026-01-15: Using latin1 encoding for ISO-8859-1 XML attachment`);
       
       // INTEGRITY CHECK: Log SHA-256 prima dell'invio per diagnostica trasmissione
       try {
         const crypto = await import('crypto');
-        const buffer = Buffer.from(xmlContent, 'utf-8');
+        const buffer = Buffer.from(xmlContent, 'latin1');
         const sha256Hash = crypto.createHash('sha256').update(buffer).digest('hex');
         console.log(`[EMAIL-SERVICE] [INTEGRITY] Attachment pre-send check:`);
         console.log(`[EMAIL-SERVICE] [INTEGRITY]   - Type: XML (raw, for S/MIME signing)`);

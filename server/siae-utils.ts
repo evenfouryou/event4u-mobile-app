@@ -1063,7 +1063,7 @@ export function validateC1Report(xml: string): C1ValidationResult {
     }
     
     // Somma importi CorrispettivoLordo (in centesimi)
-    const corrMatches = xml.matchAll(/<CorrispettivoLordo>(\d+)<\/CorrispettivoLordo>/g);
+    const corrMatches = Array.from(xml.matchAll(/<CorrispettivoLordo>(\d+)<\/CorrispettivoLordo>/g));
     for (const match of corrMatches) {
       summary.totalAmount += parseInt(match[1], 10);
     }
@@ -1191,14 +1191,14 @@ export function validateC1Report(xml: string): C1ValidationResult {
       }
       
       // Conta biglietti da Quantita in TitoliEmessi
-      const quantitaMatches = xml.matchAll(/<TitoliEmessi>[^]*?<Quantita>(\d+)<\/Quantita>/g);
+      const quantitaMatches = Array.from(xml.matchAll(/<TitoliEmessi>[^]*?<Quantita>(\d+)<\/Quantita>/g));
       for (const match of quantitaMatches) {
         summary.ticketsCount += parseInt(match[1], 10);
       }
       
       // Somma importi da CorrispettivoLordo
-      const corrMatches = xml.matchAll(/<CorrispettivoLordo>(\d+)<\/CorrispettivoLordo>/g);
-      for (const match of corrMatches) {
+      const corrMatchesRG = Array.from(xml.matchAll(/<CorrispettivoLordo>(\d+)<\/CorrispettivoLordo>/g));
+      for (const match of corrMatchesRG) {
         summary.totalAmount += parseInt(match[1], 10);
       }
     } else {
@@ -1798,8 +1798,8 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   
   // Crea sectorSummaries per compatibilità con interfaccia di ritorno
   const sectorSummaries: RCASectorSummary[] = [];
-  for (const [, sector] of sectorMap) {
-    for (const [tipoTitolo, counters] of sector.tipoTitoli) {
+  for (const [, sector] of Array.from(sectorMap)) {
+    for (const [tipoTitolo, counters] of Array.from(sector.tipoTitoli)) {
       sectorSummaries.push({
         ordinePosto: sector.codiceOrdinePosto,
         tipoTitolo,
@@ -1885,13 +1885,13 @@ export function generateRCAXml(params: RCAParams): RCAResult {
   
   // ==================== Titoli (raggruppati per settore) ====================
   // Ogni settore genera un elemento <Titoli> con N elementi <TotaleTipoTitolo>
-  for (const [, sector] of sectorMap) {
+  for (const [, sector] of Array.from(sectorMap)) {
     xmlLines.push('            <Titoli>');
     xmlLines.push(`                <CodiceOrdinePosto>${sector.codiceOrdinePosto}</CodiceOrdinePosto>`);
     xmlLines.push(`                <Capienza>${sector.capienza}</Capienza>`);
     
     // TotaleTipoTitolo per ogni tipo in questo settore
-    for (const [tipoTitolo, counters] of sector.tipoTitoli) {
+    for (const [tipoTitolo, counters] of Array.from(sector.tipoTitoli)) {
       xmlLines.push('                <TotaleTipoTitolo>');
       xmlLines.push(`                    <TipoTitolo>${tipoTitolo}</TipoTitolo>`);
       xmlLines.push(`                    <TotaleTitoliLTA>${counters.totaleLTA}</TotaleTitoliLTA>`);
