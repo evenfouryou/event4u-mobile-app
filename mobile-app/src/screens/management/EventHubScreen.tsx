@@ -447,24 +447,90 @@ export function EventHubScreen() {
         </View>
       </Card>
 
+      <Card style={styles.statusTimelineCard}>
+        <Text style={styles.statusTimelineTitle}>Stato Evento</Text>
+        <View style={styles.statusTimeline}>
+          {[
+            { key: 'draft', label: 'Bozza', icon: 'document-outline' },
+            { key: 'live', label: 'In Corso', icon: 'play-outline' },
+            { key: 'completed', label: 'Concluso', icon: 'checkmark-circle-outline' },
+            { key: 'archived', label: 'Archiviato', icon: 'archive-outline' },
+          ].map((step, index, arr) => {
+            const currentStatus = getEventStatus();
+            const statusOrder = ['draft', 'pending', 'upcoming', 'live', 'completed', 'archived'];
+            const currentIndex = statusOrder.indexOf(currentStatus);
+            const stepIndex = statusOrder.indexOf(step.key);
+            const isActive = step.key === currentStatus || 
+                            (step.key === 'draft' && ['draft', 'pending', 'upcoming'].includes(currentStatus));
+            const isCompleted = stepIndex < currentIndex || 
+                              (step.key === 'draft' && currentIndex > 2);
+            
+            return (
+              <View key={step.key} style={styles.statusTimelineStep}>
+                <View style={[
+                  styles.statusTimelineIcon,
+                  isActive && styles.statusTimelineIconActive,
+                  isCompleted && styles.statusTimelineIconCompleted,
+                ]}>
+                  <Ionicons 
+                    name={step.icon as any} 
+                    size={20} 
+                    color={isActive ? colors.primaryForeground : isCompleted ? colors.successForeground : colors.mutedForeground} 
+                  />
+                </View>
+                <Text style={[
+                  styles.statusTimelineLabel,
+                  isActive && styles.statusTimelineLabelActive,
+                  isCompleted && styles.statusTimelineLabelCompleted,
+                ]}>
+                  {step.label}
+                </Text>
+                {index < arr.length - 1 && (
+                  <View style={[
+                    styles.statusTimelineLine,
+                    (isCompleted || isActive) && styles.statusTimelineLineActive,
+                  ]} />
+                )}
+              </View>
+            );
+          })}
+        </View>
+      </Card>
+
       <View style={[styles.statsGrid, { flexDirection: 'row', flexWrap: 'wrap' }]}>
         <Card style={[styles.statCard, { width: isLandscape ? (width - spacing.lg * 2 - spacing.md * 3) / 4 : (width - spacing.lg * 2 - spacing.md) / 2 }]}>
-          <Ionicons name="wallet-outline" size={24} color={colors.primary} />
+          <View style={[styles.statIconContainer, { backgroundColor: 'rgba(139, 92, 246, 0.15)' }]}>
+            <View style={styles.statIconGradientPurple}>
+              <Ionicons name="wallet-outline" size={24} color="#FFFFFF" />
+            </View>
+          </View>
           <Text style={styles.statValue}>{getTotalRevenue()}</Text>
           <Text style={styles.statLabel}>Incasso Totale</Text>
         </Card>
         <Card style={[styles.statCard, { width: isLandscape ? (width - spacing.lg * 2 - spacing.md * 3) / 4 : (width - spacing.lg * 2 - spacing.md) / 2 }]}>
-          <Ionicons name="ticket-outline" size={24} color={colors.success} />
+          <View style={[styles.statIconContainer, { backgroundColor: 'rgba(16, 185, 129, 0.15)' }]}>
+            <View style={styles.statIconGradientGreen}>
+              <Ionicons name="ticket-outline" size={24} color="#FFFFFF" />
+            </View>
+          </View>
           <Text style={styles.statValue}>{getTicketsSold()}/{getTotalTickets()}</Text>
           <Text style={styles.statLabel}>Biglietti</Text>
         </Card>
         <Card style={[styles.statCard, { width: isLandscape ? (width - spacing.lg * 2 - spacing.md * 3) / 4 : (width - spacing.lg * 2 - spacing.md) / 2 }]}>
-          <Ionicons name="people-outline" size={24} color={colors.accent} />
+          <View style={[styles.statIconContainer, { backgroundColor: 'rgba(59, 130, 246, 0.15)' }]}>
+            <View style={styles.statIconGradientBlue}>
+              <Ionicons name="people-outline" size={24} color="#FFFFFF" />
+            </View>
+          </View>
           <Text style={styles.statValue}>{getGuestsCheckedIn()}</Text>
           <Text style={styles.statLabel}>Check-in</Text>
         </Card>
         <Card style={[styles.statCard, { width: isLandscape ? (width - spacing.lg * 2 - spacing.md * 3) / 4 : (width - spacing.lg * 2 - spacing.md) / 2 }]}>
-          <Ionicons name="person-outline" size={24} color={colors.warning} />
+          <View style={[styles.statIconContainer, { backgroundColor: 'rgba(245, 158, 11, 0.15)' }]}>
+            <View style={styles.statIconGradientAmber}>
+              <Ionicons name="person-outline" size={24} color="#FFFFFF" />
+            </View>
+          </View>
           <Text style={styles.statValue}>{getStaffOnDuty()}</Text>
           <Text style={styles.statLabel}>Staff Attivo</Text>
         </Card>
@@ -1647,5 +1713,125 @@ const styles = StyleSheet.create({
     paddingTop: spacing.md,
     borderTopWidth: 1,
     borderTopColor: colors.border,
+  },
+  statIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.full,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+  },
+  statIconGradientPurple: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.full,
+    backgroundColor: '#8B5CF6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#A855F7',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  statIconGradientGreen: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.full,
+    backgroundColor: '#10B981',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#34D399',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  statIconGradientBlue: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.full,
+    backgroundColor: '#3B82F6',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#60A5FA',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  statIconGradientAmber: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.full,
+    backgroundColor: '#F59E0B',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#FBBF24',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.4,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  statusTimelineCard: {
+    marginBottom: spacing.lg,
+  },
+  statusTimelineTitle: {
+    color: colors.foreground,
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.semibold,
+    marginBottom: spacing.md,
+  },
+  statusTimeline: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  statusTimelineStep: {
+    flex: 1,
+    alignItems: 'center',
+    position: 'relative',
+  },
+  statusTimelineIcon: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.muted,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: spacing.sm,
+    zIndex: 1,
+  },
+  statusTimelineIconActive: {
+    backgroundColor: colors.primary,
+  },
+  statusTimelineIconCompleted: {
+    backgroundColor: colors.success,
+  },
+  statusTimelineLabel: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.xs,
+    fontWeight: fontWeight.medium,
+    textAlign: 'center',
+  },
+  statusTimelineLabelActive: {
+    color: colors.primary,
+    fontWeight: fontWeight.semibold,
+  },
+  statusTimelineLabelCompleted: {
+    color: colors.success,
+  },
+  statusTimelineLine: {
+    position: 'absolute',
+    top: 20,
+    left: '60%',
+    right: '-40%',
+    height: 2,
+    backgroundColor: colors.muted,
+    zIndex: 0,
+  },
+  statusTimelineLineActive: {
+    backgroundColor: colors.success,
   },
 });
