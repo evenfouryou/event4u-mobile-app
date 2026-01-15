@@ -3702,6 +3702,155 @@ router.post("/api/siae/admin/name-changes/:id/process", requireAuth, requireGest
   }
 });
 
+// Direct name change by gestore (no customer request)
+router.post("/api/siae/tickets/:ticketId/gestore-name-change", requireAuth, requireGestore, async (req: Request, res: Response) => {
+  try {
+    const user = req.user as any;
+    const { ticketId } = req.params;
+    const { newFirstName, newLastName, newCodiceFiscale, newEmail, causale } = req.body;
+    
+    // Validate required fields
+    if (!newFirstName || !newLastName || !causale) {
+      return res.status(400).json({ message: "Nome, cognome e causale sono obbligatori" });
+    }
+    
+    // Get the original ticket with event/company info
+    const [ticketWithEvent] = await db
+      .select({
+        ticket: siaeTickets,
+        ticketedEvent: siaeTicketedEvents,
+      })
+      .from(siaeTickets)
+      .innerJoin(siaeTicketedEvents, eq(siaeTickets.ticketedEventId, siaeTicketedEvents.id))
+      .where(eq(siaeTickets.id, ticketId));
+    
+    if (!ticketWithEvent) {
+      return res.status(404).json({ message: "Biglietto non trovato" });
+    }
+    
+    const originalTicket = ticketWithEvent.ticket;
+    const ticketedEvent = ticketWithEvent.ticketedEvent;
+    
+    // Gestori can only process tickets for their own company
+    if (user.role !== 'super_admin' && ticketedEvent.companyId !== user.companyId) {
+      return res.status(403).json({ message: "Non autorizzato a modificare questo biglietto" });
+    }
+    
+    // Check ticket status - only valid/sold tickets can be changed
+    const validStatuses = ['valid', 'sold', 'emitted', 'active'];
+    if (!validStatuses.includes(originalTicket.status)) {
+      return res.status(400).json({ message: `Biglietto non modificabile: stato '${originalTicket.status}'` });
+    }
+    
+    // Check if name change is allowed for this event
+    if (!ticketedEvent.allowsChangeName) {
+      return res.status(400).json({ message: "Cambio nominativo non abilitato per questo evento" });
+    }
+    
+    const now = new Date();
+    const newTicketId = crypto.randomUUID();
+    const newTicketCode = `NC-${now.getTime().toString(36).toUpperCase()}`;
+    
+    // Request fiscal seal via bridge (smart card SIAE)
+    const priceInCents = Math.round(parseFloat(originalTicket.price || originalTicket.finalPrice || "0") * 100);
+    let sealData;
+    try {
+      console.log(`[GESTORE-NAME-CHANGE] Requesting fiscal seal, price: ${priceInCents} cents`);
+      sealData = await requestFiscalSeal(priceInCents);
+      console.log(`[GESTORE-NAME-CHANGE] Seal received: ${sealData.sealCode}, counter: ${sealData.counter}`);
+    } catch (sealError: any) {
+      console.error(`[GESTORE-NAME-CHANGE] Failed to get fiscal seal:`, sealError.message);
+      return res.status(503).json({
+        message: `Impossibile generare sigillo fiscale: ${sealError.message.replace(/^[A-Z_]+:\s*/, '')}`,
+        code: sealError.message.split(':')[0] || 'SEAL_ERROR'
+      });
+    }
+    
+    // Get next progressivo for this event
+    const [maxProgressivo] = await db
+      .select({ max: sql<number>`COALESCE(MAX(${siaeTickets.progressivoSerata}), 0)` })
+      .from(siaeTickets)
+      .where(eq(siaeTickets.ticketedEventId, originalTicket.ticketedEventId));
+    const nextProgressivo = (maxProgressivo?.max || 0) + 1;
+    
+    // Create new ticket with updated holder data
+    await db.insert(siaeTickets).values({
+      id: newTicketId,
+      ticketCode: newTicketCode,
+      ticketedEventId: originalTicket.ticketedEventId,
+      ticketTypeId: originalTicket.ticketTypeId,
+      sectorId: originalTicket.sectorId,
+      customerId: originalTicket.customerId,
+      participantFirstName: newFirstName,
+      participantLastName: newLastName,
+      participantEmail: newEmail || originalTicket.participantEmail,
+      participantCodiceFiscale: newCodiceFiscale || originalTicket.participantCodiceFiscale,
+      participantPhone: originalTicket.participantPhone,
+      price: originalTicket.price,
+      finalPrice: originalTicket.finalPrice,
+      status: 'sold',
+      sigilloFiscale: sealData.sealCode,
+      fiscalSealCounter: sealData.counter,
+      cardCode: sealData.serialNumber,
+      progressivoSerata: nextProgressivo,
+      entranceType: originalTicket.entranceType,
+      paymentStatus: 'paid',
+      paymentMethod: 'name_change',
+      orderId: originalTicket.orderId,
+      originalTicketId: originalTicket.id,
+      soldAt: now,
+      createdAt: now,
+      updatedAt: now,
+    });
+    
+    // Annul original ticket with causale from gestore
+    await db.update(siaeTickets)
+      .set({ 
+        status: 'annullato_cambio_nominativo',
+        cancellationReasonCode: '10',
+        cancellationDate: now,
+        replacedByTicketId: newTicketId,
+        annullamentoMotivo: `Cambio nominativo gestore: ${causale} - Sigillo originale: ${originalTicket.sigilloFiscale || 'N/A'} - Nuovo: ${sealData.sealCode}`,
+        annullamentoData: now,
+        updatedAt: now
+      })
+      .where(eq(siaeTickets.id, originalTicket.id));
+    
+    // Create name change record with status 'completed' directly
+    const nameChangeId = crypto.randomUUID();
+    await db.insert(siaeNameChanges).values({
+      id: nameChangeId,
+      originalTicketId: originalTicket.id,
+      newTicketId: newTicketId,
+      newFirstName,
+      newLastName,
+      newEmail: newEmail || null,
+      newFiscalCode: newCodiceFiscale || null,
+      requestedById: user.id,
+      requestedByType: 'operator',
+      status: 'completed',
+      processedAt: now,
+      processedByUserId: user.id,
+      fee: '0',
+      paymentStatus: 'paid',
+      createdAt: now,
+    });
+    
+    console.log(`[GESTORE-NAME-CHANGE] Success - Original: ${originalTicket.id}, New: ${newTicketId}, Causale: ${causale}`);
+    
+    res.json({ 
+      success: true, 
+      message: "Cambio nominativo completato",
+      newTicketId,
+      newTicketCode,
+      nameChangeId
+    });
+  } catch (error: any) {
+    console.error("[GESTORE-NAME-CHANGE] Error:", error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
 // ==================== Name Changes (Customer / Organizer) ====================
 
 // Get all name changes (for super_admin/gestore with company selector)

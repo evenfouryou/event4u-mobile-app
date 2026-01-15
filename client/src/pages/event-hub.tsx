@@ -776,6 +776,17 @@ export default function EventHub() {
   const [nameChangesExpanded, setNameChangesExpanded] = useState(false);
   const [resalesExpanded, setResalesExpanded] = useState(false);
 
+  // Gestore direct name change dialog state
+  const [nameChangeDialogOpen, setNameChangeDialogOpen] = useState(false);
+  const [ticketForNameChange, setTicketForNameChange] = useState<any>(null);
+  const [nameChangeFormData, setNameChangeFormData] = useState({
+    newFirstName: '',
+    newLastName: '',
+    newCodiceFiscale: '',
+    newEmail: '',
+    causale: ''
+  });
+
   // Transazioni state
   const [transactionPaymentMethodFilter, setTransactionPaymentMethodFilter] = useState<string>("all");
   const [transactionStatusFilter, setTransactionStatusFilter] = useState<string>("all");
@@ -1555,6 +1566,24 @@ export default function EventHub() {
         description: error?.message || "Impossibile processare la richiesta",
         variant: "destructive",
       });
+    },
+  });
+
+  // Direct gestore name change mutation
+  const gestoreNameChangeMutation = useMutation({
+    mutationFn: async (data: { ticketId: string; newFirstName: string; newLastName: string; newCodiceFiscale?: string; newEmail?: string; causale: string }) => {
+      return apiRequest('POST', `/api/siae/tickets/${data.ticketId}/gestore-name-change`, data);
+    },
+    onSuccess: () => {
+      toast({ title: "Cambio nominativo completato" });
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/ticketed-events', ticketedEvent?.id, 'name-changes'] });
+      queryClient.invalidateQueries({ queryKey: ['/api/siae/ticketed-events', ticketedEvent?.id, 'tickets'] });
+      setNameChangeDialogOpen(false);
+      setTicketForNameChange(null);
+      setNameChangeFormData({ newFirstName: '', newLastName: '', newCodiceFiscale: '', newEmail: '', causale: '' });
+    },
+    onError: (error: any) => {
+      toast({ title: "Errore", description: error?.message || "Cambio nominativo fallito", variant: "destructive" });
     },
   });
 
@@ -3366,6 +3395,28 @@ export default function EventHub() {
                                               <Eye className="h-4 w-4 mr-2" />
                                               Visualizza Dettagli
                                             </DropdownMenuItem>
+                                            {(ticket.status === 'valid' || ticket.status === 'sold' || ticket.status === 'emitted' || ticket.status === 'active') && ticketedEvent?.allowsChangeName && (
+                                              <>
+                                                <DropdownMenuSeparator />
+                                                <DropdownMenuItem 
+                                                  onSelect={() => { 
+                                                    setTicketForNameChange(ticket); 
+                                                    setNameChangeFormData({
+                                                      newFirstName: '',
+                                                      newLastName: '',
+                                                      newCodiceFiscale: '',
+                                                      newEmail: '',
+                                                      causale: ''
+                                                    });
+                                                    setNameChangeDialogOpen(true); 
+                                                  }}
+                                                  data-testid={`button-name-change-${ticket.id}`}
+                                                >
+                                                  <UserCog className="h-4 w-4 mr-2" />
+                                                  Cambio Nominativo
+                                                </DropdownMenuItem>
+                                              </>
+                                            )}
                                             {(ticket.status === 'valid' || ticket.status === 'sold') && (
                                               <>
                                                 <DropdownMenuSeparator />
@@ -3975,15 +4026,23 @@ export default function EventHub() {
 
                 {/* Name Changes List Card */}
                 <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                      <UserCog className="h-5 w-5" />
-                      Richieste Cambio Nominativo
-                      <Badge variant="secondary">{nameChanges.length}</Badge>
-                    </CardTitle>
-                    <CardDescription>
-                      Elenco delle richieste di cambio intestatario
-                    </CardDescription>
+                  <CardHeader className="flex flex-row items-start justify-between gap-4">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <UserCog className="h-5 w-5" />
+                        Richieste Cambio Nominativo
+                        <Badge variant="secondary">{nameChanges.length}</Badge>
+                      </CardTitle>
+                      <CardDescription>
+                        Elenco delle richieste di cambio intestatario
+                      </CardDescription>
+                    </div>
+                    {ticketedEvent?.allowsChangeName && (
+                      <div className="text-sm text-muted-foreground p-3 rounded-lg bg-muted/50 border max-w-xs">
+                        <UserCog className="h-4 w-4 inline mr-2 text-purple-400" />
+                        Per effettuare un cambio nominativo diretto, vai alla tab <strong>Biglietti</strong> e seleziona "Cambio Nominativo" dal menu azioni del biglietto.
+                      </div>
+                    )}
                   </CardHeader>
                   <CardContent>
                     {!ticketedEvent?.allowsChangeName ? (
@@ -5112,6 +5171,128 @@ export default function EventHub() {
             </AlertDialogFooter>
           </AlertDialogContent>
         </AlertDialog>
+
+        {/* Gestore Direct Name Change Dialog */}
+        <Dialog open={nameChangeDialogOpen} onOpenChange={(open) => {
+          setNameChangeDialogOpen(open);
+          if (!open) {
+            setTicketForNameChange(null);
+            setNameChangeFormData({ newFirstName: '', newLastName: '', newCodiceFiscale: '', newEmail: '', causale: '' });
+          }
+        }}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle className="flex items-center gap-2">
+                <UserCog className="h-5 w-5 text-purple-400" />
+                Cambio Nominativo Diretto
+              </DialogTitle>
+              <DialogDescription>
+                Modifica l'intestatario del biglietto #{ticketForNameChange?.progressiveNumber || ticketForNameChange?.progressivoSerata}
+              </DialogDescription>
+            </DialogHeader>
+            {ticketForNameChange && (
+              <div className="space-y-4">
+                <div className="p-3 rounded-lg bg-muted/50 border text-sm">
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Intestatario attuale:</span>
+                    <span className="font-medium">
+                      {ticketForNameChange.participantFirstName || ticketForNameChange.participantLastName 
+                        ? `${ticketForNameChange.participantFirstName || ''} ${ticketForNameChange.participantLastName || ''}`.trim()
+                        : 'Non specificato'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="space-y-2">
+                    <Label htmlFor="newFirstName">Nome *</Label>
+                    <Input
+                      id="newFirstName"
+                      value={nameChangeFormData.newFirstName}
+                      onChange={(e) => setNameChangeFormData(prev => ({ ...prev, newFirstName: e.target.value }))}
+                      placeholder="Nome"
+                      data-testid="input-new-first-name"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="newLastName">Cognome *</Label>
+                    <Input
+                      id="newLastName"
+                      value={nameChangeFormData.newLastName}
+                      onChange={(e) => setNameChangeFormData(prev => ({ ...prev, newLastName: e.target.value }))}
+                      placeholder="Cognome"
+                      data-testid="input-new-last-name"
+                    />
+                  </div>
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="newCodiceFiscale">Codice Fiscale (opzionale)</Label>
+                  <Input
+                    id="newCodiceFiscale"
+                    value={nameChangeFormData.newCodiceFiscale}
+                    onChange={(e) => setNameChangeFormData(prev => ({ ...prev, newCodiceFiscale: e.target.value.toUpperCase() }))}
+                    placeholder="RSSMRA80A01H501U"
+                    maxLength={16}
+                    data-testid="input-new-codice-fiscale"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="newEmail">Email (opzionale)</Label>
+                  <Input
+                    id="newEmail"
+                    type="email"
+                    value={nameChangeFormData.newEmail}
+                    onChange={(e) => setNameChangeFormData(prev => ({ ...prev, newEmail: e.target.value }))}
+                    placeholder="nuovo@email.com"
+                    data-testid="input-new-email"
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="causale">Causale del cambio *</Label>
+                  <Input
+                    id="causale"
+                    value={nameChangeFormData.causale}
+                    onChange={(e) => setNameChangeFormData(prev => ({ ...prev, causale: e.target.value }))}
+                    placeholder="Es: Richiesta telefonica del cliente"
+                    data-testid="input-causale"
+                  />
+                </div>
+
+                <div className="p-3 rounded-lg bg-amber-500/10 border border-amber-500/30 text-sm text-amber-400">
+                  <AlertTriangle className="h-4 w-4 inline mr-2" />
+                  Il biglietto originale verrà annullato e ne verrà emesso uno nuovo con il nuovo intestatario.
+                </div>
+              </div>
+            )}
+            <DialogFooter>
+              <Button variant="outline" onClick={() => setNameChangeDialogOpen(false)}>
+                Annulla
+              </Button>
+              <Button
+                onClick={() => {
+                  if (ticketForNameChange && nameChangeFormData.newFirstName && nameChangeFormData.newLastName && nameChangeFormData.causale) {
+                    gestoreNameChangeMutation.mutate({
+                      ticketId: ticketForNameChange.id,
+                      newFirstName: nameChangeFormData.newFirstName,
+                      newLastName: nameChangeFormData.newLastName,
+                      newCodiceFiscale: nameChangeFormData.newCodiceFiscale || undefined,
+                      newEmail: nameChangeFormData.newEmail || undefined,
+                      causale: nameChangeFormData.causale
+                    });
+                  }
+                }}
+                disabled={gestoreNameChangeMutation.isPending || !nameChangeFormData.newFirstName || !nameChangeFormData.newLastName || !nameChangeFormData.causale}
+                data-testid="button-confirm-name-change"
+              >
+                {gestoreNameChangeMutation.isPending && <Loader2 className="h-4 w-4 mr-2 animate-spin" />}
+                Conferma Cambio
+              </Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
 
         {/* Ticket Detail Sheet */}
         <Sheet open={showTicketDetailSheet} onOpenChange={setShowTicketDetailSheet}>
@@ -7528,6 +7709,28 @@ export default function EventHub() {
                                             <Eye className="h-4 w-4 mr-2" />
                                             Visualizza
                                           </DropdownMenuItem>
+                                          {(ticket.status === 'valid' || ticket.status === 'sold' || ticket.status === 'emitted' || ticket.status === 'active') && ticketedEvent?.allowsChangeName && (
+                                            <>
+                                              <DropdownMenuSeparator />
+                                              <DropdownMenuItem 
+                                                onSelect={() => { 
+                                                  setTicketForNameChange(ticket); 
+                                                  setNameChangeFormData({
+                                                    newFirstName: '',
+                                                    newLastName: '',
+                                                    newCodiceFiscale: '',
+                                                    newEmail: '',
+                                                    causale: ''
+                                                  });
+                                                  setNameChangeDialogOpen(true); 
+                                                }}
+                                                data-testid={`button-name-change-mobile-${ticket.id}`}
+                                              >
+                                                <UserCog className="h-4 w-4 mr-2" />
+                                                Cambio Nominativo
+                                              </DropdownMenuItem>
+                                            </>
+                                          )}
                                           {(ticket.status === 'valid' || ticket.status === 'sold') && (
                                             <>
                                               <DropdownMenuSeparator />
