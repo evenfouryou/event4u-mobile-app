@@ -318,7 +318,7 @@ export default function Home() {
             </div>
           </div>
 
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card>
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
@@ -472,7 +472,7 @@ export default function Home() {
         contentClassName="pb-24"
       >
         <div className="space-y-6 pt-2">
-          <div className="grid grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {companiesLoading ? (
               <>
                 <Skeleton className="h-[140px] rounded-2xl" />
@@ -635,7 +635,7 @@ export default function Home() {
           </div>
         </div>
 
-        <div className="grid grid-cols-4 gap-4">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <Card>
             <CardContent className="pt-6">
               <div className="flex items-center gap-4">
@@ -690,7 +690,7 @@ export default function Home() {
           </Card>
         </div>
 
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <Link href="/events/new">
             <Card className="hover-elevate cursor-pointer">
               <CardContent className="pt-6 flex items-center gap-4">
@@ -750,13 +750,13 @@ export default function Home() {
           </CardHeader>
           <CardContent>
             {eventsLoading ? (
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 <Skeleton className="h-32 rounded-xl" />
                 <Skeleton className="h-32 rounded-xl" />
                 <Skeleton className="h-32 rounded-xl" />
               </div>
             ) : recentEvents.length > 0 ? (
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                 {recentEvents.map((event) => {
                   const eventDate = new Date(event.startDatetime);
                   const isUpcoming = eventDate >= new Date();
@@ -815,7 +815,7 @@ export default function Home() {
       contentClassName="pb-24"
     >
       <div className="space-y-6 pt-2">
-        <div className="grid grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <MobileStatsCard 
             icon={Calendar} 
             label={t('dashboard.activeEvents')} 

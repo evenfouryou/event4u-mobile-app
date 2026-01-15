@@ -2596,7 +2596,7 @@ export default function EventHub() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList>
+          <TabsList className="overflow-x-auto">
             <TabsTrigger value="overview" data-testid="tab-overview">
               <LayoutDashboard className="h-4 w-4 mr-2" />
               Panoramica
@@ -2677,7 +2677,7 @@ export default function EventHub() {
 
           {/* Overview Tab */}
           <TabsContent value="overview" className="space-y-6">
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Status Card */}
               <Card>
                 <CardHeader>
@@ -2725,7 +2725,7 @@ export default function EventHub() {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                     <Button variant="outline" onClick={() => navigate('/scanner')} className="flex flex-col h-auto py-4 gap-2" data-testid="quick-scan">
                       <QrCode className="h-5 w-5" />
                       <span className="text-xs">Scansiona</span>
@@ -2758,7 +2758,7 @@ export default function EventHub() {
             </div>
 
             {/* Charts Row */}
-            <div className="grid grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <EntranceChart data={e4uStats?.entranceFlowData || []} />
               {(userFeatures?.beverageEnabled !== false) && (
                 <TopConsumptionsWidget eventId={id || ''} />
