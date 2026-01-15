@@ -104,17 +104,12 @@ export default function AccountPage() {
     }
   }, [location, navigate]);
 
-  const handleLogout = useCallback(async () => {
+  const handleLogout = useCallback(() => {
     triggerHaptic('medium');
-    try {
-      await fetch("/api/logout", { method: "GET", credentials: "include" });
-    } catch (e) {
-      console.error("Logout error:", e);
-    }
     localStorage.removeItem("customerToken");
     localStorage.removeItem("customerData");
     queryClient.clear();
-    window.location.href = "/acquista";
+    window.location.href = "/api/logout";
   }, []);
 
   const getInitials = useCallback(() => {

@@ -179,16 +179,11 @@ export function AccountLayout({ children }: AccountLayoutProps) {
     updateProfileMutation.mutate({ birthDate, city, province });
   };
 
-  const handleLogout = async () => {
-    try {
-      await fetch("/api/logout", { method: "GET", credentials: "include" });
-    } catch (e) {
-      console.error("Logout error:", e);
-    }
+  const handleLogout = () => {
     localStorage.removeItem("customerToken");
     localStorage.removeItem("customerData");
     queryClient.clear();
-    window.location.href = "/acquista";
+    window.location.href = "/api/logout";
   };
 
   // Profile completion dialog component

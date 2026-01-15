@@ -312,15 +312,10 @@ export function MobileHeader({
     }
   };
 
-  const handleLogout = async () => {
+  const handleLogout = () => {
     triggerHaptic('medium');
-    try {
-      await fetch('/api/logout', { credentials: 'include' });
-    } catch (error) {
-      console.error("Logout error:", error);
-    }
     queryClient.clear();
-    window.location.href = '/login';
+    window.location.href = '/api/logout';
   };
   
   const backButton = showBackButton ? (

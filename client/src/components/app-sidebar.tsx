@@ -850,14 +850,9 @@ export function AppSidebar() {
         <Button
           variant="ghost"
           className="w-full justify-start text-muted-foreground hover:text-foreground hover:bg-destructive/10"
-          onClick={async () => {
-            try {
-              await fetch('/api/logout', { credentials: 'include' });
-            } catch (error) {
-              console.error("Logout error:", error);
-            }
+          onClick={() => {
             queryClient.clear();
-            window.location.href = '/login';
+            window.location.href = '/api/logout';
           }}
           data-testid="button-logout"
         >
