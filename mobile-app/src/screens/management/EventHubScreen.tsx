@@ -16,7 +16,7 @@ import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/t
 import { Card, Button, Header } from '../../components';
 import { api } from '../../lib/api';
 
-type TabKey = 'overview' | 'tickets' | 'lists' | 'staff' | 'revenue' | 'name-changes' | 'resales';
+type TabKey = 'overview' | 'tickets' | 'lists' | 'staff' | 'revenue' | 'name-changes' | 'resales' | 'seats' | 'cashiers' | 'tables' | 'pr' | 'access' | 'page-editor';
 
 interface Tab {
   key: TabKey;
@@ -89,9 +89,15 @@ const tabs: Tab[] = [
   { key: 'tickets', label: 'Biglietti', icon: 'ticket-outline' },
   { key: 'name-changes', label: 'Cambi Nom.', icon: 'swap-horizontal-outline' },
   { key: 'resales', label: 'Rivendite', icon: 'repeat-outline' },
+  { key: 'seats', label: 'Posti', icon: 'apps-outline' },
+  { key: 'cashiers', label: 'Cassieri', icon: 'cash-outline' },
   { key: 'lists', label: 'Liste', icon: 'list-outline' },
+  { key: 'tables', label: 'Tavoli', icon: 'restaurant-outline' },
+  { key: 'pr', label: 'PR', icon: 'megaphone-outline' },
   { key: 'staff', label: 'Staff', icon: 'people-outline' },
+  { key: 'access', label: 'Accessi', icon: 'qr-code-outline' },
   { key: 'revenue', label: 'Incassi', icon: 'wallet-outline' },
+  { key: 'page-editor', label: 'Pagina', icon: 'globe-outline' },
 ];
 
 export function EventHubScreen() {
@@ -1170,6 +1176,68 @@ export function EventHubScreen() {
   );
   };
 
+  const renderPlaceholderTab = (title: string, icon: string, description: string) => (
+    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+      <Card style={styles.placeholderCard}>
+        <Ionicons name={icon as any} size={64} color={colors.primary} />
+        <Text style={styles.placeholderTitle}>{title}</Text>
+        <Text style={styles.placeholderDescription}>{description}</Text>
+        <View style={styles.placeholderBadge}>
+          <Text style={styles.placeholderBadgeText}>Prossimamente</Text>
+        </View>
+      </Card>
+    </ScrollView>
+  );
+
+  const renderSeatsTab = () => renderPlaceholderTab(
+    'Posti Numerati',
+    'apps-outline',
+    'Gestisci i posti numerati per questo evento. Puoi assegnare e monitorare le prenotazioni.'
+  );
+
+  const renderCashiersTab = () => renderPlaceholderTab(
+    'Cassieri',
+    'cash-outline',
+    'Gestisci le postazioni cassa e le assegnazioni dei cassieri per questo evento.'
+  );
+
+  const renderTablesTab = () => renderPlaceholderTab(
+    'Tavoli',
+    'restaurant-outline',
+    'Gestisci le prenotazioni dei tavoli e le aree VIP del locale.'
+  );
+
+  const renderPrTab = () => renderPlaceholderTab(
+    'PR & Promoter',
+    'megaphone-outline',
+    'Gestisci i PR assegnati, le liste ospiti e le performance dei promoter.'
+  );
+
+  const renderAccessTab = () => renderPlaceholderTab(
+    'Controllo Accessi',
+    'qr-code-outline',
+    'Monitora i check-in in tempo reale e le statistiche di accesso all\'evento.'
+  );
+
+  const renderPageEditorTab = () => (
+    <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
+      <Card style={styles.placeholderCard}>
+        <Ionicons name="globe-outline" size={64} color={colors.primary} />
+        <Text style={styles.placeholderTitle}>Pagina Pubblica</Text>
+        <Text style={styles.placeholderDescription}>
+          Personalizza la pagina pubblica dell'evento per i tuoi clienti.
+        </Text>
+        <Button
+          title="Apri Editor Web"
+          variant="primary"
+          onPress={() => {}}
+          icon={<Ionicons name="open-outline" size={20} color={colors.primaryForeground} />}
+          style={styles.placeholderButton}
+        />
+      </Card>
+    </ScrollView>
+  );
+
   const renderTabContent = () => {
     switch (activeTab) {
       case 'overview':
@@ -1180,12 +1248,24 @@ export function EventHubScreen() {
         return renderNameChangesTab();
       case 'resales':
         return renderResalesTab();
+      case 'seats':
+        return renderSeatsTab();
+      case 'cashiers':
+        return renderCashiersTab();
       case 'lists':
         return renderListsTab();
+      case 'tables':
+        return renderTablesTab();
+      case 'pr':
+        return renderPrTab();
       case 'staff':
         return renderStaffTab();
+      case 'access':
+        return renderAccessTab();
       case 'revenue':
         return renderRevenueTab();
+      case 'page-editor':
+        return renderPageEditorTab();
     }
   };
 
@@ -1834,5 +1914,40 @@ const styles = StyleSheet.create({
   },
   statusTimelineLineActive: {
     backgroundColor: colors.success,
+  },
+  placeholderCard: {
+    alignItems: 'center',
+    padding: spacing.xl,
+    marginTop: spacing.xl,
+  },
+  placeholderTitle: {
+    color: colors.foreground,
+    fontSize: fontSize.xl,
+    fontWeight: fontWeight.bold,
+    marginTop: spacing.lg,
+    marginBottom: spacing.md,
+    textAlign: 'center',
+  },
+  placeholderDescription: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.sm,
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: spacing.lg,
+    paddingHorizontal: spacing.md,
+  },
+  placeholderBadge: {
+    backgroundColor: colors.primary + '20',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+  },
+  placeholderBadgeText: {
+    color: colors.primary,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.semibold,
+  },
+  placeholderButton: {
+    marginTop: spacing.md,
   },
 });
