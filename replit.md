@@ -6,6 +6,58 @@ Event4U is a comprehensive event management and inventory tracking system design
 ## User Preferences
 Preferred communication style: Simple, everyday language.
 
+## Recent Changes
+
+### January 15, 2026 - SIAE Error Handling & Pre-Transmission Validation System
+**Implementation**: Created a comprehensive SIAE error handling and pre-transmission validation system to prevent transmission failures.
+
+**Added Components**:
+1. **SIAE_ERROR_CODES Constant** (server/siae-utils.ts, line 26)
+   - Complete table of 21 official SIAE error codes
+   - Each code includes severity level, description, and prevention guidelines
+   - Covers error categories: success (0000), warnings (0100, 2606), and errors (0600, 0601, 0603, 2101, 2108, 2110, 2111, 2112, 2114, 3111, 3203, 3706, 40601, 40603, 40604, 40605, 42605, 9999)
+   - Enables consistent error messaging and user guidance across the system
+
+2. **PreTransmissionValidationResult Interface** (server/siae-utils.ts, line 1119)
+   - Standardized validation response structure
+   - Properties: canTransmit (boolean), errors[], warnings[], details (validation breakdown)
+   - Allows tracking of XML validity, system code consistency, encoding, field lengths, and date coherence
+
+3. **validatePreTransmission() Function** (server/siae-utils.ts, line 3107)
+   - Centralized pre-transmission validation function
+   - Performs 7 comprehensive validation checks:
+     1. UTF-8 encoding validation (prevents error 40603)
+     2. XML structure validation using validateSiaeXml() (prevents error 40601)
+     3. System code consistency check using validateSystemCodeConsistency() (prevents errors 0600, 0603)
+     4. Field length validation (denominazione max 60, performer max 100)
+     5. Date coherence validation (DataGenerazione, Mese, Data attributes)
+     6. Required XML elements validation (Titolare, Denominazione, CodiceFiscale)
+     7. Required generation attributes validation (DataGenerazione, OraGenerazione, ProgressivoGenerazione)
+   - Returns detailed results with resolution guidance for each error
+
+**Error Prevention Coverage**:
+- Error 0600/0603: System code consistency checks prevent filename/content mismatches
+- Error 40601: XML structure validation catches formatting issues
+- Error 40603: UTF-8 encoding validation ensures proper character encoding
+- Error 40605: Field length and required elements validation ensures data completeness
+- All validation errors include SIAE error codes and resolution instructions
+
+**Usage Example**:
+```typescript
+const validation = validatePreTransmission(
+  xmlContent,
+  'EVENT4U1',
+  'rca',
+  new Date(),
+  'Business Name',
+  'Performer Name'
+);
+if (!validation.canTransmit) {
+  console.log(validation.errors);  // Show blocking errors
+  console.log(validation.warnings); // Show advisory warnings
+}
+```
+
 ## System Architecture
 
 ### Frontend

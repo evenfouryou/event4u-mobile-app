@@ -12,6 +12,123 @@ export interface SystemCodeValidationResult {
   error?: string;
 }
 
+// ==================== SIAE Error Codes Table ====================
+
+/**
+ * Tabella completa degli errori SIAE
+ * Basata su risposte reali da SIAE e Allegato B/C Provvedimento 04/03/2008
+ * 
+ * Severità:
+ * - success: Operazione completata con successo
+ * - warning: Operazione completata con anomalie
+ * - error: Operazione fallita (bloccante)
+ */
+export const SIAE_ERROR_CODES = {
+  '0000': { 
+    severity: 'success', 
+    description: 'Il riepilogo è stato elaborato correttamente' 
+  },
+  '0100': { 
+    severity: 'warning', 
+    description: 'Il riepilogo risulta già elaborato' 
+  },
+  '0600': { 
+    severity: 'error', 
+    description: 'Nome del file contenente il riepilogo sbagliato', 
+    prevention: 'Verificare coerenza codice sistema tra XML e nome file' 
+  },
+  '0601': { 
+    severity: 'error', 
+    description: 'Oggetto del messaggio contenente il riepilogo sbagliato', 
+    prevention: 'Verificare formato oggetto email' 
+  },
+  '0603': { 
+    severity: 'error', 
+    description: 'Le date dell\'oggetto, del nome file, e del contenuto del riepilogo non sono coerenti', 
+    prevention: 'Verificare che DataGenerazione, data nel filename e data nell\'oggetto email coincidano' 
+  },
+  '2101': { 
+    severity: 'error', 
+    description: 'Tipo evento diverso da quelli previsti nella tabella 1 all.A provv. 23/7/2001', 
+    prevention: 'Usare codice genere valido (01-99) dalla tabella SIAE' 
+  },
+  '2108': { 
+    severity: 'error', 
+    description: 'Autore non previsto per il Tipo Evento', 
+    prevention: 'Rimuovere autore per eventi che non lo richiedono' 
+  },
+  '2110': { 
+    severity: 'error', 
+    description: 'Esecutore non indicato per il Tipo Evento', 
+    prevention: 'Aggiungere esecutore per eventi che lo richiedono' 
+  },
+  '2111': { 
+    severity: 'error', 
+    description: 'Esecutore non previsto per il Tipo Evento', 
+    prevention: 'Rimuovere esecutore per eventi che non lo richiedono' 
+  },
+  '2112': { 
+    severity: 'error', 
+    description: 'Nazionalità del Film non prevista nella codifica ISO 3166', 
+    prevention: 'Usare codice ISO 3166 valido (IT, US, FR, etc.)' 
+  },
+  '2114': { 
+    severity: 'error', 
+    description: 'Nazionalità del Film non prevista per il Tipo Evento', 
+    prevention: 'Rimuovere nazionalità film per eventi non cinematografici' 
+  },
+  '2606': { 
+    severity: 'warning', 
+    description: 'La denominazione del titolare è diversa da quella presente sulla smart-card associata al sistema', 
+    prevention: 'Usare denominazione esatta dalla Smart Card' 
+  },
+  '3111': { 
+    severity: 'error', 
+    description: 'Il titolare del sistema non è presente nell\'anagrafica SIAE', 
+    prevention: 'Verificare CF Titolare registrato presso SIAE' 
+  },
+  '3203': { 
+    severity: 'error', 
+    description: 'Codice del locale non presente nell\'anagrafica centralizzata SIAE', 
+    prevention: 'Verificare codice locale SIAE (13 cifre)' 
+  },
+  '3706': { 
+    severity: 'error', 
+    description: 'Il prefisso o la lunghezza del nome del subject è sbagliato', 
+    prevention: 'Verificare formato oggetto email S/MIME' 
+  },
+  '40601': { 
+    severity: 'error', 
+    description: 'Il riepilogo risulta illeggibile - formato errato', 
+    prevention: 'Verificare struttura XML conforme DTD' 
+  },
+  '40603': { 
+    severity: 'error', 
+    description: 'Il riepilogo risulta illeggibile - encoding', 
+    prevention: 'Verificare encoding UTF-8' 
+  },
+  '40604': { 
+    severity: 'error', 
+    description: 'Il riepilogo risulta illeggibile - firma non valida', 
+    prevention: 'Verificare firma CAdES-BES' 
+  },
+  '40605': { 
+    severity: 'error', 
+    description: 'Il riepilogo risulta illeggibile, impossibile estrarre le informazioni', 
+    prevention: 'Verificare XML, encoding, firma e formato complessivo' 
+  },
+  '42605': { 
+    severity: 'error', 
+    description: 'Errore validazione XML avanzata', 
+    prevention: 'Verificare elementi obbligatori XML' 
+  },
+  '9999': { 
+    severity: 'error', 
+    description: 'Riepilogo Rifiutato: Eventi/Abbonamenti errati', 
+    prevention: 'Controllare dettagli errori specifici nel corpo risposta' 
+  },
+} as const;
+
 /**
  * Valida la coerenza del codice sistema tra XML e nome file.
  * Previene errori SIAE 0600 ("Nome del file contenente il riepilogo sbagliato")
@@ -993,6 +1110,35 @@ export interface DtdValidationResult {
   valid: boolean;
   errors: string[];
   warnings: string[];
+}
+
+/**
+ * Risultato validazione pre-trasmissione centralizzata
+ * Unifica tutti i controlli preventivi SIAE
+ */
+export interface PreTransmissionValidationResult {
+  canTransmit: boolean;
+  errors: Array<{
+    code: string;
+    field: string;
+    message: string;
+    resolution?: string;
+    siaeErrorCode?: string;
+  }>;
+  warnings: Array<{
+    code: string;
+    field: string;
+    message: string;
+    suggestion?: string;
+    siaeErrorCode?: string;
+  }>;
+  details: {
+    xmlValid: boolean;
+    systemCodeConsistent: boolean;
+    encodingValid: boolean;
+    fieldLengthsValid: boolean;
+    datesCoherent: boolean;
+  };
 }
 
 /**
@@ -2935,5 +3081,298 @@ export function validateSiaeReportPrerequisites(data: SiaePrerequisiteData): Sia
     errors,
     warnings,
     checklist
+  };
+}
+
+// ==================== PRE-TRANSMISSION VALIDATION ====================
+
+/**
+ * VALIDAZIONE CENTRALIZZATA PRE-TRASMISSIONE SIAE
+ * 
+ * Funzione di validazione unificata che esegue TUTTI i controlli preventivi
+ * prima della trasmissione di un report SIAE. Previene gli errori più comuni:
+ * - 0600/0603: Incoerenza codice sistema tra XML e nome file
+ * - 40603: Encoding UTF-8 non valido
+ * - 40601: Formato XML errato
+ * - 40605: Impossibile estrarre informazioni (struttura XML)
+ * 
+ * @param xml - Contenuto XML del report da validare
+ * @param systemCode - Codice sistema SIAE (8 caratteri)
+ * @param reportType - Tipo di report: 'giornaliero' | 'mensile' | 'rca'
+ * @param reportDate - Data del report (per coerenza date)
+ * @param denominazione - Denominazione titolare (max 60 char)
+ * @param performer - Nome performer/artista (max 100 char)
+ * @returns Risultato validazione con errori, warning e dettagli
+ */
+export function validatePreTransmission(
+  xml: string,
+  systemCode: string,
+  reportType: 'giornaliero' | 'mensile' | 'rca',
+  reportDate: Date | string,
+  denominazione?: string,
+  performer?: string
+): PreTransmissionValidationResult {
+  const errors: PreTransmissionValidationResult['errors'] = [];
+  const warnings: PreTransmissionValidationResult['warnings'] = [];
+  
+  const details = {
+    xmlValid: false,
+    systemCodeConsistent: false,
+    encodingValid: false,
+    fieldLengthsValid: false,
+    datesCoherent: false
+  };
+  
+  // ==================== 1. VALIDAZIONE ENCODING UTF-8 ====================
+  try {
+    // Verifica che l'XML sia UTF-8 e non contenga caratteri non-ASCII non escaped
+    const encoder = new TextEncoder();
+    const encoded = encoder.encode(xml);
+    
+    // Verifica dichiarazione encoding
+    if (!xml.includes('encoding="UTF-8"') && !xml.includes("encoding='UTF-8'")) {
+      warnings.push({
+        code: 'ENCODING_NOT_DECLARED',
+        field: 'encoding',
+        message: 'Encoding UTF-8 non dichiarato esplicitamente nell\'XML',
+        suggestion: 'Aggiungere encoding="UTF-8" nella dichiarazione XML'
+      });
+    }
+    
+    // Verifica che non ci siano caratteri UTF-8 non validi
+    const decoder = new TextDecoder('utf-8', { fatal: true });
+    try {
+      decoder.decode(encoded);
+      details.encodingValid = true;
+    } catch {
+      errors.push({
+        code: 'ENCODING_INVALID',
+        field: 'encoding',
+        message: 'Contenuto XML contiene caratteri non validi UTF-8',
+        resolution: 'Verificare che tutti i caratteri speciali siano correttamente escaped',
+        siaeErrorCode: '40603'
+      });
+    }
+  } catch (e) {
+    errors.push({
+      code: 'ENCODING_ERROR',
+      field: 'encoding',
+      message: 'Errore nella verifica dell\'encoding: ' + (e instanceof Error ? e.message : String(e)),
+      siaeErrorCode: '40603'
+    });
+  }
+  
+  // ==================== 2. VALIDAZIONE STRUTTURA XML ====================
+  const xmlValidation = validateSiaeXml(xml, reportType);
+  if (!xmlValidation.valid) {
+    // FIX 2026-01-15: Aggiunge SEMPRE un errore bloccante se XML non valido
+    // Anche se xmlValidation.errors è vuoto, l'errore deve essere generato
+    errors.push({
+      code: 'XML_STRUCTURE_INVALID',
+      field: 'xml',
+      message: xmlValidation.errors.length > 0 
+        ? `Struttura XML non valida: ${xmlValidation.errors.join('; ')}`
+        : 'Struttura XML non valida: errore di parsing',
+      resolution: 'Verificare che l\'XML sia conforme alla DTD SIAE',
+      siaeErrorCode: '40601'
+    });
+    details.xmlValid = false;
+  } else {
+    details.xmlValid = true;
+  }
+  
+  // Aggiungi warning dalla validazione XML
+  for (const warning of xmlValidation.warnings) {
+    warnings.push({
+      code: 'XML_WARNING',
+      field: 'xml',
+      message: warning
+    });
+  }
+  
+  // ==================== 3. VALIDAZIONE COERENZA CODICE SISTEMA ====================
+  const systemCodeValidation = validateSystemCodeConsistency(xml, systemCode);
+  if (!systemCodeValidation.valid) {
+    details.systemCodeConsistent = false;
+    errors.push({
+      code: 'SYSTEM_CODE_MISMATCH',
+      field: 'systemCode',
+      message: systemCodeValidation.error || 'Codice sistema non coerente',
+      siaeErrorCode: '0600'
+    });
+  } else {
+    details.systemCodeConsistent = true;
+  }
+  
+  // ==================== 4. VALIDAZIONE LUNGHEZZE CAMPI ====================
+  let fieldLengthsValid = true;
+  
+  // Denominazione: max 60 caratteri
+  if (denominazione) {
+    if (denominazione.length > 60) {
+      fieldLengthsValid = false;
+      errors.push({
+        code: 'DENOMINAZIONE_TOO_LONG',
+        field: 'denominazione',
+        message: `Denominazione titolare è troppo lunga: ${denominazione.length} caratteri (max 60)`,
+        resolution: 'Ridurre la denominazione a massimo 60 caratteri',
+        siaeErrorCode: '2606'
+      });
+    }
+  }
+  
+  // Performer: max 100 caratteri
+  if (performer) {
+    if (performer.length > 100) {
+      fieldLengthsValid = false;
+      errors.push({
+        code: 'PERFORMER_TOO_LONG',
+        field: 'performer',
+        message: `Nome performer è troppo lungo: ${performer.length} caratteri (max 100)`,
+        resolution: 'Ridurre il nome performer a massimo 100 caratteri',
+        siaeErrorCode: '40605'
+      });
+    }
+  }
+  
+  // Verifica lunghezze nel contenuto XML
+  const denominazioneMatch = xml.match(/<Denominazione>([^<]*)<\/Denominazione>/);
+  if (denominazioneMatch && denominazioneMatch[1].length > 60) {
+    fieldLengthsValid = false;
+    errors.push({
+      code: 'XML_DENOMINAZIONE_TOO_LONG',
+      field: 'denominazione',
+      message: `Denominazione nell'XML è troppo lunga: ${denominazioneMatch[1].length} caratteri (max 60)`,
+      resolution: 'Modificare la denominazione nel XML a massimo 60 caratteri',
+      siaeErrorCode: '2606'
+    });
+  }
+  
+  details.fieldLengthsValid = fieldLengthsValid;
+  
+  // ==================== 5. VALIDAZIONE COERENZA DATE ====================
+  let datesCoherent = true;
+  const reportDateObj = typeof reportDate === 'string' ? new Date(reportDate) : reportDate;
+  
+  // Estrai DataGenerazione dall'XML
+  const dataGenerazioneMatch = xml.match(/DataGenerazione="([^"]+)"/);
+  if (dataGenerazioneMatch) {
+    const xmlDate = dataGenerazioneMatch[1]; // Formato: YYYYMMDD
+    const today = reportDateObj.toISOString().split('T')[0].replace(/-/g, ''); // Converti a YYYYMMDD
+    
+    // La data di generazione deve essere quella del report
+    if (xmlDate !== today && xmlDate !== today.substring(0, 6)) {
+      // Per mensile, accetta anche anno-mese
+      if (reportType === 'mensile') {
+        const reportMonth = today.substring(0, 6);
+        const xmlMonth = xmlDate.substring(0, 6);
+        if (xmlMonth !== reportMonth) {
+          datesCoherent = false;
+          // FIX 2026-01-15: Cambiato da warning a errore bloccante (SIAE 0603)
+          errors.push({
+            code: 'DATE_MISMATCH',
+            field: 'dates',
+            message: `Data generazione (${xmlDate}) non corrisponde al periodo del report (${reportMonth})`,
+            resolution: 'Verificare che la data di generazione corrisponda al periodo del report',
+            siaeErrorCode: '0603'
+          });
+        }
+      } else {
+        datesCoherent = false;
+        // FIX 2026-01-15: Cambiato da warning a errore bloccante (SIAE 0603)
+        errors.push({
+          code: 'DATE_MISMATCH',
+          field: 'dates',
+          message: `DataGenerazione (${xmlDate}) non corrisponde alla data del report (${today})`,
+          resolution: 'Verificare che DataGenerazione corrisponda alla data odierna',
+          siaeErrorCode: '0603'
+        });
+      }
+    }
+  }
+  
+  // Verifica Mese attributo (per report mensile)
+  if (reportType === 'mensile') {
+    const meseMatch = xml.match(/Mese="([^"]+)"/);
+    if (meseMatch) {
+      const mese = meseMatch[1]; // Formato: YYYYMM
+      const reportMonth = reportDateObj.toISOString().substring(0, 7).replace('-', '');
+      if (mese !== reportMonth) {
+        datesCoherent = false;
+        // FIX 2026-01-15: Cambiato da warning a errore bloccante (SIAE 0603)
+        errors.push({
+          code: 'MONTH_MISMATCH',
+          field: 'month',
+          message: `Attributo Mese (${mese}) non corrisponde al periodo corrente (${reportMonth})`,
+          resolution: 'Verificare che l\'attributo Mese corrisponda al mese corrente',
+          siaeErrorCode: '0603'
+        });
+      }
+    }
+  }
+  
+  // Verifica Data attributo (per report giornaliero)
+  if (reportType === 'giornaliero') {
+    const dataMatch = xml.match(/Data="([^"]+)"/);
+    if (dataMatch) {
+      const data = dataMatch[1]; // Formato: YYYYMMDD
+      const today = reportDateObj.toISOString().split('T')[0].replace(/-/g, '');
+      if (data !== today) {
+        datesCoherent = false;
+        // FIX 2026-01-15: Cambiato da warning a errore bloccante (SIAE 0603)
+        errors.push({
+          code: 'DAY_MISMATCH',
+          field: 'day',
+          message: `Attributo Data (${data}) non corrisponde a oggi (${today})`,
+          resolution: 'Verificare che l\'attributo Data corrisponda alla data odierna',
+          siaeErrorCode: '0603'
+        });
+      }
+    }
+  }
+  
+  details.datesCoherent = datesCoherent;
+  
+  // ==================== 6. VALIDAZIONE OBBLIGATORIA ELEMENTI ====================
+  // Verifica elementi obbligatori comuni
+  const requiredElements = ['Titolare', 'Denominazione', 'CodiceFiscale'];
+  for (const elem of requiredElements) {
+    if (!xml.includes(`<${elem}>`)) {
+      errors.push({
+        code: `MISSING_${elem.toUpperCase()}`,
+        field: elem,
+        message: `Elemento obbligatorio mancante: <${elem}>`,
+        siaeErrorCode: '40605'
+      });
+    }
+  }
+  
+  // ==================== 7. VALIDAZIONE ATTRIBUTI GENERAZIONE ====================
+  const requiredAttributes = ['DataGenerazione', 'OraGenerazione', 'ProgressivoGenerazione'];
+  for (const attr of requiredAttributes) {
+    if (!xml.includes(`${attr}="`)) {
+      errors.push({
+        code: `MISSING_ATTR_${attr.toUpperCase()}`,
+        field: attr,
+        message: `Attributo obbligatorio mancante: ${attr}`,
+        siaeErrorCode: '40605'
+      });
+    }
+  }
+  
+  // ==================== CALCOLO RISULTATO FINALE ====================
+  // FIX 2026-01-15: canTransmit è TRUE solo se TUTTI i dettagli sono validi E non ci sono errori
+  const allDetailsValid = details.xmlValid && 
+                          details.systemCodeConsistent && 
+                          details.encodingValid && 
+                          details.fieldLengthsValid && 
+                          details.datesCoherent;
+  const canTransmit = errors.length === 0 && allDetailsValid;
+  
+  return {
+    canTransmit,
+    errors,
+    warnings,
+    details
   };
 }

@@ -1,6 +1,6 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, validateSiaeReportPrerequisites, validateSystemCodeConsistency, type SiaePrerequisiteData, type SiaePrerequisiteValidation } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, validateSiaeReportPrerequisites, validateSystemCodeConsistency, type SiaePrerequisiteData, type SiaePrerequisiteValidation, validatePreTransmission } from './siae-utils';
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -5037,6 +5037,28 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
     if (toEmail) {
       const { sendSiaeTransmissionEmail } = await import('./email-service');
       
+      // Validazione pre-trasmissione SIAE
+      const preValidation = validatePreTransmission(
+        rcaResult.xml,
+        activeCard?.systemId || 'EVENT4U1',
+        'rca',
+        original.periodDate
+      );
+      
+      if (!preValidation.canTransmit) {
+        await siaeStorage.updateSiaeTransmission(newTransmission.id, {
+          status: 'error',
+          errorMessage: preValidation.errors.map(e => `[${e.siaeErrorCode || 'ERR'}] ${e.message}`).join('; '),
+        });
+        return res.status(400).json({
+          success: false,
+          error: 'Validazione pre-trasmissione fallita',
+          errors: preValidation.errors,
+          warnings: preValidation.warnings,
+          details: preValidation.details
+        });
+      }
+      
       await sendSiaeTransmissionEmail({
         to: toEmail,
         companyName: company?.name || 'N/A',
@@ -5348,6 +5370,32 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
     
     // Import email service
     const { sendSiaeTransmissionEmail } = await import('./email-service');
+    
+    // Validazione pre-trasmissione SIAE
+    const transmissionSystemCode = transmission.systemCode || SIAE_SYSTEM_CODE_DEFAULT;
+    const transmissionReportType: 'giornaliero' | 'mensile' | 'rca' = 
+      transmission.transmissionType === 'monthly' ? 'mensile' : 
+      transmission.transmissionType === 'daily' ? 'giornaliero' : 'rca';
+    const preValidation = validatePreTransmission(
+      signedXmlContent || xmlContent,
+      transmissionSystemCode,
+      transmissionReportType,
+      new Date(transmission.periodDate)
+    );
+    
+    if (!preValidation.canTransmit) {
+      await siaeStorage.updateSiaeTransmission(transmission.id, {
+        status: 'error',
+        errorMessage: preValidation.errors.map(e => `[${e.siaeErrorCode || 'ERR'}] ${e.message}`).join('; '),
+      });
+      return res.status(400).json({
+        success: false,
+        error: 'Validazione pre-trasmissione fallita',
+        errors: preValidation.errors,
+        warnings: preValidation.warnings,
+        details: preValidation.details
+      });
+    }
     
     // Send the email to SIAE test environment
     const destinationEmail = getSiaeDestinationEmail(toEmail);
@@ -5945,6 +5993,33 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   
   // Import and send the email with SIAE-compliant format (Allegato C)
   const { sendSiaeTransmissionEmail } = await import('./email-service');
+  
+  // Validazione pre-trasmissione SIAE
+  const c1ReportType: 'giornaliero' | 'mensile' | 'rca' = isRCA ? 'rca' : (isMonthly ? 'mensile' : 'giornaliero');
+  const preValidation = validatePreTransmission(
+    signedXmlContent || xml,
+    effectiveSystemCode,
+    c1ReportType,
+    effectiveReportDateForCount
+  );
+  
+  if (!preValidation.canTransmit) {
+    await siaeStorage.updateSiaeTransmission(transmission.id, {
+      status: 'error',
+      errorMessage: preValidation.errors.map(e => `[${e.siaeErrorCode || 'ERR'}] ${e.message}`).join('; '),
+    });
+    return {
+      success: false,
+      statusCode: 400,
+      data: {
+        error: 'Validazione pre-trasmissione fallita',
+        errors: preValidation.errors,
+        warnings: preValidation.warnings,
+        details: preValidation.details,
+        transmissionId: transmission.id,
+      }
+    };
+  }
   
   const destination = getSiaeDestinationEmail(toEmail);
   const emailResult = await sendSiaeTransmissionEmail({
@@ -9771,6 +9846,28 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     // Optionally send email
     if (toEmail) {
       const { sendSiaeTransmissionEmail } = await import('./email-service');
+      
+      // Validazione pre-trasmissione SIAE
+      const preValidation = validatePreTransmission(
+        signedXmlContent || xmlContent,
+        systemCode,
+        'rca',
+        eventDate
+      );
+      
+      if (!preValidation.canTransmit) {
+        await siaeStorage.updateSiaeTransmission(transmission.id, {
+          status: 'error',
+          errorMessage: preValidation.errors.map(e => `[${e.siaeErrorCode || 'ERR'}] ${e.message}`).join('; '),
+        });
+        return res.status(400).json({
+          success: false,
+          error: 'Validazione pre-trasmissione fallita',
+          errors: preValidation.errors,
+          warnings: preValidation.warnings,
+          details: preValidation.details
+        });
+      }
       
       const emailResult = await sendSiaeTransmissionEmail({
         to: toEmail,

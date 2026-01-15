@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import type { SiaeTransmissionSettings } from "@shared/schema";
 import { sendSiaeTransmissionEmail } from "./email-service";
 import { isBridgeConnected, requestXmlSignature, getCachedEfffData } from "./bridge-relay";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, mapToSiaeTipoGenere, generateRCAXml, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, validateSystemCodeConsistency, type RCAParams } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, mapToSiaeTipoGenere, generateRCAXml, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, validateSystemCodeConsistency, validatePreTransmission, type RCAParams } from './siae-utils';
 
 // Configurazione SIAE secondo Allegato B e C - Provvedimento Agenzia delle Entrate 04/03/2008
 const SIAE_TEST_MODE = process.env.SIAE_TEST_MODE === 'true';
@@ -441,11 +441,10 @@ async function sendDailyReports() {
         const reportData = await generateC1ReportData(ticketedEvent, 'giornaliero', yesterday, progressivo);
         // Add EFFF data from Smart Card if available
         const cachedEfff = getCachedEfffData();
-        reportData.cachedEfffData = cachedEfff;
         const xmlContent = generateXMLContent(reportData);
 
         // Prefer systemId from Smart Card EFFF for email subject consistency with XML
-        const systemCode = cachedEfff?.systemId || ticketedEvent.systemCode || SIAE_SYSTEM_CODE;
+        const systemCode = cachedEfff?.systemId || SIAE_SYSTEM_CODE;
         // RMG = Riepilogo Mensile Giornaliero: usa 'giornaliero' per nome file RMG_YYYY_MM_DD_###.xsi
         let fileName = generateSiaeFileName('giornaliero', yesterday, progressivo, null, systemCode);
         let fileExtension = '.xsi'; // Default per non firmato
@@ -527,6 +526,20 @@ async function sendDailyReports() {
           continue; // Skip questo evento, procedi con il prossimo
         }
         log(`Evento ${ticketedEvent.id} - Coerenza codice sistema verificata: XML=${systemCodeValidation.xmlSystemCode}, filename=${systemCodeValidation.filenameSystemCode}`);
+        // ============================================================================
+
+        // ==================== VALIDAZIONE PRE-TRASMISSIONE COMPLETA ====================
+        // FIX 2026-01-15: Validazione centralizzata pre-trasmissione
+        const preValidation = validatePreTransmission(xmlContent, systemCode, 'giornaliero', yesterday);
+        if (!preValidation.canTransmit) {
+          log(`ERRORE validazione pre-trasmissione evento ${ticketedEvent.id}: ${preValidation.errors.map(e => e.message).join('; ')}`);
+          await siaeStorage.updateSiaeTransmission(transmission.id, {
+            status: 'error',
+            errorMessage: preValidation.errors.map(e => `[${e.siaeErrorCode || 'UNKNOWN'}] ${e.message}`).join('; '),
+          });
+          continue;
+        }
+        log(`Evento ${ticketedEvent.id} - Validazione pre-trasmissione OK`);
         // ============================================================================
 
         // Invio automatico email a SIAE con nuovo formato subject
@@ -633,11 +646,10 @@ async function sendMonthlyReports() {
         const reportData = await generateC1ReportData(ticketedEvent, 'mensile', previousMonth, progressivo);
         // Add EFFF data from Smart Card if available
         const cachedEfff = getCachedEfffData();
-        reportData.cachedEfffData = cachedEfff;
         const xmlContent = generateXMLContent(reportData);
 
         // Prefer systemId from Smart Card EFFF for email subject consistency with XML
-        const systemCode = cachedEfff?.systemId || ticketedEvent.systemCode || SIAE_SYSTEM_CODE;
+        const systemCode = cachedEfff?.systemId || SIAE_SYSTEM_CODE;
         // RPM = Riepilogo Periodico Mensile: usa 'mensile' per nome file RPM_YYYY_MM_###.xsi
         let fileName = generateSiaeFileName('mensile', previousMonth, progressivo, null, systemCode);
         let fileExtension = '.xsi'; // Default per non firmato
@@ -719,6 +731,20 @@ async function sendMonthlyReports() {
           continue; // Skip questo evento, procedi con il prossimo
         }
         log(`Evento ${ticketedEvent.id} - Coerenza codice sistema mensile verificata: XML=${systemCodeValidationMonthly.xmlSystemCode}, filename=${systemCodeValidationMonthly.filenameSystemCode}`);
+        // ============================================================================
+
+        // ==================== VALIDAZIONE PRE-TRASMISSIONE COMPLETA ====================
+        // FIX 2026-01-15: Validazione centralizzata pre-trasmissione mensile
+        const preValidationMonthly = validatePreTransmission(xmlContent, systemCode, 'mensile', previousMonth);
+        if (!preValidationMonthly.canTransmit) {
+          log(`ERRORE validazione pre-trasmissione mensile evento ${ticketedEvent.id}: ${preValidationMonthly.errors.map(e => e.message).join('; ')}`);
+          await siaeStorage.updateSiaeTransmission(transmission.id, {
+            status: 'error',
+            errorMessage: preValidationMonthly.errors.map(e => `[${e.siaeErrorCode || 'UNKNOWN'}] ${e.message}`).join('; '),
+          });
+          continue;
+        }
+        log(`Evento ${ticketedEvent.id} - Validazione pre-trasmissione mensile OK`);
         // ============================================================================
 
         // Invio automatico email a SIAE con nuovo formato subject
@@ -991,6 +1017,20 @@ async function sendRCAReports() {
           continue; // Skip questo evento, procedi con il prossimo
         }
         log(`Evento ${ticketedEvent.id} - Coerenza codice sistema RCA verificata: XML=${systemCodeValidationRca.xmlSystemCode}, filename=${systemCodeValidationRca.filenameSystemCode}`);
+        // ============================================================================
+
+        // ==================== VALIDAZIONE PRE-TRASMISSIONE COMPLETA ====================
+        // FIX 2026-01-15: Validazione centralizzata pre-trasmissione RCA
+        const preValidationRca = validatePreTransmission(xmlContent, systemCode, 'rca', eventDate);
+        if (!preValidationRca.canTransmit) {
+          log(`ERRORE validazione pre-trasmissione RCA evento ${ticketedEvent.id}: ${preValidationRca.errors.map(e => e.message).join('; ')}`);
+          await siaeStorage.updateSiaeTransmission(transmission.id, {
+            status: 'error',
+            errorMessage: preValidationRca.errors.map(e => `[${e.siaeErrorCode || 'UNKNOWN'}] ${e.message}`).join('; '),
+          });
+          continue;
+        }
+        log(`Evento ${ticketedEvent.id} - Validazione pre-trasmissione RCA OK`);
         // ============================================================================
 
         // Invio email
