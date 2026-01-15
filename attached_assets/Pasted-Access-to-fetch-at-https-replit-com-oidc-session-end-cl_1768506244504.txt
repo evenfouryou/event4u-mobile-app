@@ -1,0 +1,254 @@
+Access to fetch at 'https://replit.com/oidc/session/end?client_id=9543450c-5205-4a61-8eb7-7eca550b2452&post_logout_redirect_uri=https%3A%2F%2Fmanage.eventfouryou.com' (redirected from 'https://manage.eventfouryou.com/api/logout') from origin 'https://manage.eventfouryou.com' has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
+ SW registered: https://manage.eventfouryou.com/
+ [DEBUG SC] Fetching initial status via HTTP...
+ [DEBUG SC] ====== SMART CARD CONNECTION START ======
+ [DEBUG SC] URL: wss://manage.eventfouryou.com/ws/bridge
+ [DEBUG SC] Cookies present: YES
+ [DEBUG SC] Cookie value: _ga=GA1.1.962813290.1739208627; _fbp=fb.1.17397993...
+ [DEBUG SC] WebSocket created, state: 0
+ [DEBUG SC] HTTP status received: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 345,
+  "cardBalance": 432661,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "cardEmail": "tickefouryou@gmail.com",
+  "cardCertificateCN": "PETRELLI/JONATHAN/PTRJTH93M11I156B",
+  "cardCertificateExpiry": "2028-03-06",
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+ [DEBUG SC] HTTP - cardSerial: 4130313238343837
+ [DEBUG SC] HTTP - cardCounter: 345
+ [DEBUG SC] HTTP - cardBalance: 432661
+ [DEBUG SC] HTTP - cardKeyId: 129
+ [DEBUG SC] HTTP - cardInserted: true
+ [DEBUG SC] WebSocket OPEN! State: 1
+ [DEBUG SC] Sending get_status request...
+ [DEBUG SC] MESSAGE RECEIVED: {"type":"connection_status","bridgeConnected":true,"connected":true,"message":"Bridge desktop app is connected"}
+ [DEBUG SC] Parsed message type: connection_status
+ [DEBUG SC] Handling bridge/connection status: connection_status Object
+ [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+ [DEBUG SC] Message type: connection_status
+ [DEBUG SC] msg.connected: true
+ [DEBUG SC] msg.bridgeConnected: true
+ [DEBUG SC] isConnected (final): true
+ [DEBUG SC] Full message: {"type":"connection_status","bridgeConnected":true,"connected":true,"message":"Bridge desktop app is connected"}
+ [DEBUG SC] Bridge IS connected - updating status to CONNECTED
+ [DEBUG SC] Status after update: {"connected":true,"relayConnected":true,"readerDetected":true,"cardInserted":true,"readerName":null,"cardAtr":null,"cardSerial":"4130313238343837","cardCounter":345,"cardBalance":432661,"cardKeyId":129,"cardType":"Smart Card SIAE","lastCheck":"2026-01-15T19:43:45.617Z","error":null,"bridgeConnected":true,"canEmitRealSeals":true,"demoMode":false,"pinRetriesLeft":null,"pukRetriesLeft":null,"pinVerified":false,"pinBlocked":false}
+ [DEBUG SC] MESSAGE RECEIVED: {"type":"status","toCompanyId":"4186e56b-d6bd-4d1d-b7d6-f0b22ec12b91","toUserId":"1b809fda-2601-452a-9c70-5de6f23ecf97","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"reade
+ [DEBUG SC] Parsed message type: status
+ [DEBUG SC] Handling status message
+ [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+ [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 345,
+  "cardBalance": 432661,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "cardEmail": "tickefouryou@gmail.com",
+  "cardCertificateCN": "PETRELLI/JONATHAN/PTRJTH93M11I156B",
+  "cardCertificateExpiry": "2028-03-06",
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+ [DEBUG SC] data.cardSerial: 4130313238343837
+ [DEBUG SC] data.cardCounter: 345
+ [DEBUG SC] data.cardBalance: 432661
+ [DEBUG SC] data.cardKeyId: 129
+ [DEBUG SC] data.cardInserted: true
+ [DEBUG SC] data.readerDetected: undefined
+ [DEBUG SC] data.readerConnected: true
+index-BJ3ufPFP.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","toCompanyId":"4186e56b-d6bd-4d1d-b7d6-f0b22ec12b91","toUserId":"1b809fda-2601-452a-9c70-5de6f23ecf97","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"reade
+index-BJ3ufPFP.js:1144 [DEBUG SC] Parsed message type: status
+index-BJ3ufPFP.js:1144 [DEBUG SC] Handling status message
+index-BJ3ufPFP.js:1144 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-BJ3ufPFP.js:1144 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 345,
+  "cardBalance": 432661,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "cardEmail": "tickefouryou@gmail.com",
+  "cardCertificateCN": "PETRELLI/JONATHAN/PTRJTH93M11I156B",
+  "cardCertificateExpiry": "2028-03-06",
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.cardSerial: 4130313238343837
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.cardCounter: 345
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.cardBalance: 432661
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.cardKeyId: 129
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.cardInserted: true
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.readerDetected: undefined
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.readerConnected: true
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(0)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(0)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(0)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(0)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(0)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(0)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(0)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(0)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(0)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(0)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"bridge_status","connected":false,"message":"Bridge desktop app disconnected"}
+index-BJ3ufPFP.js:1144 [DEBUG SC] Parsed message type: bridge_status
+index-BJ3ufPFP.js:1144 [DEBUG SC] Handling bridge/connection status: bridge_status Object
+index-BJ3ufPFP.js:1144 [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+index-BJ3ufPFP.js:1144 [DEBUG SC] Message type: bridge_status
+index-BJ3ufPFP.js:1144 [DEBUG SC] msg.connected: false
+index-BJ3ufPFP.js:1144 [DEBUG SC] msg.bridgeConnected: undefined
+index-BJ3ufPFP.js:1144 [DEBUG SC] isConnected (final): false
+index-BJ3ufPFP.js:1144 [DEBUG SC] Full message: {"type":"bridge_status","connected":false,"message":"Bridge desktop app disconnected"}
+index-BJ3ufPFP.js:1144 [DEBUG SC] Bridge NOT connected - updating status to DISCONNECTED
+index-BJ3ufPFP.js:1144 [DEBUG SC] Status after update: {"connected":false,"relayConnected":true,"readerDetected":false,"cardInserted":false,"readerName":null,"cardAtr":null,"cardSerial":"4130313238343837","cardCounter":345,"cardBalance":432661,"cardKeyId":129,"cardType":"Smart Card SIAE","lastCheck":"2026-01-15T19:43:47.906Z","error":"App desktop Event4U non connessa. Avviare l'applicazione sul PC.","bridgeConnected":false,"canEmitRealSeals":true,"demoMode":false,"pinRetriesLeft":null,"pukRetriesLeft":null,"pinVerified":false,"pinBlocked":false}
+index-BJ3ufPFP.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"bridge_status","connected":true,"message":"Bridge desktop app connected"}
+index-BJ3ufPFP.js:1144 [DEBUG SC] Parsed message type: bridge_status
+index-BJ3ufPFP.js:1144 [DEBUG SC] Handling bridge/connection status: bridge_status Object
+index-BJ3ufPFP.js:1144 [DEBUG SC] ====== BRIDGE STATUS UPDATE ======
+index-BJ3ufPFP.js:1144 [DEBUG SC] Message type: bridge_status
+index-BJ3ufPFP.js:1144 [DEBUG SC] msg.connected: true
+index-BJ3ufPFP.js:1144 [DEBUG SC] msg.bridgeConnected: undefined
+index-BJ3ufPFP.js:1144 [DEBUG SC] isConnected (final): true
+index-BJ3ufPFP.js:1144 [DEBUG SC] Full message: {"type":"bridge_status","connected":true,"message":"Bridge desktop app connected"}
+index-BJ3ufPFP.js:1144 [DEBUG SC] Bridge IS connected - updating status to CONNECTED
+index-BJ3ufPFP.js:1144 [DEBUG SC] Status after update: {"connected":true,"relayConnected":true,"readerDetected":false,"cardInserted":false,"readerName":null,"cardAtr":null,"cardSerial":"4130313238343837","cardCounter":345,"cardBalance":432661,"cardKeyId":129,"cardType":"Smart Card SIAE","lastCheck":"2026-01-15T19:43:49.400Z","error":null,"bridgeConnected":true,"canEmitRealSeals":true,"demoMode":false,"pinRetriesLeft":null,"pukRetriesLeft":null,"pinVerified":false,"pinBlocked":false}
+index-BJ3ufPFP.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":"4130313238343837","cardCounter":345,"cardBalance":432661,"cardKeyId":129,"car
+index-BJ3ufPFP.js:1144 [DEBUG SC] Parsed message type: status
+index-BJ3ufPFP.js:1144 [DEBUG SC] Handling status message
+index-BJ3ufPFP.js:1144 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-BJ3ufPFP.js:1144 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 345,
+  "cardBalance": 432661,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "cardEmail": "tickefouryou@gmail.com",
+  "cardCertificateCN": "PETRELLI/JONATHAN/PTRJTH93M11I156B",
+  "cardCertificateExpiry": "2028-03-06",
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.cardSerial: 4130313238343837
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.cardCounter: 345
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.cardBalance: 432661
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.cardKeyId: 129
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.cardInserted: true
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.readerDetected: undefined
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.readerConnected: true
+index-BJ3ufPFP.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"status","data":{"bridgeConnected":true,"readerConnected":true,"cardInserted":true,"readerName":null,"cardSerial":"4130313238343837","cardCounter":345,"cardBalance":432661,"cardKeyId":129,"car
+index-BJ3ufPFP.js:1144 [DEBUG SC] Parsed message type: status
+index-BJ3ufPFP.js:1144 [DEBUG SC] Handling status message
+index-BJ3ufPFP.js:1144 [DEBUG SC] ====== CARD STATUS DATA RECEIVED ======
+index-BJ3ufPFP.js:1144 [DEBUG SC] Full data object: {
+  "bridgeConnected": true,
+  "readerConnected": true,
+  "cardInserted": true,
+  "readerName": null,
+  "cardSerial": "4130313238343837",
+  "cardCounter": 345,
+  "cardBalance": 432661,
+  "cardKeyId": 129,
+  "cardAtr": null,
+  "cardEmail": "tickefouryou@gmail.com",
+  "cardCertificateCN": "PETRELLI/JONATHAN/PTRJTH93M11I156B",
+  "cardCertificateExpiry": "2028-03-06",
+  "demoMode": false,
+  "canEmitTickets": true,
+  "relayConnected": true,
+  "pinLocked": false,
+  "pinRequired": false
+}
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.cardSerial: 4130313238343837
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.cardCounter: 345
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.cardBalance: 432661
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.cardKeyId: 129
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.cardInserted: true
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.readerDetected: undefined
+index-BJ3ufPFP.js:1144 [DEBUG SC] data.readerConnected: true
+index-BJ3ufPFP.js:1144 [DEBUG SC] MESSAGE RECEIVED: {"type":"ping"}
+index-BJ3ufPFP.js:1144 [DEBUG SC] Parsed message type: ping
+index-BJ3ufPFP.js:1144 [DEBUG SC] Ping received, sending pong
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+index-BJ3ufPFP.js:1448 [EVENT-HUB] availablePrUsers: Array(1)
+installHook.js:1 ReferenceError: ArrowRight is not defined
+    at index-BJ3ufPFP.js:1448:274540
+    at Array.map (<anonymous>)
+    at tgt (index-BJ3ufPFP.js:1448:271896)
+    at N7 (index-BJ3ufPFP.js:38:17050)
+    at eM (index-BJ3ufPFP.js:40:3150)
+    at ire (index-BJ3ufPFP.js:40:44967)
+    at are (index-BJ3ufPFP.js:40:39894)
+    at i2e (index-BJ3ufPFP.js:40:39817)
+    at Ok (index-BJ3ufPFP.js:40:39666)
+    at uM (index-BJ3ufPFP.js:40:36022)
+overrideMethod @ installHook.js:1
+index-BJ3ufPFP.js:38 Uncaught ReferenceError: ArrowRight is not defined
+    at index-BJ3ufPFP.js:1448:274540
+    at Array.map (<anonymous>)
+    at tgt (index-BJ3ufPFP.js:1448:271896)
+    at N7 (index-BJ3ufPFP.js:38:17050)
+    at eM (index-BJ3ufPFP.js:40:3150)
+    at ire (index-BJ3ufPFP.js:40:44967)
+    at are (index-BJ3ufPFP.js:40:39894)
+    at i2e (index-BJ3ufPFP.js:40:39817)
+    at Ok (index-BJ3ufPFP.js:40:39666)
+    at uM (index-BJ3ufPFP.js:40:36022)
