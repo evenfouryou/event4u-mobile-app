@@ -157,8 +157,11 @@ export default function AccountTicketDetail() {
       setQrLoading(true);
       const qrSize = 280;
       // Use dedicated QR colors from template, fallback to black on white for readability
+      // Note: QR code library doesn't support 'transparent', convert to white
       const qrForeground = digitalTemplate?.qrForegroundColor || '#000000';
-      const qrBackground = digitalTemplate?.qrBackgroundColor || '#FFFFFF';
+      const qrBackground = (digitalTemplate?.qrBackgroundColor && digitalTemplate.qrBackgroundColor !== 'transparent') 
+        ? digitalTemplate.qrBackgroundColor 
+        : '#FFFFFF';
       
       QRCodeLib.toDataURL(ticket.qrCode, {
         width: qrSize,

@@ -91,8 +91,11 @@ export function DigitalTicketCard({ ticket, template }: DigitalTicketCardProps) 
 
   const qrSizeValue = t.qrSize || 192;
   // Use dedicated QR colors, fallback to black on white for readability
+  // Note: QR code library doesn't support 'transparent', convert to white
   const qrDarkColor = t.qrForegroundColor || '#000000';
-  const qrLightColor = t.qrBackgroundColor || '#FFFFFF';
+  const qrLightColor = (t.qrBackgroundColor && t.qrBackgroundColor !== 'transparent') 
+    ? t.qrBackgroundColor 
+    : '#FFFFFF';
 
   useEffect(() => {
     if (showQrCode && ticket.qrCode) {
