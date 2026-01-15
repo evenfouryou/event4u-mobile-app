@@ -189,7 +189,7 @@ export default function ScannerStatsPage() {
             </Button>
           </div>
 
-          <div className="grid grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <Card className="col-span-1">
               <CardContent className="pt-6">
                 <div className="flex items-center gap-4">
@@ -325,7 +325,7 @@ export default function ScannerStatsPage() {
         </div>
 
         {totalStatsLoading ? (
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             {[1, 2, 3].map(i => (
               <Card key={i}>
                 <CardContent className="pt-6">
@@ -337,7 +337,7 @@ export default function ScannerStatsPage() {
           </div>
         ) : (
           <>
-            <div className="grid grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
               <Card className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5">
                 <CardContent className="pt-6">
                   <div className="flex items-center gap-4">
