@@ -84,6 +84,7 @@ interface TicketDetail {
     progressiveNumber: number;
   } | null;
   nameChangeDate: string | null;
+  isFromNameChange: boolean;
 }
 
 const springConfig = {
@@ -369,7 +370,10 @@ export default function AccountTicketDetail() {
   }
 
   const eventDate = new Date(ticket.eventStart);
-  const holderName = [ticket.participantFirstName, ticket.participantLastName].filter(Boolean).join(" ") || "Non nominativo";
+  // Se il biglietto proviene da un cambio nominativo, nascondere l'intestatario
+  const holderName = ticket.isFromNameChange 
+    ? "Dati riservati" 
+    : ([ticket.participantFirstName, ticket.participantLastName].filter(Boolean).join(" ") || "Non nominativo");
   const price = parseFloat(ticket.ticketPrice || "0");
 
   const statusVariant = () => {
@@ -454,6 +458,7 @@ export default function AccountTicketDetail() {
                     progressiveNumber: ticket.progressiveNumber,
                   }}
                   template={digitalTemplate}
+                  hideHolderName={ticket.isFromNameChange}
                 />
               </CardContent>
             </Card>
@@ -831,6 +836,7 @@ export default function AccountTicketDetail() {
               progressiveNumber: ticket.progressiveNumber,
             }} 
             template={digitalTemplate}
+            hideHolderName={ticket.isFromNameChange}
           />
         </motion.div>
 

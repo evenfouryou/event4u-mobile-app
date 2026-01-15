@@ -3496,12 +3496,30 @@ router.get("/api/public/account/tickets/:id", async (req, res) => {
     const eventStart = new Date(ticket.eventStart);
     const hoursToEvent = (eventStart.getTime() - now.getTime()) / (1000 * 60 * 60);
 
-    const canNameChange = ticket.allowsChangeName && 
+    // Verifica se questo biglietto è il risultato di un cambio nominativo
+    // (cioè se esiste un record in siaeNameChanges dove newTicketId = questo ticket)
+    const [wasFromNameChange] = await db
+      .select({ id: siaeNameChanges.id })
+      .from(siaeNameChanges)
+      .where(and(
+        eq(siaeNameChanges.newTicketId, id),
+        eq(siaeNameChanges.status, 'completed')
+      ))
+      .limit(1);
+    
+    const isFromNameChange = !!wasFromNameChange;
+
+    // Se il biglietto è stato ottenuto tramite cambio nominativo, 
+    // NON può più essere cambiato o rivenduto
+    const canNameChange = !isFromNameChange && 
+                          ticket.allowsChangeName && 
                           (ticket.status === 'emitted' || ticket.status === 'active') && 
                           hoursToEvent >= 24;
     
     // Rivendita consentita fino a 2 ore prima dell'evento (non ci sono limiti normativi specifici)
-    const canResale = ticket.allowsResale && 
+    // MA non per biglietti ottenuti tramite cambio nominativo
+    const canResale = !isFromNameChange && 
+                      ticket.allowsResale && 
                       (ticket.status === 'emitted' || ticket.status === 'active') && 
                       hoursToEvent >= 2;
 
@@ -3620,6 +3638,9 @@ router.get("/api/public/account/tickets/:id", async (req, res) => {
       isListed: !!existingResale,
       existingResale: existingResale || null,
       hoursToEvent: Math.floor(hoursToEvent),
+      // Flag per indicare se il biglietto proviene da un cambio nominativo
+      // In tal caso, non mostrare l'intestatario e nascondere azioni
+      isFromNameChange,
       // Name change information
       nameChangeHistory,
       previousTicket,
@@ -4040,6 +4061,23 @@ router.post("/api/public/account/name-change", async (req, res) => {
 
     if (!ticket) {
       return res.status(404).json({ message: "Biglietto non trovato" });
+    }
+
+    // Verifica se questo biglietto è il risultato di un cambio nominativo precedente
+    // In tal caso, NON può più essere ceduto/cambiato
+    const [wasFromNameChange] = await db
+      .select({ id: siaeNameChanges.id })
+      .from(siaeNameChanges)
+      .where(and(
+        eq(siaeNameChanges.newTicketId, ticketId),
+        eq(siaeNameChanges.status, 'completed')
+      ))
+      .limit(1);
+    
+    if (wasFromNameChange) {
+      return res.status(400).json({ 
+        message: "Questo biglietto è già stato oggetto di un cambio nominativo e non può essere ceduto nuovamente" 
+      });
     }
 
     const validStatuses = ['active', 'sold', 'paid', 'emitted', 'valid'];
@@ -4595,6 +4633,23 @@ router.post("/api/public/account/resale", async (req, res) => {
 
     if (!ticket) {
       return res.status(404).json({ message: "Biglietto non trovato" });
+    }
+
+    // Verifica se questo biglietto è il risultato di un cambio nominativo precedente
+    // In tal caso, NON può più essere rivenduto
+    const [wasFromNameChange] = await db
+      .select({ id: siaeNameChanges.id })
+      .from(siaeNameChanges)
+      .where(and(
+        eq(siaeNameChanges.newTicketId, ticketId),
+        eq(siaeNameChanges.status, 'completed')
+      ))
+      .limit(1);
+    
+    if (wasFromNameChange) {
+      return res.status(400).json({ 
+        message: "Questo biglietto è già stato oggetto di un cambio nominativo e non può essere rivenduto" 
+      });
     }
 
     // Consenti rivendita per biglietti emitted o active (coerente con canResale nel frontend)
