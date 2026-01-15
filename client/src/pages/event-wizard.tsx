@@ -1336,11 +1336,6 @@ export default function EventWizard() {
                           <div className="flex items-center gap-3">
                             <span className="font-mono text-base">{genre.code}</span>
                             <span className="text-base">{genre.name}</span>
-                            <Badge variant="outline">
-                              IVA {genre.vatRate !== null && genre.vatRate !== undefined 
-                                ? `${Number(genre.vatRate)}%` 
-                                : genre.taxType === 'S' ? '10%' : '22%'}
-                            </Badge>
                           </div>
                         </SelectItem>
                       ))}
@@ -2589,9 +2584,6 @@ export default function EventWizard() {
                                 <div className="flex items-center gap-2">
                                   <span className="font-mono">{genre.code}</span>
                                   <span>{genre.name}</span>
-                                  {genre.vatRate !== null && genre.vatRate !== undefined && (
-                                    <Badge variant="outline" className="ml-2">IVA {Number(genre.vatRate)}%</Badge>
-                                  )}
                                 </div>
                               </SelectItem>
                             ))}
