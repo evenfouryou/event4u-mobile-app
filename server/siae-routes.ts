@@ -1,6 +1,6 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, validateSiaeReportPrerequisites, type SiaePrerequisiteData, type SiaePrerequisiteValidation } from './siae-utils';
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -9799,6 +9799,86 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     });
   } catch (error: any) {
     console.error('[C1 Send] Error:', error);
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// GET /api/siae/ticketed-events/:id/validate-prerequisites - Validazione prerequisiti SIAE per trasmissione
+router.get('/api/siae/ticketed-events/:id/validate-prerequisites', requireAuth, requireOrganizer, async (req: Request, res: Response) => {
+  try {
+    const eventId = req.params.id;
+    const user = req.user as any;
+    
+    // Ottieni evento SIAE
+    const ticketedEvent = await siaeStorage.getSiaeTicketedEvent(eventId);
+    if (!ticketedEvent) {
+      return res.status(404).json({ message: "Evento SIAE non trovato" });
+    }
+    
+    // Verifica accesso
+    if (user.role !== 'super_admin' && ticketedEvent.companyId !== user.companyId) {
+      return res.status(403).json({ message: "Accesso non autorizzato" });
+    }
+    
+    // Ottieni dati correlati
+    const company = ticketedEvent.companyId ? await storage.getCompany(ticketedEvent.companyId) : null;
+    const baseEvent = await storage.getEvent(ticketedEvent.eventId);
+    const sectors = await siaeStorage.getSiaeEventSectors(eventId);
+    const systemConfig = await siaeStorage.getGlobalSiaeSystemConfig();
+    
+    // Ottieni dati Smart Card dal bridge (se connesso)
+    const bridgeConnected = isBridgeConnected();
+    const efffData = getCachedEfffData();
+    
+    // Costruisci dati per validazione
+    const prerequisiteData: SiaePrerequisiteData = {
+      company: {
+        id: company?.id || '',
+        name: company?.name || '',
+        taxId: company?.taxId || null,
+        fiscalCode: company?.fiscalCode || null,
+        regimeFiscale: company?.regimeFiscale || null,
+      },
+      ticketedEvent: {
+        id: ticketedEvent.id,
+        siaeLocationCode: ticketedEvent.siaeLocationCode || null,
+        genreCode: ticketedEvent.genreCode || '61',
+        taxType: ticketedEvent.taxType || 'I',
+        entertainmentIncidence: ticketedEvent.entertainmentIncidence ?? null,
+        organizerType: ticketedEvent.organizerType || 'G',
+        author: ticketedEvent.author || null,
+        performer: ticketedEvent.performer || null,
+        filmNationality: ticketedEvent.filmNationality || null,
+        totalCapacity: ticketedEvent.totalCapacity || 0,
+      },
+      event: {
+        id: baseEvent?.id || '',
+        name: baseEvent?.name || ticketedEvent.eventName || '',
+        startDatetime: baseEvent?.startDatetime || ticketedEvent.startDate || null,
+        endDatetime: baseEvent?.endDatetime || ticketedEvent.endDate || null,
+      },
+      sectors: sectors.map(s => ({
+        id: s.id,
+        orderCode: s.orderCode || null,
+        capacity: s.capacity || null,
+      })),
+      systemConfig: systemConfig ? {
+        systemCode: systemConfig.systemCode || null,
+      } : null,
+      smartCardData: efffData ? {
+        systemId: efffData.systemId,
+        partnerCodFis: efffData.partnerCodFis,
+        partnerName: efffData.partnerName,
+      } : null,
+      bridgeConnected,
+    };
+    
+    // Esegui validazione
+    const validation = validateSiaeReportPrerequisites(prerequisiteData);
+    
+    res.json(validation);
+  } catch (error: any) {
+    console.error('[Validate Prerequisites] Error:', error);
     res.status(500).json({ message: error.message });
   }
 });
