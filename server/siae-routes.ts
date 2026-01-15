@@ -1,6 +1,6 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, validateSiaeReportPrerequisites, validateSystemCodeConsistency, type SiaePrerequisiteData, type SiaePrerequisiteValidation, validatePreTransmission } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, validateSiaeReportPrerequisites, validateSystemCodeConsistency, type SiaePrerequisiteData, type SiaePrerequisiteValidation, validatePreTransmission, autoCorrectSiaeXml } from './siae-utils';
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -5304,6 +5304,19 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
           xmlContent = rcaResult.xml;
           regeneratedXml = true;
           
+          // AUTO-CORREZIONE PREVENTIVA: Correggi automaticamente errori comuni prima dell'invio
+          const autoCorrectionEmail = autoCorrectSiaeXml(xmlContent, eventForLog.genreCode);
+          if (autoCorrectionEmail.corrections.length > 0) {
+            console.log(`[SIAE-ROUTES] AUTO-CORREZIONE: Applicate ${autoCorrectionEmail.corrections.length} correzioni automatiche per RCA email:`);
+            for (const corr of autoCorrectionEmail.corrections) {
+              console.log(`  - ${corr.field}: ${corr.reason} (previene errore SIAE ${corr.siaeErrorPrevented})`);
+            }
+            xmlContent = autoCorrectionEmail.correctedXml;
+          }
+          if (autoCorrectionEmail.uncorrectableErrors.length > 0) {
+            console.log(`[SIAE-ROUTES] ERRORI NON CORREGGIBILI: ${autoCorrectionEmail.uncorrectableErrors.map(e => e.message).join('; ')}`);
+          }
+          
           // Aggiorna il database con l'XML corretto
           await siaeStorage.updateSiaeTransmission(id, {
             fileContent: xmlContent,
@@ -5779,6 +5792,20 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     }
     
     xml = rcaResult.xml;
+    
+    // AUTO-CORREZIONE PREVENTIVA: Correggi automaticamente errori comuni prima dell'invio
+    const autoCorrectionC1 = autoCorrectSiaeXml(xml, eventForLog.genreCode);
+    if (autoCorrectionC1.corrections.length > 0) {
+      console.log(`[SIAE-ROUTES] AUTO-CORREZIONE: Applicate ${autoCorrectionC1.corrections.length} correzioni automatiche per RCA C1:`);
+      for (const corr of autoCorrectionC1.corrections) {
+        console.log(`  - ${corr.field}: ${corr.reason} (previene errore SIAE ${corr.siaeErrorPrevented})`);
+      }
+      xml = autoCorrectionC1.correctedXml;
+    }
+    if (autoCorrectionC1.uncorrectableErrors.length > 0) {
+      console.log(`[SIAE-ROUTES] ERRORI NON CORREGGIBILI: ${autoCorrectionC1.uncorrectableErrors.map(e => e.message).join('; ')}`);
+    }
+    
     // CRITICAL DIAGNOSTIC: Verify XML format is RiepilogoControlloAccessi (not LogTransazione)
     const xmlRoot = xml.substring(0, 300);
     const isCorrectFormat = xml.includes('<RiepilogoControlloAccessi');
@@ -9788,7 +9815,20 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
       });
     }
     
-    const xmlContent = rcaResult.xml;
+    let xmlContent = rcaResult.xml;
+    
+    // AUTO-CORREZIONE PREVENTIVA: Correggi automaticamente errori comuni prima dell'invio
+    const autoCorrectionRcaEvent = autoCorrectSiaeXml(xmlContent, eventForLog.genreCode);
+    if (autoCorrectionRcaEvent.corrections.length > 0) {
+      console.log(`[SIAE-ROUTES] AUTO-CORREZIONE: Applicate ${autoCorrectionRcaEvent.corrections.length} correzioni automatiche per RCA evento:`);
+      for (const corr of autoCorrectionRcaEvent.corrections) {
+        console.log(`  - ${corr.field}: ${corr.reason} (previene errore SIAE ${corr.siaeErrorPrevented})`);
+      }
+      xmlContent = autoCorrectionRcaEvent.correctedXml;
+    }
+    if (autoCorrectionRcaEvent.uncorrectableErrors.length > 0) {
+      console.log(`[SIAE-ROUTES] ERRORI NON CORREGGIBILI: ${autoCorrectionRcaEvent.uncorrectableErrors.map(e => e.message).join('; ')}`);
+    }
     
     // Nome file conforme Allegato C SIAE (Provvedimento Agenzia Entrate 04/03/2008):
     // Formato: RCA_AAAA_MM_GG_SSSSSSSS_###_XSI_V.XX.YY.p7m

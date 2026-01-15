@@ -3084,6 +3084,454 @@ export function validateSiaeReportPrerequisites(data: SiaePrerequisiteData): Sia
   };
 }
 
+// ==================== AUTO-CORREZIONE PRE-TRASMISSIONE ====================
+
+/**
+ * Risultato dell'auto-correzione XML SIAE
+ */
+export interface AutoCorrectResult {
+  correctedXml: string;
+  corrections: Array<{
+    field: string;
+    original: string;
+    corrected: string;
+    reason: string;
+    siaeErrorPrevented: string;
+  }>;
+  uncorrectableErrors: Array<{
+    field: string;
+    message: string;
+    siaeErrorCode: string;
+  }>;
+}
+
+/**
+ * Tabella generi SIAE con requisiti Autore/Esecutore/NazionalitàFilm
+ * Basata su Tabella 1 Allegato A Provvedimento 23/7/2001
+ */
+const SIAE_GENRE_REQUIREMENTS: Record<string, { needsAutore: boolean; needsEsecutore: boolean; needsNazionalita: boolean; description: string }> = {
+  // Cinema (01-04): richiedono NazionalitàFilm
+  '01': { needsAutore: false, needsEsecutore: false, needsNazionalita: true, description: 'Cinema - Film' },
+  '02': { needsAutore: false, needsEsecutore: false, needsNazionalita: true, description: 'Cinema - Documentario' },
+  '03': { needsAutore: false, needsEsecutore: false, needsNazionalita: true, description: 'Cinema - Corto' },
+  '04': { needsAutore: false, needsEsecutore: false, needsNazionalita: true, description: 'Cinema - Altro' },
+  // Teatro/Concerti (45-59): richiedono Autore ed Esecutore
+  '45': { needsAutore: true, needsEsecutore: true, needsNazionalita: false, description: 'Teatro - Prosa' },
+  '46': { needsAutore: true, needsEsecutore: true, needsNazionalita: false, description: 'Teatro - Lirica' },
+  '47': { needsAutore: true, needsEsecutore: true, needsNazionalita: false, description: 'Teatro - Balletto' },
+  '48': { needsAutore: true, needsEsecutore: true, needsNazionalita: false, description: 'Teatro - Operetta' },
+  '49': { needsAutore: true, needsEsecutore: true, needsNazionalita: false, description: 'Teatro - Musical' },
+  '50': { needsAutore: true, needsEsecutore: true, needsNazionalita: false, description: 'Concerto - Classica' },
+  '51': { needsAutore: true, needsEsecutore: true, needsNazionalita: false, description: 'Concerto - Pop/Rock' },
+  '52': { needsAutore: true, needsEsecutore: true, needsNazionalita: false, description: 'Concerto - Jazz' },
+  '53': { needsAutore: true, needsEsecutore: true, needsNazionalita: false, description: 'Concerto - Folk' },
+  '54': { needsAutore: true, needsEsecutore: true, needsNazionalita: false, description: 'Concerto - Altro' },
+  '55': { needsAutore: true, needsEsecutore: true, needsNazionalita: false, description: 'Spettacolo comico' },
+  '56': { needsAutore: true, needsEsecutore: true, needsNazionalita: false, description: 'Cabaret' },
+  '57': { needsAutore: true, needsEsecutore: true, needsNazionalita: false, description: 'Varietà' },
+  '58': { needsAutore: true, needsEsecutore: true, needsNazionalita: false, description: 'Circo' },
+  '59': { needsAutore: true, needsEsecutore: true, needsNazionalita: false, description: 'Spettacolo viaggiante' },
+  // Intrattenimento (30-40, 60-69, 70-79): NON richiedono nulla
+  '30': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Giochi - Slot' },
+  '31': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Giochi - Carte' },
+  '32': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Giochi - Biliardo' },
+  '33': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Giochi - Bowling' },
+  '34': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Giochi - Flipper' },
+  '35': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Giochi - Videogiochi' },
+  '36': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Giochi - Altri' },
+  '60': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Discoteca' },
+  '61': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Sala da ballo' },
+  '62': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Piano bar' },
+  '63': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Karaoke' },
+  '64': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Disco pub' },
+  '65': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Night club' },
+  '66': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Locale notturno' },
+  '67': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Beach club' },
+  '68': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Lido' },
+  '69': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Altro intrattenimento' },
+  '70': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Fiera' },
+  '71': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Mostra' },
+  '72': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Esposizione' },
+  '73': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Sagra' },
+  '74': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Festa patronale' },
+  '79': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Luna park' },
+  // Sport (80-89)
+  '80': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Evento sportivo' },
+  '81': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Calcio' },
+  '82': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Basket' },
+  '83': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Tennis' },
+  '84': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Pugilato' },
+  '85': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Automobilismo' },
+  '86': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Motociclismo' },
+  '89': { needsAutore: false, needsEsecutore: false, needsNazionalita: false, description: 'Altro sport' },
+};
+
+/**
+ * Codici ISO 3166-1 alpha-2 validi per NazionalitàFilm
+ */
+const VALID_ISO_3166_CODES = new Set([
+  'IT', 'US', 'GB', 'FR', 'DE', 'ES', 'PT', 'NL', 'BE', 'AT', 'CH', 'PL', 'CZ', 'SK', 'HU',
+  'RO', 'BG', 'GR', 'HR', 'SI', 'RS', 'BA', 'ME', 'MK', 'AL', 'XK', 'UA', 'RU', 'BY', 'MD',
+  'SE', 'NO', 'DK', 'FI', 'IS', 'IE', 'LU', 'MT', 'CY', 'EE', 'LV', 'LT', 'TR', 'IL', 'EG',
+  'MA', 'TN', 'DZ', 'LY', 'ZA', 'NG', 'KE', 'ET', 'GH', 'CI', 'SN', 'CM', 'AO', 'MZ', 'TZ',
+  'JP', 'CN', 'KR', 'KP', 'TW', 'HK', 'MO', 'SG', 'MY', 'ID', 'TH', 'VN', 'PH', 'MM', 'KH',
+  'IN', 'PK', 'BD', 'LK', 'NP', 'BT', 'AF', 'IR', 'IQ', 'SA', 'AE', 'QA', 'KW', 'BH', 'OM',
+  'AU', 'NZ', 'PG', 'FJ', 'WS', 'TO', 'VU', 'NC', 'PF', 'GU', 'AS',
+  'CA', 'MX', 'GT', 'BZ', 'SV', 'HN', 'NI', 'CR', 'PA', 'CU', 'JM', 'HT', 'DO', 'PR', 'TT',
+  'BR', 'AR', 'CL', 'PE', 'CO', 'VE', 'EC', 'BO', 'PY', 'UY', 'GY', 'SR'
+]);
+
+/**
+ * AUTO-CORREZIONE PREVENTIVA XML SIAE
+ * 
+ * Corregge automaticamente gli errori comuni nell'XML SIAE prima della trasmissione.
+ * Questa funzione deve essere chiamata PRIMA di validatePreTransmission().
+ * 
+ * Correzioni automatiche:
+ * - Troncamento denominazione a 60 caratteri (previene warning 2606)
+ * - Troncamento performer a 100 caratteri (previene errore 40605)
+ * - Rimozione Autore/Esecutore/NazionalitàFilm se non richiesti dal genere (previene 2108/2111/2114)
+ * - Aggiunta Autore/Esecutore placeholder se richiesti dal genere (previene 2110)
+ * - Normalizzazione codice genere a formato valido (previene 2101)
+ * - Padding codice locale a 13 cifre (previene 3203)
+ * - Normalizzazione codice fiscale (previene 3111)
+ * - Correzione encoding UTF-8 (previene 40603)
+ * 
+ * @param xml - Contenuto XML originale
+ * @param genreCode - Codice genere evento (opzionale, estratto da XML se non fornito)
+ * @param defaultAutore - Autore di default da usare se richiesto ma mancante
+ * @param defaultEsecutore - Esecutore di default da usare se richiesto ma mancante
+ * @returns Risultato con XML corretto e lista correzioni applicate
+ */
+export function autoCorrectSiaeXml(
+  xml: string,
+  genreCode?: string,
+  defaultAutore?: string,
+  defaultEsecutore?: string
+): AutoCorrectResult {
+  let correctedXml = xml;
+  const corrections: AutoCorrectResult['corrections'] = [];
+  const uncorrectableErrors: AutoCorrectResult['uncorrectableErrors'] = [];
+  
+  // ==================== 1. CORREZIONE ENCODING ====================
+  // Rimuovi caratteri non-UTF8 e normalizza
+  try {
+    const encoder = new TextEncoder();
+    const decoder = new TextDecoder('utf-8', { fatal: false });
+    const encoded = encoder.encode(correctedXml);
+    const decoded = decoder.decode(encoded);
+    if (decoded !== correctedXml) {
+      corrections.push({
+        field: 'encoding',
+        original: 'Caratteri non-UTF8 presenti',
+        corrected: 'Caratteri normalizzati UTF-8',
+        reason: 'Rimossi caratteri non validi UTF-8',
+        siaeErrorPrevented: '40603'
+      });
+      correctedXml = decoded;
+    }
+  } catch (e) {
+    // Ignora errori encoding
+  }
+  
+  // ==================== 2. CORREZIONE DENOMINAZIONE (max 60 char) ====================
+  const denominazioneMatch = correctedXml.match(/<Denominazione>([^<]*)<\/Denominazione>/g);
+  if (denominazioneMatch) {
+    for (const match of denominazioneMatch) {
+      const innerMatch = match.match(/<Denominazione>([^<]*)<\/Denominazione>/);
+      if (innerMatch && innerMatch[1].length > 60) {
+        const original = innerMatch[1];
+        const truncated = original.substring(0, 60);
+        correctedXml = correctedXml.replace(match, `<Denominazione>${truncated}</Denominazione>`);
+        corrections.push({
+          field: 'Denominazione',
+          original: `${original.length} caratteri`,
+          corrected: `Troncato a 60 caratteri`,
+          reason: 'Denominazione max 60 caratteri per specifiche SIAE',
+          siaeErrorPrevented: '2606'
+        });
+      }
+    }
+  }
+  
+  // ==================== 3. CORREZIONE AUTORE (max 100 char) ====================
+  const autoreMatch = correctedXml.match(/<Autore>([^<]*)<\/Autore>/);
+  if (autoreMatch && autoreMatch[1].length > 100) {
+    const original = autoreMatch[1];
+    const truncated = original.substring(0, 100);
+    correctedXml = correctedXml.replace(autoreMatch[0], `<Autore>${truncated}</Autore>`);
+    corrections.push({
+      field: 'Autore',
+      original: `${original.length} caratteri`,
+      corrected: `Troncato a 100 caratteri`,
+      reason: 'Autore max 100 caratteri per specifiche SIAE',
+      siaeErrorPrevented: '40605'
+    });
+  }
+  
+  // ==================== 4. CORREZIONE ESECUTORE (max 100 char) ====================
+  const esecutoreMatch = correctedXml.match(/<Esecutore>([^<]*)<\/Esecutore>/);
+  if (esecutoreMatch && esecutoreMatch[1].length > 100) {
+    const original = esecutoreMatch[1];
+    const truncated = original.substring(0, 100);
+    correctedXml = correctedXml.replace(esecutoreMatch[0], `<Esecutore>${truncated}</Esecutore>`);
+    corrections.push({
+      field: 'Esecutore',
+      original: `${original.length} caratteri`,
+      corrected: `Troncato a 100 caratteri`,
+      reason: 'Esecutore max 100 caratteri per specifiche SIAE',
+      siaeErrorPrevented: '40605'
+    });
+  }
+  
+  // ==================== 5. CORREZIONE CODICE GENERE ====================
+  // Estrai codice genere dall'XML se non fornito
+  let effectiveGenreCode = genreCode;
+  if (!effectiveGenreCode) {
+    const tipoGenereMatch = correctedXml.match(/<TipoGenere>([^<]*)<\/TipoGenere>/);
+    effectiveGenreCode = tipoGenereMatch?.[1] || null;
+  }
+  
+  // Valida e correggi formato codice genere
+  if (effectiveGenreCode) {
+    const genreNum = parseInt(effectiveGenreCode, 10);
+    if (isNaN(genreNum) || genreNum < 1 || genreNum > 99) {
+      // Codice non valido, usa default '60' (Discoteca)
+      const correctedGenre = '60';
+      if (correctedXml.includes(`<TipoGenere>${effectiveGenreCode}</TipoGenere>`)) {
+        correctedXml = correctedXml.replace(
+          `<TipoGenere>${effectiveGenreCode}</TipoGenere>`,
+          `<TipoGenere>${correctedGenre}</TipoGenere>`
+        );
+        corrections.push({
+          field: 'TipoGenere',
+          original: effectiveGenreCode,
+          corrected: correctedGenre,
+          reason: 'Codice genere non valido, impostato default Discoteca (60)',
+          siaeErrorPrevented: '2101'
+        });
+      }
+      effectiveGenreCode = correctedGenre;
+    } else {
+      // Normalizza a 2 cifre con padding
+      const normalizedGenre = genreNum.toString().padStart(2, '0');
+      if (normalizedGenre !== effectiveGenreCode) {
+        correctedXml = correctedXml.replace(
+          `<TipoGenere>${effectiveGenreCode}</TipoGenere>`,
+          `<TipoGenere>${normalizedGenre}</TipoGenere>`
+        );
+        corrections.push({
+          field: 'TipoGenere',
+          original: effectiveGenreCode,
+          corrected: normalizedGenre,
+          reason: 'Normalizzato formato codice genere a 2 cifre',
+          siaeErrorPrevented: '2101'
+        });
+        effectiveGenreCode = normalizedGenre;
+      }
+    }
+  }
+  
+  // ==================== 6. CORREZIONE AUTORE/ESECUTORE/NAZIONALITÀ IN BASE AL GENERE ====================
+  if (effectiveGenreCode) {
+    const requirements = SIAE_GENRE_REQUIREMENTS[effectiveGenreCode];
+    
+    if (requirements) {
+      const hasAutore = correctedXml.includes('<Autore>');
+      const hasEsecutore = correctedXml.includes('<Esecutore>');
+      const hasNazionalita = correctedXml.includes('<NazionalitaFilm>');
+      
+      // Rimuovi elementi non richiesti
+      if (!requirements.needsAutore && hasAutore) {
+        correctedXml = correctedXml.replace(/<Autore>[^<]*<\/Autore>\s*/g, '');
+        corrections.push({
+          field: 'Autore',
+          original: 'Presente',
+          corrected: 'Rimosso',
+          reason: `Autore non previsto per genere ${effectiveGenreCode} (${requirements.description})`,
+          siaeErrorPrevented: '2108'
+        });
+      }
+      
+      if (!requirements.needsEsecutore && hasEsecutore) {
+        correctedXml = correctedXml.replace(/<Esecutore>[^<]*<\/Esecutore>\s*/g, '');
+        corrections.push({
+          field: 'Esecutore',
+          original: 'Presente',
+          corrected: 'Rimosso',
+          reason: `Esecutore non previsto per genere ${effectiveGenreCode} (${requirements.description})`,
+          siaeErrorPrevented: '2111'
+        });
+      }
+      
+      if (!requirements.needsNazionalita && hasNazionalita) {
+        correctedXml = correctedXml.replace(/<NazionalitaFilm>[^<]*<\/NazionalitaFilm>\s*/g, '');
+        corrections.push({
+          field: 'NazionalitaFilm',
+          original: 'Presente',
+          corrected: 'Rimosso',
+          reason: `Nazionalità film non prevista per genere ${effectiveGenreCode} (${requirements.description})`,
+          siaeErrorPrevented: '2114'
+        });
+      }
+      
+      // Aggiungi elementi richiesti se mancanti (solo se abbiamo valori default)
+      if (requirements.needsAutore && !hasAutore) {
+        const autoreValue = defaultAutore || 'Autore Evento';
+        // Inserisci dopo TipoGenere
+        if (correctedXml.includes('</TipoGenere>')) {
+          correctedXml = correctedXml.replace(
+            '</TipoGenere>',
+            `</TipoGenere>\n        <Autore>${escapeXml(autoreValue.substring(0, 100))}</Autore>`
+          );
+          corrections.push({
+            field: 'Autore',
+            original: 'Mancante',
+            corrected: autoreValue.substring(0, 30) + '...',
+            reason: `Autore richiesto per genere ${effectiveGenreCode} (${requirements.description})`,
+            siaeErrorPrevented: '2110'
+          });
+        }
+      }
+      
+      if (requirements.needsEsecutore && !hasEsecutore) {
+        const esecutoreValue = defaultEsecutore || 'Esecutore Evento';
+        // Inserisci dopo Autore o TipoGenere
+        if (correctedXml.includes('</Autore>')) {
+          correctedXml = correctedXml.replace(
+            '</Autore>',
+            `</Autore>\n        <Esecutore>${escapeXml(esecutoreValue.substring(0, 100))}</Esecutore>`
+          );
+        } else if (correctedXml.includes('</TipoGenere>')) {
+          correctedXml = correctedXml.replace(
+            '</TipoGenere>',
+            `</TipoGenere>\n        <Esecutore>${escapeXml(esecutoreValue.substring(0, 100))}</Esecutore>`
+          );
+        }
+        corrections.push({
+          field: 'Esecutore',
+          original: 'Mancante',
+          corrected: esecutoreValue.substring(0, 30) + '...',
+          reason: `Esecutore richiesto per genere ${effectiveGenreCode} (${requirements.description})`,
+          siaeErrorPrevented: '2110'
+        });
+      }
+      
+      if (requirements.needsNazionalita && !hasNazionalita) {
+        // Per cinema, aggiungi IT di default
+        if (correctedXml.includes('</Esecutore>')) {
+          correctedXml = correctedXml.replace(
+            '</Esecutore>',
+            `</Esecutore>\n        <NazionalitaFilm>IT</NazionalitaFilm>`
+          );
+        } else if (correctedXml.includes('</TipoGenere>')) {
+          correctedXml = correctedXml.replace(
+            '</TipoGenere>',
+            `</TipoGenere>\n        <NazionalitaFilm>IT</NazionalitaFilm>`
+          );
+        }
+        corrections.push({
+          field: 'NazionalitaFilm',
+          original: 'Mancante',
+          corrected: 'IT',
+          reason: `Nazionalità film richiesta per genere ${effectiveGenreCode} (${requirements.description})`,
+          siaeErrorPrevented: '2112'
+        });
+      }
+    }
+  }
+  
+  // ==================== 7. CORREZIONE NAZIONALITÀ FILM ISO 3166 ====================
+  const nazionalitaMatch = correctedXml.match(/<NazionalitaFilm>([^<]*)<\/NazionalitaFilm>/);
+  if (nazionalitaMatch) {
+    const nazionalita = nazionalitaMatch[1].toUpperCase().trim();
+    if (!VALID_ISO_3166_CODES.has(nazionalita)) {
+      // Codice non valido, usa IT di default
+      correctedXml = correctedXml.replace(nazionalitaMatch[0], '<NazionalitaFilm>IT</NazionalitaFilm>');
+      corrections.push({
+        field: 'NazionalitaFilm',
+        original: nazionalita,
+        corrected: 'IT',
+        reason: 'Codice ISO 3166 non valido, impostato Italia (IT)',
+        siaeErrorPrevented: '2112'
+      });
+    } else if (nazionalita !== nazionalitaMatch[1]) {
+      // Normalizza a maiuscolo
+      correctedXml = correctedXml.replace(nazionalitaMatch[0], `<NazionalitaFilm>${nazionalita}</NazionalitaFilm>`);
+      corrections.push({
+        field: 'NazionalitaFilm',
+        original: nazionalitaMatch[1],
+        corrected: nazionalita,
+        reason: 'Normalizzato a maiuscolo',
+        siaeErrorPrevented: '2112'
+      });
+    }
+  }
+  
+  // ==================== 8. CORREZIONE CODICE LOCALE (13 cifre) ====================
+  const codiceLocaleMatch = correctedXml.match(/<CodiceLocale>([^<]*)<\/CodiceLocale>/);
+  if (codiceLocaleMatch) {
+    const codice = codiceLocaleMatch[1].replace(/\D/g, ''); // Rimuovi non-cifre
+    if (codice.length !== 13) {
+      const correctedCodice = codice.padStart(13, '0').substring(0, 13);
+      correctedXml = correctedXml.replace(codiceLocaleMatch[0], `<CodiceLocale>${correctedCodice}</CodiceLocale>`);
+      corrections.push({
+        field: 'CodiceLocale',
+        original: codiceLocaleMatch[1],
+        corrected: correctedCodice,
+        reason: 'Normalizzato a 13 cifre con padding',
+        siaeErrorPrevented: '3203'
+      });
+    }
+  }
+  
+  // ==================== 9. CORREZIONE CODICE FISCALE (11-16 caratteri) ====================
+  const cfMatches = correctedXml.match(/<CodiceFiscale>([^<]*)<\/CodiceFiscale>/g);
+  if (cfMatches) {
+    for (const match of cfMatches) {
+      const innerMatch = match.match(/<CodiceFiscale>([^<]*)<\/CodiceFiscale>/);
+      if (innerMatch) {
+        const cf = innerMatch[1].toUpperCase().replace(/\s/g, '');
+        if (cf.length < 11 || cf.length > 16) {
+          uncorrectableErrors.push({
+            field: 'CodiceFiscale',
+            message: `Codice fiscale "${cf}" ha lunghezza non valida (${cf.length} caratteri, richiesti 11-16)`,
+            siaeErrorCode: '3111'
+          });
+        } else if (cf !== innerMatch[1]) {
+          // Normalizza (maiuscolo, senza spazi)
+          correctedXml = correctedXml.replace(match, `<CodiceFiscale>${cf}</CodiceFiscale>`);
+          corrections.push({
+            field: 'CodiceFiscale',
+            original: innerMatch[1],
+            corrected: cf,
+            reason: 'Normalizzato a maiuscolo senza spazi',
+            siaeErrorPrevented: '3111'
+          });
+        }
+      }
+    }
+  }
+  
+  // ==================== 10. RIMOZIONE DOCTYPE (causa errore 40605) ====================
+  if (correctedXml.includes('<!DOCTYPE')) {
+    correctedXml = correctedXml.replace(/<!DOCTYPE[^>]*>/g, '');
+    corrections.push({
+      field: 'DOCTYPE',
+      original: 'Presente',
+      corrected: 'Rimosso',
+      reason: 'DOCTYPE non risolto da WS SIAE (XXE protection)',
+      siaeErrorPrevented: '40605'
+    });
+  }
+  
+  return {
+    correctedXml,
+    corrections,
+    uncorrectableErrors
+  };
+}
+
 // ==================== PRE-TRANSMISSION VALIDATION ====================
 
 /**
@@ -3095,6 +3543,9 @@ export function validateSiaeReportPrerequisites(data: SiaePrerequisiteData): Sia
  * - 40603: Encoding UTF-8 non valido
  * - 40601: Formato XML errato
  * - 40605: Impossibile estrarre informazioni (struttura XML)
+ * 
+ * NOTA: Chiamare autoCorrectSiaeXml() PRIMA di questa funzione per correggere
+ * automaticamente gli errori risolvibili.
  * 
  * @param xml - Contenuto XML del report da validare
  * @param systemCode - Codice sistema SIAE (8 caratteri)

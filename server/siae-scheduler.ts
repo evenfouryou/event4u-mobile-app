@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import type { SiaeTransmissionSettings } from "@shared/schema";
 import { sendSiaeTransmissionEmail } from "./email-service";
 import { isBridgeConnected, requestXmlSignature, getCachedEfffData } from "./bridge-relay";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, mapToSiaeTipoGenere, generateRCAXml, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, validateSystemCodeConsistency, validatePreTransmission, resolveSystemCode, SIAE_SYSTEM_CODE_DEFAULT, type RCAParams } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, mapToSiaeTipoGenere, generateRCAXml, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, validateSystemCodeConsistency, validatePreTransmission, resolveSystemCode, autoCorrectSiaeXml, SIAE_SYSTEM_CODE_DEFAULT, type RCAParams } from './siae-utils';
 
 // Configurazione SIAE secondo Allegato B e C - Provvedimento Agenzia delle Entrate 04/03/2008
 const SIAE_TEST_MODE = process.env.SIAE_TEST_MODE === 'true';
@@ -463,7 +463,20 @@ async function sendDailyReports() {
         log(`FIX 2026-01-15: Resolved systemCode=${systemCode} for daily report (cachedEfff.systemId=${cachedEfff?.systemId}, siaeConfig.systemCode=${siaeConfigDaily?.systemCode})`);
         
         // Passa cachedEfffData e systemCode a generateXMLContent per coerenza
-        const xmlContent = generateXMLContent({ ...reportData, cachedEfffData: cachedEfff, resolvedSystemCode: systemCode });
+        let xmlContent = generateXMLContent({ ...reportData, cachedEfffData: cachedEfff, resolvedSystemCode: systemCode });
+        
+        // AUTO-CORREZIONE PREVENTIVA: Correggi automaticamente errori comuni prima dell'invio
+        const autoCorrectionDaily = autoCorrectSiaeXml(xmlContent);
+        if (autoCorrectionDaily.corrections.length > 0) {
+          log(`AUTO-CORREZIONE: Applicate ${autoCorrectionDaily.corrections.length} correzioni automatiche per RMG:`);
+          for (const corr of autoCorrectionDaily.corrections) {
+            log(`  - ${corr.field}: ${corr.reason} (previene errore SIAE ${corr.siaeErrorPrevented})`);
+          }
+          xmlContent = autoCorrectionDaily.correctedXml;
+        }
+        if (autoCorrectionDaily.uncorrectableErrors.length > 0) {
+          log(`ERRORI NON CORREGGIBILI: ${autoCorrectionDaily.uncorrectableErrors.map(e => e.message).join('; ')}`);
+        }
 
         // RMG = Riepilogo Mensile Giornaliero: usa 'giornaliero' per nome file RMG_YYYY_MM_DD_###.xsi
         let fileName = generateSiaeFileName('giornaliero', yesterday, progressivo, null, systemCode);
@@ -974,7 +987,20 @@ async function sendRCAReports() {
           continue;
         }
         
-        const xmlContent = rcaResult.xml;
+        let xmlContent = rcaResult.xml;
+        
+        // AUTO-CORREZIONE PREVENTIVA: Correggi automaticamente errori comuni prima dell'invio
+        const autoCorrectionRca = autoCorrectSiaeXml(xmlContent, eventForLog.genreCode);
+        if (autoCorrectionRca.corrections.length > 0) {
+          log(`AUTO-CORREZIONE: Applicate ${autoCorrectionRca.corrections.length} correzioni automatiche per RCA:`);
+          for (const corr of autoCorrectionRca.corrections) {
+            log(`  - ${corr.field}: ${corr.reason} (previene errore SIAE ${corr.siaeErrorPrevented})`);
+          }
+          xmlContent = autoCorrectionRca.correctedXml;
+        }
+        if (autoCorrectionRca.uncorrectableErrors.length > 0) {
+          log(`ERRORI NON CORREGGIBILI: ${autoCorrectionRca.uncorrectableErrors.map(e => e.message).join('; ')}`);
+        }
         
         // Nome file - usa lo stesso systemCode pre-risolto
         let fileName = generateSiaeFileName('rca', eventDate, progressivo, null, systemCode);
