@@ -232,6 +232,70 @@ function validateFiscalId(id: string | null | undefined): { valid: boolean; norm
   return { ...cfResult, type: cfResult.valid ? 'cf' : null };
 }
 
+import { createHash } from 'crypto';
+
+interface TransmissionStats {
+  totalIva: number;
+  totalEsenti: number;
+  totalImpostaIntrattenimento: number;
+  ticketsChanged: number;
+  ticketsResold: number;
+}
+
+export async function calculateTransmissionStats(
+  filteredTickets: any[],
+  companyId: string,
+  eventId?: string,
+  tipoTassazione?: string,
+  entertainmentIncidence?: number
+): Promise<TransmissionStats> {
+  let totalIva = 0;
+  let totalEsenti = 0;
+  let totalImpostaIntrattenimento = 0;
+  let ticketsChanged = 0;
+  let ticketsResold = 0;
+  
+  for (const ticket of filteredTickets) {
+    const vatAmount = parseFloat(ticket.vatAmount || '0');
+    const grossAmount = parseFloat(ticket.grossAmount || '0');
+    
+    totalIva += vatAmount;
+    
+    if (vatAmount === 0) {
+      totalEsenti += grossAmount;
+    }
+    
+    if (tipoTassazione === 'I' && entertainmentIncidence) {
+      totalImpostaIntrattenimento += grossAmount * (entertainmentIncidence / 100);
+    }
+    
+    if (ticket.status === 'annullato_cambio_nominativo' || ticket.replacedByTicketId) {
+      ticketsChanged++;
+    }
+  }
+  
+  if (eventId) {
+    try {
+      const resales = await siaeStorage.getSiaeResalesByEvent(eventId);
+      ticketsResold = resales.length;
+    } catch (err) {
+      console.warn(`[SIAE] Could not fetch resales for event ${eventId}:`, err);
+    }
+  }
+  
+  return {
+    totalIva,
+    totalEsenti,
+    totalImpostaIntrattenimento,
+    ticketsChanged,
+    ticketsResold,
+  };
+}
+
+export function calculateFileHash(xmlContent: string): string {
+  return createHash('sha256').update(xmlContent).digest('hex');
+}
+
 // Middleware to check if user is authenticated
 function requireAuth(req: Request, res: Response, next: NextFunction) {
   if (!req.isAuthenticated || !req.isAuthenticated()) {
@@ -5007,6 +5071,16 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
       true // isSubstitution = true -> Sostituzione="S"
     );
     
+    // Calculate transmission statistics
+    const resendStats = await calculateTransmissionStats(
+      eventTickets,
+      original.companyId,
+      original.ticketedEventId,
+      ticketedEvent.tipoTassazione,
+      ticketedEvent.entertainmentIncidence
+    );
+    const resendFileHash = calculateFileHash(rcaResult.xml);
+    
     // Create new transmission with substitution flag
     // FIX 2026-01-15: Salva systemCode per garantire coerenza nei reinvii (errori SIAE 0600/0603)
     const newTransmission = await siaeStorage.createSiaeTransmission({
@@ -5026,6 +5100,13 @@ router.post("/api/siae/transmissions/:id/resend", requireAuth, requireGestore, a
       ticketsCancelled: rcaResult.cancelledCount,
       totalAmount: rcaResult.totalRevenue.toFixed(2),
       systemCode: resendResolvedSystemCode, // FIX: Salva codice per reinvii futuri
+      fileHash: resendFileHash,
+      totalIva: resendStats.totalIva.toFixed(2),
+      totalEsenti: resendStats.totalEsenti.toFixed(2),
+      totalImpostaIntrattenimento: resendStats.totalImpostaIntrattenimento.toFixed(2),
+      cfOrganizzatore: systemConfig?.taxId || '',
+      ticketsChanged: resendStats.ticketsChanged,
+      ticketsResold: resendStats.ticketsResold,
     });
     
     console.log(`[SIAE-ROUTES] Created substitution transmission ${newTransmission.id} (progressivo: ${nextProgressivo}) for original ${id}`);
@@ -6050,6 +6131,24 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   );
   const fileExtension = effectiveSignatureFormat === 'cades' ? '.p7m' : '.xsi';
   
+  // Calculate transmission statistics
+  // For RCA, get tipoTassazione and entertainmentIncidence from the ticketed event
+  let c1TipoTassazione: string | undefined;
+  let c1EntertainmentIncidence: number | undefined;
+  if (isRCA && eventId) {
+    const c1TicketedEvent = await siaeStorage.getSiaeTicketedEvent(eventId);
+    c1TipoTassazione = c1TicketedEvent?.tipoTassazione || undefined;
+    c1EntertainmentIncidence = c1TicketedEvent?.entertainmentIncidence || undefined;
+  }
+  const c1Stats = await calculateTransmissionStats(
+    filteredTickets,
+    companyId,
+    eventId,
+    c1TipoTassazione,
+    c1EntertainmentIncidence
+  );
+  const c1FileHash = calculateFileHash(signedXmlContent || xml);
+  
   // Create transmission record - salva firma appropriata e nome file conforme
   // FIX: Includere ticketedEventId per tutti i tipi se un evento è selezionato
   // FIX 2026-01-15: Salva systemCode per garantire coerenza nei reinvii (errori SIAE 0600/0603)
@@ -6069,6 +6168,13 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     totalAmount: totalAmount.toString(),
     progressivoInvio: sequenceNumber, // Progressivo invio per periodo fiscale
     systemCode: effectiveSystemCode, // FIX: Salva codice per reinvii futuri
+    fileHash: c1FileHash,
+    totalIva: c1Stats.totalIva.toFixed(2),
+    totalEsenti: c1Stats.totalEsenti.toFixed(2),
+    totalImpostaIntrattenimento: c1Stats.totalImpostaIntrattenimento.toFixed(2),
+    cfOrganizzatore: systemConfig?.taxId || '',
+    ticketsChanged: c1Stats.ticketsChanged,
+    ticketsResold: c1Stats.ticketsResold,
   });
   
   // Import and send the email with SIAE-compliant format (Allegato C)
@@ -8590,6 +8696,10 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
     });
     const fileExtension = '.xsi';
     
+    // Calculate transmission statistics for daily report
+    const dailyStats = await calculateTransmissionStats(dayTickets, companyId);
+    const dailyFileHash = calculateFileHash(xml);
+    
     // Create transmission record
     // FIX 2026-01-15: Salva systemCode per garantire coerenza nei reinvii (errori SIAE 0600/0603)
     const transmission = await siaeStorage.createSiaeTransmission({
@@ -8604,6 +8714,13 @@ router.get("/api/siae/companies/:companyId/reports/xml/daily", requireAuth, requ
       totalAmount: dayTickets.reduce((sum, t) => sum + parseFloat(t.grossAmount || '0'), 0).toString(),
       progressivoInvio: sequenceNumber, // Progressivo invio per periodo fiscale
       systemCode: dailyResolvedSystemCode, // FIX: Salva codice per reinvii futuri
+      fileHash: dailyFileHash,
+      totalIva: dailyStats.totalIva.toFixed(2),
+      totalEsenti: dailyStats.totalEsenti.toFixed(2),
+      totalImpostaIntrattenimento: dailyStats.totalImpostaIntrattenimento.toFixed(2),
+      cfOrganizzatore: systemConfig?.taxId || '',
+      ticketsChanged: dailyStats.ticketsChanged,
+      ticketsResold: dailyStats.ticketsResold,
     });
     
     // Format date for filename
@@ -9920,6 +10037,16 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
     const effectiveSignatureFormat = p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : null);
     const fileExtension = effectiveSignatureFormat === 'cades' ? '.p7m' : '.xsi';
     
+    // Calculate transmission statistics for RCA report
+    const rcaSendStats = await calculateTransmissionStats(
+      reportData.tickets || [],
+      event.companyId,
+      id,
+      event.tipoTassazione,
+      event.entertainmentIncidence
+    );
+    const rcaSendFileHash = calculateFileHash(signedXmlContent || xmlContent);
+    
     // FIX 2026-01-15: Salva systemCode per garantire coerenza nei reinvii (errori SIAE 0600/0603)
     const transmission = await siaeStorage.createSiaeTransmission({
       companyId: event.companyId,
@@ -9938,6 +10065,13 @@ router.post('/api/siae/ticketed-events/:id/reports/c1/send', requireAuth, requir
       totalAmount: reportData.totalRevenue.toFixed(2),
       progressivoInvio: progressivoGenerazione, // Progressivo invio per periodo fiscale
       systemCode: rcaResolvedSystemCode, // FIX: Salva codice per reinvii futuri
+      fileHash: rcaSendFileHash,
+      totalIva: rcaSendStats.totalIva.toFixed(2),
+      totalEsenti: rcaSendStats.totalEsenti.toFixed(2),
+      totalImpostaIntrattenimento: rcaSendStats.totalImpostaIntrattenimento.toFixed(2),
+      cfOrganizzatore: siaeConfig?.taxId || '',
+      ticketsChanged: rcaSendStats.ticketsChanged,
+      ticketsResold: rcaSendStats.ticketsResold,
     });
 
     // Optionally send email
