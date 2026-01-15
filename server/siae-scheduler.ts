@@ -203,16 +203,17 @@ function generateXMLContent(reportData: any): string {
   } = reportData;
   
   const now = new Date();
-  // FIX 2026-01-15: Usa resolvedSystemCode se passato (per coerenza con nome file - errori SIAE 0600/0603)
-  // Fallback a calcolo interno se non passato (legacy mode)
-  let systemCode: string;
-  if (resolvedSystemCode) {
-    systemCode = resolvedSystemCode;
-  } else {
-    const siaeConfigForResolve = { systemCode: ticketedEvent.systemCode };
-    systemCode = resolveSystemCode(cachedEfffData, siaeConfigForResolve);
-    console.log(`[SIAE-SCHEDULER] WARNING: generateXMLContent using internal systemCode calculation (legacy mode)`);
+  // FIX 2026-01-15: resolvedSystemCode è OBBLIGATORIO per coerenza con nome file (errori SIAE 0600/0603)
+  // Non permettiamo più fallback legacy - tutti i caller DEVONO passare resolvedSystemCode
+  if (!resolvedSystemCode) {
+    console.error(`[SIAE-SCHEDULER] CRITICAL: resolvedSystemCode non fornito a generateXMLContent!`);
+    console.error(`[SIAE-SCHEDULER] Caller DEVE usare resolveSystemCode() PRIMA di chiamare generateXMLContent`);
+    throw new Error(
+      'RESOLVED_SYSTEM_CODE_REQUIRED: resolvedSystemCode è obbligatorio. ' +
+      'Usare resolveSystemCode(cachedEfff, siaeConfig) prima di chiamare generateXMLContent.'
+    );
   }
+  const systemCode: string = resolvedSystemCode;
   // Prefer partnerCodFis from EFFF for tax ID
   const taxId = cachedEfffData?.partnerCodFis || company?.taxId || 'XXXXXXXXXXXXXXXX';
   // Prefer partnerName from EFFF > systemConfig.businessName > company.name (fix warning 2606)
@@ -451,11 +452,15 @@ async function sendDailyReports() {
         // Add EFFF data from Smart Card if available
         const cachedEfff = getCachedEfffData();
         
+        // FIX 2026-01-15: Carica siaeConfig per ottenere il systemCode corretto
+        // ticketedEvent NON ha systemCode - è nella tabella siaeSystemConfig
+        const siaeConfigDaily = await siaeStorage.getSiaeSystemConfig(ticketedEvent.companyId);
+        
         // FIX 2026-01-15: Risolvi systemCode UNA VOLTA e passa a generateXMLContent
         // Questo garantisce coerenza tra XML e nome file (errori SIAE 0600/0603)
-        const siaeConfigForResolve = { systemCode: ticketedEvent.systemCode };
+        const siaeConfigForResolve = { systemCode: siaeConfigDaily?.systemCode || undefined };
         const systemCode = resolveSystemCode(cachedEfff, siaeConfigForResolve);
-        log(`FIX 2026-01-15: Resolved systemCode=${systemCode} for daily report (cachedEfff.systemId=${cachedEfff?.systemId}, ticketedEvent.systemCode=${ticketedEvent.systemCode})`);
+        log(`FIX 2026-01-15: Resolved systemCode=${systemCode} for daily report (cachedEfff.systemId=${cachedEfff?.systemId}, siaeConfig.systemCode=${siaeConfigDaily?.systemCode})`);
         
         // Passa cachedEfffData e systemCode a generateXMLContent per coerenza
         const xmlContent = generateXMLContent({ ...reportData, cachedEfffData: cachedEfff, resolvedSystemCode: systemCode });
@@ -662,11 +667,15 @@ async function sendMonthlyReports() {
         // Add EFFF data from Smart Card if available
         const cachedEfff = getCachedEfffData();
         
+        // FIX 2026-01-15: Carica siaeConfig per ottenere il systemCode corretto
+        // ticketedEvent NON ha systemCode - è nella tabella siaeSystemConfig
+        const siaeConfigMonthly = await siaeStorage.getSiaeSystemConfig(ticketedEvent.companyId);
+        
         // FIX 2026-01-15: Risolvi systemCode UNA VOLTA e passa a generateXMLContent
         // Questo garantisce coerenza tra XML e nome file (errori SIAE 0600/0603)
-        const siaeConfigForResolve = { systemCode: ticketedEvent.systemCode };
+        const siaeConfigForResolve = { systemCode: siaeConfigMonthly?.systemCode || undefined };
         const systemCode = resolveSystemCode(cachedEfff, siaeConfigForResolve);
-        log(`FIX 2026-01-15: Resolved systemCode=${systemCode} for monthly report (cachedEfff.systemId=${cachedEfff?.systemId}, ticketedEvent.systemCode=${ticketedEvent.systemCode})`);
+        log(`FIX 2026-01-15: Resolved systemCode=${systemCode} for monthly report (cachedEfff.systemId=${cachedEfff?.systemId}, siaeConfig.systemCode=${siaeConfigMonthly?.systemCode})`);
         
         // Passa cachedEfffData e systemCode a generateXMLContent per coerenza
         const xmlContent = generateXMLContent({ ...reportData, cachedEfffData: cachedEfff, resolvedSystemCode: systemCode });
@@ -936,7 +945,8 @@ async function sendRCAReports() {
         
         // FIX 2026-01-15: Risolvi systemCode UNA VOLTA per coerenza XML/nome file (errori SIAE 0600/0603)
         const cachedEfff = getCachedEfffData();
-        const siaeConfigForResolve = { systemCode: siaeConfig?.systemCode };
+        // FIX: Converti null a undefined per compatibilità con resolveSystemCode
+        const siaeConfigForResolve = { systemCode: siaeConfig?.systemCode || undefined };
         const systemCode = resolveSystemCode(cachedEfff, siaeConfigForResolve);
         log(`FIX 2026-01-15: Resolved systemCode=${systemCode} for RCA report (cachedEfff.systemId=${cachedEfff?.systemId}, siaeConfig.systemCode=${siaeConfig?.systemCode})`);
         

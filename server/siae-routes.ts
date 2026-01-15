@@ -5279,6 +5279,11 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
           const rcaProgressivo = rcaTransmissionsForEvent.length + 1;
           console.log(`[SIAE-ROUTES] RCA progressivo per reinvio: ${rcaProgressivo} (trasmissioni precedenti: ${rcaTransmissionsForEvent.length})`);
           
+          // FIX 2026-01-15: Risolvi systemCode UNA VOLTA con resolveSystemCode per coerenza (errori SIAE 0600/0603)
+          const sendEmailCachedEfff = getCachedEfffData();
+          const sendEmailResolvedSystemCode = resolveSystemCode(sendEmailCachedEfff, systemConfig);
+          console.log(`[SIAE-ROUTES] SendEmail: Resolved systemCode=${sendEmailResolvedSystemCode} (cachedEfff.systemId=${sendEmailCachedEfff?.systemId}, systemConfig.systemCode=${systemConfig?.systemCode})`);
+          
           // Generate RCA XML (RiepilogoControlloAccessi format) con Sostituzione="S"
           const rcaResult = generateRCAXml({
             companyId: transmission.companyId,
@@ -5286,7 +5291,7 @@ router.post("/api/siae/transmissions/:id/send-email", requireAuth, requireGestor
             event: eventForLog,
             tickets: ticketsForLog,
             systemConfig: {
-              systemCode: systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT,
+              systemCode: sendEmailResolvedSystemCode, // FIX: Usa codice risolto per coerenza
               taxId: taxId,
               businessName: systemConfig?.businessName || companyName,
             },

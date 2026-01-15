@@ -8,6 +8,20 @@ Preferred communication style: Simple, everyday language.
 
 ## Recent Changes
 
+### January 15, 2026 - System Code Consistency Fix for send-email Endpoint
+**Bug Fix**: Corrected the `/api/siae/transmissions/:id/send-email` endpoint to use `resolveSystemCode()` instead of direct fallback.
+
+**Problem**: The send-email endpoint was using `systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT` which bypassed the proper resolution hierarchy (SmartCard EFFF > siaeSystemConfig > DEFAULT), causing potential SIAE errors 0600/0603 due to system code inconsistency between XML content and filename.
+
+**Solution**: Added `sendEmailResolvedSystemCode = resolveSystemCode(sendEmailCachedEfff, systemConfig)` before XML regeneration (line 5285-5288 in siae-routes.ts), ensuring the same system code resolution logic is used consistently across all transmission paths.
+
+**Affected Paths Now Correctly Resolved**:
+- Scheduler: `sendDailyReports()`, `sendMonthlyReports()`, `sendRCAReports()` ✓
+- Manual: resend substitution, C1 handler, RCA event endpoints ✓
+- Email: `/api/siae/transmissions/:id/send-email` regeneration path ✓ (NEW FIX)
+
+---
+
 ### January 15, 2026 - SIAE Error Handling & Pre-Transmission Validation System
 **Implementation**: Created a comprehensive SIAE error handling and pre-transmission validation system to prevent transmission failures.
 
