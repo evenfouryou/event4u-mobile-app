@@ -19,7 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
-import { ArrowLeft, Printer, RefreshCw, CheckCircle, Loader2, FileText, Euro, Ticket, Building2, Calendar, History, Eye } from "lucide-react";
+import { ArrowLeft, Printer, RefreshCw, CheckCircle, Loader2, FileText, Euro, Ticket, Building2, Calendar, History, Eye, Download } from "lucide-react";
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { queryClient } from "@/lib/queryClient";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { format } from "date-fns";
@@ -223,6 +225,41 @@ export default function SiaeReportC1() {
     window.print();
   };
 
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const handleDownload = async () => {
+    const element = printRef.current;
+    if (!element || isGeneratingPdf) return;
+    
+    setIsGeneratingPdf(true);
+    
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      await pdf.html(element, {
+        callback: function (doc) {
+          const filename = `Report_C1_${reportDate}.pdf`;
+          doc.save(filename);
+        },
+        x: 5,
+        y: 5,
+        width: 200,
+        windowWidth: 800,
+        html2canvas: {
+          scale: 1,
+          useCORS: true,
+          logging: false,
+          letterRendering: true
+        }
+      });
+    } catch (error) {
+      console.error('Errore generazione PDF:', error);
+      alert('Errore nella generazione del PDF. Prova con la funzione Stampa.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
+  };
+
   const handleRefresh = () => {
     queryClient.invalidateQueries({ 
       queryKey: ['/api/siae/ticketed-events', id, 'reports', 'c1', reportType] 
@@ -317,6 +354,10 @@ export default function SiaeReportC1() {
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleRefresh} data-testid="button-refresh">
               <RefreshCw className="w-4 h-4 mr-2" /> Aggiorna
+            </Button>
+            <Button variant="outline" onClick={handleDownload} disabled={isGeneratingPdf} data-testid="button-download">
+              {isGeneratingPdf ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+              {isGeneratingPdf ? 'Generazione...' : 'Scarica PDF'}
             </Button>
             <Button variant="outline" onClick={handlePrint} data-testid="button-print">
               <Printer className="w-4 h-4 mr-2" /> Stampa

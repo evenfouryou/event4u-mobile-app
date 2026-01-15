@@ -26,7 +26,9 @@ import {
 } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { useIsMobile } from "@/hooks/use-mobile";
-import { ArrowLeft, Printer, Eye, FileText, Euro, Users, Calendar, RefreshCw } from "lucide-react";
+import { ArrowLeft, Printer, Eye, FileText, Euro, Users, Calendar, RefreshCw, Download, Loader2 } from "lucide-react";
+import jsPDF from 'jspdf';
+import html2canvas from 'html2canvas';
 import { queryClient } from "@/lib/queryClient";
 
 interface SubscriptionData {
@@ -187,6 +189,41 @@ export default function SiaeReportC2() {
 
   const handlePrint = () => {
     window.print();
+  };
+
+  const [isGeneratingPdf, setIsGeneratingPdf] = useState(false);
+
+  const handleDownload = async () => {
+    const element = printRef.current;
+    if (!element || isGeneratingPdf) return;
+    
+    setIsGeneratingPdf(true);
+    
+    try {
+      const pdf = new jsPDF('p', 'mm', 'a4');
+      
+      await pdf.html(element, {
+        callback: function (doc) {
+          const filename = `Report_C2_${reportDate}.pdf`;
+          doc.save(filename);
+        },
+        x: 5,
+        y: 5,
+        width: 200,
+        windowWidth: 800,
+        html2canvas: {
+          scale: 1,
+          useCORS: true,
+          logging: false,
+          letterRendering: true
+        }
+      });
+    } catch (error) {
+      console.error('Errore generazione PDF:', error);
+      alert('Errore nella generazione del PDF. Prova con la funzione Stampa.');
+    } finally {
+      setIsGeneratingPdf(false);
+    }
   };
 
   const handleRefresh = () => {
@@ -420,6 +457,10 @@ export default function SiaeReportC2() {
           <div className="flex gap-2">
             <Button variant="outline" onClick={handleRefresh} data-testid="button-refresh">
               <RefreshCw className="w-4 h-4 mr-2" /> Aggiorna
+            </Button>
+            <Button variant="outline" onClick={handleDownload} disabled={isGeneratingPdf} data-testid="button-download">
+              {isGeneratingPdf ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+              {isGeneratingPdf ? 'Generazione...' : 'Scarica PDF'}
             </Button>
             <Button variant="outline" onClick={handlePrint} data-testid="button-print">
               <Printer className="w-4 h-4 mr-2" /> Stampa
@@ -846,6 +887,10 @@ export default function SiaeReportC2() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={handleRefresh} data-testid="button-refresh">
             <RefreshCw className="w-4 h-4 mr-2" /> Aggiorna
+          </Button>
+          <Button variant="outline" onClick={handleDownload} disabled={isGeneratingPdf} data-testid="button-download">
+            {isGeneratingPdf ? <Loader2 className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+            {isGeneratingPdf ? 'Generazione...' : 'Scarica PDF'}
           </Button>
           <Button variant="outline" onClick={handlePrint} data-testid="button-print">
             <Printer className="w-4 h-4 mr-2" /> Stampa
