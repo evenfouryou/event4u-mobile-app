@@ -245,7 +245,7 @@ export interface ISiaeStorage {
   getSiaeResalesByCompany(companyId: string): Promise<SiaeResale[]>;
   getAvailableSiaeResales(): Promise<SiaeResale[]>;
   getAvailableSiaeResalesByEvent(eventId: string): Promise<SiaeResale[]>;
-  getSiaeResalesByEvent(ticketedEventId: string): Promise<SiaeResale[]>;
+  getSiaeResalesByEvent(ticketedEventId: string): Promise<any[]>;
   getSiaeResale(id: string): Promise<SiaeResale | undefined>;
   createSiaeResale(resale: InsertSiaeResale): Promise<SiaeResale>;
   updateSiaeResale(id: string, resale: Partial<SiaeResale>): Promise<SiaeResale | undefined>;
@@ -1257,14 +1257,89 @@ export class SiaeStorage implements ISiaeStorage {
       .then(rows => rows.map(r => r.resale));
   }
   
-  async getSiaeResalesByEvent(ticketedEventId: string): Promise<SiaeResale[]> {
-    return await db.select({ resale: siaeResales })
+  async getSiaeResalesByEvent(ticketedEventId: string): Promise<any[]> {
+    // Query base con dati biglietto originale e venditore
+    const rows = await db.select({ 
+      resale: siaeResales,
+      originalTicketId: siaeTickets.id,
+      originalTicketCode: siaeTickets.ticketCode,
+      originalSigilloFiscale: siaeTickets.sigilloFiscale,
+      originalProgressiveNumber: siaeTickets.progressiveNumber,
+      originalStatus: siaeTickets.status,
+      originalParticipantFirstName: siaeTickets.participantFirstName,
+      originalParticipantLastName: siaeTickets.participantLastName,
+    })
       .from(siaeResales)
       .innerJoin(siaeTickets, eq(siaeResales.originalTicketId, siaeTickets.id))
       .innerJoin(siaeEventSectors, eq(siaeTickets.sectorId, siaeEventSectors.id))
       .where(eq(siaeEventSectors.ticketedEventId, ticketedEventId))
-      .orderBy(desc(siaeResales.createdAt))
-      .then(rows => rows.map(r => r.resale));
+      .orderBy(desc(siaeResales.createdAt));
+    
+    // Per ogni rivendita, fetch dati aggiuntivi (seller, buyer, newTicket)
+    const results = await Promise.all(rows.map(async (r) => {
+      // Dati venditore
+      let seller = null;
+      if (r.resale.sellerId) {
+        const [sellerRow] = await db.select({
+          id: siaeCustomers.id,
+          firstName: siaeCustomers.firstName,
+          lastName: siaeCustomers.lastName,
+          email: siaeCustomers.email,
+        })
+          .from(siaeCustomers)
+          .where(eq(siaeCustomers.id, r.resale.sellerId));
+        if (sellerRow) seller = sellerRow;
+      }
+      
+      // Dati acquirente
+      let buyer = null;
+      if (r.resale.buyerId) {
+        const [buyerRow] = await db.select({
+          id: siaeCustomers.id,
+          firstName: siaeCustomers.firstName,
+          lastName: siaeCustomers.lastName,
+          email: siaeCustomers.email,
+        })
+          .from(siaeCustomers)
+          .where(eq(siaeCustomers.id, r.resale.buyerId));
+        if (buyerRow) buyer = buyerRow;
+      }
+      
+      // Dati nuovo biglietto (se esiste)
+      let newTicket = null;
+      if (r.resale.newTicketId) {
+        const [newTicketRow] = await db.select({
+          id: siaeTickets.id,
+          ticketCode: siaeTickets.ticketCode,
+          sigilloFiscale: siaeTickets.sigilloFiscale,
+          progressiveNumber: siaeTickets.progressiveNumber,
+          status: siaeTickets.status,
+          participantFirstName: siaeTickets.participantFirstName,
+          participantLastName: siaeTickets.participantLastName,
+        })
+          .from(siaeTickets)
+          .where(eq(siaeTickets.id, r.resale.newTicketId));
+        if (newTicketRow) newTicket = newTicketRow;
+      }
+      
+      return {
+        ...r.resale,
+        originalTicket: {
+          id: r.originalTicketId,
+          ticketCode: r.originalTicketCode,
+          sigilloFiscale: r.originalSigilloFiscale,
+          progressiveNumber: r.originalProgressiveNumber,
+          status: r.originalStatus,
+          participantFirstName: r.originalParticipantFirstName,
+          participantLastName: r.originalParticipantLastName,
+        },
+        seller,
+        buyer,
+        newTicket,
+      };
+    }));
+    
+    return results;
   }
   
   async getSiaeResale(id: string): Promise<SiaeResale | undefined> {
