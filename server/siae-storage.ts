@@ -1107,7 +1107,7 @@ export class SiaeStorage implements ISiaeStorage {
     try {
       const rows = await db.select({ 
         nameChange: siaeNameChanges,
-        sigilloFiscaleOriginale: siaeTickets.sigilloFiscale,
+        sigilloFiscaleOriginale: siaeTickets.fiscalSealCode,
         companyId: siaeTicketedEvents.companyId,
         companyName: companies.name
       })
@@ -1133,7 +1133,7 @@ export class SiaeStorage implements ISiaeStorage {
   async getSiaeNameChangesByCompany(companyId: string): Promise<any[]> {
     return await db.select({ 
       nameChange: siaeNameChanges,
-      sigilloFiscaleOriginale: siaeTickets.sigilloFiscale
+      sigilloFiscaleOriginale: siaeTickets.fiscalSealCode
     })
       .from(siaeNameChanges)
       .innerJoin(siaeTickets, eq(siaeNameChanges.originalTicketId, siaeTickets.id))
@@ -1149,7 +1149,7 @@ export class SiaeStorage implements ISiaeStorage {
       nameChange: siaeNameChanges,
       originalTicketId: siaeTickets.id,
       originalTicketCode: siaeTickets.ticketCode,
-      originalSigilloFiscale: siaeTickets.sigilloFiscale,
+      originalSigilloFiscale: siaeTickets.fiscalSealCode,
       originalProgressiveNumber: siaeTickets.progressiveNumber,
       originalStatus: siaeTickets.status,
       originalParticipantFirstName: siaeTickets.participantFirstName,
@@ -1169,7 +1169,7 @@ export class SiaeStorage implements ISiaeStorage {
         const [newTicketRow] = await db.select({
           id: siaeTickets.id,
           ticketCode: siaeTickets.ticketCode,
-          sigilloFiscale: siaeTickets.sigilloFiscale,
+          sigilloFiscale: siaeTickets.fiscalSealCode,
           progressiveNumber: siaeTickets.progressiveNumber,
           status: siaeTickets.status,
           participantFirstName: siaeTickets.participantFirstName,
@@ -1263,7 +1263,7 @@ export class SiaeStorage implements ISiaeStorage {
       resale: siaeResales,
       originalTicketId: siaeTickets.id,
       originalTicketCode: siaeTickets.ticketCode,
-      originalSigilloFiscale: siaeTickets.sigilloFiscale,
+      originalSigilloFiscale: siaeTickets.fiscalSealCode,
       originalProgressiveNumber: siaeTickets.progressiveNumber,
       originalStatus: siaeTickets.status,
       originalParticipantFirstName: siaeTickets.participantFirstName,
@@ -1311,7 +1311,7 @@ export class SiaeStorage implements ISiaeStorage {
         const [newTicketRow] = await db.select({
           id: siaeTickets.id,
           ticketCode: siaeTickets.ticketCode,
-          sigilloFiscale: siaeTickets.sigilloFiscale,
+          sigilloFiscale: siaeTickets.fiscalSealCode,
           progressiveNumber: siaeTickets.progressiveNumber,
           status: siaeTickets.status,
           participantFirstName: siaeTickets.participantFirstName,
