@@ -1,219 +1,391 @@
-import { View, Text, ScrollView, StyleSheet, Image, TouchableOpacity, FlatList, Dimensions } from 'react-native';
-import { useQuery } from '@tanstack/react-query';
+import { useState, useEffect, useCallback } from 'react';
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  StyleSheet, 
+  TouchableOpacity, 
+  useWindowDimensions,
+  RefreshControl
+} from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
-import { Card, EventCard, Button } from '../../components';
 import { api } from '../../lib/api';
 
-const { width } = Dimensions.get('window');
-
-interface Category {
-  id: string;
-  name: string;
-  icon: string;
-  count: number;
-}
-
 interface Event {
-  id: string;
-  title: string;
-  date: string;
-  time: string;
-  location: string;
-  imageUrl?: string;
-  price?: number;
+  id: number;
+  name: string;
+  startDatetime: string;
+  endDatetime?: string;
+  location?: string;
 }
 
-const CATEGORIES: Category[] = [
-  { id: '1', name: 'Musica', icon: 'musical-notes', count: 42 },
-  { id: '2', name: 'Club', icon: 'wine', count: 28 },
-  { id: '3', name: 'Festival', icon: 'bonfire', count: 15 },
-  { id: '4', name: 'Concerti', icon: 'mic', count: 33 },
-  { id: '5', name: 'Party', icon: 'sparkles', count: 21 },
-];
+interface DashboardStats {
+  activeEvents: number;
+  ticketsSold: number;
+  todayRevenue: number;
+  nextEventName?: string;
+  nextEventDate?: string;
+}
+
+interface UserData {
+  firstName?: string;
+  lastName?: string;
+  role?: string;
+}
 
 export function HomeScreen() {
   const navigation = useNavigation<any>();
   const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
 
-  const { data: featuredEvents, isLoading: loadingFeatured } = useQuery({
-    queryKey: ['/api/events', 'featured'],
+  const [events, setEvents] = useState<Event[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
+  const [user, setUser] = useState<UserData | null>(null);
+  const [stats, setStats] = useState<DashboardStats>({
+    activeEvents: 0,
+    ticketsSold: 0,
+    todayRevenue: 0,
   });
+  const [hasBeverageAccess, setHasBeverageAccess] = useState(false);
+  const [hasScannerAccess, setHasScannerAccess] = useState(false);
 
-  const { data: upcomingEvents, isLoading: loadingUpcoming } = useQuery({
-    queryKey: ['/api/events', 'upcoming'],
-  });
+  const fetchData = useCallback(async () => {
+    try {
+      setError(null);
+      const [eventsData, userData, userFeatures] = await Promise.all([
+        api.get<Event[]>('/api/events').catch(() => []),
+        api.get<UserData>('/api/auth/user').catch(() => null),
+        api.get<any>('/api/user-features/current/my').catch(() => null),
+      ]);
+      
+      // Set feature access based on user features
+      if (userFeatures) {
+        setHasBeverageAccess(userFeatures.beverageEnabled !== false);
+        setHasScannerAccess(userFeatures.scannerEnabled !== false);
+      } else {
+        // Default to true if gestore role
+        const isGestore = userData?.role === 'gestore';
+        setHasBeverageAccess(isGestore);
+        setHasScannerAccess(isGestore);
+      }
+      
+      setEvents(eventsData || []);
+      setUser(userData);
+      
+      const now = new Date();
+      const activeEvents = eventsData?.filter((e: Event) => {
+        const startDate = new Date(e.startDatetime);
+        const endDate = e.endDatetime ? new Date(e.endDatetime) : new Date(startDate.getTime() + 24 * 60 * 60 * 1000);
+        return startDate <= now && endDate >= now;
+      }) || [];
+      
+      const futureEvents = eventsData?.filter((e: Event) => new Date(e.startDatetime) > now)
+        .sort((a: Event, b: Event) => new Date(a.startDatetime).getTime() - new Date(b.startDatetime).getTime()) || [];
+      
+      const nextEvent = futureEvents[0];
+      
+      // Calculate real stats from events data
+      const totalTicketsSold = eventsData?.reduce((sum: number, e: any) => 
+        sum + (e.ticketsSold || 0), 0) || 0;
+      const totalRevenue = eventsData?.reduce((sum: number, e: any) => 
+        sum + parseFloat(e.actualRevenue || e.revenue || '0'), 0) || 0;
+      
+      setStats({
+        activeEvents: activeEvents.length,
+        ticketsSold: totalTicketsSold,
+        todayRevenue: totalRevenue,
+        nextEventName: nextEvent?.name,
+        nextEventDate: nextEvent?.startDatetime,
+      });
+    } catch (err) {
+      setError('Errore nel caricamento dei dati');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  }, []);
 
-  const handleEventPress = (eventId: string) => {
-    navigation.navigate('EventDetail', { eventId });
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    fetchData();
+  }, [fetchData]);
+
+  const getGreeting = (): string => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Buongiorno';
+    if (hour < 18) return 'Buon pomeriggio';
+    return 'Buonasera';
   };
 
-  const handleCategoryPress = (categoryId: string) => {
-    navigation.navigate('Events', { categoryId });
+  const getInitials = (firstName?: string, lastName?: string): string => {
+    const first = firstName?.charAt(0) || '';
+    const last = lastName?.charAt(0) || '';
+    return (first + last).toUpperCase() || 'U';
+  };
+
+  const formatDate = (dateString: string): string => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('it-IT', {
+      day: 'numeric',
+      month: 'short',
+    });
+  };
+
+  const formatCurrency = (amount: number): string => {
+    return new Intl.NumberFormat('it-IT', {
+      style: 'currency',
+      currency: 'EUR',
+      minimumFractionDigits: 0,
+    }).format(amount);
+  };
+
+  const handleEventPress = (eventId: number) => {
+    navigation.navigate('EventDetail', { eventId });
   };
 
   const handleSeeAllEvents = () => {
     navigation.navigate('Events');
   };
 
-  const renderCategoryItem = ({ item }: { item: Category }) => (
-    <TouchableOpacity
-      style={styles.categoryItem}
-      onPress={() => handleCategoryPress(item.id)}
-      activeOpacity={0.8}
-      data-testid={`button-category-${item.id}`}
-    >
-      <View style={styles.categoryIcon}>
-        <Ionicons name={item.icon as any} size={24} color={colors.primary} />
+  const handleNewEvent = () => {
+    navigation.navigate('CreateEvent');
+  };
+
+  const handleScanner = () => {
+    navigation.navigate('Scanner');
+  };
+
+  const handleBeverage = () => {
+    navigation.navigate('Beverage');
+  };
+
+  const recentEvents = events.slice(0, isLandscape ? 4 : 3);
+
+  const statsGridColumns = isLandscape ? 4 : 2;
+
+  if (loading) {
+    return (
+      <ScrollView
+        style={styles.container}
+        contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + 100 }]}
+      >
+        <View style={styles.headerSkeleton}>
+          <View style={styles.avatarSkeleton} />
+          <View style={styles.headerTextSkeleton}>
+            <View style={styles.greetingSkeleton} />
+            <View style={styles.nameSkeleton} />
+          </View>
+        </View>
+        <View style={[styles.statsGrid, { flexDirection: 'row', flexWrap: 'wrap' }]}>
+          {[1, 2, 3, 4].map((i) => (
+            <View key={i} style={[styles.statCardSkeleton, { width: `${100 / statsGridColumns - 2}%` }]} />
+          ))}
+        </View>
+        <View style={styles.sectionSkeleton} />
+        {[1, 2, 3].map((i) => (
+          <View key={i} style={styles.eventCardSkeleton} />
+        ))}
+      </ScrollView>
+    );
+  }
+
+  if (error) {
+    return (
+      <View style={[styles.container, styles.centerContent, { paddingTop: insets.top }]}>
+        <Ionicons name="alert-circle-outline" size={64} color={colors.destructive} />
+        <Text style={styles.errorText}>{error}</Text>
+        <TouchableOpacity 
+          style={styles.retryButton} 
+          onPress={fetchData}
+          data-testid="button-retry"
+        >
+          <Text style={styles.retryButtonText}>Riprova</Text>
+        </TouchableOpacity>
       </View>
-      <Text style={styles.categoryName}>{item.name}</Text>
-      <Text style={styles.categoryCount}>{item.count}</Text>
-    </TouchableOpacity>
-  );
+    );
+  }
 
   return (
     <ScrollView
       style={styles.container}
-      contentContainerStyle={{ paddingBottom: insets.bottom + 80 }}
+      contentContainerStyle={[styles.scrollContent, { paddingTop: insets.top + spacing.md, paddingBottom: insets.bottom + 100 }]}
       showsVerticalScrollIndicator={false}
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={onRefresh}
+          tintColor={colors.primary}
+          colors={[colors.primary]}
+        />
+      }
     >
-      <View style={[styles.header, { paddingTop: insets.top + spacing.md }]}>
-        <View>
-          <Text style={styles.greeting}>Benvenuto</Text>
-          <Text style={styles.title}>Scopri eventi</Text>
-        </View>
-        <TouchableOpacity
-          style={styles.searchButton}
-          onPress={() => navigation.navigate('Events')}
-          data-testid="button-search"
-        >
-          <Ionicons name="search" size={24} color={colors.foreground} />
-        </TouchableOpacity>
-      </View>
-
-      <TouchableOpacity
-        style={styles.banner}
-        activeOpacity={0.9}
-        data-testid="button-banner"
-      >
-        <Image
-          source={{ uri: 'https://images.unsplash.com/photo-1492684223066-81342ee5ff30?w=800' }}
-          style={styles.bannerImage}
-        />
-        <View style={styles.bannerOverlay}>
-          <Text style={styles.bannerTag}>In Evidenza</Text>
-          <Text style={styles.bannerTitle}>Weekend Festival</Text>
-          <Text style={styles.bannerSubtitle}>15-17 Gennaio • Milano</Text>
-        </View>
-      </TouchableOpacity>
-
-      <View style={styles.section}>
-        <Text style={styles.sectionTitle}>Categorie</Text>
-        <FlatList
-          data={CATEGORIES}
-          renderItem={renderCategoryItem}
-          keyExtractor={(item) => item.id}
-          horizontal
-          showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.categoriesList}
-        />
-      </View>
-
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Eventi in Evidenza</Text>
-          <TouchableOpacity onPress={handleSeeAllEvents} data-testid="button-see-all-featured">
-            <Text style={styles.seeAll}>Vedi tutti</Text>
-          </TouchableOpacity>
-        </View>
-        {loadingFeatured ? (
-          <View style={styles.loadingContainer}>
-            {[1, 2].map((i) => (
-              <View key={i} style={styles.skeletonCard} />
-            ))}
+      <View style={styles.header}>
+        <View style={styles.headerLeft}>
+          <View style={styles.avatarContainer}>
+            <Text style={styles.avatarText}>
+              {getInitials(user?.firstName, user?.lastName)}
+            </Text>
           </View>
-        ) : (
-          ((featuredEvents as Event[]) || []).slice(0, 3).map((event) => (
-            <EventCard
-              key={event.id}
-              id={event.id}
-              title={event.title}
-              date={event.date}
-              time={event.time}
-              location={event.location}
-              imageUrl={event.imageUrl}
-              price={event.price}
-              onPress={() => handleEventPress(event.id)}
-            />
-          ))
-        )}
-        {!loadingFeatured && (!featuredEvents || (featuredEvents as Event[]).length === 0) && (
-          <Card style={styles.emptyCard}>
-            <Ionicons name="calendar-outline" size={48} color={colors.mutedForeground} />
-            <Text style={styles.emptyText}>Nessun evento in evidenza</Text>
-          </Card>
-        )}
+          <View style={styles.headerTextContainer}>
+            <Text style={styles.greeting}>{getGreeting()}</Text>
+            <Text style={styles.userName}>{user?.firstName || 'Gestore'}</Text>
+          </View>
+        </View>
+        <View style={styles.onlineStatus}>
+          <View style={styles.onlineDot} />
+          <Text style={styles.onlineText}>Online</Text>
+        </View>
+      </View>
+
+      <View style={[
+        styles.statsGrid, 
+        isLandscape && styles.statsGridLandscape
+      ]}>
+        <View style={[styles.statCard, isLandscape && styles.statCardLandscape]}>
+          <View style={[styles.statIconContainer, { backgroundColor: 'rgba(99, 102, 241, 0.2)' }]}>
+            <View style={styles.statIconGradient1}>
+              <Ionicons name="calendar-outline" size={28} color="#FFFFFF" />
+            </View>
+          </View>
+          <Text style={styles.statValue}>{stats.activeEvents}</Text>
+          <Text style={styles.statLabel}>Eventi Attivi</Text>
+        </View>
+
+        <View style={[styles.statCard, isLandscape && styles.statCardLandscape]}>
+          <View style={[styles.statIconContainer, { backgroundColor: 'rgba(245, 158, 11, 0.2)' }]}>
+            <View style={styles.statIconGradient2}>
+              <Ionicons name="ticket-outline" size={28} color="#FFFFFF" />
+            </View>
+          </View>
+          <Text style={styles.statValue}>{stats.ticketsSold}</Text>
+          <Text style={styles.statLabel}>Biglietti Venduti</Text>
+        </View>
+
+        <View style={[styles.statCard, isLandscape && styles.statCardLandscape]}>
+          <View style={[styles.statIconContainer, { backgroundColor: 'rgba(20, 184, 166, 0.2)' }]}>
+            <View style={styles.statIconGradient3}>
+              <Ionicons name="wallet-outline" size={28} color="#FFFFFF" />
+            </View>
+          </View>
+          <Text style={styles.statValue}>{formatCurrency(stats.todayRevenue)}</Text>
+          <Text style={styles.statLabel}>Incasso Oggi</Text>
+        </View>
+
+        <View style={[styles.statCard, isLandscape && styles.statCardLandscape]}>
+          <View style={[styles.statIconContainer, { backgroundColor: 'rgba(244, 63, 94, 0.2)' }]}>
+            <View style={styles.statIconGradient4}>
+              <Ionicons name="time-outline" size={28} color="#FFFFFF" />
+            </View>
+          </View>
+          <Text style={styles.statValue} numberOfLines={1}>
+            {stats.nextEventName ? formatDate(stats.nextEventDate!) : '--'}
+          </Text>
+          <Text style={styles.statLabel}>Prossimo Evento</Text>
+        </View>
       </View>
 
       <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Prossimi Eventi</Text>
-          <TouchableOpacity onPress={handleSeeAllEvents} data-testid="button-see-all-upcoming">
-            <Text style={styles.seeAll}>Vedi tutti</Text>
-          </TouchableOpacity>
-        </View>
-        <ScrollView
-          horizontal
+        <Text style={styles.sectionTitle}>Azioni Rapide</Text>
+        <ScrollView 
+          horizontal 
           showsHorizontalScrollIndicator={false}
-          contentContainerStyle={styles.horizontalScroll}
+          contentContainerStyle={styles.quickActionsContainer}
         >
-          {loadingUpcoming ? (
-            [1, 2, 3].map((i) => (
-              <View key={i} style={styles.horizontalSkeletonCard} />
-            ))
-          ) : (
-            ((upcomingEvents as Event[]) || []).slice(0, 5).map((event) => (
-              <TouchableOpacity
-                key={event.id}
-                style={styles.horizontalEventCard}
-                onPress={() => handleEventPress(event.id)}
-                activeOpacity={0.8}
-                data-testid={`button-event-${event.id}`}
-              >
-                <Image
-                  source={{ uri: event.imageUrl || 'https://images.unsplash.com/photo-1514525253161-7a46d19cd819?w=400' }}
-                  style={styles.horizontalEventImage}
-                />
-                <View style={styles.horizontalEventContent}>
-                  <Text style={styles.horizontalEventTitle} numberOfLines={2}>
-                    {event.title}
-                  </Text>
-                  <Text style={styles.horizontalEventDate}>{event.date}</Text>
-                </View>
-              </TouchableOpacity>
-            ))
+          <TouchableOpacity 
+            style={[styles.quickActionButton, styles.quickActionGradient1]}
+            onPress={handleNewEvent}
+            activeOpacity={0.8}
+            data-testid="button-new-event"
+          >
+            <View style={styles.quickActionIconContainer}>
+              <Ionicons name="add-outline" size={32} color="#FFFFFF" />
+            </View>
+            <Text style={styles.quickActionLabel}>Nuovo Evento</Text>
+          </TouchableOpacity>
+
+          {hasScannerAccess && (
+            <TouchableOpacity 
+              style={[styles.quickActionButton, styles.quickActionGradient2]}
+              onPress={handleScanner}
+              activeOpacity={0.8}
+              data-testid="button-scanner"
+            >
+              <View style={styles.quickActionIconContainer}>
+                <Ionicons name="qr-code-outline" size={32} color="#FFFFFF" />
+              </View>
+              <Text style={styles.quickActionLabel}>Scanner</Text>
+            </TouchableOpacity>
+          )}
+
+          {hasBeverageAccess && (
+            <TouchableOpacity 
+              style={[styles.quickActionButton, styles.quickActionGradient3]}
+              onPress={handleBeverage}
+              activeOpacity={0.8}
+              data-testid="button-beverage"
+            >
+              <View style={styles.quickActionIconContainer}>
+                <Ionicons name="wine-outline" size={32} color="#FFFFFF" />
+              </View>
+              <Text style={styles.quickActionLabel}>Beverage</Text>
+            </TouchableOpacity>
           )}
         </ScrollView>
       </View>
 
       <View style={styles.section}>
-        <Card style={styles.promoCard}>
-          <View style={styles.promoContent}>
-            <Ionicons name="ticket" size={32} color={colors.primary} />
-            <View style={styles.promoText}>
-              <Text style={styles.promoTitle}>Rivendita Biglietti</Text>
-              <Text style={styles.promoSubtitle}>Compra e vendi biglietti in sicurezza</Text>
-            </View>
+        <View style={styles.sectionHeader}>
+          <Text style={styles.sectionTitle}>Eventi Recenti</Text>
+          <TouchableOpacity onPress={handleSeeAllEvents} data-testid="button-see-all-events">
+            <Text style={styles.seeAllText}>Vedi tutti</Text>
+          </TouchableOpacity>
+        </View>
+
+        {recentEvents.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Ionicons name="calendar-outline" size={48} color={colors.mutedForeground} />
+            <Text style={styles.emptyStateText}>Nessun evento disponibile</Text>
           </View>
-          <Button
-            title="Esplora"
-            variant="outline"
-            size="sm"
-            onPress={() => navigation.navigate('Resales')}
-          />
-        </Card>
+        ) : (
+          <View style={[
+            styles.eventsContainer,
+            isLandscape && styles.eventsContainerLandscape
+          ]}>
+            {recentEvents.map((event) => (
+              <TouchableOpacity
+                key={event.id}
+                style={[
+                  styles.eventCard,
+                  isLandscape && styles.eventCardLandscape
+                ]}
+                onPress={() => handleEventPress(event.id)}
+                activeOpacity={0.8}
+                data-testid={`event-card-${event.id}`}
+              >
+                <View style={styles.eventIconContainer}>
+                  <Ionicons name="calendar" size={24} color={colors.primary} />
+                </View>
+                <View style={styles.eventContent}>
+                  <Text style={styles.eventName} numberOfLines={1}>{event.name}</Text>
+                  <Text style={styles.eventDate}>{formatDate(event.startDatetime)}</Text>
+                </View>
+                <View style={styles.eventChevron}>
+                  <Ionicons name="chevron-forward" size={24} color={colors.mutedForeground} />
+                </View>
+              </TouchableOpacity>
+            ))}
+          </View>
+        )}
       </View>
     </ScrollView>
   );
@@ -224,63 +396,166 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.background,
   },
+  scrollContent: {
+    paddingHorizontal: spacing.lg,
+  },
+  centerContent: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+  },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
-    paddingBottom: spacing.lg,
+    marginBottom: spacing.lg,
+  },
+  headerLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+  },
+  avatarContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.primary,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  avatarText: {
+    color: colors.primaryForeground,
+    fontSize: fontSize.lg,
+    fontWeight: fontWeight.bold,
+  },
+  headerTextContainer: {
+    gap: spacing.xs,
   },
   greeting: {
     color: colors.mutedForeground,
     fontSize: fontSize.sm,
   },
-  title: {
-    color: colors.foreground,
-    fontSize: fontSize['2xl'],
-    fontWeight: fontWeight.bold,
-  },
-  searchButton: {
-    width: 48,
-    height: 48,
-    borderRadius: borderRadius.full,
-    backgroundColor: colors.card,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  banner: {
-    marginHorizontal: spacing.lg,
-    borderRadius: borderRadius.xl,
-    overflow: 'hidden',
-    height: 180,
-    marginBottom: spacing.lg,
-  },
-  bannerImage: {
-    width: '100%',
-    height: '100%',
-  },
-  bannerOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(0,0,0,0.4)',
-    justifyContent: 'flex-end',
-    padding: spacing.lg,
-  },
-  bannerTag: {
-    color: colors.primary,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.bold,
-    textTransform: 'uppercase',
-    marginBottom: spacing.xs,
-  },
-  bannerTitle: {
+  userName: {
     color: colors.foreground,
     fontSize: fontSize.xl,
     fontWeight: fontWeight.bold,
   },
-  bannerSubtitle: {
+  onlineStatus: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: 'rgba(34, 197, 94, 0.15)',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: borderRadius.full,
+  },
+  onlineDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: colors.success,
+  },
+  onlineText: {
+    color: colors.success,
+    fontSize: fontSize.sm,
+    fontWeight: fontWeight.medium,
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  statsGridLandscape: {
+    gap: spacing.sm,
+  },
+  statCard: {
+    width: '48%',
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.xl,
+    padding: spacing.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  statCardLandscape: {
+    width: '23%',
+    padding: spacing.md,
+  },
+  statIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.md,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  statIconGradient1: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.lg,
+    backgroundColor: '#6366F1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#6366F1',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  statIconGradient2: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.lg,
+    backgroundColor: '#F59E0B',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#F59E0B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  statIconGradient3: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.lg,
+    backgroundColor: '#14B8A6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#14B8A6',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  statIconGradient4: {
+    width: 56,
+    height: 56,
+    borderRadius: borderRadius.lg,
+    backgroundColor: '#F43F5E',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#F43F5E',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.4,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  statValue: {
+    color: colors.foreground,
+    fontSize: fontSize['2xl'],
+    fontWeight: fontWeight.bold,
+    marginBottom: spacing.xs,
+  },
+  statLabel: {
     color: colors.mutedForeground,
     fontSize: fontSize.sm,
-    marginTop: spacing.xs,
   },
   section: {
     marginBottom: spacing.lg,
@@ -289,122 +564,187 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
   sectionTitle: {
     color: colors.foreground,
     fontSize: fontSize.lg,
     fontWeight: fontWeight.semibold,
-    paddingHorizontal: spacing.lg,
     marginBottom: spacing.md,
   },
-  seeAll: {
+  seeAllText: {
     color: colors.primary,
     fontSize: fontSize.sm,
     fontWeight: fontWeight.medium,
   },
-  categoriesList: {
-    paddingHorizontal: spacing.lg,
+  quickActionsContainer: {
     gap: spacing.md,
+    paddingRight: spacing.md,
   },
-  categoryItem: {
+  quickActionButton: {
+    width: 120,
+    height: 120,
+    borderRadius: borderRadius.xl,
+    padding: spacing.md,
+    justifyContent: 'center',
     alignItems: 'center',
-    width: 72,
+    gap: spacing.sm,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
   },
-  categoryIcon: {
+  quickActionGradient1: {
+    backgroundColor: '#6366F1',
+    shadowColor: '#6366F1',
+  },
+  quickActionGradient2: {
+    backgroundColor: '#F59E0B',
+    shadowColor: '#F59E0B',
+  },
+  quickActionGradient3: {
+    backgroundColor: '#8B5CF6',
+    shadowColor: '#8B5CF6',
+  },
+  quickActionIconContainer: {
     width: 56,
     height: 56,
     borderRadius: borderRadius.lg,
-    backgroundColor: colors.card,
-    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
     justifyContent: 'center',
-    marginBottom: spacing.xs,
+    alignItems: 'center',
   },
-  categoryName: {
-    color: colors.foreground,
-    fontSize: fontSize.xs,
-    fontWeight: fontWeight.medium,
-  },
-  categoryCount: {
-    color: colors.mutedForeground,
-    fontSize: fontSize.xs,
-  },
-  loadingContainer: {
-    paddingHorizontal: spacing.lg,
-    gap: spacing.md,
-  },
-  skeletonCard: {
-    height: 240,
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-  },
-  horizontalScroll: {
-    paddingHorizontal: spacing.lg,
-    gap: spacing.md,
-  },
-  horizontalSkeletonCard: {
-    width: 200,
-    height: 200,
-    backgroundColor: colors.card,
-    borderRadius: borderRadius.lg,
-  },
-  horizontalEventCard: {
-    width: 200,
-    borderRadius: borderRadius.lg,
-    backgroundColor: colors.card,
-    overflow: 'hidden',
-  },
-  horizontalEventImage: {
-    width: '100%',
-    height: 120,
-    backgroundColor: colors.muted,
-  },
-  horizontalEventContent: {
-    padding: spacing.sm,
-  },
-  horizontalEventTitle: {
-    color: colors.foreground,
+  quickActionLabel: {
+    color: '#FFFFFF',
     fontSize: fontSize.sm,
     fontWeight: fontWeight.semibold,
-    marginBottom: spacing.xs,
+    textAlign: 'center',
   },
-  horizontalEventDate: {
-    color: colors.mutedForeground,
-    fontSize: fontSize.xs,
-  },
-  emptyCard: {
-    marginHorizontal: spacing.lg,
-    alignItems: 'center',
-    paddingVertical: spacing.xl,
-  },
-  emptyText: {
-    color: colors.mutedForeground,
-    fontSize: fontSize.sm,
-    marginTop: spacing.md,
-  },
-  promoCard: {
-    marginHorizontal: spacing.lg,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  promoContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
+  eventsContainer: {
     gap: spacing.md,
-    flex: 1,
   },
-  promoText: {
-    flex: 1,
+  eventsContainerLandscape: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
   },
-  promoTitle: {
+  eventCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    padding: spacing.md,
+    borderWidth: 1,
+    borderColor: colors.border,
+    gap: spacing.md,
+  },
+  eventCardLandscape: {
+    width: '48%',
+  },
+  eventIconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: borderRadius.lg,
+    backgroundColor: 'rgba(139, 92, 246, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  eventContent: {
+    flex: 1,
+    gap: spacing.xs,
+  },
+  eventName: {
     color: colors.foreground,
     fontSize: fontSize.base,
     fontWeight: fontWeight.semibold,
   },
-  promoSubtitle: {
+  eventDate: {
     color: colors.mutedForeground,
-    fontSize: fontSize.xs,
+    fontSize: fontSize.sm,
+  },
+  eventChevron: {
+    width: 40,
+    height: 40,
+    borderRadius: borderRadius.full,
+    backgroundColor: colors.muted,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  emptyState: {
+    alignItems: 'center',
+    paddingVertical: spacing.xl,
+    backgroundColor: colors.card,
+    borderRadius: borderRadius.lg,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  emptyStateText: {
+    color: colors.mutedForeground,
+    fontSize: fontSize.sm,
+    marginTop: spacing.md,
+  },
+  errorText: {
+    color: colors.foreground,
+    fontSize: fontSize.base,
+    marginTop: spacing.md,
+    marginBottom: spacing.lg,
+    textAlign: 'center',
+  },
+  retryButton: {
+    backgroundColor: colors.primary,
+    paddingHorizontal: spacing.lg,
+    paddingVertical: spacing.md,
+    borderRadius: borderRadius.lg,
+  },
+  retryButtonText: {
+    color: colors.primaryForeground,
+    fontSize: fontSize.base,
+    fontWeight: fontWeight.semibold,
+  },
+  headerSkeleton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.md,
+    marginBottom: spacing.lg,
+  },
+  avatarSkeleton: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: colors.muted,
+  },
+  headerTextSkeleton: {
+    gap: spacing.sm,
+  },
+  greetingSkeleton: {
+    width: 80,
+    height: 16,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.muted,
+  },
+  nameSkeleton: {
+    width: 120,
+    height: 24,
+    borderRadius: borderRadius.sm,
+    backgroundColor: colors.muted,
+  },
+  statCardSkeleton: {
+    height: 140,
+    backgroundColor: colors.muted,
+    borderRadius: borderRadius.xl,
+    marginBottom: spacing.md,
+  },
+  sectionSkeleton: {
+    height: 24,
+    width: 150,
+    backgroundColor: colors.muted,
+    borderRadius: borderRadius.sm,
+    marginBottom: spacing.md,
+    marginTop: spacing.lg,
+  },
+  eventCardSkeleton: {
+    height: 80,
+    backgroundColor: colors.muted,
+    borderRadius: borderRadius.lg,
+    marginBottom: spacing.md,
   },
 });
