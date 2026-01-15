@@ -2425,23 +2425,48 @@ export function validateSiaeReportPrerequisites(data: SiaePrerequisiteData): Sia
   
   // ==================== VALIDAZIONI TITOLARE ====================
   
-  // 1. Codice Sistema (8 caratteri)
+  // 1. Codice Sistema (8 caratteri) - OBBLIGATORIO
+  // Verifica se è stato configurato esplicitamente o si sta usando il default
+  const hasConfiguredSystemCode = !!(data.smartCardData?.systemId || data.systemConfig?.systemCode);
   const sysCodeValidation = validateSystemCode(systemCode);
+  
+  // SystemCode DEVE essere configurato esplicitamente (Smart Card o config)
+  // Non è accettabile usare un default per trasmissioni RCA ufficiali
+  // - Se non configurato = error bloccante (non può procedere)
+  // - Se configurato MA non valido = error bloccante
+  // - Se configurato E valido = ok
+  let systemCodeStatus: 'ok' | 'warning' | 'error' = 'ok';
+  if (!hasConfiguredSystemCode) {
+    systemCodeStatus = 'error'; // Mancanza configurazione = bloccante
+  } else if (!sysCodeValidation.valid) {
+    systemCodeStatus = 'error'; // Valore non valido = bloccante
+  }
+  
   checklist.push({
     category: 'titolare',
     field: 'systemCode',
     label: 'Codice Sistema SIAE',
-    status: sysCodeValidation.valid ? 'ok' : 'error',
-    value: systemCode,
+    status: systemCodeStatus,
+    value: hasConfiguredSystemCode ? systemCode : 'Non configurato',
     required: true
   });
-  if (!sysCodeValidation.valid) {
+  
+  if (!hasConfiguredSystemCode) {
+    errors.push({
+      code: 'SYSTEM_CODE_NOT_CONFIGURED',
+      field: 'systemCode',
+      category: 'titolare',
+      message: 'Codice Sistema SIAE obbligatorio ma non configurato',
+      resolution: 'Connettere Smart Card per leggere il codice automaticamente, oppure configurare manualmente in Impostazioni SIAE (8 caratteri alfanumerici)',
+      siaeErrorCode: '0600'
+    });
+  } else if (!sysCodeValidation.valid) {
     errors.push({
       code: 'SYSTEM_CODE_INVALID',
       field: 'systemCode',
       category: 'titolare',
       message: sysCodeValidation.error || 'Codice Sistema non valido',
-      resolution: 'Configurare codice sistema a 8 caratteri nelle impostazioni SIAE o connettere Smart Card',
+      resolution: 'Verificare che il codice sistema sia di 8 caratteri alfanumerici',
       siaeErrorCode: '0600'
     });
   }
@@ -2654,10 +2679,12 @@ export function validateSiaeReportPrerequisites(data: SiaePrerequisiteData): Sia
       });
     }
     
-    // Incidenza Intrattenimento (obbligatoria se I)
+    // Incidenza Intrattenimento (obbligatoria se I, deve essere > 0 per generi intrattenimento)
     if (taxType === 'I') {
       const incidence = data.ticketedEvent.entertainmentIncidence;
-      const incidenceValid = incidence !== null && incidence !== undefined && incidence >= 0 && incidence <= 100;
+      // Per generi intrattenimento (30-40, 60-69) l'incidenza deve essere > 0
+      const minIncidence = rules.mustBeIntrattenimento ? 1 : 0;
+      const incidenceValid = incidence !== null && incidence !== undefined && incidence >= minIncidence && incidence <= 100;
       checklist.push({
         category: 'genere',
         field: 'entertainmentIncidence',
@@ -2671,8 +2698,12 @@ export function validateSiaeReportPrerequisites(data: SiaePrerequisiteData): Sia
           code: 'ENTERTAINMENT_INCIDENCE_MISSING',
           field: 'entertainmentIncidence',
           category: 'genere',
-          message: 'Incidenza Intrattenimento obbligatoria per Tax Type = I',
-          resolution: 'Impostare percentuale incidenza intrattenimento (0-100%)'
+          message: rules.mustBeIntrattenimento 
+            ? `Incidenza Intrattenimento obbligatoria (1-100%) per genere ${genreCode} (${rules.description})`
+            : 'Incidenza Intrattenimento obbligatoria per Tax Type = I (0-100%)',
+          resolution: rules.mustBeIntrattenimento 
+            ? 'Impostare percentuale incidenza intrattenimento maggiore di 0 (tipicamente 100% per discoteche/ballo)'
+            : 'Impostare percentuale incidenza intrattenimento (0-100%)'
         });
       }
     }
@@ -2748,22 +2779,25 @@ export function validateSiaeReportPrerequisites(data: SiaePrerequisiteData): Sia
   // ==================== VALIDAZIONI SETTORI ====================
   
   const sectors = data.sectors || [];
+  // RCA richiede almeno un settore per la struttura XML
+  const hasSectors = sectors.length > 0;
   checklist.push({
     category: 'settori',
     field: 'sectorsCount',
     label: 'Settori Configurati',
-    status: sectors.length > 0 ? 'ok' : 'warning',
+    status: hasSectors ? 'ok' : 'error',
     value: sectors.length,
-    required: false
+    required: true
   });
   
-  if (sectors.length === 0) {
-    warnings.push({
+  if (!hasSectors) {
+    errors.push({
       code: 'NO_SECTORS',
       field: 'sectors',
       category: 'settori',
-      message: 'Nessun settore configurato',
-      suggestion: 'Verrà usato settore default "UN" (Unico). Configurare settori per report più precisi.'
+      message: 'Almeno un settore obbligatorio per trasmissione RCA',
+      resolution: 'Configurare almeno un settore con codice ordine (es: UN, PL) e capienza nella sezione Settori evento',
+      siaeErrorCode: '40605'
     });
   } else {
     // Verifica ogni settore

@@ -236,6 +236,18 @@ export default function SiaeTransmissionsPage() {
   // Filter to show only closed events for RCA (events with ticketingStatus='closed')
   const eventsForRCA = ticketedEvents?.filter(e => e.status === 'closed') || [];
 
+  // Fetch validation prerequisites for selected event
+  const { data: prerequisiteValidation, isLoading: isLoadingPrerequisites } = useQuery<{
+    isReady: boolean;
+    score: number;
+    errors: Array<{ code: string; field: string; category: string; message: string; resolution: string; siaeErrorCode?: string }>;
+    warnings: Array<{ code: string; field: string; category: string; message: string; suggestion: string }>;
+    checklist: Array<{ category: string; field: string; label: string; status: string; value?: string | number | null; required: boolean }>;
+  }>({
+    queryKey: ['/api/siae/ticketed-events', selectedEventId, 'validate-prerequisites'],
+    enabled: !!selectedEventId && c1Type === 'rca',
+  });
+
   // Gmail OAuth status (system-wide, always enabled)
   const { data: gmailStatus } = useQuery<{ authorized: boolean; connected: boolean; email?: string }>({
     queryKey: ['/api/gmail/status'],
@@ -1482,6 +1494,100 @@ export default function SiaeTransmissionsPage() {
                 )}
               </div>
               
+              {/* Checklist Validazione Prerequisiti SIAE */}
+              {c1Type === 'rca' && selectedEventId && (
+                <div className="p-3 rounded-lg border">
+                  {isLoadingPrerequisites ? (
+                    <div className="flex items-center gap-2 text-muted-foreground">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Verifica prerequisiti...</span>
+                    </div>
+                  ) : prerequisiteValidation ? (
+                    <div className="space-y-3">
+                      <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          {prerequisiteValidation.isReady ? (
+                            <CheckCircle2 className="w-5 h-5 text-green-500" />
+                          ) : (
+                            <AlertTriangle className="w-5 h-5 text-amber-500" />
+                          )}
+                          <span className="font-medium text-sm">
+                            {prerequisiteValidation.isReady ? 'Pronto per trasmissione' : 'Verifica richiesta'}
+                          </span>
+                        </div>
+                        <Badge variant={prerequisiteValidation.score >= 80 ? 'default' : prerequisiteValidation.score >= 50 ? 'secondary' : 'destructive'}>
+                          {prerequisiteValidation.score}%
+                        </Badge>
+                      </div>
+                      
+                      {/* Errori bloccanti */}
+                      {prerequisiteValidation.errors.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-destructive">Errori bloccanti:</p>
+                          {prerequisiteValidation.errors.map((err, idx) => (
+                            <div key={idx} className="text-xs p-2 bg-destructive/10 rounded border border-destructive/20">
+                              <p className="font-medium">{err.message}</p>
+                              <p className="text-muted-foreground mt-1">{err.resolution}</p>
+                              {err.siaeErrorCode && (
+                                <Badge variant="outline" className="mt-1 text-[10px]">
+                                  Errore SIAE: {err.siaeErrorCode}
+                                </Badge>
+                              )}
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                      
+                      {/* Warning */}
+                      {prerequisiteValidation.warnings.length > 0 && (
+                        <div className="space-y-2">
+                          <p className="text-xs font-medium text-amber-600">Avvisi:</p>
+                          {prerequisiteValidation.warnings.slice(0, 3).map((warn, idx) => (
+                            <div key={idx} className="text-xs p-2 bg-amber-50 dark:bg-amber-950/30 rounded border border-amber-200 dark:border-amber-800">
+                              <p>{warn.message}</p>
+                              <p className="text-muted-foreground mt-1">{warn.suggestion}</p>
+                            </div>
+                          ))}
+                          {prerequisiteValidation.warnings.length > 3 && (
+                            <p className="text-xs text-muted-foreground">
+                              +{prerequisiteValidation.warnings.length - 3} altri avvisi
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      
+                      {/* Checklist compatta */}
+                      {prerequisiteValidation.isReady && prerequisiteValidation.errors.length === 0 && (
+                        <Collapsible>
+                          <CollapsibleTrigger asChild>
+                            <Button variant="ghost" size="sm" className="w-full justify-between text-xs h-7">
+                              Mostra checklist completa
+                              <ChevronDown className="w-3 h-3" />
+                            </Button>
+                          </CollapsibleTrigger>
+                          <CollapsibleContent>
+                            <div className="grid grid-cols-2 gap-1 mt-2">
+                              {prerequisiteValidation.checklist.map((item, idx) => (
+                                <div key={idx} className="flex items-center gap-1 text-[10px]">
+                                  {item.status === 'ok' ? (
+                                    <CheckCircle2 className="w-3 h-3 text-green-500" />
+                                  ) : item.status === 'warning' ? (
+                                    <AlertTriangle className="w-3 h-3 text-amber-500" />
+                                  ) : (
+                                    <X className="w-3 h-3 text-destructive" />
+                                  )}
+                                  <span className="truncate">{item.label}</span>
+                                </div>
+                              ))}
+                            </div>
+                          </CollapsibleContent>
+                        </Collapsible>
+                      )}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+              
               {/* Data/Mese di riferimento per il riepilogo */}
               <div>
                 <Label>{c1Type === 'monthly' ? 'Mese di riferimento' : c1Type === 'rca' ? 'Data Evento' : 'Data Riepilogo'}</Label>
@@ -1538,6 +1644,7 @@ export default function SiaeTransmissionsPage() {
                 }}
                 disabled={
                   (c1Type === 'rca' && !selectedEventId) || 
+                  (c1Type === 'rca' && prerequisiteValidation && !prerequisiteValidation.isReady) ||
                   !dailyDate || 
                   !dailyEmail || 
                   sendC1Mutation.isPending
@@ -2621,6 +2728,53 @@ export default function SiaeTransmissionsPage() {
               )}
             </div>
             
+            {/* Checklist Validazione Prerequisiti SIAE - Mobile */}
+            {c1Type === 'rca' && selectedEventId && (
+              <div className="p-3 rounded-lg border">
+                {isLoadingPrerequisites ? (
+                  <div className="flex items-center gap-2 text-muted-foreground">
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    <span className="text-sm">Verifica prerequisiti...</span>
+                  </div>
+                ) : prerequisiteValidation ? (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {prerequisiteValidation.isReady ? (
+                          <CheckCircle2 className="w-5 h-5 text-green-500" />
+                        ) : (
+                          <AlertTriangle className="w-5 h-5 text-amber-500" />
+                        )}
+                        <span className="font-medium text-sm">
+                          {prerequisiteValidation.isReady ? 'Pronto' : 'Verifica richiesta'}
+                        </span>
+                      </div>
+                      <Badge variant={prerequisiteValidation.score >= 80 ? 'default' : prerequisiteValidation.score >= 50 ? 'secondary' : 'destructive'}>
+                        {prerequisiteValidation.score}%
+                      </Badge>
+                    </div>
+                    
+                    {/* Errori bloccanti */}
+                    {prerequisiteValidation.errors.length > 0 && (
+                      <div className="space-y-2">
+                        <p className="text-xs font-medium text-destructive">Errori:</p>
+                        {prerequisiteValidation.errors.slice(0, 2).map((err, idx) => (
+                          <div key={idx} className="text-xs p-2 bg-destructive/10 rounded">
+                            <p className="font-medium">{err.message}</p>
+                          </div>
+                        ))}
+                        {prerequisiteValidation.errors.length > 2 && (
+                          <p className="text-xs text-muted-foreground">
+                            +{prerequisiteValidation.errors.length - 2} altri errori
+                          </p>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                ) : null}
+              </div>
+            )}
+            
             {/* Data/Mese di riferimento */}
             <div>
               <Label className="text-sm font-medium mb-2 block">{c1Type === 'monthly' ? 'Mese di riferimento' : c1Type === 'rca' ? 'Data Evento' : 'Data Riepilogo'}</Label>
@@ -2688,6 +2842,7 @@ export default function SiaeTransmissionsPage() {
               })}
               disabled={
                 (c1Type === 'rca' && !selectedEventId) || 
+                (c1Type === 'rca' && prerequisiteValidation && !prerequisiteValidation.isReady) ||
                 !dailyDate || 
                 !dailyEmail || 
                 sendC1Mutation.isPending
