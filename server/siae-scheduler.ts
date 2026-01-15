@@ -6,7 +6,7 @@ import { storage } from "./storage";
 import type { SiaeTransmissionSettings } from "@shared/schema";
 import { sendSiaeTransmissionEmail } from "./email-service";
 import { isBridgeConnected, requestXmlSignature, getCachedEfffData } from "./bridge-relay";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, mapToSiaeTipoGenere, generateRCAXml, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, type RCAParams } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, generateSiaeFileName, mapToSiaeTipoGenere, generateRCAXml, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, validateSystemCodeConsistency, type RCAParams } from './siae-utils';
 
 // Configurazione SIAE secondo Allegato B e C - Provvedimento Agenzia delle Entrate 04/03/2008
 const SIAE_TEST_MODE = process.env.SIAE_TEST_MODE === 'true';
@@ -513,6 +513,22 @@ async function sendDailyReports() {
           log(`ATTENZIONE: Firma digitale fallita, invio non firmato: ${signError.message}`);
         }
 
+        // ==================== VALIDAZIONE COERENZA CODICE SISTEMA ====================
+        // FIX 2026-01-15: Blocca invio se codice sistema XML != codice sistema nome file
+        // NOTA: Valida sempre XML originale (stringa), non il payload firmato CAdES (Buffer binario)
+        const systemCodeValidation = validateSystemCodeConsistency(xmlContent, systemCode);
+        
+        if (!systemCodeValidation.valid) {
+          log(`ERRORE evento ${ticketedEvent.id}: ${systemCodeValidation.error}`);
+          await siaeStorage.updateSiaeTransmission(transmission.id, {
+            status: 'error',
+            errorMessage: systemCodeValidation.error || 'Codice sistema non coerente',
+          });
+          continue; // Skip questo evento, procedi con il prossimo
+        }
+        log(`Evento ${ticketedEvent.id} - Coerenza codice sistema verificata: XML=${systemCodeValidation.xmlSystemCode}, filename=${systemCodeValidation.filenameSystemCode}`);
+        // ============================================================================
+
         // Invio automatico email a SIAE con nuovo formato subject
         try {
           await sendSiaeTransmissionEmail({
@@ -688,6 +704,22 @@ async function sendMonthlyReports() {
         } catch (signError: any) {
           log(`ATTENZIONE: Firma digitale report mensile fallita, invio non firmato: ${signError.message}`);
         }
+
+        // ==================== VALIDAZIONE COERENZA CODICE SISTEMA ====================
+        // FIX 2026-01-15: Blocca invio se codice sistema XML != codice sistema nome file
+        // NOTA: Valida sempre XML originale (stringa), non il payload firmato CAdES (Buffer binario)
+        const systemCodeValidationMonthly = validateSystemCodeConsistency(xmlContent, systemCode);
+        
+        if (!systemCodeValidationMonthly.valid) {
+          log(`ERRORE evento ${ticketedEvent.id}: ${systemCodeValidationMonthly.error}`);
+          await siaeStorage.updateSiaeTransmission(transmission.id, {
+            status: 'error',
+            errorMessage: systemCodeValidationMonthly.error || 'Codice sistema non coerente',
+          });
+          continue; // Skip questo evento, procedi con il prossimo
+        }
+        log(`Evento ${ticketedEvent.id} - Coerenza codice sistema mensile verificata: XML=${systemCodeValidationMonthly.xmlSystemCode}, filename=${systemCodeValidationMonthly.filenameSystemCode}`);
+        // ============================================================================
 
         // Invio automatico email a SIAE con nuovo formato subject
         try {
@@ -945,6 +977,22 @@ async function sendRCAReports() {
           log(`ATTENZIONE: Firma digitale RCA fallita, invio non firmato: ${signError.message}`);
         }
         
+        // ==================== VALIDAZIONE COERENZA CODICE SISTEMA ====================
+        // FIX 2026-01-15: Blocca invio se codice sistema XML != codice sistema nome file
+        // NOTA: Valida sempre XML originale (stringa), non il payload firmato CAdES (Buffer binario)
+        const systemCodeValidationRca = validateSystemCodeConsistency(xmlContent, systemCode);
+        
+        if (!systemCodeValidationRca.valid) {
+          log(`ERRORE evento ${ticketedEvent.id}: ${systemCodeValidationRca.error}`);
+          await siaeStorage.updateSiaeTransmission(transmission.id, {
+            status: 'error',
+            errorMessage: systemCodeValidationRca.error || 'Codice sistema non coerente',
+          });
+          continue; // Skip questo evento, procedi con il prossimo
+        }
+        log(`Evento ${ticketedEvent.id} - Coerenza codice sistema RCA verificata: XML=${systemCodeValidationRca.xmlSystemCode}, filename=${systemCodeValidationRca.filenameSystemCode}`);
+        // ============================================================================
+
         // Invio email
         try {
           await sendSiaeTransmissionEmail({

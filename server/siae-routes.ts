@@ -1,6 +1,6 @@
 // SIAE Module API Routes
 import { Router, Request, Response, NextFunction } from "express";
-import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, validateSiaeReportPrerequisites, type SiaePrerequisiteData, type SiaePrerequisiteValidation } from './siae-utils';
+import { escapeXml, formatSiaeDateCompact, formatSiaeTimeCompact, formatSiaeTimeHHMM, formatSiaeDate, formatSiaeDateTime, toCentesimi, normalizeSiaeTipoTitolo, normalizeSiaeCodiceOrdine, generateSiaeFileName, SIAE_SYSTEM_CODE_DEFAULT, SIAE_CANCELLED_STATUSES, isCancelledStatus, validateC1Report, type C1ValidationResult, generateC1LogXml, type C1LogParams, type SiaeEventForLog, type SiaeTicketForLog, generateRCAXml, type RCAParams, type RCAResult, mapToSiaeTipoGenere, parseSiaeResponseFile, type SiaeResponseParseResult, resolveSystemCode, validateSiaeReportPrerequisites, validateSystemCodeConsistency, type SiaePrerequisiteData, type SiaePrerequisiteValidation } from './siae-utils';
 import { siaeStorage } from "./siae-storage";
 import { storage } from "./storage";
 import { db } from "./db";
@@ -5795,6 +5795,27 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     };
   }
   console.log(`[SIAE-ROUTES] Coerenza XML/tipo verificata: ${transmissionType} → ${hasRCA ? 'RCA' : hasRMG ? 'RMG' : 'RPM'}`);
+  // ==========================================================================================
+  
+  // ==================== SYSTEM CODE CONSISTENCY VALIDATION (Fix SIAE Error 0600/0603) ====================
+  // FIX 2026-01-15: Usa funzione centralizzata per validazione coerenza codice sistema
+  const systemCodeValidation = validateSystemCodeConsistency(xml, preResolvedSystemCode);
+  
+  if (!systemCodeValidation.valid) {
+    console.error(`[SIAE-ROUTES] ${systemCodeValidation.error}`);
+    return {
+      success: false,
+      statusCode: 400,
+      error: systemCodeValidation.error || 'Codice sistema non coerente',
+      data: {
+        code: 'SYSTEM_CODE_MISMATCH',
+        xmlSystemCode: systemCodeValidation.xmlSystemCode,
+        filenameSystemCode: systemCodeValidation.filenameSystemCode,
+        suggestion: 'Il codice sistema deve essere identico nel nome file, nell\'attributo NomeFile XML e negli elementi SistemaEmissione/CodiceSistemaCA.'
+      }
+    };
+  }
+  console.log(`[SIAE-ROUTES] Coerenza codice sistema verificata: XML=${systemCodeValidation.xmlSystemCode}, filename=${systemCodeValidation.filenameSystemCode}`);
   // ==========================================================================================
   
   // ==================== AUTOMATIC VALIDATION ====================

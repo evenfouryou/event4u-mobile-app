@@ -3,6 +3,103 @@
  * Conforme a Allegato B e C - Provvedimento Agenzia delle Entrate 04/03/2008
  */
 
+// ==================== System Code Consistency Validation ====================
+
+export interface SystemCodeValidationResult {
+  valid: boolean;
+  xmlSystemCode: string | null;
+  filenameSystemCode: string;
+  error?: string;
+}
+
+/**
+ * Valida la coerenza del codice sistema tra XML e nome file.
+ * Previene errori SIAE 0600 ("Nome del file contenente il riepilogo sbagliato")
+ * e 0603 ("Le date dell'oggetto, del nome file, e del contenuto del riepilogo non sono coerenti").
+ * 
+ * Verifica tre elementi:
+ * 1. Elementi SistemaEmissione/CodiceSistemaCA/CodiceSistemaEmissione
+ * 2. Attributo NomeFile (per RMG/RPM)
+ * 
+ * @param xmlContent - Contenuto XML da validare
+ * @param expectedSystemCode - Codice sistema atteso (usato per nome file)
+ * @returns Oggetto con risultato validazione
+ */
+export function validateSystemCodeConsistency(
+  xmlContent: string,
+  expectedSystemCode: string
+): SystemCodeValidationResult {
+  let xmlSystemCode: string | null = null;
+  
+  // Determina tipo report e estrai codice sistema
+  const isRCA = xmlContent.includes('<RiepilogoControlloAccessi');
+  const isRMG = xmlContent.includes('<RiepilogoGiornaliero');
+  const isRPM = xmlContent.includes('<RiepilogoMensile');
+  
+  if (isRCA) {
+    // RCA: Extract CodiceSistemaCA or CodiceSistemaEmissione
+    const codiceSistemaCAMatch = xmlContent.match(/<CodiceSistemaCA>([^<]+)<\/CodiceSistemaCA>/);
+    const codiceSistemaEmissioneMatch = xmlContent.match(/<CodiceSistemaEmissione>([^<]+)<\/CodiceSistemaEmissione>/);
+    xmlSystemCode = codiceSistemaCAMatch?.[1] || codiceSistemaEmissioneMatch?.[1] || null;
+  } else if (isRMG || isRPM) {
+    // RMG/RPM: Extract SistemaEmissione
+    const sistemaEmissioneMatch = xmlContent.match(/<SistemaEmissione>([^<]+)<\/SistemaEmissione>/);
+    xmlSystemCode = sistemaEmissioneMatch?.[1] || null;
+  }
+  
+  // Se non troviamo codice sistema nell'XML, è un warning ma non un errore bloccante
+  if (!xmlSystemCode) {
+    return {
+      valid: true,
+      xmlSystemCode: null,
+      filenameSystemCode: expectedSystemCode,
+    };
+  }
+  
+  // Verifica coerenza elemento SistemaEmissione/CodiceSistemaCA
+  if (xmlSystemCode !== expectedSystemCode) {
+    return {
+      valid: false,
+      xmlSystemCode,
+      filenameSystemCode: expectedSystemCode,
+      error: `ERRORE COERENZA CODICE SISTEMA: Il codice sistema nell'XML (${xmlSystemCode}) non corrisponde a quello usato per il nome file (${expectedSystemCode}). Questo causerebbe errore SIAE 0600/0603.`,
+    };
+  }
+  
+  // Verifica anche attributo NomeFile (solo per RMG/RPM che lo supportano)
+  // Formato generato da generateSiaeAttachmentName():
+  // - RMG: RMG_yyyyMMdd_SSSSSSSS_nnn.xsi (es: RMG_20260115_EVENT4U1_001.xsi)
+  // - RPM: RPM_yyyyMM_SSSSSSSS_nnn.xsi (es: RPM_202601_EVENT4U1_001.xsi)
+  // Il codice sistema è SEMPRE nella 3a parte (parts[2]) con underscore come separatore
+  if (isRMG || isRPM) {
+    const nomeFileMatch = xmlContent.match(/NomeFile="([^"]+)"/);
+    if (nomeFileMatch) {
+      const nomeFileValue = nomeFileMatch[1];
+      const parts = nomeFileValue.split('_');
+      // parts[0] = tipo (RMG/RPM)
+      // parts[1] = data (yyyyMMdd o yyyyMM)
+      // parts[2] = codice sistema (8 caratteri)
+      // parts[3] = progressivo.estensione (nnn.xsi o nnn.xsi.p7m)
+      const nomeFileSystemCode = parts.length >= 3 ? parts[2] : null;
+      
+      if (nomeFileSystemCode && nomeFileSystemCode !== expectedSystemCode) {
+        return {
+          valid: false,
+          xmlSystemCode: nomeFileSystemCode,
+          filenameSystemCode: expectedSystemCode,
+          error: `ERRORE COERENZA ATTRIBUTO NOMEFILE: Il codice sistema nell'attributo NomeFile (${nomeFileSystemCode}) non corrisponde a quello atteso (${expectedSystemCode}). Questo causerebbe errore SIAE 0600.`,
+        };
+      }
+    }
+  }
+  
+  return {
+    valid: true,
+    xmlSystemCode,
+    filenameSystemCode: expectedSystemCode,
+  };
+}
+
 // ==================== XML Character Escaping ====================
 
 /**
