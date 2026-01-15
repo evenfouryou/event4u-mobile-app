@@ -1,0 +1,9 @@
+REPLY:
+
+ERRORE
+CODICE:      0600
+DESCRIZIONE: Nome del file contenente il riepilogo sbagliato
+DETTAGLIO:   
+
+
+

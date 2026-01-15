@@ -1,0 +1,9 @@
+REPLY:
+
+ERRORE
+CODICE:      0603
+DESCRIZIONE: Le date dell'oggetto, del nome file, e del contenuto del riepilogo non sono coerenti
+DETTAGLIO:   
+
+
+

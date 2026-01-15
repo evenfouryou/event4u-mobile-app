@@ -5572,6 +5572,13 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   // FIX 2026-01-14: Calcola il progressivo UNA SOLA VOLTA e riusa per XML e nome file
   let calculatedProgressivo: number;
   
+  // FIX 2026-01-15: Calcola il codice sistema UNA SOLA VOLTA all'inizio per coerenza
+  // Questo evita errori SIAE 0600/0603 causati da differenze tra NomeFile XML e nome file allegato
+  const { getCachedEfffData } = await import('./bridge-relay');
+  const cachedEfffData = getCachedEfffData();
+  const preResolvedSystemCode = resolveSystemCode(cachedEfffData, systemConfig);
+  console.log(`[SIAE-ROUTES] FIX 2026-01-15: Pre-resolved system code for ALL report types: ${preResolvedSystemCode}`);
+  
   if (isRCA && eventId) {
     // RCA: Use RiepilogoControlloAccessi format per DTD ControlloAccessi_v0001_20080626.dtd
     // NOTA: NON usare LogTransazione per RCA - causa errore SIAE 40605
@@ -5651,13 +5658,14 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     
     // Generate RCA XML (RiepilogoControlloAccessi format - Allegato B Provvedimento 04/03/2008)
     // NOTA: Usa generateRCAXml invece di generateC1LogXml (deprecato - causa errore SIAE 40605)
+    // FIX 2026-01-15: Usa preResolvedSystemCode per coerenza con nome file allegato (errori SIAE 0600/0603)
     const rcaResult = generateRCAXml({
       companyId,
       eventId,
       event: eventForLog,
       tickets: ticketsForLog,
       systemConfig: {
-        systemCode: systemConfig?.systemCode || SIAE_SYSTEM_CODE_DEFAULT,
+        systemCode: preResolvedSystemCode, // FIX: Usa preResolvedSystemCode invece di systemConfig.systemCode
         taxId: systemConfig?.taxId || taxId,
         businessName: systemConfig?.businessName || companyName,
       },
@@ -5724,12 +5732,9 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
     
     // FIX 2026-01-14: Genera nome file PRIMA della generazione XML per attributo NomeFile obbligatorio
     // L'attributo NomeFile deve corrispondere esattamente al nome dell'allegato email (errore SIAE 0600)
-    // FIX 2026-01-14: Usa resolveSystemCode per coerenza codice sistema in nome file, NomeFile, SistemaEmissione (errori SIAE 0600/0603)
+    // FIX 2026-01-15: Usa preResolvedSystemCode già calcolato all'inizio (non ridefinire!)
     const preReportTypeForFileName: 'giornaliero' | 'mensile' = isMonthly ? 'mensile' : 'giornaliero';
-    const { getCachedEfffData } = await import('./bridge-relay');
-    const preEfffData = getCachedEfffData();
-    const preResolvedSystemCode = resolveSystemCode(preEfffData, systemConfig);
-    console.log(`[SIAE-ROUTES] Pre-resolved system code for RMG/RPM: ${preResolvedSystemCode}`);
+    console.log(`[SIAE-ROUTES] Using pre-resolved system code for RMG/RPM: ${preResolvedSystemCode}`);
     
     const preGeneratedFileName = generateSiaeFileName(
       preReportTypeForFileName,
@@ -5884,11 +5889,11 @@ async function handleSendC1Transmission(params: SendC1Params): Promise<{
   const reportTypeForFileName: 'giornaliero' | 'mensile' | 'rca' | 'log' = 
     isRCA ? 'rca' : (isMonthly ? 'mensile' : 'giornaliero');
   const effectiveSignatureFormat = p7mBase64 ? 'cades' : (signedXmlContent ? 'xmldsig' : null);
-  // CRITICAL: Use same systemCode as XML for consistency (Allegato C SIAE)
-  // FIX 2026-01-14: Usa resolveSystemCode per coerenza codice sistema (errori SIAE 0600/0603)
-  const { getCachedEfffData: getPostSignEfffData } = await import('./bridge-relay');
-  const postSignEfffData = getPostSignEfffData();
-  const effectiveSystemCode = resolveSystemCode(postSignEfffData, systemConfig);
+  // FIX 2026-01-15: Usa lo STESSO codice sistema già calcolato prima della generazione XML!
+  // NON ricalcolare - la cache può cambiare tra le due chiamate causando errori SIAE 0600/0603
+  // Il codice sistema DEVE essere identico in: NomeFile XML, nome file allegato, SistemaEmissione
+  const effectiveSystemCode = preResolvedSystemCode;
+  console.log(`[SIAE-ROUTES] FIX 2026-01-15: Using preResolvedSystemCode for attachment filename: ${effectiveSystemCode}`);
   const generatedFileName = generateSiaeFileName(
     reportTypeForFileName, 
     effectiveReportDateForCount, 
