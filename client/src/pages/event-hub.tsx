@@ -187,6 +187,7 @@ import type {
 } from "@shared/schema";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { FloorPlanViewer } from "@/components/floor-plan-viewer";
 
 const sectorFormSchema = z.object({
   name: z.string().min(1, "Nome biglietto richiesto"),
@@ -4426,6 +4427,39 @@ export default function EventHub() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Floor Plan Viewer */}
+            {ticketedEvent && ticketedEvent.sectors && ticketedEvent.sectors.length > 0 && (
+              <Card className="mt-6">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <MapPin className="h-5 w-5" />
+                    Planimetria Interattiva
+                  </CardTitle>
+                  <CardDescription>
+                    Visualizza e collega i settori alla planimetria del locale
+                  </CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <FloorPlanViewer
+                    eventId={id || ''}
+                    ticketedEventId={ticketedEvent.id}
+                    sectors={ticketedEvent.sectors.map((s: any) => ({
+                      id: s.id,
+                      name: s.name,
+                      sectorCode: s.sectorCode,
+                      capacity: s.capacity,
+                      ticketType: 'intero',
+                      isNumbered: s.isNumbered,
+                      floorPlanZoneId: s.floorPlanZoneId || null,
+                    }))}
+                    onSectorLinked={() => {
+                      queryClient.invalidateQueries({ queryKey: ['/api/siae/events', id, 'sectors'] });
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           {/* Cashiers Tab */}
@@ -8811,6 +8845,36 @@ export default function EventHub() {
                 )}
               </CardContent>
             </Card>
+
+            {/* Floor Plan Viewer - Mobile */}
+            {ticketedEvent && ticketedEvent.sectors && ticketedEvent.sectors.length > 0 && (
+              <Card className="glass-card mt-4">
+                <CardHeader className="px-4">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    Planimetria
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="px-4">
+                  <FloorPlanViewer
+                    eventId={id || ''}
+                    ticketedEventId={ticketedEvent.id}
+                    sectors={ticketedEvent.sectors.map((s: any) => ({
+                      id: s.id,
+                      name: s.name,
+                      sectorCode: s.sectorCode,
+                      capacity: s.capacity,
+                      ticketType: 'intero',
+                      isNumbered: s.isNumbered,
+                      floorPlanZoneId: s.floorPlanZoneId || null,
+                    }))}
+                    onSectorLinked={() => {
+                      queryClient.invalidateQueries({ queryKey: ['/api/siae/events', id, 'sectors'] });
+                    }}
+                  />
+                </CardContent>
+              </Card>
+            )}
           </TabsContent>
 
           <TabsContent value="cashiers">

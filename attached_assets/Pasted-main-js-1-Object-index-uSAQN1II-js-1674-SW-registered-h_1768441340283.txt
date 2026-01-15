@@ -1,0 +1,50 @@
+main.js:1 Object
+index-uSAQN1II.js:1674 SW registered: https://manage.eventfouryou.com/
+installHook.js:1 Error generating QR code: Error: Invalid hex color: transparent
+    at s (index-uSAQN1II.js:1573:788)
+    at t.getOptions (index-uSAQN1II.js:1573:1324)
+    at t.render (index-uSAQN1II.js:1573:2356)
+    at t.renderToDataURL (index-uSAQN1II.js:1573:2639)
+    at index-uSAQN1II.js:1574:591
+    at new Promise (<anonymous>)
+    at mz (index-uSAQN1II.js:1574:536)
+    at index-uSAQN1II.js:1574:41729
+    at B_ (index-uSAQN1II.js:40:24328)
+    at dy (index-uSAQN1II.js:40:42530)
+overrideMethod @ installHook.js:1
+installHook.js:1 Error generating QR code: Error: Invalid hex color: transparent
+    at s (index-uSAQN1II.js:1573:788)
+    at t.getOptions (index-uSAQN1II.js:1573:1324)
+    at t.render (index-uSAQN1II.js:1573:2356)
+    at t.renderToDataURL (index-uSAQN1II.js:1573:2639)
+    at index-uSAQN1II.js:1574:591
+    at new Promise (<anonymous>)
+    at mz (index-uSAQN1II.js:1574:536)
+    at index-uSAQN1II.js:1574:52546
+    at B_ (index-uSAQN1II.js:40:24328)
+    at dy (index-uSAQN1II.js:40:42530)
+overrideMethod @ installHook.js:1
+installHook.js:1 Error generating QR code: Error: Invalid hex color: transparent
+    at s (index-uSAQN1II.js:1573:788)
+    at t.getOptions (index-uSAQN1II.js:1573:1324)
+    at t.render (index-uSAQN1II.js:1573:2356)
+    at t.renderToDataURL (index-uSAQN1II.js:1573:2639)
+    at index-uSAQN1II.js:1574:591
+    at new Promise (<anonymous>)
+    at mz (index-uSAQN1II.js:1574:536)
+    at index-uSAQN1II.js:1574:41729
+    at B_ (index-uSAQN1II.js:40:24328)
+    at dy (index-uSAQN1II.js:40:42530)
+overrideMethod @ installHook.js:1
+installHook.js:1 Error generating QR code: Error: Invalid hex color: transparent
+    at s (index-uSAQN1II.js:1573:788)
+    at t.getOptions (index-uSAQN1II.js:1573:1324)
+    at t.render (index-uSAQN1II.js:1573:2356)
+    at t.renderToDataURL (index-uSAQN1II.js:1573:2639)
+    at index-uSAQN1II.js:1574:591
+    at new Promise (<anonymous>)
+    at mz (index-uSAQN1II.js:1574:536)
+    at index-uSAQN1II.js:1574:52546
+    at B_ (index-uSAQN1II.js:40:24328)
+    at dy (index-uSAQN1II.js:40:42530)
+overrideMethod @ installHook.js:1
