@@ -4210,7 +4210,7 @@ export default function EventHub() {
                       <Badge variant="secondary">{resales.length}</Badge>
                     </CardTitle>
                     <CardDescription>
-                      Elenco dei biglietti messi in rivendita
+                      Elenco dei biglietti messi in rivendita con tracciamento completo
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -4226,64 +4226,98 @@ export default function EventHub() {
                         <p>Nessun biglietto in rivendita</p>
                       </div>
                     ) : (
-                      <Table>
-                        <TableHeader>
-                          <TableRow>
-                            <TableHead>Data</TableHead>
-                            <TableHead>Biglietto</TableHead>
-                            <TableHead>Prezzo Orig.</TableHead>
-                            <TableHead>Prezzo Riv.</TableHead>
-                            <TableHead>Causale</TableHead>
-                            <TableHead>Venditore</TableHead>
-                            <TableHead>Stato</TableHead>
-                          </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                          {resales.map((resale) => (
-                            <TableRow key={resale.id} data-testid={`row-resale-tab-${resale.id}`}>
-                              <TableCell className="text-sm">
-                                {resale.listedAt ? format(new Date(resale.listedAt), 'dd/MM/yyyy', { locale: it }) : '-'}
-                              </TableCell>
-                              <TableCell className="font-mono text-xs">
-                                {resale.originalTicketId?.substring(0, 8)}...
-                              </TableCell>
-                              <TableCell>€{Number(resale.originalPrice || 0).toFixed(2)}</TableCell>
-                              <TableCell>€{Number(resale.resalePrice || 0).toFixed(2)}</TableCell>
-                              <TableCell>
-                                <Badge variant="outline">
-                                  {resale.causaleRivendita === 'IMP' ? 'Impedimento' :
-                                   resale.causaleRivendita === 'RIN' ? 'Rinuncia' :
-                                   resale.causaleRivendita === 'ERR' ? 'Errore' : 'Altro'}
-                                </Badge>
-                              </TableCell>
-                              <TableCell>
-                                {resale.venditoreVerificato ? (
-                                  <Badge variant="default" className="gap-1">
-                                    <CheckCircle2 className="h-3 w-3" />
-                                    Verificato
-                                  </Badge>
-                                ) : (
-                                  <Badge variant="secondary">Non verificato</Badge>
-                                )}
-                              </TableCell>
-                              <TableCell>
+                      <div className="space-y-4">
+                        {resales.map((resale: any) => (
+                          <div key={resale.id} className="border rounded-lg p-4 space-y-3" data-testid={`card-resale-tab-${resale.id}`}>
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
                                 <Badge variant={
-                                  resale.status === 'sold' ? 'default' :
-                                  resale.status === 'cancelled' ? 'destructive' :
-                                  resale.status === 'expired' ? 'outline' :
-                                  resale.status === 'rejected' ? 'destructive' : 'secondary'
+                                  resale.status === 'sold' || resale.status === 'fulfilled' ? 'default' :
+                                  resale.status === 'cancelled' || resale.status === 'rejected' ? 'destructive' :
+                                  resale.status === 'expired' ? 'outline' : 'secondary'
                                 }>
-                                  {resale.status === 'sold' ? 'Venduto' :
+                                  {resale.status === 'sold' || resale.status === 'fulfilled' ? 'Venduto' :
                                    resale.status === 'cancelled' ? 'Annullato' :
                                    resale.status === 'expired' ? 'Scaduto' :
                                    resale.status === 'listed' ? 'In Vendita' :
+                                   resale.status === 'reserved' ? 'Prenotato' :
                                    resale.status === 'rejected' ? 'Rifiutato' : resale.status}
                                 </Badge>
-                              </TableCell>
-                            </TableRow>
-                          ))}
-                        </TableBody>
-                      </Table>
+                                <Badge variant="outline">
+                                  {resale.causaleRivendita === 'IMP' ? 'Impedimento' :
+                                   resale.causaleRivendita === 'RIN' ? 'Rinuncia' :
+                                   resale.causaleRivendita === 'VOL' ? 'Volontaria' :
+                                   resale.causaleRivendita === 'ERR' ? 'Errore' : 'Altro'}
+                                </Badge>
+                                <span className="text-sm text-muted-foreground">
+                                  {resale.listedAt ? format(new Date(resale.listedAt), 'dd/MM/yyyy HH:mm', { locale: it }) : '-'}
+                                </span>
+                              </div>
+                              <div className="flex items-center gap-2 text-sm">
+                                <span className="text-muted-foreground">Prezzo:</span>
+                                <span className="line-through text-muted-foreground">€{Number(resale.originalPrice || 0).toFixed(2)}</span>
+                                <ArrowRight className="h-4 w-4 text-muted-foreground" />
+                                <span className="font-bold text-green-600">€{Number(resale.resalePrice || 0).toFixed(2)}</span>
+                              </div>
+                            </div>
+                            
+                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 items-center">
+                              {/* Venditore + Biglietto Originale */}
+                              <div className="p-3 border rounded-lg bg-red-50 dark:bg-red-950/30 border-red-200 dark:border-red-800">
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant="destructive" className="text-xs">VENDITORE</Badge>
+                                  {resale.venditoreVerificato && (
+                                    <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                                      Verificato
+                                    </Badge>
+                                  )}
+                                </div>
+                                <div className="space-y-1 text-sm">
+                                  <p><span className="text-muted-foreground">Nome:</span> <span className="font-medium">{resale.seller?.firstName || resale.originalTicket?.participantFirstName || '-'} {resale.seller?.lastName || resale.originalTicket?.participantLastName || ''}</span></p>
+                                  <p><span className="text-muted-foreground">Prog.:</span> <span className="font-mono line-through">{resale.originalTicket?.progressiveNumber || '-'}</span></p>
+                                  <p><span className="text-muted-foreground">Sigillo:</span> <span className="font-mono text-xs line-through">{resale.originalTicket?.sigilloFiscale || 'N/D'}</span></p>
+                                </div>
+                              </div>
+                              
+                              <div className="flex justify-center">
+                                <div className="flex items-center gap-2 text-muted-foreground">
+                                  <ArrowRight className="h-6 w-6" />
+                                </div>
+                              </div>
+                              
+                              {/* Acquirente + Nuovo Biglietto */}
+                              <div className={`p-3 border rounded-lg ${resale.buyer || resale.newTicket ? 'bg-green-50 dark:bg-green-950/30 border-green-200 dark:border-green-800' : 'bg-muted/50 border-dashed'}`}>
+                                <div className="flex items-center gap-2 mb-2">
+                                  <Badge variant={resale.buyer ? 'default' : 'secondary'} className="text-xs">ACQUIRENTE</Badge>
+                                  {resale.acquirenteVerificato && (
+                                    <Badge variant="outline" className="text-xs text-green-600 border-green-600">
+                                      <CheckCircle2 className="h-3 w-3 mr-1" />
+                                      Verificato
+                                    </Badge>
+                                  )}
+                                </div>
+                                {resale.buyer || resale.newTicket ? (
+                                  <div className="space-y-1 text-sm">
+                                    <p><span className="text-muted-foreground">Nome:</span> <span className="font-medium">{resale.buyer?.firstName || resale.newTicket?.participantFirstName || '-'} {resale.buyer?.lastName || resale.newTicket?.participantLastName || ''}</span></p>
+                                    <p><span className="text-muted-foreground">Prog.:</span> <span className="font-mono font-bold">{resale.newTicket?.progressiveNumber || '-'}</span></p>
+                                    <p><span className="text-muted-foreground">Sigillo:</span> <span className="font-mono text-xs">{resale.newTicket?.sigilloFiscale || 'N/D'}</span></p>
+                                  </div>
+                                ) : (
+                                  <p className="text-sm text-muted-foreground italic">In attesa di acquirente</p>
+                                )}
+                              </div>
+                            </div>
+                            
+                            {(resale.soldAt || resale.paidAt || resale.fulfilledAt) && (
+                              <div className="flex items-center justify-between pt-2 border-t text-sm text-muted-foreground">
+                                {resale.paidAt && <span>Pagato il {format(new Date(resale.paidAt), 'dd/MM/yyyy HH:mm', { locale: it })}</span>}
+                                {resale.fulfilledAt && <span>Completato il {format(new Date(resale.fulfilledAt), 'dd/MM/yyyy HH:mm', { locale: it })}</span>}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
                     )}
                   </CardContent>
                 </Card>
