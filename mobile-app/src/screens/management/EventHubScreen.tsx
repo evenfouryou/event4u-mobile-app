@@ -106,6 +106,33 @@ export function EventHubScreen() {
   const [errorNameChanges, setErrorNameChanges] = useState<string | null>(null);
   const [errorResales, setErrorResales] = useState<string | null>(null);
 
+  const [eventData, setEventData] = useState<any>(null);
+  const [operationalStats, setOperationalStats] = useState<any>(null);
+  const [loadingEvent, setLoadingEvent] = useState(false);
+  const [errorEvent, setErrorEvent] = useState<string | null>(null);
+
+  const [ticketTypes, setTicketTypes] = useState<any[]>([]);
+  const [loadingTickets, setLoadingTickets] = useState(false);
+  const [errorTickets, setErrorTickets] = useState<string | null>(null);
+
+  const [guestLists, setGuestLists] = useState<GuestListEntry[]>([]);
+  const [loadingLists, setLoadingLists] = useState(false);
+  const [errorLists, setErrorLists] = useState<string | null>(null);
+
+  const [staffMembers, setStaffMembers] = useState<StaffMember[]>([]);
+  const [loadingStaff, setLoadingStaff] = useState(false);
+  const [errorStaff, setErrorStaff] = useState<string | null>(null);
+
+  const [revenueData, setRevenueData] = useState<any>(null);
+  const [loadingRevenue, setLoadingRevenue] = useState(false);
+  const [errorRevenue, setErrorRevenue] = useState<string | null>(null);
+
+  const [reloadOverview, setReloadOverview] = useState(0);
+  const [reloadTickets, setReloadTickets] = useState(0);
+  const [reloadLists, setReloadLists] = useState(0);
+  const [reloadStaff, setReloadStaff] = useState(0);
+  const [reloadRevenue, setReloadRevenue] = useState(0);
+
   const eventId = route.params?.eventId || '1';
 
   // Reset data when eventId changes
@@ -114,7 +141,166 @@ export function EventHubScreen() {
     setResales([]);
     setErrorNameChanges(null);
     setErrorResales(null);
+    setEventData(null);
+    setOperationalStats(null);
+    setErrorEvent(null);
+    setTicketTypes([]);
+    setErrorTickets(null);
+    setGuestLists([]);
+    setErrorLists(null);
+    setStaffMembers([]);
+    setErrorStaff(null);
+    setRevenueData(null);
+    setErrorRevenue(null);
+    setReloadOverview(0);
+    setReloadTickets(0);
+    setReloadLists(0);
+    setReloadStaff(0);
+    setReloadRevenue(0);
   }, [eventId]);
+
+  // Load event data on mount
+  useEffect(() => {
+    const loadEventData = async () => {
+      setLoadingEvent(true);
+      setErrorEvent(null);
+      try {
+        const [eventRes, statsRes] = await Promise.all([
+          fetch(`/api/events/${eventId}`, { credentials: 'include' }),
+          fetch(`/api/events/${eventId}/operational-stats`, { credentials: 'include' }),
+        ]);
+        if (eventRes.ok) {
+          const event = await eventRes.json();
+          setEventData(event);
+        } else {
+          setErrorEvent('Errore nel caricamento evento');
+        }
+        if (statsRes.ok) {
+          const stats = await statsRes.json();
+          setOperationalStats(stats);
+        }
+      } catch (e) {
+        console.error(e);
+        setErrorEvent('Errore di connessione');
+      }
+      setLoadingEvent(false);
+    };
+    loadEventData();
+  }, [eventId, reloadOverview]);
+
+  // Load ticket types when tickets tab is active
+  useEffect(() => {
+    if (activeTab !== 'tickets') return;
+    
+    const loadTicketTypes = async () => {
+      setLoadingTickets(true);
+      setErrorTickets(null);
+      try {
+        const response = await fetch(`/api/siae/ticketed-events/${eventId}/ticket-stats`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setTicketTypes(data);
+        } else {
+          setErrorTickets('Errore nel caricamento');
+        }
+      } catch (e) {
+        setErrorTickets('Errore di connessione');
+      }
+      setLoadingTickets(false);
+    };
+    loadTicketTypes();
+  }, [activeTab, eventId, reloadTickets]);
+
+  // Load guest lists when lists tab is active
+  useEffect(() => {
+    if (activeTab !== 'lists') return;
+    
+    const loadGuestLists = async () => {
+      setLoadingLists(true);
+      setErrorLists(null);
+      try {
+        const response = await fetch(`/api/pr/events/${eventId}/guest-lists`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const mapped = data.map((gl: any) => ({
+            id: gl.id,
+            name: gl.name || gl.guestName || 'Lista',
+            guests: gl.totalGuests || gl.guests || 0,
+            status: gl.status || 'pending',
+            prName: gl.prName || gl.assignedPrName || 'N/A',
+          }));
+          setGuestLists(mapped);
+        } else {
+          setErrorLists('Errore nel caricamento');
+        }
+      } catch (e) {
+        setErrorLists('Errore di connessione');
+      }
+      setLoadingLists(false);
+    };
+    loadGuestLists();
+  }, [activeTab, eventId, reloadLists]);
+
+  // Load staff when staff tab is active
+  useEffect(() => {
+    if (activeTab !== 'staff') return;
+    
+    const loadStaff = async () => {
+      setLoadingStaff(true);
+      setErrorStaff(null);
+      try {
+        const response = await fetch(`/api/events/${eventId}/pr-assignments`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          const mapped = data.map((s: any) => ({
+            id: s.id,
+            name: s.userName || s.name || 'Staff',
+            role: s.role || s.assignmentType || 'Staff',
+            status: s.status || 'active',
+            checkInTime: s.checkInTime || null,
+          }));
+          setStaffMembers(mapped);
+        } else {
+          setErrorStaff('Errore nel caricamento');
+        }
+      } catch (e) {
+        setErrorStaff('Errore di connessione');
+      }
+      setLoadingStaff(false);
+    };
+    loadStaff();
+  }, [activeTab, eventId, reloadStaff]);
+
+  // Load revenue data when revenue tab is active
+  useEffect(() => {
+    if (activeTab !== 'revenue') return;
+    
+    const loadRevenue = async () => {
+      setLoadingRevenue(true);
+      setErrorRevenue(null);
+      try {
+        const response = await fetch(`/api/events/${eventId}/revenue-analysis`, {
+          credentials: 'include',
+        });
+        if (response.ok) {
+          const data = await response.json();
+          setRevenueData(data);
+        } else {
+          setErrorRevenue('Errore nel caricamento');
+        }
+      } catch (e) {
+        setErrorRevenue('Errore di connessione');
+      }
+      setLoadingRevenue(false);
+    };
+    loadRevenue();
+  }, [activeTab, eventId, reloadRevenue]);
 
   // Fetch name changes
   useEffect(() => {
@@ -166,50 +352,54 @@ export function EventHubScreen() {
     loadResales();
   }, [activeTab, eventId]);
 
-  const eventData = {
-    id: eventId,
-    name: 'Festival Notte d\'Estate',
-    date: '14 Gennaio 2026',
-    time: '22:00 - 04:00',
-    venue: 'Arena Milano',
-    status: 'live' as const,
-    totalRevenue: '€ 13.500',
-    ticketsSold: 450,
-    totalTickets: 500,
-    guestsCheckedIn: 280,
-    staffOnDuty: 12,
+  // Helper functions for computed values
+  const getEventName = () => eventData?.name || 'Caricamento...';
+  const getEventDate = () => {
+    if (!eventData?.startDate) return '--';
+    const date = new Date(eventData.startDate);
+    return date.toLocaleDateString('it-IT', { day: 'numeric', month: 'long', year: 'numeric' });
   };
+  const getEventTime = () => {
+    if (!eventData?.startDate) return '';
+    const start = new Date(eventData.startDate);
+    const end = eventData.endDate ? new Date(eventData.endDate) : null;
+    const startTime = start.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' });
+    const endTime = end ? end.toLocaleTimeString('it-IT', { hour: '2-digit', minute: '2-digit' }) : '';
+    return endTime ? `${startTime} - ${endTime}` : startTime;
+  };
+  const getEventVenue = () => eventData?.venue || eventData?.locationName || '--';
+  const getEventStatus = () => eventData?.status || 'pending';
+  const getTicketsSold = () => operationalStats?.ticketsSold ?? eventData?.ticketsSold ?? 0;
+  const getTotalTickets = () => operationalStats?.totalTickets ?? eventData?.totalTickets ?? 0;
+  const getTotalRevenue = () => {
+    const revenue = operationalStats?.totalRevenue ?? eventData?.totalRevenue ?? 0;
+    return typeof revenue === 'number' ? `€ ${revenue.toLocaleString('it-IT')}` : revenue;
+  };
+  const getGuestsCheckedIn = () => operationalStats?.guestsCheckedIn ?? 0;
+  const getStaffOnDuty = () => operationalStats?.staffOnDuty ?? staffMembers.filter(s => s.status === 'active').length;
 
-  const ticketTypes: TicketType[] = [
-    { id: '1', name: 'Standard', price: '€ 25', sold: 280, total: 300, revenue: '€ 7.000' },
-    { id: '2', name: 'VIP', price: '€ 50', sold: 120, total: 150, revenue: '€ 6.000' },
-    { id: '3', name: 'Tavolo', price: '€ 200', sold: 25, total: 30, revenue: '€ 5.000' },
-    { id: '4', name: 'Early Bird', price: '€ 20', sold: 25, total: 20, revenue: '€ 500' },
-  ];
-
-  const guestLists: GuestListEntry[] = [
-    { id: '1', name: 'Marco Rossi', guests: 4, status: 'checked-in', prName: 'Giulia PR' },
-    { id: '2', name: 'Anna Bianchi', guests: 2, status: 'confirmed', prName: 'Giulia PR' },
-    { id: '3', name: 'Luca Verdi', guests: 6, status: 'pending', prName: 'Andrea PR' },
-    { id: '4', name: 'Sara Neri', guests: 3, status: 'checked-in', prName: 'Marco PR' },
-    { id: '5', name: 'Paolo Gialli', guests: 5, status: 'confirmed', prName: 'Andrea PR' },
-  ];
-
-  const staffMembers: StaffMember[] = [
-    { id: '1', name: 'Giulia Rossi', role: 'PR Manager', status: 'active', checkInTime: '21:45' },
-    { id: '2', name: 'Andrea Bianchi', role: 'PR', status: 'active', checkInTime: '21:50' },
-    { id: '3', name: 'Marco Verdi', role: 'PR', status: 'active', checkInTime: '21:55' },
-    { id: '4', name: 'Laura Neri', role: 'Cassiere', status: 'active', checkInTime: '21:30' },
-    { id: '5', name: 'Fabio Gialli', role: 'Scanner', status: 'break', checkInTime: '21:45' },
-    { id: '6', name: 'Elena Blu', role: 'Scanner', status: 'active', checkInTime: '21:40' },
-  ];
-
-  const revenueBreakdown = [
-    { label: 'Biglietti', value: '€ 18.500', percentage: 68, color: colors.primary },
-    { label: 'Tavoli', value: '€ 5.000', percentage: 18, color: colors.accent },
-    { label: 'Bevande', value: '€ 3.200', percentage: 12, color: colors.success },
-    { label: 'Altro', value: '€ 540', percentage: 2, color: colors.warning },
-  ];
+  // Revenue breakdown from API data
+  const getRevenueBreakdown = () => {
+    if (!revenueData?.breakdown) {
+      return [];
+    }
+    const colorMap: Record<string, string> = {
+      'tickets': colors.primary,
+      'biglietti': colors.primary,
+      'tables': colors.accent,
+      'tavoli': colors.accent,
+      'drinks': colors.success,
+      'bevande': colors.success,
+      'other': colors.warning,
+      'altro': colors.warning,
+    };
+    return revenueData.breakdown.map((item: any) => ({
+      label: item.label || item.category,
+      value: typeof item.value === 'number' ? `€ ${item.value.toLocaleString('it-IT')}` : item.value,
+      percentage: item.percentage || 0,
+      color: colorMap[item.category?.toLowerCase()] || colors.mutedForeground,
+    }));
+  };
 
   const getStatusColor = (status: string) => {
     switch (status) {
@@ -252,25 +442,53 @@ export function EventHubScreen() {
     </TouchableOpacity>
   );
 
-  const renderOverviewTab = () => (
+  const renderOverviewTab = () => {
+    if (loadingEvent) {
+      return (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Caricamento...</Text>
+        </View>
+      );
+    }
+
+    if (errorEvent) {
+      return (
+        <Card style={styles.emptyCard}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
+          <Text style={styles.errorText}>{errorEvent}</Text>
+          <Button
+            title="Riprova"
+            variant="primary"
+            onPress={() => setReloadOverview(prev => prev + 1)}
+            style={styles.retryButton}
+          />
+        </Card>
+      );
+    }
+
+    const statusLabel = getEventStatus() === 'live' ? 'In Corso' : 
+                        getEventStatus() === 'upcoming' ? 'Prossimo' : 
+                        getEventStatus() === 'completed' ? 'Concluso' : 'Bozza';
+
+    return (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       <Card style={styles.eventInfoCard} variant="elevated">
         <View style={styles.eventHeader}>
           <View>
-            <Text style={styles.eventName}>{eventData.name}</Text>
+            <Text style={styles.eventName}>{getEventName()}</Text>
             <View style={styles.eventMeta}>
               <Ionicons name="calendar-outline" size={14} color={colors.mutedForeground} />
-              <Text style={styles.eventMetaText}>{eventData.date} • {eventData.time}</Text>
+              <Text style={styles.eventMetaText}>{getEventDate()} • {getEventTime()}</Text>
             </View>
             <View style={styles.eventMeta}>
               <Ionicons name="location-outline" size={14} color={colors.mutedForeground} />
-              <Text style={styles.eventMetaText}>{eventData.venue}</Text>
+              <Text style={styles.eventMetaText}>{getEventVenue()}</Text>
             </View>
           </View>
-          <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(eventData.status)}20` }]}>
-            <View style={[styles.liveDot, { backgroundColor: getStatusColor(eventData.status) }]} />
-            <Text style={[styles.statusText, { color: getStatusColor(eventData.status) }]}>
-              In Corso
+          <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(getEventStatus())}20` }]}>
+            <View style={[styles.liveDot, { backgroundColor: getStatusColor(getEventStatus()) }]} />
+            <Text style={[styles.statusText, { color: getStatusColor(getEventStatus()) }]}>
+              {statusLabel}
             </Text>
           </View>
         </View>
@@ -279,22 +497,22 @@ export function EventHubScreen() {
       <View style={styles.statsGrid}>
         <Card style={styles.statCard}>
           <Ionicons name="wallet-outline" size={24} color={colors.primary} />
-          <Text style={styles.statValue}>{eventData.totalRevenue}</Text>
+          <Text style={styles.statValue}>{getTotalRevenue()}</Text>
           <Text style={styles.statLabel}>Incasso Totale</Text>
         </Card>
         <Card style={styles.statCard}>
           <Ionicons name="ticket-outline" size={24} color={colors.success} />
-          <Text style={styles.statValue}>{eventData.ticketsSold}/{eventData.totalTickets}</Text>
+          <Text style={styles.statValue}>{getTicketsSold()}/{getTotalTickets()}</Text>
           <Text style={styles.statLabel}>Biglietti</Text>
         </Card>
         <Card style={styles.statCard}>
           <Ionicons name="people-outline" size={24} color={colors.accent} />
-          <Text style={styles.statValue}>{eventData.guestsCheckedIn}</Text>
+          <Text style={styles.statValue}>{getGuestsCheckedIn()}</Text>
           <Text style={styles.statLabel}>Check-in</Text>
         </Card>
         <Card style={styles.statCard}>
           <Ionicons name="person-outline" size={24} color={colors.warning} />
-          <Text style={styles.statValue}>{eventData.staffOnDuty}</Text>
+          <Text style={styles.statValue}>{getStaffOnDuty()}</Text>
           <Text style={styles.statLabel}>Staff Attivo</Text>
         </Card>
       </View>
@@ -357,61 +575,104 @@ export function EventHubScreen() {
       </View>
     </ScrollView>
   );
+  };
 
-  const renderTicketsTab = () => (
+  const renderTicketsTab = () => {
+    if (loadingTickets) {
+      return (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Caricamento...</Text>
+        </View>
+      );
+    }
+
+    if (errorTickets) {
+      return (
+        <Card style={styles.emptyCard}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
+          <Text style={styles.errorText}>{errorTickets}</Text>
+          <Button
+            title="Riprova"
+            variant="primary"
+            onPress={() => setReloadTickets(prev => prev + 1)}
+            style={styles.retryButton}
+          />
+        </Card>
+      );
+    }
+
+    const totalSold = ticketTypes.reduce((sum, t) => sum + (t.sold || 0), 0);
+    const totalAvailable = ticketTypes.reduce((sum, t) => sum + ((t.total || 0) - (t.sold || 0)), 0);
+
+    return (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       <Card style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>Riepilogo Biglietti</Text>
         <View style={styles.summaryStats}>
           <View style={styles.summaryStat}>
-            <Text style={styles.summaryValue}>{eventData.ticketsSold}</Text>
+            <Text style={styles.summaryValue}>{getTicketsSold()}</Text>
             <Text style={styles.summaryLabel}>Venduti</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryStat}>
-            <Text style={styles.summaryValue}>{eventData.totalTickets - eventData.ticketsSold}</Text>
+            <Text style={styles.summaryValue}>{getTotalTickets() - getTicketsSold()}</Text>
             <Text style={styles.summaryLabel}>Disponibili</Text>
           </View>
           <View style={styles.summaryDivider} />
           <View style={styles.summaryStat}>
-            <Text style={[styles.summaryValue, { color: colors.primary }]}>{eventData.totalRevenue}</Text>
+            <Text style={[styles.summaryValue, { color: colors.primary }]}>{getTotalRevenue()}</Text>
             <Text style={styles.summaryLabel}>Incasso</Text>
           </View>
         </View>
       </Card>
 
-      {ticketTypes.map((ticket) => (
-        <Card key={ticket.id} style={styles.ticketCard}>
-          <View style={styles.ticketHeader}>
-            <View>
-              <Text style={styles.ticketName}>{ticket.name}</Text>
-              <Text style={styles.ticketPrice}>{ticket.price}</Text>
-            </View>
-            <Text style={styles.ticketRevenue}>{ticket.revenue}</Text>
-          </View>
-          <View style={styles.ticketProgress}>
-            <View style={styles.progressHeader}>
-              <Text style={styles.progressLabel}>Venduti: {ticket.sold}/{ticket.total}</Text>
-              <Text style={styles.progressPercentage}>
-                {Math.round((ticket.sold / ticket.total) * 100)}%
-              </Text>
-            </View>
-            <View style={styles.progressBar}>
-              <View
-                style={[
-                  styles.progressFill,
-                  {
-                    width: `${(ticket.sold / ticket.total) * 100}%`,
-                    backgroundColor: ticket.sold >= ticket.total ? colors.success : colors.primary,
-                  },
-                ]}
-              />
-            </View>
-          </View>
+      {ticketTypes.length === 0 ? (
+        <Card style={styles.emptyCard}>
+          <Ionicons name="ticket-outline" size={48} color={colors.mutedForeground} />
+          <Text style={styles.emptyText}>Nessun tipo di biglietto</Text>
         </Card>
-      ))}
+      ) : (
+        ticketTypes.map((ticket) => {
+          const sold = ticket.sold || ticket.soldCount || 0;
+          const total = ticket.total || ticket.totalCount || ticket.capacity || 1;
+          const price = typeof ticket.price === 'number' ? `€ ${ticket.price.toLocaleString('it-IT')}` : (ticket.price || '€ 0');
+          const revenue = typeof ticket.revenue === 'number' ? `€ ${ticket.revenue.toLocaleString('it-IT')}` : (ticket.revenue || '€ 0');
+          
+          return (
+          <Card key={ticket.id} style={styles.ticketCard}>
+            <View style={styles.ticketHeader}>
+              <View>
+                <Text style={styles.ticketName}>{ticket.name || ticket.typeName}</Text>
+                <Text style={styles.ticketPrice}>{price}</Text>
+              </View>
+              <Text style={styles.ticketRevenue}>{revenue}</Text>
+            </View>
+            <View style={styles.ticketProgress}>
+              <View style={styles.progressHeader}>
+                <Text style={styles.progressLabel}>Venduti: {sold}/{total}</Text>
+                <Text style={styles.progressPercentage}>
+                  {total > 0 ? Math.round((sold / total) * 100) : 0}%
+                </Text>
+              </View>
+              <View style={styles.progressBar}>
+                <View
+                  style={[
+                    styles.progressFill,
+                    {
+                      width: `${total > 0 ? (sold / total) * 100 : 0}%`,
+                      backgroundColor: sold >= total ? colors.success : colors.primary,
+                    },
+                  ]}
+                />
+              </View>
+            </View>
+          </Card>
+          );
+        })
+      )}
     </ScrollView>
   );
+  };
 
   const renderNameChangesTab = () => (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
@@ -609,7 +870,31 @@ export function EventHubScreen() {
     </ScrollView>
   );
 
-  const renderListsTab = () => (
+  const renderListsTab = () => {
+    if (loadingLists) {
+      return (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Caricamento...</Text>
+        </View>
+      );
+    }
+
+    if (errorLists) {
+      return (
+        <Card style={styles.emptyCard}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
+          <Text style={styles.errorText}>{errorLists}</Text>
+          <Button
+            title="Riprova"
+            variant="primary"
+            onPress={() => setReloadLists(prev => prev + 1)}
+            style={styles.retryButton}
+          />
+        </Card>
+      );
+    }
+
+    return (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       <Card style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>Riepilogo Liste</Text>
@@ -635,38 +920,70 @@ export function EventHubScreen() {
         </View>
       </Card>
 
-      {guestLists.map((entry) => (
-        <Card key={entry.id} style={styles.listEntryCard}>
-          <View style={styles.listEntryHeader}>
-            <View>
-              <Text style={styles.listEntryName}>{entry.name}</Text>
-              <Text style={styles.listEntryPr}>PR: {entry.prName}</Text>
-            </View>
-            <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(entry.status)}20` }]}>
-              <Text style={[styles.statusText, { color: getStatusColor(entry.status) }]}>
-                {entry.status === 'checked-in' ? 'Entrato' : entry.status === 'confirmed' ? 'Confermato' : 'In attesa'}
-              </Text>
-            </View>
-          </View>
-          <View style={styles.listEntryFooter}>
-            <View style={styles.guestCount}>
-              <Ionicons name="people-outline" size={16} color={colors.mutedForeground} />
-              <Text style={styles.guestCountText}>{entry.guests} ospiti</Text>
-            </View>
-            {entry.status !== 'checked-in' && (
-              <Button
-                title="Check-in"
-                size="sm"
-                onPress={() => {}}
-              />
-            )}
-          </View>
+      {guestLists.length === 0 ? (
+        <Card style={styles.emptyCard}>
+          <Ionicons name="list-outline" size={48} color={colors.mutedForeground} />
+          <Text style={styles.emptyText}>Nessuna lista ospiti</Text>
         </Card>
-      ))}
+      ) : (
+        guestLists.map((entry) => (
+          <Card key={entry.id} style={styles.listEntryCard}>
+            <View style={styles.listEntryHeader}>
+              <View>
+                <Text style={styles.listEntryName}>{entry.name}</Text>
+                <Text style={styles.listEntryPr}>PR: {entry.prName}</Text>
+              </View>
+              <View style={[styles.statusBadge, { backgroundColor: `${getStatusColor(entry.status)}20` }]}>
+                <Text style={[styles.statusText, { color: getStatusColor(entry.status) }]}>
+                  {entry.status === 'checked-in' ? 'Entrato' : entry.status === 'confirmed' ? 'Confermato' : 'In attesa'}
+                </Text>
+              </View>
+            </View>
+            <View style={styles.listEntryFooter}>
+              <View style={styles.guestCount}>
+                <Ionicons name="people-outline" size={16} color={colors.mutedForeground} />
+                <Text style={styles.guestCountText}>{entry.guests} ospiti</Text>
+              </View>
+              {entry.status !== 'checked-in' && (
+                <Button
+                  title="Check-in"
+                  size="sm"
+                  onPress={() => {}}
+                />
+              )}
+            </View>
+          </Card>
+        ))
+      )}
     </ScrollView>
   );
+  };
 
-  const renderStaffTab = () => (
+  const renderStaffTab = () => {
+    if (loadingStaff) {
+      return (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Caricamento...</Text>
+        </View>
+      );
+    }
+
+    if (errorStaff) {
+      return (
+        <Card style={styles.emptyCard}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
+          <Text style={styles.errorText}>{errorStaff}</Text>
+          <Button
+            title="Riprova"
+            variant="primary"
+            onPress={() => setReloadStaff(prev => prev + 1)}
+            style={styles.retryButton}
+          />
+        </Card>
+      );
+    }
+
+    return (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       <Card style={styles.summaryCard}>
         <Text style={styles.summaryTitle}>Staff in Servizio</Text>
@@ -692,61 +1009,117 @@ export function EventHubScreen() {
         </View>
       </Card>
 
-      {staffMembers.map((member) => (
-        <Card key={member.id} style={styles.staffCard}>
-          <View style={styles.staffHeader}>
-            <View style={styles.staffAvatar}>
-              <Text style={styles.staffInitials}>
-                {member.name.split(' ').map((n) => n[0]).join('')}
-              </Text>
-            </View>
-            <View style={styles.staffInfo}>
-              <Text style={styles.staffName}>{member.name}</Text>
-              <Text style={styles.staffRole}>{member.role}</Text>
-            </View>
-            <View style={[styles.statusDot, { backgroundColor: getStatusColor(member.status) }]} />
-          </View>
-          {member.checkInTime && (
-            <View style={styles.staffCheckIn}>
-              <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
-              <Text style={styles.staffCheckInText}>Check-in: {member.checkInTime}</Text>
-            </View>
-          )}
+      {staffMembers.length === 0 ? (
+        <Card style={styles.emptyCard}>
+          <Ionicons name="people-outline" size={48} color={colors.mutedForeground} />
+          <Text style={styles.emptyText}>Nessuno staff assegnato</Text>
         </Card>
-      ))}
+      ) : (
+        staffMembers.map((member) => (
+          <Card key={member.id} style={styles.staffCard}>
+            <View style={styles.staffHeader}>
+              <View style={styles.staffAvatar}>
+                <Text style={styles.staffInitials}>
+                  {member.name?.split(' ').map((n: string) => n[0]).join('') || '?'}
+                </Text>
+              </View>
+              <View style={styles.staffInfo}>
+                <Text style={styles.staffName}>{member.name}</Text>
+                <Text style={styles.staffRole}>{member.role}</Text>
+              </View>
+              <View style={[styles.statusDot, { backgroundColor: getStatusColor(member.status) }]} />
+            </View>
+            {member.checkInTime && (
+              <View style={styles.staffCheckIn}>
+                <Ionicons name="time-outline" size={14} color={colors.mutedForeground} />
+                <Text style={styles.staffCheckInText}>Check-in: {member.checkInTime}</Text>
+              </View>
+            )}
+          </Card>
+        ))
+      )}
     </ScrollView>
   );
+  };
 
-  const renderRevenueTab = () => (
+  const renderRevenueTab = () => {
+    if (loadingRevenue) {
+      return (
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>Caricamento...</Text>
+        </View>
+      );
+    }
+
+    if (errorRevenue) {
+      return (
+        <Card style={styles.emptyCard}>
+          <Ionicons name="alert-circle-outline" size={48} color={colors.destructive} />
+          <Text style={styles.errorText}>{errorRevenue}</Text>
+          <Button
+            title="Riprova"
+            variant="primary"
+            onPress={() => setReloadRevenue(prev => prev + 1)}
+            style={styles.retryButton}
+          />
+        </Card>
+      );
+    }
+
+    const revenueBreakdown = getRevenueBreakdown();
+    const totalRevenueValue = revenueData?.totalRevenue ?? operationalStats?.totalRevenue ?? 0;
+    const formattedTotal = typeof totalRevenueValue === 'number' 
+      ? `€ ${totalRevenueValue.toLocaleString('it-IT')}` 
+      : totalRevenueValue;
+    const trendPercentage = revenueData?.trendPercentage ?? null;
+    const cardPayments = revenueData?.paymentMethods?.card ?? revenueData?.cardPayments ?? 0;
+    const cashPayments = revenueData?.paymentMethods?.cash ?? revenueData?.cashPayments ?? 0;
+
+    return (
     <ScrollView style={styles.tabContent} showsVerticalScrollIndicator={false}>
       <Card style={styles.revenueCard} variant="elevated">
         <Text style={styles.revenueTotalLabel}>Incasso Totale</Text>
-        <Text style={styles.revenueTotalValue}>€ 27.240</Text>
-        <View style={styles.revenueTrend}>
-          <Ionicons name="trending-up" size={16} color={colors.success} />
-          <Text style={styles.revenueTrendText}>+15% rispetto a evento precedente</Text>
-        </View>
+        <Text style={styles.revenueTotalValue}>{formattedTotal}</Text>
+        {trendPercentage !== null && (
+          <View style={styles.revenueTrend}>
+            <Ionicons 
+              name={trendPercentage >= 0 ? "trending-up" : "trending-down"} 
+              size={16} 
+              color={trendPercentage >= 0 ? colors.success : colors.destructive} 
+            />
+            <Text style={[styles.revenueTrendText, { color: trendPercentage >= 0 ? colors.success : colors.destructive }]}>
+              {trendPercentage >= 0 ? '+' : ''}{trendPercentage}% rispetto a evento precedente
+            </Text>
+          </View>
+        )}
       </Card>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Suddivisione Incassi</Text>
-        {revenueBreakdown.map((item, index) => (
-          <Card key={index} style={styles.breakdownCard}>
-            <View style={styles.breakdownHeader}>
-              <View style={styles.breakdownLabel}>
-                <View style={[styles.breakdownDot, { backgroundColor: item.color }]} />
-                <Text style={styles.breakdownName}>{item.label}</Text>
-              </View>
-              <Text style={styles.breakdownValue}>{item.value}</Text>
-            </View>
-            <View style={styles.breakdownBar}>
-              <View
-                style={[styles.breakdownFill, { width: `${item.percentage}%`, backgroundColor: item.color }]}
-              />
-            </View>
-            <Text style={styles.breakdownPercentage}>{item.percentage}%</Text>
+        {revenueBreakdown.length === 0 ? (
+          <Card style={styles.emptyCard}>
+            <Ionicons name="pie-chart-outline" size={48} color={colors.mutedForeground} />
+            <Text style={styles.emptyText}>Nessun dato disponibile</Text>
           </Card>
-        ))}
+        ) : (
+          revenueBreakdown.map((item: any, index: number) => (
+            <Card key={index} style={styles.breakdownCard}>
+              <View style={styles.breakdownHeader}>
+                <View style={styles.breakdownLabel}>
+                  <View style={[styles.breakdownDot, { backgroundColor: item.color }]} />
+                  <Text style={styles.breakdownName}>{item.label}</Text>
+                </View>
+                <Text style={styles.breakdownValue}>{item.value}</Text>
+              </View>
+              <View style={styles.breakdownBar}>
+                <View
+                  style={[styles.breakdownFill, { width: `${item.percentage}%`, backgroundColor: item.color }]}
+                />
+              </View>
+              <Text style={styles.breakdownPercentage}>{item.percentage}%</Text>
+            </Card>
+          ))
+        )}
       </View>
 
       <View style={styles.section}>
@@ -757,7 +1130,9 @@ export function EventHubScreen() {
               <Ionicons name="card-outline" size={20} color={colors.primary} />
               <Text style={styles.paymentLabel}>Carte</Text>
             </View>
-            <Text style={styles.paymentValue}>€ 18.450</Text>
+            <Text style={styles.paymentValue}>
+              {typeof cardPayments === 'number' ? `€ ${cardPayments.toLocaleString('it-IT')}` : cardPayments}
+            </Text>
           </View>
           <View style={styles.paymentDivider} />
           <View style={styles.paymentRow}>
@@ -765,12 +1140,15 @@ export function EventHubScreen() {
               <Ionicons name="cash-outline" size={20} color={colors.success} />
               <Text style={styles.paymentLabel}>Contanti</Text>
             </View>
-            <Text style={styles.paymentValue}>€ 8.790</Text>
+            <Text style={styles.paymentValue}>
+              {typeof cashPayments === 'number' ? `€ ${cashPayments.toLocaleString('it-IT')}` : cashPayments}
+            </Text>
           </View>
         </Card>
       </View>
     </ScrollView>
   );
+  };
 
   const renderTabContent = () => {
     switch (activeTab) {
