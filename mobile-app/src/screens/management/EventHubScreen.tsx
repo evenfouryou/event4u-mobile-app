@@ -6,13 +6,14 @@ import {
   StyleSheet,
   TouchableOpacity,
   FlatList,
-  Dimensions,
+  useWindowDimensions,
 } from 'react-native';
 import { useNavigation, useRoute } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { colors, spacing, fontSize, fontWeight, borderRadius } from '../../lib/theme';
 import { Card, Button, Header } from '../../components';
+import { api } from '../../lib/api';
 
 type TabKey = 'overview' | 'tickets' | 'lists' | 'staff' | 'revenue' | 'name-changes' | 'resales';
 
@@ -82,8 +83,6 @@ interface SiaeResale {
   newProgressiveNumber: number | null;
 }
 
-const { width } = Dimensions.get('window');
-
 const tabs: Tab[] = [
   { key: 'overview', label: 'Overview', icon: 'grid-outline' },
   { key: 'tickets', label: 'Biglietti', icon: 'ticket-outline' },
@@ -98,6 +97,8 @@ export function EventHubScreen() {
   const navigation = useNavigation<any>();
   const route = useRoute<any>();
   const insets = useSafeAreaInsets();
+  const { width, height } = useWindowDimensions();
+  const isLandscape = width > height;
   const [activeTab, setActiveTab] = useState<TabKey>(route.params?.tab || 'overview');
   const [nameChanges, setNameChanges] = useState<SiaeNameChange[]>([]);
   const [resales, setResales] = useState<SiaeResale[]>([]);
@@ -165,18 +166,12 @@ export function EventHubScreen() {
       setLoadingEvent(true);
       setErrorEvent(null);
       try {
-        const [eventRes, statsRes] = await Promise.all([
-          fetch(`/api/events/${eventId}`, { credentials: 'include' }),
-          fetch(`/api/events/${eventId}/operational-stats`, { credentials: 'include' }),
+        const [event, stats] = await Promise.all([
+          api.get<any>(`/api/events/${eventId}`),
+          api.get<any>(`/api/events/${eventId}/operational-stats`).catch(() => null),
         ]);
-        if (eventRes.ok) {
-          const event = await eventRes.json();
-          setEventData(event);
-        } else {
-          setErrorEvent('Errore nel caricamento evento');
-        }
-        if (statsRes.ok) {
-          const stats = await statsRes.json();
+        setEventData(event);
+        if (stats) {
           setOperationalStats(stats);
         }
       } catch (e) {
@@ -196,15 +191,8 @@ export function EventHubScreen() {
       setLoadingTickets(true);
       setErrorTickets(null);
       try {
-        const response = await fetch(`/api/siae/ticketed-events/${eventId}/ticket-stats`, {
-          credentials: 'include',
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setTicketTypes(data);
-        } else {
-          setErrorTickets('Errore nel caricamento');
-        }
+        const data = await api.get<any[]>(`/api/siae/ticketed-events/${eventId}/ticket-stats`);
+        setTicketTypes(data);
       } catch (e) {
         setErrorTickets('Errore di connessione');
       }
@@ -221,22 +209,15 @@ export function EventHubScreen() {
       setLoadingLists(true);
       setErrorLists(null);
       try {
-        const response = await fetch(`/api/pr/events/${eventId}/guest-lists`, {
-          credentials: 'include',
-        });
-        if (response.ok) {
-          const data = await response.json();
-          const mapped = data.map((gl: any) => ({
-            id: gl.id,
-            name: gl.name || gl.guestName || 'Lista',
-            guests: gl.totalGuests || gl.guests || 0,
-            status: gl.status || 'pending',
-            prName: gl.prName || gl.assignedPrName || 'N/A',
-          }));
-          setGuestLists(mapped);
-        } else {
-          setErrorLists('Errore nel caricamento');
-        }
+        const data = await api.get<any[]>(`/api/pr/events/${eventId}/guest-lists`);
+        const mapped = data.map((gl: any) => ({
+          id: gl.id,
+          name: gl.name || gl.guestName || 'Lista',
+          guests: gl.totalGuests || gl.guests || 0,
+          status: gl.status || 'pending',
+          prName: gl.prName || gl.assignedPrName || 'N/A',
+        }));
+        setGuestLists(mapped);
       } catch (e) {
         setErrorLists('Errore di connessione');
       }
@@ -253,22 +234,15 @@ export function EventHubScreen() {
       setLoadingStaff(true);
       setErrorStaff(null);
       try {
-        const response = await fetch(`/api/events/${eventId}/pr-assignments`, {
-          credentials: 'include',
-        });
-        if (response.ok) {
-          const data = await response.json();
-          const mapped = data.map((s: any) => ({
-            id: s.id,
-            name: s.userName || s.name || 'Staff',
-            role: s.role || s.assignmentType || 'Staff',
-            status: s.status || 'active',
-            checkInTime: s.checkInTime || null,
-          }));
-          setStaffMembers(mapped);
-        } else {
-          setErrorStaff('Errore nel caricamento');
-        }
+        const data = await api.get<any[]>(`/api/events/${eventId}/pr-assignments`);
+        const mapped = data.map((s: any) => ({
+          id: s.id,
+          name: s.userName || s.name || 'Staff',
+          role: s.role || s.assignmentType || 'Staff',
+          status: s.status || 'active',
+          checkInTime: s.checkInTime || null,
+        }));
+        setStaffMembers(mapped);
       } catch (e) {
         setErrorStaff('Errore di connessione');
       }
@@ -285,15 +259,8 @@ export function EventHubScreen() {
       setLoadingRevenue(true);
       setErrorRevenue(null);
       try {
-        const response = await fetch(`/api/events/${eventId}/revenue-analysis`, {
-          credentials: 'include',
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setRevenueData(data);
-        } else {
-          setErrorRevenue('Errore nel caricamento');
-        }
+        const data = await api.get<any>(`/api/events/${eventId}/revenue-analysis`);
+        setRevenueData(data);
       } catch (e) {
         setErrorRevenue('Errore di connessione');
       }
@@ -310,15 +277,8 @@ export function EventHubScreen() {
       setLoadingNameChanges(true);
       setErrorNameChanges(null);
       try {
-        const response = await fetch(`/api/siae/ticketed-events/${eventId}/name-changes`, {
-          credentials: 'include',
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setNameChanges(data);
-        } else {
-          setErrorNameChanges('Errore nel caricamento');
-        }
+        const data = await api.get<any[]>(`/api/siae/ticketed-events/${eventId}/name-changes`);
+        setNameChanges(data);
       } catch (e) {
         setErrorNameChanges('Errore di connessione');
       }
@@ -335,15 +295,8 @@ export function EventHubScreen() {
       setLoadingResales(true);
       setErrorResales(null);
       try {
-        const response = await fetch(`/api/siae/ticketed-events/${eventId}/resales`, {
-          credentials: 'include',
-        });
-        if (response.ok) {
-          const data = await response.json();
-          setResales(data);
-        } else {
-          setErrorResales('Errore nel caricamento');
-        }
+        const data = await api.get<any[]>(`/api/siae/ticketed-events/${eventId}/resales`);
+        setResales(data);
       } catch (e) {
         setErrorResales('Errore di connessione');
       }
@@ -494,23 +447,23 @@ export function EventHubScreen() {
         </View>
       </Card>
 
-      <View style={styles.statsGrid}>
-        <Card style={styles.statCard}>
+      <View style={[styles.statsGrid, { flexDirection: 'row', flexWrap: 'wrap' }]}>
+        <Card style={[styles.statCard, { width: isLandscape ? (width - spacing.lg * 2 - spacing.md * 3) / 4 : (width - spacing.lg * 2 - spacing.md) / 2 }]}>
           <Ionicons name="wallet-outline" size={24} color={colors.primary} />
           <Text style={styles.statValue}>{getTotalRevenue()}</Text>
           <Text style={styles.statLabel}>Incasso Totale</Text>
         </Card>
-        <Card style={styles.statCard}>
+        <Card style={[styles.statCard, { width: isLandscape ? (width - spacing.lg * 2 - spacing.md * 3) / 4 : (width - spacing.lg * 2 - spacing.md) / 2 }]}>
           <Ionicons name="ticket-outline" size={24} color={colors.success} />
           <Text style={styles.statValue}>{getTicketsSold()}/{getTotalTickets()}</Text>
           <Text style={styles.statLabel}>Biglietti</Text>
         </Card>
-        <Card style={styles.statCard}>
+        <Card style={[styles.statCard, { width: isLandscape ? (width - spacing.lg * 2 - spacing.md * 3) / 4 : (width - spacing.lg * 2 - spacing.md) / 2 }]}>
           <Ionicons name="people-outline" size={24} color={colors.accent} />
           <Text style={styles.statValue}>{getGuestsCheckedIn()}</Text>
           <Text style={styles.statLabel}>Check-in</Text>
         </Card>
-        <Card style={styles.statCard}>
+        <Card style={[styles.statCard, { width: isLandscape ? (width - spacing.lg * 2 - spacing.md * 3) / 4 : (width - spacing.lg * 2 - spacing.md) / 2 }]}>
           <Ionicons name="person-outline" size={24} color={colors.warning} />
           <Text style={styles.statValue}>{getStaffOnDuty()}</Text>
           <Text style={styles.statLabel}>Staff Attivo</Text>
@@ -1288,7 +1241,6 @@ const styles = StyleSheet.create({
     marginBottom: spacing.lg,
   },
   statCard: {
-    width: (width - spacing.lg * 2 - spacing.md) / 2,
     alignItems: 'center',
     paddingVertical: spacing.lg,
   },
@@ -1319,7 +1271,7 @@ const styles = StyleSheet.create({
   },
   quickActionBtn: {
     flex: 1,
-    minWidth: (width - spacing.lg * 2 - spacing.md) / 2,
+    minWidth: 140,
   },
   activityCard: {
     marginBottom: spacing.sm,
